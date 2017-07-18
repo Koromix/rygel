@@ -354,6 +354,9 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                 diag.code.str[3] = code456_chars[code456_remain / 132]; code456_remain %= 132;
                 diag.code.str[4] = code456_chars[code456_remain / 11]; code456_remain %= 11;
                 diag.code.str[5] = code456_chars[code456_remain];
+                for (size_t i = 5; i >= 3 && diag.code.str[i] == ' '; i--) {
+                    diag.code.str[i] = '\0';
+                }
             }
 
             // Flags and warnings

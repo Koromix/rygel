@@ -64,28 +64,20 @@ static bool DumpDiagnosticTable(const uint8_t *file_data, const char *filename,
 
     PrintLn("    Diagnostics:");
     for (const DiagnosticInfo &dg_info: diagnostics) {
-        PrintLn("      %1", dg_info.code.str);
+        PrintLn("      %1:", dg_info.code.str);
 
-#if 0
-        Print("      H: ");
+        Print("        Male:");
         for (size_t i = 0; i < CountOf(dg_info.sex[0].values); i++) {
-            if (i) {
-                Print("\n         ");
-            }
-            Print("%1", FmtBin(dg_info.sex[0].values[i]));
+            Print(" %1", FmtBin(dg_info.sex[0].values[i]));
         }
         PrintLn();
-        Print("      F: ");
+        Print("        Female:");
         for (size_t i = 0; i < CountOf(dg_info.sex[1].values); i++) {
-            if (i) {
-                Print("\n         ");
-            }
-            Print("%1", FmtBin(dg_info.sex[1].values[i]));
+            Print(" %1", FmtBin(dg_info.sex[1].values[i]));
         }
         PrintLn();
-#endif
 
-        PrintLn("        CMD Homme: %1 - Femme: %2", dg_info.sex[0].info.cmd,
+        PrintLn("        CMD Male: %1 - Female: %2", dg_info.sex[0].info.cmd,
                                                      dg_info.sex[1].info.cmd);
         PrintLn("        Warnings: %1", FmtBin(dg_info.warnings));
     }
