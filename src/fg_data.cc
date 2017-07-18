@@ -304,8 +304,8 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
         } while (false)
 
     FAIL_PARSE_IF(table.sections.len != 5);
-    FAIL_PARSE_IF(table.sections[0].values_count != 2600 || table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != 9);
+    FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
+    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosticPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
                   table.sections[2].value_len / 2 > sizeof(DiagnosticInfo::sex[0].values));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
@@ -347,10 +347,10 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
 
             // CIM-10 code
             {
-                static const char code456_chars[] = " 0123456789+";
-
                 memcpy(diag.code.str, code123, 3);
-                uint16_t code456_remain = raw_diag_ptr.code456;
+
+                static const char code456_chars[] = " 0123456789+";
+                uint16_t code456_remain = raw_diag_ptr.code456 % 1584;
                 diag.code.str[3] = code456_chars[code456_remain / 132]; code456_remain %= 132;
                 diag.code.str[4] = code456_chars[code456_remain / 11]; code456_remain %= 11;
                 diag.code.str[5] = code456_chars[code456_remain];
@@ -413,7 +413,7 @@ bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
             } \
         } while (false)
 
-    FAIL_PARSE_IF(section.value_len != 10);
+    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
 
     for (size_t i = 0; i < section.values_count; i++) {
         ValueRangeCell<2> cell = {};
