@@ -48,8 +48,8 @@ struct DiagnosticInfo {
     } sex[2];
     uint16_t warnings;
 
-    uint16_t exclusion_set_bit;
     uint16_t exclusion_set_idx;
+    uint16_t exclusion_set_bit;
 };
 
 struct ProcedureInfo {

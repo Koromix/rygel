@@ -384,6 +384,9 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                         diag.warnings |= 1 << i;
                     }
                 }
+
+                diag.exclusion_set_idx = raw_diag_ptr.section4_idx;
+                diag.exclusion_set_bit = raw_diag_ptr.section4_bit;
             }
 
             out_diags->Append(diag);
