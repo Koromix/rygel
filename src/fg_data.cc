@@ -32,6 +32,15 @@ static Date ParseDate1980(uint16_t days)
     static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     Date date;
+
+    if (UNLIKELY(!days)) {
+        date.st.year = 1979;
+        date.st.month = 12;
+        date.st.day = 31;
+
+        return date;
+    }
+
     bool leap_year;
     for (date.st.year = 1980;; date.st.year++) {
         leap_year = ((date.st.year % 4 == 0 && date.st.year % 100 != 0) || date.st.year % 400 == 0);
@@ -48,6 +57,7 @@ static Date ParseDate1980(uint16_t days)
         days -= month_days;
     }
     date.st.day = days;
+
     return date;
 }
 
