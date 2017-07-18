@@ -263,8 +263,8 @@ bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
             static char letters4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
             node.type = DecisionNode::Type::Leaf;
-            snprintf(node.u.leaf.ghm, sizeof(node.u.leaf.ghm),
-                     "%02u%c%02u%c", raw_node.params[1], letters1[(raw_node.children_idx / 1000) % 10],
+            snprintf(node.u.leaf.ghm, sizeof(node.u.leaf.ghm), "%02u%c%02u%c",
+                     raw_node.params[1], letters1[(raw_node.children_idx / 1000) % 10],
                      (raw_node.children_idx / 10) % 100, letters4[raw_node.children_idx % 10]);
             if (strchr(node.u.leaf.ghm, ' ')) {
                 return false;
@@ -288,6 +288,7 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
 
     struct PackedDiagnosticPtr  {
         uint16_t code456;
+
         uint16_t section2_idx;
         uint8_t section3_idx;
         uint16_t section4_bit;

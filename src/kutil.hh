@@ -29,9 +29,11 @@
 
 #define DYNAMICARRAY_BASE_CAPACITY 8
 #define DYNAMICARRAY_GROWTH_FACTOR 2
+
 #define SPARSETABLE_BASE_CAPACITY 32
 #define SPARSETABLE_GROWTH_FACTOR 2
 #define SPARSETABLE_MAX_LOAD_FACTOR 0.5f
+
 #define FMT_STRING_BASE_CAPACITY 128
 #define FMT_STRING_GROWTH_FACTOR 1.5f
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
@@ -1572,4 +1574,4 @@ private:
 // ------------------------------------------------------------------------
 
 bool ReadFile(Allocator *alloc, const char *filename, uint64_t max_size,
-                     uint8_t **rdata, uint64_t *rlen);
+              uint8_t **rdata, uint64_t *rlen);
