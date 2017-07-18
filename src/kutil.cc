@@ -223,7 +223,7 @@ static inline void WriteDouble(double value, int precision, AppendFunc append)
 template <typename AppendFunc>
 static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
-    for (unsigned int i = 0; i < arg.repeat; i++) {
+    for (int i = 0; i < arg.repeat; i++) {
         switch (arg.type) {
             case FmtArg::Type::String: {
                 append(arg.value.str);

@@ -43,7 +43,7 @@ struct DiagnosticInfo {
     union {
         uint8_t values[48];
         struct {
-            uint8_t cmd;
+            int8_t cmd;
         } info;
     } sex[2];
     uint16_t warnings;
@@ -74,19 +74,19 @@ struct GhmRootInfo {
         uint64_t value;
     } code;
 
-    uint8_t confirm_duration_treshold;
+    int8_t confirm_duration_treshold;
 
     bool allow_ambulatory;
-    uint8_t short_duration_treshold;
+    int8_t short_duration_treshold;
 
-    uint8_t young_severity_limit;
-    uint8_t young_age_treshold;
-    uint8_t old_severity_limit;
-    uint8_t old_age_treshold;
+    int8_t young_severity_limit;
+    int8_t young_age_treshold;
+    int8_t old_severity_limit;
+    int8_t old_age_treshold;
 
-    uint8_t childbirth_severity_list;
+    int8_t childbirth_severity_list;
 
-    uint8_t cma_exclusion_offset;
+    int8_t cma_exclusion_offset;
     uint8_t cma_exclusion_mask;
 };
 

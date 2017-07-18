@@ -121,7 +121,7 @@ T *FindLinear(T (&arr)[N], Pred pred)
 template <typename T, typename Pred>
 T *FindLinear(T *arr, size_t size, Pred pred)
 {
-    for (unsigned int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         if (pred(arr[i]))
             return &arr[i];
     }
@@ -415,7 +415,7 @@ union Date {
         int8_t day;
 #endif
     } st;
-    uint32_t value;
+    int32_t value;
 
     bool operator==(const Date &other) const { return value == other.value; }
     bool operator!=(const Date &other) const { return value != other.value; }
@@ -527,7 +527,7 @@ struct FmtArg {
             const char *separator;
         } list;
     } value;
-    unsigned int repeat = 1;
+    int repeat = 1;
 
     FmtArg() = default;
     FmtArg(const char *str) : type(Type::String) { value.str = MakeStrRef(str ? str : "(null)"); }
@@ -547,7 +547,7 @@ struct FmtArg {
     FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
 
-    FmtArg &Repeat(unsigned int new_repeat) { repeat = new_repeat; return *this; }
+    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
 };
 
 static inline FmtArg FmtBin(uint64_t u)
