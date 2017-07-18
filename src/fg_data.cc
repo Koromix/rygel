@@ -389,9 +389,103 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procedures)
+                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs)
 {
-    return false;
+    DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
+
+    struct PackedProcedurePtr  {
+        char letter4;
+        uint16_t seq_phase;
+
+        uint16_t section2_idx;
+        uint16_t date_min;
+        uint16_t date_max;
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(table.sections.len != 3);
+    FAIL_PARSE_IF(table.sections[0].values_count != 26 * 26 * 26 ||
+                  table.sections[0].value_len != 2);
+    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedProcedurePtr));
+    FAIL_PARSE_IF(!table.sections[2].value_len ||
+                  table.sections[2].value_len > sizeof(ProcedureInfo::values));
+
+    size_t block_start = table.sections[1].raw_offset;
+    for (size_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
+        size_t block_end;
+        {
+            uint16_t end_idx = *(uint16_t *)(file_data + table.sections[0].raw_offset +
+                                             root_idx * 2);
+            ReverseBytes(&end_idx);
+            FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
+            block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedProcedurePtr);
+        }
+
+        char code123[3];
+        {
+            size_t root_idx_remain = root_idx;
+            for (int i = 0; i < 3; i++) {
+                code123[2 - i] = (root_idx_remain % 26) + 65;
+                root_idx_remain /= 26;
+            }
+        }
+
+        for (size_t block_offset = block_start; block_offset < block_end;
+             block_offset += sizeof(PackedProcedurePtr)) {
+            ProcedureInfo proc = {};
+
+            PackedProcedurePtr raw_proc_ptr;
+            {
+                memcpy(&raw_proc_ptr, file_data + block_offset, sizeof(PackedProcedurePtr));
+#ifdef ARCH_LITTLE_ENDIAN
+                ReverseBytes(&raw_proc_ptr.seq_phase);
+                ReverseBytes(&raw_proc_ptr.section2_idx);
+                ReverseBytes(&raw_proc_ptr.date_min);
+                ReverseBytes(&raw_proc_ptr.date_max);
+#endif
+
+                FAIL_PARSE_IF(raw_proc_ptr.section2_idx >= table.sections[2].values_count);
+            }
+
+            // CCAM code and phase
+            {
+                memcpy(proc.code.str, code123, 3);
+                snprintf(proc.code.str + 3, sizeof(proc.code.str) - 3, "%c%03u",
+                         (raw_proc_ptr.letter4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
+                proc.phase = raw_proc_ptr.seq_phase % 10;
+            }
+
+            // CCAM information and lists
+            {
+                proc.limit_dates[0] = ParseDate1980(raw_proc_ptr.date_min);
+                if (raw_proc_ptr.date_max < UINT16_MAX) {
+                    proc.limit_dates[1] = ParseDate1980(raw_proc_ptr.date_max + 1);
+                } else {
+                    proc.limit_dates[1] = ParseDate1980(UINT16_MAX);
+                }
+
+                const uint8_t *proc_data = file_data + table.sections[2].raw_offset +
+                                           raw_proc_ptr.section2_idx * table.sections[2].value_len;
+                memcpy(proc.values, proc_data, table.sections[2].value_len);
+            }
+
+            out_procs->Append(proc);
+        }
+
+        block_start = block_end;
+    }
+
+#undef FAIL_PARSE_IF
+
+    out_proc_guard.disable();
+    return true;
 }
 
 bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,

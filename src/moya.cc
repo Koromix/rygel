@@ -93,6 +93,15 @@ static bool DumpProcedureTable(const uint8_t *file_data, const char *filename,
         return false;
 
     PrintLn("    Procedures:");
+    for (const ProcedureInfo &proc: procedures) {
+        Print("      %1/%2 =", proc.code.str, proc.phase);
+        for (size_t i = 0; i < CountOf(proc.values); i++) {
+            Print(" %1", FmtBin(proc.values[i]));
+        }
+        PrintLn();
+
+        PrintLn("        Validity: %1 to %2", proc.limit_dates[0], proc.limit_dates[1]);
+    }
     PrintLn();
 
     return true;

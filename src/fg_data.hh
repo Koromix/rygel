@@ -57,6 +57,10 @@ struct ProcedureInfo {
         char str[8];
         uint64_t value;
     } code;
+    int8_t phase;
+
+    Date limit_dates[2];
+    uint8_t values[55];
 };
 
 template <size_t N>
@@ -119,7 +123,7 @@ bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
 bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<DiagnosticInfo> *out_diags);
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procedures);
+                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);
 bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
                           const TableInfo::Section &section,
                           DynamicArray<ValueRangeCell<2>> *out_cells);
