@@ -734,8 +734,6 @@ static inline constexpr const char *SimplifyLogContext(const char *ctx)
 // Collections
 // ------------------------------------------------------------------------
 
-
-
 template <typename T>
 T &ArrayRef<T>::operator[](size_t idx) const
 {
