@@ -209,11 +209,12 @@ static bool DumpTable(const char *filename, bool detail = true)
     PrintLn("%1", filename);
     for (const TableInfo &table_info: tables) {
         PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table_info.type], table_info.build_date);
-        PrintLn("    Version: %1.%2", table_info.version[0], table_info.version[1]);
-        PrintLn("    Validity: %1 to %2", table_info.limit_dates[0], table_info.limit_dates[1]);
-        PrintLn("    Sections:");
+        PrintLn("    Header:");
+        PrintLn("      Version: %1.%2", table_info.version[0], table_info.version[1]);
+        PrintLn("      Validity: %1 to %2", table_info.limit_dates[0], table_info.limit_dates[1]);
+        PrintLn("      Sections:");
         for (size_t i = 0; i < table_info.sections.len; i++) {
-            PrintLn("      %1. %2 -- %3 bytes -- %4 elements (%5 bytes / element)",
+            PrintLn("        %1. %2 -- %3 bytes -- %4 elements (%5 bytes / element)",
                     i, FmtHex(table_info.sections[i].raw_offset), table_info.sections[i].raw_len,
                     table_info.sections[i].values_count, table_info.sections[i].value_len);
         }
@@ -237,6 +238,7 @@ static bool DumpTable(const char *filename, bool detail = true)
                     DumpChildbirthTable(file_data, filename, table_info);
                 } break;
             }
+            PrintLn();
         }
     }
 
