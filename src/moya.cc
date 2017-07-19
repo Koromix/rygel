@@ -1,15 +1,6 @@
 #include "kutil.hh"
 #include "fg_data.hh"
 
-static void PrintUsage(FILE *fp = stdout)
-{
-    PrintLn(fp, "Usage: moya command [options]");
-}
-static void PrintFgDumpUsage(FILE *fp = stdout)
-{
-    PrintLn(fp, "Usage: moya fg_dump filename");
-}
-
 static void DumpDecisionNode(const ArrayRef<const DecisionNode> nodes,
                              size_t node_idx, int depth)
 {
@@ -249,14 +240,25 @@ int main(int argc, char **argv)
 {
     const char *cmd;
     if (argc < 2) {
-        PrintUsage(stderr);
+generic_usage:
+        Print(stderr,
+R"(Usage: moya command [options]
+
+Commands:
+    fg_dump        Dump available classifier data tables
+    fg_pricing     Print GHS pricing tables
+    fg_run         Run classifier on patient data
+)");
         return 1;
     }
     cmd = argv[1];
 
-    if (!strcmp(cmd, "fg_dump")) {
+#define COMMAND(Cmd) \
+        if (!(strcmp(cmd, STRINGIFY(Cmd))))
+
+    COMMAND(fg_dump) {
         if (argc < 3) {
-            PrintFgDumpUsage(stderr);
+            PrintLn(stderr, "Usage: moya fg_dump filename");
             return 1;
         }
 
@@ -266,8 +268,17 @@ int main(int argc, char **argv)
         }
         return !success;
     }
+    COMMAND(fg_pricing) {
+        PrintLn(stderr, "Not implemented");
+        return 1;
+    }
+    COMMAND(fg_run) {
+        PrintLn(stderr, "Not implemented");
+        return 1;
+    }
 
-    fprintf(stderr, "Unknown command '%s'\n", cmd);
-    PrintUsage(stderr);
-    return 1;
+#undef COMMAND
+
+    PrintLn(stderr, "Unknown command '%1'", cmd);
+    goto generic_usage;
 }
