@@ -1,14 +1,14 @@
 #include "kutil.hh"
 #include "fg_data.hh"
 
-static void DumpDecisionNode(const ArrayRef<const DecisionNode> nodes,
+static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                              size_t node_idx, int depth)
 {
     for (;;) {
-        const DecisionNode &node = nodes[node_idx];
+        const GhmDecisionNode &node = nodes[node_idx];
 
         switch (node.type) {
-            case DecisionNode::Type::Test: {
+            case GhmDecisionNode::Type::Test: {
                 PrintLn("      %1%2. %3(%4, %5) => %6 [%7]", FmtArg("  ").Repeat(depth), node_idx,
                         node.u.test.function, node.u.test.params[0], node.u.test.params[1],
                         node.u.test.children_idx, node.u.test.children_count);
@@ -24,9 +24,9 @@ static void DumpDecisionNode(const ArrayRef<const DecisionNode> nodes,
                 }
             } break;
 
-            case DecisionNode::Type::Leaf: {
+            case GhmDecisionNode::Type::Ghm: {
                 PrintLn("      %1%2. %3 (err = %4)", FmtArg("  ").Repeat(depth), node_idx,
-                        node.u.leaf.ghm, node.u.leaf.error);
+                        node.u.ghm.code, node.u.ghm.error);
                 return;
             } break;
         }
@@ -36,12 +36,12 @@ static void DumpDecisionNode(const ArrayRef<const DecisionNode> nodes,
 static bool DumpDecisionTree(const uint8_t *file_data, const char *filename,
                              const TableInfo &table_info)
 {
-    DynamicArray<DecisionNode> nodes;
-    if (!ParseDecisionTree(file_data, filename, table_info, &nodes))
+    DynamicArray<GhmDecisionNode> ghm_nodes;
+    if (!ParseGhmDecisionTree(file_data, filename, table_info, &ghm_nodes))
         return false;
 
     PrintLn("    Decision Tree:");
-    DumpDecisionNode(nodes, 0, 0);
+    DumpDecisionNode(ghm_nodes, 0, 0);
 
     return true;
 }
@@ -54,23 +54,23 @@ static bool DumpDiagnosticTable(const uint8_t *file_data, const char *filename,
         return false;
 
     PrintLn("    Diagnostics:");
-    for (const DiagnosticInfo &dg_info: diagnostics) {
-        PrintLn("      %1:", dg_info.code.str);
+    for (const DiagnosticInfo &diag: diagnostics) {
+        PrintLn("      %1:", diag.code);
 
         Print("        Male:");
-        for (size_t i = 0; i < CountOf(dg_info.sex[0].values); i++) {
-            Print(" %1", FmtBin(dg_info.sex[0].values[i]));
+        for (size_t i = 0; i < CountOf(diag.sex[0].values); i++) {
+            Print(" %1", FmtBin(diag.sex[0].values[i]));
         }
         PrintLn();
         Print("        Female:");
-        for (size_t i = 0; i < CountOf(dg_info.sex[1].values); i++) {
-            Print(" %1", FmtBin(dg_info.sex[1].values[i]));
+        for (size_t i = 0; i < CountOf(diag.sex[1].values); i++) {
+            Print(" %1", FmtBin(diag.sex[1].values[i]));
         }
         PrintLn();
 
-        PrintLn("        CMD Male: %1 - Female: %2", dg_info.sex[0].info.cmd,
-                                                     dg_info.sex[1].info.cmd);
-        PrintLn("        Warnings: %1", FmtBin(dg_info.warnings));
+        PrintLn("        CMD Male: %1 - Female: %2", diag.sex[0].info.cmd,
+                                                     diag.sex[1].info.cmd);
+        PrintLn("        Warnings: %1", FmtBin(diag.warnings));
     }
 
     return true;
@@ -85,7 +85,7 @@ static bool DumpProcedureTable(const uint8_t *file_data, const char *filename,
 
     PrintLn("    Procedures:");
     for (const ProcedureInfo &proc: procedures) {
-        Print("      %1/%2 =", proc.code.str, proc.phase);
+        Print("      %1/%2 =", proc.code, proc.phase);
         for (size_t i = 0; i < CountOf(proc.values); i++) {
             Print(" %1", FmtBin(proc.values[i]));
         }
@@ -107,7 +107,7 @@ static bool DumpGhmRootTable(const uint8_t *file_data, const char *filename,
 
     PrintLn("    GHM roots:");
     for (const GhmRootInfo &ghm_root: ghm_roots) {
-        PrintLn("      %1:", ghm_root.code.str);
+        PrintLn("      %1:", ghm_root.code);
 
         if (ghm_root.confirm_duration_treshold) {
             PrintLn("        Confirm if < %1 days (except for deaths and MCO transfers)",
@@ -115,10 +115,10 @@ static bool DumpGhmRootTable(const uint8_t *file_data, const char *filename,
         }
 
         if (ghm_root.allow_ambulatory) {
-            PrintLn("        Ambulatory (J)");
+            PrintLn("        Can be ambulatory (J)");
         }
         if (ghm_root.short_duration_treshold) {
-            PrintLn("        Short duration (T) if < %1 days", ghm_root.short_duration_treshold);
+            PrintLn("        Can be short duration (T) if < %1 days", ghm_root.short_duration_treshold);
         }
 
         if (ghm_root.young_age_treshold) {
@@ -213,7 +213,7 @@ static bool DumpTable(const char *filename, bool detail = true)
 
         if (detail) {
             switch (table_info.type) {
-                case TableType::DecisionTree: {
+                case TableType::GhmDecisionTree: {
                     DumpDecisionTree(file_data, filename, table_info);
                 } break;
                 case TableType::DiagnosticInfo: {

@@ -2,19 +2,65 @@
 
 #include "kutil.hh"
 
+// NOTE: Move into TableInfo or keep separate?
 enum class TableType {
-    DecisionTree,
+    GhmDecisionTree,
     DiagnosticInfo,
     ProcedureInfo,
     GhmRootInfo,
     ChildbirthInfo
 };
 static const char *const TableTypeNames[] = {
-    "Decision Tree",
+    "GHM Decision Tree",
     "Diagnostic Table",
     "Procedure Table",
     "GHM Root Table",
     "Childbirth Table"
+};
+
+union GhmRootCode {
+    char str[6];
+    uint64_t value;
+
+    bool operator==(const GhmRootCode &other) const { return value == other.value; }
+    bool operator!=(const GhmRootCode &other) const { return value != other.value; }
+
+    operator FmtArg() const { return FmtArg(str); }
+};
+union GhmCode {
+    char str[7];
+    uint64_t value;
+
+    bool operator==(const GhmCode &other) const { return value == other.value; }
+    bool operator!=(const GhmCode &other) const { return value != other.value; }
+
+    operator FmtArg() const { return FmtArg(str); }
+};
+struct GhsCode {
+    uint16_t value;
+
+    bool operator==(const GhsCode &other) const { return value == other.value; }
+    bool operator!=(const GhsCode &other) const { return value != other.value; }
+
+    operator FmtArg() const { return FmtArg(value); }
+};
+union DiagnosticCode {
+    char str[7];
+    uint64_t value;
+
+    bool operator==(const DiagnosticCode &other) const { return value == other.value; }
+    bool operator!=(const DiagnosticCode &other) const { return value != other.value; }
+
+    operator FmtArg() const { return FmtArg(str); }
+};
+union ProcedureCode {
+    char str[8];
+    uint64_t value;
+
+    bool operator==(const ProcedureCode &other) const { return value == other.value; }
+    bool operator!=(const ProcedureCode &other) const { return value != other.value; }
+
+    operator FmtArg() const { return FmtArg(str); }
 };
 
 struct TableInfo {
@@ -35,10 +81,7 @@ struct TableInfo {
 };
 
 struct DiagnosticInfo {
-    union {
-        char str[7];
-        uint64_t value;
-    } code;
+    DiagnosticCode code;
 
     union {
         uint8_t values[48];
@@ -53,10 +96,7 @@ struct DiagnosticInfo {
 };
 
 struct ProcedureInfo {
-    union {
-        char str[8];
-        uint64_t value;
-    } code;
+    ProcedureCode code;
     int8_t phase;
 
     Date limit_dates[2];
@@ -73,10 +113,7 @@ struct ValueRangeCell {
 };
 
 struct GhmRootInfo {
-    union {
-        char str[6];
-        uint64_t value;
-    } code;
+    GhmRootCode code;
 
     int8_t confirm_duration_treshold;
 
@@ -94,38 +131,38 @@ struct GhmRootInfo {
     uint8_t cma_exclusion_mask;
 };
 
-struct DecisionNode {
+struct GhmDecisionNode {
     enum class Type {
         Test,
-        Leaf
+        Ghm
     };
 
     Type type;
     union {
         struct {
-            int function; // Switch to dedicated enum
-            int params[2];
+            int8_t function; // Switch to dedicated enum
+            int8_t params[2];
             size_t children_count;
             size_t children_idx;
         } test;
 
         struct {
-            char ghm[8];
             int error;
-        } leaf;
+            GhmCode code;
+        } ghm;
     } u;
 };
 
 bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
                        const char *filename, DynamicArray<TableInfo> *out_tables);
-bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, DynamicArray<DecisionNode> *out_nodes);
+bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
+                          const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes);
 bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<DiagnosticInfo> *out_diags);
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                          const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);
+bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
+                       const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots);
 bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
                           const TableInfo::Section &section,
                           DynamicArray<ValueRangeCell<2>> *out_cells);
-bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots);

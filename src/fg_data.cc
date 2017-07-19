@@ -183,7 +183,7 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
         table.limit_dates[1] = ParseDate1980(raw_table_ptr.date_range[1]);
         FAIL_PARSE_IF(table.limit_dates[1] < table.limit_dates[0]);
         if (!strncmp(raw_table_header.name, "ARBREDEC", sizeof(raw_table_header.name))) {
-            table.type = TableType::DecisionTree;
+            table.type = TableType::GhmDecisionTree;
         } else if (!strncmp(raw_table_header.name, "DIAG10CR", sizeof(raw_table_header.name))) {
             table.type = TableType::DiagnosticInfo;
         } else if (!strncmp(raw_table_header.name, "CCAMCARA", sizeof(raw_table_header.name))) {
@@ -219,8 +219,8 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
     return true;
 }
 
-bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, DynamicArray<DecisionNode> *out_nodes)
+bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
+                          const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes)
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
 
@@ -243,7 +243,7 @@ bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedTreeNode));
 
     for (size_t i = 0; i < table.sections[0].values_count; i++) {
-        DecisionNode node = {};
+        GhmDecisionNode ghm_node = {};
 
         PackedTreeNode raw_node;
         memcpy(&raw_node, file_data + table.sections[0].raw_offset +
@@ -253,36 +253,37 @@ bool ParseDecisionTree(const uint8_t *file_data, const char *filename,
 #endif
 
         if (raw_node.function != 12) {
-            node.type = DecisionNode::Type::Test;
-            node.u.test.function = raw_node.function;
-            node.u.test.params[0] = raw_node.params[0];
-            node.u.test.params[1] = raw_node.params[1];
+            ghm_node.type = GhmDecisionNode::Type::Test;
+            ghm_node.u.test.function = raw_node.function;
+            ghm_node.u.test.params[0] = raw_node.params[0];
+            ghm_node.u.test.params[1] = raw_node.params[1];
             if (raw_node.function == 20) {
-                node.u.test.children_idx = raw_node.children_idx + (raw_node.params[0] << 8) + raw_node.params[1];
-                node.u.test.children_count = 1;
+                ghm_node.u.test.children_idx = raw_node.children_idx + (raw_node.params[0] << 8) +
+                                                                       raw_node.params[1];
+                ghm_node.u.test.children_count = 1;
             } else {
-                node.u.test.children_idx = raw_node.children_idx;
-                node.u.test.children_count = raw_node.children_count;
+                ghm_node.u.test.children_idx = raw_node.children_idx;
+                ghm_node.u.test.children_count = raw_node.children_count;
             }
             // TODO: Test does not deal with overflow
-            if (node.u.test.children_idx + node.u.test.children_count > table.sections[0].values_count) {
+            if (ghm_node.u.test.children_idx + ghm_node.u.test.children_count > table.sections[0].values_count) {
                 return false;
             }
         } else {
-            static char letters1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
-            static char letters4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
+            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
+            static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
-            node.type = DecisionNode::Type::Leaf;
-            snprintf(node.u.leaf.ghm, sizeof(node.u.leaf.ghm), "%02u%c%02u%c",
-                     raw_node.params[1], letters1[(raw_node.children_idx / 1000) % 10],
-                     (raw_node.children_idx / 10) % 100, letters4[raw_node.children_idx % 10]);
-            if (strchr(node.u.leaf.ghm, ' ')) {
+            ghm_node.type = GhmDecisionNode::Type::Ghm;
+            snprintf(ghm_node.u.ghm.code.str, sizeof(ghm_node.u.ghm.code.str), "%02u%c%02u%c",
+                     raw_node.params[1], chars1[(raw_node.children_idx / 1000) % 10],
+                     (raw_node.children_idx / 10) % 100, chars4[raw_node.children_idx % 10]);
+            if (strchr(ghm_node.u.ghm.code.str, ' ')) {
                 return false;
             }
-            node.u.leaf.error = raw_node.params[0];
+            ghm_node.u.ghm.error = raw_node.params[0];
         }
 
-        out_nodes->Append(node);
+        out_nodes->Append(ghm_node);
     }
 
 #undef FAIL_PARSE_IF
@@ -407,7 +408,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
     DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
 
     struct PackedProcedurePtr  {
-        char letter4;
+        char char4;
         uint16_t seq_phase;
 
         uint16_t section2_idx;
@@ -471,7 +472,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
             {
                 memcpy(proc.code.str, code123, 3);
                 snprintf(proc.code.str + 3, sizeof(proc.code.str) - 3, "%c%03u",
-                         (raw_proc_ptr.letter4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
+                         (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
                 proc.phase = raw_proc_ptr.seq_phase % 10;
             }
 
@@ -498,59 +499,6 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 #undef FAIL_PARSE_IF
 
     out_proc_guard.disable();
-    return true;
-}
-
-bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo::Section &section,
-                          DynamicArray<ValueRangeCell<2>> *out_cells)
-{
-    DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
-
-    struct PackedCell {
-        uint16_t var1_min;
-        uint16_t var1_max;
-        uint16_t var2_min;
-        uint16_t var2_max;
-        uint16_t value;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
-
-    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
-
-    for (size_t i = 0; i < section.values_count; i++) {
-        ValueRangeCell<2> cell = {};
-
-        PackedCell raw_cell;
-        memcpy(&raw_cell, file_data + section.raw_offset + i * sizeof(PackedCell),
-               sizeof(PackedCell));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_cell.var1_min);
-        ReverseBytes(&raw_cell.var1_max);
-        ReverseBytes(&raw_cell.var2_min);
-        ReverseBytes(&raw_cell.var2_max);
-        ReverseBytes(&raw_cell.value);
-#endif
-
-        cell.limits[0].min = raw_cell.var1_min;
-        cell.limits[0].max = raw_cell.var1_max + 1;
-        cell.limits[1].min = raw_cell.var2_min;
-        cell.limits[1].max = raw_cell.var2_max + 1;
-        cell.value = raw_cell.value;
-
-        out_cells->Append(cell);
-    }
-
-#undef FAIL_PARSE_IF
-
-    out_cells_guard.disable();
     return true;
 }
 
@@ -665,5 +613,58 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 #undef FAIL_PARSE_IF
 
     out_ghm_roots_guard.disable();
+    return true;
+}
+
+bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
+                          const TableInfo::Section &section,
+                          DynamicArray<ValueRangeCell<2>> *out_cells)
+{
+    DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
+
+    struct PackedCell {
+        uint16_t var1_min;
+        uint16_t var1_max;
+        uint16_t var2_min;
+        uint16_t var2_max;
+        uint16_t value;
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
+
+    for (size_t i = 0; i < section.values_count; i++) {
+        ValueRangeCell<2> cell = {};
+
+        PackedCell raw_cell;
+        memcpy(&raw_cell, file_data + section.raw_offset + i * sizeof(PackedCell),
+               sizeof(PackedCell));
+#ifdef ARCH_LITTLE_ENDIAN
+        ReverseBytes(&raw_cell.var1_min);
+        ReverseBytes(&raw_cell.var1_max);
+        ReverseBytes(&raw_cell.var2_min);
+        ReverseBytes(&raw_cell.var2_max);
+        ReverseBytes(&raw_cell.value);
+#endif
+
+        cell.limits[0].min = raw_cell.var1_min;
+        cell.limits[0].max = raw_cell.var1_max + 1;
+        cell.limits[1].min = raw_cell.var2_min;
+        cell.limits[1].max = raw_cell.var2_max + 1;
+        cell.value = raw_cell.value;
+
+        out_cells->Append(cell);
+    }
+
+#undef FAIL_PARSE_IF
+
+    out_cells_guard.disable();
     return true;
 }
