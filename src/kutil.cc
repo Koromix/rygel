@@ -225,8 +225,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 {
     for (int i = 0; i < arg.repeat; i++) {
         switch (arg.type) {
-            case FmtArg::Type::String: {
-                append(arg.value.str);
+            case FmtArg::Type::StrRef: {
+                append(arg.value.str_ref);
             } break;
             case FmtArg::Type::Char: {
                 append(ArrayRef<const char>(&arg.value.ch, 1));

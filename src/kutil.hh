@@ -496,7 +496,7 @@ private:
 
 struct FmtArg {
     enum class Type {
-        String,
+        StrRef,
         Char,
         Bool,
         Integer,
@@ -512,7 +512,7 @@ struct FmtArg {
 
     Type type;
     union {
-        ArrayRef<const char> str;
+        ArrayRef<const char> str_ref;
         char ch;
         bool b;
         int64_t i;
@@ -532,8 +532,8 @@ struct FmtArg {
     int repeat = 1;
 
     FmtArg() = default;
-    FmtArg(const char *str) : type(Type::String) { value.str = MakeStrRef(str ? str : "(null)"); }
-    FmtArg(const ArrayRef<const char> str) : type(Type::String) { value.str = str; }
+    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
+    FmtArg(const ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
     FmtArg(char c) : type(Type::Char) { value.ch = c; }
     FmtArg(bool b) : type(Type::Bool) { value.b = b; }
     FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
