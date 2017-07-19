@@ -190,6 +190,8 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
             table.type = TableType::ProcedureInfo;
         } else if (!strncmp(raw_table_header.name, "RGHMINFO", sizeof(raw_table_header.name))) {
             table.type = TableType::GhmRootInfo;
+        } else if (!strncmp(raw_table_header.name, "GHSINFO ", sizeof(raw_table_header.name))) {
+            table.type = TableType::GhsDecisionTree;
         } else if (!strncmp(raw_table_header.name, "TABCOMBI", sizeof(raw_table_header.name))) {
             table.type = TableType::ChildbirthInfo;
         } else {
@@ -613,6 +615,121 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 #undef FAIL_PARSE_IF
 
     out_ghm_roots_guard.disable();
+    return true;
+}
+
+bool ParseGhsDecisionTable(const uint8_t *file_data, const char *filename,
+                           const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes)
+{
+    DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
+
+    struct PackedGhsNode {
+        uint8_t cmd;
+        uint16_t type_seq;
+        uint8_t low_duration_mode;
+        uint8_t function;
+        uint8_t params[2];
+        uint8_t skip_after_failure;
+        uint8_t valid_ghs;
+        struct { // 0 for public, 1 for private
+            uint16_t ghs_code;
+            uint16_t high_duration_treshold;
+            uint16_t low_duration_treshold;
+        } versions[2];
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(table.sections.len != 1);
+    FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
+
+    uint32_t previous_cmd_type_seq = 0;
+    size_t ghm_node_idx = SIZE_MAX;
+    size_t first_test_idx = SIZE_MAX;
+    for (size_t i = 0; i < table.sections[0].values_count; i++) {
+        PackedGhsNode raw_ghs_node;
+        memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
+                         i * sizeof(PackedGhsNode), sizeof(PackedGhsNode));
+#ifdef ARCH_LITTLE_ENDIAN
+        ReverseBytes(&raw_ghs_node.type_seq);
+        for (size_t j = 0; j < 2; j++) {
+            ReverseBytes(&raw_ghs_node.versions[j].ghs_code);
+            ReverseBytes(&raw_ghs_node.versions[j].high_duration_treshold);
+            ReverseBytes(&raw_ghs_node.versions[j].low_duration_treshold);
+        }
+#endif
+
+        uint32_t cmd_type_seq = (raw_ghs_node.cmd << 16) | raw_ghs_node.type_seq;
+        if (cmd_type_seq != previous_cmd_type_seq) {
+            previous_cmd_type_seq = cmd_type_seq;
+
+            FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
+            if (ghm_node_idx != SIZE_MAX) {
+                (*out_nodes)[ghm_node_idx].u.ghm.next_ghm_idx = out_nodes->len;
+            } else {
+                FAIL_PARSE_IF(i);
+            }
+            ghm_node_idx = out_nodes->len;
+
+            GhsDecisionNode ghm_node = {};
+            ghm_node.type = GhsDecisionNode::Type::Ghm;
+            {
+                static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
+                static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J',
+                                        'Z', 'T', '1', '2', '3', '4'};
+                snprintf(ghm_node.u.ghm.code.str, sizeof(ghm_node.u.ghm.code.str), "%02u%c%02u%c",
+                         raw_ghs_node.cmd, chars1[raw_ghs_node.type_seq / 10000 % 6],
+                         raw_ghs_node.type_seq / 100 % 100,
+                         chars4[raw_ghs_node.type_seq % 100 % 13]);
+            }
+            out_nodes->Append(ghm_node);
+        }
+
+        if (raw_ghs_node.function) {
+            if (first_test_idx == SIZE_MAX) {
+                first_test_idx = out_nodes->len;
+            }
+
+            GhsDecisionNode test_node = {};
+            test_node.type = GhsDecisionNode::Type::Test;
+            test_node.u.test.function = raw_ghs_node.function;
+            test_node.u.test.params[0] = raw_ghs_node.params[0];
+            test_node.u.test.params[1] = raw_ghs_node.params[1];
+            out_nodes->Append(test_node);
+        } else {
+            FAIL_PARSE_IF(!raw_ghs_node.valid_ghs);
+        }
+
+        if (raw_ghs_node.valid_ghs) {
+            for (size_t j = first_test_idx; j < out_nodes->len; j++) {
+                (*out_nodes)[j].u.test.fail_goto_idx = out_nodes->len + 1;
+            }
+            first_test_idx = SIZE_MAX;
+
+            GhsDecisionNode ghs_node = {};
+            ghs_node.type = GhsDecisionNode::Type::Ghs;
+            for (int j = 0; j < 2; j++) {
+                ghs_node.u.ghs[j].code.value = raw_ghs_node.versions[j].ghs_code;
+                ghs_node.u.ghs[j].high_duration_treshold =
+                    raw_ghs_node.versions[j].high_duration_treshold;
+                ghs_node.u.ghs[j].low_duration_treshold =
+                    raw_ghs_node.versions[j].low_duration_treshold;
+            }
+            out_nodes->Append(ghs_node);
+        }
+    }
+    FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
+    FAIL_PARSE_IF(ghm_node_idx + 1 == out_nodes->len);
+
+#undef FAIL_PARSE_IF
+
+    out_nodes_guard.disable();
     return true;
 }
 

@@ -139,6 +139,55 @@ static bool DumpGhmRootTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
+static bool DumpGhsTable(const uint8_t *file_data, const char *filename,
+                         const TableInfo &table_info)
+{
+    DynamicArray<GhsDecisionNode> ghs_nodes;
+    if (!ParseGhsDecisionTable(file_data, filename, table_info, &ghs_nodes))
+        return false;
+
+    PrintLn("    GHS nodes:");
+    // This code is simplistic and assumes that test failures always go back
+    // to a GHS (or nothing at all), which is necessarily true in ghsinfo.tab
+    // even though our representation can do more.
+    size_t test_until = SIZE_MAX;
+    int test_depth = 0;
+    for (size_t i = 0; i < ghs_nodes.len; i++) {
+        const GhsDecisionNode &node = ghs_nodes[i];
+
+        if (i == test_until) {
+            test_until = SIZE_MAX;
+            test_depth = 0;
+        }
+
+        switch (node.type) {
+            case GhsDecisionNode::Type::Ghm: {
+                PrintLn("      %1. GHM %2 [next %3]",
+                        i, node.u.ghm.code, node.u.ghm.next_ghm_idx);
+            } break;
+
+            case GhsDecisionNode::Type::Test: {
+                test_until = node.u.test.fail_goto_idx;
+                test_depth++;
+
+                PrintLn("      %1%2. Test %3(%4, %5) => %6",
+                        FmtArg("  ").Repeat(test_depth), i,
+                        node.u.test.function, node.u.test.params[0], node.u.test.params[1],
+                        node.u.test.fail_goto_idx);
+            } break;
+
+            case GhsDecisionNode::Type::Ghs: {
+                PrintLn("        %1%2. GHS %3 [duration = %4 to %5 days]",
+                        FmtArg("  ").Repeat(test_depth), i,
+                        node.u.ghs[0].code, node.u.ghs[0].low_duration_treshold,
+                        node.u.ghs[0].high_duration_treshold);
+            } break;
+        }
+    }
+
+    return true;
+}
+
 static bool DumpChildbirthTable(const uint8_t *file_data, const char *filename,
                                 const TableInfo &table_info)
 {
@@ -224,6 +273,9 @@ static bool DumpTable(const char *filename, bool detail = true)
                 } break;
                 case TableType::GhmRootInfo: {
                     DumpGhmRootTable(file_data, filename, table_info);
+                } break;
+                case TableType::GhsDecisionTree: {
+                    DumpGhsTable(file_data, filename, table_info);
                 } break;
                 case TableType::ChildbirthInfo: {
                     DumpChildbirthTable(file_data, filename, table_info);

@@ -8,6 +8,7 @@ enum class TableType {
     DiagnosticInfo,
     ProcedureInfo,
     GhmRootInfo,
+    GhsDecisionTree,
     ChildbirthInfo
 };
 static const char *const TableTypeNames[] = {
@@ -15,6 +16,7 @@ static const char *const TableTypeNames[] = {
     "Diagnostic Table",
     "Procedure Table",
     "GHM Root Table",
+    "GHS Decision Tree",
     "Childbirth Table"
 };
 
@@ -131,6 +133,34 @@ struct GhmRootInfo {
     uint8_t cma_exclusion_mask;
 };
 
+struct GhsDecisionNode {
+    enum class Type {
+        Ghm,
+        Test,
+        Ghs
+    };
+
+    Type type;
+    union {
+        struct {
+            GhmCode code;
+            size_t next_ghm_idx;
+        } ghm;
+
+        struct {
+            int8_t function;
+            uint8_t params[2];
+            size_t fail_goto_idx;
+        } test;
+
+        struct {
+            GhsCode code;
+            int16_t high_duration_treshold;
+            int16_t low_duration_treshold;
+        } ghs[2]; // 0 for public, 1 for private
+    } u;
+};
+
 struct GhmDecisionNode {
     enum class Type {
         Test,
@@ -163,6 +193,8 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                          const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);
 bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
                        const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots);
+bool ParseGhsDecisionTable(const uint8_t *file_data, const char *filename,
+                           const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes);
 bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
                           const TableInfo::Section &section,
                           DynamicArray<ValueRangeCell<2>> *out_cells);
