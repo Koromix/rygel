@@ -27,7 +27,7 @@ static inline void ReverseBytes(uint64_t *u)
          ((*u & 0xFF00000000000000) >> 56);
 }
 
-static Date ParseDate1980(uint16_t days)
+static Date ConvertDate1980(uint16_t days)
 {
     static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
@@ -179,8 +179,8 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
         FAIL_PARSE_IF(!table.build_date.IsValid());
         sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
                &table.version[0], &table.version[1]);
-        table.limit_dates[0] = ParseDate1980(raw_table_ptr.date_range[0]);
-        table.limit_dates[1] = ParseDate1980(raw_table_ptr.date_range[1]);
+        table.limit_dates[0] = ConvertDate1980(raw_table_ptr.date_range[0]);
+        table.limit_dates[1] = ConvertDate1980(raw_table_ptr.date_range[1]);
         FAIL_PARSE_IF(table.limit_dates[1] < table.limit_dates[0]);
         if (!strncmp(raw_table_header.name, "ARBREDEC", sizeof(raw_table_header.name))) {
             table.type = TableType::GhmDecisionTree;
@@ -480,11 +480,11 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 
             // CCAM information and lists
             {
-                proc.limit_dates[0] = ParseDate1980(raw_proc_ptr.date_min);
+                proc.limit_dates[0] = ConvertDate1980(raw_proc_ptr.date_min);
                 if (raw_proc_ptr.date_max < UINT16_MAX) {
-                    proc.limit_dates[1] = ParseDate1980(raw_proc_ptr.date_max + 1);
+                    proc.limit_dates[1] = ConvertDate1980(raw_proc_ptr.date_max + 1);
                 } else {
-                    proc.limit_dates[1] = ParseDate1980(UINT16_MAX);
+                    proc.limit_dates[1] = ConvertDate1980(UINT16_MAX);
                 }
 
                 const uint8_t *proc_data = file_data + table.sections[2].raw_offset +
