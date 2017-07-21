@@ -12,7 +12,9 @@ enum class TableType {
     GhmRootTable,
     ChildbirthTable,
 
-    GhsDecisionTree
+    GhsDecisionTree,
+    AuthorizationTable,
+    DiagnosisProcedureTable
 };
 static const char *const TableTypeNames[] = {
     "Unknown Table",
@@ -23,7 +25,9 @@ static const char *const TableTypeNames[] = {
     "GHM Root Table",
     "Childbirth Table",
 
-    "GHS Decision Tree"
+    "GHS Decision Tree",
+    "Unit Reference Table",
+    "Diagnosis Procedure Table"
 };
 
 union GhmRootCode {
@@ -191,6 +195,27 @@ struct GhsDecisionNode {
     } u;
 };
 
+enum class AuthorizationType: uint8_t {
+    Facility,
+    Unit,
+    Bed
+};
+static const char *const AuthorizationTypeNames[] = {
+    "Facility",
+    "Unit",
+    "Bed"
+};
+struct AuthorizationInfo {
+    AuthorizationType type;
+    int8_t code;
+    int8_t function;
+};
+
+struct DiagnosisProcedurePair {
+    DiagnosisCode diag_code;
+    ProcedureCode proc_code;
+};
+
 bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
                        const char *filename, DynamicArray<TableInfo> *out_tables);
 
@@ -208,3 +233,8 @@ bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
 
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                            const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes);
+bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
+                             const TableInfo &table, DynamicArray<AuthorizationInfo> *out_units);
+bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename,
+                                  const TableInfo::Section &section,
+                                  DynamicArray<DiagnosisProcedurePair> *out_pairs);

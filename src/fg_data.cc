@@ -795,3 +795,111 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
     out_nodes_guard.disable();
     return true;
 }
+
+bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
+                             const TableInfo &table, DynamicArray<AuthorizationInfo> *out_auths)
+{
+    DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
+
+    struct PackedAuthorization {
+        uint8_t code;
+        uint8_t function;
+        uint8_t global;
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(table.sections.len != 2);
+    FAIL_PARSE_IF(table.sections[0].value_len != 3 || table.sections[0].value_len != 3);
+
+    for (int i = 0; i < 2; i++) {
+        for (size_t j = 0; j < table.sections[i].values_count; j++) {
+            AuthorizationInfo auth = {};
+
+            PackedAuthorization raw_auth;
+            memcpy(&raw_auth, file_data + table.sections[i].raw_offset +
+                                          j * sizeof(PackedAuthorization),
+                   sizeof(PackedAuthorization));
+
+            if (i == 0) {
+                auth.type = AuthorizationType::Bed;
+            } else if (!raw_auth.global) {
+                auth.type = AuthorizationType::Unit;
+            } else {
+                auth.type = AuthorizationType::Facility;
+            }
+            auth.code = raw_auth.code;
+            auth.function = raw_auth.function;
+
+            out_auths->Append(auth);
+        }
+    }
+
+#undef FAIL_PARSE_IF
+
+    out_auths_guard.disable();
+    return true;
+}
+
+bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename,
+                                  const TableInfo::Section &section,
+                                  DynamicArray<DiagnosisProcedurePair> *out_pairs)
+{
+    DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
+
+    struct PackedPair {
+        uint16_t diag_code123;
+        uint16_t diag_code456;
+        uint16_t proc_code123;
+        uint16_t proc_code456;
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(section.value_len != sizeof(PackedPair));
+
+    for (size_t i = 0; i < section.values_count; i++) {
+        DiagnosisProcedurePair pair = {};
+
+        PackedPair raw_pair;
+        memcpy(&raw_pair, file_data + section.raw_offset + i * sizeof(PackedPair),
+               sizeof(PackedPair));
+#ifdef ARCH_LITTLE_ENDIAN
+        ReverseBytes(&raw_pair.diag_code123);
+        ReverseBytes(&raw_pair.diag_code456);
+        ReverseBytes(&raw_pair.proc_code123);
+        ReverseBytes(&raw_pair.proc_code456);
+#endif
+
+        pair.diag_code = ConvertDiagnosticCode(raw_pair.diag_code123, raw_pair.diag_code456);
+        {
+            uint16_t code123_remain = raw_pair.proc_code123;
+            for (int i = 0; i < 3; i++) {
+                pair.proc_code.str[2 - i] = (code123_remain % 26) + 65;
+                code123_remain /= 26;
+            }
+            snprintf(pair.proc_code.str + 3, sizeof(pair.proc_code.str) - 3, "%c%03u",
+                     (raw_pair.proc_code456 / 1000 % 26) + 65,
+                     raw_pair.proc_code456 % 1000);
+        }
+
+        out_pairs->Append(pair);
+    }
+
+#undef FAIL_PARSE_IF
+
+    out_pairs_guard.disable();
+    return true;
+}

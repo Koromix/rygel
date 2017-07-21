@@ -234,6 +234,42 @@ static bool DumpChildbirthTables(const uint8_t *file_data, const char *filename,
     return true;
 }
 
+static bool DumpAuthorizationTable(const uint8_t *file_data, const char *filename,
+                                   const TableInfo &table_info)
+{
+    DynamicArray<AuthorizationInfo> authorizations;
+    if (!ParseAuthorizationTable(file_data, filename, table_info, &authorizations))
+        return false;
+
+    PrintLn("    Authorization Types:");
+    for (const AuthorizationInfo &auth: authorizations) {
+        PrintLn("      %1 [%2] => Function %3",
+                auth.code, AuthorizationTypeNames[(int)auth.type], auth.function);
+    }
+
+    return true;
+}
+
+static bool DumpDiagnosisProcedureTables(const uint8_t *file_data, const char *filename,
+                                         const TableInfo &table_info)
+{
+    DynamicArray<DiagnosisProcedurePair> diag_proc_pairs[2];
+    for (size_t i = 0; i < CountOf(diag_proc_pairs); i++) {
+        if (!ParseDiagnosisProcedureTable(file_data, filename, table_info.sections[i], &diag_proc_pairs[i]))
+            return false;
+    }
+
+    for (size_t i = 0; i < CountOf(diag_proc_pairs); i++) {
+        PrintLn("    List %1:", i + 1);
+        for (const DiagnosisProcedurePair &pair: diag_proc_pairs[i]) {
+            PrintLn("      %1 -- %2", pair.diag_code, pair.proc_code);
+        }
+        PrintLn();
+    }
+
+    return true;
+}
+
 static bool DumpTable(const char *filename, bool detail = true)
 {
     uint8_t *file_data;
@@ -281,6 +317,12 @@ static bool DumpTable(const char *filename, bool detail = true)
 
                 case TableType::GhsDecisionTree: {
                     DumpGhsTable(file_data, filename, table_info);
+                } break;
+                case TableType::AuthorizationTable: {
+                    DumpAuthorizationTable(file_data, filename, table_info);
+                } break;
+                case TableType::DiagnosisProcedureTable: {
+                    DumpDiagnosisProcedureTables(file_data, filename, table_info);
                 } break;
 
                 // Ignored types
