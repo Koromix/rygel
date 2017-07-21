@@ -715,6 +715,7 @@ static inline constexpr const char *SimplifyLogContext(const char *ctx)
         LogError(__VA_ARGS__); \
         abort(); \
     } while (false)
+
 #define Assert(Cond) \
     do { \
         if (!(Cond)) { \
@@ -729,6 +730,8 @@ static inline constexpr const char *SimplifyLogContext(const char *ctx)
             (void)(Cond); \
         } while (false)
 #endif
+#define StaticAssert(Cond) \
+    static_assert((Cond), STRINGIFY(Cond))
 
 // ------------------------------------------------------------------------
 // Collections

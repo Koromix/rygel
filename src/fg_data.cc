@@ -111,6 +111,8 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
         uint32_t raw_offset;
     } __attribute__((__packed__));
 
+    StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
+
     // FIXME: What about other filename uses in other functions?
     if (!filename) {
         filename = "?";
