@@ -49,12 +49,12 @@ static bool DumpDecisionTree(const uint8_t *file_data, const char *filename,
 static bool DumpDiagnosticTable(const uint8_t *file_data, const char *filename,
                                 const TableInfo &table_info)
 {
-    DynamicArray<DiagnosticInfo> diagnostics;
+    DynamicArray<DiagnosisInfo> diagnostics;
     if (!ParseDiagnosticTable(file_data, filename, table_info, &diagnostics))
         return false;
 
     PrintLn("    Diagnostics:");
-    for (const DiagnosticInfo &diag: diagnostics) {
+    for (const DiagnosisInfo &diag: diagnostics) {
         PrintLn("      %1:", diag.code);
 
         Print("        Male:");
@@ -143,7 +143,7 @@ static bool DumpGhsTable(const uint8_t *file_data, const char *filename,
                          const TableInfo &table_info)
 {
     DynamicArray<GhsDecisionNode> ghs_nodes;
-    if (!ParseGhsDecisionTable(file_data, filename, table_info, &ghs_nodes))
+    if (!ParseGhsDecisionTree(file_data, filename, table_info, &ghs_nodes))
         return false;
 
     PrintLn("    GHS nodes:");
@@ -188,8 +188,8 @@ static bool DumpGhsTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-static bool DumpChildbirthTable(const uint8_t *file_data, const char *filename,
-                                const TableInfo &table_info)
+static bool DumpChildbirthTables(const uint8_t *file_data, const char *filename,
+                                 const TableInfo &table_info)
 {
     // FIXME: Make a dedicated childbirth parse function
     if (table_info.sections.len != 4) {
@@ -250,6 +250,7 @@ static bool DumpTable(const char *filename, bool detail = true)
     for (const TableInfo &table_info: tables) {
         PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table_info.type], table_info.build_date);
         PrintLn("    Header:");
+        PrintLn("      Raw Type: %1", table_info.raw_type);
         PrintLn("      Version: %1.%2", table_info.version[0], table_info.version[1]);
         PrintLn("      Validity: %1 to %2", table_info.limit_dates[0], table_info.limit_dates[1]);
         PrintLn("      Sections:");
@@ -265,21 +266,25 @@ static bool DumpTable(const char *filename, bool detail = true)
                 case TableType::GhmDecisionTree: {
                     DumpDecisionTree(file_data, filename, table_info);
                 } break;
-                case TableType::DiagnosticInfo: {
+                case TableType::DiagnosisTable: {
                     DumpDiagnosticTable(file_data, filename, table_info);
                 } break;
-                case TableType::ProcedureInfo: {
+                case TableType::ProcedureTable: {
                     DumpProcedureTable(file_data, filename, table_info);
                 } break;
-                case TableType::GhmRootInfo: {
+                case TableType::GhmRootTable: {
                     DumpGhmRootTable(file_data, filename, table_info);
                 } break;
                 case TableType::GhsDecisionTree: {
                     DumpGhsTable(file_data, filename, table_info);
                 } break;
-                case TableType::ChildbirthInfo: {
-                    DumpChildbirthTable(file_data, filename, table_info);
+                case TableType::ChildbirthTable: {
+                    DumpChildbirthTables(file_data, filename, table_info);
                 } break;
+
+                // Ignored types
+                case TableType::UnknownTable:
+                    break;
             }
             PrintLn();
         }

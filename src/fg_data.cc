@@ -200,22 +200,29 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
         table.limit_dates[0] = ConvertDate1980(raw_table_ptr.date_range[0]);
         table.limit_dates[1] = ConvertDate1980(raw_table_ptr.date_range[1]);
         FAIL_PARSE_IF(table.limit_dates[1] < table.limit_dates[0]);
-        if (!strncmp(raw_table_header.name, "ARBREDEC", sizeof(raw_table_header.name))) {
+
+        // Table type
+        strncpy(table.raw_type, raw_table_header.name, sizeof(raw_table_header.name));
+        table.raw_type[sizeof(table.raw_type) - 1] = '\0';
+        table.raw_type[strcspn(table.raw_type, " ")] = '\0';
+        if (!strcmp(table.raw_type, "ARBREDEC")) {
             table.type = TableType::GhmDecisionTree;
-        } else if (!strncmp(raw_table_header.name, "DIAG10CR", sizeof(raw_table_header.name))) {
-            table.type = TableType::DiagnosticInfo;
-        } else if (!strncmp(raw_table_header.name, "CCAMCARA", sizeof(raw_table_header.name))) {
-            table.type = TableType::ProcedureInfo;
-        } else if (!strncmp(raw_table_header.name, "RGHMINFO", sizeof(raw_table_header.name))) {
-            table.type = TableType::GhmRootInfo;
-        } else if (!strncmp(raw_table_header.name, "GHSINFO ", sizeof(raw_table_header.name))) {
+        } else if (!strcmp(table.raw_type, "DIAG10CR")) {
+            table.type = TableType::DiagnosisTable;
+        } else if (!strcmp(table.raw_type, "CCAMCARA")) {
+            table.type = TableType::ProcedureTable;
+        } else if (!strcmp(table.raw_type, "RGHMINFO")) {
+            table.type = TableType::GhmRootTable;
+        } else if (!strcmp(table.raw_type, "GHSINFO")) {
             table.type = TableType::GhsDecisionTree;
-        } else if (!strncmp(raw_table_header.name, "TABCOMBI", sizeof(raw_table_header.name))) {
-            table.type = TableType::ChildbirthInfo;
+        } else if (!strcmp(table.raw_type, "TABCOMBI")) {
+            table.type = TableType::ChildbirthTable;
+        } else if (!strcmp(table.raw_type, "AUTOREFS")) {
+            table.type = TableType::AuthorizationTable;
+        } else if (!strcmp(table.raw_type, "SRCDGACT")) {
+            table.type = TableType::DiagnosisProcedureTable;
         } else {
-            LogError("Unknown table type in '%1': '%2'", filename,
-                     MakeStrRef(raw_table_header.name, sizeof(raw_table_header.name)));
-            return false;
+            table.type = TableType::UnknownTable;
         }
 
         // Parse table sections
@@ -313,7 +320,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, DynamicArray<DiagnosticInfo> *out_diags)
+                          const TableInfo &table, DynamicArray<DiagnosisInfo> *out_diags)
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
 
@@ -338,9 +345,9 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosticPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > sizeof(DiagnosticInfo::sex[0].values));
+                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::sex[0].values));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
-                  table.sections[3].value_len > sizeof(DiagnosticInfo::warnings) * 8);
+                  table.sections[3].value_len > sizeof(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(!table.sections[4].value_len);
 
     size_t block_start = table.sections[1].raw_offset;
@@ -356,7 +363,7 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
 
         for (size_t block_offset = block_start; block_offset < block_end;
              block_offset += sizeof(PackedDiagnosticPtr)) {
-            DiagnosticInfo diag = {};
+            DiagnosisInfo diag = {};
 
             PackedDiagnosticPtr raw_diag_ptr;
             {
