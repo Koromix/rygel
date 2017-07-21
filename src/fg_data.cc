@@ -61,6 +61,24 @@ static Date ConvertDate1980(uint16_t days)
     return date;
 }
 
+static DiagnosisCode ConvertDiagnosticCode(uint16_t code123, uint16_t code456)
+{
+    DiagnosisCode code = {};
+
+    snprintf(code.str, sizeof(code.str), "%c%02d", code123 / 100 + 65, code456 % 100);
+
+    static const char code456_chars[] = " 0123456789+";
+    code456 %= 1584;
+    code.str[3] = code456_chars[code456 / 132]; code456 %= 132;
+    code.str[4] = code456_chars[code456 / 11]; code456 %= 11;
+    code.str[5] = code456_chars[code456];
+    for (size_t i = 5; i >= 3 && code.str[i] == ' '; i--) {
+        code.str[i] = '\0';
+    }
+
+    return code;
+}
+
 // TODO: Be careful with overflow in offset and length checks
 bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
                        const char *filename, DynamicArray<TableInfo> *out_tables)
@@ -336,9 +354,6 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
             block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedDiagnosticPtr);
         }
 
-        char code123[4];
-        snprintf(code123, sizeof(code123), "%c%02d", root_idx / 100 + 65, root_idx % 100);
-
         for (size_t block_offset = block_start; block_offset < block_end;
              block_offset += sizeof(PackedDiagnosticPtr)) {
             DiagnosticInfo diag = {};
@@ -358,19 +373,7 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                 FAIL_PARSE_IF(raw_diag_ptr.section4_idx >= table.sections[4].values_count);
             }
 
-            // CIM-10 code
-            {
-                memcpy(diag.code.str, code123, 3);
-
-                static const char code456_chars[] = " 0123456789+";
-                uint16_t code456_remain = raw_diag_ptr.code456 % 1584;
-                diag.code.str[3] = code456_chars[code456_remain / 132]; code456_remain %= 132;
-                diag.code.str[4] = code456_chars[code456_remain / 11]; code456_remain %= 11;
-                diag.code.str[5] = code456_chars[code456_remain];
-                for (size_t i = 5; i >= 3 && diag.code.str[i] == ' '; i--) {
-                    diag.code.str[i] = '\0';
-                }
-            }
+            diag.code = ConvertDiagnosticCode(root_idx, raw_diag_ptr.code456);
 
             // Flags and warnings
             {
