@@ -628,7 +628,60 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseGhsDecisionTable(const uint8_t *file_data, const char *filename,
+bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
+                          const TableInfo::Section &section,
+                          DynamicArray<ValueRangeCell<2>> *out_cells)
+{
+    DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
+
+    struct PackedCell {
+        uint16_t var1_min;
+        uint16_t var1_max;
+        uint16_t var2_min;
+        uint16_t var2_max;
+        uint16_t value;
+    } __attribute__((__packed__));
+
+#define FAIL_PARSE_IF(Cond) \
+        do { \
+            if (Cond) { \
+                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                return false; \
+            } \
+        } while (false)
+
+    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
+
+    for (size_t i = 0; i < section.values_count; i++) {
+        ValueRangeCell<2> cell = {};
+
+        PackedCell raw_cell;
+        memcpy(&raw_cell, file_data + section.raw_offset + i * sizeof(PackedCell),
+               sizeof(PackedCell));
+#ifdef ARCH_LITTLE_ENDIAN
+        ReverseBytes(&raw_cell.var1_min);
+        ReverseBytes(&raw_cell.var1_max);
+        ReverseBytes(&raw_cell.var2_min);
+        ReverseBytes(&raw_cell.var2_max);
+        ReverseBytes(&raw_cell.value);
+#endif
+
+        cell.limits[0].min = raw_cell.var1_min;
+        cell.limits[0].max = raw_cell.var1_max + 1;
+        cell.limits[1].min = raw_cell.var2_min;
+        cell.limits[1].max = raw_cell.var2_max + 1;
+        cell.value = raw_cell.value;
+
+        out_cells->Append(cell);
+    }
+
+#undef FAIL_PARSE_IF
+
+    out_cells_guard.disable();
+    return true;
+}
+
+bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                            const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes)
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
@@ -740,58 +793,5 @@ bool ParseGhsDecisionTable(const uint8_t *file_data, const char *filename,
 #undef FAIL_PARSE_IF
 
     out_nodes_guard.disable();
-    return true;
-}
-
-bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo::Section &section,
-                          DynamicArray<ValueRangeCell<2>> *out_cells)
-{
-    DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
-
-    struct PackedCell {
-        uint16_t var1_min;
-        uint16_t var1_max;
-        uint16_t var2_min;
-        uint16_t var2_max;
-        uint16_t value;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
-
-    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
-
-    for (size_t i = 0; i < section.values_count; i++) {
-        ValueRangeCell<2> cell = {};
-
-        PackedCell raw_cell;
-        memcpy(&raw_cell, file_data + section.raw_offset + i * sizeof(PackedCell),
-               sizeof(PackedCell));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_cell.var1_min);
-        ReverseBytes(&raw_cell.var1_max);
-        ReverseBytes(&raw_cell.var2_min);
-        ReverseBytes(&raw_cell.var2_max);
-        ReverseBytes(&raw_cell.value);
-#endif
-
-        cell.limits[0].min = raw_cell.var1_min;
-        cell.limits[0].max = raw_cell.var1_max + 1;
-        cell.limits[1].min = raw_cell.var2_min;
-        cell.limits[1].max = raw_cell.var2_max + 1;
-        cell.value = raw_cell.value;
-
-        out_cells->Append(cell);
-    }
-
-#undef FAIL_PARSE_IF
-
-    out_cells_guard.disable();
     return true;
 }

@@ -275,11 +275,12 @@ static bool DumpTable(const char *filename, bool detail = true)
                 case TableType::GhmRootTable: {
                     DumpGhmRootTable(file_data, filename, table_info);
                 } break;
-                case TableType::GhsDecisionTree: {
-                    DumpGhsTable(file_data, filename, table_info);
-                } break;
                 case TableType::ChildbirthTable: {
                     DumpChildbirthTables(file_data, filename, table_info);
+                } break;
+
+                case TableType::GhsDecisionTree: {
+                    DumpGhsTable(file_data, filename, table_info);
                 } break;
 
                 // Ignored types
