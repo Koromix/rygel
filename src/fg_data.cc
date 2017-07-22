@@ -61,11 +61,11 @@ static Date ConvertDate1980(uint16_t days)
     return date;
 }
 
-static DiagnosisCode ConvertDiagnosticCode(uint16_t code123, uint16_t code456)
+static DiagnosisCode ConvertDiagnosisCode(uint16_t code123, uint16_t code456)
 {
     DiagnosisCode code = {};
 
-    snprintf(code.str, sizeof(code.str), "%c%02d", code123 / 100 + 65, code456 % 100);
+    snprintf(code.str, sizeof(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
 
     static const char code456_chars[] = " 0123456789+";
     code456 %= 1584;
@@ -382,7 +382,7 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                 FAIL_PARSE_IF(raw_diag_ptr.section4_idx >= table.sections[4].values_count);
             }
 
-            diag.code = ConvertDiagnosticCode(root_idx, raw_diag_ptr.code456);
+            diag.code = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
 
             // Flags and warnings
             {
@@ -885,7 +885,7 @@ bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename
         ReverseBytes(&raw_pair.proc_code456);
 #endif
 
-        pair.diag_code = ConvertDiagnosticCode(raw_pair.diag_code123, raw_pair.diag_code456);
+        pair.diag_code = ConvertDiagnosisCode(raw_pair.diag_code123, raw_pair.diag_code456);
         {
             uint16_t code123_remain = raw_pair.proc_code123;
             for (int i = 0; i < 3; i++) {
