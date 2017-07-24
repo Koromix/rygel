@@ -1,5 +1,6 @@
 #include "kutil.hh"
-#include "fg_data.hh"
+#include "fg_table.hh"
+#include "fg_classifier.hh"
 
 static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                              size_t node_idx, int depth)
@@ -34,10 +35,10 @@ static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
 }
 
 static bool DumpDecisionTree(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table_info)
+                             const TableInfo &table)
 {
     DynamicArray<GhmDecisionNode> ghm_nodes;
-    if (!ParseGhmDecisionTree(file_data, filename, table_info, &ghm_nodes))
+    if (!ParseGhmDecisionTree(file_data, filename, table, &ghm_nodes))
         return false;
 
     PrintLn("    Decision Tree:");
@@ -46,15 +47,15 @@ static bool DumpDecisionTree(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-static bool DumpDiagnosticTable(const uint8_t *file_data, const char *filename,
-                                const TableInfo &table_info)
+static bool DumpDiagnosisTable(const uint8_t *file_data, const char *filename,
+                               const TableInfo &table)
 {
-    DynamicArray<DiagnosisInfo> diagnostics;
-    if (!ParseDiagnosticTable(file_data, filename, table_info, &diagnostics))
+    DynamicArray<DiagnosisInfo> diagnosess;
+    if (!ParseDiagnosisTable(file_data, filename, table, &diagnosess))
         return false;
 
-    PrintLn("    Diagnostics:");
-    for (const DiagnosisInfo &diag: diagnostics) {
+    PrintLn("    Diagnoses:");
+    for (const DiagnosisInfo &diag: diagnosess) {
         PrintLn("      %1:", diag.code);
 
         Print("        Male:");
@@ -77,10 +78,10 @@ static bool DumpDiagnosticTable(const uint8_t *file_data, const char *filename,
 }
 
 static bool DumpProcedureTable(const uint8_t *file_data, const char *filename,
-                               const TableInfo &table_info)
+                               const TableInfo &table)
 {
     DynamicArray<ProcedureInfo> procedures;
-    if (!ParseProcedureTable(file_data, filename, table_info, &procedures))
+    if (!ParseProcedureTable(file_data, filename, table, &procedures))
         return false;
 
     PrintLn("    Procedures:");
@@ -99,10 +100,10 @@ static bool DumpProcedureTable(const uint8_t *file_data, const char *filename,
 }
 
 static bool DumpGhmRootTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table_info)
+                             const TableInfo &table)
 {
     DynamicArray<GhmRootInfo> ghm_roots;
-    if (!ParseGhmRootTable(file_data, filename, table_info, &ghm_roots))
+    if (!ParseGhmRootTable(file_data, filename, table, &ghm_roots))
         return false;
 
     PrintLn("    GHM roots:");
@@ -140,10 +141,10 @@ static bool DumpGhmRootTable(const uint8_t *file_data, const char *filename,
 }
 
 static bool DumpGhsTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table_info)
+                         const TableInfo &table)
 {
     DynamicArray<GhsDecisionNode> ghs_nodes;
-    if (!ParseGhsDecisionTree(file_data, filename, table_info, &ghs_nodes))
+    if (!ParseGhsDecisionTree(file_data, filename, table, &ghs_nodes))
         return false;
 
     PrintLn("    GHS nodes:");
@@ -189,20 +190,20 @@ static bool DumpGhsTable(const uint8_t *file_data, const char *filename,
 }
 
 static bool DumpChildbirthTables(const uint8_t *file_data, const char *filename,
-                                 const TableInfo &table_info)
+                                 const TableInfo &table)
 {
     // FIXME: Make a dedicated childbirth parse function
-    if (table_info.sections.len != 4) {
+    if (table.sections.len != 4) {
         // TODO: Error message
         return false;
     }
 
     DynamicArray<ValueRangeCell<2>> gnn_table;
     DynamicArray<ValueRangeCell<2>> cma_tables[3];
-    if (!ParseValueRangeTable(file_data, filename, table_info.sections[0], &gnn_table))
+    if (!ParseValueRangeTable(file_data, filename, table.sections[0], &gnn_table))
         return false;
     for (size_t i = 0; i < CountOf(cma_tables); i++) {
-        if (!ParseValueRangeTable(file_data, filename, table_info.sections[i + 1], &cma_tables[i]))
+        if (!ParseValueRangeTable(file_data, filename, table.sections[i + 1], &cma_tables[i]))
             return false;
     }
 
@@ -235,10 +236,10 @@ static bool DumpChildbirthTables(const uint8_t *file_data, const char *filename,
 }
 
 static bool DumpAuthorizationTable(const uint8_t *file_data, const char *filename,
-                                   const TableInfo &table_info)
+                                   const TableInfo &table)
 {
     DynamicArray<AuthorizationInfo> authorizations;
-    if (!ParseAuthorizationTable(file_data, filename, table_info, &authorizations))
+    if (!ParseAuthorizationTable(file_data, filename, table, &authorizations))
         return false;
 
     PrintLn("    Authorization Types:");
@@ -251,11 +252,11 @@ static bool DumpAuthorizationTable(const uint8_t *file_data, const char *filenam
 }
 
 static bool DumpDiagnosisProcedureTables(const uint8_t *file_data, const char *filename,
-                                         const TableInfo &table_info)
+                                         const TableInfo &table)
 {
     DynamicArray<DiagnosisProcedurePair> diag_proc_pairs[2];
     for (size_t i = 0; i < CountOf(diag_proc_pairs); i++) {
-        if (!ParseDiagnosisProcedureTable(file_data, filename, table_info.sections[i], &diag_proc_pairs[i]))
+        if (!ParseDiagnosisProcedureTable(file_data, filename, table.sections[i], &diag_proc_pairs[i]))
             return false;
     }
 
@@ -270,10 +271,10 @@ static bool DumpDiagnosisProcedureTables(const uint8_t *file_data, const char *f
     return true;
 }
 
-static bool DumpTable(const char *filename, bool detail = true)
+static bool FgDump(const char *filename, bool detail = true)
 {
     uint8_t *file_data;
-    uint64_t file_len;
+    size_t file_len;
     if (!ReadFile(nullptr, filename, Megabytes(20), &file_data, &file_len))
         return false;
     DEFER { Allocator::Release(nullptr, file_data, file_len); };
@@ -283,49 +284,48 @@ static bool DumpTable(const char *filename, bool detail = true)
         return false;
 
     PrintLn("%1", filename);
-    for (const TableInfo &table_info: tables) {
-        PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table_info.type], table_info.build_date);
+    for (const TableInfo &table: tables) {
+        PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table.type], table.build_date);
         PrintLn("    Header:");
-        PrintLn("      Raw Type: %1", table_info.raw_type);
-        PrintLn("      Version: %1.%2", table_info.version[0], table_info.version[1]);
-        PrintLn("      Validity: %1 to %2", table_info.limit_dates[0], table_info.limit_dates[1]);
+        PrintLn("      Raw Type: %1", table.raw_type);
+        PrintLn("      Version: %1.%2", table.version[0], table.version[1]);
+        PrintLn("      Validity: %1 to %2", table.limit_dates[0], table.limit_dates[1]);
         PrintLn("      Sections:");
-        for (size_t i = 0; i < table_info.sections.len; i++) {
+        for (size_t i = 0; i < table.sections.len; i++) {
             PrintLn("        %1. %2 -- %3 bytes -- %4 elements (%5 bytes / element)",
-                    i, FmtHex(table_info.sections[i].raw_offset), table_info.sections[i].raw_len,
-                    table_info.sections[i].values_count, table_info.sections[i].value_len);
+                    i, FmtHex(table.sections[i].raw_offset), table.sections[i].raw_len,
+                    table.sections[i].values_count, table.sections[i].value_len);
         }
         PrintLn();
 
         if (detail) {
-            switch (table_info.type) {
+            switch (table.type) {
                 case TableType::GhmDecisionTree: {
-                    DumpDecisionTree(file_data, filename, table_info);
+                    DumpDecisionTree(file_data, filename, table);
                 } break;
                 case TableType::DiagnosisTable: {
-                    DumpDiagnosticTable(file_data, filename, table_info);
+                    DumpDiagnosisTable(file_data, filename, table);
                 } break;
                 case TableType::ProcedureTable: {
-                    DumpProcedureTable(file_data, filename, table_info);
+                    DumpProcedureTable(file_data, filename, table);
                 } break;
                 case TableType::GhmRootTable: {
-                    DumpGhmRootTable(file_data, filename, table_info);
+                    DumpGhmRootTable(file_data, filename, table);
                 } break;
                 case TableType::ChildbirthTable: {
-                    DumpChildbirthTables(file_data, filename, table_info);
+                    DumpChildbirthTables(file_data, filename, table);
                 } break;
 
                 case TableType::GhsDecisionTree: {
-                    DumpGhsTable(file_data, filename, table_info);
+                    DumpGhsTable(file_data, filename, table);
                 } break;
                 case TableType::AuthorizationTable: {
-                    DumpAuthorizationTable(file_data, filename, table_info);
+                    DumpAuthorizationTable(file_data, filename, table);
                 } break;
                 case TableType::DiagnosisProcedureTable: {
-                    DumpDiagnosisProcedureTables(file_data, filename, table_info);
+                    DumpDiagnosisProcedureTables(file_data, filename, table);
                 } break;
 
-                // Ignored types
                 case TableType::UnknownTable:
                     break;
             }
@@ -338,47 +338,171 @@ static bool DumpTable(const char *filename, bool detail = true)
 
 int main(int argc, char **argv)
 {
-    const char *cmd;
-    if (argc < 2) {
-generic_usage:
-        Print(stderr,
+    static const char *const main_usage_str =
 R"(Usage: moya command [options]
 
 Commands:
-    fg_dump        Dump available classifier data tables
-    fg_pricing     Print GHS pricing tables
-    fg_run         Run classifier on patient data
-)");
+    fg_dump                  Dump available classifier data tables
+    fg_list                  Print diagnosis and procedure lists
+    fg_pricing               Print GHS pricing tables
+    fg_run                   Run classifier on patient data)";
+    static const char *const fg_dump_usage_str =
+R"(Usage: moya fg_dump [options] filename
+
+Options:
+    -h, --headers            Print only table headers)";
+    static const char *const fg_tables_usage_str =
+R"(Usage: moya fg_tables [options] filename
+
+Options:
+    -t, --table <filename>   Load table file or directory)";
+
+    if (argc < 2) {
+        PrintLn(stderr, "%1", main_usage_str);
         return 1;
     }
-    cmd = argv[1];
+
+    if (argc < 2) {
+        PrintLn(stderr, "%1", main_usage_str);
+        return 1;
+    }
 
 #define COMMAND(Cmd) \
         if (!(strcmp(cmd, STRINGIFY(Cmd))))
+#define REQUIRE_OPTION_VALUE(UsageStr) \
+        do { \
+            if (!opt_parser.ConsumeOptionValue()) { \
+                PrintLn(stderr, "Option '%1' needs an argument", opt_parser.current_option); \
+                PrintLn(stderr, "%1", (UsageStr)); \
+                return 1; \
+            } \
+        } while (false)
+
+    const char *cmd = argv[1];
+    OptionParser opt_parser(argc - 1, argv + 1);
 
     COMMAND(fg_dump) {
-        if (argc < 3) {
-            PrintLn(stderr, "Usage: moya fg_dump filename");
+        bool headers = false;
+        {
+            const char *opt;
+            while ((opt = opt_parser.ConsumeOption())) {
+                if (TestOption(opt, "-h", "--headers")) {
+                    headers = true;
+                } else if (TestOption(opt, "--help")) {
+                    PrintLn(stdout, "%1", fg_dump_usage_str);
+                    return 0;
+                } else {
+                    PrintLn(stderr, "Unknown option '%1'", opt);
+                    PrintLn(stderr, "%1", fg_dump_usage_str);
+                    return 1;
+                }
+            }
+        }
+
+        DynamicArray<const char *> filenames;
+        opt_parser.ConsumeNonOptions(&filenames);
+        if (!filenames.len) {
+            PrintLn(stderr, "No filename provided");
+            PrintLn(stderr, "%1", fg_dump_usage_str);
             return 1;
         }
 
         bool success = true;
-        for (int i = 2; i < argc; i++) {
-            success &= DumpTable(argv[i]);
+        for (const char *filename: filenames) {
+            success &= FgDump(filename, !headers);
         }
         return !success;
     }
+
+    COMMAND(fg_tables) {
+        Allocator temp_alloc;
+
+        DynamicArray<const char *> filenames;
+        bool verbose = false;
+        {
+            const char *opt;
+            while ((opt = opt_parser.ConsumeOption())) {
+                if (TestOption(opt, "-T", "--table-dir")) {
+                    REQUIRE_OPTION_VALUE(fg_tables_usage_str);
+
+                    // FIXME: Ugly copying?
+                    // FIXME: Avoid use of Fmt, make full path directly
+                    DynamicArray<FileInfo> files;
+                    if (EnumerateDirectory(opt_parser.current_value, "*.tab", temp_alloc,
+                                           &files, 1024) != EnumStatus::Done)
+                        return 1;
+                    for (const FileInfo &file: files) {
+                        if (file.type == FileType::File) {
+                            filenames.Append(Fmt(&temp_alloc, "%1/%2", opt_parser.current_value,
+                                                 file.name));
+                        }
+                    }
+                } else if (TestOption(opt, "-t", "--table-file")) {
+                    REQUIRE_OPTION_VALUE(fg_tables_usage_str);
+                    filenames.Append(opt_parser.current_value);
+                } else if (TestOption(opt, "-v", "--verbose")) {
+                    verbose = true;
+                } else {
+                    PrintLn(stderr, "Unknown option '%1'", opt);
+                    PrintLn(stderr, "%1", fg_tables_usage_str);
+                    return 1;
+                }
+            }
+        }
+        if (!filenames.len) {
+            PrintLn(stderr, "No filename provided");
+            PrintLn(stderr, "%1", fg_tables_usage_str);
+            return 1;
+        }
+
+        ClassifierStore classifier_store = {};
+        if (!LoadClassifierFiles(filenames, &classifier_store)) {
+            if (!classifier_store.sets.len)
+                return 1;
+            LogError("Load incomplete, some information may be inaccurate");
+        } else if (!classifier_store.sets.len) {
+            return 0;
+        }
+
+        for (const ClassifierSet &set: classifier_store.sets) {
+            PrintLn("%1 to %2:", set.limit_dates[0], set.limit_dates[1]);
+            for (const TableInfo *table: set.tables) {
+                if (!table)
+                    continue;
+
+                PrintLn("  %1: %2.%3",
+                        TableTypeNames[(int)table->type], table->version[0], table->version[1]);
+                if (verbose) {
+                    PrintLn("    Validity: %1 to %2",
+                            table->limit_dates[0], table->limit_dates[1]);
+                    PrintLn("    Build: %1", table->build_date);
+                }
+            }
+            PrintLn();
+        }
+
+        return 0;
+    }
+
+    COMMAND(fg_list) {
+        PrintLn(stderr, "Not implemented");
+        return 1;
+    }
+
     COMMAND(fg_pricing) {
         PrintLn(stderr, "Not implemented");
         return 1;
     }
+
     COMMAND(fg_run) {
         PrintLn(stderr, "Not implemented");
         return 1;
     }
 
+#undef REQUIRE_OPTION_VALUE
 #undef COMMAND
 
     PrintLn(stderr, "Unknown command '%1'", cmd);
-    goto generic_usage;
+    PrintLn(stderr, "%1", main_usage_str);
+    return 1;
 }

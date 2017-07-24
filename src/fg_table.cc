@@ -1,5 +1,5 @@
 #include "kutil.hh"
-#include "fg_data.hh"
+#include "fg_table.hh"
 
 static inline void ReverseBytes(uint16_t *u)
 {
@@ -80,7 +80,7 @@ static DiagnosisCode ConvertDiagnosisCode(uint16_t code123, uint16_t code456)
 }
 
 // TODO: Be careful with overflow in offset and length checks
-bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
+bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
                        const char *filename, DynamicArray<TableInfo> *out_tables)
 {
     DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
@@ -113,49 +113,45 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
 
     StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
 
-    // FIXME: What about other filename uses in other functions?
-    if (!filename) {
-        filename = "?";
-    }
-
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
 
-    PackedHeader1111 main_header;
-    PackedSection1111 main_section;
+    PackedHeader1111 raw_main_header;
+    PackedSection1111 raw_main_section;
     {
-        FAIL_PARSE_IF(file_len < sizeof(PackedHeader1111) + sizeof(PackedSection1111));
+        FAIL_PARSE_IF(file_data.len < sizeof(PackedHeader1111) + sizeof(PackedSection1111));
 
-        memcpy(&main_header, file_data, sizeof(PackedHeader1111));
-        FAIL_PARSE_IF(main_header.sections_count != 1);
+        memcpy(&raw_main_header, file_data.ptr, sizeof(PackedHeader1111));
+        FAIL_PARSE_IF(raw_main_header.sections_count != 1);
 
-        memcpy(&main_section, file_data + sizeof(PackedHeader1111), sizeof(PackedSection1111));
+        memcpy(&raw_main_section, file_data.ptr + sizeof(PackedHeader1111), sizeof(PackedSection1111));
 #ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&main_section.values_count);
-        ReverseBytes(&main_section.value_len);
-        ReverseBytes(&main_section.raw_len);
-        ReverseBytes(&main_section.raw_offset);
+        ReverseBytes(&raw_main_section.values_count);
+        ReverseBytes(&raw_main_section.value_len);
+        ReverseBytes(&raw_main_section.raw_len);
+        ReverseBytes(&raw_main_section.raw_offset);
 #endif
 
         int version = 0, revision = 0;
-        sscanf(main_header.version, "%2u%2u", &version, &revision);
+        sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
         FAIL_PARSE_IF(version < 11 || (version == 11 && revision < 10));
-        FAIL_PARSE_IF(main_section.value_len != sizeof(PackedTablePtr1111));
-        FAIL_PARSE_IF(file_len < sizeof(PackedHeader1111) +
-                                 main_section.values_count * sizeof(PackedTablePtr1111));
+        FAIL_PARSE_IF(raw_main_section.value_len != sizeof(PackedTablePtr1111));
+        FAIL_PARSE_IF(file_data.len < sizeof(PackedHeader1111) +
+                                 raw_main_section.values_count * sizeof(PackedTablePtr1111));
     }
 
-    for (int i = 0; i < main_section.values_count; i++) {
+    for (int i = 0; i < raw_main_section.values_count; i++) {
         TableInfo table = {};
 
         PackedTablePtr1111 raw_table_ptr;
         {
-            memcpy(&raw_table_ptr, file_data + sizeof(PackedHeader1111) +
+            memcpy(&raw_table_ptr, file_data.ptr + sizeof(PackedHeader1111) +
                                    sizeof(PackedSection1111) + i * sizeof(PackedTablePtr1111),
                    sizeof(PackedTablePtr1111));
 #ifdef ARCH_LITTLE_ENDIAN
@@ -163,21 +159,22 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
             ReverseBytes(&raw_table_ptr.date_range[1]);
             ReverseBytes(&raw_table_ptr.raw_offset);
 #endif
-            FAIL_PARSE_IF(file_len < raw_table_ptr.raw_offset + sizeof(PackedHeader1111));
+            FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset + sizeof(PackedHeader1111));
         }
 
         PackedHeader1111 raw_table_header;
         PackedSection1111 raw_table_sections[CountOf(table.sections.data)];
         {
-            memcpy(&raw_table_header, file_data + raw_table_ptr.raw_offset,
+            memcpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset,
                    sizeof(PackedHeader1111));
-            FAIL_PARSE_IF(file_len < raw_table_ptr.raw_offset +
+            FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset +
                                      raw_table_header.sections_count * sizeof(PackedSection1111));
             FAIL_PARSE_IF(raw_table_header.sections_count > CountOf(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
-                memcpy(&raw_table_sections[j], file_data + raw_table_ptr.raw_offset +
-                                               sizeof(PackedHeader1111) + j * sizeof(PackedSection1111),
+                memcpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset +
+                                               sizeof(PackedHeader1111) +
+                                               j * sizeof(PackedSection1111),
                        sizeof(PackedSection1111));
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_table_sections[j].values_count);
@@ -185,14 +182,14 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
                 ReverseBytes(&raw_table_sections[j].raw_len);
                 ReverseBytes(&raw_table_sections[j].raw_offset);
 #endif
-                FAIL_PARSE_IF(file_len < raw_table_ptr.raw_offset +
+                FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset +
                                          raw_table_sections[j].raw_offset +
                                          raw_table_sections[j].raw_len);
             }
         }
 
         // Parse header information
-        sscanf(main_header.date, "%2" SCNd8 "%2" SCNd8 "%4" SCNd16,
+        sscanf(raw_main_header.date, "%2" SCNd8 "%2" SCNd8 "%4" SCNd16,
                &table.build_date.st.day, &table.build_date.st.month,
                &table.build_date.st.year);
         table.build_date.st.year += 2000;
@@ -201,7 +198,7 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
                &table.version[0], &table.version[1]);
         table.limit_dates[0] = ConvertDate1980(raw_table_ptr.date_range[0]);
         table.limit_dates[1] = ConvertDate1980(raw_table_ptr.date_range[1]);
-        FAIL_PARSE_IF(table.limit_dates[1] < table.limit_dates[0]);
+        FAIL_PARSE_IF(table.limit_dates[1] <= table.limit_dates[0]);
 
         // Table type
         strncpy(table.raw_type, raw_table_header.name, sizeof(raw_table_header.name));
@@ -230,8 +227,9 @@ bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
         // Parse table sections
         table.sections.len = raw_table_header.sections_count;
         for (int j = 0; j < raw_table_header.sections_count; j++) {
-            FAIL_PARSE_IF(raw_table_sections[j].raw_len != raw_table_sections[j].values_count *
-                                                           raw_table_sections[j].value_len);
+            FAIL_PARSE_IF(raw_table_sections[j].raw_len !=
+                            (uint32_t)raw_table_sections[j].values_count *
+                            raw_table_sections[j].value_len);
             table.sections[j].raw_offset = raw_table_ptr.raw_offset +
                                            raw_table_sections[j].raw_offset;
             table.sections[j].raw_len = raw_table_sections[j].raw_len;
@@ -263,7 +261,8 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -321,12 +320,12 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
+bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<DiagnosisInfo> *out_diags)
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
 
-    struct PackedDiagnosticPtr  {
+    struct PackedDiagnosisPtr  {
         uint16_t code456;
 
         uint16_t section2_idx;
@@ -338,14 +337,15 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
 
     FAIL_PARSE_IF(table.sections.len != 5);
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosticPtr));
+    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosisPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
                   table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::sex[0].values));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
@@ -360,16 +360,16 @@ bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
                                              root_idx * 2);
             ReverseBytes(&end_idx);
             FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedDiagnosticPtr);
+            block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedDiagnosisPtr);
         }
 
         for (size_t block_offset = block_start; block_offset < block_end;
-             block_offset += sizeof(PackedDiagnosticPtr)) {
+             block_offset += sizeof(PackedDiagnosisPtr)) {
             DiagnosisInfo diag = {};
 
-            PackedDiagnosticPtr raw_diag_ptr;
+            PackedDiagnosisPtr raw_diag_ptr;
             {
-                memcpy(&raw_diag_ptr, file_data + block_offset, sizeof(PackedDiagnosticPtr));
+                memcpy(&raw_diag_ptr, file_data + block_offset, sizeof(PackedDiagnosisPtr));
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_diag_ptr.code456);
                 ReverseBytes(&raw_diag_ptr.section2_idx);
@@ -433,7 +433,8 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -537,7 +538,8 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -647,7 +649,8 @@ bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -706,7 +709,8 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -772,6 +776,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
         }
 
         if (raw_ghs_node.valid_ghs) {
+            // TODO: Doubts about correctness of this
             for (size_t j = first_test_idx; j < out_nodes->len; j++) {
                 (*out_nodes)[j].u.test.fail_goto_idx = out_nodes->len + 1;
             }
@@ -812,7 +817,8 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)
@@ -865,7 +871,8 @@ bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename
 #define FAIL_PARSE_IF(Cond) \
         do { \
             if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", filename, STRINGIFY(Cond)); \
+                LogError("Malformed binary table file '%1': %2", \
+                         filename ? filename : "?", STRINGIFY(Cond)); \
                 return false; \
             } \
         } while (false)

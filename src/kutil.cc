@@ -57,7 +57,7 @@ void Allocator::Release(Allocator *alloc, void *ptr, size_t size)
     alloc->Release(ptr, size);
 }
 
-char *Allocator::MakeString(Allocator *alloc, const ArrayRef<const char> &bytes)
+char *Allocator::MakeString(Allocator *alloc, ArrayRef<const char> bytes)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -91,7 +91,7 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
     return bucket->data;
 }
 
-char *Allocator::MakeString(const ArrayRef<const char> &bytes)
+char *Allocator::MakeString(ArrayRef<const char> bytes)
 {
     char *str = (char *)Allocate(bytes.len + 1);
     memcpy(str, bytes.ptr, bytes.len);
@@ -332,7 +332,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 }
 
 template <typename AppendFunc>
-static inline void DoFormat(const char *fmt, const ArrayRef<const FmtArg> &args,
+static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
                             AppendFunc append)
 {
 #ifndef NDEBUG
@@ -405,11 +405,11 @@ static inline void DoFormat(const char *fmt, const ArrayRef<const FmtArg> &args,
 #endif
 }
 
-size_t FmtString(const ArrayRef<char> &buf, const char *fmt, const ArrayRef<const FmtArg> &args)
+size_t FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
 {
     size_t real_len = 0;
 
-    DoFormat(fmt, args, [&](const ArrayRef<const char> &fragment) {
+    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         if (real_len < buf.len) {
             size_t copy_len = fragment.len;
             if (copy_len > buf.len - real_len) {
@@ -429,14 +429,14 @@ size_t FmtString(const ArrayRef<char> &buf, const char *fmt, const ArrayRef<cons
     return real_len;
 }
 
-char *FmtString(Allocator *alloc, const char *fmt, const ArrayRef<const FmtArg> &args)
+char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
 {
     char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY, Allocator::Resizable);
     size_t buf_len = 0;
     // Cheat a little bit to make room for the NUL byte
     size_t buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
 
-    DoFormat(fmt, args, [&](const ArrayRef<const char> &fragment) {
+    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         // Same thing, use >= and <= to make sure we have enough place for the NUL byte
         if (fragment.len >= buf_capacity - buf_len) {
             size_t new_capacity = buf_capacity;
@@ -454,10 +454,10 @@ char *FmtString(Allocator *alloc, const char *fmt, const ArrayRef<const FmtArg> 
     return buf;
 }
 
-void FmtPrint(FILE *fp, const char *fmt, const ArrayRef<const FmtArg> &args)
+void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
 {
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](const ArrayRef<const char> &fragment) {
+    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         if (fragment.len > CountOf(buf.data) - buf.len) {
             fwrite(buf.data, 1, buf.len, fp);
             buf.len = 0;
@@ -501,7 +501,7 @@ static bool ConfigTerminalOutput()
     return output_is_terminal;
 }
 
-void FmtLog(LogLevel level, const char *ctx, const char *fmt, const ArrayRef<const FmtArg> &args)
+void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
 {
     FILE *fp = stderr;
     const char *end_marker = nullptr;
@@ -536,11 +536,34 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, const ArrayRef<con
 }
 
 // ------------------------------------------------------------------------
-// Files
+// System
 // ------------------------------------------------------------------------
 
-bool ReadFile(Allocator *alloc, const char *filename, uint64_t max_size,
-              uint8_t **rdata, uint64_t *rlen)
+static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
+{
+    if (error_code == UINT32_MAX) {
+        error_code = GetLastError();
+    }
+
+    static thread_local char str_buf[256];
+    DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                  nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                  str_buf, sizeof(str_buf), nullptr);
+    if (fmt_ret) {
+        char *str_end = str_buf + strlen(str_buf);
+        // FormatMessage adds newlines, remove them
+        while (str_end > str_buf && (str_end[-1] == '\n' || str_end[-1] == '\r'))
+            str_end--;
+        *str_end = 0;
+    } else {
+        strcpy(str_buf, "(unknown)");
+    }
+
+    return str_buf;
+}
+
+bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+              ArrayRef<uint8_t> *rdata)
 {
 #ifdef _WIN32
     FILE *fp = fopen(filename, "rb");
@@ -548,31 +571,294 @@ bool ReadFile(Allocator *alloc, const char *filename, uint64_t max_size,
     FILE *fp = fopen(filename, "rbe");
 #endif
     if (!fp) {
-        // TODO: Detailed error messages
-        LogError("Failed to open '%1'", filename);
+        // TODO: Detailed error messages, and switch to Win32 API
+        LogError("Cannot open file '%1'", filename);
         return false;
     }
     DEFER { fclose(fp); };
 
-    uint64_t data_len;
+    ArrayRef<uint8_t> data;
     fseek(fp, 0, SEEK_END);
-    data_len = ftell(fp);
-    if (data_len > max_size) {
-        LogError("File '%1' is too big", filename);
+    data.len = ftell(fp);
+    if (data.len > max_size) {
+        LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
         return false;
     }
     fseek(fp, 0, SEEK_SET);
 
-    uint8_t *data = (uint8_t *)Allocator::Allocate(alloc, data_len);
-    DEFER_N(data_guard) { Allocator::Release(alloc, data, data_len); };
-
-    if (fread(data, 1, data_len, fp) != data_len || ferror(fp)) {
+    data.ptr = (uint8_t *)Allocator::Allocate(alloc, data.len);
+    DEFER_N(data_guard) { Allocator::Release(alloc, data.ptr, data.len); };
+    if (fread(data.ptr, 1, data.len, fp) != data.len || ferror(fp)) {
         LogError("Error while reading file '%1'", filename);
         return false;
     }
 
     data_guard.disable();
     *rdata = data;
-    *rlen = data_len;
     return true;
+}
+
+static void ConvertFindData(const WIN32_FIND_DATA &find_data, Allocator &str_alloc,
+                            FileInfo *out_info)
+{
+    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        out_info->type = FileType::Directory;
+    } else {
+        out_info->type = FileType::File;
+    }
+    out_info->name = Allocator::DuplicateString(&str_alloc, find_data.cFileName);
+}
+
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
+                              DynamicArray<FileInfo> *out_files, size_t max_files,
+                              EnumDirectoryHandle *out_handle)
+{
+    Assert(max_files > 0);
+
+    DEFER_NC(out_files_guard, len = out_files->len) { out_files->RemoveFrom(len); };
+
+    char find_filter[4096];
+    if (!filter) {
+        filter = "*";
+    }
+    if (snprintf(find_filter, sizeof(find_filter), "%s\\%s", dirname, filter)
+            >= (int)sizeof(find_filter)) {
+        LogError("Cannot enumerate directory '%1': Path too long", dirname);
+        return EnumStatus::Error;
+    }
+
+    WIN32_FIND_DATA find_data;
+    HANDLE handle = FindFirstFileEx(find_filter, FindExInfoBasic, &find_data,
+                                    FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+    if (handle == INVALID_HANDLE_VALUE) {
+        LogError("Cannot enumerate directory '%1': %2", dirname,
+                 Win32ErrorString());
+        return EnumStatus::Error;
+    }
+    DEFER_N(handle_guard) { FindClose(handle); };
+
+    do {
+        FileInfo file_info;
+        ConvertFindData(find_data, str_alloc, &file_info);
+        out_files->Append(file_info);
+
+        if (!--max_files) {
+            if (out_handle) {
+                handle_guard.disable();
+                out_handle->handle = handle;
+            } else {
+                LogError("Partial enumeration of directory '%1'", dirname);
+            }
+            out_files_guard.disable();
+            return EnumStatus::Partial;
+        }
+    } while (FindNextFile(handle, &find_data));
+
+    if (GetLastError() != ERROR_NO_MORE_FILES) {
+        LogError("Error while enumerating directory '%1': %2", dirname,
+                 Win32ErrorString());
+        return EnumStatus::Error;
+    }
+
+    if (out_handle) {
+        out_handle->handle = nullptr;
+    }
+    out_files_guard.disable();
+    return EnumStatus::Done;
+}
+
+void EnumDirectoryHandle::Close()
+{
+    if (handle) {
+        FindClose(handle);
+        handle = nullptr;
+    }
+}
+
+EnumStatus EnumDirectoryHandle::Enumerate(Allocator &str_alloc,
+                                          DynamicArray<FileInfo> *out_files, size_t max_files)
+{
+    Assert(max_files > 0);
+
+    DEFER_NC(out_files_guard, len = out_files->len) { out_files->RemoveFrom(len); };
+
+    WIN32_FIND_DATA find_data;
+    while (FindNextFile(handle, &find_data)) {
+        FileInfo file_info;
+        ConvertFindData(find_data, str_alloc, &file_info);
+        out_files->Append(file_info);
+
+        if (!--max_files) {
+            out_files_guard.disable();
+            return EnumStatus::Partial;
+        }
+    }
+
+    if (GetLastError() != ERROR_NO_MORE_FILES) {
+        LogError("Error while enumerating directory: %1", Win32ErrorString());
+        return EnumStatus::Error;
+    }
+
+    out_files_guard.disable();
+    return EnumStatus::Done;
+}
+
+// ------------------------------------------------------------------------
+// Option Parser
+// ------------------------------------------------------------------------
+
+static inline bool IsOption(const char *arg)
+{
+    return arg[0] == '-' && arg[1];
+}
+
+static inline bool IsLongOption(const char *arg)
+{
+    return arg[0] == '-' && arg[1] == '-' && arg[2];
+}
+
+static inline bool IsDashDash(const char *arg)
+{
+    return arg[0] == '-' && arg[1] == '-' && !arg[2];
+}
+
+static void ReverseArgs(const char **args, size_t start, size_t end)
+{
+    for (size_t i = 0; i < (end - start) / 2; i++) {
+        const char *tmp = args[start + i];
+        args[start + i] = args[end - i - 1];
+        args[end - i - 1] = tmp;
+    }
+}
+
+static void RotateArgs(const char **args, size_t start, size_t mid, size_t end)
+{
+    if (start == mid || mid == end) {
+        return;
+    }
+
+    ReverseArgs(args, start, mid);
+    ReverseArgs(args, mid, end);
+    ReverseArgs(args, start, end);
+}
+
+const char *OptionParser::ConsumeOption()
+{
+    size_t next_index;
+    const char *opt;
+
+    current_option = nullptr;
+    current_value = nullptr;
+
+    // Support aggregate short options, such as '-fbar'. Note that this can also be
+    // parsed as the short option '-f' with value 'bar', if the user calls ConsumeValue()
+    // after getting '-f'.
+    if (smallopt_offset) {
+        opt = args[pos];
+        smallopt_offset++;
+        if (opt[smallopt_offset]) {
+            buf[1] = opt[smallopt_offset];
+            current_option = buf;
+            return current_option;
+        } else {
+            smallopt_offset = 0;
+            pos++;
+        }
+    }
+
+    // Skip non-options, do the permutation once we reach an option or the last argument
+    next_index = pos;
+    while (next_index < limit && !IsOption(args[next_index])) {
+        next_index++;
+    }
+    RotateArgs(args.ptr, pos, next_index, args.len);
+    limit -= (next_index - pos);
+    if (pos >= limit) {
+        return nullptr;
+    }
+    opt = args[pos];
+
+    if (IsLongOption(opt)) {
+        const char *needle = strchr(opt, '=');
+        if (needle) {
+            // We can reorder args, but we don't want to change strings. So copy the
+            // option up to '=' in our buffer. And store the part after '=' as the
+            // current value.
+            size_t len = (size_t)(needle - opt);
+            if (len > sizeof(buf) - 1) {
+                len = sizeof(buf) - 1;
+            }
+            memcpy(buf, opt, len);
+            buf[len] = 0;
+            current_option = buf;
+            current_value = needle + 1;
+        } else {
+            current_option = opt;
+        }
+        pos++;
+    } else if (IsDashDash(opt)) {
+        // We may have previously moved non-options to the end of args. For example,
+        // at this point 'a b c -- d e' is reordered to '-- d e a b c'. Fix it.
+        RotateArgs(args.ptr, pos + 1, limit, args.len);
+        limit = pos;
+        pos++;
+    } else if (opt[2]) {
+        // We either have aggregated short options or one short option with a value,
+        // depending on whether or not the user calls ty_optline_get_opt_value().
+        buf[0] = '-';
+        buf[1] = opt[1];
+        buf[2] = 0;
+        current_option = buf;
+        smallopt_offset = 1;
+    } else {
+        current_option = opt;
+        pos++;
+    }
+
+    return current_option;
+}
+
+const char *OptionParser::ConsumeOptionValue()
+{
+    if (current_value) {
+        return current_value;
+    }
+
+    const char *arg = args[pos];
+
+    // Support '-fbar' where bar is the value, but only for the first short option
+    // if it's an aggregate.
+    if (smallopt_offset == 1 && arg[2]) {
+        smallopt_offset = 0;
+        current_value = arg + 2;
+        pos++;
+    // Support '-f bar' and '--foo bar', see ConsumeOption() for '--foo=bar'
+    } else if (!smallopt_offset && pos < args.len && !IsOption(arg)) {
+        current_value = args[pos];
+        pos++;
+    }
+
+    return current_value;
+}
+
+const char *OptionParser::ConsumeNonOption()
+{
+    if (pos == args.len) {
+        return nullptr;
+    }
+    // Beyond limit there are only non-options, the limit is moved when we move non-options
+    // to the end or upon encouteering a double dash '--'.
+    if (pos < limit && IsOption(args[pos])) {
+        return nullptr;
+    }
+
+    return args[pos++];
+}
+
+void OptionParser::ConsumeNonOptions(DynamicArray<const char *> *non_options)
+{
+    const char *non_option;
+    while ((non_option = ConsumeNonOption())) {
+        non_options->Append(non_option);
+    }
 }

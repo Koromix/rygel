@@ -2,7 +2,6 @@
 
 #include "kutil.hh"
 
-// NOTE: Move into TableInfo or keep separate?
 enum class TableType {
     UnknownTable,
 
@@ -92,7 +91,6 @@ struct TableInfo {
 
     LocalArray<Section, 16> sections;
 };
-
 
 struct GhmDecisionNode {
     enum class Type {
@@ -216,12 +214,15 @@ struct DiagnosisProcedurePair {
     ProcedureCode proc_code;
 };
 
-bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
+bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
                        const char *filename, DynamicArray<TableInfo> *out_tables);
+static inline bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
+                                     const char *filename, DynamicArray<TableInfo> *out_tables)
+    { return ParseTableHeaders(MakeArrayRef(file_data, file_len), filename, out_tables); }
 
 bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes);
-bool ParseDiagnosticTable(const uint8_t *file_data, const char *filename,
+bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<DiagnosisInfo> *out_diags);
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                          const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);

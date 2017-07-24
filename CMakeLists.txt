@@ -46,8 +46,10 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lutf8lib.c
                 lib/lua/src/loadlib.c
                 lib/lua/src/linit.c)
-set(MOYA_SRC src/fg_data.cc
-             src/fg_data.hh
+set(MOYA_SRC src/fg_classifier.cc
+             src/fg_classifier.hh
+             src/fg_table.cc
+             src/fg_table.hh
              src/moya.cc
              src/kutil.cc
              src/kutil.hh)

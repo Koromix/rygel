@@ -249,6 +249,12 @@ ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
 #define DEFER_NC(Name, ...) \
     auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 
+template <typename T>
+struct ArraySlice {
+    size_t offset;
+    size_t len;
+};
+
 // I'd love to make ArrayRef default to { nullptr, 0 } but unfortunately that makes
 // it a non-POD and prevents putting it in a union.
 template <typename T>
@@ -271,8 +277,9 @@ struct ArrayRef {
 
     operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
 
-    ArrayRef Take(size_t sub_offset, size_t sub_len) const;
-    ArrayRef Between(size_t sub_offset, size_t sub_end) const;
+    ArrayRef Take(ArraySlice<T> slice) const;
+    ArrayRef Take(size_t offset, size_t len) const
+        { return Take(ArraySlice<T>(offset, len)); }
 };
 
 // Unfortunately C strings ("foobar") are implicity converted to ArrayRef<T> with the
@@ -298,7 +305,8 @@ struct ArrayRef<const char> {
     const char &operator[](size_t idx) const;
 
     ArrayRef Take(size_t sub_offset, size_t sub_len) const;
-    ArrayRef Between(size_t sub_offset, size_t sub_end) const;
+    ArrayRef Take(const ArraySlice<const char> &slice) const
+        { return Take(slice.offset, slice.len); }
 };
 template <>
 struct ArrayRef<char> {
@@ -321,7 +329,7 @@ struct ArrayRef<char> {
     operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
 
     ArrayRef Take(size_t sub_offset, size_t sub_len) const;
-    ArrayRef Between(size_t sub_offset, size_t sub_end) const;
+    ArrayRef Take(const ArraySlice<char> &slice) const { return Take(slice.offset, slice.len); }
 };
 
 template <typename T>
@@ -476,7 +484,7 @@ public:
                        unsigned int flags = 0);
     static void Release(Allocator *alloc, void *ptr, size_t size);
 
-    static char *MakeString(Allocator *alloc, const ArrayRef<const char> &bytes);
+    static char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
     static char *DuplicateString(Allocator *alloc, const char *str, size_t max_len = SIZE_MAX);
 
 private:
@@ -486,7 +494,7 @@ private:
     void Resize(void **ptr, size_t old_size, size_t new_size, unsigned int flags = 0);
     void Release(void *ptr, size_t size);
 
-    char *MakeString(const ArrayRef<const char> &bytes);
+    char *MakeString(ArrayRef<const char> bytes);
     char *DuplicateString(const char *str, size_t max_len = SIZE_MAX);
 };
 
@@ -494,7 +502,8 @@ private:
 // String Format
 // ------------------------------------------------------------------------
 
-struct FmtArg {
+class FmtArg {
+public:
     enum class Type {
         StrRef,
         Char,
@@ -533,7 +542,7 @@ struct FmtArg {
 
     FmtArg() = default;
     FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
-    FmtArg(const ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
+    FmtArg(ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
     FmtArg(char c) : type(Type::Char) { value.ch = c; }
     FmtArg(bool b) : type(Type::Bool) { value.b = b; }
     FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
@@ -590,7 +599,7 @@ static inline FmtArg FmtDiskSize(size_t size)
     arg.value.size = size;
     return arg;
 }
-static inline FmtArg FmtList(const ArrayRef<FmtArg> &args, const char *sep = ", ")
+static inline FmtArg FmtList(ArrayRef<FmtArg> args, const char *sep = ", ")
 {
     FmtArg arg;
     arg.type = FmtArg::Type::List;
@@ -605,20 +614,20 @@ enum class LogLevel {
     Error
 };
 
-size_t FmtString(const ArrayRef<char> &buf, const char *fmt,
-                 const ArrayRef<const FmtArg> &args);
-char *FmtString(Allocator *alloc, const char *fmt, const ArrayRef<const FmtArg> &args);
-void FmtPrint(FILE *fp, const char *fmt, const ArrayRef<const FmtArg> &args);
+size_t FmtString(ArrayRef<char> buf, const char *fmt,
+                 ArrayRef<const FmtArg> args);
+char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
+void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
 void FmtLog(LogLevel level, const char *ctx, const char *fmt,
-            const ArrayRef<const FmtArg> &args);
+            ArrayRef<const FmtArg> args);
 
 // Print formatted strings to fixed-size buffer
-static inline size_t Fmt(const ArrayRef<char> &buf, const char *fmt)
+static inline size_t Fmt(ArrayRef<char> buf, const char *fmt)
 {
     return FmtString(buf, fmt, {});
 }
 template <typename... Args>
-static inline size_t Fmt(const ArrayRef<char> &buf, const char *fmt, Args... args)
+static inline size_t Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     return FmtString(buf, fmt, fmt_args);
@@ -745,32 +754,18 @@ T &ArrayRef<T>::operator[](size_t idx) const
 }
 
 template<typename T>
-ArrayRef<T> ArrayRef<T>::Take(size_t sub_offset, size_t sub_len) const
+ArrayRef<T> ArrayRef<T>::Take(ArraySlice<T> slice) const
 {
     ArrayRef<T> sub;
 
-    if (sub_len > len || sub_offset > len - sub_len) {
+    if (slice.len > len || slice.offset > len - slice.len) {
         sub = {};
         return sub;
     }
-    sub.ptr = ptr + sub_offset;
-    sub.len = sub_len;
+    sub.ptr = ptr + slice.offset;
+    sub.len = slice.len;
 
     return sub;
-}
-template<typename T>
-ArrayRef<T> ArrayRef<T>::Between(size_t sub_offset, size_t sub_end) const
-{
-    ArrayRef<T> between;
-
-    if (sub_end > len || sub_offset > sub_end) {
-        between = {};
-        return between;
-    }
-    between.ptr = ptr + sub_offset;
-    between.len = sub_end - sub_offset;
-
-    return between;
 }
 
 inline const char &ArrayRef<const char>::operator[](size_t idx) const
@@ -792,19 +787,6 @@ inline ArrayRef<const char> ArrayRef<const char>::Take(size_t sub_offset, size_t
 
     return sub;
 }
-inline ArrayRef<const char> ArrayRef<const char>::Between(size_t sub_offset, size_t sub_end) const
-{
-    ArrayRef<const char> between;
-
-    if (sub_end > len || sub_offset > sub_end) {
-        between = {};
-        return between;
-    }
-    between.ptr = ptr + sub_offset;
-    between.len = sub_end - sub_offset;
-
-    return between;
-}
 
 inline char &ArrayRef<char>::operator[](size_t idx) const
 {
@@ -824,19 +806,6 @@ inline ArrayRef<char> ArrayRef<char>::Take(size_t sub_offset, size_t sub_len) co
     sub.len = sub_len;
 
     return sub;
-}
-inline ArrayRef<char> ArrayRef<char>::Between(size_t sub_offset, size_t sub_end) const
-{
-    ArrayRef<char> between;
-
-    if (sub_end > len || sub_offset > sub_end) {
-        between = {};
-        return between;
-    }
-    between.ptr = ptr + sub_offset;
-    between.len = sub_end - sub_offset;
-
-    return between;
 }
 
 template <typename T, size_t N>
@@ -864,10 +833,15 @@ public:
     const T &operator[](size_t idx) const;
 
     T *Append(const T &value);
-    T *Append(const ArrayRef<const T> &values);
+    T *Append(ArrayRef<const T> values);
 
     void RemoveLast(size_t count = 1) { RemoveAfter(count < len ? len - count : len); }
     void RemoveAfter(size_t first);
+
+    ArrayRef<T> Take(size_t offset, size_t len) const
+        { return ArrayRef<T>(*this).Take(offset, len); }
+    ArrayRef<T> Take(const ArraySlice<T> &slice) const
+        { return ArrayRef<T>(*this).Take(slice); }
 };
 
 template <typename T, size_t N>
@@ -903,7 +877,7 @@ T *LocalArray<T, N>::Append(const T &value)
 }
 
 template <typename T, size_t N>
-T *LocalArray<T, N>::Append(const ArrayRef<const T> &values)
+T *LocalArray<T, N>::Append(ArrayRef<const T> values)
 {
     DebugAssert(data.len2 <= N - len);
     T *it = data + len;
@@ -963,11 +937,17 @@ public:
 
     void Trim() { SetCapacity(len); }
 
+    T *Append();
     T *Append(const T &value);
-    T *Append(const ArrayRef<const T> &values);
+    T *Append(ArrayRef<const T> values);
 
     void RemoveLast(size_t count = 1) { RemoveFrom(count < len ? len - count : len); }
     void RemoveFrom(size_t from);
+
+    ArrayRef<T> Take(size_t offset, size_t len) const
+        { return ArrayRef<T>(*this).Take(offset, len); }
+    ArrayRef<T> Take(const ArraySlice<T> &slice) const
+        { return ArrayRef<T>(*this).Take(slice); }
 };
 
 template <typename T>
@@ -1046,6 +1026,18 @@ void DynamicArray<T>::Grow(size_t reserve_capacity)
 }
 
 template <typename T>
+T *DynamicArray<T>::Append()
+{
+    if (len == capacity) {
+        Grow();
+    }
+
+    T *first = ptr + len;
+    new (ptr + len) T;
+    return first;
+}
+
+template <typename T>
 T *DynamicArray<T>::Append(const T &value)
 {
     if (len == capacity) {
@@ -1059,7 +1051,7 @@ T *DynamicArray<T>::Append(const T &value)
 }
 
 template <typename T>
-T *DynamicArray<T>::Append(const ArrayRef<const T> &values)
+T *DynamicArray<T>::Append(ArrayRef<const T> values)
 {
     if (values.len > capacity - len) {
         Grow(values.len);
@@ -1571,8 +1563,93 @@ private:
     struct Name: public HashTableBase<Name, KeyType, ValueType>
 
 // ------------------------------------------------------------------------
-// Files
+// System
 // ------------------------------------------------------------------------
 
-bool ReadFile(Allocator *alloc, const char *filename, uint64_t max_size,
-              uint8_t **rdata, uint64_t *rlen);
+bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+              ArrayRef<uint8_t> *rdata);
+static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+                            uint8_t **rdata, size_t *rlen)
+{
+    ArrayRef<uint8_t> data;
+    if (!ReadFile(alloc, filename, max_size, &data))
+        return false;
+    *rdata = data.ptr;
+    *rlen = data.len;
+    return true;
+}
+
+enum class FileType {
+    Directory,
+    File,
+    Special
+};
+
+struct FileInfo {
+    const char *name;
+    FileType type;
+};
+
+enum class EnumStatus {
+    Error,
+    Partial,
+    Done
+};
+
+class EnumDirectoryHandle {
+    void *handle = nullptr;
+
+public:
+
+    EnumDirectoryHandle() = default;
+    EnumDirectoryHandle(Allocator &) = delete;
+    EnumDirectoryHandle &operator=(const Allocator &) = delete;
+    ~EnumDirectoryHandle() { Close(); }
+
+    void Close();
+
+    EnumStatus Enumerate(Allocator &str_alloc,
+                         DynamicArray<FileInfo> *out_files, size_t max_files);
+
+    friend EnumStatus EnumerateDirectory(const char *, const char *, Allocator &,
+                                         DynamicArray<FileInfo> *, size_t,
+                                         EnumDirectoryHandle *);
+};
+
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
+                              DynamicArray<FileInfo> *out_files, size_t max_files,
+                              EnumDirectoryHandle *out_handle = nullptr);
+
+// ------------------------------------------------------------------------
+// Option Parser
+// ------------------------------------------------------------------------
+
+class OptionParser {
+    size_t limit;
+    size_t smallopt_offset = 0;
+    char buf[80];
+
+public:
+    ArrayRef<const char *> args;
+    size_t pos = 0;
+
+    const char *current_option = nullptr;
+    const char *current_value = nullptr;
+
+    OptionParser(ArrayRef<const char *> args)
+        : limit(args.len), args(args) {}
+    OptionParser(int argc, char **argv)
+        : limit(argc > 0 ? argc - 1 : 0),
+          args(limit ? (const char **)(argv + 1) : nullptr, limit) {}
+
+    const char *ConsumeOption();
+    const char *ConsumeOptionValue();
+    const char *ConsumeNonOption();
+    void ConsumeNonOptions(DynamicArray<const char *> *non_options);
+};
+
+static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
+{
+    return !strcmp(opt, test1) ||
+           (test2 && !strcmp(opt, test2));
+}
