@@ -391,6 +391,9 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                 memcpy(diag.sex[0].values, sex_data, table.sections[2].value_len / 2);
                 memcpy(diag.sex[1].values, sex_data + table.sections[2].value_len / 2,
                        table.sections[2].value_len / 2);
+                if (memcmp(diag.sex[0].values, diag.sex[1].values, sizeof(diag.sex[0].values))) {
+                    diag.flags |= (int)DiagnosisInfo::Flag::SexDifference;
+                }
 
                 const uint8_t *warn_data = file_data + table.sections[3].raw_offset +
                                            raw_diag_ptr.section3_idx * table.sections[3].value_len;

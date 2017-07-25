@@ -115,8 +115,13 @@ struct GhmDecisionNode {
 };
 
 struct DiagnosisInfo {
+    enum class Flag {
+        SexDifference = 1
+    };
+
     DiagnosisCode code;
 
+    uint16_t flags;
     union {
         uint8_t values[48];
         struct {

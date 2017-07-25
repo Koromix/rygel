@@ -593,8 +593,17 @@ Options:
             switch (spec.table) {
                 case ListSpecifier::Table::Diagnoses: {
                     for (const DiagnosisInfo &diag: store->diagnoses.Take(set.diagnoses)) {
-                        if (spec.Match(diag.sex[0].values)) {
-                            PrintLn("  %1", diag.code);
+                        if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
+                            if (spec.Match(diag.sex[0].values)) {
+                                PrintLn("  %1 (male)", diag.code);
+                            }
+                            if (spec.Match(diag.sex[1].values)) {
+                                PrintLn("  %1 (female)", diag.code);
+                            }
+                        } else {
+                            if (spec.Match(diag.sex[0].values)) {
+                                PrintLn("  %1", diag.code);
+                            }
                         }
                     }
                 } break;
