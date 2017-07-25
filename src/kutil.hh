@@ -68,6 +68,9 @@
     #ifndef SCNi8
         #define SCNi8 "hhd"
     #endif
+    #ifndef SCNu8
+        #define SCNu8 "hhu"
+    #endif
 #elif defined(_MSC_VER)
     #define MAYBE_UNUSED
     #define FORCE_INLINE __forceinline
@@ -410,46 +413,6 @@ static inline ArrayRef<const char> MakeStrRef(const char *str, size_t max_len)
 #endif
 
 // ------------------------------------------------------------------------
-// Date and Time
-// ------------------------------------------------------------------------
-
-union Date {
-    struct {
-#ifdef ARCH_LITTLE_ENDIAN
-        int8_t day;
-        int8_t month;
-        int16_t year;
-#else
-        int16_t year;
-        int8_t month;
-        int8_t day;
-#endif
-    } st;
-    int32_t value;
-
-    bool operator==(const Date &other) const { return value == other.value; }
-    bool operator!=(const Date &other) const { return value != other.value; }
-    bool operator>(const Date &other) const { return value > other.value; }
-    bool operator>=(const Date &other) const { return value >= other.value; }
-    bool operator<(const Date &other) const { return value < other.value; }
-    bool operator<=(const Date &other) const { return value <= other.value; }
-
-    bool IsValid() const;
-};
-
-inline bool Date::IsValid() const
-{
-    static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
-    bool leap_month = (st.month == 2 && ((st.year % 4 == 0 && st.year % 100 != 0) || st.year % 400 == 0));
-    if (st.month < 1 || st.month > 12)
-        return false;
-    if (st.day < 1 || st.day > (days_per_month[st.month - 1] + leap_month))
-        return false;
-    return true;
-}
-
-// ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
@@ -497,6 +460,36 @@ private:
     char *MakeString(ArrayRef<const char> bytes);
     char *DuplicateString(const char *str, size_t max_len = SIZE_MAX);
 };
+
+// ------------------------------------------------------------------------
+// Date and Time
+// ------------------------------------------------------------------------
+
+union Date {
+    struct {
+#ifdef ARCH_LITTLE_ENDIAN
+        int8_t day;
+        int8_t month;
+        int16_t year;
+#else
+        int16_t year;
+        int8_t month;
+        int8_t day;
+#endif
+    } st;
+    int32_t value;
+
+    bool operator==(const Date &other) const { return value == other.value; }
+    bool operator!=(const Date &other) const { return value != other.value; }
+    bool operator>(const Date &other) const { return value > other.value; }
+    bool operator>=(const Date &other) const { return value >= other.value; }
+    bool operator<(const Date &other) const { return value < other.value; }
+    bool operator<=(const Date &other) const { return value <= other.value; }
+
+    bool IsValid() const;
+};
+
+Date ParseDateString(const char *date_str);
 
 // ------------------------------------------------------------------------
 // String Format
@@ -839,9 +832,9 @@ public:
     void RemoveAfter(size_t first);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
-        { return ArrayRef<T>(*this).Take(offset, len); }
-    ArrayRef<T> Take(const ArraySlice<T> &slice) const
-        { return ArrayRef<T>(*this).Take(slice); }
+        { return ArrayRef<T>(data, len).Take(offset, len); }
+    ArrayRef<T> Take(ArraySlice<T> slice) const
+        { return ArrayRef<T>(data, len).Take(slice); }
 };
 
 template <typename T, size_t N>
@@ -945,9 +938,9 @@ public:
     void RemoveFrom(size_t from);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
-        { return ArrayRef<T>(*this).Take(offset, len); }
-    ArrayRef<T> Take(const ArraySlice<T> &slice) const
-        { return ArrayRef<T>(*this).Take(slice); }
+        { return ArrayRef<T>(ptr, len).Take(offset, len); }
+    ArrayRef<T> Take(ArraySlice<T> slice) const
+        { return ArrayRef<T>(ptr, len).Take(slice); }
 };
 
 template <typename T>
@@ -1565,6 +1558,12 @@ private:
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------
+
+#ifdef _WIN32
+    #define PATH_SEPARATORS "\\/"
+#else
+    #define PATH_SEPARATORS "/"
+#endif
 
 bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
               ArrayRef<uint8_t> *rdata);

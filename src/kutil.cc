@@ -156,6 +156,61 @@ void Allocator::ReleaseAll()
 }
 
 // ------------------------------------------------------------------------
+// Date and Time
+// ------------------------------------------------------------------------
+
+bool Date::IsValid() const
+{
+    static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    bool leap_month = (st.month == 2 && ((st.year % 4 == 0 && st.year % 100 != 0) ||
+                                         st.year % 400 == 0));
+    if (st.month < 1 || st.month > 12)
+        return false;
+    if (st.day < 1 || st.day > (days_per_month[st.month - 1] + leap_month))
+        return false;
+    return true;
+}
+
+Date ParseDateString(const char *date_str)
+{
+    Date date = {};
+
+    unsigned int parts[3];
+    const auto TryFormat = [&](const char *format) {
+        return (sscanf(date_str, format, &parts[0], &parts[1], &parts[2]) == 3);
+    };
+    if (!TryFormat("%6u-%6u-%6u")) {
+        if (!TryFormat("%6u/%6u/%6u")) {
+            LogError("Malformed date string '%1'", date_str);
+            return date;
+        }
+    }
+
+    if (parts[2] >= 100) {
+        std::swap(parts[0], parts[2]);
+    } else if (parts[0] < 100) {
+        LogError("Ambiguous date string '%1'", date_str);
+        return date;
+    }
+    if (parts[0] > UINT16_MAX || parts[1] > UINT8_MAX || parts[2] > UINT8_MAX) {
+        LogError("Invalid date string '%1'", date_str);
+        return date;
+    }
+
+    date.st.year = (uint16_t)parts[0];
+    date.st.month = (uint8_t)parts[1];
+    date.st.day = (uint8_t)parts[2];
+    if (!date.IsValid()) {
+        LogError("Invalid date string '%1'", date_str);
+        date.value = 0;
+    }
+
+    return date;
+}
+
+
+// ------------------------------------------------------------------------
 // String Format
 // ------------------------------------------------------------------------
 
@@ -228,9 +283,11 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtArg::Type::StrRef: {
                 append(arg.value.str_ref);
             } break;
+
             case FmtArg::Type::Char: {
                 append(ArrayRef<const char>(&arg.value.ch, 1));
             } break;
+
             case FmtArg::Type::Bool: {
                 if (arg.value.b) {
                     append(MakeStrRef("true"));
@@ -238,6 +295,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     append(MakeStrRef("false"));
                 }
             } break;
+
             case FmtArg::Type::Integer: {
                 if (arg.value.i < 0) {
                     append(MakeStrRef("-"));
@@ -246,12 +304,15 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     WriteUnsignedAsDecimal((uint64_t)arg.value.i, append);
                 }
             } break;
+
             case FmtArg::Type::Unsigned: {
                 WriteUnsignedAsDecimal(arg.value.u, append);
             } break;
+
             case FmtArg::Type::Double: {
                 WriteDouble(arg.value.d.value, arg.value.d.precision, append);
             } break;
+
             case FmtArg::Type::Binary: {
                 if (arg.value.u) {
                     append(MakeStrRef("0b"));
@@ -260,6 +321,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     append('0');
                 }
             } break;
+
             case FmtArg::Type::Hexadecimal: {
                 if (arg.value.u) {
                     append(MakeStrRef("0x"));
@@ -268,6 +330,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     append('0');
                 }
             } break;
+
             case FmtArg::Type::MemorySize: {
                 if (arg.value.size > 1024 * 1024) {
                     double len_mib = (double)arg.value.size / (1024.0 * 1024.0);
@@ -282,6 +345,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     append(MakeStrRef(" B"));
                 }
             } break;
+
             case FmtArg::Type::DiskSize: {
                 if (arg.value.size > 1000 * 1000) {
                     double len_mb = (double)arg.value.size / (1000.0 * 1000.0);
@@ -296,6 +360,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     append(MakeStrRef(" B"));
                 }
             } break;
+
             case FmtArg::Type::Date: {
                 DebugAssert(arg.value.date.IsValid());
                 if (arg.value.date.st.year < 10) {
@@ -317,6 +382,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 }
                 WriteUnsignedAsDecimal(arg.value.date.st.day, append);
             } break;
+
             case FmtArg::Type::List: {
                 if (arg.value.list.args.len) {
                     ProcessArg(arg.value.list.args[0], append);
@@ -348,9 +414,8 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
             marker_ptr++;
         }
         append(ArrayRef<const char>(fmt_ptr, (size_t)(marker_ptr - fmt_ptr)));
-        if (!marker_ptr[0]) {
+        if (!marker_ptr[0])
             break;
-        }
 
         // Try to interpret this marker as a number
         size_t idx = 0;
@@ -358,9 +423,8 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
         for (;;) {
             // Unsigned cast makes the test below quicker, don't remove it or it'll break
             unsigned int digit = (unsigned int)marker_ptr[idx_end] - '0';
-            if (digit > 9) {
+            if (digit > 9)
                 break;
-            }
             idx = (idx * 10) + digit;
             idx_end++;
         }
@@ -379,6 +443,9 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
             fmt_ptr = marker_ptr + idx_end;
         } else if (marker_ptr[1] == '%') {
             append('%');
+            fmt_ptr = marker_ptr + 2;
+        } else if (marker_ptr[1] == '/') {
+            append(*PATH_SEPARATORS);
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
@@ -733,9 +800,8 @@ static void ReverseArgs(const char **args, size_t start, size_t end)
 
 static void RotateArgs(const char **args, size_t start, size_t mid, size_t end)
 {
-    if (start == mid || mid == end) {
+    if (start == mid || mid == end)
         return;
-    }
 
     ReverseArgs(args, start, mid);
     ReverseArgs(args, mid, end);
@@ -751,8 +817,8 @@ const char *OptionParser::ConsumeOption()
     current_value = nullptr;
 
     // Support aggregate short options, such as '-fbar'. Note that this can also be
-    // parsed as the short option '-f' with value 'bar', if the user calls ConsumeValue()
-    // after getting '-f'.
+    // parsed as the short option '-f' with value 'bar', if the user calls
+    // ConsumeOptionValue() after getting '-f'.
     if (smallopt_offset) {
         opt = args[pos];
         smallopt_offset++;
@@ -773,9 +839,8 @@ const char *OptionParser::ConsumeOption()
     }
     RotateArgs(args.ptr, pos, next_index, args.len);
     limit -= (next_index - pos);
-    if (pos >= limit) {
+    if (pos >= limit)
         return nullptr;
-    }
     opt = args[pos];
 
     if (IsLongOption(opt)) {
@@ -804,7 +869,7 @@ const char *OptionParser::ConsumeOption()
         pos++;
     } else if (opt[2]) {
         // We either have aggregated short options or one short option with a value,
-        // depending on whether or not the user calls ty_optline_get_opt_value().
+        // depending on whether or not the user calls ConsumeOptionValue().
         buf[0] = '-';
         buf[1] = opt[1];
         buf[2] = 0;
@@ -820,9 +885,8 @@ const char *OptionParser::ConsumeOption()
 
 const char *OptionParser::ConsumeOptionValue()
 {
-    if (current_value) {
+    if (current_value)
         return current_value;
-    }
 
     const char *arg = args[pos];
 
@@ -843,14 +907,12 @@ const char *OptionParser::ConsumeOptionValue()
 
 const char *OptionParser::ConsumeNonOption()
 {
-    if (pos == args.len) {
+    if (pos == args.len)
         return nullptr;
-    }
     // Beyond limit there are only non-options, the limit is moved when we move non-options
     // to the end or upon encouteering a double dash '--'.
-    if (pos < limit && IsOption(args[pos])) {
+    if (pos < limit && IsOption(args[pos]))
         return nullptr;
-    }
 
     return args[pos++];
 }

@@ -1,6 +1,5 @@
 #include "kutil.hh"
-#include "fg_table.hh"
-#include "fg_classifier.hh"
+#include "classifier.hh"
 
 static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                              size_t node_idx, int depth)
@@ -271,7 +270,7 @@ static bool DumpDiagnosisProcedureTables(const uint8_t *file_data, const char *f
     return true;
 }
 
-static bool FgDump(const char *filename, bool detail = true)
+static bool DumpTableFile(const char *filename, bool detail = true)
 {
     uint8_t *file_data;
     size_t file_len;
@@ -336,22 +335,140 @@ static bool FgDump(const char *filename, bool detail = true)
     return true;
 }
 
+static Date main_set_date = {};
+static DynamicArray<const char *> main_table_filenames;
+static ClassifierStore main_classifier_store = {};
+
+static ClassifierStore *GetMainClassifierStore(size_t *out_set_idx = nullptr)
+{
+    if (!main_classifier_store.sets.len) {
+        if (!main_table_filenames.len) {
+            LogError("No table provided");
+            return nullptr;
+        }
+        if (!LoadClassifierFiles(main_table_filenames, &main_classifier_store)) {
+            if (!main_classifier_store.sets.len)
+                return nullptr;
+            LogError("Load incomplete, some information may be inaccurate");
+        }
+    }
+
+    size_t set_idx;
+    if (main_set_date.value) {
+        const ClassifierSet *set = FindLinear(main_classifier_store.sets,
+                                              [&](const ClassifierSet &set) {
+            return main_set_date >= set.limit_dates[0] && main_set_date < set.limit_dates[1];
+        });
+        if (!set) {
+            LogError("No classifier set available for %1", main_set_date);
+            return nullptr;
+        }
+        set_idx = set - main_classifier_store.sets.ptr;
+    } else {
+        set_idx = main_classifier_store.sets.len - 1;
+    }
+
+    if (out_set_idx) {
+        *out_set_idx = set_idx;
+    }
+    return &main_classifier_store;
+}
+
+struct ListSpecifier {
+    enum class Table {
+        Diagnoses,
+        Procedures
+    };
+    enum class Type {
+        Mask
+    };
+
+    Table table;
+
+    Type type;
+    struct {
+        struct {
+            uint8_t offset;
+            uint8_t mask;
+        } mask;
+    } u;
+
+    bool Match(ArrayRef<const uint8_t> values) const;
+};
+
+bool ListSpecifier::Match(ArrayRef<const uint8_t> values) const
+{
+    switch (type) {
+        case Type::Mask: {
+            return u.mask.offset < values.len &&
+                   values[u.mask.offset] & u.mask.mask;
+        } break;
+    }
+
+    Assert(false);
+}
+
+// FIXME: Return invalid specifier instead
+static bool ParseListSpecifier(const char *spec_str, ListSpecifier *out_spec)
+{
+    ListSpecifier spec = {};
+
+    if (!spec_str[0] || !spec_str[1])
+        goto error;
+
+    switch (spec_str[0]) {
+        case 'd': case 'D': { spec.table = ListSpecifier::Table::Diagnoses; } break;
+        case 'a': case 'A': { spec.table = ListSpecifier::Table::Procedures; } break;
+
+        default:
+            goto error;
+    }
+
+    switch (spec_str[1]) {
+        case '$': {
+            spec.type = ListSpecifier::Type::Mask;
+            if (sscanf(spec_str + 2, "%" SCNu8 ".%" SCNu8,
+                       &spec.u.mask.offset, &spec.u.mask.mask) != 2)
+                goto error;
+        } break;
+
+        default:
+            goto error;
+    }
+
+    *out_spec = spec;
+    return true;
+
+error:
+    LogError("Malformed list specifier '%1'", spec_str);
+    return false;
+}
+
 int main(int argc, char **argv)
 {
     static const char *const main_usage_str =
 R"(Usage: moya command [options]
 
 Commands:
-    fg_dump                  Dump available classifier data tables
-    fg_list                  Print diagnosis and procedure lists
-    fg_pricing               Print GHS pricing tables
-    fg_run                   Run classifier on patient data)";
-    static const char *const fg_dump_usage_str =
+    dump                  Dump available classifier data tables
+    list                  Print diagnosis and procedure lists
+    tables
+    pricing               Print GHS pricing tables
+    run                   Run classifier on patient data)";
+
+    static const char *const dump_usage_str =
 R"(Usage: moya fg_dump [options] filename
 
 Options:
     -h, --headers            Print only table headers)";
-    static const char *const fg_tables_usage_str =
+
+    static const char *const list_usage_str =
+R"(Usage: moya fg_tables [options] filename
+
+Options:
+    -t, --table <filename>   Load table file or directory)";
+
+    static const char *const tables_usage_str =
 R"(Usage: moya fg_tables [options] filename
 
 Options:
@@ -362,109 +479,161 @@ Options:
         return 1;
     }
 
-    if (argc < 2) {
-        PrintLn(stderr, "%1", main_usage_str);
-        return 1;
-    }
-
 #define COMMAND(Cmd) \
         if (!(strcmp(cmd, STRINGIFY(Cmd))))
-#define REQUIRE_OPTION_VALUE(UsageStr) \
+#define REQUIRE_OPTION_VALUE(UsageStr, ReturnValue) \
         do { \
             if (!opt_parser.ConsumeOptionValue()) { \
                 PrintLn(stderr, "Option '%1' needs an argument", opt_parser.current_option); \
                 PrintLn(stderr, "%1", (UsageStr)); \
-                return 1; \
+                return (ReturnValue); \
             } \
         } while (false)
+
+    Allocator temp_alloc;
 
     const char *cmd = argv[1];
     OptionParser opt_parser(argc - 1, argv + 1);
 
-    COMMAND(fg_dump) {
+    const auto HandleMainOption = [&](const char *usage_str) {
+        if (TestOption(opt_parser.current_option, "-T", "--table-dir")) {
+            REQUIRE_OPTION_VALUE(main_usage_str, false);
+
+            // FIXME: Ugly copying?
+            // FIXME: Avoid use of Fmt, make full path directly
+            DynamicArray<FileInfo> files;
+            if (EnumerateDirectory(opt_parser.current_value, "*.tab", temp_alloc,
+                                   &files, 1024) != EnumStatus::Done)
+                return false;
+            for (const FileInfo &file: files) {
+                if (file.type == FileType::File) {
+                    const char *filename =
+                        Fmt(&temp_alloc, "%1%/%2", opt_parser.current_value, file.name);
+                    main_table_filenames.Append(filename);
+                }
+            }
+
+            return true;
+        } else if (TestOption(opt_parser.current_option, "-t", "--table-file")) {
+            REQUIRE_OPTION_VALUE(main_usage_str, false);
+            main_table_filenames.Append(opt_parser.current_value);
+            return true;
+        } else if (TestOption(opt_parser.current_option, "-d", "--table-date")) {
+            REQUIRE_OPTION_VALUE(main_usage_str, false);
+            main_set_date = ParseDateString(opt_parser.current_value);
+            return !!main_set_date.value;
+        } else {
+            PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+            PrintLn(stderr, usage_str);
+            return false;
+        }
+    };
+
+    COMMAND(dump) {
         bool headers = false;
         {
             const char *opt;
             while ((opt = opt_parser.ConsumeOption())) {
-                if (TestOption(opt, "-h", "--headers")) {
-                    headers = true;
-                } else if (TestOption(opt, "--help")) {
-                    PrintLn(stdout, "%1", fg_dump_usage_str);
+                if (TestOption(opt, "--help")) {
+                    PrintLn(stdout, "%1", dump_usage_str);
                     return 0;
-                } else {
-                    PrintLn(stderr, "Unknown option '%1'", opt);
-                    PrintLn(stderr, "%1", fg_dump_usage_str);
+                } else if (TestOption(opt, "-h", "--headers")) {
+                    headers = true;
+                } else if (!HandleMainOption(dump_usage_str)) {
                     return 1;
                 }
             }
         }
 
-        DynamicArray<const char *> filenames;
-        opt_parser.ConsumeNonOptions(&filenames);
-        if (!filenames.len) {
-            PrintLn(stderr, "No filename provided");
-            PrintLn(stderr, "%1", fg_dump_usage_str);
-            return 1;
-        }
+        opt_parser.ConsumeNonOptions(&main_table_filenames);
 
         bool success = true;
-        for (const char *filename: filenames) {
-            success &= FgDump(filename, !headers);
+        for (const char *filename: main_table_filenames) {
+            success &= DumpTableFile(filename, !headers);
         }
         return !success;
     }
 
-    COMMAND(fg_tables) {
-        Allocator temp_alloc;
-
-        DynamicArray<const char *> filenames;
+    COMMAND(list) {
+        DynamicArray<const char *> spec_strings;
         bool verbose = false;
         {
             const char *opt;
             while ((opt = opt_parser.ConsumeOption())) {
-                if (TestOption(opt, "-T", "--table-dir")) {
-                    REQUIRE_OPTION_VALUE(fg_tables_usage_str);
-
-                    // FIXME: Ugly copying?
-                    // FIXME: Avoid use of Fmt, make full path directly
-                    DynamicArray<FileInfo> files;
-                    if (EnumerateDirectory(opt_parser.current_value, "*.tab", temp_alloc,
-                                           &files, 1024) != EnumStatus::Done)
-                        return 1;
-                    for (const FileInfo &file: files) {
-                        if (file.type == FileType::File) {
-                            filenames.Append(Fmt(&temp_alloc, "%1/%2", opt_parser.current_value,
-                                                 file.name));
-                        }
-                    }
-                } else if (TestOption(opt, "-t", "--table-file")) {
-                    REQUIRE_OPTION_VALUE(fg_tables_usage_str);
-                    filenames.Append(opt_parser.current_value);
+                if (TestOption(opt, "--help")) {
+                    PrintLn(stdout, list_usage_str);
+                    return 0;
                 } else if (TestOption(opt, "-v", "--verbose")) {
                     verbose = true;
-                } else {
-                    PrintLn(stderr, "Unknown option '%1'", opt);
-                    PrintLn(stderr, "%1", fg_tables_usage_str);
+                } else if (!HandleMainOption(list_usage_str)) {
+                    return 1;
+                }
+            }
+
+            opt_parser.ConsumeNonOptions(&spec_strings);
+            if (!spec_strings.len) {
+                PrintLn(stderr, "No specifier provided");
+                PrintLn(stderr, list_usage_str);
+                return 1;
+            }
+        }
+
+        size_t store_set_idx;
+        ClassifierStore *store = GetMainClassifierStore(&store_set_idx);
+        if (!store)
+            return 1;
+
+        const ClassifierSet &set = store->sets[store_set_idx];
+        for (const char *spec_str: spec_strings) {
+            ListSpecifier spec;
+            if (!ParseListSpecifier(spec_str, &spec))
+                continue;
+
+            PrintLn("%1:", spec_str);
+            switch (spec.table) {
+                case ListSpecifier::Table::Diagnoses: {
+                    for (const DiagnosisInfo &diag: store->diagnoses.Take(set.diagnoses)) {
+                        if (spec.Match(diag.sex[0].values)) {
+                            PrintLn("  %1", diag.code);
+                        }
+                    }
+                } break;
+
+                case ListSpecifier::Table::Procedures: {
+                    for (const ProcedureInfo &proc: store->procedures.Take(set.procedures)) {
+                        if (spec.Match(proc.values)) {
+                            PrintLn("  %1", proc.code);
+                        }
+                    }
+                } break;
+            }
+            PrintLn();
+        }
+
+        return 0;
+    }
+
+    COMMAND(tables) {
+        bool verbose = false;
+        {
+            const char *opt;
+            while ((opt = opt_parser.ConsumeOption())) {
+                if (TestOption(opt, "--help")) {
+                    PrintLn(stdout, "%1", tables_usage_str);
+                    return 0;
+                } else if (TestOption(opt, "-v", "--verbose")) {
+                    verbose = true;
+                } else if (!HandleMainOption(tables_usage_str)) {
                     return 1;
                 }
             }
         }
-        if (!filenames.len) {
-            PrintLn(stderr, "No filename provided");
-            PrintLn(stderr, "%1", fg_tables_usage_str);
+
+        ClassifierStore *store = GetMainClassifierStore();
+        if (!store)
             return 1;
-        }
 
-        ClassifierStore classifier_store = {};
-        if (!LoadClassifierFiles(filenames, &classifier_store)) {
-            if (!classifier_store.sets.len)
-                return 1;
-            LogError("Load incomplete, some information may be inaccurate");
-        } else if (!classifier_store.sets.len) {
-            return 0;
-        }
-
-        for (const ClassifierSet &set: classifier_store.sets) {
+        for (const ClassifierSet &set: store->sets) {
             PrintLn("%1 to %2:", set.limit_dates[0], set.limit_dates[1]);
             for (const TableInfo *table: set.tables) {
                 if (!table)
@@ -484,17 +653,12 @@ Options:
         return 0;
     }
 
-    COMMAND(fg_list) {
+    COMMAND(pricing) {
         PrintLn(stderr, "Not implemented");
         return 1;
     }
 
-    COMMAND(fg_pricing) {
-        PrintLn(stderr, "Not implemented");
-        return 1;
-    }
-
-    COMMAND(fg_run) {
+    COMMAND(run) {
         PrintLn(stderr, "Not implemented");
         return 1;
     }

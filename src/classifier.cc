@@ -1,6 +1,6 @@
 #include "kutil.hh"
-#include "fg_classifier.hh"
-#include "fg_table.hh"
+#include "classifier.hh"
+#include "data_fg.hh"
 
 struct TableData {
     size_t table_idx;
@@ -19,6 +19,18 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
     set.limit_dates[0] = start_date;
     set.limit_dates[1] = end_sate;
 
+#define LOAD_TABLE(Type, MemberName, LoadFunc) \
+        case TableType::Type: { \
+            if (!table->loaded) { \
+                set.MemberName.offset = store->MemberName.len; \
+                success &= LoadFunc(table->raw_data.ptr, table->filename, \
+                                    table_info, &store->MemberName); \
+                set.MemberName.len = store->MemberName.len - set.MemberName.offset; \
+            } else { \
+                set.MemberName = store->sets[store->sets.len - 1].MemberName; \
+            } \
+        } break
+
     size_t active_count = 0;
     for (size_t i = 0; i < CountOf(TableTypeNames); i++) {
         if (!current_tables[i])
@@ -28,34 +40,15 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
         const TableInfo &table_info = store->tables[table->table_idx];
 
         switch ((TableType)i) {
-            case TableType::DiagnosisTable: {
-                if (!table->loaded) {
-                    set.diagnoses.offset = store->diagnoses.len;
-                    success &= ParseDiagnosisTable(table->raw_data.ptr, table->filename,
-                                                   table_info, &store->diagnoses);
-                    set.diagnoses.len = store->diagnoses.len - set.diagnoses.offset;
-                } else {
-                    set.diagnoses = store->sets[store->sets.len - 1].diagnoses;
-                }
-            } break;
+            LOAD_TABLE(GhmDecisionTree, ghm_nodes, ParseGhmDecisionTree);
+            LOAD_TABLE(DiagnosisTable, diagnoses, ParseDiagnosisTable);
+            LOAD_TABLE(ProcedureTable, procedures, ParseProcedureTable);
+            LOAD_TABLE(GhmRootTable, ghm_roots, ParseGhmRootTable);
 
-            case TableType::ProcedureTable: {
-                if (!table->loaded) {
-                    set.procedures.offset = store->procedures.len;
-                    success &= ParseProcedureTable(table->raw_data.ptr, table->filename,
-                                                   table_info, &store->procedures);
-                    set.procedures.len = store->procedures.len - set.procedures.offset;
-                } else {
-                    set.procedures = store->sets[store->sets.len - 1].procedures;
-                }
-            } break;
-
-            case TableType::AuthorizationTable:
             case TableType::ChildbirthTable:
-            case TableType::DiagnosisProcedureTable:
-            case TableType::GhmDecisionTree:
-            case TableType::GhmRootTable:
             case TableType::GhsDecisionTree:
+            case TableType::AuthorizationTable:
+            case TableType::DiagnosisProcedureTable:
             case TableType::UnknownTable:
                 break;
         }
@@ -68,6 +61,8 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
     if (active_count) {
         store->sets.Append(set);
     }
+
+#undef LOAD_TABLE
 
     return success;
 }
@@ -84,7 +79,6 @@ bool LoadClassifierFiles(ArrayRef<const char *const> filenames, ClassifierStore 
     DynamicArray<TableData> tables;
     for (const char *filename: filenames) {
         ArrayRef<uint8_t> raw_data;
-        // TODO: Full fail if file does not exist
         if (!ReadFile(&file_alloc, filename, Megabytes(8), &raw_data)) {
             success = false;
             continue;

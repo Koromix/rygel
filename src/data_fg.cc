@@ -1,5 +1,5 @@
 #include "kutil.hh"
-#include "fg_table.hh"
+#include "data_fg.hh"
 
 static inline void ReverseBytes(uint16_t *u)
 {
@@ -559,11 +559,11 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 
         // GHM root code
         {
-            static char letters1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
+            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
 
             // TODO: Improve Fmt API to replace sprintf/snprintf
             snprintf(ghm_root.code.str, sizeof(ghm_root.code.str), "%02u%c%02u",
-                     raw_ghm_root.cmd, letters1[raw_ghm_root.type_seq / 100 % 10],
+                     raw_ghm_root.cmd, chars1[raw_ghm_root.type_seq / 100 % 10],
                      raw_ghm_root.type_seq % 100);
         }
 
