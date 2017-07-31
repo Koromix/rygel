@@ -1,6 +1,7 @@
 #pragma once
 
 #include "kutil.hh"
+#include "data_common.hh"
 
 enum class TableType {
     UnknownTable,
@@ -9,11 +10,11 @@ enum class TableType {
     DiagnosisTable,
     ProcedureTable,
     GhmRootTable,
-    ChildbirthTable,
+    SeverityTable,
 
     GhsDecisionTree,
     AuthorizationTable,
-    DiagnosisProcedureTable
+    SupplementPairTable
 };
 static const char *const TableTypeNames[] = {
     "Unknown Table",
@@ -22,56 +23,11 @@ static const char *const TableTypeNames[] = {
     "Diagnosis Table",
     "Procedure Table",
     "GHM Root Table",
-    "Childbirth Table",
+    "Severity Table",
 
     "GHS Decision Tree",
     "Unit Reference Table",
-    "Diagnosis Procedure Table"
-};
-
-union GhmRootCode {
-    char str[6];
-    uint64_t value;
-
-    bool operator==(const GhmRootCode &other) const { return value == other.value; }
-    bool operator!=(const GhmRootCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(str); }
-};
-union GhmCode {
-    char str[7];
-    uint64_t value;
-
-    bool operator==(const GhmCode &other) const { return value == other.value; }
-    bool operator!=(const GhmCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(str); }
-};
-struct GhsCode {
-    uint16_t value;
-
-    bool operator==(const GhsCode &other) const { return value == other.value; }
-    bool operator!=(const GhsCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(value); }
-};
-union DiagnosisCode {
-    char str[7];
-    uint64_t value;
-
-    bool operator==(const DiagnosisCode &other) const { return value == other.value; }
-    bool operator!=(const DiagnosisCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(str); }
-};
-union ProcedureCode {
-    char str[8];
-    uint64_t value;
-
-    bool operator==(const ProcedureCode &other) const { return value == other.value; }
-    bool operator!=(const ProcedureCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(str); }
+    "Supplement Pair Table"
 };
 
 struct TableInfo {
@@ -102,8 +58,9 @@ struct GhmDecisionNode {
     union {
         struct {
             int8_t function; // Switch to dedicated enum
-            int8_t params[2];
+            uint8_t params[2];
             size_t children_count;
+            // TODO: Switch to relative indexes (for GHS nodes too)
             size_t children_idx;
         } test;
 
@@ -125,7 +82,7 @@ struct DiagnosisInfo {
     union {
         uint8_t values[48];
         struct {
-            int8_t cmd;
+            uint8_t cmd;
         } info;
     } sex[2];
     uint16_t warnings;
@@ -150,6 +107,11 @@ struct ValueRangeCell {
     } limits[N];
     int value;
 };
+
+//struct BirthSeverityTable {
+//    DynamicArray<ValueRangeCell<2>> gnn_table;
+//    DynamicArray<ValueRangeCell<2>> cma_tables[3];
+//};
 
 struct GhmRootInfo {
     GhmRootCode code;
@@ -221,9 +183,6 @@ struct DiagnosisProcedurePair {
 
 bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
                        const char *filename, DynamicArray<TableInfo> *out_tables);
-static inline bool ParseTableHeaders(const uint8_t *file_data, size_t file_len,
-                                     const char *filename, DynamicArray<TableInfo> *out_tables)
-    { return ParseTableHeaders(MakeArrayRef(file_data, file_len), filename, out_tables); }
 
 bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
                           const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes);
@@ -233,14 +192,55 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                          const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);
 bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
                        const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots);
-bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo::Section &section,
-                          DynamicArray<ValueRangeCell<2>> *out_cells);
+bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
+                        const TableInfo &table, size_t section_idx,
+                        DynamicArray<ValueRangeCell<2>> *out_cells);
 
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                            const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes);
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
                              const TableInfo &table, DynamicArray<AuthorizationInfo> *out_units);
-bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename,
-                                  const TableInfo::Section &section,
-                                  DynamicArray<DiagnosisProcedurePair> *out_pairs);
+bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
+                              const TableInfo &table, size_t section_idx,
+                              DynamicArray<DiagnosisProcedurePair> *out_pairs);
+
+struct ClassifierSet {
+    Date limit_dates[2];
+    // FIXME: Direct pointer?
+    const TableInfo *tables[CountOf(TableTypeNames)];
+
+    ArraySlice<GhmDecisionNode> ghm_nodes;
+    ArraySlice<DiagnosisInfo> diagnoses;
+    ArraySlice<ProcedureInfo> procedures;
+    ArraySlice<GhmRootInfo> ghm_roots;
+    ArraySlice<ValueRangeCell<2>> gnn_cells;
+    ArraySlice<ValueRangeCell<2>> cma_cells[3];
+
+    ArraySlice<GhsDecisionNode> ghs_nodes;
+    ArraySlice<AuthorizationInfo> authorizations;
+    ArraySlice<DiagnosisProcedurePair> supplement_pairs[2];
+};
+
+class ClassifierStore {
+public:
+    DynamicArray<TableInfo> tables;
+
+    DynamicArray<ClassifierSet> sets;
+
+    DynamicArray<GhmDecisionNode> ghm_nodes;
+    DynamicArray<DiagnosisInfo> diagnoses;
+    DynamicArray<ProcedureInfo> procedures;
+    DynamicArray<GhmRootInfo> ghm_roots;
+    DynamicArray<ValueRangeCell<2>> gnn_cells;
+    DynamicArray<ValueRangeCell<2>> cma_cells[3];
+
+    DynamicArray<GhsDecisionNode> ghs_nodes;
+    DynamicArray<AuthorizationInfo> authorizations;
+    DynamicArray<DiagnosisProcedurePair> supplement_pairs[2];
+
+    const ClassifierSet *FindSet(Date date) const;
+    ClassifierSet *FindSet(Date date)
+        { return (ClassifierSet *)((const ClassifierStore *)this)->FindSet(date); }
+};
+
+bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore *out_store);

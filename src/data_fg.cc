@@ -1,6 +1,22 @@
 #include "kutil.hh"
 #include "data_fg.hh"
 
+struct LoadTableData {
+    size_t table_idx;
+    const char *filename;
+    ArrayRef<uint8_t> raw_data;
+    bool loaded;
+};
+
+#define FAIL_PARSE_IF(Cond) \
+    do { \
+        if (Cond) { \
+            LogError("Malformed binary table file '%1': %2", \
+                     filename ? filename : "?", STRINGIFY(Cond)); \
+            return false; \
+        } \
+    } while (false)
+
 static inline void ReverseBytes(uint16_t *u)
 {
     *u = (uint16_t)(((*u & 0x00FF) << 8) |
@@ -88,6 +104,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
     // Since FG 10.10b, each tab file can contain several tables, with a different
     // date range for each. The struct layout changed a bit around FG 11.11, which is
     // the first version supported here.
+#pragma pack(push, 1)
     struct PackedHeader1111 {
         char signature[8];
         char version[4];
@@ -96,7 +113,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         uint8_t pad1;
         uint8_t sections_count;
         uint8_t pad2[4];
-    } __attribute__((__packed__));
+	};
     struct PackedSection1111 {
         uint8_t pad1[18];
         uint16_t values_count;
@@ -104,23 +121,15 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         uint32_t raw_len;
         uint32_t raw_offset;
         uint8_t pad2[3];
-    } __attribute__((__packed__));
+	};
     struct PackedTablePtr1111 {
         uint16_t date_range[2];
         uint8_t pad1[2]; // No idea what those two bytes are for
         uint32_t raw_offset;
-    } __attribute__((__packed__));
+	};
+#pragma pack(pop)
 
     StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
 
     PackedHeader1111 raw_main_header;
     PackedSection1111 raw_main_section;
@@ -215,11 +224,11 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         } else if (!strcmp(table.raw_type, "GHSINFO")) {
             table.type = TableType::GhsDecisionTree;
         } else if (!strcmp(table.raw_type, "TABCOMBI")) {
-            table.type = TableType::ChildbirthTable;
+            table.type = TableType::SeverityTable;
         } else if (!strcmp(table.raw_type, "AUTOREFS")) {
             table.type = TableType::AuthorizationTable;
         } else if (!strcmp(table.raw_type, "SRCDGACT")) {
-            table.type = TableType::DiagnosisProcedureTable;
+            table.type = TableType::SupplementPairTable;
         } else {
             table.type = TableType::UnknownTable;
         }
@@ -240,8 +249,6 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         out_tables->Append(table);
     }
 
-#undef FAIL_PARSE_IF
-
     out_tables_guard.disable();
     return true;
 }
@@ -251,21 +258,14 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedTreeNode {
         uint8_t function;
         uint8_t params[2];
         uint8_t children_count;
         uint16_t children_idx;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedTreeNode));
@@ -314,8 +314,6 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
         out_nodes->Append(ghm_node);
     }
 
-#undef FAIL_PARSE_IF
-
     out_nodes_guard.disable();
     return true;
 }
@@ -325,6 +323,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedDiagnosisPtr  {
         uint16_t code456;
 
@@ -332,16 +331,8 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
         uint8_t section3_idx;
         uint16_t section4_bit;
         uint16_t section4_idx;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 5);
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
@@ -413,8 +404,6 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
         block_start = block_end;
     }
 
-#undef FAIL_PARSE_IF
-
     out_diags_guard.disable();
     return true;
 }
@@ -424,6 +413,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 {
     DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedProcedurePtr  {
         char char4;
         uint16_t seq_phase;
@@ -431,16 +421,8 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
         uint16_t section2_idx;
         uint16_t date_min;
         uint16_t date_max;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 3);
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 26 * 26 ||
@@ -514,8 +496,6 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
         block_start = block_end;
     }
 
-#undef FAIL_PARSE_IF
-
     out_proc_guard.disable();
     return true;
 }
@@ -525,6 +505,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 {
     DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedGhmRoot {
         uint8_t cmd;
         uint16_t type_seq;
@@ -535,27 +516,23 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         uint8_t cma_exclusion_offset;
         uint8_t cma_exclusion_mask;
         uint8_t confirm_duration_treshold;
-        uint8_t childbirth_severity_mode;
-    } __attribute__((__packed__));;
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+        uint8_t childbirth_severity_mode; // Appeared in FG 11d
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
-    FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhmRoot));
+    if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 14)) {
+        FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhmRoot));
+    } else {
+        FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhmRoot) - 1);
+    }
 
     for (size_t i = 0; i < table.sections[0].values_count; i++) {
         GhmRootInfo ghm_root = {};
 
         PackedGhmRoot raw_ghm_root;
         memcpy(&raw_ghm_root, file_data + table.sections[0].raw_offset +
-                                 i * sizeof(PackedGhmRoot), sizeof(PackedGhmRoot));
+                              i * table.sections[0].value_len, table.sections[0].value_len);
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_ghm_root.type_seq);
 #endif
@@ -617,7 +594,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
             } break;
         }
 
-        if (raw_ghm_root.childbirth_severity_mode) {
+        if (table.sections[0].value_len >= 12 && raw_ghm_root.childbirth_severity_mode) {
             FAIL_PARSE_IF(raw_ghm_root.childbirth_severity_mode < 2 ||
                           raw_ghm_root.childbirth_severity_mode > 4);
             ghm_root.childbirth_severity_list = raw_ghm_root.childbirth_severity_mode - 1;
@@ -629,43 +606,35 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         out_ghm_roots->Append(ghm_root);
     }
 
-#undef FAIL_PARSE_IF
-
     out_ghm_roots_guard.disable();
     return true;
 }
 
-bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo::Section &section,
-                          DynamicArray<ValueRangeCell<2>> *out_cells)
+bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
+                        const TableInfo &table, size_t section_idx,
+                        DynamicArray<ValueRangeCell<2>> *out_cells)
 {
     DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedCell {
         uint16_t var1_min;
         uint16_t var1_max;
         uint16_t var2_min;
         uint16_t var2_max;
         uint16_t value;
-    } __attribute__((__packed__));
+	};
+#pragma pack(pop)
 
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+    FAIL_PARSE_IF(section_idx >= table.sections.len);
+    FAIL_PARSE_IF(table.sections[section_idx].value_len != sizeof(PackedCell));
 
-    FAIL_PARSE_IF(section.value_len != sizeof(PackedCell));
-
-    for (size_t i = 0; i < section.values_count; i++) {
+    for (size_t i = 0; i < table.sections[section_idx].values_count; i++) {
         ValueRangeCell<2> cell = {};
 
         PackedCell raw_cell;
-        memcpy(&raw_cell, file_data + section.raw_offset + i * sizeof(PackedCell),
-               sizeof(PackedCell));
+        memcpy(&raw_cell, file_data + table.sections[section_idx].raw_offset +
+                          i * sizeof(PackedCell), sizeof(PackedCell));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_cell.var1_min);
         ReverseBytes(&raw_cell.var1_max);
@@ -683,17 +652,46 @@ bool ParseValueRangeTable(const uint8_t *file_data, const char *filename,
         out_cells->Append(cell);
     }
 
-#undef FAIL_PARSE_IF
-
     out_cells_guard.disable();
     return true;
 }
 
+#if 0
+bool ParseBirthSeverityTable(const uint8_t *file_data, const char *filename,
+                             const TableInfo &table, BirthSeverityTable *out_table)
+{
+    DEFER_NC(table_guard,
+             gnn_len = out_table->gnn_table.len, cma0_len = out_table->cma_tables[0].len,
+             cma1_len = out_table->cma_tables[1].len, cma2_len = out_table->cma_tables[2].len) {
+        out_table->gnn_table.RemoveFrom(gnn_len);
+        out_table->cma_tables[0].RemoveFrom(cma0_len);
+        out_table->cma_tables[1].RemoveFrom(cma1_len);
+        out_table->cma_tables[2].RemoveFrom(cma2_len);
+    };
+
+    FAIL_PARSE_IF(table.sections.len != 4);
+
+    if (!ParseValueRangeTable(file_data, filename, table.sections[0], &out_table->gnn_table))
+        return false;
+    if (!ParseValueRangeTable(file_data, filename, table.sections[1], &out_table->cma_tables[0]))
+        return false;
+    if (!ParseValueRangeTable(file_data, filename, table.sections[2], &out_table->cma_tables[1]))
+        return false;
+    if (!ParseValueRangeTable(file_data, filename, table.sections[3], &out_table->cma_tables[2]))
+        return false;
+
+    table_guard.disable();
+    return true;
+}
+#endif
+
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                            const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes)
 {
-    DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
+    size_t base_len = out_nodes->len;
+    DEFER_N(out_nodes_guard) { out_nodes->RemoveFrom(base_len); };
 
+#pragma pack(push, 1)
     struct PackedGhsNode {
         uint8_t cmd;
         uint16_t type_seq;
@@ -707,16 +705,8 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
             uint16_t high_duration_treshold;
             uint16_t low_duration_treshold;
         } versions[2];
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
@@ -743,7 +733,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
 
             FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
             if (ghm_node_idx != SIZE_MAX) {
-                (*out_nodes)[ghm_node_idx].u.ghm.next_ghm_idx = out_nodes->len;
+                (*out_nodes)[ghm_node_idx].u.ghm.next_ghm_idx = out_nodes->len - base_len;
             } else {
                 FAIL_PARSE_IF(i);
             }
@@ -780,8 +770,9 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
 
         if (raw_ghs_node.valid_ghs) {
             // TODO: Doubts about correctness of this
+            // TODO: Put to 0 at the end
             for (size_t j = first_test_idx; j < out_nodes->len; j++) {
-                (*out_nodes)[j].u.test.fail_goto_idx = out_nodes->len + 1;
+                (*out_nodes)[j].u.test.fail_goto_idx = out_nodes->len + 1 - base_len;
             }
             first_test_idx = SIZE_MAX;
 
@@ -800,8 +791,6 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
     FAIL_PARSE_IF(ghm_node_idx + 1 == out_nodes->len);
 
-#undef FAIL_PARSE_IF
-
     out_nodes_guard.disable();
     return true;
 }
@@ -811,20 +800,13 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
 {
     DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedAuthorization {
         uint8_t code;
         uint8_t function;
         uint8_t global;
-    } __attribute__((__packed__));
-
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+	};
+#pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 2);
     FAIL_PARSE_IF(table.sections[0].value_len != 3 || table.sections[0].value_len != 3);
@@ -852,42 +834,34 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
         }
     }
 
-#undef FAIL_PARSE_IF
-
     out_auths_guard.disable();
     return true;
 }
 
-bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename,
-                                  const TableInfo::Section &section,
-                                  DynamicArray<DiagnosisProcedurePair> *out_pairs)
+bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
+                              const TableInfo &table, size_t section_idx,
+                              DynamicArray<DiagnosisProcedurePair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
 
+#pragma pack(push, 1)
     struct PackedPair {
         uint16_t diag_code123;
         uint16_t diag_code456;
         uint16_t proc_code123;
         uint16_t proc_code456;
-    } __attribute__((__packed__));
+	};
+#pragma pack(pop)
 
-#define FAIL_PARSE_IF(Cond) \
-        do { \
-            if (Cond) { \
-                LogError("Malformed binary table file '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
-                return false; \
-            } \
-        } while (false)
+    FAIL_PARSE_IF(section_idx >= table.sections.len);
+    FAIL_PARSE_IF(table.sections[section_idx].value_len != sizeof(PackedPair));
 
-    FAIL_PARSE_IF(section.value_len != sizeof(PackedPair));
-
-    for (size_t i = 0; i < section.values_count; i++) {
+    for (size_t i = 0; i < table.sections[section_idx].values_count; i++) {
         DiagnosisProcedurePair pair = {};
 
         PackedPair raw_pair;
-        memcpy(&raw_pair, file_data + section.raw_offset + i * sizeof(PackedPair),
-               sizeof(PackedPair));
+        memcpy(&raw_pair, file_data + table.sections[section_idx].raw_offset +
+                          i * sizeof(PackedPair), sizeof(PackedPair));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_pair.diag_code123);
         ReverseBytes(&raw_pair.diag_code456);
@@ -910,8 +884,195 @@ bool ParseDiagnosisProcedureTable(const uint8_t *file_data, const char *filename
         out_pairs->Append(pair);
     }
 
-#undef FAIL_PARSE_IF
-
     out_pairs_guard.disable();
     return true;
+}
+
+const ClassifierSet *ClassifierStore::FindSet(Date date) const
+{
+    if (date.value) {
+        for (size_t i = sets.len - 1; i-- > 0;) {
+            if (date >= sets[i].limit_dates[0] && date < sets[i].limit_dates[1])
+                return &sets[i];
+        }
+    } else if (sets.len) {
+        return &sets[sets.len - 1];
+    }
+    return nullptr;
+}
+
+static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date end_sate,
+                                LoadTableData *current_tables[])
+{
+    bool success = true;
+
+    ClassifierSet set = {};
+
+    set.limit_dates[0] = start_date;
+    set.limit_dates[1] = end_sate;
+
+#define LOAD_TABLE(MemberName, LoadFunc, ...) \
+        do { \
+            if (!table->loaded) { \
+                set.MemberName.offset = store->MemberName.len; \
+                success &= LoadFunc(table->raw_data.ptr, table->filename, \
+                                    table_info, ##__VA_ARGS__, &store->MemberName); \
+                set.MemberName.len = store->MemberName.len - set.MemberName.offset; \
+            } else { \
+                set.MemberName = store->sets[store->sets.len - 1].MemberName; \
+            } \
+        } while (false)
+
+    size_t active_count = 0;
+    for (size_t i = 0; i < CountOf(set.tables); i++) {
+        if (!current_tables[i])
+            continue;
+
+        LoadTableData *table = current_tables[i];
+        const TableInfo &table_info = store->tables[table->table_idx];
+
+        switch ((TableType)i) {
+            case TableType::GhmDecisionTree: {
+                LOAD_TABLE(ghm_nodes, ParseGhmDecisionTree);
+            } break;
+            case TableType::DiagnosisTable: {
+                LOAD_TABLE(diagnoses, ParseDiagnosisTable);
+            } break;
+            case TableType::ProcedureTable: {
+                LOAD_TABLE(procedures, ParseProcedureTable);
+            } break;
+            case TableType::GhmRootTable: {
+                LOAD_TABLE(ghm_roots, ParseGhmRootTable);
+            } break;
+            case TableType::SeverityTable: {
+                LOAD_TABLE(gnn_cells, ParseSeverityTable, 0);
+                LOAD_TABLE(cma_cells[0], ParseSeverityTable, 1);
+                LOAD_TABLE(cma_cells[1], ParseSeverityTable, 2);
+                LOAD_TABLE(cma_cells[2], ParseSeverityTable, 3);
+            } break;
+
+            case TableType::GhsDecisionTree: {
+                LOAD_TABLE(ghs_nodes, ParseGhsDecisionTree);
+            } break;
+            case TableType::AuthorizationTable: {
+                LOAD_TABLE(authorizations, ParseAuthorizationTable);
+            } break;
+            case TableType::SupplementPairTable: {
+                LOAD_TABLE(supplement_pairs[0], ParseSupplementPairTable, 0);
+                LOAD_TABLE(supplement_pairs[1], ParseSupplementPairTable, 1);
+            } break;
+
+            case TableType::UnknownTable:
+                break;
+        }
+        table->loaded = true;
+        set.tables[i] = &table_info;
+
+        active_count++;
+    }
+
+    if (active_count) {
+        store->sets.Append(set);
+    }
+
+#undef LOAD_TABLE
+
+    return success;
+}
+
+bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore *out_store)
+{
+    Assert(!out_store->tables.len);
+    Assert(!out_store->sets.len);
+
+    bool success = true;
+
+    Allocator file_alloc;
+
+    DynamicArray<LoadTableData> tables;
+    for (const char *filename: filenames) {
+        ArrayRef<uint8_t> raw_data;
+        if (!ReadFile(&file_alloc, filename, Megabytes(8), &raw_data)) {
+            success = false;
+            continue;
+        }
+
+        size_t start_len = out_store->tables.len;
+        if (!ParseTableHeaders(raw_data, filename, &out_store->tables)) {
+            success = false;
+            continue;
+        }
+        for (size_t i = start_len; i < out_store->tables.len; i++) {
+            if (out_store->tables[i].type == TableType::UnknownTable)
+                continue;
+
+            LoadTableData table = {};
+            table.table_idx = i;
+            table.filename = filename;
+            table.raw_data = raw_data;
+            tables.Append(table);
+        }
+    }
+
+    std::sort(tables.begin(), tables.end(),
+              [&](const LoadTableData &table1, const LoadTableData &table2) {
+        const TableInfo &table_info1 = out_store->tables[table1.table_idx];
+        const TableInfo &table_info2 = out_store->tables[table2.table_idx];
+
+        if (table_info1.limit_dates[0] < table_info2.limit_dates[0]) {
+            return true;
+        } else if (table_info1.limit_dates[0] == table_info2.limit_dates[0]) {
+            return table_info1.build_date < table_info2.build_date;
+        } else {
+            return false;
+        }
+    });
+
+    LoadTableData *active_tables[CountOf(TableTypeNames)] = {};
+    Date start_date = {}, end_date = {};
+    for (LoadTableData &table: tables) {
+        const TableInfo &table_info = out_store->tables[table.table_idx];
+
+        while (end_date.value && table_info.limit_dates[0] >= end_date) {
+            success &= CommitClassifierSet(out_store, start_date, end_date, active_tables);
+
+            start_date = {};
+            Date next_end_date = {};
+            for (size_t i = 0; i < CountOf(active_tables); i++) {
+                if (!active_tables[i])
+                    continue;
+
+                const TableInfo &active_info = out_store->tables[active_tables[i]->table_idx];
+
+                if (active_info.limit_dates[1] == end_date) {
+                    active_tables[i] = nullptr;
+                } else {
+                    if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
+                        next_end_date = active_info.limit_dates[1];
+                    }
+                }
+            }
+
+            start_date = table_info.limit_dates[0];
+            end_date = next_end_date;
+        }
+
+        if (start_date.value) {
+            if (table_info.limit_dates[0] > start_date) {
+                success &= CommitClassifierSet(out_store, start_date, table_info.limit_dates[0],
+                                               active_tables);
+                start_date = table_info.limit_dates[0];
+            }
+        } else {
+            start_date = table_info.limit_dates[0];
+        }
+        if (!end_date.value || table_info.limit_dates[1] < end_date) {
+            end_date = table_info.limit_dates[1];
+        }
+
+        active_tables[(int)table_info.type] = &table;
+    }
+    success &= CommitClassifierSet(out_store, start_date, end_date, active_tables);
+
+    return success;
 }

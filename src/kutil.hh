@@ -2,8 +2,10 @@
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
+#include <functional>
 #include <inttypes.h>
 #include <limits.h>
+#include <limits>
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -113,35 +115,6 @@ constexpr size_t CountOf(T const (&)[N])
     return N;
 }
 
-template <typename T, size_t N, typename Pred>
-T *FindLinear(T (&arr)[N], Pred pred)
-{
-    for (auto &it: arr)
-    {
-        if (pred(it))
-            return &it;
-    }
-    return nullptr;
-}
-template <typename T, typename Pred>
-T *FindLinear(T *arr, size_t size, Pred pred)
-{
-    for (size_t i = 0; i < size; i++) {
-        if (pred(arr[i]))
-            return &arr[i];
-    }
-    return nullptr;
-}
-template <typename Coll, typename Pred>
-typename Coll::value_type *FindLinear(Coll &coll, Pred pred)
-{
-    for (auto &it: coll) {
-        if (pred(it))
-            return &it;
-    }
-    return nullptr;
-}
-
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
     {
@@ -185,7 +158,6 @@ typename Coll::value_type *FindLinear(Coll &coll, Pred pred)
             return 64;
         }
     #else
-        unsigned long leading_zero;
         if (_BitScanReverse(&leading_zero, u >> 32)) {
             return 31 - leading_zero;
         } else if (_BitScanReverse(&leading_zero, (uint32_t)u)) {
@@ -680,6 +652,10 @@ static inline void PrintLn()
     putchar('\n');
 }
 
+// ------------------------------------------------------------------------
+// Debug and errors
+// ------------------------------------------------------------------------
+
 // Log text line to stderr with context, for the Log() macros below
 static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 {
@@ -703,14 +679,13 @@ static inline constexpr const char *SimplifyLogContext(const char *ctx)
     return new_ctx;
 }
 
-// ------------------------------------------------------------------------
-// Debug and errors
-// ------------------------------------------------------------------------
-
 #define LOG_LOCATION SimplifyLogContext(__FILE__ ":" STRINGIFY(__LINE__))
 #define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
 #define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
+
+void PushLogHandler(std::function<void(FILE *)> handler);
+void PopLogHandler();
 
 #define Abort(...) \
     do { \
@@ -910,7 +885,7 @@ public:
     DynamicArray(DynamicArray &) = delete;
     DynamicArray &operator=(const DynamicArray &) = delete;
 
-    ~DynamicArray();
+    ~DynamicArray() { Clear(); }
     void Clear();
 
     operator ArrayRef<T>() { return ArrayRef<T>(ptr, len); }
@@ -942,14 +917,6 @@ public:
     ArrayRef<T> Take(ArraySlice<T> slice) const
         { return ArrayRef<T>(ptr, len).Take(slice); }
 };
-
-template <typename T>
-DynamicArray<T>::~DynamicArray()
-{
-    for (size_t i = 0; i < len; i++) {
-        ptr[i].~T();
-    }
-}
 
 template <typename T>
 void DynamicArray<T>::Clear()
@@ -1561,20 +1528,22 @@ private:
 
 #ifdef _WIN32
     #define PATH_SEPARATORS "\\/"
+    #define FOPEN_COMMON_FLAGS
 #else
     #define PATH_SEPARATORS "/"
+    #define FOPEN_COMMON_FLAGS "e"
 #endif
 
 bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
-              ArrayRef<uint8_t> *rdata);
+              ArrayRef<uint8_t> *out_data);
 static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
-                            uint8_t **rdata, size_t *rlen)
+                            uint8_t **out_data, size_t *out_len)
 {
     ArrayRef<uint8_t> data;
     if (!ReadFile(alloc, filename, max_size, &data))
         return false;
-    *rdata = data.ptr;
-    *rlen = data.len;
+    *out_data = data.ptr;
+    *out_len = data.len;
     return true;
 }
 

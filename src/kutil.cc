@@ -75,6 +75,9 @@ char *Allocator::DuplicateString(Allocator *alloc, const char *str, size_t max_l
 
 void *Allocator::Allocate(size_t size, unsigned int flags)
 {
+    if (!size)
+        return nullptr;
+
     AllocatorBucket *bucket = (AllocatorBucket *)malloc(sizeof(*bucket) + size);
     if (!bucket) {
         Abort("Failed to allocate %1 of memory", FmtMemSize(size));
@@ -117,6 +120,10 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
         *ptr = Allocate(new_size, flags | Resizable);
         return;
     }
+    if (!new_size) {
+        Release(*ptr, old_size);
+        return;
+    }
 
     AllocatorBucket *bucket = PTR_TO_BUCKET(*ptr);
     AllocatorBucket *new_bucket = (AllocatorBucket *)realloc(bucket, sizeof(*new_bucket) + new_size);
@@ -134,9 +141,8 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
 
 void Allocator::Release(void *ptr, size_t)
 {
-    if (!ptr) {
-        return ;
-    }
+    if (!ptr)
+        return;
 
     AllocatorBucket *bucket = PTR_TO_BUCKET(ptr);
     bucket->head.next->prev = bucket->head.prev;
@@ -568,6 +574,12 @@ static bool ConfigTerminalOutput()
     return output_is_terminal;
 }
 
+// ------------------------------------------------------------------------
+// Debug and errors
+// ------------------------------------------------------------------------
+
+static LocalArray<std::function<void(FILE *)>, 16> log_handlers;
+
 void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
 {
     FILE *fp = stderr;
@@ -589,17 +601,31 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
 
     {
         size_t ctx_len = strlen(ctx);
-        if (ctx_len > 27) {
-            fprintf(fp, " ...%s  ", ctx + ctx_len - 24);
+        if (ctx_len > 22) {
+            fprintf(fp, " ...%s  ", ctx + ctx_len - 19);
         } else {
-            fprintf(fp, "%28s  ", ctx);
+            fprintf(fp, "%23s  ", ctx);
         }
+    }
+    if (log_handlers.len) {
+        log_handlers[log_handlers.len - 1](fp);
     }
     FmtPrint(fp, fmt, args);
     if (end_marker) {
         fputs(end_marker, fp);
     }
     fputc('\n', fp);
+}
+
+void PushLogHandler(std::function<void(FILE *)> handler)
+{
+    log_handlers.Append(handler);
+}
+
+void PopLogHandler()
+{
+    DebugAssert(log_handlers.len > 0);
+    log_handlers.RemoveLast(1);
 }
 
 // ------------------------------------------------------------------------
@@ -630,16 +656,11 @@ static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
 }
 
 bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
-              ArrayRef<uint8_t> *rdata)
+              ArrayRef<uint8_t> *out_data)
 {
-#ifdef _WIN32
-    FILE *fp = fopen(filename, "rb");
-#else
-    FILE *fp = fopen(filename, "rbe");
-#endif
+    FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
     if (!fp) {
-        // TODO: Detailed error messages, and switch to Win32 API
-        LogError("Cannot open file '%1'", filename);
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
         return false;
     }
     DEFER { fclose(fp); };
@@ -661,7 +682,7 @@ bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
     }
 
     data_guard.disable();
-    *rdata = data;
+    *out_data = data;
     return true;
 }
 
