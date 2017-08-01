@@ -627,7 +627,7 @@ void PushLogHandler(std::function<void(FILE *)> handler)
 void PopLogHandler()
 {
     DebugAssert(log_handlers.len > 0);
-    log_handlers.RemoveLast(1);
+    log_handlers.RemoveLast();
 }
 
 // ------------------------------------------------------------------------

@@ -656,35 +656,6 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-#if 0
-bool ParseBirthSeverityTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table, BirthSeverityTable *out_table)
-{
-    DEFER_NC(table_guard,
-             gnn_len = out_table->gnn_table.len, cma0_len = out_table->cma_tables[0].len,
-             cma1_len = out_table->cma_tables[1].len, cma2_len = out_table->cma_tables[2].len) {
-        out_table->gnn_table.RemoveFrom(gnn_len);
-        out_table->cma_tables[0].RemoveFrom(cma0_len);
-        out_table->cma_tables[1].RemoveFrom(cma1_len);
-        out_table->cma_tables[2].RemoveFrom(cma2_len);
-    };
-
-    FAIL_PARSE_IF(table.sections.len != 4);
-
-    if (!ParseValueRangeTable(file_data, filename, table.sections[0], &out_table->gnn_table))
-        return false;
-    if (!ParseValueRangeTable(file_data, filename, table.sections[1], &out_table->cma_tables[0]))
-        return false;
-    if (!ParseValueRangeTable(file_data, filename, table.sections[2], &out_table->cma_tables[1]))
-        return false;
-    if (!ParseValueRangeTable(file_data, filename, table.sections[3], &out_table->cma_tables[2]))
-        return false;
-
-    table_guard.disable();
-    return true;
-}
-#endif
-
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                            const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes)
 {
@@ -914,10 +885,10 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
             if (!table->loaded) { \
-                set.MemberName.offset = store->MemberName.len; \
+                set.MemberName.ptr = (decltype(set.MemberName.ptr))store->MemberName.len; \
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
                                     table_info, ##__VA_ARGS__, &store->MemberName); \
-                set.MemberName.len = store->MemberName.len - set.MemberName.offset; \
+                set.MemberName.len = store->MemberName.len - (size_t)set.MemberName.ptr; \
             } else { \
                 set.MemberName = store->sets[store->sets.len - 1].MemberName; \
             } \
@@ -1073,6 +1044,26 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
         active_tables[(int)table_info.type] = &table;
     }
     success &= CommitClassifierSet(out_store, start_date, end_date, active_tables);
+
+    for (ClassifierSet &set: out_store->sets) {
+#define FIX_SET_ARRAYREF(ArrayRefName) \
+            set.ArrayRefName.ptr = out_store->ArrayRefName.ptr + (size_t)set.ArrayRefName.ptr
+
+        FIX_SET_ARRAYREF(ghm_nodes);
+        FIX_SET_ARRAYREF(diagnoses);
+        FIX_SET_ARRAYREF(procedures);
+        FIX_SET_ARRAYREF(ghm_roots);
+        FIX_SET_ARRAYREF(gnn_cells);
+        FIX_SET_ARRAYREF(cma_cells[0]);
+        FIX_SET_ARRAYREF(cma_cells[1]);
+        FIX_SET_ARRAYREF(cma_cells[2]);
+        FIX_SET_ARRAYREF(ghs_nodes);
+        FIX_SET_ARRAYREF(authorizations);
+        FIX_SET_ARRAYREF(supplement_pairs[0]);
+        FIX_SET_ARRAYREF(supplement_pairs[1]);
+
+#undef FIX_SET_ARRAYREF
+    }
 
     return success;
 }

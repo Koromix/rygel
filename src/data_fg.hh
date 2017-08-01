@@ -206,19 +206,18 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
 
 struct ClassifierSet {
     Date limit_dates[2];
-    // FIXME: Direct pointer?
     const TableInfo *tables[CountOf(TableTypeNames)];
 
-    ArraySlice<GhmDecisionNode> ghm_nodes;
-    ArraySlice<DiagnosisInfo> diagnoses;
-    ArraySlice<ProcedureInfo> procedures;
-    ArraySlice<GhmRootInfo> ghm_roots;
-    ArraySlice<ValueRangeCell<2>> gnn_cells;
-    ArraySlice<ValueRangeCell<2>> cma_cells[3];
+    ArrayRef<GhmDecisionNode> ghm_nodes;
+    ArrayRef<DiagnosisInfo> diagnoses;
+    ArrayRef<ProcedureInfo> procedures;
+    ArrayRef<GhmRootInfo> ghm_roots;
+    ArrayRef<ValueRangeCell<2>> gnn_cells;
+    ArrayRef<ValueRangeCell<2>> cma_cells[3];
 
-    ArraySlice<GhsDecisionNode> ghs_nodes;
-    ArraySlice<AuthorizationInfo> authorizations;
-    ArraySlice<DiagnosisProcedurePair> supplement_pairs[2];
+    ArrayRef<GhsDecisionNode> ghs_nodes;
+    ArrayRef<AuthorizationInfo> authorizations;
+    ArrayRef<DiagnosisProcedurePair> supplement_pairs[2];
 };
 
 class ClassifierStore {

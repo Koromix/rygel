@@ -203,49 +203,48 @@ static void DumpClassifierStore(const ClassifierStore &store, bool detail = true
                 switch ((TableType)i) {
                     case TableType::GhmDecisionTree: {
                         PrintLn("  GHM Decision Tree:");
-                        DumpGhmDecisionTree(store.ghm_nodes.Take(set.ghm_nodes));
+                        DumpGhmDecisionTree(set.ghm_nodes);
                         PrintLn();
                     } break;
                     case TableType::DiagnosisTable: {
                         PrintLn("  Diagnoses:");
-                        DumpDiagnosisTable(store.diagnoses.Take(set.diagnoses));
+                        DumpDiagnosisTable(set.diagnoses);
                         PrintLn();
                     } break;
                     case TableType::ProcedureTable: {
                         PrintLn("  Procedures:");
-                        DumpProcedureTable(store.procedures.Take(set.procedures));
+                        DumpProcedureTable(set.procedures);
                         PrintLn();
                     } break;
                     case TableType::GhmRootTable: {
                         PrintLn("  GHM Roots:");
-                        DumpGhmRootTable(store.ghm_roots.Take(set.ghm_roots));
+                        DumpGhmRootTable(set.ghm_roots);
                         PrintLn();
                     } break;
                     case TableType::SeverityTable: {
                         PrintLn("  GNN Table:");
-                        DumpSeverityTable(store.gnn_cells.Take(set.gnn_cells));
+                        DumpSeverityTable(set.gnn_cells);
                         PrintLn();
 
                         for (size_t j = 0; j < CountOf(set.cma_cells); j++) {
                             PrintLn("  CMA Table %1:", j + 1);
-                            DumpSeverityTable(store.cma_cells[j].Take(set.cma_cells[j]));
+                            DumpSeverityTable(set.cma_cells[j]);
                             PrintLn();
                         }
                     } break;
 
                     case TableType::GhsDecisionTree: {
                         PrintLn("  GHS Decision Tree:");
-                        DumpGhsDecisionTree(store.ghs_nodes.Take(set.ghs_nodes));
+                        DumpGhsDecisionTree(set.ghs_nodes);
                     } break;
                     case TableType::AuthorizationTable: {
                         PrintLn("  Authorization Types:");
-                        DumpAuthorizationTable(store.authorizations.Take(set.authorizations));
+                        DumpAuthorizationTable(set.authorizations);
                     } break;
                     case TableType::SupplementPairTable: {
                         for (size_t j = 0; j < CountOf(set.supplement_pairs); j++) {
                             PrintLn("  Supplement Pairs List %1:", j + 1);
-                            DumpSupplementPairTable(
-                                store.supplement_pairs[j].Take(set.supplement_pairs[j]));
+                            DumpSupplementPairTable(set.supplement_pairs[j]);
                             PrintLn();
                         }
                     } break;
@@ -526,7 +525,7 @@ Options:
             PrintLn("%1:", spec_str);
             switch (spec.table) {
                 case ListSpecifier::Table::Diagnoses: {
-                    for (const DiagnosisInfo &diag: store->diagnoses.Take(store_set->diagnoses)) {
+                    for (const DiagnosisInfo &diag: store_set->diagnoses) {
                         if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
                             if (spec.Match(diag.sex[0].values)) {
                                 PrintLn("  %1 (male)", diag.code);
@@ -543,7 +542,7 @@ Options:
                 } break;
 
                 case ListSpecifier::Table::Procedures: {
-                    for (const ProcedureInfo &proc: store->procedures.Take(store_set->procedures)) {
+                    for (const ProcedureInfo &proc: store_set->procedures) {
                         if (spec.Match(proc.values)) {
                             PrintLn("  %1", proc.code);
                         }

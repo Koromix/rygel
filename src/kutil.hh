@@ -813,8 +813,8 @@ public:
     T *Append(const T &value);
     T *Append(ArrayRef<const T> values);
 
-    void RemoveLast(size_t count = 1) { RemoveAfter(count < len ? len - count : len); }
-    void RemoveAfter(size_t first);
+    void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
+    void RemoveFrom(size_t first);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
         { return ArrayRef<T>(data, len).Take(offset, len); }
@@ -867,7 +867,7 @@ T *LocalArray<T, N>::Append(ArrayRef<const T> values)
 }
 
 template <typename T, size_t N>
-void LocalArray<T, N>::RemoveAfter(size_t first)
+void LocalArray<T, N>::RemoveFrom(size_t first)
 {
     if (first >= len) {
         return;
@@ -919,7 +919,7 @@ public:
     T *Append(const T &value);
     T *Append(ArrayRef<const T> values);
 
-    void RemoveLast(size_t count = 1) { RemoveFrom(count < len ? len - count : len); }
+    void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
     void RemoveFrom(size_t from);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
@@ -1111,7 +1111,7 @@ public:
 
     T *Append(const T &value);
 
-    void RemoveLast(size_t count = 1) { RemoveFrom(count < len ? len - count : len); }
+    void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
     void RemoveFrom(size_t from);
     void RemoveFirst(size_t count = 1);
 
@@ -1206,7 +1206,7 @@ void DynamicQueue<T, BucketSize>::RemoveFrom(size_t from)
     for (size_t i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
         DeleteBucket(buckets[i]);
     }
-    buckets.RemoveLast(end_bucket_idx - start_bucket_idx);
+    buckets.RemoveFrom(start_bucket_idx + 1);
     if (start_idx % BucketSize == 0) {
         DeleteBucket(buckets[buckets.len - 1]);
         buckets[buckets.len - 1] = CreateBucket();
@@ -1471,14 +1471,17 @@ size_t SparseTable<T, EmptyKey>::IteratorToIndex(const T *it) const
     return (size_t)((const Bucket *)((const uint8_t *)it - OffsetOf(Bucket, value)) - buckets);
 }
 
-// djb2
-static inline uint64_t HashString(const char *str)
+static inline uint64_t HashKey(int64_t i) { return (uint64_t)i; }
+static inline uint64_t HashKey(uint64_t u) { return u; }
+
+static inline uint64_t HashKey(const char *str)
 {
-    uint32_t hash = 0;
+    // djb2
+    uint64_t hash = 0;
     for (size_t i = 0; str[i]; i++) {
         hash = hash * 33 + (uint8_t)str[i];
     }
-    return (uint64_t)hash + 1;
+    return hash;
 }
 
 template <typename KeyType, typename ValueType, typename HashSetHandler = ValueType>
@@ -1493,7 +1496,7 @@ public:
     ValueType *Set(const ValueType &value)
     {
         KeyType key = HashSetHandler::GetKey(value);
-        uint64_t hash = HashSetHandler::HashKey(key);
+        uint64_t hash = SafeHash(key);
         ValueType *it = Find(hash, key);
         if (it) {
             *it = value;
@@ -1510,7 +1513,7 @@ public:
         { return (ValueType *)((const HashSet *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
-        uint64_t hash = HashSetHandler::HashKey(key);
+        uint64_t hash = SafeHash(key);
         return Find(hash, key);
     }
     ValueType FindValue(const KeyType &key, const ValueType &default_value)
@@ -1526,6 +1529,11 @@ public:
     }
 
 private:
+    uint64_t SafeHash(const KeyType &key) const
+    {
+        return HashSetHandler::HashKey(key) | (1ull << 63);
+    }
+
     ValueType *Find(uint64_t hash, const KeyType &key)
         { return (ValueType *)((const HashSet *)this)->Find(hash, key); }
     const ValueType *Find(uint64_t hash, const KeyType &key) const
@@ -1548,28 +1556,28 @@ private:
 
 template <typename KeyType, typename ValueType>
 class HashTable {
-    struct KeyValueType {
+    struct Bucket {
         ValueType value; // Keep first, see Remove(it) method
         KeyType key;
 
-        HASH_SET_METHODS(KeyValueType, key, HashString)
+        HASH_SET_METHODS(Bucket, key, HashKey)
     };
 
 public:
-    HashSet<KeyType, KeyValueType> set;
+    HashSet<KeyType, Bucket> set;
     Allocator *&allocator = set.table.allocator;
 
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &set.Set({value, key})->value; }
 
-    void Remove(ValueType *it) { set.Remove((KeyValueType *)it); }
+    void Remove(ValueType *it) { set.Remove((Bucket *)it); }
     void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
         { return (ValueType *)((const HashTable *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
-        const KeyValueType *set_it = set.Find(key);
+        const Bucket *set_it = set.Find(key);
         if (set_it) {
             return &set_it->value;
         } else {

@@ -6,6 +6,14 @@
 
 using namespace rapidjson;
 
+static DiagnosisCode ConvertDiagnosisCode(const char *diag_str)
+{
+    DiagnosisCode diag;
+    strncpy(diag.str, diag_str, sizeof(diag.str));
+    diag.str[sizeof(diag.str) - 1] = '\0';
+    return diag;
+}
+
 class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
     enum class State {
         Default,
@@ -112,10 +120,9 @@ public:
             case State::StayObject: {
                 state = State::StayArray;
 
-                stay.associated_diagnoses.len = out_set->diagnoses.len -
-                                                stay.associated_diagnoses.offset;
-                stay.procedures.len = out_set->procedures.len -
-                                      stay.procedures.offset;
+                stay.diagnoses.len = out_set->diagnoses.len -
+                                                (size_t)stay.diagnoses.ptr;
+                stay.procedures.len = out_set->procedures.len - (size_t)stay.procedures.ptr;
                 out_set->stays.Append(stay);
                 ResetStay();
             } break;
@@ -317,18 +324,15 @@ public:
 
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {
-                strncpy(stay.main_diagnosis.str, str, sizeof(stay.main_diagnosis.str));
-                stay.main_diagnosis.str[sizeof(stay.main_diagnosis.str) - 1] = '\0';
+                stay.main_diagnosis = ConvertDiagnosisCode(str);
+                out_set->diagnoses.Append(stay.main_diagnosis);
             } break;
             case State::StayLinkedDiagnosis: {
-                strncpy(stay.linked_diagnosis.str, str, sizeof(stay.linked_diagnosis.str));
-                stay.linked_diagnosis.str[sizeof(stay.linked_diagnosis.str) - 1] = '\0';
+                stay.linked_diagnosis = ConvertDiagnosisCode(str);
+                out_set->diagnoses.Append(stay.linked_diagnosis);
             } break;
             case State::AssociatedDiagnosisArray: {
-                DiagnosisCode diag_code;
-                strncpy(diag_code.str, str, sizeof(diag_code.str));
-                diag_code.str[sizeof(diag_code.str) - 1] = '\0';
-                out_set->diagnoses.Append(diag_code);
+                out_set->diagnoses.Append(ConvertDiagnosisCode(str));
             } break;
 
             // Procedure attributes
@@ -367,8 +371,8 @@ private:
     void ResetStay()
     {
         stay = {};
-        stay.associated_diagnoses.offset = out_set->diagnoses.len;
-        stay.procedures.offset = out_set->procedures.len;
+        stay.diagnoses.ptr = (DiagnosisCode *)out_set->diagnoses.len;
+        stay.procedures.ptr = (Procedure *)out_set->procedures.len;
     }
 
     void SetErrorFlag()
@@ -535,12 +539,22 @@ bool StaySetBuilder::LoadJson(ArrayRef<const char *const> filenames)
     return success;
 }
 
-bool StaySetBuilder::Validate(StaySet *out_set)
+bool StaySetBuilder::Finish(StaySet *out_set)
 {
     std::stable_sort(set.stays.begin(), set.stays.end(),
               [](const Stay &stay1, const Stay &stay2) {
         return stay1.stay_id < stay2.stay_id;
     });
+
+    for (Stay &stay: set.stays) {
+#define FIX_STAY_ARRAYREF(ArrayRefName) \
+            stay.ArrayRefName.ptr = out_set->ArrayRefName.ptr + (size_t)stay.ArrayRefName.ptr
+
+        FIX_STAY_ARRAYREF(diagnoses);
+        FIX_STAY_ARRAYREF(procedures);
+
+#undef FIX_STAY_ARRAYREF
+    }
 
     memcpy(out_set, &set, sizeof(set));
     memset(&set, 0, sizeof(set));

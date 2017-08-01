@@ -62,9 +62,9 @@ struct Stay {
 
     DiagnosisCode main_diagnosis;
     DiagnosisCode linked_diagnosis;
-    ArraySlice<DiagnosisCode> associated_diagnoses;
+    ArrayRef<DiagnosisCode> diagnoses;
 
-    ArraySlice<Procedure> procedures;
+    ArrayRef<Procedure> procedures;
 
     uint32_t error_mask;
 };
@@ -81,5 +81,5 @@ class StaySetBuilder {
 public:
     bool LoadJson(ArrayRef<const char *const> filenames);
 
-    bool Validate(StaySet *out_set);
+    bool Finish(StaySet *out_set);
 };
