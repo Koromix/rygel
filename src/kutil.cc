@@ -182,9 +182,10 @@ Date ParseDateString(const char *date_str)
 {
     Date date = {};
 
+GCC_PUSH_IGNORE(-Wformat-nonliteral)
     unsigned int parts[3];
     const auto TryFormat = [&](const char *format) {
-        return (sscanf(date_str, format, &parts[0], &parts[1], &parts[2]) == 3);
+        return sscanf(date_str, format, &parts[0], &parts[1], &parts[2]) == 3;
     };
     if (!TryFormat("%6u-%6u-%6u")) {
         if (!TryFormat("%6u/%6u/%6u")) {
@@ -192,6 +193,7 @@ Date ParseDateString(const char *date_str)
             return date;
         }
     }
+GCC_POP_IGNORE()
 
     if (parts[2] >= 100) {
         std::swap(parts[0], parts[2]);

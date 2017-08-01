@@ -58,11 +58,18 @@
 #endif
 
 #if defined(__GNUC__)
+    #define GCC_PRAGMA(Pragma) \
+        _Pragma(STRINGIFY(Pragma))
+    #define GCC_PUSH_IGNORE(Option) \
+        GCC_PRAGMA(GCC diagnostic push) \
+        GCC_PRAGMA(GCC diagnostic ignored STRINGIFY(Option))
+    #define GCC_POP_IGNORE() \
+        GCC_PRAGMA(GCC diagnostic pop)
+
     #define MAYBE_UNUSED __attribute__((unused))
     #define FORCE_INLINE __attribute__((always_inline)) inline
-    #define LIKELY(cond) __builtin_expect(!!(cond), 1)
-    #define UNLIKELY(cond) __builtin_expect(!!(cond), 0)
-    #define THREAD_LOCAL __thread
+    #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
+    #define UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -74,11 +81,14 @@
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
+    #define GCC_PRAGMA(Pragma)
+    #define GCC_PUSH_IGNORE(Option)
+    #define GCC_POP_IGNORE()
+
     #define MAYBE_UNUSED
     #define FORCE_INLINE __forceinline
-    #define LIKELY(cond) (cond)
-    #define UNLIKELY(cond) (cond)
-    #define THREAD_LOCAL __declspec(thread)
+    #define LIKELY(Cond) (Cond)
+    #define UNLIKELY(Cond) (Cond)
 #else
     #error Compiler not supported
 #endif

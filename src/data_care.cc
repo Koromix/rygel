@@ -380,7 +380,7 @@ private:
     template <typename T>
     void SetInt(T *dest, int i)
     {
-        if (i < std::numeric_limits<T>::min() || i > std::numeric_limits<T>::max()) {
+        if (i < (int)std::numeric_limits<T>::min() || i > (int)std::numeric_limits<T>::max()) {
             LogError("Value %1 outside of range %2 - %3",
                      i, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
             SetErrorFlag();
@@ -436,7 +436,7 @@ bool ParseJsonFile(const char *filename, T *json_handler)
         size_t file_offset = 0;
 
     public:
-        typedef char Ch;
+        typedef char Ch MAYBE_UNUSED;
 
         size_t line_number = 1;
         size_t line_offset = 1;
