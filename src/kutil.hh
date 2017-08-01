@@ -1481,47 +1481,59 @@ static inline uint64_t HashString(const char *str)
     return (uint64_t)hash + 1;
 }
 
-template <typename HashTableImpl, typename KeyType, typename ValueType>
-class HashTableBase {
+template <typename KeyType, typename ValueType, typename HashSetHandler = ValueType>
+class HashSet {
 public:
-    SparseTable<ValueType> map;
-    Allocator *&allocator = map.allocator;
+    SparseTable<ValueType> table;
+    Allocator *&allocator = table.allocator;
 
     typedef KeyType key_type;
     typedef ValueType value_type;
 
     ValueType *Set(const ValueType &value)
     {
-        KeyType key = ((HashTableImpl *)this)->GetKey(value);
-        uint64_t hash = ((HashTableImpl *)this)->HashKey(key);
+        KeyType key = HashSetHandler::GetKey(value);
+        uint64_t hash = HashSetHandler::HashKey(key);
         ValueType *it = Find(hash, key);
         if (it) {
             *it = value;
             return it;
         } else {
-            return map.Add(hash, value);
+            return table.Add(hash, value);
         }
     }
-    void Remove(ValueType *it) { map.Remove(it); }
+
+    void Remove(ValueType *it) { table.Remove(it); }
     void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
-        { return (ValueType *)((const HashTableBase *)this)->Find(key); }
+        { return (ValueType *)((const HashSet *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
-        uint64_t hash = ((HashTableImpl *)this)->HashKey(key);
+        uint64_t hash = HashSetHandler::HashKey(key);
         return Find(hash, key);
+    }
+    ValueType FindValue(const KeyType &key, const ValueType &default_value)
+        { return (ValueType)((const HashSet *)this)->FindValue(key, default_value); }
+    const ValueType FindValue(const KeyType key, const ValueType &default_value) const
+    {
+        const ValueType *it = Find(key);
+        if (it) {
+            return *it;
+        } else {
+            return default_value;
+        }
     }
 
 private:
     ValueType *Find(uint64_t hash, const KeyType &key)
-        { return (ValueType *)((const HashTableBase *)this)->Find(hash, key); }
+        { return (ValueType *)((const HashSet *)this)->Find(hash, key); }
     const ValueType *Find(uint64_t hash, const KeyType &key) const
     {
         const ValueType *it = nullptr;
-        while ((it = map.Find(hash, it))) {
-            KeyType it_key = ((HashTableImpl *)this)->GetKey(*it);
-            if (!((HashTableImpl *)this)->CompareKeys(key, it_key)) {
+        while ((it = table.Find(hash, it))) {
+            KeyType it_key = HashSetHandler::GetKey(*it);
+            if (!HashSetHandler::CompareKeys(key, it_key)) {
                 return it;
             }
         }
@@ -1529,8 +1541,53 @@ private:
     }
 };
 
-#define HASH_TABLE_TYPE(Name, KeyType, ValueType) \
-    struct Name: public HashTableBase<Name, KeyType, ValueType>
+#define HASH_SET_METHODS(Type, KeyMember, HashFunc) \
+    static const char *GetKey(const Type &value) { return value.key; } \
+    static uint64_t HashKey(const char *key) { return HashFunc(key); } \
+    static int CompareKeys(const char *key1, const char *key2) { return strcmp(key1, key2); }
+
+template <typename KeyType, typename ValueType>
+class HashTable {
+    struct KeyValueType {
+        ValueType value; // Keep first, see Remove(it) method
+        KeyType key;
+
+        HASH_SET_METHODS(KeyValueType, key, HashString)
+    };
+
+public:
+    HashSet<KeyType, KeyValueType> set;
+    Allocator *&allocator = set.table.allocator;
+
+    ValueType *Set(const KeyType &key, const ValueType &value)
+        { return &set.Set({value, key})->value; }
+
+    void Remove(ValueType *it) { set.Remove((KeyValueType *)it); }
+    void Remove(KeyType key) { Remove(Find(key)); }
+
+    ValueType *Find(const KeyType &key)
+        { return (ValueType *)((const HashTable *)this)->Find(key); }
+    const ValueType *Find(const KeyType &key) const
+    {
+        const KeyValueType *set_it = set.Find(key);
+        if (set_it) {
+            return &set_it->value;
+        } else {
+            return nullptr;
+        }
+    }
+    ValueType FindValue(const KeyType key, const ValueType &default_value)
+        { return (ValueType)((const HashTable *)this)->FindValue(key, default_value); }
+    const ValueType FindValue(const KeyType key, const ValueType &default_value) const
+    {
+        const ValueType *it = Find(key);
+        if (it) {
+            return *it;
+        } else {
+            return default_value;
+        }
+    }
+};
 
 // ------------------------------------------------------------------------
 // System
