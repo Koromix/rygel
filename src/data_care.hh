@@ -45,6 +45,7 @@ struct Stay {
     Sex sex;
     Date birthdate;
     Date dates[2];
+    uint32_t duration;
     struct {
         char mode;
         char origin;
@@ -54,11 +55,11 @@ struct Stay {
         char destination;
     } exit;
     UnitCode unit_code;
-    uint16_t session_count;
+    int16_t session_count;
     uint8_t igs2;
     Date last_menstrual_period;
-    uint16_t gestational_age;
-    uint16_t newborn_weight;
+    int16_t gestational_age;
+    int16_t newborn_weight;
 
     DiagnosisCode main_diagnosis;
     DiagnosisCode linked_diagnosis;
@@ -70,9 +71,12 @@ struct Stay {
 };
 
 struct StaySet {
-    DynamicArray<Stay> stays;
-    DynamicArray<DiagnosisCode> diagnoses;
-    DynamicArray<Procedure> procedures;
+    HeapArray<Stay> stays;
+
+    struct {
+        HeapArray<DiagnosisCode> diagnoses;
+        HeapArray<Procedure> procedures;
+    } store;
 };
 
 class StaySetBuilder {

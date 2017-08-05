@@ -32,9 +32,9 @@
 #define DYNAMICARRAY_BASE_CAPACITY 8
 #define DYNAMICARRAY_GROWTH_FACTOR 2
 
-#define SPARSETABLE_BASE_CAPACITY 32
-#define SPARSETABLE_GROWTH_FACTOR 2
-#define SPARSETABLE_MAX_LOAD_FACTOR 0.5f
+// Must be a power-of-two
+#define HASHSET_BASE_CAPACITY 32
+#define HASHSET_MAX_LOAD_FACTOR 0.4f
 
 #define FMT_STRING_BASE_CAPACITY 128
 #define FMT_STRING_GROWTH_FACTOR 1.5f
@@ -92,6 +92,24 @@
 #else
     #error Compiler not supported
 #endif
+
+#define Assert(Cond) \
+    do { \
+        if (!(Cond)) { \
+            fputs("Assertion '" STRINGIFY(Cond) "' failed", stderr); \
+            abort(); \
+        } \
+    } while (false)
+#ifndef NDEBUG
+    #define DebugAssert(Cond) Assert(Cond)
+#else
+    #define DebugAssert(Cond) \
+        do { \
+            (void)(Cond); \
+        } while (false)
+#endif
+#define StaticAssert(Cond) \
+    static_assert((Cond), STRINGIFY(Cond))
 
 #define READ_ONLY_GLOBAL(Type, Name) \
     static Type Name##_priv; \
@@ -448,6 +466,7 @@ private:
 // ------------------------------------------------------------------------
 
 union Date {
+    int32_t value;
     struct {
 #ifdef ARCH_LITTLE_ENDIAN
         int8_t day;
@@ -459,19 +478,81 @@ union Date {
         int8_t day;
 #endif
     } st;
-    int32_t value;
 
-    bool operator==(const Date &other) const { return value == other.value; }
-    bool operator!=(const Date &other) const { return value != other.value; }
-    bool operator>(const Date &other) const { return value > other.value; }
-    bool operator>=(const Date &other) const { return value >= other.value; }
-    bool operator<(const Date &other) const { return value < other.value; }
-    bool operator<=(const Date &other) const { return value <= other.value; }
+    Date() = default;
+    Date(int16_t year, int8_t month, int8_t day)
+#ifdef ARCH_LITTLE_ENDIAN
+        : st({day, month, year}) { DebugAssert(IsValid()); }
+#else
+        : st({year, month, day}) { DebugAssert(IsValid()); }
+#endif
 
-    bool IsValid() const;
+    static inline bool IsLeapYear(int16_t year)
+    {
+        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    }
+    static inline int8_t DaysInMonth(uint16_t year, uint8_t month)
+    {
+        static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
+    }
+
+    static Date FromString(const char *date_str);
+    static Date FromJulianDays(int days);
+
+    bool IsValid() const
+    {
+        if (st.year < -4712)
+            return false;
+        if (st.month < 1 || st.month > 12)
+            return false;
+        if (st.day < 1 || st.day > DaysInMonth(st.year, st.month))
+            return false;
+
+        return true;
+    }
+
+    bool operator==(Date other) const { return value == other.value; }
+    bool operator!=(Date other) const { return value != other.value; }
+    bool operator>(Date other) const { return value > other.value; }
+    bool operator>=(Date other) const { return value >= other.value; }
+    bool operator<(Date other) const { return value < other.value; }
+    bool operator<=(Date other) const { return value <= other.value; }
+
+    int ToJulianDays() const;
+
+    int operator-(Date other) const
+        { return ToJulianDays() - other.ToJulianDays(); }
+
+    Date operator+(int days) const
+    {
+        if (days < 5 && days > -5) {
+            Date date = *this;
+            if (days > 0) {
+                while (days--) {
+                    ++date;
+                }
+            } else {
+                while (days++) {
+                    --date;
+                }
+            }
+            return date;
+        } else {
+            return Date::FromJulianDays(ToJulianDays() + days);
+        }
+    }
+    // That'll fail with INT_MAX days but that's far more days than can
+    // be represented as a date anyway
+    Date operator-(int days) const { return *this + (-days); }
+
+    Date &operator+=(int days) { *this = *this + days; return *this; }
+    Date &operator-=(int days) { *this = *this - days; return *this; }
+    Date &operator++();
+    Date operator++(int) { Date date = *this; ++(*this); return date; }
+    Date &operator--();
+    Date operator--(int) { Date date = *this; --(*this); return date; }
 };
-
-Date ParseDateString(const char *date_str);
 
 // ------------------------------------------------------------------------
 // String Format
@@ -697,29 +778,6 @@ static inline constexpr const char *SimplifyLogContext(const char *ctx)
 void PushLogHandler(std::function<void(FILE *)> handler);
 void PopLogHandler();
 
-#define Abort(...) \
-    do { \
-        LogError(__VA_ARGS__); \
-        abort(); \
-    } while (false)
-
-#define Assert(Cond) \
-    do { \
-        if (!(Cond)) { \
-            Abort("Assertion '%1' failed", STRINGIFY(Cond)); \
-        } \
-    } while (false)
-#ifndef NDEBUG
-    #define DebugAssert(Cond) Assert(Cond)
-#else
-    #define DebugAssert(Cond) \
-        do { \
-            (void)(Cond); \
-        } while (false)
-#endif
-#define StaticAssert(Cond) \
-    static_assert((Cond), STRINGIFY(Cond))
-
 // ------------------------------------------------------------------------
 // Collections
 // ------------------------------------------------------------------------
@@ -794,8 +852,6 @@ public:
 
     typedef T value_type;
     typedef T *iterator_type;
-
-    ~LocalArray() { Clear(); }
 
     void Clear();
 
@@ -879,9 +935,10 @@ void LocalArray<T, N>::RemoveFrom(size_t first)
     len = first;
 }
 
-// TODO: Can we check some kind of is_trivially_movable template crap?
 template <typename T>
-class DynamicArray {
+class HeapArray {
+    StaticAssert(std::is_trivially_copyable<T>::value);
+
 public:
     T *ptr = nullptr;
     size_t len = 0;
@@ -891,11 +948,11 @@ public:
     typedef T value_type;
     typedef T *iterator_type;
 
-    DynamicArray() = default;
-    DynamicArray(DynamicArray &) = delete;
-    DynamicArray &operator=(const DynamicArray &) = delete;
+    HeapArray() = default;
+    HeapArray(HeapArray &) = delete;
+    HeapArray &operator=(const HeapArray &) = delete;
 
-    ~DynamicArray() { Clear(); }
+    ~HeapArray() { Clear(); }
     void Clear();
 
     operator ArrayRef<T>() { return ArrayRef<T>(ptr, len); }
@@ -906,7 +963,7 @@ public:
     T *end() { return ptr + len; }
     const T *end() const { return ptr + len; }
 
-    T &operator[](size_t idx) { return (T &)(*(const DynamicArray *)this)[idx]; }
+    T &operator[](size_t idx) { return (T &)(*(const HeapArray *)this)[idx]; }
     const T &operator[](size_t idx) const;
 
     void SetCapacity(size_t new_capacity);
@@ -929,20 +986,20 @@ public:
 };
 
 template <typename T>
-void DynamicArray<T>::Clear()
+void HeapArray<T>::Clear()
 {
     SetCapacity(0);
 }
 
 template <typename T>
-const T &DynamicArray<T>::operator[](size_t idx) const
+const T &HeapArray<T>::operator[](size_t idx) const
 {
     DebugAssert(idx < len);
     return ptr[idx];
 }
 
 template <typename T>
-void DynamicArray<T>::SetCapacity(size_t new_capacity)
+void HeapArray<T>::SetCapacity(size_t new_capacity)
 {
     if (new_capacity == capacity) {
         return;
@@ -959,7 +1016,7 @@ void DynamicArray<T>::SetCapacity(size_t new_capacity)
 }
 
 template <typename T>
-void DynamicArray<T>::Reserve(size_t min_capacity)
+void HeapArray<T>::Reserve(size_t min_capacity)
 {
     if (min_capacity <= capacity) {
         return;
@@ -969,7 +1026,7 @@ void DynamicArray<T>::Reserve(size_t min_capacity)
 }
 
 template <typename T>
-void DynamicArray<T>::Grow(size_t reserve_capacity)
+void HeapArray<T>::Grow(size_t reserve_capacity)
 {
     if (reserve_capacity <= capacity - len) {
         return;
@@ -996,7 +1053,7 @@ void DynamicArray<T>::Grow(size_t reserve_capacity)
 }
 
 template <typename T>
-T *DynamicArray<T>::Append()
+T *HeapArray<T>::Append()
 {
     if (len == capacity) {
         Grow();
@@ -1004,11 +1061,12 @@ T *DynamicArray<T>::Append()
 
     T *first = ptr + len;
     new (ptr + len) T;
+    len++;
     return first;
 }
 
 template <typename T>
-T *DynamicArray<T>::Append(const T &value)
+T *HeapArray<T>::Append(const T &value)
 {
     if (len == capacity) {
         Grow();
@@ -1021,7 +1079,7 @@ T *DynamicArray<T>::Append(const T &value)
 }
 
 template <typename T>
-T *DynamicArray<T>::Append(ArrayRef<const T> values)
+T *HeapArray<T>::Append(ArrayRef<const T> values)
 {
     if (values.len > capacity - len) {
         Grow(values.len);
@@ -1036,7 +1094,7 @@ T *DynamicArray<T>::Append(ArrayRef<const T> values)
 }
 
 template <typename T>
-void DynamicArray<T>::RemoveFrom(size_t from)
+void HeapArray<T>::RemoveFrom(size_t from)
 {
     if (from >= len) {
         return;
@@ -1086,7 +1144,7 @@ public:
         bool operator!=(const Iterator &other) const { return !(*this == other); }
     };
 
-    DynamicArray<Bucket *> buckets;
+    HeapArray<Bucket *> buckets;
     size_t offset = 0;
     size_t len = 0;
     Allocator *current_allocator = nullptr;
@@ -1263,304 +1321,228 @@ void DynamicQueue<T, BucketSize>::DeleteBucket(Bucket *bucket)
     Allocator::Release(buckets.allocator, bucket, sizeof(Bucket));
 }
 
-template <typename T, uint64_t EmptyKey = 0>
-class SparseTable {
+template <typename KeyType, typename ValueType,
+          typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
+class HashSet {
 public:
-    struct Bucket {
-        // We XOR the real key with EmptyKey so that xor_key == 0 for unused buckets no matter
-        // what EmptyKey is set to. This way a simple memset() can be used when we allocate
-        // the buckets array.
-        uint64_t xor_key;
-        T value;
-
-        bool IsFree() const { return !xor_key; }
-    };
-
-    Bucket *buckets = nullptr;
+    ValueType *data = nullptr;
     size_t count = 0;
     size_t capacity = 0;
     Allocator *allocator = nullptr;
 
-    SparseTable() = default;
-    SparseTable(SparseTable &) = delete;
-    SparseTable &operator=(const SparseTable &) = delete;
+    HashSet() = default;
+    HashSet(HashSet &) = delete;
+    HashSet &operator=(const HashSet &) = delete;
+    ~HashSet() { Clear(); }
 
-    ~SparseTable();
-    void Clear();
-
-    void Rehash(size_t new_capacity);
-
-    T *Find(uint64_t key, const T *it = nullptr)
-        { return (T *)((const SparseTable<T, EmptyKey> *)this)->Find(key, it); }
-    const T *Find(uint64_t key, const T *it = nullptr) const;
-    T FindValue(uint64_t key, const T &default_value)
-        { return (T)((const SparseTable<T, EmptyKey> *)this)->FindValue(key, default_value); }
-    const T FindValue(uint64_t key, const T &default_value) const;
-
-    T *Add(uint64_t key, const T &value);
-    T *Set(uint64_t key, const T &value);
-    void Remove(T *it);
-
-private:
-    size_t InsertBucket(uint64_t xor_key, const T &value);
-    size_t IteratorToIndex(const T *it) const;
-};
-
-template <typename T, uint64_t EmptyKey>
-SparseTable<T, EmptyKey>::~SparseTable()
-{
-    for (size_t i = 0; i < capacity; i++) {
-        if (buckets[i].IsFree()) {
-            continue;
-        }
-        buckets[i].value.~T();
-    }
-}
-
-template <typename T, uint64_t EmptyKey>
-void SparseTable<T, EmptyKey>::Clear()
-{
-    for (size_t i = 0; i < capacity; i++) {
-        if (buckets[i].IsFree()) {
-            continue;
-        }
-        // Don't need to make it free if we drop the buckets array after
-        // buckets[i].xor_key = 0;
-        buckets[i].value.~T();
-    }
-    count = 0;
-    Rehash(0);
-}
-
-template <typename T, uint64_t EmptyKey>
-void SparseTable<T, EmptyKey>::Rehash(size_t new_capacity)
-{
-    if (new_capacity == capacity) {
-        return;
-    }
-    Assert(count <= new_capacity);
-
-    Bucket *old_buckets = buckets;
-    if (new_capacity) {
-        buckets = (Bucket *)Allocator::Allocate(allocator, new_capacity * sizeof(Bucket),
-                                                Allocator::ZeroMemory);
-        for (size_t i = 0; i < capacity; i++) {
-            if (old_buckets[i].IsFree()) {
-                continue;
-            }
-            InsertBucket(old_buckets[i].xor_key, old_buckets[i].value);
-        }
-    } else {
-        buckets = nullptr;
-    }
-    Allocator::Release(allocator, old_buckets, capacity * sizeof(Bucket));
-    capacity = new_capacity;
-}
-
-template <typename T, uint64_t EmptyKey>
-const T *SparseTable<T, EmptyKey>::Find(uint64_t key, const T *it) const
-{
-    if (!capacity) {
-        return nullptr;
-    }
-
-    uint64_t xor_key = key ^ EmptyKey;
-    size_t first_idx = xor_key % capacity;
-
-    size_t idx;
-    if (it) {
-        idx = IteratorToIndex(it);
-    } else {
-        if (buckets[first_idx].xor_key == xor_key) {
-            return &buckets[first_idx].value;
-        }
-        idx = first_idx;
-    }
-
-    if (++idx == capacity) {
-        idx = 0;
-    }
-    while (idx != first_idx) {
-        if (buckets[idx].xor_key == xor_key) {
-            return &buckets[idx].value;
-        }
-        if (++idx == capacity) {
-            idx = 0;
-        }
-    }
-    return nullptr;
-}
-
-template <typename T, uint64_t EmptyKey>
-const T SparseTable<T, EmptyKey>::FindValue(uint64_t key, const T &default_value) const
-{
-    const T *it = Find(key);
-    if (it) {
-        return *it;
-    } else {
-        return default_value;
-    }
-}
-
-template <typename T, uint64_t EmptyKey>
-T *SparseTable<T, EmptyKey>::Add(uint64_t key, const T &value)
-{
-    Assert(key != EmptyKey);
-
-    if (count >= (size_t)(capacity * SPARSETABLE_MAX_LOAD_FACTOR)) {
-        size_t new_capacity = (size_t)(capacity * SPARSETABLE_GROWTH_FACTOR);
-        if (new_capacity < SPARSETABLE_BASE_CAPACITY) {
-            new_capacity = SPARSETABLE_BASE_CAPACITY;
-        }
-        Rehash(new_capacity);
-    }
-
-    uint64_t xor_key = key ^ EmptyKey;
-    size_t idx = InsertBucket(xor_key, value);
-    count++;
-    return &buckets[idx].value;
-}
-
-template <typename T, uint64_t EmptyKey>
-T *SparseTable<T, EmptyKey>::Set(uint64_t key, const T &value)
-{
-    T *it = Find(key);
-    if (it) {
-        *it = value;
-        return it;
-    } else {
-        return Add(key, value);
-    }
-}
-
-template <typename T, uint64_t EmptyKey>
-void SparseTable<T, EmptyKey>::Remove(T *it)
-{
-    if (!it) {
-        return;
-    }
-
-    size_t idx = IteratorToIndex(it);
-    buckets[idx].xor_key = 0;
-    buckets[idx].value.~T();
-}
-
-template <typename T, uint64_t EmptyKey>
-size_t SparseTable<T, EmptyKey>::InsertBucket(uint64_t xor_key, const T &value)
-{
-    size_t first_idx = xor_key % capacity;
-    size_t idx = first_idx;
-    do {
-        if (buckets[idx].IsFree()) {
-            buckets[idx].xor_key = xor_key;
-            new (&buckets[idx].value) T;
-            buckets[idx].value = value;
-            return idx;
-        }
-        if (++idx == capacity) {
-            idx = 0;
-        }
-    } while (idx != first_idx);
-
-    Assert(false);
-}
-
-template <typename T, uint64_t EmptyKey>
-size_t SparseTable<T, EmptyKey>::IteratorToIndex(const T *it) const
-{
-    return (size_t)((const Bucket *)((const uint8_t *)it - OffsetOf(Bucket, value)) - buckets);
-}
-
-static inline uint64_t HashKey(int64_t i) { return (uint64_t)i; }
-static inline uint64_t HashKey(uint64_t u) { return u; }
-
-static inline uint64_t HashKey(const char *str)
-{
-    // djb2
-    uint64_t hash = 0;
-    for (size_t i = 0; str[i]; i++) {
-        hash = hash * 33 + (uint8_t)str[i];
-    }
-    return hash;
-}
-
-template <typename KeyType, typename ValueType, typename HashSetHandler = ValueType>
-class HashSet {
-public:
-    SparseTable<ValueType> table;
-    Allocator *&allocator = table.allocator;
-
-    typedef KeyType key_type;
-    typedef ValueType value_type;
-
-    ValueType *Set(const ValueType &value)
+    void Clear()
     {
-        KeyType key = HashSetHandler::GetKey(value);
-        uint64_t hash = SafeHash(key);
-        ValueType *it = Find(hash, key);
-        if (it) {
-            *it = value;
-            return it;
-        } else {
-            return table.Add(hash, value);
-        }
+        count = 0;
+        Rehash(0);
     }
-
-    void Remove(ValueType *it) { table.Remove(it); }
-    void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
         { return (ValueType *)((const HashSet *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
-        uint64_t hash = SafeHash(key);
-        return Find(hash, key);
+        if (!capacity)
+            return nullptr;
+
+        uint64_t hash = Handler::HashKey(key);
+        size_t idx = hash & (capacity - 1);
+        return Find(idx, key);
     }
     ValueType FindValue(const KeyType &key, const ValueType &default_value)
         { return (ValueType)((const HashSet *)this)->FindValue(key, default_value); }
-    const ValueType FindValue(const KeyType key, const ValueType &default_value) const
+    const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
     {
         const ValueType *it = Find(key);
-        if (it) {
-            return *it;
+        return it ? *it : default_value;
+    }
+
+    ValueType *Set(const ValueType &value)
+    {
+        if (capacity) {
+            const KeyType &key = Handler::GetKey(value);
+            size_t idx = KeyToIndex(key);
+            ValueType *it = Find(idx, key);
+            if (it) {
+                *it = value;
+                return it;
+            } else {
+                if (count >= (size_t)(capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                    size_t new_capacity = capacity << 1;
+                    Rehash(new_capacity);
+                }
+                return Add(idx, value);
+            }
         } else {
-            return default_value;
+            Rehash(HASHSET_BASE_CAPACITY);
+            return Add(0, value);
         }
     }
+
+    void Remove(ValueType *it)
+    {
+        if (!it)
+            return;
+        DebugAssert(!Handler::IsEmpty(*it));
+
+        it->~ValueType();
+
+        size_t idx = it - data;
+        do {
+            size_t next_idx = (idx + 1) & (capacity - 1);
+            if (KeyToIndex(Handler::GetKey(data[next_idx])) >= idx)
+                break;
+            data[idx] = data[next_idx];
+
+            idx = next_idx;
+        } while (!Handler::IsEmpty(data[idx]));
+    }
+    void Remove(const KeyType &key) { Remove(Find(key)); }
 
 private:
-    uint64_t SafeHash(const KeyType &key) const
+    ValueType *Find(size_t idx, const KeyType &key)
+        { return (ValueType *)((const HashSet *)this)->Find(idx, key); }
+    const ValueType *Find(size_t idx, const KeyType &key) const
     {
-        return HashSetHandler::HashKey(key) | (1ull << 63);
+        while (!Handler::CompareKeys(Handler::GetKey(data[idx]), key)) {
+            if (Handler::IsEmpty(data[idx]))
+                return nullptr;
+            idx = (idx + 1) & (capacity - 1);
+        }
+        return &data[idx];
     }
 
-    ValueType *Find(uint64_t hash, const KeyType &key)
-        { return (ValueType *)((const HashSet *)this)->Find(hash, key); }
-    const ValueType *Find(uint64_t hash, const KeyType &key) const
+    ValueType *Add(size_t idx, const ValueType &value)
     {
-        const ValueType *it = nullptr;
-        while ((it = table.Find(hash, it))) {
-            KeyType it_key = HashSetHandler::GetKey(*it);
-            if (!HashSetHandler::CompareKeys(key, it_key)) {
-                return it;
+        DebugAssert(!Handler::IsEmpty(value));
+
+        while (!Handler::IsEmpty(data[idx])) {
+            idx = (idx + 1) & (capacity - 1);
+        }
+        data[idx] = value;
+        count++;
+
+        return &data[idx];
+    }
+
+    void Rehash(size_t new_capacity)
+    {
+        if (new_capacity == capacity)
+            return;
+        DebugAssert(count <= new_capacity);
+
+        ValueType *old_data = data;
+        if (new_capacity) {
+            // We need to zero memory for POD values, we could avoid it in other
+            // cases but I'll wait for widespred constexpr if (C++17) support
+            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * sizeof(ValueType),
+                                                    Allocator::ZeroMemory);
+            for (size_t i = 0; i < new_capacity; i++) {
+                new (&data[i]) ValueType;
+            }
+
+            count = 0;
+            for (size_t i = 0; i < capacity; i++) {
+                if (!Handler::IsEmpty(old_data[i])) {
+                    size_t new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
+                    Add(new_idx, old_data[i]);
+                    old_data[i].~ValueType();
+                }
+            }
+        } else {
+            data = nullptr;
+
+            for (size_t i = 0; i < capacity; i++) {
+                if (!Handler::IsEmpty(old_data[i])) {
+                    old_data[i].~ValueType();
+                }
             }
         }
-        return nullptr;
+        Allocator::Release(allocator, old_data, capacity * sizeof(ValueType));
+        capacity = new_capacity;
+    }
+
+    size_t KeyToIndex(const KeyType &key) const
+    {
+        uint64_t hash = Handler::HashKey(key);
+        return hash & (capacity - 1);
     }
 };
 
-#define HASH_SET_METHODS(Type, KeyMember, HashFunc) \
-    static const char *GetKey(const Type &value) { return value.key; } \
-    static uint64_t HashKey(const char *key) { return HashFunc(key); } \
-    static int CompareKeys(const char *key1, const char *key2) { return strcmp(key1, key2); }
+static inline uint64_t DefaultHash(char key) { return (uint64_t)key; }
+static inline uint64_t DefaultHash(unsigned char key) { return key; }
+static inline uint64_t DefaultHash(short key) { return (uint64_t)key; }
+static inline uint64_t DefaultHash(unsigned short key) { return key; }
+static inline uint64_t DefaultHash(int key) { return (uint64_t)key; }
+static inline uint64_t DefaultHash(unsigned int key) { return key; }
+static inline uint64_t DefaultHash(long key) { return (uint64_t)key; }
+static inline uint64_t DefaultHash(unsigned long key) { return key; }
+static inline uint64_t DefaultHash(long long key) { return (uint64_t)key; }
+static inline uint64_t DefaultHash(unsigned long long key) { return key; }
+
+// FNV-1a
+static inline uint64_t DefaultHash(const char *key)
+{
+    uint64_t hash = 0xCBF29CE484222325ull;
+    for (size_t i = 0; key[i]; i++) {
+        hash ^= key[i];
+        hash *= 0x100000001B3ull;
+    }
+    return hash;
+}
+
+static inline bool DefaultCompare(char key1, char key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(unsigned char key1, unsigned char key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(short key1, short key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(unsigned short key1, unsigned short key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(int key1, int key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(unsigned int key1, unsigned int key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(long key1, long key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(unsigned long key1, unsigned long key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(long long key1, long long key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(unsigned long long key1, unsigned long long key2)
+    { return key1 == key2; }
+
+static inline bool DefaultCompare(const char *key1, const char *key2)
+    { return !strcmp(key1, key2); }
+
+#define HASH_SET_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+    class HashHandler { \
+    public: \
+        static bool IsEmpty(const ValueType &value) \
+            { return value.key == static_cast<decltype(ValueType::KeyMember)>(EmptyKey); } \
+        static const decltype(ValueType::KeyMember) &GetKey(const ValueType &value) \
+            { return value.key; } \
+        static const decltype(ValueType::KeyMember) &GetKey(const ValueType *value) \
+            { return value->key; } \
+        static uint64_t HashKey(const decltype(ValueType::KeyMember) &key) \
+            { return HashFunc(key); } \
+        static bool CompareKeys(const decltype(ValueType::KeyMember) &key1, \
+                                const decltype(ValueType::KeyMember) &key2) \
+            { return CompareFunc((key1), (key2)); } \
+    }
+#define HASH_SET_HANDLER(ValueType, KeyMember) \
+    HASH_SET_HANDLER_EX(ValueType, KeyMember, 0, DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
-class HashTable {
+class HashMap {
     struct Bucket {
         ValueType value; // Keep first, see Remove(it) method
         KeyType key;
 
-        HASH_SET_METHODS(Bucket, key, HashKey)
+        HASH_SET_HANDLER(Bucket, key);
     };
 
 public:
@@ -1574,26 +1556,18 @@ public:
     void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
-        { return (ValueType *)((const HashTable *)this)->Find(key); }
+        { return (ValueType *)((const HashMap *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
         const Bucket *set_it = set.Find(key);
-        if (set_it) {
-            return &set_it->value;
-        } else {
-            return nullptr;
-        }
+        return set_it ? &set_it->value : nullptr;
     }
     ValueType FindValue(const KeyType key, const ValueType &default_value)
-        { return (ValueType)((const HashTable *)this)->FindValue(key, default_value); }
+        { return (ValueType)((const HashMap *)this)->FindValue(key, default_value); }
     const ValueType FindValue(const KeyType key, const ValueType &default_value) const
     {
         const ValueType *it = Find(key);
-        if (it) {
-            return *it;
-        } else {
-            return default_value;
-        }
+        return it ? *it : default_value;
     }
 };
 
@@ -1652,15 +1626,15 @@ public:
     void Close();
 
     EnumStatus Enumerate(Allocator &str_alloc,
-                         DynamicArray<FileInfo> *out_files, size_t max_files);
+                         HeapArray<FileInfo> *out_files, size_t max_files);
 
     friend EnumStatus EnumerateDirectory(const char *, const char *, Allocator &,
-                                         DynamicArray<FileInfo> *, size_t,
+                                         HeapArray<FileInfo> *, size_t,
                                          EnumDirectoryHandle *);
 };
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
-                              DynamicArray<FileInfo> *out_files, size_t max_files,
+                              HeapArray<FileInfo> *out_files, size_t max_files,
                               EnumDirectoryHandle *out_handle = nullptr);
 
 // ------------------------------------------------------------------------
@@ -1688,7 +1662,7 @@ public:
     const char *ConsumeOption();
     const char *ConsumeOptionValue();
     const char *ConsumeNonOption();
-    void ConsumeNonOptions(DynamicArray<const char *> *non_options);
+    void ConsumeNonOptions(HeapArray<const char *> *non_options);
 };
 
 static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)

@@ -45,36 +45,8 @@ static inline void ReverseBytes(uint64_t *u)
 
 static Date ConvertDate1980(uint16_t days)
 {
-    static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
-    Date date;
-
-    if (UNLIKELY(!days)) {
-        date.st.year = 1979;
-        date.st.month = 12;
-        date.st.day = 31;
-
-        return date;
-    }
-
-    bool leap_year;
-    for (date.st.year = 1980;; date.st.year++) {
-        leap_year = ((date.st.year % 4 == 0 && date.st.year % 100 != 0) || date.st.year % 400 == 0);
-
-        int year_days = 365 + leap_year;
-        if (days <= year_days)
-            break;
-        days -= year_days;
-    }
-    for (date.st.month = 1; date.st.month <= 12; date.st.month++) {
-        int month_days = days_per_month[date.st.month - 1] + (date.st.month == 2 && leap_year);
-        if (days <= month_days)
-            break;
-        days -= month_days;
-    }
-    date.st.day = days;
-
-    return date;
+    static const int base_days = Date(1979, 12, 31).ToJulianDays();
+    return Date::FromJulianDays(base_days + days);
 }
 
 static DiagnosisCode ConvertDiagnosisCode(uint16_t code123, uint16_t code456)
@@ -97,7 +69,7 @@ static DiagnosisCode ConvertDiagnosisCode(uint16_t code123, uint16_t code456)
 
 // TODO: Be careful with overflow in offset and length checks
 bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
-                       const char *filename, DynamicArray<TableInfo> *out_tables)
+                       const char *filename, HeapArray<TableInfo> *out_tables)
 {
     DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
 
@@ -254,7 +226,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
 }
 
 bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes)
+                          const TableInfo &table, HeapArray<GhmDecisionNode> *out_nodes)
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
 
@@ -319,7 +291,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, DynamicArray<DiagnosisInfo> *out_diags)
+                          const TableInfo &table, HeapArray<DiagnosisInfo> *out_diags)
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
 
@@ -338,7 +310,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosisPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::sex[0].values));
+                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::mask[0].values));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
                   table.sections[3].value_len > sizeof(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(!table.sections[4].value_len);
@@ -379,10 +351,10 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             {
                 const uint8_t *sex_data = file_data + table.sections[2].raw_offset +
                                           raw_diag_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(diag.sex[0].values, sex_data, table.sections[2].value_len / 2);
-                memcpy(diag.sex[1].values, sex_data + table.sections[2].value_len / 2,
+                memcpy(diag.mask[0].values, sex_data, table.sections[2].value_len / 2);
+                memcpy(diag.mask[1].values, sex_data + table.sections[2].value_len / 2,
                        table.sections[2].value_len / 2);
-                if (memcmp(diag.sex[0].values, diag.sex[1].values, sizeof(diag.sex[0].values))) {
+                if (memcmp(diag.mask[0].values, diag.mask[1].values, sizeof(diag.mask[0].values))) {
                     diag.flags |= (int)DiagnosisInfo::Flag::SexDifference;
                 }
 
@@ -408,8 +380,32 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
+bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
+                         const TableInfo &table,
+                         HeapArray<ExclusionInfo> *out_exclusions)
+{
+    DEFER_NC(out_exclusions_guard, len = out_exclusions->len) { out_exclusions->RemoveFrom(len); };
+
+    FAIL_PARSE_IF(table.sections.len != 5);
+    FAIL_PARSE_IF(!table.sections[4].value_len);
+    FAIL_PARSE_IF(table.sections[4].value_len > sizeof(ExclusionInfo::mask));
+
+    for (size_t i = 0; i < table.sections[4].values_count; i++) {
+        ExclusionInfo *excl = out_exclusions->Append();
+        memcpy(excl->mask, file_data + table.sections[4].raw_offset +
+                           i * table.sections[4].value_len, table.sections[4].value_len);
+        if (table.sections[4].value_len > sizeof(excl->mask)) {
+            memset(excl->mask + table.sections[4].value_len,
+                   0, sizeof(excl->mask) - table.sections[4].value_len);
+        }
+    }
+
+    out_exclusions_guard.disable();
+    return true;
+}
+
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs)
+                         const TableInfo &table, HeapArray<ProcedureInfo> *out_procs)
 {
     DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
 
@@ -501,7 +497,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots)
+                       const TableInfo &table, HeapArray<GhmRootInfo> *out_ghm_roots)
 {
     DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
 
@@ -612,7 +608,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 
 bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
                         const TableInfo &table, size_t section_idx,
-                        DynamicArray<ValueRangeCell<2>> *out_cells)
+                        HeapArray<ValueRangeCell<2>> *out_cells)
 {
     DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
 
@@ -657,7 +653,7 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
-                           const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes)
+                           const TableInfo &table, HeapArray<GhsDecisionNode> *out_nodes)
 {
     size_t base_len = out_nodes->len;
     DEFER_N(out_nodes_guard) { out_nodes->RemoveFrom(base_len); };
@@ -767,7 +763,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table, DynamicArray<AuthorizationInfo> *out_auths)
+                             const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths)
 {
     DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
 
@@ -811,7 +807,7 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
 
 bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
                               const TableInfo &table, size_t section_idx,
-                              DynamicArray<DiagnosisProcedurePair> *out_pairs)
+                              HeapArray<DiagnosisProcedurePair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
 
@@ -859,48 +855,48 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-const ClassifierSet *ClassifierStore::FindSet(Date date) const
+const ClassifierIndex *ClassifierSet::FindIndex(Date date) const
 {
     if (date.value) {
-        for (size_t i = sets.len - 1; i-- > 0;) {
-            if (date >= sets[i].limit_dates[0] && date < sets[i].limit_dates[1])
-                return &sets[i];
+        for (size_t i = indexes.len - 1; i-- > 0;) {
+            if (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])
+                return &indexes[i];
         }
-    } else if (sets.len) {
-        return &sets[sets.len - 1];
+    } else if (indexes.len) {
+        return &indexes[indexes.len - 1];
     }
     return nullptr;
 }
 
-static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date end_sate,
-                                LoadTableData *current_tables[])
+static bool CommitClassifierIndex(ClassifierSet *set, Date start_date, Date end_sate,
+                                  LoadTableData *current_tables[])
 {
     bool success = true;
 
-    ClassifierSet set = {};
+    ClassifierIndex index = {};
 
-    set.limit_dates[0] = start_date;
-    set.limit_dates[1] = end_sate;
+    index.limit_dates[0] = start_date;
+    index.limit_dates[1] = end_sate;
 
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
             if (!table->loaded) { \
-                set.MemberName.ptr = (decltype(set.MemberName.ptr))store->MemberName.len; \
+                index.MemberName.ptr = (decltype(index.MemberName.ptr))set->store.MemberName.len; \
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
-                                    table_info, ##__VA_ARGS__, &store->MemberName); \
-                set.MemberName.len = store->MemberName.len - (size_t)set.MemberName.ptr; \
+                                    table_info, ##__VA_ARGS__, &set->store.MemberName); \
+                index.MemberName.len = set->store.MemberName.len - (size_t)index.MemberName.ptr; \
             } else { \
-                set.MemberName = store->sets[store->sets.len - 1].MemberName; \
+                index.MemberName = set->indexes[set->indexes.len - 1].MemberName; \
             } \
         } while (false)
 
     size_t active_count = 0;
-    for (size_t i = 0; i < CountOf(set.tables); i++) {
+    for (size_t i = 0; i < CountOf(index.tables); i++) {
         if (!current_tables[i])
             continue;
 
         LoadTableData *table = current_tables[i];
-        const TableInfo &table_info = store->tables[table->table_idx];
+        const TableInfo &table_info = set->tables[table->table_idx];
 
         switch ((TableType)i) {
             case TableType::GhmDecisionTree: {
@@ -908,6 +904,7 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
             } break;
             case TableType::DiagnosisTable: {
                 LOAD_TABLE(diagnoses, ParseDiagnosisTable);
+                LOAD_TABLE(exclusions, ParseExclusionTable);
             } break;
             case TableType::ProcedureTable: {
                 LOAD_TABLE(procedures, ParseProcedureTable);
@@ -937,13 +934,13 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
                 break;
         }
         table->loaded = true;
-        set.tables[i] = &table_info;
+        index.tables[i] = &table_info;
 
         active_count++;
     }
 
     if (active_count) {
-        store->sets.Append(set);
+        set->indexes.Append(index);
     }
 
 #undef LOAD_TABLE
@@ -951,16 +948,16 @@ static bool CommitClassifierSet(ClassifierStore *store, Date start_date, Date en
     return success;
 }
 
-bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore *out_store)
+bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out_set)
 {
-    Assert(!out_store->tables.len);
-    Assert(!out_store->sets.len);
+    Assert(!out_set->tables.len);
+    Assert(!out_set->indexes.len);
 
     bool success = true;
 
     Allocator file_alloc;
 
-    DynamicArray<LoadTableData> tables;
+    HeapArray<LoadTableData> tables;
     for (const char *filename: filenames) {
         ArrayRef<uint8_t> raw_data;
         if (!ReadFile(&file_alloc, filename, Megabytes(8), &raw_data)) {
@@ -968,13 +965,13 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
             continue;
         }
 
-        size_t start_len = out_store->tables.len;
-        if (!ParseTableHeaders(raw_data, filename, &out_store->tables)) {
+        size_t start_len = out_set->tables.len;
+        if (!ParseTableHeaders(raw_data, filename, &out_set->tables)) {
             success = false;
             continue;
         }
-        for (size_t i = start_len; i < out_store->tables.len; i++) {
-            if (out_store->tables[i].type == TableType::UnknownTable)
+        for (size_t i = start_len; i < out_set->tables.len; i++) {
+            if (out_set->tables[i].type == TableType::UnknownTable)
                 continue;
 
             LoadTableData table = {};
@@ -987,8 +984,8 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
 
     std::sort(tables.begin(), tables.end(),
               [&](const LoadTableData &table1, const LoadTableData &table2) {
-        const TableInfo &table_info1 = out_store->tables[table1.table_idx];
-        const TableInfo &table_info2 = out_store->tables[table2.table_idx];
+        const TableInfo &table_info1 = out_set->tables[table1.table_idx];
+        const TableInfo &table_info2 = out_set->tables[table2.table_idx];
 
         if (table_info1.limit_dates[0] < table_info2.limit_dates[0]) {
             return true;
@@ -1002,10 +999,10 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
     LoadTableData *active_tables[CountOf(TableTypeNames)] = {};
     Date start_date = {}, end_date = {};
     for (LoadTableData &table: tables) {
-        const TableInfo &table_info = out_store->tables[table.table_idx];
+        const TableInfo &table_info = out_set->tables[table.table_idx];
 
         while (end_date.value && table_info.limit_dates[0] >= end_date) {
-            success &= CommitClassifierSet(out_store, start_date, end_date, active_tables);
+            success &= CommitClassifierIndex(out_set, start_date, end_date, active_tables);
 
             start_date = {};
             Date next_end_date = {};
@@ -1013,7 +1010,7 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
                 if (!active_tables[i])
                     continue;
 
-                const TableInfo &active_info = out_store->tables[active_tables[i]->table_idx];
+                const TableInfo &active_info = out_set->tables[active_tables[i]->table_idx];
 
                 if (active_info.limit_dates[1] == end_date) {
                     active_tables[i] = nullptr;
@@ -1030,7 +1027,7 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
 
         if (start_date.value) {
             if (table_info.limit_dates[0] > start_date) {
-                success &= CommitClassifierSet(out_store, start_date, table_info.limit_dates[0],
+                success &= CommitClassifierIndex(out_set, start_date, table_info.limit_dates[0],
                                                active_tables);
                 start_date = table_info.limit_dates[0];
             }
@@ -1043,14 +1040,16 @@ bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore 
 
         active_tables[(int)table_info.type] = &table;
     }
-    success &= CommitClassifierSet(out_store, start_date, end_date, active_tables);
+    success &= CommitClassifierIndex(out_set, start_date, end_date, active_tables);
 
-    for (ClassifierSet &set: out_store->sets) {
+    for (ClassifierIndex &index: out_set->indexes) {
 #define FIX_SET_ARRAYREF(ArrayRefName) \
-            set.ArrayRefName.ptr = out_store->ArrayRefName.ptr + (size_t)set.ArrayRefName.ptr
+            index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
+                                     (size_t)index.ArrayRefName.ptr
 
         FIX_SET_ARRAYREF(ghm_nodes);
         FIX_SET_ARRAYREF(diagnoses);
+        FIX_SET_ARRAYREF(exclusions);
         FIX_SET_ARRAYREF(procedures);
         FIX_SET_ARRAYREF(ghm_roots);
         FIX_SET_ARRAYREF(gnn_cells);

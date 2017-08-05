@@ -39,7 +39,7 @@ struct TableInfo {
     };
 
     Date build_date;
-    int16_t version[2];
+    uint16_t version[2];
     Date limit_dates[2];
 
     char raw_type[9];
@@ -84,11 +84,15 @@ struct DiagnosisInfo {
         struct {
             uint8_t cmd;
         } info;
-    } sex[2];
+    } mask[2];
     uint16_t warnings;
 
     uint16_t exclusion_set_idx;
     uint16_t exclusion_set_bit;
+};
+
+struct ExclusionInfo {
+    uint8_t mask[256];
 };
 
 struct ProcedureInfo {
@@ -154,8 +158,8 @@ struct GhsDecisionNode {
 
         struct {
             GhsCode code;
-            int16_t high_duration_treshold;
-            int16_t low_duration_treshold;
+            uint16_t high_duration_treshold;
+            uint16_t low_duration_treshold;
         } ghs[2]; // 0 for public, 1 for private
     } u;
 };
@@ -182,34 +186,37 @@ struct DiagnosisProcedurePair {
 };
 
 bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
-                       const char *filename, DynamicArray<TableInfo> *out_tables);
+                       const char *filename, HeapArray<TableInfo> *out_tables);
 
 bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, DynamicArray<GhmDecisionNode> *out_nodes);
+                          const TableInfo &table, HeapArray<GhmDecisionNode> *out_nodes);
 bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, DynamicArray<DiagnosisInfo> *out_diags);
+                         const TableInfo &table, HeapArray<DiagnosisInfo> *out_diags);
+bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
+                         const TableInfo &table, HeapArray<ExclusionInfo> *out_exclusions);
 bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, DynamicArray<ProcedureInfo> *out_procs);
+                         const TableInfo &table, HeapArray<ProcedureInfo> *out_procs);
 bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, DynamicArray<GhmRootInfo> *out_ghm_roots);
+                       const TableInfo &table, HeapArray<GhmRootInfo> *out_ghm_roots);
 bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
                         const TableInfo &table, size_t section_idx,
-                        DynamicArray<ValueRangeCell<2>> *out_cells);
+                        HeapArray<ValueRangeCell<2>> *out_cells);
 
 bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
-                           const TableInfo &table, DynamicArray<GhsDecisionNode> *out_nodes);
+                           const TableInfo &table, HeapArray<GhsDecisionNode> *out_nodes);
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table, DynamicArray<AuthorizationInfo> *out_units);
+                             const TableInfo &table, HeapArray<AuthorizationInfo> *out_units);
 bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
                               const TableInfo &table, size_t section_idx,
-                              DynamicArray<DiagnosisProcedurePair> *out_pairs);
+                              HeapArray<DiagnosisProcedurePair> *out_pairs);
 
-struct ClassifierSet {
+struct ClassifierIndex {
     Date limit_dates[2];
     const TableInfo *tables[CountOf(TableTypeNames)];
 
     ArrayRef<GhmDecisionNode> ghm_nodes;
     ArrayRef<DiagnosisInfo> diagnoses;
+    ArrayRef<ExclusionInfo> exclusions;
     ArrayRef<ProcedureInfo> procedures;
     ArrayRef<GhmRootInfo> ghm_roots;
     ArrayRef<ValueRangeCell<2>> gnn_cells;
@@ -220,26 +227,28 @@ struct ClassifierSet {
     ArrayRef<DiagnosisProcedurePair> supplement_pairs[2];
 };
 
-class ClassifierStore {
+class ClassifierSet {
 public:
-    DynamicArray<TableInfo> tables;
+    HeapArray<TableInfo> tables;
+    HeapArray<ClassifierIndex> indexes;
 
-    DynamicArray<ClassifierSet> sets;
+    struct {
+        HeapArray<GhmDecisionNode> ghm_nodes;
+        HeapArray<DiagnosisInfo> diagnoses;
+        HeapArray<ExclusionInfo> exclusions;
+        HeapArray<ProcedureInfo> procedures;
+        HeapArray<GhmRootInfo> ghm_roots;
+        HeapArray<ValueRangeCell<2>> gnn_cells;
+        HeapArray<ValueRangeCell<2>> cma_cells[3];
 
-    DynamicArray<GhmDecisionNode> ghm_nodes;
-    DynamicArray<DiagnosisInfo> diagnoses;
-    DynamicArray<ProcedureInfo> procedures;
-    DynamicArray<GhmRootInfo> ghm_roots;
-    DynamicArray<ValueRangeCell<2>> gnn_cells;
-    DynamicArray<ValueRangeCell<2>> cma_cells[3];
+        HeapArray<GhsDecisionNode> ghs_nodes;
+        HeapArray<AuthorizationInfo> authorizations;
+        HeapArray<DiagnosisProcedurePair> supplement_pairs[2];
+    } store;
 
-    DynamicArray<GhsDecisionNode> ghs_nodes;
-    DynamicArray<AuthorizationInfo> authorizations;
-    DynamicArray<DiagnosisProcedurePair> supplement_pairs[2];
-
-    const ClassifierSet *FindSet(Date date) const;
-    ClassifierSet *FindSet(Date date)
-        { return (ClassifierSet *)((const ClassifierStore *)this)->FindSet(date); }
+    const ClassifierIndex *FindIndex(Date date) const;
+    ClassifierIndex *FindIndex(Date date)
+        { return (ClassifierIndex *)((const ClassifierSet *)this)->FindIndex(date); }
 };
 
-bool LoadClassifierStore(ArrayRef<const char *const> filenames, ClassifierStore *out_store);
+bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out_set);

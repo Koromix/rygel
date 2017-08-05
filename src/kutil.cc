@@ -80,7 +80,8 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
 
     AllocatorBucket *bucket = (AllocatorBucket *)malloc(sizeof(*bucket) + size);
     if (!bucket) {
-        Abort("Failed to allocate %1 of memory", FmtMemSize(size));
+        LogError("Failed to allocate %1 of memory", FmtMemSize(size));
+        abort();
     }
     list.prev->next = &bucket->head;
     bucket->head.prev = list.prev;
@@ -128,7 +129,9 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
     AllocatorBucket *bucket = PTR_TO_BUCKET(*ptr);
     AllocatorBucket *new_bucket = (AllocatorBucket *)realloc(bucket, sizeof(*new_bucket) + new_size);
     if (!new_bucket) {
-        Abort("Failed to resize %1 memory block to %2", FmtMemSize(old_size), FmtMemSize(new_size));
+        LogError("Failed to resize %1 memory block to %2",
+                 FmtMemSize(old_size), FmtMemSize(new_size));
+        abort();
     }
     new_bucket->head.prev->next = &new_bucket->head;
     new_bucket->head.next->prev = &new_bucket->head;
@@ -165,39 +168,28 @@ void Allocator::ReleaseAll()
 // Date and Time
 // ------------------------------------------------------------------------
 
-bool Date::IsValid() const
-{
-    static const int8_t days_per_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-
-    bool leap_month = (st.month == 2 && ((st.year % 4 == 0 && st.year % 100 != 0) ||
-                                         st.year % 400 == 0));
-    if (st.month < 1 || st.month > 12)
-        return false;
-    if (st.day < 1 || st.day > (days_per_month[st.month - 1] + leap_month))
-        return false;
-    return true;
-}
-
-Date ParseDateString(const char *date_str)
+Date Date::FromString(const char *date_str)
 {
     Date date = {};
 
 GCC_PUSH_IGNORE(-Wformat-nonliteral)
-    unsigned int parts[3];
+    int parts[3];
     const auto TryFormat = [&](const char *format) {
-        return sscanf(date_str, format, &parts[0], &parts[1], &parts[2]) == 3;
+        int end_offset;
+        int parts_count = sscanf(date_str, format, &parts[0], &parts[1], &parts[2], &end_offset);
+        return parts_count == 3 && !date_str[end_offset];
     };
-    if (!TryFormat("%6u-%6u-%6u")) {
-        if (!TryFormat("%6u/%6u/%6u")) {
+    if (!TryFormat("%6d-%2u-%2u%n")) {
+        if (!TryFormat("%6d/%2u/%2u%n")) {
             LogError("Malformed date string '%1'", date_str);
             return date;
         }
     }
 GCC_POP_IGNORE()
 
-    if (parts[2] >= 100) {
+    if (parts[2] >= 100 || parts[2] <= -100) {
         std::swap(parts[0], parts[2]);
-    } else if (parts[0] < 100) {
+    } else if (parts[0] < 100 && parts[0] > -100) {
         LogError("Ambiguous date string '%1'", date_str);
         return date;
     }
@@ -206,7 +198,7 @@ GCC_POP_IGNORE()
         return date;
     }
 
-    date.st.year = (uint16_t)parts[0];
+    date.st.year = (int16_t)parts[0];
     date.st.month = (uint8_t)parts[1];
     date.st.day = (uint8_t)parts[2];
     if (!date.IsValid()) {
@@ -217,6 +209,79 @@ GCC_POP_IGNORE()
     return date;
 }
 
+Date Date::FromJulianDays(int days)
+{
+    DebugAssert(days >= 0);
+
+    Date date;
+    {
+        // Algorithm from Richards, copied from Wikipedia:
+        // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
+        int f = days + 1401 + (((4 * days + 274277) / 146097) * 3) / 4 - 38;
+        int e = 4 * f + 3;
+        int g = e % 1461 / 4;
+        int h = 5 * g + 2;
+        date.st.day = h % 153 / 5 + 1;
+        date.st.month = (h / 153 + 2) % 12 + 1;
+        date.st.year = (e / 1461) - 4716 + (date.st.month < 3);
+    }
+
+    return date;
+}
+
+int Date::ToJulianDays() const
+{
+    DebugAssert(IsValid());
+
+    int julian_days;
+    {
+        // Straight from the Web:
+        // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
+        bool adjust = st.month < 3;
+        int year = st.year + 4800 - adjust;
+        int month = st.month + 12 * adjust - 3;
+        julian_days = st.day + (153 * month + 2) / 5 + 365 * year - 32045 +
+                      year / 4 - year / 100 + year / 400;
+    }
+
+    return julian_days;
+}
+
+Date &Date::operator++()
+{
+    DebugAssert(IsValid());
+
+    if (st.day < DaysInMonth(st.year, st.month)) {
+        st.day++;
+    } else if (st.month < 12) {
+        st.month++;
+        st.day = 1;
+    } else {
+        st.year++;
+        st.month = 1;
+        st.day = 1;
+    }
+
+    return *this;
+}
+
+Date &Date::operator--()
+{
+    DebugAssert(IsValid());
+
+    if (st.day > 1) {
+        st.day--;
+    } else if (st.month > 1) {
+        st.month--;
+        st.day = DaysInMonth(st.year, st.month);
+    } else {
+        st.year--;
+        st.month = 12;
+        st.day = DaysInMonth(st.year, st.month);
+    }
+
+    return *this;
+}
 
 // ------------------------------------------------------------------------
 // String Format
@@ -371,14 +436,19 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Date: {
                 DebugAssert(arg.value.date.IsValid());
-                if (arg.value.date.st.year < 10) {
+                int year = arg.value.date.st.year;
+                if (year < 0) {
+                    append(MakeStrRef("-"));
+                    year = -year;
+                }
+                if (year < 10) {
                     append(MakeStrRef("000"));
-                } else if (arg.value.date.st.year < 100) {
+                } else if (year < 100) {
                     append(MakeStrRef("00"));
-                } else if (arg.value.date.st.year < 1000) {
+                } else if (year < 1000) {
                     append(MakeStrRef("0"));
                 }
-                WriteUnsignedAsDecimal(arg.value.date.st.year, append);
+                WriteUnsignedAsDecimal(year, append);
                 append(MakeStrRef("-"));
                 if (arg.value.date.st.month < 10) {
                     append(MakeStrRef("0"));
@@ -700,7 +770,7 @@ static void ConvertFindData(const WIN32_FIND_DATA &find_data, Allocator &str_all
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
-                              DynamicArray<FileInfo> *out_files, size_t max_files,
+                              HeapArray<FileInfo> *out_files, size_t max_files,
                               EnumDirectoryHandle *out_handle)
 {
     Assert(max_files > 0);
@@ -766,7 +836,7 @@ void EnumDirectoryHandle::Close()
 }
 
 EnumStatus EnumDirectoryHandle::Enumerate(Allocator &str_alloc,
-                                          DynamicArray<FileInfo> *out_files, size_t max_files)
+                                          HeapArray<FileInfo> *out_files, size_t max_files)
 {
     Assert(max_files > 0);
 
@@ -940,7 +1010,7 @@ const char *OptionParser::ConsumeNonOption()
     return args[pos++];
 }
 
-void OptionParser::ConsumeNonOptions(DynamicArray<const char *> *non_options)
+void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
 {
     const char *non_option;
     while ((non_option = ConsumeNonOption())) {

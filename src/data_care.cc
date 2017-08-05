@@ -120,9 +120,9 @@ public:
             case State::StayObject: {
                 state = State::StayArray;
 
-                stay.diagnoses.len = out_set->diagnoses.len -
+                stay.diagnoses.len = out_set->store.diagnoses.len -
                                                 (size_t)stay.diagnoses.ptr;
-                stay.procedures.len = out_set->procedures.len - (size_t)stay.procedures.ptr;
+                stay.procedures.len = out_set->store.procedures.len - (size_t)stay.procedures.ptr;
                 out_set->stays.Append(stay);
                 ResetStay();
             } break;
@@ -130,7 +130,7 @@ public:
             case State::ProcedureObject: {
                 state = State::ProcedureArray;
 
-                out_set->procedures.Append(proc);
+                out_set->store.procedures.Append(proc);
                 proc = {};
             } break;
 
@@ -325,14 +325,14 @@ public:
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {
                 stay.main_diagnosis = ConvertDiagnosisCode(str);
-                out_set->diagnoses.Append(stay.main_diagnosis);
+                out_set->store.diagnoses.Append(stay.main_diagnosis);
             } break;
             case State::StayLinkedDiagnosis: {
                 stay.linked_diagnosis = ConvertDiagnosisCode(str);
-                out_set->diagnoses.Append(stay.linked_diagnosis);
+                out_set->store.diagnoses.Append(stay.linked_diagnosis);
             } break;
             case State::AssociatedDiagnosisArray: {
-                out_set->diagnoses.Append(ConvertDiagnosisCode(str));
+                out_set->store.diagnoses.Append(ConvertDiagnosisCode(str));
             } break;
 
             // Procedure attributes
@@ -371,8 +371,8 @@ private:
     void ResetStay()
     {
         stay = {};
-        stay.diagnoses.ptr = (DiagnosisCode *)out_set->diagnoses.len;
-        stay.procedures.ptr = (Procedure *)out_set->procedures.len;
+        stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
+        stay.procedures.ptr = (Procedure *)out_set->store.procedures.len;
     }
 
     void SetErrorFlag()
@@ -384,9 +384,10 @@ private:
     template <typename T>
     void SetInt(T *dest, int i)
     {
-        if (i < (int)std::numeric_limits<T>::min() || i > (int)std::numeric_limits<T>::max()) {
+        *dest = i;
+        if (*dest != i) {
             LogError("Value %1 outside of range %2 - %3",
-                     i, std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
+                     i, (int)std::numeric_limits<T>::min(), (int)std::numeric_limits<T>::max());
             SetErrorFlag();
             return;
         }
@@ -395,7 +396,7 @@ private:
     }
     void SetDate(Date *dest, const char *date_str)
     {
-        *dest = ParseDateString(date_str);
+        *dest = Date::FromString(date_str);
         if (!dest->value) {
             LogError("Invalid date string '%1'", date_str);
             SetErrorFlag();
@@ -519,12 +520,12 @@ bool ParseJsonFile(const char *filename, T *json_handler)
 
 bool StaySetBuilder::LoadJson(ArrayRef<const char *const> filenames)
 {
-    DEFER_NC(set_guard, stays_len = set.diagnoses.len,
-                        diagnoses_len = set.diagnoses.len,
-                        procedures_len = set.procedures.len) {
+    DEFER_NC(set_guard, stays_len = set.store.diagnoses.len,
+                        diagnoses_len = set.store.diagnoses.len,
+                        procedures_len = set.store.procedures.len) {
         set.stays.RemoveFrom(stays_len);
-        set.diagnoses.RemoveFrom(diagnoses_len);
-        set.procedures.RemoveFrom(procedures_len);
+        set.store.diagnoses.RemoveFrom(diagnoses_len);
+        set.store.procedures.RemoveFrom(procedures_len);
     };
 
     bool success = true;
@@ -548,12 +549,15 @@ bool StaySetBuilder::Finish(StaySet *out_set)
 
     for (Stay &stay: set.stays) {
 #define FIX_STAY_ARRAYREF(ArrayRefName) \
-            stay.ArrayRefName.ptr = out_set->ArrayRefName.ptr + (size_t)stay.ArrayRefName.ptr
+            stay.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
+                                    (size_t)stay.ArrayRefName.ptr
 
         FIX_STAY_ARRAYREF(diagnoses);
         FIX_STAY_ARRAYREF(procedures);
 
 #undef FIX_STAY_ARRAYREF
+
+        stay.duration = stay.dates[1] - stay.dates[0];
     }
 
     memcpy(out_set, &set, sizeof(set));

@@ -42,25 +42,52 @@ static void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes)
     }
 }
 
-static void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses)
+static void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
+                               ArrayRef<const ExclusionInfo> exclusions = {})
 {
     for (const DiagnosisInfo &diag: diagnoses) {
+        const auto DumpMask = [&](size_t mask_idx) {
+            for (size_t i = 0; i < CountOf(diag.mask[mask_idx].values); i++) {
+                Print(" %1", FmtBin(diag.mask[mask_idx].values[i]));
+            }
+            PrintLn();
+        };
+
         PrintLn("      %1:", diag.code);
+        if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
+            PrintLn("        Male:");
+            PrintLn("          Category: %1", diag.mask[0].info.cmd);
+            Print("          Mask:");
+            DumpMask(0);
 
-        Print("        Male:");
-        for (size_t i = 0; i < CountOf(diag.sex[0].values); i++) {
-            Print(" %1", FmtBin(diag.sex[0].values[i]));
+            PrintLn("        Female:");
+            PrintLn("          Category: %1", diag.mask[1].info.cmd);
+            Print("          Mask:");
+            DumpMask(1);
+        } else {
+            PrintLn("        Category: %1", diag.mask[0].info.cmd);
+            Print("        Mask:");
+            DumpMask(0);
         }
-        PrintLn();
-        Print("        Female:");
-        for (size_t i = 0; i < CountOf(diag.sex[1].values); i++) {
-            Print(" %1", FmtBin(diag.sex[1].values[i]));
-        }
-        PrintLn();
-
-        PrintLn("        CMD Male: %1 - Female: %2", diag.sex[0].info.cmd,
-                                                     diag.sex[1].info.cmd);
         PrintLn("        Warnings: %1", FmtBin(diag.warnings));
+
+        if (exclusions.len) {
+            Print("        Exclusions (list %1):", diag.exclusion_set_idx);
+            {
+                if (diag.exclusion_set_idx <= exclusions.len) {
+                    const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
+                    for (const DiagnosisInfo &excl_diag: diagnoses) {
+                        if (excl->mask[excl_diag.exclusion_set_bit >> 3] &
+                                (0x80 >> (excl_diag.exclusion_set_bit & 0x7))) {
+                            Print(" %1", excl_diag.code);
+                        }
+                    }
+                } else {
+                    Print("Invalid list");
+                }
+            }
+            PrintLn();
+        }
     }
 }
 
@@ -174,10 +201,10 @@ static void DumpSupplementPairTable(ArrayRef<const DiagnosisProcedurePair> pairs
     }
 }
 
-static void DumpClassifierStore(const ClassifierStore &store, bool detail = true)
+static void DumpClassifierSet(const ClassifierSet &set, bool detail = true)
 {
     PrintLn("Headers:");
-    for (const TableInfo &table: store.tables) {
+    for (const TableInfo &table: set.tables) {
         PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table.type], table.build_date);
         PrintLn("    Raw Type: %1", table.raw_type);
         PrintLn("    Version: %1.%2", table.version[0], table.version[1]);
@@ -193,58 +220,58 @@ static void DumpClassifierStore(const ClassifierStore &store, bool detail = true
 
     if (detail) {
         PrintLn("Content:");
-        for (const ClassifierSet &set: store.sets) {
+        for (const ClassifierIndex &index: set.indexes) {
             // We don't really need to loop here, but we want the switch to get
             // warnings when we introduce new table types.
-            for (size_t i = 0; i < CountOf(set.tables); i++) {
-                if (!set.tables[i])
+            for (size_t i = 0; i < CountOf(index.tables); i++) {
+                if (!index.tables[i])
                     continue;
 
                 switch ((TableType)i) {
                     case TableType::GhmDecisionTree: {
                         PrintLn("  GHM Decision Tree:");
-                        DumpGhmDecisionTree(set.ghm_nodes);
+                        DumpGhmDecisionTree(index.ghm_nodes);
                         PrintLn();
                     } break;
                     case TableType::DiagnosisTable: {
                         PrintLn("  Diagnoses:");
-                        DumpDiagnosisTable(set.diagnoses);
+                        DumpDiagnosisTable(index.diagnoses, index.exclusions);
                         PrintLn();
                     } break;
                     case TableType::ProcedureTable: {
                         PrintLn("  Procedures:");
-                        DumpProcedureTable(set.procedures);
+                        DumpProcedureTable(index.procedures);
                         PrintLn();
                     } break;
                     case TableType::GhmRootTable: {
                         PrintLn("  GHM Roots:");
-                        DumpGhmRootTable(set.ghm_roots);
+                        DumpGhmRootTable(index.ghm_roots);
                         PrintLn();
                     } break;
                     case TableType::SeverityTable: {
                         PrintLn("  GNN Table:");
-                        DumpSeverityTable(set.gnn_cells);
+                        DumpSeverityTable(index.gnn_cells);
                         PrintLn();
 
-                        for (size_t j = 0; j < CountOf(set.cma_cells); j++) {
+                        for (size_t j = 0; j < CountOf(index.cma_cells); j++) {
                             PrintLn("  CMA Table %1:", j + 1);
-                            DumpSeverityTable(set.cma_cells[j]);
+                            DumpSeverityTable(index.cma_cells[j]);
                             PrintLn();
                         }
                     } break;
 
                     case TableType::GhsDecisionTree: {
                         PrintLn("  GHS Decision Tree:");
-                        DumpGhsDecisionTree(set.ghs_nodes);
+                        DumpGhsDecisionTree(index.ghs_nodes);
                     } break;
                     case TableType::AuthorizationTable: {
                         PrintLn("  Authorization Types:");
-                        DumpAuthorizationTable(set.authorizations);
+                        DumpAuthorizationTable(index.authorizations);
                     } break;
                     case TableType::SupplementPairTable: {
-                        for (size_t j = 0; j < CountOf(set.supplement_pairs); j++) {
+                        for (size_t j = 0; j < CountOf(index.supplement_pairs); j++) {
                             PrintLn("  Supplement Pairs List %1:", j + 1);
-                            DumpSupplementPairTable(set.supplement_pairs[j]);
+                            DumpSupplementPairTable(index.supplement_pairs[j]);
                             PrintLn();
                         }
                     } break;
@@ -258,22 +285,22 @@ static void DumpClassifierStore(const ClassifierStore &store, bool detail = true
 }
 
 static Date main_set_date = {};
-static DynamicArray<const char *> main_table_filenames;
-static ClassifierStore main_classifier_store = {};
+static HeapArray<const char *> main_table_filenames;
+static ClassifierSet main_classifier_set = {};
 
-static const ClassifierStore *GetMainClassifierStore()
+static const ClassifierSet *GetMainClassifierSet()
 {
-    if (!main_classifier_store.sets.len) {
+    if (!main_classifier_set.indexes.len) {
         if (!main_table_filenames.len) {
             LogError("No table provided");
             return nullptr;
         }
-        LoadClassifierStore(main_table_filenames, &main_classifier_store);
-        if (!main_classifier_store.sets.len)
+        LoadClassifierSet(main_table_filenames, &main_classifier_set);
+        if (!main_classifier_set.indexes.len)
             return nullptr;
     }
 
-    return &main_classifier_store;
+    return &main_classifier_set;
 }
 
 struct ListSpecifier {
@@ -418,7 +445,7 @@ Options:
 
             // FIXME: Ugly copying?
             // FIXME: Avoid use of Fmt, make full path directly
-            DynamicArray<FileInfo> files;
+            HeapArray<FileInfo> files;
             if (EnumerateDirectory(opt_parser.current_value, "*.tab", temp_alloc,
                                    &files, 1024) != EnumStatus::Done)
                 return false;
@@ -437,7 +464,7 @@ Options:
             return true;
         } else if (TestOption(opt_parser.current_option, "-d", "--table-date")) {
             REQUIRE_OPTION_VALUE(main_usage_str, false);
-            main_set_date = ParseDateString(opt_parser.current_value);
+            main_set_date = Date::FromString(opt_parser.current_value);
             return !!main_set_date.value;
         } else {
             PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
@@ -462,26 +489,26 @@ Options:
             }
         }
 
-        DynamicArray<const char *> filenames;
+        HeapArray<const char *> filenames;
         opt_parser.ConsumeNonOptions(&filenames);
 
         if (filenames.len) {
-            ClassifierStore store;
-            if (!LoadClassifierStore(filenames, &store) && !store.sets.len)
+            ClassifierSet classifier_set;
+            if (!LoadClassifierSet(filenames, &classifier_set) && !classifier_set.indexes.len)
                 return 1;
-            DumpClassifierStore(store, !headers);
+            DumpClassifierSet(classifier_set, !headers);
         } else {
-            const ClassifierStore *store = GetMainClassifierStore();
-            if (!store)
+            const ClassifierSet *classifier_set = GetMainClassifierSet();
+            if (!classifier_set)
                 return 1;
-            DumpClassifierStore(*store, !headers);
+            DumpClassifierSet(*classifier_set, !headers);
         }
 
         return 0;
     }
 
     COMMAND(list) {
-        DynamicArray<const char *> spec_strings;
+        HeapArray<const char *> spec_strings;
         bool verbose = false;
         {
             const char *opt;
@@ -504,14 +531,14 @@ Options:
             }
         }
 
-        const ClassifierStore *store;
-        const ClassifierSet *store_set;
+        const ClassifierSet *classifier_set;
+        const ClassifierIndex *classifier_index;
         {
-            store = GetMainClassifierStore();
-            if (!store)
+            classifier_set = GetMainClassifierSet();
+            if (!classifier_set)
                 return 1;
-            store_set = store->FindSet(main_set_date);
-            if (!store_set) {
+            classifier_index = classifier_set->FindIndex(main_set_date);
+            if (!classifier_index) {
                 LogError("No classifier set available at '%1'", main_set_date);
                 return 1;
             }
@@ -525,16 +552,16 @@ Options:
             PrintLn("%1:", spec_str);
             switch (spec.table) {
                 case ListSpecifier::Table::Diagnoses: {
-                    for (const DiagnosisInfo &diag: store_set->diagnoses) {
+                    for (const DiagnosisInfo &diag: classifier_index->diagnoses) {
                         if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
-                            if (spec.Match(diag.sex[0].values)) {
+                            if (spec.Match(diag.mask[0].values)) {
                                 PrintLn("  %1 (male)", diag.code);
                             }
-                            if (spec.Match(diag.sex[1].values)) {
+                            if (spec.Match(diag.mask[1].values)) {
                                 PrintLn("  %1 (female)", diag.code);
                             }
                         } else {
-                            if (spec.Match(diag.sex[0].values)) {
+                            if (spec.Match(diag.mask[0].values)) {
                                 PrintLn("  %1", diag.code);
                             }
                         }
@@ -542,7 +569,7 @@ Options:
                 } break;
 
                 case ListSpecifier::Table::Procedures: {
-                    for (const ProcedureInfo &proc: store_set->procedures) {
+                    for (const ProcedureInfo &proc: classifier_index->procedures) {
                         if (spec.Match(proc.values)) {
                             PrintLn("  %1", proc.code);
                         }
@@ -571,13 +598,13 @@ Options:
             }
         }
 
-        const ClassifierStore *store = GetMainClassifierStore();
-        if (!store)
+        const ClassifierSet *classifier_set = GetMainClassifierSet();
+        if (!classifier_set)
             return 1;
 
-        for (const ClassifierSet &set: store->sets) {
-            PrintLn("%1 to %2:", set.limit_dates[0], set.limit_dates[1]);
-            for (const TableInfo *table: set.tables) {
+        for (const ClassifierIndex &index: classifier_set->indexes) {
+            PrintLn("%1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+            for (const TableInfo *table: index.tables) {
                 if (!table)
                     continue;
 
@@ -601,7 +628,7 @@ Options:
     }
 
     COMMAND(run) {
-        DynamicArray<const char *> filenames;
+        HeapArray<const char *> filenames;
         {
             const char *opt;
             while ((opt = opt_parser.ConsumeOption())) {
@@ -624,16 +651,13 @@ Options:
         StaySet stay_set;
         {
             StaySetBuilder stay_set_builder;
-            for (size_t i = 0; i < 500; i++) {
-                if (!stay_set_builder.LoadJson(filenames))
-                    return 1;
-            }
-            if (!stay_set_builder.Validate(&stay_set))
+            if (!stay_set_builder.LoadJson(filenames))
+                return 1;
+            if (!stay_set_builder.Finish(&stay_set))
                 return 1;
         }
-
         PrintLn("%1 -- %2 -- %3",
-                stay_set.stays.len, stay_set.diagnoses.len, stay_set.procedures.len);
+                stay_set.stays.len, stay_set.store.diagnoses.len, stay_set.store.procedures.len);
 
         return 0;
     }
