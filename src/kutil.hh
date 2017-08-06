@@ -252,117 +252,6 @@ ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
 #define DEFER_NC(Name, ...) \
     auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 
-template <typename T>
-struct ArraySlice {
-    size_t offset;
-    size_t len;
-};
-
-// I'd love to make ArrayRef default to { nullptr, 0 } but unfortunately that makes
-// it a non-POD and prevents putting it in a union.
-template <typename T>
-struct ArrayRef {
-    T *ptr;
-    size_t len;
-
-    ArrayRef() = default;
-    constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
-    constexpr ArrayRef(T *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
-    template <size_t N>
-    constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
-
-    T *begin() const { return ptr; }
-    T *end() const { return ptr + len; }
-
-    bool IsValid() const { return ptr; }
-
-    T &operator[](size_t idx) const;
-
-    operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
-
-    ArrayRef Take(ArraySlice<T> slice) const;
-    ArrayRef Take(size_t offset, size_t len) const
-        { return Take(ArraySlice<T>(offset, len)); }
-};
-
-// Unfortunately C strings ("foobar") are implicity converted to ArrayRef<T> with the
-// templated array constructor. But the NUL terminator is obviously counted in. Since I
-// don't want to give up implicit conversion for every type, so instead we need to
-// specialize ArrayRef<const char> and ArrayRef<char>.
-template <>
-struct ArrayRef<const char> {
-    const char *ptr;
-    size_t len;
-
-    ArrayRef() = default;
-    constexpr ArrayRef(const char &value) : ptr(&value), len(1) {}
-    explicit constexpr ArrayRef(const char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
-    template <size_t N>
-    explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}
-
-    const char *begin() const { return ptr; }
-    const char *end() const { return ptr + len; }
-
-    bool IsValid() const { return ptr; }
-
-    const char &operator[](size_t idx) const;
-
-    ArrayRef Take(size_t sub_offset, size_t sub_len) const;
-    ArrayRef Take(const ArraySlice<const char> &slice) const
-        { return Take(slice.offset, slice.len); }
-};
-template <>
-struct ArrayRef<char> {
-    char *ptr;
-    size_t len;
-
-    ArrayRef() = default;
-    constexpr ArrayRef(char &value) : ptr(&value), len(1) {}
-    explicit constexpr ArrayRef(char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
-    template <size_t N>
-    explicit constexpr ArrayRef(char (&arr)[N]) : ptr(arr), len(N) {}
-
-    char *begin() const { return ptr; }
-    char *end() const { return ptr + len; }
-
-    bool IsValid() const { return ptr; }
-
-    char &operator[](size_t idx) const;
-
-    operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
-
-    ArrayRef Take(size_t sub_offset, size_t sub_len) const;
-    ArrayRef Take(const ArraySlice<char> &slice) const { return Take(slice.offset, slice.len); }
-};
-
-template <typename T>
-static inline constexpr ArrayRef<T> MakeArrayRef(T *ptr, size_t len)
-{
-    return ArrayRef<T>(ptr, len);
-}
-template <typename T, size_t N>
-static inline constexpr ArrayRef<T> MakeArrayRef(T (&arr)[N])
-{
-    return ArrayRef<T>(arr, N);
-}
-
-static inline ArrayRef<char> MakeStrRef(char *str)
-{
-    return ArrayRef<char>(str, strlen(str));
-}
-static inline ArrayRef<const char> MakeStrRef(const char *str)
-{
-    return ArrayRef<const char>(str, strlen(str));
-}
-static inline ArrayRef<char> MakeStrRef(char *str, size_t max_len)
-{
-    return ArrayRef<char>(str, strnlen(str, max_len));
-}
-static inline ArrayRef<const char> MakeStrRef(const char *str, size_t max_len)
-{
-    return ArrayRef<const char>(str, strnlen(str, max_len));
-}
-
 // ------------------------------------------------------------------------
 // Overflow Safety
 // ------------------------------------------------------------------------
@@ -447,401 +336,176 @@ public:
                        unsigned int flags = 0);
     static void Release(Allocator *alloc, void *ptr, size_t size);
 
-    static char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
-    static char *DuplicateString(Allocator *alloc, const char *str, size_t max_len = SIZE_MAX);
-
 private:
     void ReleaseAll();
 
     void *Allocate(size_t size, unsigned int flags = 0);
     void Resize(void **ptr, size_t old_size, size_t new_size, unsigned int flags = 0);
     void Release(void *ptr, size_t size);
-
-    char *MakeString(ArrayRef<const char> bytes);
-    char *DuplicateString(const char *str, size_t max_len = SIZE_MAX);
 };
-
-// ------------------------------------------------------------------------
-// Date and Time
-// ------------------------------------------------------------------------
-
-union Date {
-    int32_t value;
-    struct {
-#ifdef ARCH_LITTLE_ENDIAN
-        int8_t day;
-        int8_t month;
-        int16_t year;
-#else
-        int16_t year;
-        int8_t month;
-        int8_t day;
-#endif
-    } st;
-
-    Date() = default;
-    Date(int16_t year, int8_t month, int8_t day)
-#ifdef ARCH_LITTLE_ENDIAN
-        : st({day, month, year}) { DebugAssert(IsValid()); }
-#else
-        : st({year, month, day}) { DebugAssert(IsValid()); }
-#endif
-
-    static inline bool IsLeapYear(int16_t year)
-    {
-        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
-    }
-    static inline int8_t DaysInMonth(uint16_t year, uint8_t month)
-    {
-        static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-        return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
-    }
-
-    static Date FromString(const char *date_str);
-    static Date FromJulianDays(int days);
-
-    bool IsValid() const
-    {
-        if (st.year < -4712)
-            return false;
-        if (st.month < 1 || st.month > 12)
-            return false;
-        if (st.day < 1 || st.day > DaysInMonth(st.year, st.month))
-            return false;
-
-        return true;
-    }
-
-    bool operator==(Date other) const { return value == other.value; }
-    bool operator!=(Date other) const { return value != other.value; }
-    bool operator>(Date other) const { return value > other.value; }
-    bool operator>=(Date other) const { return value >= other.value; }
-    bool operator<(Date other) const { return value < other.value; }
-    bool operator<=(Date other) const { return value <= other.value; }
-
-    int ToJulianDays() const;
-
-    int operator-(Date other) const
-        { return ToJulianDays() - other.ToJulianDays(); }
-
-    Date operator+(int days) const
-    {
-        if (days < 5 && days > -5) {
-            Date date = *this;
-            if (days > 0) {
-                while (days--) {
-                    ++date;
-                }
-            } else {
-                while (days++) {
-                    --date;
-                }
-            }
-            return date;
-        } else {
-            return Date::FromJulianDays(ToJulianDays() + days);
-        }
-    }
-    // That'll fail with INT_MAX days but that's far more days than can
-    // be represented as a date anyway
-    Date operator-(int days) const { return *this + (-days); }
-
-    Date &operator+=(int days) { *this = *this + days; return *this; }
-    Date &operator-=(int days) { *this = *this - days; return *this; }
-    Date &operator++();
-    Date operator++(int) { Date date = *this; ++(*this); return date; }
-    Date &operator--();
-    Date operator--(int) { Date date = *this; --(*this); return date; }
-};
-
-// ------------------------------------------------------------------------
-// String Format
-// ------------------------------------------------------------------------
-
-class FmtArg {
-public:
-    enum class Type {
-        StrRef,
-        Char,
-        Bool,
-        Integer,
-        Unsigned,
-        Double,
-        Binary,
-        Hexadecimal,
-        MemorySize,
-        DiskSize,
-        Date,
-        List
-    };
-
-    Type type;
-    union {
-        ArrayRef<const char> str_ref;
-        char ch;
-        bool b;
-        int64_t i;
-        uint64_t u;
-        struct {
-            double value;
-            int precision;
-        } d;
-        const void *ptr;
-        size_t size;
-        Date date;
-        struct {
-            ArrayRef<FmtArg> args;
-            const char *separator;
-        } list;
-    } value;
-    int repeat = 1;
-
-    FmtArg() = default;
-    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
-    FmtArg(ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
-    FmtArg(char c) : type(Type::Char) { value.ch = c; }
-    FmtArg(bool b) : type(Type::Bool) { value.b = b; }
-    FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
-    FmtArg(short i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned short u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(int i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned int u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(long i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned long u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(long long i) : type(Type::Integer) { value.i = i; }
-    FmtArg(unsigned long long u) : type(Type::Unsigned) { value.u = u; }
-    FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
-    FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
-    FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
-
-    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
-};
-
-static inline FmtArg FmtBin(uint64_t u)
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::Binary;
-    arg.value.u = u;
-    return arg;
-}
-static inline FmtArg FmtHex(uint64_t u)
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::Hexadecimal;
-    arg.value.u = u;
-    return arg;
-}
-
-static inline FmtArg FmtDouble(double d, int precision = -1)
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::Double;
-    arg.value.d.value = d;
-    arg.value.d.precision = precision;
-    return arg;
-}
-
-static inline FmtArg FmtMemSize(size_t size)
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::MemorySize;
-    arg.value.size = size;
-    return arg;
-}
-static inline FmtArg FmtDiskSize(size_t size)
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::DiskSize;
-    arg.value.size = size;
-    return arg;
-}
-static inline FmtArg FmtList(ArrayRef<FmtArg> args, const char *sep = ", ")
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::List;
-    arg.value.list.args = args;
-    arg.value.list.separator = sep;
-    return arg;
-}
-
-enum class LogLevel {
-    Debug,
-    Info,
-    Error
-};
-
-size_t FmtString(ArrayRef<char> buf, const char *fmt,
-                 ArrayRef<const FmtArg> args);
-char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
-void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
-void FmtLog(LogLevel level, const char *ctx, const char *fmt,
-            ArrayRef<const FmtArg> args);
-
-// Print formatted strings to fixed-size buffer
-static inline size_t Fmt(ArrayRef<char> buf, const char *fmt)
-{
-    return FmtString(buf, fmt, {});
-}
-template <typename... Args>
-static inline size_t Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtString(buf, fmt, fmt_args);
-}
-
-// Print formatted strings to dynamic char array
-static inline char *Fmt(Allocator *alloc, const char *fmt)
-{
-    return FmtString(alloc, fmt, {});
-}
-template <typename... Args>
-static inline char *Fmt(Allocator *alloc, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtString(alloc, fmt, fmt_args);
-}
-
-// Print formatted strings to stdio FILE
-static inline  void Print(FILE *fp, const char *fmt)
-{
-    FmtPrint(fp, fmt, {});
-}
-template <typename... Args>
-static inline void Print(FILE *fp, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtPrint(fp, fmt, fmt_args);
-}
-
-// Print formatted strings to stdout
-static inline void Print(const char *fmt)
-{
-    FmtPrint(stdout, fmt, {});
-}
-template <typename... Args>
-static inline void Print(const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtPrint(stdout, fmt, fmt_args);
-}
-
-// Variants of the Print() functions with terminating newline
-template <typename... Args>
-static inline void PrintLn(FILE *fp, const char *fmt, Args... args)
-{
-    Print(fp, fmt, args...);
-    putc('\n', fp);
-}
-template <typename... Args>
-static inline void PrintLn(const char *fmt, Args... args)
-{
-    Print(stdout, fmt, args...);
-    putchar('\n');
-}
-static inline void PrintLn()
-{
-    putchar('\n');
-}
-
-// ------------------------------------------------------------------------
-// Debug and errors
-// ------------------------------------------------------------------------
-
-// Log text line to stderr with context, for the Log() macros below
-static inline void Log(LogLevel level, const char *ctx, const char *fmt)
-{
-    FmtLog(level, ctx, fmt, {});
-}
-template <typename... Args>
-static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtLog(level, ctx, fmt, fmt_args);
-}
-
-static inline constexpr const char *SimplifyLogContext(const char *ctx)
-{
-    const char *new_ctx = ctx;
-    for(; *ctx; ctx++) {
-        if (*ctx == '/' || *ctx == '\\') {
-            new_ctx = ctx + 1;
-        }
-    }
-    return new_ctx;
-}
-
-#define LOG_LOCATION SimplifyLogContext(__FILE__ ":" STRINGIFY(__LINE__))
-#define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
-#define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
-#define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
-
-void PushLogHandler(std::function<void(FILE *)> handler);
-void PopLogHandler();
 
 // ------------------------------------------------------------------------
 // Collections
 // ------------------------------------------------------------------------
 
 template <typename T>
-T &ArrayRef<T>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-    return ptr[idx];
-}
+struct ArraySlice {
+    size_t offset;
+    size_t len;
+};
 
-template<typename T>
-ArrayRef<T> ArrayRef<T>::Take(ArraySlice<T> slice) const
-{
-    ArrayRef<T> sub;
+// I'd love to make ArrayRef default to { nullptr, 0 } but unfortunately that makes
+// it a non-POD and prevents putting it in a union.
+template <typename T>
+struct ArrayRef {
+    T *ptr;
+    size_t len;
 
-    if (slice.len > len || slice.offset > len - slice.len) {
-        sub = {};
+    ArrayRef() = default;
+    constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
+    constexpr ArrayRef(T *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
+    template <size_t N>
+    constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
+
+    T *begin() const { return ptr; }
+    T *end() const { return ptr + len; }
+
+    bool IsValid() const { return ptr; }
+
+    T &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+        return ptr[idx];
+    }
+
+    operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
+
+    ArrayRef Take(ArraySlice<T> slice) const
+    {
+        ArrayRef<T> sub;
+
+        if (slice.len > len || slice.offset > len - slice.len) {
+            sub = {};
+            return sub;
+        }
+        sub.ptr = ptr + slice.offset;
+        sub.len = slice.len;
+
         return sub;
     }
-    sub.ptr = ptr + slice.offset;
-    sub.len = slice.len;
+    ArrayRef Take(size_t offset, size_t len) const
+        { return Take(ArraySlice<T>(offset, len)); }
+};
 
-    return sub;
-}
+// Unfortunately C strings ("foobar") are implicity converted to ArrayRef<T> with the
+// templated array constructor. But the NUL terminator is obviously counted in. Since I
+// don't want to give up implicit conversion for every type, so instead we need to
+// specialize ArrayRef<const char> and ArrayRef<char>.
+template <>
+struct ArrayRef<const char> {
+    const char *ptr;
+    size_t len;
 
-inline const char &ArrayRef<const char>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-    return ptr[idx];
-}
+    ArrayRef() = default;
+    constexpr ArrayRef(const char &value) : ptr(&value), len(1) {}
+    explicit constexpr ArrayRef(const char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
+    template <size_t N>
+    explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}
 
-inline ArrayRef<const char> ArrayRef<const char>::Take(size_t sub_offset, size_t sub_len) const
-{
-    ArrayRef<const char> sub;
+    const char *begin() const { return ptr; }
+    const char *end() const { return ptr + len; }
 
-    if (sub_len > len || sub_offset > len - sub_len) {
-        sub = {};
+    bool IsValid() const { return ptr; }
+
+    const char &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+        return ptr[idx];
+    }
+
+    ArrayRef Take(size_t sub_offset, size_t sub_len) const
+    {
+        ArrayRef<const char> sub;
+
+        if (sub_len > len || sub_offset > len - sub_len) {
+            sub = {};
+            return sub;
+        }
+        sub.ptr = ptr + sub_offset;
+        sub.len = sub_len;
+
         return sub;
     }
-    sub.ptr = ptr + sub_offset;
-    sub.len = sub_len;
+    ArrayRef Take(const ArraySlice<const char> &slice) const
+        { return Take(slice.offset, slice.len); }
+};
+template <>
+struct ArrayRef<char> {
+    char *ptr;
+    size_t len;
 
-    return sub;
-}
+    ArrayRef() = default;
+    constexpr ArrayRef(char &value) : ptr(&value), len(1) {}
+    explicit constexpr ArrayRef(char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
+    template <size_t N>
+    explicit constexpr ArrayRef(char (&arr)[N]) : ptr(arr), len(N) {}
 
-inline char &ArrayRef<char>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-    return ptr[idx];
-}
+    char *begin() const { return ptr; }
+    char *end() const { return ptr + len; }
 
-inline ArrayRef<char> ArrayRef<char>::Take(size_t sub_offset, size_t sub_len) const
-{
-    ArrayRef<char> sub;
+    bool IsValid() const { return ptr; }
 
-    if (sub_len > len || sub_offset > len - sub_len) {
-        sub = {};
+    char &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+        return ptr[idx];
+    }
+
+    operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
+
+    ArrayRef Take(size_t sub_offset, size_t sub_len) const
+    {
+        ArrayRef<char> sub;
+
+        if (sub_len > len || sub_offset > len - sub_len) {
+            sub = {};
+            return sub;
+        }
+        sub.ptr = ptr + sub_offset;
+        sub.len = sub_len;
+
         return sub;
     }
-    sub.ptr = ptr + sub_offset;
-    sub.len = sub_len;
+    ArrayRef Take(const ArraySlice<char> &slice) const
+        { return Take(slice.offset, slice.len); }
+};
 
-    return sub;
+template <typename T>
+static inline constexpr ArrayRef<T> MakeArrayRef(T *ptr, size_t len)
+{
+    return ArrayRef<T>(ptr, len);
+}
+template <typename T, size_t N>
+static inline constexpr ArrayRef<T> MakeArrayRef(T (&arr)[N])
+{
+    return ArrayRef<T>(arr, N);
+}
+
+static inline ArrayRef<char> MakeStrRef(char *str)
+{
+    return ArrayRef<char>(str, strlen(str));
+}
+static inline ArrayRef<const char> MakeStrRef(const char *str)
+{
+    return ArrayRef<const char>(str, strlen(str));
+}
+static inline ArrayRef<char> MakeStrRef(char *str, size_t max_len)
+{
+    return ArrayRef<char>(str, strnlen(str, max_len));
+}
+static inline ArrayRef<const char> MakeStrRef(const char *str, size_t max_len)
+{
+    return ArrayRef<const char>(str, strnlen(str, max_len));
 }
 
 template <typename T, size_t N>
@@ -853,7 +517,13 @@ public:
     typedef T value_type;
     typedef T *iterator_type;
 
-    void Clear();
+    void Clear()
+    {
+        for (size_t i = 0; i < len; i++) {
+            data[i].~T();
+        }
+        len = 0;
+    }
 
     operator ArrayRef<T>() { return ArrayRef<T>(data, len); }
     operator ArrayRef<const T>() const { return ArrayRef<const T>(data, len); }
@@ -863,77 +533,57 @@ public:
     T *end() { return data + len; }
     const T *end() const { return data + len; }
 
-    T &operator[](size_t idx);
-    const T &operator[](size_t idx) const;
+    T &operator[](size_t idx)
+    {
+        DebugAssert(idx < len);
+        return data[idx];
+    }
+    const T &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+        return data[idx];
+    }
 
-    T *Append(const T &value);
-    T *Append(ArrayRef<const T> values);
+    T *Append(const T &value)
+    {
+        DebugAssert(len < N);
 
+        T *it = data + len;
+        *it = value;
+        len++;
+
+        return it;
+    }
+    T *Append(ArrayRef<const T> values)
+    {
+        DebugAssert(values.len <= N - len);
+
+        T *it = data + len;
+        for (size_t i = 0; i < values.len; i++) {
+            data[len + i] = values[i];
+        }
+        len += values.len;
+
+        return it;
+    }
+
+    void RemoveFrom(size_t first)
+    {
+        if (first >= len)
+            return;
+
+        for (size_t i = first; i < len; i++) {
+            data[i].~T();
+        }
+        len = first;
+    }
     void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
-    void RemoveFrom(size_t first);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
         { return ArrayRef<T>(data, len).Take(offset, len); }
     ArrayRef<T> Take(ArraySlice<T> slice) const
         { return ArrayRef<T>(data, len).Take(slice); }
 };
-
-template <typename T, size_t N>
-void LocalArray<T, N>::Clear()
-{
-    for (size_t i = 0; i < len; i++) {
-        data[i].~T();
-    }
-    len = 0;
-}
-
-template <typename T, size_t N>
-T &LocalArray<T, N>::operator[](size_t idx)
-{
-    DebugAssert(idx < len);
-    return data[idx];
-}
-template <typename T, size_t N>
-const T &LocalArray<T, N>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-    return data[idx];
-}
-
-template <typename T, size_t N>
-T *LocalArray<T, N>::Append(const T &value)
-{
-    DebugAssert(len < N);
-    T *it = data + len;
-    *it = value;
-    len++;
-    return it;
-}
-
-template <typename T, size_t N>
-T *LocalArray<T, N>::Append(ArrayRef<const T> values)
-{
-    DebugAssert(data.len2 <= N - len);
-    T *it = data + len;
-    for (size_t i = 0; i < values.len; i++) {
-        data[len + i] = values[i];
-    }
-    len += values.len;
-    return it;
-}
-
-template <typename T, size_t N>
-void LocalArray<T, N>::RemoveFrom(size_t first)
-{
-    if (first >= len) {
-        return;
-    }
-
-    for (size_t i = first; i < len; i++) {
-        data[i].~T();
-    }
-    len = first;
-}
 
 template <typename T>
 class HeapArray {
@@ -951,9 +601,9 @@ public:
     HeapArray() = default;
     HeapArray(HeapArray &) = delete;
     HeapArray &operator=(const HeapArray &) = delete;
-
     ~HeapArray() { Clear(); }
-    void Clear();
+
+    void Clear() { SetCapacity(0); }
 
     operator ArrayRef<T>() { return ArrayRef<T>(ptr, len); }
     operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
@@ -963,148 +613,121 @@ public:
     T *end() { return ptr + len; }
     const T *end() const { return ptr + len; }
 
-    T &operator[](size_t idx) { return (T &)(*(const HeapArray *)this)[idx]; }
-    const T &operator[](size_t idx) const;
+    T &operator[](size_t idx)
+    {
+        DebugAssert(idx < len);
+        return ptr[idx];
+    }
+    const T &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+        return ptr[idx];
+    }
 
-    void SetCapacity(size_t new_capacity);
-    void Reserve(size_t min_capacity);
-    void Grow(size_t reserve_capacity = 1);
+    void SetCapacity(size_t new_capacity)
+    {
+        if (new_capacity == capacity)
+            return;
+
+        if (len > new_capacity) {
+            for (size_t i = new_capacity; i < len; i++) {
+                ptr[i].~T();
+            }
+            len = new_capacity;
+        }
+        Allocator::Resize(allocator, (void **)&ptr, capacity * sizeof(T), new_capacity * sizeof(T));
+        capacity = new_capacity;
+    }
+
+    void Reserve(size_t min_capacity)
+    {
+        if (min_capacity <= capacity)
+            return;
+
+        SetCapacity(min_capacity);
+    }
+
+    void Grow(size_t reserve_capacity = 1)
+    {
+        if (reserve_capacity <= capacity - len) {
+            return;
+        }
+
+        size_t needed_capacity;
+#if !defined(NDEBUG)
+        DebugAssert(!AddOverflow(capacity, reserve_capacity, &needed_capacity));
+#else
+        needed_capacity = capacity + reserve_capacity;
+#endif
+
+        size_t new_capacity;
+        if (!capacity) {
+            new_capacity = DYNAMICARRAY_BASE_CAPACITY;
+        } else {
+            new_capacity = capacity;
+        }
+        do {
+            new_capacity = (size_t)(new_capacity * DYNAMICARRAY_GROWTH_FACTOR);
+        } while (new_capacity < needed_capacity);
+
+        SetCapacity(new_capacity);
+    }
 
     void Trim() { SetCapacity(len); }
 
-    T *Append();
-    T *Append(const T &value);
-    T *Append(ArrayRef<const T> values);
+    T *Append()
+    {
+        if (len == capacity) {
+            Grow();
+        }
 
+        T *first = ptr + len;
+        new (ptr + len) T;
+        len++;
+        return first;
+    }
+    T *Append(const T &value)
+    {
+        if (len == capacity) {
+            Grow();
+        }
+
+        T *first = ptr + len;
+        new (ptr + len) T;
+        ptr[len++] = value;
+        return first;
+    }
+    T *Append(ArrayRef<const T> values)
+    {
+        if (values.len > capacity - len) {
+            Grow(values.len);
+        }
+
+        T *first = ptr + len;
+        for (const T &value: values) {
+            new (ptr + len) T;
+            ptr[len++] = value;
+        }
+        return first;
+    }
+
+    void RemoveFrom(size_t from)
+    {
+        if (from >= len)
+            return;
+
+        for (size_t i = from; i < len; i++) {
+            ptr[i].~T();
+        }
+        len = from;
+    }
     void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
-    void RemoveFrom(size_t from);
 
     ArrayRef<T> Take(size_t offset, size_t len) const
         { return ArrayRef<T>(ptr, len).Take(offset, len); }
     ArrayRef<T> Take(ArraySlice<T> slice) const
         { return ArrayRef<T>(ptr, len).Take(slice); }
 };
-
-template <typename T>
-void HeapArray<T>::Clear()
-{
-    SetCapacity(0);
-}
-
-template <typename T>
-const T &HeapArray<T>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-    return ptr[idx];
-}
-
-template <typename T>
-void HeapArray<T>::SetCapacity(size_t new_capacity)
-{
-    if (new_capacity == capacity) {
-        return;
-    }
-
-    if (len > new_capacity) {
-        for (size_t i = new_capacity; i < len; i++) {
-            ptr[i].~T();
-        }
-        len = new_capacity;
-    }
-    Allocator::Resize(allocator, (void **)&ptr, capacity * sizeof(T), new_capacity * sizeof(T));
-    capacity = new_capacity;
-}
-
-template <typename T>
-void HeapArray<T>::Reserve(size_t min_capacity)
-{
-    if (min_capacity <= capacity) {
-        return;
-    }
-
-    SetCapacity(min_capacity);
-}
-
-template <typename T>
-void HeapArray<T>::Grow(size_t reserve_capacity)
-{
-    if (reserve_capacity <= capacity - len) {
-        return;
-    }
-
-    size_t needed_capacity;
-#if !defined(NDEBUG)
-    DebugAssert(!AddOverflow(capacity, reserve_capacity, &needed_capacity));
-#else
-    needed_capacity = capacity + reserve_capacity;
-#endif
-
-    size_t new_capacity;
-    if (!capacity) {
-        new_capacity = DYNAMICARRAY_BASE_CAPACITY;
-    } else {
-        new_capacity = capacity;
-    }
-    do {
-        new_capacity = (size_t)(new_capacity * DYNAMICARRAY_GROWTH_FACTOR);
-    } while (new_capacity < needed_capacity);
-
-    SetCapacity(new_capacity);
-}
-
-template <typename T>
-T *HeapArray<T>::Append()
-{
-    if (len == capacity) {
-        Grow();
-    }
-
-    T *first = ptr + len;
-    new (ptr + len) T;
-    len++;
-    return first;
-}
-
-template <typename T>
-T *HeapArray<T>::Append(const T &value)
-{
-    if (len == capacity) {
-        Grow();
-    }
-
-    T *first = ptr + len;
-    new (ptr + len) T;
-    ptr[len++] = value;
-    return first;
-}
-
-template <typename T>
-T *HeapArray<T>::Append(ArrayRef<const T> values)
-{
-    if (values.len > capacity - len) {
-        Grow(values.len);
-    }
-
-    T *first = ptr + len;
-    for (auto &value: values) {
-        new (ptr + len) T;
-        ptr[len++] = value;
-    }
-    return first;
-}
-
-template <typename T>
-void HeapArray<T>::RemoveFrom(size_t from)
-{
-    if (from >= len) {
-        return;
-    }
-
-    for (size_t i = from; i < len; i++) {
-        ptr[i].~T();
-    }
-    len = from;
-}
 
 template <typename T, size_t BucketSize = 1024>
 class DynamicQueue {
@@ -1152,174 +775,150 @@ public:
     typedef T value_type;
     typedef Iterator iterator_type;
 
-    DynamicQueue();
+    DynamicQueue()
+    {
+        Bucket *first_bucket = *buckets.Append(CreateBucket());
+        current_allocator = &first_bucket->allocator;
+    }
+
     DynamicQueue(DynamicQueue &) = delete;
     DynamicQueue &operator=(const DynamicQueue &) = delete;
 
-    ~DynamicQueue();
-    void Clear();
+    ~DynamicQueue()
+    {
+        for (Bucket *bucket: buckets) {
+            DeleteBucket(bucket);
+        }
+    }
+
+    void Clear()
+    {
+        for (Bucket *bucket: buckets) {
+            DeleteBucket(bucket);
+        }
+        buckets.Clear();
+
+        Bucket *first_bucket = *buckets.Append(CreateBucket());
+        offset = 0;
+        len = 0;
+        current_allocator = &first_bucket->allocator;
+    }
 
     Iterator begin() { return Iterator(this, 0); }
     const Iterator begin() const { return Iterator(this, 0); }
     Iterator end() { return Iterator(this, len); }
     const Iterator end() const { return Iterator(this, len); }
 
+    const T &operator[](size_t idx) const
+    {
+        DebugAssert(idx < len);
+
+        idx += offset;
+        size_t bucket_idx = idx / BucketSize;
+        size_t bucket_offset = idx % BucketSize;
+
+        return buckets[bucket_idx]->values[bucket_offset];
+    }
     T &operator[](size_t idx) { return (T &)(*(const DynamicQueue *)this)[idx]; }
-    const T &operator[](size_t idx) const;
 
-    T *Append(const T &value);
-
-    void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
-    void RemoveFrom(size_t from);
-    void RemoveFirst(size_t count = 1);
-
-private:
-    Bucket *CreateBucket();
-    void DeleteBucket(Bucket *bucket);
-};
-
-template <typename T, size_t BucketSize>
-DynamicQueue<T, BucketSize>::DynamicQueue()
-{
-    Bucket *first_bucket = *buckets.Append(CreateBucket());
-    current_allocator = &first_bucket->allocator;
-}
-
-template <typename T, size_t BucketSize>
-DynamicQueue<T, BucketSize>::~DynamicQueue()
-{
-    for (Bucket *bucket: buckets) {
-        DeleteBucket(bucket);
-    }
-}
-
-template <typename T, size_t BucketSize>
-void DynamicQueue<T, BucketSize>::Clear()
-{
-    for (Bucket *bucket: buckets) {
-        DeleteBucket(bucket);
-    }
-    buckets.Clear();
-
-    Bucket *first_bucket = *buckets.Append(CreateBucket());
-    offset = 0;
-    len = 0;
-    current_allocator = &first_bucket->allocator;
-}
-
-template <typename T, size_t BucketSize>
-const T &DynamicQueue<T, BucketSize>::operator[](size_t idx) const
-{
-    DebugAssert(idx < len);
-
-    idx += offset;
-    size_t bucket_idx = idx / BucketSize;
-    size_t bucket_offset = idx % BucketSize;
-
-    return buckets[bucket_idx]->values[bucket_offset];
-}
-
-template <typename T, size_t BucketSize>
-T *DynamicQueue<T, BucketSize>::Append(const T &value)
-{
-    size_t bucket_idx = (offset + len) / BucketSize;
-    size_t bucket_offset = (offset + len) % BucketSize;
-
-    T *first = buckets[bucket_idx]->values + bucket_offset;
-    new (first) T;
-    *first = value;
-
-    len++;
-    if (bucket_offset == BucketSize - 1) {
-        Bucket *new_bucket = *buckets.Append(CreateBucket());
-        current_allocator = &new_bucket->allocator;
-    }
-
-    return first;
-}
-
-template <typename T, size_t BucketSize>
-void DynamicQueue<T, BucketSize>::RemoveFrom(size_t from)
-{
-    if (from >= len) {
-        return;
-    }
-    if (!from) {
-        Clear();
-        return;
-    }
-
-    size_t start_idx = offset + from;
-    size_t end_idx = offset + len;
-    size_t start_bucket_idx = start_idx / BucketSize;
-    size_t end_bucket_idx = end_idx / BucketSize;
-
+    T *Append(const T &value)
     {
-        Iterator end_it = end();
-        for (Iterator it(this, from); it != end_it; it++) {
-            it->~T();
+        size_t bucket_idx = (offset + len) / BucketSize;
+        size_t bucket_offset = (offset + len) % BucketSize;
+
+        T *first = buckets[bucket_idx]->values + bucket_offset;
+        new (first) T;
+        *first = value;
+
+        len++;
+        if (bucket_offset == BucketSize - 1) {
+            Bucket *new_bucket = *buckets.Append(CreateBucket());
+            current_allocator = &new_bucket->allocator;
         }
+
+        return first;
     }
 
-    for (size_t i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
-        DeleteBucket(buckets[i]);
-    }
-    buckets.RemoveFrom(start_bucket_idx + 1);
-    if (start_idx % BucketSize == 0) {
-        DeleteBucket(buckets[buckets.len - 1]);
-        buckets[buckets.len - 1] = CreateBucket();
-    }
-
-    len = from;
-    current_allocator = &buckets[buckets.len - 1]->allocator;
-}
-
-template <typename T, size_t BucketSize>
-void DynamicQueue<T, BucketSize>::RemoveFirst(size_t count)
-{
-    if (count >= len) {
-        Clear();
-        return;
-    }
-
-    size_t end_idx = offset + count;
-    size_t end_bucket_idx = end_idx / BucketSize;
-
+    void RemoveFrom(size_t from)
     {
-        Iterator end_it(this, count);
-        for (Iterator it = begin(); it != end_it; it++) {
-            it->~T();
+        if (from >= len)
+            return;
+        if (!from) {
+            Clear();
+            return;
         }
-    }
 
-    if (end_bucket_idx) {
-        for (size_t i = 0; i < end_bucket_idx; i++) {
+        size_t start_idx = offset + from;
+        size_t end_idx = offset + len;
+        size_t start_bucket_idx = start_idx / BucketSize;
+        size_t end_bucket_idx = end_idx / BucketSize;
+
+        {
+            Iterator end_it = end();
+            for (Iterator it(this, from); it != end_it; it++) {
+                it->~T();
+            }
+        }
+
+        for (size_t i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
             DeleteBucket(buckets[i]);
         }
-        memmove(&buckets[0], &buckets[end_bucket_idx],
-                (buckets.len - end_bucket_idx) * sizeof(Bucket *));
-        buckets.RemoveLast(end_bucket_idx);
+        buckets.RemoveFrom(start_bucket_idx + 1);
+        if (start_idx % BucketSize == 0) {
+            DeleteBucket(buckets[buckets.len - 1]);
+            buckets[buckets.len - 1] = CreateBucket();
+        }
+
+        len = from;
+        current_allocator = &buckets[buckets.len - 1]->allocator;
+    }
+    void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
+
+    void RemoveFirst(size_t count = 1)
+    {
+        if (count >= len) {
+            Clear();
+            return;
+        }
+
+        size_t end_idx = offset + count;
+        size_t end_bucket_idx = end_idx / BucketSize;
+
+        {
+            Iterator end_it(this, count);
+            for (Iterator it = begin(); it != end_it; it++) {
+                it->~T();
+            }
+        }
+
+        if (end_bucket_idx) {
+            for (size_t i = 0; i < end_bucket_idx; i++) {
+                DeleteBucket(buckets[i]);
+            }
+            memmove(&buckets[0], &buckets[end_bucket_idx],
+                    (buckets.len - end_bucket_idx) * sizeof(Bucket *));
+            buckets.RemoveLast(end_bucket_idx);
+        }
+
+        offset = (offset + count) % BucketSize;
+        len -= count;
     }
 
-    offset = (offset + count) % BucketSize;
-    len -= count;
-}
+private:
+    Bucket *CreateBucket()
+    {
+        Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, sizeof(Bucket));
+        new (&new_bucket->allocator) Allocator;
+        new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * sizeof(T));
+        return new_bucket;
+    }
 
-template <typename T, size_t BucketSize>
-typename DynamicQueue<T, BucketSize>::Bucket *DynamicQueue<T, BucketSize>::CreateBucket()
-{
-    Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, sizeof(Bucket));
-    new (&new_bucket->allocator) Allocator;
-    new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * sizeof(T));
-    return new_bucket;
-}
-
-template <typename T, size_t BucketSize>
-void DynamicQueue<T, BucketSize>::DeleteBucket(Bucket *bucket)
-{
-    bucket->allocator.~Allocator();
-    Allocator::Release(buckets.allocator, bucket, sizeof(Bucket));
-}
+    void DeleteBucket(Bucket *bucket)
+    {
+        bucket->allocator.~Allocator();
+        Allocator::Release(buckets.allocator, bucket, sizeof(Bucket));
+    }
+};
 
 template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
@@ -1570,6 +1169,326 @@ public:
         return it ? *it : default_value;
     }
 };
+
+// ------------------------------------------------------------------------
+// Date and Time
+// ------------------------------------------------------------------------
+
+union Date {
+    int32_t value;
+    struct {
+#ifdef ARCH_LITTLE_ENDIAN
+        int8_t day;
+        int8_t month;
+        int16_t year;
+#else
+        int16_t year;
+        int8_t month;
+        int8_t day;
+#endif
+    } st;
+
+    Date() = default;
+    Date(int16_t year, int8_t month, int8_t day)
+#ifdef ARCH_LITTLE_ENDIAN
+        : st({day, month, year}) { DebugAssert(IsValid()); }
+#else
+        : st({year, month, day}) { DebugAssert(IsValid()); }
+#endif
+
+    static inline bool IsLeapYear(int16_t year)
+    {
+        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    }
+    static inline int8_t DaysInMonth(uint16_t year, uint8_t month)
+    {
+        static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+        return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
+    }
+
+    static Date FromString(const char *date_str);
+    static Date FromJulianDays(int days);
+
+    bool IsValid() const
+    {
+        if (st.year < -4712)
+            return false;
+        if (st.month < 1 || st.month > 12)
+            return false;
+        if (st.day < 1 || st.day > DaysInMonth(st.year, st.month))
+            return false;
+
+        return true;
+    }
+
+    bool operator==(Date other) const { return value == other.value; }
+    bool operator!=(Date other) const { return value != other.value; }
+    bool operator>(Date other) const { return value > other.value; }
+    bool operator>=(Date other) const { return value >= other.value; }
+    bool operator<(Date other) const { return value < other.value; }
+    bool operator<=(Date other) const { return value <= other.value; }
+
+    int ToJulianDays() const;
+
+    int operator-(Date other) const
+        { return ToJulianDays() - other.ToJulianDays(); }
+
+    Date operator+(int days) const
+    {
+        if (days < 5 && days > -5) {
+            Date date = *this;
+            if (days > 0) {
+                while (days--) {
+                    ++date;
+                }
+            } else {
+                while (days++) {
+                    --date;
+                }
+            }
+            return date;
+        } else {
+            return Date::FromJulianDays(ToJulianDays() + days);
+        }
+    }
+    // That'll fail with INT_MAX days but that's far more days than can
+    // be represented as a date anyway
+    Date operator-(int days) const { return *this + (-days); }
+
+    Date &operator+=(int days) { *this = *this + days; return *this; }
+    Date &operator-=(int days) { *this = *this - days; return *this; }
+    Date &operator++();
+    Date operator++(int) { Date date = *this; ++(*this); return date; }
+    Date &operator--();
+    Date operator--(int) { Date date = *this; --(*this); return date; }
+};
+
+// ------------------------------------------------------------------------
+// Strings
+// ------------------------------------------------------------------------
+
+char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
+char *DuplicateString(Allocator *alloc, const char *str, size_t max_len = SIZE_MAX);
+
+class FmtArg {
+public:
+    enum class Type {
+        StrRef,
+        Char,
+        Bool,
+        Integer,
+        Unsigned,
+        Double,
+        Binary,
+        Hexadecimal,
+        MemorySize,
+        DiskSize,
+        Date,
+        List
+    };
+
+    Type type;
+    union {
+        ArrayRef<const char> str_ref;
+        char ch;
+        bool b;
+        int64_t i;
+        uint64_t u;
+        struct {
+            double value;
+            int precision;
+        } d;
+        const void *ptr;
+        size_t size;
+        Date date;
+        struct {
+            ArrayRef<FmtArg> args;
+            const char *separator;
+        } list;
+    } value;
+    int repeat = 1;
+
+    FmtArg() = default;
+    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
+    FmtArg(ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
+    FmtArg(char c) : type(Type::Char) { value.ch = c; }
+    FmtArg(bool b) : type(Type::Bool) { value.b = b; }
+    FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
+    FmtArg(short i) : type(Type::Integer) { value.i = i; }
+    FmtArg(unsigned short u) : type(Type::Unsigned) { value.u = u; }
+    FmtArg(int i) : type(Type::Integer) { value.i = i; }
+    FmtArg(unsigned int u) : type(Type::Unsigned) { value.u = u; }
+    FmtArg(long i) : type(Type::Integer) { value.i = i; }
+    FmtArg(unsigned long u) : type(Type::Unsigned) { value.u = u; }
+    FmtArg(long long i) : type(Type::Integer) { value.i = i; }
+    FmtArg(unsigned long long u) : type(Type::Unsigned) { value.u = u; }
+    FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
+    FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
+    FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
+
+    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
+};
+
+static inline FmtArg FmtBin(uint64_t u)
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::Binary;
+    arg.value.u = u;
+    return arg;
+}
+static inline FmtArg FmtHex(uint64_t u)
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::Hexadecimal;
+    arg.value.u = u;
+    return arg;
+}
+
+static inline FmtArg FmtDouble(double d, int precision = -1)
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::Double;
+    arg.value.d.value = d;
+    arg.value.d.precision = precision;
+    return arg;
+}
+
+static inline FmtArg FmtMemSize(size_t size)
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::MemorySize;
+    arg.value.size = size;
+    return arg;
+}
+static inline FmtArg FmtDiskSize(size_t size)
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::DiskSize;
+    arg.value.size = size;
+    return arg;
+}
+static inline FmtArg FmtList(ArrayRef<FmtArg> args, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::List;
+    arg.value.list.args = args;
+    arg.value.list.separator = sep;
+    return arg;
+}
+
+enum class LogLevel {
+    Debug,
+    Info,
+    Error
+};
+
+size_t FmtString(ArrayRef<char> buf, const char *fmt,
+                 ArrayRef<const FmtArg> args);
+char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
+void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
+void FmtLog(LogLevel level, const char *ctx, const char *fmt,
+            ArrayRef<const FmtArg> args);
+
+// Print formatted strings to fixed-size buffer
+static inline size_t Fmt(ArrayRef<char> buf, const char *fmt)
+{
+    return FmtString(buf, fmt, {});
+}
+template <typename... Args>
+static inline size_t Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    return FmtString(buf, fmt, fmt_args);
+}
+
+// Print formatted strings to dynamic char array
+static inline char *Fmt(Allocator *alloc, const char *fmt)
+{
+    return FmtString(alloc, fmt, {});
+}
+template <typename... Args>
+static inline char *Fmt(Allocator *alloc, const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    return FmtString(alloc, fmt, fmt_args);
+}
+
+// Print formatted strings to stdio FILE
+static inline  void Print(FILE *fp, const char *fmt)
+{
+    FmtPrint(fp, fmt, {});
+}
+template <typename... Args>
+static inline void Print(FILE *fp, const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    FmtPrint(fp, fmt, fmt_args);
+}
+
+// Print formatted strings to stdout
+static inline void Print(const char *fmt)
+{
+    FmtPrint(stdout, fmt, {});
+}
+template <typename... Args>
+static inline void Print(const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    FmtPrint(stdout, fmt, fmt_args);
+}
+
+// Variants of the Print() functions with terminating newline
+template <typename... Args>
+static inline void PrintLn(FILE *fp, const char *fmt, Args... args)
+{
+    Print(fp, fmt, args...);
+    putc('\n', fp);
+}
+template <typename... Args>
+static inline void PrintLn(const char *fmt, Args... args)
+{
+    Print(stdout, fmt, args...);
+    putchar('\n');
+}
+static inline void PrintLn()
+{
+    putchar('\n');
+}
+
+// ------------------------------------------------------------------------
+// Debug and errors
+// ------------------------------------------------------------------------
+
+// Log text line to stderr with context, for the Log() macros below
+static inline void Log(LogLevel level, const char *ctx, const char *fmt)
+{
+    FmtLog(level, ctx, fmt, {});
+}
+template <typename... Args>
+static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    FmtLog(level, ctx, fmt, fmt_args);
+}
+
+static inline constexpr const char *SimplifyLogContext(const char *ctx)
+{
+    const char *new_ctx = ctx;
+    for(; *ctx; ctx++) {
+        if (*ctx == '/' || *ctx == '\\') {
+            new_ctx = ctx + 1;
+        }
+    }
+    return new_ctx;
+}
+
+#define LOG_LOCATION SimplifyLogContext(__FILE__ ":" STRINGIFY(__LINE__))
+#define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
+#define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
+#define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
+
+void PushLogHandler(std::function<void(FILE *)> handler);
+void PopLogHandler();
 
 // ------------------------------------------------------------------------
 // System

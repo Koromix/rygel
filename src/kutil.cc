@@ -57,22 +57,6 @@ void Allocator::Release(Allocator *alloc, void *ptr, size_t size)
     alloc->Release(ptr, size);
 }
 
-char *Allocator::MakeString(Allocator *alloc, ArrayRef<const char> bytes)
-{
-    if (!alloc) {
-        alloc = &default_allocator;
-    }
-    return alloc->MakeString(bytes);
-}
-
-char *Allocator::DuplicateString(Allocator *alloc, const char *str, size_t max_len)
-{
-    if (!alloc) {
-        alloc = &default_allocator;
-    }
-    return alloc->DuplicateString(str, max_len);
-}
-
 void *Allocator::Allocate(size_t size, unsigned int flags)
 {
     if (!size)
@@ -93,26 +77,6 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
     }
 
     return bucket->data;
-}
-
-char *Allocator::MakeString(ArrayRef<const char> bytes)
-{
-    char *str = (char *)Allocate(bytes.len + 1);
-    memcpy(str, bytes.ptr, bytes.len);
-    str[bytes.len] = 0;
-    return str;
-}
-
-char *Allocator::DuplicateString(const char *str, size_t max_len)
-{
-    size_t str_len = strlen(str);
-    if (str_len > max_len) {
-        str_len = max_len;
-    }
-    char *new_str = (char *)Allocate(str_len + 1);
-    memcpy(new_str, str, str_len);
-    new_str[str_len] = 0;
-    return new_str;
 }
 
 void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned int flags)
@@ -284,8 +248,28 @@ Date &Date::operator--()
 }
 
 // ------------------------------------------------------------------------
-// String Format
+// Strings
 // ------------------------------------------------------------------------
+
+char *MakeString(Allocator *alloc, ArrayRef<const char> bytes)
+{
+    char *str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
+    memcpy(str, bytes.ptr, bytes.len);
+    str[bytes.len] = 0;
+    return str;
+}
+
+char *DuplicateString(Allocator *alloc, const char *str, size_t max_len)
+{
+    size_t str_len = strlen(str);
+    if (str_len > max_len) {
+        str_len = max_len;
+    }
+    char *new_str = (char *)Allocator::Allocate(alloc, str_len + 1);
+    memcpy(new_str, str, str_len);
+    new_str[str_len] = 0;
+    return new_str;
+}
 
 template <typename AppendFunc>
 static inline void WriteUnsignedAsDecimal(uint64_t value, AppendFunc append)
@@ -766,7 +750,7 @@ static void ConvertFindData(const WIN32_FIND_DATA &find_data, Allocator &str_all
     } else {
         out_info->type = FileType::File;
     }
-    out_info->name = Allocator::DuplicateString(&str_alloc, find_data.cFileName);
+    out_info->name = DuplicateString(&str_alloc, find_data.cFileName);
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
