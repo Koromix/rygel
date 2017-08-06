@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 project(Moya C CXX)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast -Wformat=2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -fno-rtti -fno-exceptions \
+                                        -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast -Wformat=2")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Og -gdwarf-2")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -gdwarf-2 -DNDEBUG")
@@ -56,6 +57,8 @@ set(MOYA_SRC src/classifier.cc
              src/data_care.hh
              src/data_fg.cc
              src/data_fg.hh
+             src/dump.cc
+             src/dump.hh
              src/moya.cc
              src/kutil.cc
              src/kutil.hh)
@@ -63,4 +66,3 @@ set(MOYA_SRC src/classifier.cc
 # add_executable(moya ${MOYA_SRC} ${LIB_LUA_SRC})
 add_executable(moya ${MOYA_SRC})
 target_link_libraries(moya ws2_32)
-target_include_directories(moya PRIVATE lib/bdb/src lib/bdb/build_windows)

@@ -6,14 +6,6 @@
 
 using namespace rapidjson;
 
-static DiagnosisCode ConvertDiagnosisCode(const char *diag_str)
-{
-    DiagnosisCode diag;
-    strncpy(diag.str, diag_str, sizeof(diag.str));
-    diag.str[sizeof(diag.str) - 1] = '\0';
-    return diag;
-}
-
 class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
     enum class State {
         Default,
@@ -324,22 +316,19 @@ public:
 
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {
-                stay.main_diagnosis = ConvertDiagnosisCode(str);
+                stay.main_diagnosis = DiagnosisCode(str);
                 out_set->store.diagnoses.Append(stay.main_diagnosis);
             } break;
             case State::StayLinkedDiagnosis: {
-                stay.linked_diagnosis = ConvertDiagnosisCode(str);
+                stay.linked_diagnosis = DiagnosisCode(str);
                 out_set->store.diagnoses.Append(stay.linked_diagnosis);
             } break;
             case State::AssociatedDiagnosisArray: {
-                out_set->store.diagnoses.Append(ConvertDiagnosisCode(str));
+                out_set->store.diagnoses.Append(DiagnosisCode(str));
             } break;
 
             // Procedure attributes
-            case State::ProcedureCode: {
-                strncpy(proc.code.str, str, sizeof(proc.code.str));
-                proc.code.str[sizeof(proc.code.str) - 1] = '\0';
-            } break;
+            case State::ProcedureCode: { proc.code = ProcedureCode(str); } break;
             case State::ProcedureDate: { SetDate(&proc.date, str); } break;
 
             default: {
@@ -548,14 +537,14 @@ bool StaySetBuilder::Finish(StaySet *out_set)
     });
 
     for (Stay &stay: set.stays) {
-#define FIX_STAY_ARRAYREF(ArrayRefName) \
+#define FIX_ARRAYREF(ArrayRefName) \
             stay.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
                                     (size_t)stay.ArrayRefName.ptr
 
-        FIX_STAY_ARRAYREF(diagnoses);
-        FIX_STAY_ARRAYREF(procedures);
+        FIX_ARRAYREF(diagnoses);
+        FIX_ARRAYREF(procedures);
 
-#undef FIX_STAY_ARRAYREF
+#undef FIX_ARRAYREF
 
         stay.duration = stay.dates[1] - stay.dates[0];
     }

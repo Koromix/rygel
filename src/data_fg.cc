@@ -746,7 +746,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
             GhsDecisionNode ghs_node = {};
             ghs_node.type = GhsDecisionNode::Type::Ghs;
             for (int j = 0; j < 2; j++) {
-                ghs_node.u.ghs[j].code.value = raw_ghs_node.versions[j].ghs_code;
+                ghs_node.u.ghs[j].code.number = raw_ghs_node.versions[j].ghs_code;
                 ghs_node.u.ghs[j].high_duration_treshold =
                     raw_ghs_node.versions[j].high_duration_treshold;
                 ghs_node.u.ghs[j].low_duration_treshold =
@@ -885,6 +885,7 @@ static bool CommitClassifierIndex(ClassifierSet *set, Date start_date, Date end_
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
                                     table_info, ##__VA_ARGS__, &set->store.MemberName); \
                 index.MemberName.len = set->store.MemberName.len - (size_t)index.MemberName.ptr; \
+                index.changed_tables |= 1 << i; \
             } else { \
                 index.MemberName = set->indexes[set->indexes.len - 1].MemberName; \
             } \
@@ -1042,27 +1043,96 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
     }
     success &= CommitClassifierIndex(out_set, start_date, end_date, active_tables);
 
-    for (ClassifierIndex &index: out_set->indexes) {
-#define FIX_SET_ARRAYREF(ArrayRefName) \
-            index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
-                                     (size_t)index.ArrayRefName.ptr
+    {
+        HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
+        HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
 
-        FIX_SET_ARRAYREF(ghm_nodes);
-        FIX_SET_ARRAYREF(diagnoses);
-        FIX_SET_ARRAYREF(exclusions);
-        FIX_SET_ARRAYREF(procedures);
-        FIX_SET_ARRAYREF(ghm_roots);
-        FIX_SET_ARRAYREF(gnn_cells);
-        FIX_SET_ARRAYREF(cma_cells[0]);
-        FIX_SET_ARRAYREF(cma_cells[1]);
-        FIX_SET_ARRAYREF(cma_cells[2]);
-        FIX_SET_ARRAYREF(ghs_nodes);
-        FIX_SET_ARRAYREF(authorizations);
-        FIX_SET_ARRAYREF(supplement_pairs[0]);
-        FIX_SET_ARRAYREF(supplement_pairs[1]);
+        for (ClassifierIndex &index: out_set->indexes) {
+#define FIX_ARRAYREF(ArrayRefName) \
+                index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
+                                         (size_t)index.ArrayRefName.ptr
+#define BUILD_MAP(MemberName, TableType) \
+                do { \
+                    if (!CONCAT(MemberName, _map) || index.changed_tables & MaskEnum(TableType)) { \
+                        CONCAT(MemberName, _map) = out_set->maps.MemberName.Append(); \
+                        for (auto &value: index.MemberName) { \
+                            CONCAT(MemberName, _map)->Append(&value); \
+                        } \
+                    } \
+                    index.CONCAT(MemberName, _map) = CONCAT(MemberName, _map); \
+                } while (false)
 
-#undef FIX_SET_ARRAYREF
+            FIX_ARRAYREF(ghm_nodes);
+            FIX_ARRAYREF(diagnoses);
+            FIX_ARRAYREF(exclusions);
+            FIX_ARRAYREF(procedures);
+            FIX_ARRAYREF(ghm_roots);
+            FIX_ARRAYREF(gnn_cells);
+            FIX_ARRAYREF(cma_cells[0]);
+            FIX_ARRAYREF(cma_cells[1]);
+            FIX_ARRAYREF(cma_cells[2]);
+            FIX_ARRAYREF(ghs_nodes);
+            FIX_ARRAYREF(authorizations);
+            FIX_ARRAYREF(supplement_pairs[0]);
+            FIX_ARRAYREF(supplement_pairs[1]);
+
+            BUILD_MAP(diagnoses, TableType::DiagnosisTable);
+            BUILD_MAP(procedures, TableType::ProcedureTable);
+
+#undef BUILD_MAP
+#undef FIX_ARRAYREF
+        }
     }
 
     return success;
+}
+
+const DiagnosisInfo *ClassifierIndex::FindDiagnosis(DiagnosisCode code) const
+{
+    if (!diagnoses_map)
+        return nullptr;
+
+    return diagnoses_map->FindValue(code, nullptr);
+}
+
+ArrayRef<const ProcedureInfo> ClassifierIndex::FindProcedure(ProcedureCode code) const
+{
+    if (!procedures_map)
+        return {};
+
+    ArrayRef<const ProcedureInfo> proc;
+    proc.ptr = procedures_map->FindValue(code, nullptr);
+    if (!proc.ptr)
+        return {};
+
+    {
+        const ProcedureInfo *end_proc = proc.ptr + 1;
+        while (end_proc->code == code) {
+            end_proc++;
+        }
+        proc.len = end_proc - proc.ptr;
+    }
+
+    return proc;
+}
+
+const ProcedureInfo *ClassifierIndex::FindProcedure(ProcedureCode code, int8_t phase, Date date) const
+{
+    if (!procedures_map)
+        return nullptr;
+
+    const ProcedureInfo *proc = procedures_map->FindValue(code, nullptr);
+    if (!proc)
+        return nullptr;
+
+    do {
+        if (proc->phase != phase)
+            continue;
+        if (date.value && (date < proc->limit_dates[0] || date >= proc->limit_dates[1]))
+            continue;
+
+        return proc;
+    } while (++proc < procedures.ptr + procedures.len);
+
+    return nullptr;
 }

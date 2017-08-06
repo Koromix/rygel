@@ -587,7 +587,7 @@ public:
 
 template <typename T>
 class HeapArray {
-    StaticAssert(std::is_trivially_copyable<T>::value);
+    // StaticAssert(std::is_trivially_copyable<T>::value);
 
 public:
     T *ptr = nullptr;
@@ -770,7 +770,7 @@ public:
     HeapArray<Bucket *> buckets;
     size_t offset = 0;
     size_t len = 0;
-    Allocator *current_allocator = nullptr;
+    Allocator *bucket_allocator;
 
     typedef T value_type;
     typedef Iterator iterator_type;
@@ -778,7 +778,7 @@ public:
     DynamicQueue()
     {
         Bucket *first_bucket = *buckets.Append(CreateBucket());
-        current_allocator = &first_bucket->allocator;
+        bucket_allocator = &first_bucket->allocator;
     }
 
     DynamicQueue(DynamicQueue &) = delete;
@@ -801,7 +801,7 @@ public:
         Bucket *first_bucket = *buckets.Append(CreateBucket());
         offset = 0;
         len = 0;
-        current_allocator = &first_bucket->allocator;
+        bucket_allocator = &first_bucket->allocator;
     }
 
     Iterator begin() { return Iterator(this, 0); }
@@ -833,7 +833,7 @@ public:
         len++;
         if (bucket_offset == BucketSize - 1) {
             Bucket *new_bucket = *buckets.Append(CreateBucket());
-            current_allocator = &new_bucket->allocator;
+            bucket_allocator = &new_bucket->allocator;
         }
 
         return first;
@@ -870,7 +870,7 @@ public:
         }
 
         len = from;
-        current_allocator = &buckets[buckets.len - 1]->allocator;
+        bucket_allocator = &buckets[buckets.len - 1]->allocator;
     }
     void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
 
@@ -959,25 +959,53 @@ public:
         return it ? *it : default_value;
     }
 
-    ValueType *Set(const ValueType &value)
+    ValueType *Append(const ValueType &value)
     {
+        const KeyType &key = Handler::GetKey(value);
+        uint64_t hash = Handler::HashKey(key);
+
         if (capacity) {
-            const KeyType &key = Handler::GetKey(value);
-            size_t idx = KeyToIndex(key);
-            ValueType *it = Find(idx, key);
-            if (it) {
-                *it = value;
-                return it;
-            } else {
+            size_t idx = HashToIndex(hash);
+            if (!Find(idx, key)) {
                 if (count >= (size_t)(capacity * HASHSET_MAX_LOAD_FACTOR)) {
-                    size_t new_capacity = capacity << 1;
-                    Rehash(new_capacity);
+                    Rehash(capacity << 1);
+                    idx = HashToIndex(hash);
                 }
-                return Add(idx, value);
+                return Insert(idx, value);
+            } else {
+                return nullptr;
             }
         } else {
             Rehash(HASHSET_BASE_CAPACITY);
-            return Add(0, value);
+
+            size_t idx = HashToIndex(hash);
+            return Insert(idx, value);
+        }
+    }
+
+    ValueType *Set(const ValueType &value)
+    {
+        const KeyType &key = Handler::GetKey(value);
+        uint64_t hash = Handler::HashKey(key);
+
+        if (capacity) {
+            size_t idx = HashToIndex(hash);
+            ValueType *it = Find(idx, key);
+            if (!it) {
+                if (count >= (size_t)(capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                    Rehash(capacity << 1);
+                    idx = HashToIndex(hash);
+                }
+                return Insert(idx, value);
+            } else {
+                *it = value;
+                return it;
+            }
+        } else {
+            Rehash(HASHSET_BASE_CAPACITY);
+
+            size_t idx = HashToIndex(hash);
+            return Insert(idx, value);
         }
     }
 
@@ -1006,15 +1034,16 @@ private:
         { return (ValueType *)((const HashSet *)this)->Find(idx, key); }
     const ValueType *Find(size_t idx, const KeyType &key) const
     {
-        while (!Handler::CompareKeys(Handler::GetKey(data[idx]), key)) {
-            if (Handler::IsEmpty(data[idx]))
-                return nullptr;
+        while (!Handler::IsEmpty(data[idx])) {
+            const KeyType &it_key = Handler::GetKey(data[idx]);
+            if (Handler::CompareKeys(it_key, key))
+                return &data[idx];
             idx = (idx + 1) & (capacity - 1);
         }
-        return &data[idx];
+        return nullptr;
     }
 
-    ValueType *Add(size_t idx, const ValueType &value)
+    ValueType *Insert(size_t idx, const ValueType &value)
     {
         DebugAssert(!Handler::IsEmpty(value));
 
@@ -1034,6 +1063,8 @@ private:
         DebugAssert(count <= new_capacity);
 
         ValueType *old_data = data;
+        size_t old_capacity = capacity;
+
         if (new_capacity) {
             // We need to zero memory for POD values, we could avoid it in other
             // cases but I'll wait for widespred constexpr if (C++17) support
@@ -1042,32 +1073,39 @@ private:
             for (size_t i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType;
             }
+            capacity = new_capacity;
 
             count = 0;
-            for (size_t i = 0; i < capacity; i++) {
+            for (size_t i = 0; i < old_capacity; i++) {
                 if (!Handler::IsEmpty(old_data[i])) {
                     size_t new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
-                    Add(new_idx, old_data[i]);
+                    Insert(new_idx, old_data[i]);
                     old_data[i].~ValueType();
                 }
             }
         } else {
             data = nullptr;
+            capacity = 0;
 
-            for (size_t i = 0; i < capacity; i++) {
+            count = 0;
+            for (size_t i = 0; i < old_capacity; i++) {
                 if (!Handler::IsEmpty(old_data[i])) {
                     old_data[i].~ValueType();
                 }
             }
         }
-        Allocator::Release(allocator, old_data, capacity * sizeof(ValueType));
-        capacity = new_capacity;
+
+        Allocator::Release(allocator, old_data, old_capacity * sizeof(ValueType));
     }
 
+    size_t HashToIndex(uint64_t hash) const
+    {
+        return hash & (capacity - 1);
+    }
     size_t KeyToIndex(const KeyType &key) const
     {
         uint64_t hash = Handler::HashKey(key);
-        return hash & (capacity - 1);
+        return HashToIndex(hash);
     }
 };
 
@@ -1121,11 +1159,12 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
     class HashHandler { \
     public: \
         static bool IsEmpty(const ValueType &value) \
-            { return value.key == static_cast<decltype(ValueType::KeyMember)>(EmptyKey); } \
+            { return value.KeyMember == static_cast<decltype(ValueType::KeyMember)>(EmptyKey); } \
+        static bool IsEmpty(const ValueType *value) { return !value; } \
         static const decltype(ValueType::KeyMember) &GetKey(const ValueType &value) \
-            { return value.key; } \
+            { return value.KeyMember; } \
         static const decltype(ValueType::KeyMember) &GetKey(const ValueType *value) \
-            { return value->key; } \
+            { return value->KeyMember; } \
         static uint64_t HashKey(const decltype(ValueType::KeyMember) &key) \
             { return HashFunc(key); } \
         static bool CompareKeys(const decltype(ValueType::KeyMember) &key1, \
@@ -1582,6 +1621,8 @@ public:
     const char *ConsumeOptionValue();
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
+
+    const char *RequireOptionValue(const char *usage_str = nullptr);
 };
 
 static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)

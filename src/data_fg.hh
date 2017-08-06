@@ -89,6 +89,8 @@ struct DiagnosisInfo {
 
     uint16_t exclusion_set_idx;
     uint16_t exclusion_set_bit;
+
+    HASH_SET_HANDLER(DiagnosisInfo, code);
 };
 
 struct ExclusionInfo {
@@ -101,6 +103,8 @@ struct ProcedureInfo {
 
     Date limit_dates[2];
     uint8_t values[55];
+
+    HASH_SET_HANDLER(ProcedureInfo, code);
 };
 
 template <size_t N>
@@ -212,7 +216,9 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
 
 struct ClassifierIndex {
     Date limit_dates[2];
+
     const TableInfo *tables[CountOf(TableTypeNames)];
+    uint32_t changed_tables;
 
     ArrayRef<GhmDecisionNode> ghm_nodes;
     ArrayRef<DiagnosisInfo> diagnoses;
@@ -225,6 +231,13 @@ struct ClassifierIndex {
     ArrayRef<GhsDecisionNode> ghs_nodes;
     ArrayRef<AuthorizationInfo> authorizations;
     ArrayRef<DiagnosisProcedurePair> supplement_pairs[2];
+
+    HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
+    HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
+
+    const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
+    ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
+    const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
 };
 
 class ClassifierSet {
@@ -245,6 +258,11 @@ public:
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<DiagnosisProcedurePair> supplement_pairs[2];
     } store;
+
+    struct {
+        HeapArray<HashSet<DiagnosisCode, const DiagnosisInfo *>> diagnoses;
+        HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
+    } maps;
 
     const ClassifierIndex *FindIndex(Date date) const;
     ClassifierIndex *FindIndex(Date date)

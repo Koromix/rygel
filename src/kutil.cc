@@ -1001,3 +1001,15 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
         non_options->Append(non_option);
     }
 }
+
+const char *OptionParser::RequireOptionValue(const char *usage_str)
+{
+    if (!ConsumeOptionValue()) {
+        PrintLn(stderr, "Option '%1' needs an argument", current_option);
+        if (usage_str) {
+            PrintLn(stderr, "%1", usage_str);
+        }
+    }
+
+    return current_value;
+}
