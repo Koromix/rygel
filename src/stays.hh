@@ -1,7 +1,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "data_common.hh"
+#include "tables.hh"
 
 struct UnitCode {
     uint32_t value;

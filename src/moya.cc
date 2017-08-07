@@ -1,8 +1,8 @@
 #include "kutil.hh"
 #include "classifier.hh"
-#include "data_care.hh"
-#include "data_fg.hh"
 #include "dump.hh"
+#include "stays.hh"
+#include "tables.hh"
 
 static const char *const MainUsageText =
 R"(Usage: moya command [options]

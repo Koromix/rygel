@@ -18,33 +18,36 @@
     <ClCompile Include="src\classifier.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\data_care.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\data_fg.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\kutil.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\moya.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\dump.cc">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stays.cc">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tables.cc">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\classifier.hh">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\data_care.hh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\data_common.hh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\data_fg.hh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\kutil.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\dump.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stays.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tables.hh">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

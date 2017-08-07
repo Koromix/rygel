@@ -100,17 +100,18 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\classifier.cc" />
-    <ClCompile Include="src\data_care.cc" />
-    <ClCompile Include="src\data_fg.cc" />
+    <ClCompile Include="src\dump.cc" />
     <ClCompile Include="src\kutil.cc" />
     <ClCompile Include="src\moya.cc" />
+    <ClCompile Include="src\stays.cc" />
+    <ClCompile Include="src\tables.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\classifier.hh" />
-    <ClInclude Include="src\data_care.hh" />
-    <ClInclude Include="src\data_common.hh" />
-    <ClInclude Include="src\data_fg.hh" />
+    <ClInclude Include="src\dump.hh" />
     <ClInclude Include="src\kutil.hh" />
+    <ClInclude Include="src\stays.hh" />
+    <ClInclude Include="src\tables.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

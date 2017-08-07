@@ -1,5 +1,5 @@
 #include "kutil.hh"
-#include "data_fg.hh"
+#include "tables.hh"
 
 struct LoadTableData {
     size_t table_idx;

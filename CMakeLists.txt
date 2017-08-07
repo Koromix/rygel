@@ -52,16 +52,15 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/linit.c)
 set(MOYA_SRC src/classifier.cc
              src/classifier.hh
-             src/data_common.hh
-             src/data_care.cc
-             src/data_care.hh
-             src/data_fg.cc
-             src/data_fg.hh
              src/dump.cc
              src/dump.hh
              src/moya.cc
              src/kutil.cc
-             src/kutil.hh)
+             src/kutil.hh
+             src/stays.cc
+             src/stays.hh
+             src/tables.cc
+             src/tables.hh)
 
 # add_executable(moya ${MOYA_SRC} ${LIB_LUA_SRC})
 add_executable(moya ${MOYA_SRC})
