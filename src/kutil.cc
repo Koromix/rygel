@@ -742,25 +742,9 @@ bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
     return true;
 }
 
-static void ConvertFindData(const WIN32_FIND_DATA &find_data, Allocator &str_alloc,
-                            FileInfo *out_info)
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+                              std::function<bool(const char *, const FileInfo &)> func)
 {
-    if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        out_info->type = FileType::Directory;
-    } else {
-        out_info->type = FileType::File;
-    }
-    out_info->name = DuplicateString(&str_alloc, find_data.cFileName);
-}
-
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
-                              HeapArray<FileInfo> *out_files, size_t max_files,
-                              EnumDirectoryHandle *out_handle)
-{
-    Assert(max_files > 0);
-
-    DEFER_NC(out_files_guard, len = out_files->len) { out_files->RemoveFrom(len); };
-
     char find_filter[4096];
     if (!filter) {
         filter = "*";
@@ -783,19 +767,14 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator
 
     do {
         FileInfo file_info;
-        ConvertFindData(find_data, str_alloc, &file_info);
-        out_files->Append(file_info);
-
-        if (!--max_files) {
-            if (out_handle) {
-                handle_guard.disable();
-                out_handle->handle = handle;
-            } else {
-                LogError("Partial enumeration of directory '%1'", dirname);
-            }
-            out_files_guard.disable();
-            return EnumStatus::Partial;
+        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            file_info.type = FileType::Directory;
+        } else {
+            file_info.type = FileType::File;
         }
+
+        if (!func(find_data.cFileName, file_info))
+            return EnumStatus::Partial;
     } while (FindNextFile(handle, &find_data));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
@@ -804,47 +783,32 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator
         return EnumStatus::Error;
     }
 
-    if (out_handle) {
-        out_handle->handle = nullptr;
-    }
-    out_files_guard.disable();
     return EnumStatus::Done;
 }
 
-void EnumDirectoryHandle::Close()
-{
-    if (handle) {
-        FindClose(handle);
-        handle = nullptr;
-    }
-}
-
-EnumStatus EnumDirectoryHandle::Enumerate(Allocator &str_alloc,
-                                          HeapArray<FileInfo> *out_files, size_t max_files)
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator &str_alloc,
+                             HeapArray<const char *> *out_files, size_t max_files)
 {
     Assert(max_files > 0);
 
-    DEFER_NC(out_files_guard, len = out_files->len) { out_files->RemoveFrom(len); };
+    DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
-    WIN32_FIND_DATA find_data;
-    while (FindNextFile(handle, &find_data)) {
-        FileInfo file_info;
-        ConvertFindData(find_data, str_alloc, &file_info);
-        out_files->Append(file_info);
-
-        if (!--max_files) {
-            out_files_guard.disable();
-            return EnumStatus::Partial;
+    EnumStatus status = EnumerateDirectory(dirname, filter,
+                                           [&](const char *filename, const FileInfo &info) {
+        if (info.type == FileType::File) {
+            out_files->Append(Fmt(&str_alloc, "%1%/%2", dirname, filename));
         }
+        return true;
+    });
+    if (status == EnumStatus::Error)
+        return false;
+
+    if (status == EnumStatus::Partial) {
+        LogError("Partial enumeration of directory '%1'", dirname);
     }
 
-    if (GetLastError() != ERROR_NO_MORE_FILES) {
-        LogError("Error while enumerating directory: %1", Win32ErrorString());
-        return EnumStatus::Error;
-    }
-
-    out_files_guard.disable();
-    return EnumStatus::Done;
+    out_guard.disable();
+    return true;
 }
 
 // ------------------------------------------------------------------------

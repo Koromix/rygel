@@ -4,7 +4,7 @@
 #include "data_fg.hh"
 #include "dump.hh"
 
-static const char *const main_usage_str =
+static const char *const MainUsageText =
 R"(Usage: moya command [options]
 
 Commands:
@@ -15,7 +15,7 @@ Commands:
     show                     A
     tables                   B
 
-Common options:
+Global options:
     -t, --table <filename>   Load table file
     -T, --table-dir <dir>    Load table directory
     -d, --table-date <date>  Table date)";
@@ -29,15 +29,53 @@ struct ListSpecifier {
         Mask
     };
 
-    Table table;
+    bool valid;
 
+    Table table;
     Type type;
-    struct {
+    union {
         struct {
             uint8_t offset;
             uint8_t mask;
         } mask;
     } u;
+
+    static ListSpecifier FromString(const char *spec_str)
+    {
+        ListSpecifier spec = {};
+
+        if (!spec_str[0] || !spec_str[1])
+            goto error;
+
+        switch (spec_str[0]) {
+            case 'd': case 'D': { spec.table = ListSpecifier::Table::Diagnoses; } break;
+            case 'a': case 'A': { spec.table = ListSpecifier::Table::Procedures; } break;
+
+            default:
+                goto error;
+        }
+
+        switch (spec_str[1]) {
+            case '$': {
+                spec.type = ListSpecifier::Type::Mask;
+                if (sscanf(spec_str + 2, "%" SCNu8 ".%" SCNu8,
+                           &spec.u.mask.offset, &spec.u.mask.mask) != 2)
+                    goto error;
+            } break;
+
+            default:
+                goto error;
+        }
+
+        spec.valid = true;
+        return spec;
+
+error:
+        LogError("Malformed list specifier '%1'", spec_str);
+        return spec;
+    }
+
+    bool IsValid() const { return valid; }
 
     bool Match(ArrayRef<const uint8_t> values) const
     {
@@ -71,72 +109,23 @@ static const ClassifierSet *GetMainClassifierSet()
     return &main_classifier_set;
 }
 
-// FIXME: Return invalid specifier instead
-static bool ParseListSpecifier(const char *spec_str, ListSpecifier *out_spec)
-{
-    ListSpecifier spec = {};
-
-    if (!spec_str[0] || !spec_str[1])
-        goto error;
-
-    switch (spec_str[0]) {
-        case 'd': case 'D': { spec.table = ListSpecifier::Table::Diagnoses; } break;
-        case 'a': case 'A': { spec.table = ListSpecifier::Table::Procedures; } break;
-
-        default:
-            goto error;
-    }
-
-    switch (spec_str[1]) {
-        case '$': {
-            spec.type = ListSpecifier::Type::Mask;
-            if (sscanf(spec_str + 2, "%" SCNu8 ".%" SCNu8,
-                       &spec.u.mask.offset, &spec.u.mask.mask) != 2)
-                goto error;
-        } break;
-
-        default:
-            goto error;
-    }
-
-    *out_spec = spec;
-    return true;
-
-error:
-    LogError("Malformed list specifier '%1'", spec_str);
-    return false;
-}
-
 static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
                              const char *usage_str)
 {
     if (TestOption(opt_parser.current_option, "-T", "--table-dir")) {
-        if (!opt_parser.RequireOptionValue(main_usage_str))
+        if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
-        // FIXME: Ugly copying?
-        // FIXME: Avoid use of Fmt, make full path directly
-        HeapArray<FileInfo> files;
-        if (EnumerateDirectory(opt_parser.current_value, "*.tab", temp_alloc,
-                               &files, 1024) != EnumStatus::Done)
-            return false;
-        for (const FileInfo &file: files) {
-            if (file.type == FileType::File) {
-                const char *filename =
-                    Fmt(&temp_alloc, "%1%/%2", opt_parser.current_value, file.name);
-                main_table_filenames.Append(filename);
-            }
-        }
-
-        return true;
+        return EnumerateDirectoryFiles(opt_parser.current_value, "*.tab", temp_alloc,
+                                       &main_table_filenames, 1024);
     } else if (TestOption(opt_parser.current_option, "-t", "--table-file")) {
-        if (!opt_parser.RequireOptionValue(main_usage_str))
+        if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
         main_table_filenames.Append(opt_parser.current_value);
         return true;
     } else if (TestOption(opt_parser.current_option, "-d", "--table-date")) {
-        if (!opt_parser.RequireOptionValue(main_usage_str))
+        if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
         main_set_date = Date::FromString(opt_parser.current_value);
@@ -150,7 +139,7 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
 
 static bool RunClassify(ArrayRef<const char *> arguments)
 {
-    static const char *const usage_str =
+    static const char *const UsageText =
 R"(Usage: moya classify [options] stay_file ...)";
 
     Allocator temp_alloc;
@@ -161,9 +150,9 @@ R"(Usage: moya classify [options] stay_file ...)";
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, usage_str);
+                PrintLn(stdout, UsageText);
                 return true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, usage_str)) {
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
         }
@@ -171,7 +160,7 @@ R"(Usage: moya classify [options] stay_file ...)";
         opt_parser.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             PrintLn(stderr, "No filename provided");
-            PrintLn(stderr, usage_str);
+            PrintLn(stderr, UsageText);
             return false;
         }
     }
@@ -192,7 +181,7 @@ R"(Usage: moya classify [options] stay_file ...)";
 
 static bool RunDump(ArrayRef<const char *> arguments)
 {
-    static const char *const usage_str =
+    static const char *const UsageText =
 R"(Usage: moya dump [options] [filename] ...
 
 Specific options:
@@ -207,11 +196,11 @@ Specific options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, "%1", usage_str);
+                PrintLn(stdout, "%1", UsageText);
                 return true;
             } else if (TestOption(opt, "-h", "--headers")) {
                 headers = true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, usage_str)) {
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
         }
@@ -236,7 +225,7 @@ Specific options:
 
 static bool RunList(ArrayRef<const char *> arguments)
 {
-    static const char *const usage_str =
+    static const char *const UsageText =
 R"(Usage: moya list [options] list_name ...)";
 
     Allocator temp_alloc;
@@ -247,9 +236,9 @@ R"(Usage: moya list [options] list_name ...)";
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, usage_str);
+                PrintLn(stdout, UsageText);
                 return true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, usage_str)) {
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
         }
@@ -257,7 +246,7 @@ R"(Usage: moya list [options] list_name ...)";
         opt_parser.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
             PrintLn(stderr, "No specifier provided");
-            PrintLn(stderr, usage_str);
+            PrintLn(stderr, UsageText);
             return false;
         }
     }
@@ -276,8 +265,8 @@ R"(Usage: moya list [options] list_name ...)";
     }
 
     for (const char *spec_str: spec_strings) {
-        ListSpecifier spec;
-        if (!ParseListSpecifier(spec_str, &spec))
+        ListSpecifier spec = ListSpecifier::FromString(spec_str);
+        if (!spec.IsValid())
             continue;
 
         PrintLn("%1:", spec_str);
@@ -321,7 +310,7 @@ static bool RunPricing(ArrayRef<const char *>)
 
 static bool RunShow(ArrayRef<const char *> arguments)
 {
-    static const char *const usage_str =
+    static const char *const UsageText =
 R"(Usage: moya show [options] name ...)";
 
     Allocator temp_alloc;
@@ -332,9 +321,9 @@ R"(Usage: moya show [options] name ...)";
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, usage_str);
+                PrintLn(stdout, UsageText);
                 return true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, usage_str)) {
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
         }
@@ -342,7 +331,7 @@ R"(Usage: moya show [options] name ...)";
         opt_parser.ConsumeNonOptions(&names);
         if (!names.len) {
             PrintLn(stderr, "No element name provided");
-            PrintLn(stderr, usage_str);
+            PrintLn(stderr, UsageText);
             return false;
         }
     }
@@ -381,7 +370,7 @@ R"(Usage: moya show [options] name ...)";
 
 static bool RunTables(ArrayRef<const char *> arguments)
 {
-    static const char *const usage_str =
+    static const char *const UsageText =
 R"(Usage: moya tables [options]
 
 Options:
@@ -395,11 +384,11 @@ Options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, "%1", usage_str);
+                PrintLn(stdout, "%1", UsageText);
                 return true;
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbose = true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, usage_str)) {
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
         }
@@ -432,7 +421,7 @@ Options:
 int main(int argc, char **argv)
 {
     if (argc < 2) {
-        PrintLn(stderr, "%1", main_usage_str);
+        PrintLn(stderr, "%1", MainUsageText);
         return 1;
     }
     if (!strcmp(argv[1], "--help") || !strcmp(argv[1], "help")) {
@@ -440,7 +429,7 @@ int main(int argc, char **argv)
             std::swap(argv[1], argv[2]);
             argv[2] = (char *)"--help";
         } else {
-            PrintLn("%1", main_usage_str);
+            PrintLn("%1", MainUsageText);
             return 1;
         }
     }
@@ -465,6 +454,6 @@ int main(int argc, char **argv)
 #undef HANDLE_COMMAND
 
     PrintLn(stderr, "Unknown command '%1'", cmd);
-    PrintLn(stderr, "%1", main_usage_str);
+    PrintLn(stderr, "%1", MainUsageText);
     return 1;
 }

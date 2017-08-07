@@ -1561,7 +1561,6 @@ enum class FileType {
 };
 
 struct FileInfo {
-    const char *name;
     FileType type;
 };
 
@@ -1571,29 +1570,10 @@ enum class EnumStatus {
     Done
 };
 
-class EnumDirectoryHandle {
-    void *handle = nullptr;
-
-public:
-
-    EnumDirectoryHandle() = default;
-    EnumDirectoryHandle(Allocator &) = delete;
-    EnumDirectoryHandle &operator=(const Allocator &) = delete;
-    ~EnumDirectoryHandle() { Close(); }
-
-    void Close();
-
-    EnumStatus Enumerate(Allocator &str_alloc,
-                         HeapArray<FileInfo> *out_files, size_t max_files);
-
-    friend EnumStatus EnumerateDirectory(const char *, const char *, Allocator &,
-                                         HeapArray<FileInfo> *, size_t,
-                                         EnumDirectoryHandle *);
-};
-
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Allocator &str_alloc,
-                              HeapArray<FileInfo> *out_files, size_t max_files,
-                              EnumDirectoryHandle *out_handle = nullptr);
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+                              std::function<bool(const char *, const FileInfo &)> func);
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator &str_alloc,
+                             HeapArray<const char *> *out_files, size_t max_files);
 
 // ------------------------------------------------------------------------
 // Option Parser
