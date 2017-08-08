@@ -6,6 +6,11 @@
 struct UnitCode {
     uint32_t value;
 
+    UnitCode() = default;
+    explicit UnitCode(uint32_t code) : value(code) {}
+
+    bool IsValid() const { return value; }
+
     bool operator==(const UnitCode &other) const { return value == other.value; }
     bool operator!=(const UnitCode &other) const { return value != other.value; }
 
@@ -15,7 +20,7 @@ struct UnitCode {
 struct UnitInfo {
     UnitCode code;
     Date dates[2];
-    uint32_t facility_id;
+    int32_t facility_id;
 };
 
 enum class Sex: uint8_t {
@@ -30,6 +35,7 @@ static const char *const SexNames[] = {
 struct Procedure {
     ProcedureCode code;
     int8_t phase;
+    int8_t activity;
     int16_t count;
     Date date;
 };
@@ -40,23 +46,22 @@ struct Stay {
         Incoherent
     };
 
-    uint32_t stay_id;
+    int32_t stay_id;
 
     Sex sex;
     Date birthdate;
     Date dates[2];
-    uint32_t duration;
     struct {
-        char mode;
-        char origin;
+        int8_t mode;
+        int8_t origin;
     } entry;
     struct {
-        char mode;
-        char destination;
+        int8_t mode;
+        int8_t destination;
     } exit;
     UnitCode unit_code;
     int16_t session_count;
-    uint8_t igs2;
+    int16_t igs2;
     Date last_menstrual_period;
     int16_t gestational_age;
     int16_t newborn_weight;

@@ -41,6 +41,7 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         ProcedureCode,
         ProcedureDate,
         ProcedurePhase,
+        ProcedureActivity,
         ProcedureCount
     };
 
@@ -111,8 +112,7 @@ public:
             case State::StayObject: {
                 state = State::StayArray;
 
-                stay.diagnoses.len = out_set->store.diagnoses.len -
-                                                (size_t)stay.diagnoses.ptr;
+                stay.diagnoses.len = out_set->store.diagnoses.len - (size_t)stay.diagnoses.ptr;
                 stay.procedures.len = out_set->store.procedures.len - (size_t)stay.procedures.ptr;
                 out_set->stays.Append(stay);
                 ResetStay();
@@ -175,6 +175,7 @@ public:
                 HANDLE_KEY("code", State::ProcedureCode);
                 HANDLE_KEY("date", State::ProcedureDate);
                 HANDLE_KEY("phase", State::ProcedurePhase);
+                HANDLE_KEY("activity", State::ProcedureActivity);
                 HANDLE_KEY("count", State::ProcedureCount);
 
                 LogError("Unknown procedure attribute '%1'", key);
@@ -196,7 +197,9 @@ public:
     {
         switch (state) {
             // Stay attributes
-            case State::StayIdentifier: { SetInt(&stay.stay_id, i); } break;
+            case State::StayIdentifier: { SetInt(&stay.stay_id, i);
+                if (stay.stay_id == 17075599)
+                    LogError("%1", stay.main_diagnosis);} break;
             case State::StaySex: {
                 if (i == 1) {
                     stay.sex = Sex::Male;
@@ -208,36 +211,32 @@ public:
                 }
             } break;
             case State::StayEntryMode: {
-                if (i >= 0 && i < 10) {
-                    stay.entry.mode = '0' + i;
+                if (i >= 0 && i <= 9) {
+                    stay.entry.mode = i;
                 } else {
                     LogError("Invalid entry mode value %1", i);
                     SetErrorFlag();
                 }
             } break;
             case State::StayEntryOrigin: {
-                if (i >= 1 && i < 10) {
-                    stay.entry.origin = '0' + i;
-                } else if (!i) {
-                    stay.entry.origin = 0;
+                if (i >= 0 && i <= 9) {
+                    stay.entry.origin = i;
                 } else {
                     LogError("Invalid entry origin value %1", i);
                     SetErrorFlag();
                 }
             } break;
             case State::StayExitMode: {
-                if (i >= 0 && i < 10) {
-                    stay.exit.mode = '0' + i;
+                if (i >= 0 && i <= 9) {
+                    stay.exit.mode = i;
                 } else {
                     LogError("Invalid exit mode value %1", i);
                     SetErrorFlag();
                 }
             } break;
             case State::StayExitDestination: {
-                if (i >= 1 && i < 10) {
-                    stay.exit.destination = '0' + i;
-                } else if (!i) {
-                    stay.exit.destination = 0;
+                if (i >= 0 && i <= 9) {
+                    stay.exit.destination = i;
                 } else {
                     LogError("Invalid exit destination value %1", i);
                     SetErrorFlag();
@@ -251,6 +250,7 @@ public:
 
             // Procedure attributes
             case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
+            case State::ProcedureActivity: { SetInt(&proc.activity, i); } break;
             case State::ProcedureCount: { SetInt(&proc.count, i); } break;
 
             default: {
@@ -279,15 +279,20 @@ public:
             case State::StayEntryDate: { SetDate(&stay.dates[0], str); } break;
             case State::StayEntryMode: {
                 if (str[0] && !str[1]) {
-                    stay.entry.mode = str[0];
+                    stay.entry.mode = str[0] - '0';
                 } else {
                     LogError("Invalid entry mode value '%1'", str);
                     SetErrorFlag();
                 }
             } break;
             case State::StayEntryOrigin: {
-                if (!str[0] || !str[1]) {
-                    stay.entry.origin = str[0];
+                if (!str[0]) {
+                    stay.entry.origin = 0;
+                } else if (((str[0] >= '0' && str[0] <= '9')
+                            || str[0] == 'R' || str[0] == 'r') && !str[1]) {
+                    // This is probably incorrect for either 'R' or 'r' but this is what
+                    // the machine code in FG2017.exe does, so keep it that way.
+                    stay.entry.origin = str[0] - '0';
                 } else {
                     LogError("Invalid entry origin value '%1'", str);
                     SetErrorFlag();
@@ -296,15 +301,17 @@ public:
             case State::StayExitDate: { SetDate(&stay.dates[1], str); } break;
             case State::StayExitMode: {
                 if (str[0] && !str[1]) {
-                    stay.exit.mode = str[0];
+                    stay.exit.mode = str[0] - '0';
                 } else {
                     LogError("Invalid exit mode value '%1'", str);
                     SetErrorFlag();
                 }
             } break;
             case State::StayExitDestination: {
-                if (!str[0] || !str[1]) {
-                    stay.exit.destination = str[0];
+                if (!str[0]) {
+                    stay.exit.destination = 0;
+                } else if ((str[0] >= '0' && str[0] <= '9') && !str[1]) {
+                    stay.exit.destination = str[0] - '0';
                 } else {
                     LogError("Invalid exit destination value '%1'", str);
                     SetErrorFlag();
@@ -323,7 +330,8 @@ public:
                 out_set->store.diagnoses.Append(stay.linked_diagnosis);
             } break;
             case State::AssociatedDiagnosisArray: {
-                out_set->store.diagnoses.Append(DiagnosisCode(str));
+                DiagnosisCode diag = DiagnosisCode(str);
+                out_set->store.diagnoses.Append(diag);
             } break;
 
             // Procedure attributes
@@ -537,15 +545,13 @@ bool StaySetBuilder::Finish(StaySet *out_set)
 
     for (Stay &stay: set.stays) {
 #define FIX_ARRAYREF(ArrayRefName) \
-            stay.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
+            stay.ArrayRefName.ptr = set.store.ArrayRefName.ptr + \
                                     (size_t)stay.ArrayRefName.ptr
 
         FIX_ARRAYREF(diagnoses);
         FIX_ARRAYREF(procedures);
 
 #undef FIX_ARRAYREF
-
-        stay.duration = stay.dates[1] - stay.dates[0];
     }
 
     memcpy(out_set, &set, sizeof(set));

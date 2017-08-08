@@ -5,7 +5,7 @@
 #include "tables.hh"
 
 static const char *const MainUsageText =
-R"(Usage: moya command [options]
+R"(Usage: moya <command> [<args>]
 
 Commands:
     classify                 Run classifier on patient data
@@ -26,7 +26,8 @@ struct ListSpecifier {
         Procedures
     };
     enum class Type {
-        Mask
+        Mask,
+        CmdJump
     };
 
     bool valid;
@@ -38,6 +39,11 @@ struct ListSpecifier {
             uint8_t offset;
             uint8_t mask;
         } mask;
+
+        struct {
+            uint8_t cmd;
+            uint8_t jump;
+        } cmd_jump;
     } u;
 
     static ListSpecifier FromString(const char *spec_str)
@@ -63,6 +69,13 @@ struct ListSpecifier {
                     goto error;
             } break;
 
+            case '-': {
+                spec.type = ListSpecifier::Type::CmdJump;
+                if (sscanf(spec_str + 2, "%02" SCNu8 "%02" SCNu8,
+                           &spec.u.cmd_jump.cmd, &spec.u.cmd_jump.jump) != 2)
+                    goto error;
+            } break;
+
             default:
                 goto error;
         }
@@ -84,15 +97,20 @@ error:
                 return u.mask.offset < values.len &&
                        values[u.mask.offset] & u.mask.mask;
             } break;
+
+            case Type::CmdJump: {
+                return values[0] == u.cmd_jump.cmd &&
+                       values[1] == u.cmd_jump.jump;
+            } break;
         }
 
         Assert(false);
     }
 };
 
-static Date main_set_date = {};
 static HeapArray<const char *> main_table_filenames;
 static ClassifierSet main_classifier_set = {};
+static Date main_index_date = {};
 
 static const ClassifierSet *GetMainClassifierSet()
 {
@@ -128,8 +146,8 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
         if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
-        main_set_date = Date::FromString(opt_parser.current_value);
-        return !!main_set_date.value;
+        main_index_date = Date::FromString(opt_parser.current_value);
+        return !!main_index_date.value;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
         PrintLn(stderr, "%1", usage_str);
@@ -165,16 +183,26 @@ R"(Usage: moya classify [options] stay_file ...)";
         }
     }
 
+    const ClassifierSet *classifier_set = GetMainClassifierSet();
+    if (!classifier_set)
+        return false;
+
     StaySet stay_set;
     {
         StaySetBuilder stay_set_builder;
+
+        LogDebug("Load");
         if (!stay_set_builder.LoadJson(filenames))
             return false;
+        LogDebug("Finish");
         if (!stay_set_builder.Finish(&stay_set))
             return false;
     }
-    PrintLn("%1 -- %2 -- %3",
-            stay_set.stays.len, stay_set.store.diagnoses.len, stay_set.store.procedures.len);
+    LogDebug("%1 -- %2 -- %3",
+             stay_set.stays.len, stay_set.store.diagnoses.len, stay_set.store.procedures.len);
+
+    LogDebug("Classify");
+    Classify(*classifier_set, stay_set, nullptr);
 
     return true;
 }
@@ -257,9 +285,9 @@ R"(Usage: moya list [options] list_name ...)";
         classifier_set = GetMainClassifierSet();
         if (!classifier_set)
             return false;
-        classifier_index = classifier_set->FindIndex(main_set_date);
+        classifier_index = classifier_set->FindIndex(main_index_date);
         if (!classifier_index) {
-            LogError("No classifier set available at '%1'", main_set_date);
+            LogError("No classifier index available at '%1'", main_index_date);
             return false;
         }
     }
@@ -274,14 +302,14 @@ R"(Usage: moya list [options] list_name ...)";
             case ListSpecifier::Table::Diagnoses: {
                 for (const DiagnosisInfo &diag: classifier_index->diagnoses) {
                     if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
-                        if (spec.Match(diag.mask[0].values)) {
+                        if (spec.Match(diag.mask[0].bytes)) {
                             PrintLn("  %1 (male)", diag.code);
                         }
-                        if (spec.Match(diag.mask[1].values)) {
+                        if (spec.Match(diag.mask[1].bytes)) {
                             PrintLn("  %1 (female)", diag.code);
                         }
                     } else {
-                        if (spec.Match(diag.mask[0].values)) {
+                        if (spec.Match(diag.mask[0].bytes)) {
                             PrintLn("  %1", diag.code);
                         }
                     }
@@ -290,7 +318,7 @@ R"(Usage: moya list [options] list_name ...)";
 
             case ListSpecifier::Table::Procedures: {
                 for (const ProcedureInfo &proc: classifier_index->procedures) {
-                    if (spec.Match(proc.values)) {
+                    if (spec.Match(proc.bytes)) {
                         PrintLn("  %1", proc.code);
                     }
                 }
@@ -342,9 +370,9 @@ R"(Usage: moya show [options] name ...)";
         classifier_set = GetMainClassifierSet();
         if (!classifier_set)
             return false;
-        classifier_index = classifier_set->FindIndex(main_set_date);
+        classifier_index = classifier_set->FindIndex(main_index_date);
         if (!classifier_index) {
-            LogError("No classifier set available at '%1'", main_set_date);
+            LogError("No classifier index available at '%1'", main_index_date);
             return false;
         }
     }

@@ -127,6 +127,7 @@
     #define CORE_SYMBOL
 #endif
 
+constexpr uint16_t MakeUInt16(uint8_t high, uint8_t low) { return ((uint16_t)high << 8) | low; }
 constexpr uint32_t MakeUInt32(uint16_t high, uint16_t low) { return ((uint32_t)high << 16) | low; }
 constexpr uint64_t MakeUInt64(uint32_t high, uint32_t low) { return ((uint64_t)high << 32) | low; }
 
@@ -1313,6 +1314,7 @@ class FmtArg {
 public:
     enum class Type {
         StrRef,
+        StrBuf,
         Char,
         Bool,
         Integer,
@@ -1329,6 +1331,7 @@ public:
     Type type;
     union {
         ArrayRef<const char> str_ref;
+        char str_buf[12];
         char ch;
         bool b;
         int64_t i;

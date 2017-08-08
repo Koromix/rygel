@@ -265,21 +265,20 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
                 ghm_node.u.test.children_idx = raw_node.children_idx;
                 ghm_node.u.test.children_count = raw_node.children_count;
             }
-            // TODO: Test does not deal with overflow
-            if (ghm_node.u.test.children_idx + ghm_node.u.test.children_count > table.sections[0].values_count) {
-                return false;
-            }
+
+            FAIL_PARSE_IF(!ghm_node.u.test.children_count);
+            FAIL_PARSE_IF(ghm_node.u.test.children_idx > table.sections[0].values_count);
+            FAIL_PARSE_IF(ghm_node.u.test.children_count > table.sections[0].values_count -
+                                                           ghm_node.u.test.children_idx);
         } else {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
             static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
             ghm_node.type = GhmDecisionNode::Type::Ghm;
-            snprintf(ghm_node.u.ghm.code.str, sizeof(ghm_node.u.ghm.code.str), "%02u%c%02u%c",
-                     raw_node.params[1], chars1[(raw_node.children_idx / 1000) % 10],
-                     (raw_node.children_idx / 10) % 100, chars4[raw_node.children_idx % 10]);
-            if (strchr(ghm_node.u.ghm.code.str, ' ')) {
-                return false;
-            }
+            ghm_node.u.ghm.code.parts.cmd = raw_node.params[1];
+            ghm_node.u.ghm.code.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
+            ghm_node.u.ghm.code.parts.seq = (raw_node.children_idx / 10) % 100;
+            ghm_node.u.ghm.code.parts.severity = chars4[raw_node.children_idx % 10];
             ghm_node.u.ghm.error = raw_node.params[0];
         }
 
@@ -310,7 +309,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosisPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::mask[0].values));
+                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::mask[0].bytes));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
                   table.sections[3].value_len > sizeof(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(!table.sections[4].value_len);
@@ -351,10 +350,10 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             {
                 const uint8_t *sex_data = file_data + table.sections[2].raw_offset +
                                           raw_diag_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(diag.mask[0].values, sex_data, table.sections[2].value_len / 2);
-                memcpy(diag.mask[1].values, sex_data + table.sections[2].value_len / 2,
+                memcpy(diag.mask[0].bytes, sex_data, table.sections[2].value_len / 2);
+                memcpy(diag.mask[1].bytes, sex_data + table.sections[2].value_len / 2,
                        table.sections[2].value_len / 2);
-                if (memcmp(diag.mask[0].values, diag.mask[1].values, sizeof(diag.mask[0].values))) {
+                if (memcmp(diag.mask[0].bytes, diag.mask[1].bytes, sizeof(diag.mask[0].bytes))) {
                     diag.flags |= (int)DiagnosisInfo::Flag::SexDifference;
                 }
 
@@ -425,7 +424,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                   table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedProcedurePtr));
     FAIL_PARSE_IF(!table.sections[2].value_len ||
-                  table.sections[2].value_len > sizeof(ProcedureInfo::values));
+                  table.sections[2].value_len > sizeof(ProcedureInfo::bytes));
 
     size_t block_start = table.sections[1].raw_offset;
     for (size_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
@@ -483,7 +482,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 
                 const uint8_t *proc_data = file_data + table.sections[2].raw_offset +
                                            raw_proc_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(proc.values, proc_data, table.sections[2].value_len);
+                memcpy(proc.bytes, proc_data, table.sections[2].value_len);
             }
 
             out_procs->Append(proc);
@@ -537,10 +536,9 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
 
-            // TODO: Improve Fmt API to replace sprintf/snprintf
-            snprintf(ghm_root.code.str, sizeof(ghm_root.code.str), "%02u%c%02u",
-                     raw_ghm_root.cmd, chars1[raw_ghm_root.type_seq / 100 % 10],
-                     raw_ghm_root.type_seq % 100);
+            ghm_root.code.parts.cmd = raw_ghm_root.cmd;
+            ghm_root.code.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
+            ghm_root.code.parts.seq = raw_ghm_root.type_seq % 100;
         }
 
         switch (raw_ghm_root.duration_severity_mode) {
@@ -712,10 +710,11 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                 static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
                 static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J',
                                         'Z', 'T', '1', '2', '3', '4'};
-                snprintf(ghm_node.u.ghm.code.str, sizeof(ghm_node.u.ghm.code.str), "%02u%c%02u%c",
-                         raw_ghs_node.cmd, chars1[raw_ghs_node.type_seq / 10000 % 6],
-                         raw_ghs_node.type_seq / 100 % 100,
-                         chars4[raw_ghs_node.type_seq % 100 % 13]);
+
+                ghm_node.u.ghm.code.parts.cmd = raw_ghs_node.cmd;
+                ghm_node.u.ghm.code.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
+                ghm_node.u.ghm.code.parts.seq = raw_ghs_node.type_seq / 100 % 100;
+                ghm_node.u.ghm.code.parts.severity = chars4[raw_ghs_node.type_seq % 100 % 13];
             }
             out_nodes->Append(ghm_node);
         }
@@ -858,7 +857,7 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
 const ClassifierIndex *ClassifierSet::FindIndex(Date date) const
 {
     if (date.value) {
-        for (size_t i = indexes.len - 1; i-- > 0;) {
+        for (size_t i = indexes.len; i-- > 0;) {
             if (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])
                 return &indexes[i];
         }
@@ -1128,7 +1127,7 @@ const ProcedureInfo *ClassifierIndex::FindProcedure(ProcedureCode code, int8_t p
     do {
         if (proc->phase != phase)
             continue;
-        if (date.value && (date < proc->limit_dates[0] || date >= proc->limit_dates[1]))
+        if (date < proc->limit_dates[0] || date >= proc->limit_dates[1])
             continue;
 
         return proc;

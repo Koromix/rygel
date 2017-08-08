@@ -3,6 +3,7 @@ import sys
 from datetime import datetime, date
 import csv
 import json
+import traceback
 
 # -------------------------------------------------------------------------
 # Constants
@@ -36,65 +37,56 @@ def parse_rums(filename):
     with open(filename) as f:
         for line in f:
             try:
-                parts = [part.strip() for part in line.rstrip("\r\n").split(";")]
-
-                first_das = 32
-                first_dad = first_das + int(parts[23])
-                first_procedure = first_dad + int(parts[24])
+                first_das = 192
+                first_dad = first_das + int(line[133:135]) * 8
+                first_procedure = first_dad + int(line[135:137]) * 8
 
                 rum = {}
-                rum['iep'] = int(parts[7])
-                rum['sex'] = int(parts[9])
-                rum['birthdate'] = date_value(parts[8])
-                rum['entry_date'] = date_value(parts[14])
-                try:
-                    rum['entry_mode'] = int(parts[15])
-                except ValueError:
-                    rum['entry_mode'] = parts[15]
-                if parts[16]:
-                    try:
-                        rum['entry_origin'] = int(parts[16])
-                    except ValueError:
-                        rum['entry_origin'] = parts[16]
-                rum['exit_date'] = date_value(parts[17])
-                try:
-                    rum['exit_mode'] = int(parts[18])
-                except ValueError:
-                    rum['exit_mode'] = parts[18]
-                if parts[19]:
-                    try:
-                        rum['exit_destination'] = int(parts[19])
-                    except ValueError:
-                        rum['exit_destination'] = parts[19]
-                rum['unit'] = int(parts[10])
-                if parts[22]:
-                    rum['session_count'] = int(parts[22])
-                if parts[28]:
-                    rum['igs2'] = int(parts[28])
-                if parts[30]:
-                    rum['last_menstrual_period'] = date_value(parts[30])
-                if parts[21]:
-                    rum['newborn_weight'] = int(parts[21])
-                if parts[29]:
-                    rum['gestational_age'] = int(parts[29])
+                rum['iep'] = int(line[47:67])
+                rum['sex'] = int(line[85])
+                rum['birthdate'] = date_value(line[77:85])
+                rum['entry_date'] = date_value(line[92:100])
+                rum['entry_mode'] = int(line[100])
+                if line[101].strip():
+                    if line[101] == 'R' or line[101] == 'r':
+                        rum['entry_origin'] = 'R'
+                    else:
+                        rum['entry_origin'] = int(line[101])
+                rum['exit_date'] = date_value(line[102:110])
+                rum['exit_mode'] = int(line[110])
+                if line[111].strip():
+                    rum['exit_destination'] = int(line[111])
+                rum['unit'] = int(line[86:90])
+                if line[131:133].strip():
+                    rum['session_count'] = int(line[131:133])
+                if line[156:159].strip():
+                    rum['igs2'] = int(line[156:159])
+                if line[123:131].strip():
+                    rum['last_menstrual_period'] = date_value(line[123:131])
+                if line[117:121].strip():
+                    rum['newborn_weight'] = int(line[117:121])
+                if line[121:123].strip():
+                    rum['gestational_age'] = int(line[121:123])
 
-                rum['dp'] = parts[26]
-                if parts[27]:
-                    rum['dr'] = parts[27]
-                if int(parts[23]):
-                    rum['das'] = [parts[first_das + i] for i in range(0, int(parts[23]))]
+                rum['dp'] = line[140:148].strip()
+                if line[148:156].strip():
+                    rum['dr'] = line[148:156].strip()
+                if int(line[133:135]):
+                    rum['das'] = [line[(first_das + i * 8):(first_das + (i + 1) * 8)].strip()
+                                  for i in range(0, int(line[133:135]))]
 
-                if int(parts[25]):
+                if int(line[137:140]):
                     rum['procedures'] = [{
-                        'date': date_value(parts[first_procedure + i * 11 + 0]),
-                        'code': parts[first_procedure + i * 11 + 1],
-                        'phase': int(parts[first_procedure + i * 11 + 2]),
-                        'count': int(parts[first_procedure + i * 11 + 9])
-                    } for i in range(0, int(parts[25]))]
+                        'date': date_value(line[i:(i + 8)]),
+                        'code': line[(i + 8):(i + 15)].strip(),
+                        'phase': int(line[i + 18]),
+                        'activity': int(line[i + 19]),
+                        'count': int(line[(i + 27):(i + 29)])
+                    } for i in range(first_procedure, first_procedure + int(line[137:140]) * 29, 29)]
 
                 yield rum
             except Exception as e:
-                print(e, file = sys.stderr)
+                traceback.print_exc()
 
 def parse_structure(filename):
     units = {}

@@ -46,8 +46,8 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
 {
     for (const DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](size_t mask_idx) {
-            for (size_t i = 0; i < CountOf(diag.mask[mask_idx].values); i++) {
-                Print(" %1", FmtBin(diag.mask[mask_idx].values[i]));
+            for (size_t i = 0; i < CountOf(diag.mask[mask_idx].bytes); i++) {
+                Print(" %1", FmtBin(diag.mask[mask_idx].bytes[i]));
             }
             PrintLn();
         };
@@ -94,8 +94,8 @@ void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
 {
     for (const ProcedureInfo &proc: procedures) {
         Print("      %1/%2 =", proc.code, proc.phase);
-        for (size_t i = 0; i < CountOf(proc.values); i++) {
-            Print(" %1", FmtBin(proc.values[i]));
+        for (size_t i = 0; i < CountOf(proc.bytes); i++) {
+            Print(" %1", FmtBin(proc.bytes[i]));
         }
         PrintLn();
 

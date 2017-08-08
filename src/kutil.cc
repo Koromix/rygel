@@ -341,6 +341,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 append(arg.value.str_ref);
             } break;
 
+            case FmtArg::Type::StrBuf: {
+                append(MakeStrRef(arg.value.str_buf));
+            } break;
+
             case FmtArg::Type::Char: {
                 append(ArrayRef<const char>(&arg.value.ch, 1));
             } break;
