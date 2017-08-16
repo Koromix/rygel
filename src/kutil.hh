@@ -353,6 +353,9 @@ template <typename T>
 struct ArraySlice {
     size_t offset;
     size_t len;
+
+    ArraySlice() = default;
+    ArraySlice(size_t offset, size_t len) : offset(offset), len(len) {}
 };
 
 // I'd love to make ArrayRef default to { nullptr, 0 } but unfortunately that makes
@@ -510,6 +513,39 @@ static inline ArrayRef<const char> MakeStrRef(const char *str, size_t max_len)
 }
 
 template <typename T, size_t N>
+class FixedArray {
+public:
+    T data[N];
+
+    typedef T value_type;
+    typedef T *iterator_type;
+
+    operator ArrayRef<T>() { return ArrayRef<T>(data, N); }
+    operator ArrayRef<const T>() const { return ArrayRef<const T>(data, N); }
+
+    T *begin() { return data; }
+    const T *begin() const { return data; }
+    T *end() { return data + N; }
+    const T *end() const { return data + N; }
+
+    T &operator[](size_t idx)
+    {
+        DebugAssert(idx < N);
+        return data[idx];
+    }
+    const T &operator[](size_t idx) const
+    {
+        DebugAssert(idx < N);
+        return data[idx];
+    }
+
+    ArrayRef<T> Take(size_t offset, size_t len) const
+        { return ArrayRef<T>(data, N).Take(offset, len); }
+    ArrayRef<T> Take(ArraySlice<T> slice) const
+        { return ArrayRef<T>(data, N).Take(slice); }
+};
+
+template <typename T, size_t N>
 class LocalArray {
 public:
     T data[N];
@@ -518,6 +554,7 @@ public:
     typedef T value_type;
     typedef T *iterator_type;
 
+    // TODO: Check behavior of Append() after Clear()
     void Clear()
     {
         for (size_t i = 0; i < len; i++) {
@@ -581,9 +618,9 @@ public:
     void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
 
     ArrayRef<T> Take(size_t offset, size_t len) const
-        { return ArrayRef<T>(data, len).Take(offset, len); }
+        { return ArrayRef<T>(data, this->len).Take(offset, len); }
     ArrayRef<T> Take(ArraySlice<T> slice) const
-        { return ArrayRef<T>(data, len).Take(slice); }
+        { return ArrayRef<T>(data, this->len).Take(slice); }
 };
 
 template <typename T>
@@ -725,9 +762,9 @@ public:
     void RemoveLast(size_t count = 1) { RemoveFrom(len - count); }
 
     ArrayRef<T> Take(size_t offset, size_t len) const
-        { return ArrayRef<T>(ptr, len).Take(offset, len); }
+        { return ArrayRef<T>(ptr, this->len).Take(offset, len); }
     ArrayRef<T> Take(ArraySlice<T> slice) const
-        { return ArrayRef<T>(ptr, len).Take(slice); }
+        { return ArrayRef<T>(ptr, this->len).Take(slice); }
 };
 
 template <typename T, size_t BucketSize = 1024>
@@ -1160,7 +1197,7 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
     class HashHandler { \
     public: \
         static bool IsEmpty(const ValueType &value) \
-            { return value.KeyMember == static_cast<decltype(ValueType::KeyMember)>(EmptyKey); } \
+            { return value.KeyMember == (EmptyKey); } \
         static bool IsEmpty(const ValueType *value) { return !value; } \
         static const decltype(ValueType::KeyMember) &GetKey(const ValueType &value) \
             { return value.KeyMember; } \
@@ -1173,7 +1210,7 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
             { return CompareFunc((key1), (key2)); } \
     }
 #define HASH_SET_HANDLER(ValueType, KeyMember) \
-    HASH_SET_HANDLER_EX(ValueType, KeyMember, 0, DefaultHash, DefaultCompare)
+    HASH_SET_HANDLER_EX(ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
@@ -1303,12 +1340,44 @@ union Date {
     Date operator--(int) { Date date = *this; --(*this); return date; }
 };
 
+uint64_t GetMonotonicTime();
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------
 
 char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
 char *DuplicateString(Allocator *alloc, const char *str, size_t max_len = SIZE_MAX);
+
+static inline bool IsAsciiAlpha(char c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+static inline bool IsAsciiDigit(char c)
+{
+    return (c >= '0' && c <= '9');
+}
+static inline bool IsAsciiAlphaOrDigit(char c)
+{
+    return IsAsciiAlpha(c) || IsAsciiDigit(c);
+}
+
+static inline char UpperAscii(char c)
+{
+    if (c >= 'a' && c <= 'z') {
+        return c - 32;
+    } else {
+        return c;
+    }
+}
+static inline char LowerAscii(char c)
+{
+    if (c >= 'A' && c <= 'Z') {
+        return c + 32;
+    } else {
+        return c;
+    }
+}
 
 class FmtArg {
 public:

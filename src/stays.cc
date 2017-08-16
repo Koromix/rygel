@@ -197,9 +197,7 @@ public:
     {
         switch (state) {
             // Stay attributes
-            case State::StayIdentifier: { SetInt(&stay.stay_id, i);
-                if (stay.stay_id == 17075599)
-                    LogError("%1", stay.main_diagnosis);} break;
+            case State::StayIdentifier: { SetInt(&stay.stay_id, i); } break;
             case State::StaySex: {
                 if (i == 1) {
                     stay.sex = Sex::Male;
@@ -322,20 +320,20 @@ public:
 
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {
-                stay.main_diagnosis = DiagnosisCode(str);
+                stay.main_diagnosis = DiagnosisCode::FromString(str);
                 out_set->store.diagnoses.Append(stay.main_diagnosis);
             } break;
             case State::StayLinkedDiagnosis: {
-                stay.linked_diagnosis = DiagnosisCode(str);
+                stay.linked_diagnosis = DiagnosisCode::FromString(str);
                 out_set->store.diagnoses.Append(stay.linked_diagnosis);
             } break;
             case State::AssociatedDiagnosisArray: {
-                DiagnosisCode diag = DiagnosisCode(str);
+                DiagnosisCode diag = DiagnosisCode::FromString(str);
                 out_set->store.diagnoses.Append(diag);
             } break;
 
             // Procedure attributes
-            case State::ProcedureCode: { proc.code = ProcedureCode(str); } break;
+            case State::ProcedureCode: { proc.code = ProcedureCode::FromString(str); } break;
             case State::ProcedureDate: { SetDate(&proc.date, str); } break;
 
             default: {

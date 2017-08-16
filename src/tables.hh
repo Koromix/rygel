@@ -2,6 +2,16 @@
 
 #include "kutil.hh"
 
+// TODO: Reorganize basic domain types -- move to common file?
+enum class Sex: uint8_t {
+    Male = 1,
+    Female
+};
+static const char *const SexNames[] = {
+    "Male",
+    "Female"
+};
+
 union GhmRootCode {
     uint32_t value;
     struct {
@@ -11,18 +21,25 @@ union GhmRootCode {
     } parts;
 
     GhmRootCode() = default;
-    explicit GhmRootCode(const char *code_str)
+
+    static GhmRootCode FromString(const char *str, bool errors = true)
     {
-        value = 0;
-        if (code_str[0]) {
+        GhmRootCode code;
+
+        code.value = 0;
+        if (str[0]) {
             int end_offset;
-            sscanf(code_str, "%02" SCNu8 "%c%02" SCNu8 "%n",
-                   &parts.cmd, &parts.type, &parts.seq, &end_offset);
-            if (end_offset != 5 || code_str[5]) {
-                LogError("Malformed GHM root code '%1'", code_str);
-                value = 0;
+            sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
+                   &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
+            if (end_offset != 5 || str[5]) {
+                if (errors) {
+                    LogError("Malformed GHM root code '%1'", str);
+                }
+                code.value = 0;
             }
         }
+
+        return code;
     }
 
     bool IsValid() const { return value; }
@@ -40,6 +57,9 @@ union GhmRootCode {
         return arg;
     }
 };
+static inline uint64_t DefaultHash(GhmRootCode code) { return DefaultHash(code.value); }
+static inline bool DefaultCompare(GhmRootCode code1, GhmRootCode code2)
+    { return code1 == code2; }
 
 union GhmCode {
     uint32_t value;
@@ -47,25 +67,31 @@ union GhmCode {
         int8_t cmd;
         char type;
         int8_t seq;
-        char severity;
+        char mode;
     } parts;
-    GhmRootCode root;
 
     GhmCode() = default;
-    explicit GhmCode(const char *code_str)
+
+    static GhmCode FromString(const char *str, bool errors = true)
     {
-        value = 0;
-        if (code_str[0]) {
+        GhmCode code;
+
+        code.value = 0;
+        if (str[0]) {
             int end_offset;
-            sscanf(code_str, "%02" SCNu8 "%c%02" SCNu8 "%n",
-                   &parts.cmd, &parts.type, &parts.seq, &end_offset);
-            if (end_offset == 5 && (!code_str[5] || !code_str[6])) {
-                parts.severity = code_str[5];
+            sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
+                   &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
+            if (end_offset == 5 && (!str[5] || !str[6])) {
+                code.parts.mode = str[5];
             } else {
-                LogError("Malformed GHM code '%1'", code_str);
-                value = 0;
+                if (errors) {
+                    LogError("Malformed GHM code '%1'", str);
+                }
+                code.value = 0;
             }
         }
+
+        return code;
     }
 
     bool IsValid() const { return value; }
@@ -78,8 +104,17 @@ union GhmCode {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
         snprintf(arg.value.str_buf, sizeof(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16 "%c",
-                 parts.cmd, parts.type, parts.seq, parts.severity);
+                 parts.cmd, parts.type, parts.seq, parts.mode);
         return arg;
+    }
+
+    GhmRootCode Root() const
+    {
+        GhmRootCode root_code = {};
+        root_code.parts.cmd = parts.cmd;
+        root_code.parts.type = parts.type;
+        root_code.parts.seq = parts.seq;
+        return root_code;
     }
 };
 
@@ -88,37 +123,55 @@ union DiagnosisCode {
     char str[7];
 
     DiagnosisCode() = default;
-    explicit DiagnosisCode(const char *code_str)
+
+    static DiagnosisCode FromString(const char *str, bool errors = true)
     {
-        value = 0;
-        if (code_str[0]) {
-            for (size_t i = 0; i < sizeof(str) - 1 && code_str[i] && code_str[i] != ' '; i++) {
-                str[i] = code_str[i];
+        DiagnosisCode code;
+
+        code.value = 0;
+        if (str[0]) {
+            for (size_t i = 0; i < sizeof(code.str) - 1 && str[i] && str[i] != ' '; i++) {
+                code.str[i] = UpperAscii(str[i]);
             }
 
-            bool valid = (isalpha(str[0]) && isdigit(str[1]) && isdigit(str[2]));
+            bool valid = (IsAsciiAlpha(code.str[0]) && IsAsciiDigit(code.str[1]) &&
+                          IsAsciiDigit(code.str[2]));
             if (valid) {
                 size_t end = 3;
-                while (str[end]) {
-                    valid &= (isdigit(str[end]) || (end < 5 && str[end] == '+'));
+                while (code.str[end]) {
+                    valid &= (IsAsciiDigit(code.str[end]) || (end < 5 && code.str[end] == '+'));
                     end++;
                 }
-                while (end > 3 && str[--end] == '+') {
-                    str[end] = '\0';
+                while (end > 3 && code.str[--end] == '+') {
+                    code.str[end] = '\0';
                 }
             }
 
             if (!valid) {
-                LogError("Malformed diagnosis code '%1'", code_str);
-                value = 0;
+                if (errors) {
+                    LogError("Malformed diagnosis code '%1'", str);
+                }
+                code.value = 0;
             }
         }
+
+        return code;
     }
 
     bool IsValid() const { return value; }
 
     bool operator==(DiagnosisCode other) const { return value == other.value; }
     bool operator!=(DiagnosisCode other) const { return value != other.value; }
+
+    bool Matches(const char *other_str) const
+    {
+        size_t i = 0;
+        while (str[i] && other_str[i] && str[i] == other_str[i]) {
+            i++;
+        }
+        return !other_str[i];
+    }
+    bool Matches(DiagnosisCode other) const { return Matches(other.str); }
 
     operator FmtArg() const { return FmtArg(str); }
 };
@@ -131,20 +184,30 @@ union ProcedureCode {
     char str[8];
 
     ProcedureCode() = default;
-    explicit ProcedureCode(const char *code_str)
-    {
-        value = 0;
-        if (code_str[0]) {
-            strncpy(str, code_str, sizeof(str));
-            str[sizeof(str) - 1] = '\0';
 
-            bool valid = isalpha(str[0]) && isalpha(str[1]) && isalpha(str[2]) && isalpha(str[3]) &&
-                         isdigit(str[4]) && isdigit(str[5]) && isdigit(str[6]) && !str[7];
+    static ProcedureCode FromString(const char *str, bool errors = true)
+    {
+        ProcedureCode code;
+
+        code.value = 0;
+        if (str[0]) {
+            for (size_t i = 0; i < sizeof(code.str) - 1 && str[i] && str[i] != ' '; i++) {
+                code.str[i] = UpperAscii(str[i]);
+            }
+
+            bool valid = (IsAsciiAlpha(code.str[0]) && IsAsciiAlpha(code.str[1]) &&
+                          IsAsciiAlpha(code.str[2]) && IsAsciiAlpha(code.str[3]) &&
+                          IsAsciiDigit(code.str[4]) && IsAsciiDigit(code.str[5]) &&
+                          IsAsciiDigit(code.str[6]) && !code.str[7]);
             if (!valid) {
-                LogError("Malformed procedure code '%1'", code_str);
-                value = 0;
+                if (errors) {
+                    LogError("Malformed procedure code '%1'", str);
+                }
+                code.value = 0;
             }
         }
+
+        return code;
     }
 
     bool IsValid() const { return value; }
@@ -247,23 +310,30 @@ struct DiagnosisInfo {
     DiagnosisCode code;
 
     uint16_t flags;
-    union {
-        uint8_t bytes[48];
-        struct {
-            int8_t cmd;
-            int8_t jump;
-        } info;
-    } mask[2];
+    struct Attributes {
+        uint8_t raw[37];
+
+        int8_t cmd;
+        int8_t jump;
+        int8_t severity;
+    } attributes[2];
     uint16_t warnings;
 
     uint16_t exclusion_set_idx;
-    uint16_t exclusion_set_bit;
+    uint8_t cma_exclusion_offset;
+    uint8_t cma_exclusion_mask;
+
+    const Attributes &Attributes(Sex sex) const
+    {
+        StaticAssert((int)Sex::Male == 1);
+        return attributes[(int)sex - 1];
+    }
 
     HASH_SET_HANDLER(DiagnosisInfo, code);
 };
 
 struct ExclusionInfo {
-    uint8_t mask[256];
+    uint8_t raw[256];
 };
 
 struct ProcedureInfo {
@@ -283,12 +353,13 @@ struct ValueRangeCell {
         int max;
     } limits[N];
     int value;
-};
 
-//struct BirthSeverityTable {
-//    DynamicArray<ValueRangeCell<2>> gnn_table;
-//    DynamicArray<ValueRangeCell<2>> cma_tables[3];
-//};
+    bool Test(size_t idx, int value) const
+    {
+        DebugAssert(idx < N);
+        return (value >= limits[idx].min && value < limits[idx].max);
+    }
+};
 
 struct GhmRootInfo {
     GhmRootCode code;
@@ -307,6 +378,8 @@ struct GhmRootInfo {
 
     uint8_t cma_exclusion_offset;
     uint8_t cma_exclusion_mask;
+
+    HASH_SET_HANDLER(GhmRootInfo, code);
 };
 
 struct GhsDecisionNode {
@@ -403,10 +476,12 @@ struct ClassifierIndex {
 
     HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
+    HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
+    const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
 };
 
 class ClassifierSet {
@@ -431,6 +506,7 @@ public:
     struct {
         HeapArray<HashSet<DiagnosisCode, const DiagnosisInfo *>> diagnoses;
         HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
+        HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
     } maps;
 
     const ClassifierIndex *FindIndex(Date date) const;

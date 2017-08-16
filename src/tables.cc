@@ -278,7 +278,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
             ghm_node.u.ghm.code.parts.cmd = raw_node.params[1];
             ghm_node.u.ghm.code.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
             ghm_node.u.ghm.code.parts.seq = (raw_node.children_idx / 10) % 100;
-            ghm_node.u.ghm.code.parts.severity = chars4[raw_node.children_idx % 10];
+            ghm_node.u.ghm.code.parts.mode = chars4[raw_node.children_idx % 10];
             ghm_node.u.ghm.error = raw_node.params[0];
         }
 
@@ -309,7 +309,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
     FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosisPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::mask[0].bytes));
+                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::attributes[0].raw));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
                   table.sections[3].value_len > sizeof(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(!table.sections[4].value_len);
@@ -350,11 +350,26 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             {
                 const uint8_t *sex_data = file_data + table.sections[2].raw_offset +
                                           raw_diag_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(diag.mask[0].bytes, sex_data, table.sections[2].value_len / 2);
-                memcpy(diag.mask[1].bytes, sex_data + table.sections[2].value_len / 2,
+                memcpy(diag.attributes[0].raw, sex_data, table.sections[2].value_len / 2);
+                memcpy(diag.attributes[1].raw, sex_data + table.sections[2].value_len / 2,
                        table.sections[2].value_len / 2);
-                if (memcmp(diag.mask[0].bytes, diag.mask[1].bytes, sizeof(diag.mask[0].bytes))) {
+                if (memcmp(diag.attributes[0].raw, diag.attributes[1].raw, sizeof(diag.attributes[0].raw))) {
                     diag.flags |= (int)DiagnosisInfo::Flag::SexDifference;
+                }
+
+                for (int i = 0; i < 2; i++) {
+                    diag.attributes[i].cmd = diag.attributes[i].raw[0];
+                    diag.attributes[i].jump = diag.attributes[i].raw[1];
+
+                    if (diag.attributes[i].raw[21] & 0x40) {
+                        diag.attributes[i].severity = 3;
+                    } else if (diag.attributes[i].raw[21] & 0x80) {
+                        diag.attributes[i].severity = 2;
+                    } else if (diag.attributes[i].raw[20] & 0x1) {
+                        diag.attributes[i].severity = 1;
+                    } else {
+                        diag.attributes[i].severity = 0;
+                    }
                 }
 
                 const uint8_t *warn_data = file_data + table.sections[3].raw_offset +
@@ -366,7 +381,8 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                 }
 
                 diag.exclusion_set_idx = raw_diag_ptr.section4_idx;
-                diag.exclusion_set_bit = raw_diag_ptr.section4_bit;
+                diag.cma_exclusion_offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
+                diag.cma_exclusion_mask = 0x80 >> (raw_diag_ptr.section4_bit & 0x7);
             }
 
             out_diags->Append(diag);
@@ -387,15 +403,15 @@ bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
 
     FAIL_PARSE_IF(table.sections.len != 5);
     FAIL_PARSE_IF(!table.sections[4].value_len);
-    FAIL_PARSE_IF(table.sections[4].value_len > sizeof(ExclusionInfo::mask));
+    FAIL_PARSE_IF(table.sections[4].value_len > sizeof(ExclusionInfo::raw));
 
     for (size_t i = 0; i < table.sections[4].values_count; i++) {
         ExclusionInfo *excl = out_exclusions->Append();
-        memcpy(excl->mask, file_data + table.sections[4].raw_offset +
+        memcpy(excl->raw, file_data + table.sections[4].raw_offset +
                            i * table.sections[4].value_len, table.sections[4].value_len);
-        if (table.sections[4].value_len > sizeof(excl->mask)) {
-            memset(excl->mask + table.sections[4].value_len,
-                   0, sizeof(excl->mask) - table.sections[4].value_len);
+        if (table.sections[4].value_len > sizeof(excl->raw)) {
+            memset(excl->raw + table.sections[4].value_len,
+                   0, sizeof(excl->raw) - table.sections[4].value_len);
         }
     }
 
@@ -559,32 +575,32 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 
         if (raw_ghm_root.young_severity_mode == 1) {
             ghm_root.young_age_treshold = 2;
-            ghm_root.young_severity_limit = 2;
+            ghm_root.young_severity_limit = 1;
         }
         switch (raw_ghm_root.old_severity_mode) {
             case 1: {
                 ghm_root.old_age_treshold = 70;
-                ghm_root.old_severity_limit = 2;
+                ghm_root.old_severity_limit = 1;
             } break;
             case 2: {
                 ghm_root.old_age_treshold = 80;
-                ghm_root.old_severity_limit = 2;
+                ghm_root.old_severity_limit = 1;
             } break;
             case 3: {
                 ghm_root.old_age_treshold = 70;
-                ghm_root.old_severity_limit = 3;
+                ghm_root.old_severity_limit = 2;
             } break;
             case 4: {
                 ghm_root.old_age_treshold = 80;
-                ghm_root.old_severity_limit = 3;
+                ghm_root.old_severity_limit = 2;
             } break;
             case 5: {
                 ghm_root.old_age_treshold = 70;
-                ghm_root.old_severity_limit = 4;
+                ghm_root.old_severity_limit = 3;
             } break;
             case 6: {
                 ghm_root.old_age_treshold = 80;
-                ghm_root.old_severity_limit = 4;
+                ghm_root.old_severity_limit = 3;
             } break;
         }
 
@@ -714,7 +730,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
                 ghm_node.u.ghm.code.parts.cmd = raw_ghs_node.cmd;
                 ghm_node.u.ghm.code.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
                 ghm_node.u.ghm.code.parts.seq = raw_ghs_node.type_seq / 100 % 100;
-                ghm_node.u.ghm.code.parts.severity = chars4[raw_ghs_node.type_seq % 100 % 13];
+                ghm_node.u.ghm.code.parts.mode = chars4[raw_ghs_node.type_seq % 100 % 13];
             }
             out_nodes->Append(ghm_node);
         }
@@ -1045,6 +1061,7 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
     {
         HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
         HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
+        HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
         for (ClassifierIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
@@ -1077,6 +1094,7 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
 
             BUILD_MAP(diagnoses, TableType::DiagnosisTable);
             BUILD_MAP(procedures, TableType::ProcedureTable);
+            BUILD_MAP(ghm_roots, TableType::GhmRootTable);
 
 #undef BUILD_MAP
 #undef FIX_ARRAYREF
@@ -1134,4 +1152,12 @@ const ProcedureInfo *ClassifierIndex::FindProcedure(ProcedureCode code, int8_t p
     } while (++proc < procedures.ptr + procedures.len);
 
     return nullptr;
+}
+
+const GhmRootInfo *ClassifierIndex::FindGhmRoot(GhmRootCode code) const
+{
+    if (!ghm_roots_map)
+        return nullptr;
+
+    return ghm_roots_map->FindValue(code, nullptr);
 }

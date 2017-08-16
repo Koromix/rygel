@@ -23,15 +23,6 @@ struct UnitInfo {
     int32_t facility_id;
 };
 
-enum class Sex: uint8_t {
-    Male = 1,
-    Female
-};
-static const char *const SexNames[] = {
-    "Male",
-    "Female"
-};
-
 struct Procedure {
     ProcedureCode code;
     int8_t phase;

@@ -247,6 +247,11 @@ Date &Date::operator--()
     return *this;
 }
 
+uint64_t GetMonotonicTime()
+{
+    return GetTickCount64();
+}
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------
@@ -670,6 +675,7 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
     if (log_handlers.len) {
         log_handlers[log_handlers.len - 1](fp);
     }
+    Print(fp, "%1 -- ", GetMonotonicTime());
     FmtPrint(fp, fmt, args);
     if (end_marker) {
         fputs(end_marker, fp);

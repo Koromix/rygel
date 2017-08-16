@@ -8,17 +8,16 @@ static const char *const MainUsageText =
 R"(Usage: moya <command> [<args>]
 
 Commands:
-    classify                 Run classifier on patient data
-    dump                     Dump available classifier data tables
-    list                     Print diagnosis and procedure lists
-    pricing                  Print GHS pricing tables
-    show                     A
-    tables                   B
+    classify                     Run classifier on patient data
+    dump                         Dump available classifier data tables
+    list                         Print diagnosis and procedure lists
+    pricing                      Print GHS pricing tables
+    show                         A
+    tables                       B
 
 Global options:
-    -t, --table <filename>   Load table file
-    -T, --table-dir <dir>    Load table directory
-    -d, --table-date <date>  Table date)";
+    -t, --table-file <filename>  Load table file
+    -T, --table-dir <dir>        Load table directory)";
 
 struct ListSpecifier {
     enum class Table {
@@ -110,7 +109,6 @@ error:
 
 static HeapArray<const char *> main_table_filenames;
 static ClassifierSet main_classifier_set = {};
-static Date main_index_date = {};
 
 static const ClassifierSet *GetMainClassifierSet()
 {
@@ -142,12 +140,6 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
 
         main_table_filenames.Append(opt_parser.current_value);
         return true;
-    } else if (TestOption(opt_parser.current_option, "-d", "--table-date")) {
-        if (!opt_parser.RequireOptionValue(MainUsageText))
-            return false;
-
-        main_index_date = Date::FromString(opt_parser.current_value);
-        return !!main_index_date.value;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
         PrintLn(stderr, "%1", usage_str);
@@ -204,6 +196,7 @@ R"(Usage: moya classify [options] stay_file ...)";
     LogDebug("Classify");
     Classify(*classifier_set, stay_set, nullptr);
 
+    LogDebug("Done");
     return true;
 }
 
@@ -213,7 +206,7 @@ static bool RunDump(ArrayRef<const char *> arguments)
 R"(Usage: moya dump [options] [filename] ...
 
 Specific options:
-    -h, --headers            Print only table headers)";
+    -h, --headers                Print only table headers)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -259,6 +252,7 @@ R"(Usage: moya list [options] list_name ...)";
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
+    Date index_date = {};
     HeapArray<const char *> spec_strings;
     {
         const char *opt;
@@ -266,6 +260,12 @@ R"(Usage: moya list [options] list_name ...)";
             if (TestOption(opt, "--help")) {
                 PrintLn(stdout, UsageText);
                 return true;
+            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+                if (!opt_parser.RequireOptionValue(MainUsageText))
+                    return false;
+                index_date = Date::FromString(opt_parser.current_value);
+                if (!index_date.value)
+                    return false;
             } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
@@ -285,9 +285,9 @@ R"(Usage: moya list [options] list_name ...)";
         classifier_set = GetMainClassifierSet();
         if (!classifier_set)
             return false;
-        classifier_index = classifier_set->FindIndex(main_index_date);
+        classifier_index = classifier_set->FindIndex(index_date);
         if (!classifier_index) {
-            LogError("No classifier index available at '%1'", main_index_date);
+            LogError("No classifier index available at '%1'", index_date);
             return false;
         }
     }
@@ -302,14 +302,14 @@ R"(Usage: moya list [options] list_name ...)";
             case ListSpecifier::Table::Diagnoses: {
                 for (const DiagnosisInfo &diag: classifier_index->diagnoses) {
                     if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
-                        if (spec.Match(diag.mask[0].bytes)) {
+                        if (spec.Match(diag.Attributes(Sex::Male).raw)) {
                             PrintLn("  %1 (male)", diag.code);
                         }
-                        if (spec.Match(diag.mask[1].bytes)) {
+                        if (spec.Match(diag.Attributes(Sex::Female).raw)) {
                             PrintLn("  %1 (female)", diag.code);
                         }
                     } else {
-                        if (spec.Match(diag.mask[0].bytes)) {
+                        if (spec.Match(diag.Attributes(Sex::Male).raw)) {
                             PrintLn("  %1", diag.code);
                         }
                     }
@@ -344,6 +344,7 @@ R"(Usage: moya show [options] name ...)";
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
+    Date index_date = {};
     HeapArray<const char *> names;
     {
         const char *opt;
@@ -351,6 +352,12 @@ R"(Usage: moya show [options] name ...)";
             if (TestOption(opt, "--help")) {
                 PrintLn(stdout, UsageText);
                 return true;
+            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+                if (!opt_parser.RequireOptionValue(MainUsageText))
+                    return false;
+                index_date = Date::FromString(opt_parser.current_value);
+                if (!index_date.value)
+                    return false;
             } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
@@ -370,24 +377,39 @@ R"(Usage: moya show [options] name ...)";
         classifier_set = GetMainClassifierSet();
         if (!classifier_set)
             return false;
-        classifier_index = classifier_set->FindIndex(main_index_date);
+        classifier_index = classifier_set->FindIndex(index_date);
         if (!classifier_index) {
-            LogError("No classifier index available at '%1'", main_index_date);
+            LogError("No classifier index available at '%1'", index_date);
             return false;
         }
     }
 
     for (const char *name: names) {
-        const DiagnosisInfo *diag = classifier_index->FindDiagnosis(DiagnosisCode(name));
-        if (diag) {
-            DumpDiagnosisTable(*diag, classifier_index->exclusions);
-            continue;
+        {
+            DiagnosisCode diag_code = DiagnosisCode::FromString(name, false);
+            const DiagnosisInfo *diag_info = classifier_index->FindDiagnosis(diag_code);
+            if (diag_info) {
+                DumpDiagnosisTable(*diag_info, classifier_index->exclusions);
+                continue;
+            }
         }
 
-        ArrayRef<const ProcedureInfo> proc = classifier_index->FindProcedure(ProcedureCode(name));
-        if (proc.len) {
-            DumpProcedureTable(proc);
-            continue;
+        {
+            ProcedureCode proc_code = ProcedureCode::FromString(name, false);
+            ArrayRef<const ProcedureInfo> proc_info = classifier_index->FindProcedure(proc_code);
+            if (proc_info.len) {
+                DumpProcedureTable(proc_info);
+                continue;
+            }
+        }
+
+        {
+            GhmRootCode ghm_root_code = GhmRootCode::FromString(name, false);
+            const GhmRootInfo *ghm_root_info = classifier_index->FindGhmRoot(ghm_root_code);
+            if (ghm_root_info) {
+                DumpGhmRootTable(*ghm_root_info);
+                continue;
+            }
         }
 
         PrintLn(stderr, "Unknown element '%1'", name);
@@ -402,7 +424,7 @@ static bool RunTables(ArrayRef<const char *> arguments)
 R"(Usage: moya tables [options]
 
 Options:
-    -v, --verbose            Show more detailed information)";
+    -v, --verbose                Show more detailed information)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);

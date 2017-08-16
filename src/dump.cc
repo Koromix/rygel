@@ -6,28 +6,34 @@ static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                              size_t node_idx, int depth)
 {
     for (;;) {
-        const GhmDecisionNode &node = nodes[node_idx];
+        const GhmDecisionNode &ghm_node = nodes[node_idx];
 
-        switch (node.type) {
+        switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
                 PrintLn("      %1%2. %3(%4, %5) => %6 [%7]", FmtArg("  ").Repeat(depth), node_idx,
-                        node.u.test.function, node.u.test.params[0], node.u.test.params[1],
-                        node.u.test.children_idx, node.u.test.children_count);
+                        ghm_node.u.test.function, ghm_node.u.test.params[0],
+                        ghm_node.u.test.params[1], ghm_node.u.test.children_idx,
+                        ghm_node.u.test.children_count);
 
-                if (node.u.test.function != 20) {
-                    for (size_t i = 1; i < node.u.test.children_count; i++) {
-                        DumpDecisionNode(nodes, node.u.test.children_idx + i, depth + 1);
+                if (ghm_node.u.test.function != 20) {
+                    for (size_t i = 1; i < ghm_node.u.test.children_count; i++) {
+                        DumpDecisionNode(nodes, ghm_node.u.test.children_idx + i, depth + 1);
                     }
 
-                    node_idx = node.u.test.children_idx;
+                    node_idx = ghm_node.u.test.children_idx;
                 } else {
                     return;
                 }
             } break;
 
             case GhmDecisionNode::Type::Ghm: {
-                PrintLn("      %1%2. %3 (err = %4)", FmtArg("  ").Repeat(depth), node_idx,
-                        node.u.ghm.code, node.u.ghm.error);
+                if (ghm_node.u.ghm.error) {
+                    PrintLn("      %1%2. %3 (err = %4)", FmtArg("  ").Repeat(depth), node_idx,
+                            ghm_node.u.ghm.code, ghm_node.u.ghm.error);
+                } else {
+                    PrintLn("      %1%2. %3", FmtArg("  ").Repeat(depth), node_idx,
+                            ghm_node.u.ghm.code);
+                }
                 return;
             } break;
         }
@@ -45,9 +51,9 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
                         ArrayRef<const ExclusionInfo> exclusions)
 {
     for (const DiagnosisInfo &diag: diagnoses) {
-        const auto DumpMask = [&](size_t mask_idx) {
-            for (size_t i = 0; i < CountOf(diag.mask[mask_idx].bytes); i++) {
-                Print(" %1", FmtBin(diag.mask[mask_idx].bytes[i]));
+        const auto DumpMask = [&](Sex sex) {
+            for (size_t i = 0; i < CountOf(diag.Attributes(sex).raw); i++) {
+                Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
             }
             PrintLn();
         };
@@ -55,18 +61,21 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
         PrintLn("      %1:", diag.code);
         if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
             PrintLn("        Male:");
-            PrintLn("          Category: %1", diag.mask[0].info.cmd);
+            PrintLn("          Category: %1", diag.Attributes(Sex::Male).cmd);
+            PrintLn("          Severity: %1", diag.Attributes(Sex::Male).severity + 1);
             Print("          Mask:");
-            DumpMask(0);
+            DumpMask(Sex::Male);
 
             PrintLn("        Female:");
-            PrintLn("          Category: %1", diag.mask[1].info.cmd);
+            PrintLn("          Category: %1", diag.Attributes(Sex::Female).cmd);
+            PrintLn("          Severity: %1", diag.Attributes(Sex::Female).severity + 1);
             Print("          Mask:");
-            DumpMask(1);
+            DumpMask(Sex::Female);
         } else {
-            PrintLn("        Category: %1", diag.mask[0].info.cmd);
+            PrintLn("        Category: %1", diag.Attributes(Sex::Male).cmd);
+            PrintLn("        Severity: %1", diag.Attributes(Sex::Male).severity + 1);
             Print("        Mask:");
-            DumpMask(0);
+            DumpMask(Sex::Male);
         }
         PrintLn("        Warnings: %1", FmtBin(diag.warnings));
 
@@ -76,8 +85,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
                 if (diag.exclusion_set_idx <= exclusions.len) {
                     const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
                     for (const DiagnosisInfo &excl_diag: diagnoses) {
-                        if (excl->mask[excl_diag.exclusion_set_bit >> 3] &
-                                (0x80 >> (excl_diag.exclusion_set_bit & 0x7))) {
+                        if (excl->raw[excl_diag.cma_exclusion_offset] & excl_diag.cma_exclusion_mask) {
                             Print(" %1", excl_diag.code);
                         }
                     }
@@ -117,16 +125,17 @@ void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots)
             PrintLn("        Can be ambulatory (J)");
         }
         if (ghm_root.short_duration_treshold) {
-            PrintLn("        Can be short duration (T) if < %1 days", ghm_root.short_duration_treshold);
+            PrintLn("        Can be short duration (T) if < %1 days",
+                    ghm_root.short_duration_treshold);
         }
 
         if (ghm_root.young_age_treshold) {
             PrintLn("        Increase severity if age < %1 years and severity < %2",
-                    ghm_root.young_age_treshold, ghm_root.young_severity_limit);
+                    ghm_root.young_age_treshold, ghm_root.young_severity_limit + 1);
         }
         if (ghm_root.old_age_treshold) {
             PrintLn("        Increase severity if age >= %1 years and severity < %2",
-                    ghm_root.old_age_treshold, ghm_root.old_severity_limit);
+                    ghm_root.old_age_treshold, ghm_root.old_severity_limit + 1);
         }
 
         if (ghm_root.childbirth_severity_list) {
