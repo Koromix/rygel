@@ -31,6 +31,9 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         StayLinkedDiagnosis,
         StayAssociatedDiagnoses,
         StayProcedures,
+#ifdef TESTING
+        StayTestGhm,
+#endif
 
         // Associated diagnosis objects
         AssociatedDiagnosisArray,
@@ -164,6 +167,9 @@ public:
                 HANDLE_KEY("session_count", State::StaySessionCount);
                 HANDLE_KEY("sex", State::StaySex);
                 HANDLE_KEY("unit", State::StayUnit);
+#ifdef TESTING
+                HANDLE_KEY("test_ghm", State::StayTestGhm);
+#endif
 
                 LogError("Unknown stay attribute '%1'", key);
                 SetErrorFlag();
@@ -317,6 +323,9 @@ public:
             } break;
             case State::StayLastMenstrualPeriod:
                 { SetDate(&stay.last_menstrual_period, str); } break;
+#ifdef TESTING
+            case State::StayTestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
+#endif
 
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {

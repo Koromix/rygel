@@ -64,6 +64,12 @@ struct Stay {
     ArrayRef<Procedure> procedures;
 
     uint32_t error_mask;
+
+#ifdef TESTING
+    struct {
+        GhmCode ghm;
+    } test;
+#endif
 };
 
 struct StaySet {

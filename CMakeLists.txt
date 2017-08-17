@@ -18,6 +18,8 @@ if(MINGW)
 endif()
 add_definitions(-D_FILE_OFFSET_BITS=64)
 
+add_definitions(-DTESTING)
+
 set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lcode.c
                 lib/lua/src/lctype.c

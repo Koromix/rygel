@@ -74,6 +74,7 @@ def parse_rums(filename):
                 if int(line[133:135]):
                     rum['das'] = [line[(first_das + i * 8):(first_das + (i + 1) * 8)].strip()
                                   for i in range(0, int(line[133:135]))]
+                rum['test_ghm'] = line[2:8]
 
                 if int(line[137:140]):
                     rum['procedures'] = [{

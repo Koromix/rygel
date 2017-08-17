@@ -152,6 +152,9 @@ static bool RunClassify(ArrayRef<const char *> arguments)
     static const char *const UsageText =
 R"(Usage: moya classify [options] stay_file ...)";
 
+	// FIXME: Temporary hack for MSVC profiling
+	freopen("grp", "w", stdout);
+
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
