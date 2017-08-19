@@ -31,9 +31,8 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         StayLinkedDiagnosis,
         StayAssociatedDiagnoses,
         StayProcedures,
-#ifdef TESTING
         StayTestGhm,
-#endif
+        StayTestRssLen,
 
         // Associated diagnosis objects
         AssociatedDiagnosisArray,
@@ -159,17 +158,16 @@ public:
                 HANDLE_KEY("dr", State::StayLinkedDiagnosis);
                 HANDLE_KEY("das", State::StayAssociatedDiagnoses);
                 HANDLE_KEY("gestational_age", State::StayGestationalAge);
-                HANDLE_KEY("iep", State::StayIdentifier);
                 HANDLE_KEY("igs2", State::StayIgs2);
                 HANDLE_KEY("last_menstrual_period", State::StayLastMenstrualPeriod);
                 HANDLE_KEY("newborn_weight", State::StayNewbornWeight);
                 HANDLE_KEY("procedures", State::StayProcedures);
                 HANDLE_KEY("session_count", State::StaySessionCount);
                 HANDLE_KEY("sex", State::StaySex);
+                HANDLE_KEY("stay_id", State::StayIdentifier);
                 HANDLE_KEY("unit", State::StayUnit);
-#ifdef TESTING
                 HANDLE_KEY("test_ghm", State::StayTestGhm);
-#endif
+                HANDLE_KEY("test_rss_len", State::StayTestRssLen);
 
                 LogError("Unknown stay attribute '%1'", key);
                 SetErrorFlag();
@@ -251,10 +249,22 @@ public:
             case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
             case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
+#ifdef TESTING
+            case State::StayTestRssLen: { SetInt(&stay.test.rss_len, i); } break;
+#else
+            case State::StayTestRssLen: {} break;
+#endif
 
             // Procedure attributes
             case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
-            case State::ProcedureActivity: { SetInt(&proc.activity, i); } break;
+            case State::ProcedureActivity: {
+                if (i >= 0 && i < 8) {
+                    proc.activities = 1 << i;
+                } else {
+                    LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
+                    SetErrorFlag();
+                }
+            } break;
             case State::ProcedureCount: { SetInt(&proc.count, i); } break;
 
             default: {
@@ -325,6 +335,8 @@ public:
                 { SetDate(&stay.last_menstrual_period, str); } break;
 #ifdef TESTING
             case State::StayTestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
+#else
+            case State::StayTestGhm: {} break;
 #endif
 
             // Diagnoses (part of Stay, separated for clarity)

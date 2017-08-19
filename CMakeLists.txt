@@ -3,7 +3,7 @@ project(Moya C CXX)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -fno-rtti -fno-exceptions \
-                                        -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast -Wformat=2")
+                                        -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-Og -gdwarf-2")

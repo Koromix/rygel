@@ -4,6 +4,7 @@ from datetime import datetime, date
 import csv
 import json
 import traceback
+import operator
 
 # -------------------------------------------------------------------------
 # Constants
@@ -42,7 +43,8 @@ def parse_rums(filename):
                 first_procedure = first_dad + int(line[135:137]) * 8
 
                 rum = {}
-                rum['iep'] = int(line[47:67])
+                rum['stay_id'] = int(line[47:67])
+                rum['bill_id'] = int(line[27:47])
                 rum['sex'] = int(line[85])
                 rum['birthdate'] = date_value(line[77:85])
                 rum['entry_date'] = date_value(line[92:100])
@@ -151,7 +153,23 @@ UNITS_USAGE = \
 """
 
 def process_stays(rum_filename):
-    write_json(list(parse_rums(rum_filename)), sys.stdout)
+    rums = list(parse_rums(rum_filename))
+    rums.sort(key = operator.itemgetter('bill_id'))
+
+    def update_rss_count(first, last):
+        for rum in rums[first:last]:
+            rum['test_rss_len'] = last - first
+            rum.pop('bill_id')
+
+    first_rss_rum = 0
+    for i, rum in enumerate(rums):
+        if rums[first_rss_rum]['bill_id'] != rum['bill_id']:
+            update_rss_count(first_rss_rum, i)
+            first_rss_rum = i
+    update_rss_count(first_rss_rum, len(rums))
+
+    write_json(rums, sys.stdout)
+
 def process_units(structure_filename, ficum_filename):
     write_json({
         'units': parse_structure(structure_filename),

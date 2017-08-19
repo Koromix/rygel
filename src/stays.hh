@@ -26,7 +26,7 @@ struct UnitInfo {
 struct Procedure {
     ProcedureCode code;
     int8_t phase;
-    int8_t activity;
+    int8_t activities;
     int16_t count;
     Date date;
 };
@@ -68,6 +68,7 @@ struct Stay {
 #ifdef TESTING
     struct {
         GhmCode ghm;
+        uint16_t rss_len;
     } test;
 #endif
 };

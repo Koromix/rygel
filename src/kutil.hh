@@ -371,6 +371,12 @@ struct ArrayRef {
     template <size_t N>
     constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
 
+    void Reset()
+    {
+        ptr = nullptr;
+        len = 0;
+    }
+
     T *begin() const { return ptr; }
     T *end() const { return ptr + len; }
 
@@ -416,6 +422,12 @@ struct ArrayRef<const char> {
     template <size_t N>
     explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}
 
+    void Reset()
+    {
+        ptr = nullptr;
+        len = 0;
+    }
+
     const char *begin() const { return ptr; }
     const char *end() const { return ptr + len; }
 
@@ -453,6 +465,12 @@ struct ArrayRef<char> {
     explicit constexpr ArrayRef(char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
     template <size_t N>
     explicit constexpr ArrayRef(char (&arr)[N]) : ptr(arr), len(N) {}
+
+    void Reset()
+    {
+        ptr = nullptr;
+        len = 0;
+    }
 
     char *begin() const { return ptr; }
     char *end() const { return ptr + len; }

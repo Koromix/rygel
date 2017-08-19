@@ -854,8 +854,8 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
         pair.diag_code = ConvertDiagnosisCode(raw_pair.diag_code123, raw_pair.diag_code456);
         {
             uint16_t code123_remain = raw_pair.proc_code123;
-            for (int i = 0; i < 3; i++) {
-                pair.proc_code.str[2 - i] = (code123_remain % 26) + 65;
+            for (int j = 0; j < 3; j++) {
+                pair.proc_code.str[2 - j] = (code123_remain % 26) + 65;
                 code123_remain /= 26;
             }
             snprintf(pair.proc_code.str + 3, sizeof(pair.proc_code.str) - 3, "%c%03u",
