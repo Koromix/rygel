@@ -3,26 +3,6 @@
 #include "stays.hh"
 #include "tables.hh"
 
-struct ClassifierContext {
-    const ClassifierIndex *index;
-
-    int age;
-    ArrayRef<const Stay> stays;
-    Stay stay;
-    int duration;
-
-    // Deduplicated diagnoses and procedures
-    HeapArray<DiagnosisCode> diagnoses;
-    HeapArray<Procedure> procedures;
-
-    // Keep a copy for DP - DR reversal during GHM tree traversal (function 34)
-    DiagnosisCode main_diagnosis;
-    DiagnosisCode linked_diagnosis;
-
-    // Lazily computed values
-    int gnn;
-};
-
 static int ComputeAge(Date date, Date birthdate)
 {
     int age = date.st.year - birthdate.st.year;
@@ -31,34 +11,32 @@ static int ComputeAge(Date date, Date birthdate)
     return age;
 }
 
-static uint16_t GetDiagnosisByte(ClassifierContext &ctx, DiagnosisCode diag_code,
-                                 uint8_t byte_idx)
+uint8_t Classifier::GetDiagnosisByte(DiagnosisCode diag_code, uint8_t byte_idx)
 {
     // FIXME: Warning / classifier errors
-    if (byte_idx >= sizeof(DiagnosisInfo::attributes[0].raw))
+    if (UNLIKELY(byte_idx >= sizeof(DiagnosisInfo::attributes[0].raw)))
         return 0;
 
-    const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag_code);
+    const DiagnosisInfo *diag_info = index->FindDiagnosis(diag_code);
     if (!diag_info)
         return 0;
 
-    return diag_info->Attributes(ctx.stay.sex).raw[byte_idx];
+    return diag_info->Attributes(agg.stay.sex).raw[byte_idx];
 }
 
-static uint8_t GetProcedureByte(ClassifierContext &ctx, const Procedure &proc,
-                                uint8_t byte_idx)
+uint8_t Classifier::GetProcedureByte(const Procedure &proc, uint8_t byte_idx)
 {
-    if (byte_idx >= sizeof(ProcedureInfo::bytes))
+    if (UNLIKELY(byte_idx >= sizeof(ProcedureInfo::bytes)))
         return 0;
 
-    const ProcedureInfo *proc_info = ctx.index->FindProcedure(proc.code, proc.phase, proc.date);
+    const ProcedureInfo *proc_info = index->FindProcedure(proc.code, proc.phase, proc.date);
     if (!proc_info)
         return 0;
 
     return proc_info->bytes[byte_idx];
 }
 
-static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> stays)
+const Stay *Classifier::FindMainStay()
 {
     int max_duration = -1;
     const Stay *zx_stay = nullptr;
@@ -77,8 +55,8 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
 
         proc_priority = 0;
         for (const Procedure &proc: stay.procedures) {
-            const ProcedureInfo *proc_info = ctx.index->FindProcedure(proc.code, proc.phase,
-                                                                      proc.date);
+            const ProcedureInfo *proc_info = index->FindProcedure(proc.code, proc.phase,
+                                                                  proc.date);
             if (!proc_info)
                 continue;
 
@@ -87,9 +65,9 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
 
             if (proc_priority < 3 && proc_info->bytes[38] & 0x2) {
                 proc_priority = 3;
-            } else if (proc_priority < 2 && ctx.duration <= 1 && proc_info->bytes[39] & 0x80) {
+            } else if (proc_priority < 2 && agg.duration <= 1 && proc_info->bytes[39] & 0x80) {
                 proc_priority = 2;
-            } else if (proc_priority < 1 && ctx.duration == 0 && proc_info->bytes[39] & 0x40) {
+            } else if (proc_priority < 1 && agg.duration == 0 && proc_info->bytes[39] & 0x40) {
                 proc_priority = 1;
             }
         }
@@ -113,7 +91,7 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
         }
 
         if (!ignore_trauma) {
-            if (GetDiagnosisByte(ctx, stay.main_diagnosis, 21) & 0x4) {
+            if (GetDiagnosisByte(stay.main_diagnosis, 21) & 0x4) {
                 last_trauma_stay = &stay;
                 if (stay_duration > max_duration) {
                     trauma_stay = &stay;
@@ -123,7 +101,7 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
             }
         }
 
-        if (GetDiagnosisByte(ctx, stay.main_diagnosis, 21) & 0x20) {
+        if (GetDiagnosisByte(stay.main_diagnosis, 21) & 0x20) {
             stay_score += 150;
         } else if (stay_duration >= 2) {
             base_score += 100;
@@ -133,7 +111,7 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
         } else if (stay_duration == 1) {
             stay_score++;
         }
-        if (GetDiagnosisByte(ctx, stay.main_diagnosis, 21) & 0x2) {
+        if (GetDiagnosisByte(stay.main_diagnosis, 21) & 0x2) {
             stay_score += 201;
         }
 
@@ -154,19 +132,19 @@ static const Stay *FindMainStay(ClassifierContext &ctx, ArrayRef<const Stay> sta
     return score_stay;
 }
 
-static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
+int Classifier::ExecuteGhmTest(const GhmDecisionNode &ghm_node)
 {
     DebugAssert(ghm_node.type == GhmDecisionNode::Type::Test);
 
     switch (ghm_node.u.test.function) {
         case 0:
         case 1: {
-            return GetDiagnosisByte(ctx, ctx.main_diagnosis, ghm_node.u.test.params[0]);
+            return GetDiagnosisByte(main_diagnosis, ghm_node.u.test.params[0]);
         } break;
 
         case 2: {
-            for (const Procedure &proc: ctx.stay.procedures) {
-                uint8_t proc_byte = GetProcedureByte(ctx, proc, ghm_node.u.test.params[0]);
+            for (const Procedure &proc: procedures) {
+                uint8_t proc_byte = GetProcedureByte(proc, ghm_node.u.test.params[0]);
                 if (proc_byte & ghm_node.u.test.params[1])
                     return 1;
             }
@@ -175,27 +153,26 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
 
         case 3: {
             if (ghm_node.u.test.params[1] == 1) {
-                int age_days = ctx.stay.dates[0] - ctx.stay.birthdate;
+                int age_days = agg.stay.dates[0] - agg.stay.birthdate;
                 return (age_days > ghm_node.u.test.params[0]);
             } else {
-                return (ctx.age > ghm_node.u.test.params[0]);
+                return (agg.age > ghm_node.u.test.params[0]);
             }
         } break;
 
         case 5: {
-            uint8_t diag_byte = GetDiagnosisByte(ctx, ctx.main_diagnosis,
-                                                 ghm_node.u.test.params[0]);
+            uint8_t diag_byte = GetDiagnosisByte(main_diagnosis, ghm_node.u.test.params[0]);
             return ((diag_byte & ghm_node.u.test.params[1]) != 0);
         } break;
 
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
-            for (DiagnosisCode diag: ctx.stay.diagnoses) {
-                if (diag == ctx.main_diagnosis || diag == ctx.linked_diagnosis)
+            for (DiagnosisCode diag: diagnoses) {
+                if (diag == main_diagnosis || diag == linked_diagnosis)
                     continue;
 
-                uint8_t diag_byte = GetDiagnosisByte(ctx, diag, ghm_node.u.test.params[0]);
+                uint8_t diag_byte = GetDiagnosisByte(diag, ghm_node.u.test.params[0]);
                 if (diag_byte & ghm_node.u.test.params[1])
                     return 1;
             }
@@ -204,8 +181,8 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 7: {
-            for (const DiagnosisCode &diag: ctx.stay.diagnoses) {
-                uint8_t diag_byte = GetDiagnosisByte(ctx, diag, ghm_node.u.test.params[0]);
+            for (const DiagnosisCode &diag: diagnoses) {
+                uint8_t diag_byte = GetDiagnosisByte(diag, ghm_node.u.test.params[0]);
                 if (diag_byte & ghm_node.u.test.params[1])
                     return 1;
             }
@@ -214,9 +191,9 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
 
         case 9: {
             int result = 0;
-            for (const Procedure &proc: ctx.stay.procedures) {
-                if (GetProcedureByte(ctx, proc, 0) & 0x80) {
-                    uint8_t proc_byte = GetProcedureByte(ctx, proc, ghm_node.u.test.params[0]);
+            for (const Procedure &proc: procedures) {
+                if (GetProcedureByte(proc, 0) & 0x80) {
+                    uint8_t proc_byte = GetProcedureByte(proc, ghm_node.u.test.params[0]);
                     if (proc_byte & ghm_node.u.test.params[1]) {
                         result = 1;
                     } else {
@@ -229,8 +206,8 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
 
         case 10: {
             size_t matches = 0;
-            for (const Procedure &proc: ctx.procedures) {
-                uint8_t proc_byte = GetProcedureByte(ctx, proc, ghm_node.u.test.params[0]);
+            for (const Procedure &proc: procedures) {
+                uint8_t proc_byte = GetProcedureByte(proc, ghm_node.u.test.params[0]);
                 if (proc_byte & ghm_node.u.test.params[1]) {
                     matches++;
                     if (matches >= 2)
@@ -241,22 +218,21 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 13: {
-            uint8_t diag_byte = GetDiagnosisByte(ctx, ctx.main_diagnosis,
-                                                 ghm_node.u.test.params[0]);
+            uint8_t diag_byte = GetDiagnosisByte(main_diagnosis, ghm_node.u.test.params[0]);
             return (diag_byte == ghm_node.u.test.params[1]);
         } break;
 
         case 14: {
-            return ((int)ctx.stay.sex - 1 == ghm_node.u.test.params[0] - 49);
+            return ((int)agg.stay.sex - 1 == ghm_node.u.test.params[0] - 49);
         } break;
 
         case 18: {
             size_t matches = 0, special_matches = 0;
-            for (DiagnosisCode diag: ctx.stay.diagnoses) {
-                uint8_t diag_byte = GetDiagnosisByte(ctx, diag, ghm_node.u.test.params[0]);
+            for (DiagnosisCode diag: diagnoses) {
+                uint8_t diag_byte = GetDiagnosisByte(diag, ghm_node.u.test.params[0]);
                 if (diag_byte & ghm_node.u.test.params[1]) {
                     matches++;
-                    if (diag == ctx.main_diagnosis || diag == ctx.linked_diagnosis) {
+                    if (diag == main_diagnosis || diag == linked_diagnosis) {
                         special_matches++;
                     }
                     if (matches >= 2 && matches > special_matches)
@@ -269,16 +245,16 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         case 19: {
             switch (ghm_node.u.test.params[1]) {
                 case 0: {
-                    return (ctx.stay.exit.mode == ghm_node.u.test.params[0]);
+                    return (agg.stay.exit.mode == ghm_node.u.test.params[0]);
                 } break;
                 case 1: {
-                    return (ctx.stay.exit.destination == ghm_node.u.test.params[0]);
+                    return (agg.stay.exit.destination == ghm_node.u.test.params[0]);
                 } break;
                 case 2: {
-                    return (ctx.stay.entry.mode == ghm_node.u.test.params[0]);
+                    return (agg.stay.entry.mode == ghm_node.u.test.params[0]);
                 } break;
                 case 3: {
-                    return (ctx.stay.entry.origin == ghm_node.u.test.params[0]);
+                    return (agg.stay.entry.origin == ghm_node.u.test.params[0]);
                 } break;
             }
         } break;
@@ -289,33 +265,33 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
 
         case 22: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.duration < param);
+            return (agg.duration < param);
         } break;
 
         case 26: {
-            uint8_t diag_byte = GetDiagnosisByte(ctx, ctx.stay.linked_diagnosis,
+            uint8_t diag_byte = GetDiagnosisByte(agg.stay.linked_diagnosis,
                                                  ghm_node.u.test.params[0]);
             return ((diag_byte & ghm_node.u.test.params[1]) != 0);
         } break;
 
         case 28: {
-            PrintLn("%1 -- Erreur %2", ctx.stay.stay_id, ghm_node.u.test.params[0]);
+            PrintLn("%1 -- Erreur %2", agg.stay.stay_id, ghm_node.u.test.params[0]);
             // TODO: Add error
             return 0;
         } break;
 
         case 29: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.duration == param);
+            return (agg.duration == param);
         } break;
 
         case 30: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.stay.session_count == param);
+            return (agg.stay.session_count == param);
         } break;
 
         case 33: {
-            for (const Procedure &proc: ctx.stay.procedures) {
+            for (const Procedure &proc: procedures) {
                 if (proc.activities & (1 << ghm_node.u.test.params[0]))
                     return 1;
             }
@@ -324,14 +300,13 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 34: {
-            if (ctx.stay.linked_diagnosis.IsValid() &&
-                    ctx.main_diagnosis == ctx.stay.main_diagnosis) {
-                const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(ctx.linked_diagnosis);
+            if (linked_diagnosis.IsValid() && main_diagnosis == agg.stay.main_diagnosis) {
+                const DiagnosisInfo *diag_info = index->FindDiagnosis(linked_diagnosis);
                 if (diag_info) {
-                    uint8_t cmd = diag_info->Attributes(ctx.stay.sex).cmd;
-                    uint8_t jump = diag_info->Attributes(ctx.stay.sex).jump;
+                    uint8_t cmd = diag_info->Attributes(agg.stay.sex).cmd;
+                    uint8_t jump = diag_info->Attributes(agg.stay.sex).jump;
                     if (cmd || jump != 3) {
-                        std::swap(ctx.main_diagnosis, ctx.linked_diagnosis);
+                        std::swap(main_diagnosis, linked_diagnosis);
                     }
                 }
             }
@@ -340,15 +315,15 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 35: {
-            return (ctx.main_diagnosis != ctx.stay.main_diagnosis);
+            return (main_diagnosis != agg.stay.main_diagnosis);
         } break;
 
         case 36: {
-            for (DiagnosisCode diag: ctx.stay.diagnoses) {
-                if (diag == ctx.linked_diagnosis)
+            for (DiagnosisCode diag: agg.stay.diagnoses) {
+                if (diag == linked_diagnosis)
                     continue;
 
-                uint8_t diag_byte = GetDiagnosisByte(ctx, diag, ghm_node.u.test.params[0]);
+                uint8_t diag_byte = GetDiagnosisByte(diag, ghm_node.u.test.params[0]);
                 if (diag_byte & ghm_node.u.test.params[1])
                     return 1;
             }
@@ -357,20 +332,20 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 38: {
-            return (ctx.gnn >= ghm_node.u.test.params[0] &&
-                    ctx.gnn <= ghm_node.u.test.params[1]);
+            return (lazy.gnn >= ghm_node.u.test.params[0] &&
+                    lazy.gnn <= ghm_node.u.test.params[1]);
         } break;
 
         case 39: {
-            if (!ctx.gnn) {
-                int gestational_age = ctx.stay.gestational_age;
+            if (!lazy.gnn) {
+                int gestational_age = agg.stay.gestational_age;
                 if (!gestational_age) {
                     gestational_age = 99;
                 }
 
-                for (const ValueRangeCell<2> &cell: ctx.index->gnn_cells) {
-                    if (cell.Test(0, ctx.stay.newborn_weight) && cell.Test(1, gestational_age)) {
-                        ctx.gnn = cell.value;
+                for (const ValueRangeCell<2> &cell: index->gnn_cells) {
+                    if (cell.Test(0, agg.stay.newborn_weight) && cell.Test(1, gestational_age)) {
+                        lazy.gnn = cell.value;
                         break;
                     }
                 }
@@ -380,13 +355,13 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
         } break;
 
         case 41: {
-            for (DiagnosisCode diag: ctx.stay.diagnoses) {
-                const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag);
+            for (DiagnosisCode diag: diagnoses) {
+                const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (!diag_info)
                     continue;
 
-                uint8_t cmd = diag_info->Attributes(ctx.stay.sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.stay.sex).jump;
+                uint8_t cmd = diag_info->Attributes(agg.stay.sex).cmd;
+                uint8_t jump = diag_info->Attributes(agg.stay.sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
                     return 1;
             }
@@ -396,20 +371,20 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
 
         case 42: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.stay.newborn_weight && ctx.stay.newborn_weight < param);
+            return (agg.stay.newborn_weight && agg.stay.newborn_weight < param);
         } break;
 
         case 43: {
-            for (DiagnosisCode diag: ctx.stay.diagnoses) {
-                if (diag == ctx.linked_diagnosis)
+            for (DiagnosisCode diag: diagnoses) {
+                if (diag == linked_diagnosis)
                     continue;
 
-                const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag);
+                const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (!diag_info)
                     continue;
 
-                uint8_t cmd = diag_info->Attributes(ctx.stay.sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.stay.sex).jump;
+                uint8_t cmd = diag_info->Attributes(agg.stay.sex).cmd;
+                uint8_t jump = diag_info->Attributes(agg.stay.sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
                     return 1;
             }
@@ -422,244 +397,304 @@ static int RunGhmTest(ClassifierContext &ctx, const GhmDecisionNode &ghm_node)
     return -1;
 }
 
-static int LimitSeverity(ClassifierContext &ctx, int severity)
+static int LimitSeverity(int duration, int severity)
 {
-    if (severity == 3 && ctx.duration < 5) {
+    if (severity == 3 && duration < 5) {
         severity = 2;
     }
-    if (severity == 2 && ctx.duration < 4) {
+    if (severity == 2 && duration < 4) {
         severity = 1;
     }
-    if (severity == 1 && ctx.duration < 3) {
+    if (severity == 1 && duration < 3) {
         severity = 0;
     }
 
     return severity;
 }
 
-static bool TestExclusion(ClassifierContext &ctx, const DiagnosisInfo &cma_diag_info,
-                          const DiagnosisInfo &main_diag_info)
+bool Classifier::TestExclusion(const DiagnosisInfo &cma_diag_info,
+                               const DiagnosisInfo &main_diag_info)
 {
     // TODO: Check boundaries, and take care of DumpDiagnosis too
-    const ExclusionInfo *excl = &ctx.index->exclusions[cma_diag_info.exclusion_set_idx];
+    const ExclusionInfo *excl = &index->exclusions[cma_diag_info.exclusion_set_idx];
+    if (UNLIKELY(!excl))
+        return false;
     return (excl->raw[main_diag_info.cma_exclusion_offset] & main_diag_info.cma_exclusion_mask);
 }
 
-void RunGhmTree(ClassifierContext &ctx)
+GhmCode Classifier::Run(HeapArray<ClassifyError> *out_errors)
 {
-    GhmCode ghm_code = {};
-    int error = 0;
+    GhmCode ghm = RunGhmTree(out_errors);
+    ghm = RunGhmSeverity(ghm);
 
-    ctx.main_diagnosis = ctx.stay.main_diagnosis;
-    ctx.linked_diagnosis = ctx.stay.linked_diagnosis;
+    Print("%1 (%2) -- %3", agg.stay.stay_id, stays.len, ghm);
+    /*if (error) {
+        Print(" (err = %1)", error);
+    }*/
+#ifdef TESTING
+    if (agg.stay.test.ghm != ghm) {
+        Print(" GHM_ERROR (%1)", agg.stay.test.ghm);
+    }
+    if (agg.stay.test.rss_len != stays.len) {
+        Print(" AGG_ERROR (%1, expected %2)", stays.len, agg.stay.test.rss_len);
+    }
+#endif
+    PrintLn();
 
-    // Run the GHM tree
+    return {};
+}
+
+GhmCode Classifier::RunGhmTree(HeapArray<ClassifyError> *out_errors)
+{
+    GhmCode ghm = {};
+    int error;
+
+    main_diagnosis = agg.stay.main_diagnosis;
+    linked_diagnosis = agg.stay.linked_diagnosis;
+
     size_t ghm_node_idx = 0;
-    for (size_t i = 0; !ghm_code.IsValid(); i++) {
-        if (i >= ctx.index->ghm_nodes.len) {
-            LogError("Infinite GHM tree iteration");
-            return;
+    for (size_t i = 0; !ghm.IsValid(); i++) {
+        if (i >= index->ghm_nodes.len) {
+            LogError("Empty GHM tree or infinite loop");
+            return {}; // FIXME: Real error
         }
 
-        const GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[ghm_node_idx];
+        const GhmDecisionNode &ghm_node = index->ghm_nodes[ghm_node_idx];
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
-                int function_ret = RunGhmTest(ctx, ghm_node);
+                int function_ret = ExecuteGhmTest(ghm_node);
                 if (function_ret < 0 || (size_t)function_ret >= ghm_node.u.test.children_count) {
-                    PrintLn("%1 -- Failed (function %2)", ctx.stay.stay_id,
+                    PrintLn("%1 -- Failed (function %2)", agg.stay.stay_id,
                             ghm_node.u.test.function);
-                    return;
+                    return {};
                 }
 
                 ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
             } break;
 
             case GhmDecisionNode::Type::Ghm: {
-                ghm_code = ghm_node.u.ghm.code;
+                ghm = ghm_node.u.ghm.code;
                 error = ghm_node.u.ghm.error;
             } break;
         }
     }
 
-    const GhmRootInfo *ghm_root = ctx.index->FindGhmRoot(ghm_code.Root());
-    if (!ghm_root) {
-        LogError("Unknown GHM root '%1'", ghm_code.Root());
-        return;
+    return ghm;
+}
+
+GhmCode Classifier::RunGhmSeverity(GhmCode ghm)
+{
+    const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm.Root());
+    if (!ghm_root_info) {
+        LogError("Unknown GHM root '%1'", ghm.Root());
+        return {};
     }
 
     // Ambulatory and / or short duration GHM
-    if (ghm_root->allow_ambulatory && ctx.duration == 0) {
-        ghm_code.parts.mode = 'J';
-    } else if (ghm_root->short_duration_treshold &&
-               ctx.duration < ghm_root->short_duration_treshold) {
-        ghm_code.parts.mode = 'T';
+    if (ghm_root_info->allow_ambulatory && agg.duration == 0) {
+        ghm.parts.mode = 'J';
+    } else if (ghm_root_info->short_duration_treshold &&
+               agg.duration < ghm_root_info->short_duration_treshold) {
+        ghm.parts.mode = 'T';
     }
 
-    // Apply mode / severity algorithm
-    if (ghm_code.parts.mode >= 'A' && ghm_code.parts.mode <= 'D') {
-        int severity = ghm_code.parts.mode - 'A';
+    if (ghm.parts.mode >= 'A' && ghm.parts.mode <= 'D') {
+        int severity = ghm.parts.mode - 'A';
 
-        if (ghm_root->childbirth_severity_list) {
+        if (ghm_root_info->childbirth_severity_list) {
             // TODO: Check boundaries
-            for (const ValueRangeCell<2> &cell: ctx.index->cma_cells[ghm_root->childbirth_severity_list - 1]) {
-                if (cell.Test(0, ctx.stay.gestational_age) && cell.Test(1, severity)) {
+            for (const ValueRangeCell<2> &cell: index->cma_cells[ghm_root_info->childbirth_severity_list - 1]) {
+                if (cell.Test(0, agg.stay.gestational_age) && cell.Test(1, severity)) {
                     severity = cell.value;
                     break;
                 }
             }
         }
 
-        ghm_code.parts.mode = 'A' + LimitSeverity(ctx, severity);
-    } else if (!ghm_code.parts.mode) {
+        ghm.parts.mode = 'A' + LimitSeverity(agg.duration, severity);
+    } else if (!ghm.parts.mode) {
         int severity = 0;
 
-        const DiagnosisInfo *main_diag_info = ctx.index->FindDiagnosis(ctx.main_diagnosis);
-        const DiagnosisInfo *linked_diag_info = ctx.index->FindDiagnosis(ctx.linked_diagnosis);
-        for (const DiagnosisCode &diag: ctx.stay.diagnoses) {
-            if (diag == ctx.main_diagnosis || diag == ctx.linked_diagnosis)
+        const DiagnosisInfo *main_diag_info = index->FindDiagnosis(main_diagnosis);
+        const DiagnosisInfo *linked_diag_info = index->FindDiagnosis(linked_diagnosis);
+        for (const DiagnosisCode &diag: diagnoses) {
+            if (diag == main_diagnosis || diag == linked_diagnosis)
                 continue;
 
-            const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag);
+            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
             if (!diag_info)
                 continue;
 
             // TODO: Check boundaries (ghm_root CMA exclusion offset, etc.)
-            int new_severity = diag_info->Attributes(ctx.stay.sex).severity;
+            int new_severity = diag_info->Attributes(agg.stay.sex).severity;
             if (new_severity > severity &&
-                    !(ctx.age < 14 && diag_info->Attributes(ctx.stay.sex).raw[19] & 0x10) &&
-                    !(ctx.age >= 2 && diag_info->Attributes(ctx.stay.sex).raw[19] & 0x8) &&
-                    !(ctx.age >= 2 && diag.str[0] == 'P') &&
-                    !(diag_info->Attributes(ctx.stay.sex).raw[ghm_root->cma_exclusion_offset] &
-                      ghm_root->cma_exclusion_mask) &&
-                    !TestExclusion(ctx, *diag_info, *main_diag_info) &&
-                    (!linked_diag_info || !TestExclusion(ctx, *diag_info, *linked_diag_info))) {
+                    !(agg.age < 14 && diag_info->Attributes(agg.stay.sex).raw[19] & 0x10) &&
+                    !(agg.age >= 2 && diag_info->Attributes(agg.stay.sex).raw[19] & 0x8) &&
+                    !(agg.age >= 2 && diag.str[0] == 'P') &&
+                    !(diag_info->Attributes(agg.stay.sex).raw[ghm_root_info->cma_exclusion_offset] &
+                      ghm_root_info->cma_exclusion_mask) &&
+                    !TestExclusion(*diag_info, *main_diag_info) &&
+                    (!linked_diag_info || !TestExclusion(*diag_info, *linked_diag_info))) {
                 severity = new_severity;
             }
         }
 
-        if (ctx.age >= ghm_root->old_age_treshold && severity < ghm_root->old_severity_limit) {
+        if (agg.age >= ghm_root_info->old_age_treshold && severity < ghm_root_info->old_severity_limit) {
             severity++;
-        } else if (ctx.age < ghm_root->young_age_treshold && severity < ghm_root->young_severity_limit) {
+        } else if (agg.age < ghm_root_info->young_age_treshold && severity < ghm_root_info->young_severity_limit) {
             severity++;
-        } else if (ctx.stay.exit.mode == 9 && !severity) {
+        } else if (agg.stay.exit.mode == 9 && !severity) {
             severity = 1;
         }
 
-        ghm_code.parts.mode = '1' + LimitSeverity(ctx, severity);
+        ghm.parts.mode = '1' + LimitSeverity(agg.duration, severity);
     }
 
-    Print("%1 (%2) -- %3", ctx.stay.stay_id, ctx.stays.len, ghm_code);
-    if (error) {
-        Print(" (err = %1)", error);
+    return ghm;
+}
+
+static bool AreStaysCompatible(const Stay stay1, const Stay &stay2)
+{
+    return stay2.stay_id == stay1.stay_id &&
+           !stay2.session_count &&
+           (stay2.entry.mode == 6 || stay2.entry.mode == 0);
+}
+
+ArrayRef<const Stay> Aggregate(ArrayRef<const Stay> stays, AggregateMode agg_mode,
+                               ArrayRef<const Stay> *out_remainder)
+{
+    if (!stays.len)
+        return {};
+
+    size_t agg_len = 1;
+    switch (agg_mode) {
+        case AggregateMode::StayModes: {
+            if (!stays[0].session_count) {
+                while (agg_len < stays.len &&
+                       AreStaysCompatible(stays[agg_len - 1], stays[agg_len])) {
+                    agg_len++;
+                }
+            }
+        } break;
+
+        case AggregateMode::BillId: {
+            while (agg_len < stays.len &&
+                   stays[agg_len - 1].bill_id == stays[agg_len].bill_id) {
+                agg_len++;
+            }
+        } break;
+
+        case AggregateMode::Disable: {
+            agg_len = 1;
+        } break;
     }
-#ifdef TESTING
-    if (ctx.stay.test.ghm != ghm_code) {
-        Print(" GHM_ERROR (%1)", ctx.stay.test.ghm);
+
+    if (out_remainder) {
+        *out_remainder = stays.Take(agg_len, stays.len - agg_len);
     }
-    if (ctx.stay.test.rss_len != ctx.stays.len) {
-        Print(" MULTI_ERROR (%1, expected %2)", ctx.stays.len, ctx.stay.test.rss_len);
+    return stays.Take(0, agg_len);
+}
+
+bool Classifier::Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays)
+{
+    Assert(stays.len > 0);
+
+    this->stays = stays;
+
+    index = classifier_set.FindIndex(stays[stays.len - 1].dates[1]);
+    if (!index) {
+        PrintLn("Damn it: %1 (%2)", stays[stays.len - 1].dates[1], stays[stays.len - 1].stay_id);
+        return false;
     }
-#endif
-    PrintLn();
+
+    agg.stay = stays[0];
+    agg.age = ComputeAge(agg.stay.dates[0], agg.stay.birthdate);
+    agg.duration = 0;
+    for (const Stay &stay: stays) {
+        if (stay.gestational_age > 0) {
+            // TODO: Must be first (newborn) or on RUM with a$41.2 only
+            agg.stay.gestational_age = stay.gestational_age;
+        }
+        if (stay.igs2 > agg.stay.igs2) {
+            agg.stay.igs2 = stay.igs2;
+        }
+        agg.duration += stay.dates[1] - stay.dates[0];
+    }
+    agg.stay.dates[1] = stays[stays.len - 1].dates[1];
+    agg.stay.exit = stays[stays.len - 1].exit;
+
+    // Deduplicate diagnoses
+    {
+        diagnoses.Clear(256);
+        for (const Stay &stay: stays) {
+            diagnoses.Append(stay.diagnoses);
+        }
+
+        std::sort(diagnoses.begin(), diagnoses.end(),
+                  [](DiagnosisCode code1, DiagnosisCode code2) {
+            return code1.value < code2.value;
+        });
+
+        diagnoses.RemoveFrom(std::unique(diagnoses.begin(), diagnoses.end()) - diagnoses.ptr);
+    }
+    agg.stay.diagnoses = diagnoses;
+
+    // Deduplicate procedures
+    {
+        procedures.Clear(512);
+        for (const Stay &stay: stays) {
+            procedures.Append(stay.procedures);
+        }
+
+        std::sort(procedures.begin(), procedures.end(),
+                  [](const Procedure &proc1, const Procedure &proc2) {
+            if (proc1.code.value < proc2.code.value) {
+                return true;
+            } else {
+                return proc1.phase < proc2.phase;
+            }
+        });
+
+        // TODO: Warn when we deduplicate procedures with different attributes,
+        // such as when the two procedures fall into different date ranges / limits.
+        size_t k = 0;
+        for (size_t j = 1; j < procedures.len; j++) {
+            if (procedures[j].code == procedures[k].code &&
+                    procedures[j].phase == procedures[k].phase) {
+                procedures[k].activities |= procedures[j].activities;
+                procedures[k].count += procedures[j].count;
+                if (UNLIKELY(procedures[k].count > 9999)) {
+                    procedures[k].count = 9999;
+                }
+            } else {
+                procedures[++k] = procedures[j];
+            }
+        }
+        procedures.RemoveFrom(k + 1);
+    }
+    agg.stay.procedures = procedures;
+
+    if (stays.len > 1) {
+        const Stay *main_stay = FindMainStay();
+
+        agg.stay.main_diagnosis = main_stay->main_diagnosis;
+        agg.stay.linked_diagnosis = main_stay->linked_diagnosis;
+    }
+
+    lazy = {};
+
+    return true;
 }
 
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
-bool Classify(const ClassifierSet &classifier_set, const StaySet &stay_set,
-              ResultSet *out_result_set)
+bool ClassifyAggregates(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+                        AggregateMode agg_mode, ClassifyResultSet *out_result_set)
 {
-    for (size_t i = 0; i < stay_set.stays.len;) {
-        ClassifierContext ctx = {};
-
-        ctx.stays = stay_set.stays.Take(i, 1);
-        if (!ctx.stays[0].session_count) {
-            while (i + ctx.stays.len < stay_set.stays.len &&
-                   !stay_set.stays[i + ctx.stays.len].session_count &&
-                   stay_set.stays[i + ctx.stays.len].stay_id == ctx.stays[0].stay_id &&
-                   (ctx.stays[ctx.stays.len - 1].exit.mode == 6 || ctx.stays[ctx.stays.len - 1].exit.mode == 0)) {
-                ctx.stays.len++;
-            }
-        }
-
-        ctx.index = classifier_set.FindIndex(ctx.stays[ctx.stays.len - 1].dates[1]);
-        if (!ctx.index) {
-            PrintLn("Damn it: %1", ctx.stays[ctx.stays.len - 1].dates[1]);
+    Classifier classifier;
+    while (stays.len) {
+        if (!classifier.Init(classifier_set, Aggregate(stays, agg_mode, &stays)))
             continue;
-        }
-
-        ctx.stay = ctx.stays[0];
-
-        ctx.age = ComputeAge(ctx.stay.dates[0], ctx.stay.birthdate);
-        for (const Stay &stay: ctx.stays) {
-            if (stay.gestational_age > 0) {
-                // TODO: Must be first (newborn) or on RUM with a$41.2 only
-                ctx.stay.gestational_age = stay.gestational_age;
-            }
-            if (stay.igs2 > ctx.stay.igs2) {
-                ctx.stay.igs2 = stay.igs2;
-            }
-            ctx.duration += stay.dates[1] - stay.dates[0];
-        }
-        ctx.stay.dates[1] = ctx.stays[ctx.stays.len - 1].dates[1];
-        ctx.stay.exit = ctx.stays[ctx.stays.len - 1].exit;
-
-        {
-            for (const Stay &stay: ctx.stays) {
-                ctx.diagnoses.Append(stay.diagnoses);
-            }
-
-            std::sort(ctx.diagnoses.begin(), ctx.diagnoses.end(),
-                      [](DiagnosisCode code1, DiagnosisCode code2) {
-                return code1.value < code2.value;
-            });
-
-            ctx.diagnoses.RemoveFrom(
-                std::unique(ctx.diagnoses.begin(), ctx.diagnoses.end()) - ctx.diagnoses.ptr);
-        }
-        ctx.stay.diagnoses = ctx.diagnoses;
-
-        {
-            for (const Stay &stay: ctx.stays) {
-                ctx.procedures.Append(stay.procedures);
-            }
-
-            std::sort(ctx.procedures.begin(), ctx.procedures.end(),
-                      [](const Procedure &proc1, const Procedure &proc2) {
-                if (proc1.code.value < proc2.code.value) {
-                    return true;
-                } else {
-                    return proc1.phase < proc2.phase;
-                }
-            });
-
-            // TODO: Warn when we deduplicate procedures with different attributes,
-            // such as when the two procedures fall into different date ranges / limits.
-            size_t k = 0;
-            for (size_t j = 1; j < ctx.procedures.len; j++) {
-                if (ctx.procedures[j].code == ctx.procedures[k].code &&
-                        ctx.procedures[j].phase == ctx.procedures[k].phase) {
-                    ctx.procedures[k].activities |= ctx.procedures[j].activities;
-                    ctx.procedures[k].count += ctx.procedures[j].count;
-                    if (UNLIKELY(ctx.procedures[k].count > 9999)) {
-                        ctx.procedures[k].count = 9999;
-                    }
-                } else {
-                    ctx.procedures[++k] = ctx.procedures[j];
-                }
-            }
-            ctx.procedures.RemoveFrom(k + 1);
-        }
-        ctx.stay.procedures = ctx.procedures;
-
-        if (ctx.stays.len > 1) {
-            const Stay *main_stay = FindMainStay(ctx, ctx.stays);
-
-            ctx.stay.main_diagnosis = main_stay->main_diagnosis;
-            ctx.stay.linked_diagnosis = main_stay->linked_diagnosis;
-        }
-
-        RunGhmTree(ctx);
-
-        i += ctx.stays.len;
+        classifier.Run(nullptr);
     }
 
     return true;

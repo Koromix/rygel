@@ -7,6 +7,13 @@
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
+#else
+    #include <dirent.h>
+    #include <fcntl.h>
+    #include <fnmatch.h>
+    #include <sys/stat.h>
+    #include <sys/types.h>
+    #include <unistd.h>
 #endif
 
 #include "kutil.hh"
@@ -23,6 +30,13 @@ static Allocator default_allocator;
 
 #define PTR_TO_BUCKET(Ptr) \
     ((AllocatorBucket *)((uint8_t *)(Ptr) - OffsetOf(AllocatorBucket, data)))
+
+Allocator::~Allocator()
+{
+    if (LIKELY(this != &default_allocator)) {
+        ReleaseAll();
+    }
+}
 
 void Allocator::ReleaseAll(Allocator *alloc)
 {
@@ -72,7 +86,7 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
     list.prev = &bucket->head;
     bucket->head.next = &list;
 
-    if (flags & ZeroMemory) {
+    if (flags & (int)Flag::Zero) {
         memset(bucket->data, 0, size);
     }
 
@@ -82,11 +96,12 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
 void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned int flags)
 {
     if (!*ptr) {
-        *ptr = Allocate(new_size, flags | Resizable);
+        *ptr = Allocate(new_size, flags | (int)Flag::Resizable);
         return;
     }
     if (!new_size) {
         Release(*ptr, old_size);
+        *ptr = nullptr;
         return;
     }
 
@@ -101,7 +116,7 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
     new_bucket->head.next->prev = &new_bucket->head;
     *ptr = new_bucket->data;
 
-    if (flags & ZeroMemory && new_size > old_size) {
+    if (flags & (int)Flag::Zero && new_size > old_size) {
         memset(new_bucket->data + old_size, 0, new_size - old_size);
     }
 }
@@ -247,10 +262,27 @@ Date &Date::operator--()
     return *this;
 }
 
+#ifdef _WIN32
+
 uint64_t GetMonotonicTime()
 {
     return GetTickCount64();
 }
+
+#else
+
+uint64_t GetMonotonicTime()
+{
+    struct timespec ts;
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
+        LogError("clock_gettime() failed: %1", strerror(errno));
+        return 0;
+    }
+
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 10000000;
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // Strings
@@ -569,7 +601,8 @@ size_t FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> arg
 
 char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
 {
-    char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY, Allocator::Resizable);
+    char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
+                                            (int)Allocator::Flag::Resizable);
     size_t buf_len = 0;
     // Cheat a little bit to make room for the NUL byte
     size_t buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
@@ -610,15 +643,21 @@ void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
     fwrite(buf.data, 1, buf.len, fp);
 }
 
+// ------------------------------------------------------------------------
+// Debug and errors
+// ------------------------------------------------------------------------
+
+static LocalArray<std::function<void(FILE *)>, 16> log_handlers;
+
 static bool ConfigTerminalOutput()
 {
     static bool init, output_is_terminal;
 
     if (!init) {
+#ifdef _WIN32
         static HANDLE stdout_handle;
         static DWORD orig_console_mode;
 
-#ifdef _WIN32
         stdout_handle = (HANDLE)_get_osfhandle(_fileno(stdout));
         output_is_terminal = GetConsoleMode(stdout_handle, &orig_console_mode);
         if (output_is_terminal && !(orig_console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
@@ -633,17 +672,12 @@ static bool ConfigTerminalOutput()
         int stdout_fd = fileno(stdout);
         output_is_terminal = isatty(stdout_fd);
 #endif
+
         init = true;
     }
 
     return output_is_terminal;
 }
-
-// ------------------------------------------------------------------------
-// Debug and errors
-// ------------------------------------------------------------------------
-
-static LocalArray<std::function<void(FILE *)>, 16> log_handlers;
 
 void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
 {
@@ -698,29 +732,6 @@ void PopLogHandler()
 // System
 // ------------------------------------------------------------------------
 
-static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
-{
-    if (error_code == UINT32_MAX) {
-        error_code = GetLastError();
-    }
-
-    static thread_local char str_buf[256];
-    DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                                  nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                  str_buf, sizeof(str_buf), nullptr);
-    if (fmt_ret) {
-        char *str_end = str_buf + strlen(str_buf);
-        // FormatMessage adds newlines, remove them
-        while (str_end > str_buf && (str_end[-1] == '\n' || str_end[-1] == '\r'))
-            str_end--;
-        *str_end = 0;
-    } else {
-        strcpy(str_buf, "(unknown)");
-    }
-
-    return str_buf;
-}
-
 bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
               ArrayRef<uint8_t> *out_data)
 {
@@ -752,6 +763,31 @@ bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
     return true;
 }
 
+#ifdef _WIN32
+
+static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
+{
+    if (error_code == UINT32_MAX) {
+        error_code = GetLastError();
+    }
+
+    static thread_local char str_buf[256];
+    DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                  nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                  str_buf, sizeof(str_buf), nullptr);
+    if (fmt_ret) {
+        char *str_end = str_buf + strlen(str_buf);
+        // FormatMessage adds newlines, remove them
+        while (str_end > str_buf && (str_end[-1] == '\n' || str_end[-1] == '\r'))
+            str_end--;
+        *str_end = 0;
+    } else {
+        strcpy(str_buf, "(unknown)");
+    }
+
+    return str_buf;
+}
+
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                               std::function<bool(const char *, const FileInfo &)> func)
 {
@@ -773,10 +809,11 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                  Win32ErrorString());
         return EnumStatus::Error;
     }
-    DEFER_N(handle_guard) { FindClose(handle); };
+    DEFER { FindClose(handle); };
 
     do {
         FileInfo file_info;
+
         if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             file_info.type = FileType::Directory;
         } else {
@@ -795,6 +832,67 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 
     return EnumStatus::Done;
 }
+
+#else
+
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+                              std::function<bool(const char *, const FileInfo &)> func)
+{
+    DIR *dirp = opendir(dirname);
+    if (!dirp) {
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+        return EnumStatus::Error;
+    }
+    DEFER { closedir(dirp); };
+
+    dirent *dent;
+    while ((dent = readdir(dirp))) {
+        if ((dent->d_name[0] == '.' && !dent->d_name[1]) ||
+                (dent->d_name[0] == '.' && dent->d_name[1] == '.' && !dent->d_name[2]))
+            continue;
+
+        if (!fnmatch(filter, dent->d_name, FNM_PERIOD)) {
+            FileInfo file_info;
+
+#ifdef _DIRENT_HAVE_D_TYPE
+            if (dent->d_type != DT_UNKNOWN && dent->d_type != DT_LNK) {
+                switch (dent->d_type) {
+                    case DT_DIR: { file_info.type = FileType::Directory; } break;
+                    case DT_REG: { file_info.type = FileType::File; } break;
+                    default: { file_info.type = FileType::Special; } break;
+                }
+            } else
+#endif
+            {
+                struct stat sb;
+                if (fstatat(dirfd(dirp), dent->d_name, &sb, 0) < 0) {
+                    LogError("Ignoring file '%1' in '%2' (stat failed)",
+                             dent->d_name, dirname);
+                    continue;
+                }
+                if (S_ISDIR(sb.st_mode)) {
+                    file_info.type = FileType::Directory;
+                } else if (S_ISREG(sb.st_mode)) {
+                    file_info.type = FileType::File;
+                } else {
+                    file_info.type = FileType::Special;
+                }
+            }
+
+            if (!func(dent->d_name, file_info))
+                return EnumStatus::Partial;
+        }
+    }
+
+    if (errno) {
+        LogError("Error while enumerating directory '%1': %2", dirname, strerror(errno));
+        return EnumStatus::Error;
+    }
+
+    return EnumStatus::Done;
+}
+
+#endif
 
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator &str_alloc,
                              HeapArray<const char *> *out_files, size_t max_files)

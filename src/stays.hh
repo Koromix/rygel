@@ -32,12 +32,8 @@ struct Procedure {
 };
 
 struct Stay {
-    enum class Error {
-        Load,
-        Incoherent
-    };
-
     int32_t stay_id;
+    int32_t bill_id;
 
     Sex sex;
     Date birthdate;
@@ -63,12 +59,10 @@ struct Stay {
 
     ArrayRef<Procedure> procedures;
 
-    uint32_t error_mask;
-
 #ifdef TESTING
     struct {
         GhmCode ghm;
-        uint16_t rss_len;
+        int16_t rss_len;
     } test;
 #endif
 };

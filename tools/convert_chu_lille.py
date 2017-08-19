@@ -159,7 +159,6 @@ def process_stays(rum_filename):
     def update_rss_count(first, last):
         for rum in rums[first:last]:
             rum['test_rss_len'] = last - first
-            rum.pop('bill_id')
 
     first_rss_rum = 0
     for i, rum in enumerate(rums):

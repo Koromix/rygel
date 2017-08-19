@@ -870,6 +870,7 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
+// TODO: Validate that index has everything we need
 const ClassifierIndex *ClassifierSet::FindIndex(Date date) const
 {
     if (date.value) {

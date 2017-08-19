@@ -197,7 +197,7 @@ R"(Usage: moya classify [options] stay_file ...)";
              stay_set.stays.len, stay_set.store.diagnoses.len, stay_set.store.procedures.len);
 
     LogDebug("Classify");
-    Classify(*classifier_set, stay_set, nullptr);
+    ClassifyAggregates(*classifier_set, stay_set.stays, AggregateMode::BillId, nullptr);
 
     LogDebug("Done");
     return true;

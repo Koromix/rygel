@@ -12,6 +12,7 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         // Stay objects
         StayArray,
         StayObject,
+        StayBillId,
         StayBirthdate,
         StayEntryDate,
         StayEntryMode,
@@ -20,7 +21,7 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         StayExitMode,
         StayExitDestination,
         StayGestationalAge,
-        StayIdentifier,
+        StayStayId,
         StayIgs2,
         StayLastMenstrualPeriod,
         StayNewbornWeight,
@@ -147,6 +148,7 @@ public:
 
         switch (state) {
             case State::StayObject: {
+                HANDLE_KEY("bill_id", State::StayBillId);
                 HANDLE_KEY("birthdate", State::StayBirthdate);
                 HANDLE_KEY("entry_date", State::StayEntryDate);
                 HANDLE_KEY("entry_mode", State::StayEntryMode);
@@ -164,7 +166,7 @@ public:
                 HANDLE_KEY("procedures", State::StayProcedures);
                 HANDLE_KEY("session_count", State::StaySessionCount);
                 HANDLE_KEY("sex", State::StaySex);
-                HANDLE_KEY("stay_id", State::StayIdentifier);
+                HANDLE_KEY("stay_id", State::StayStayId);
                 HANDLE_KEY("unit", State::StayUnit);
                 HANDLE_KEY("test_ghm", State::StayTestGhm);
                 HANDLE_KEY("test_rss_len", State::StayTestRssLen);
@@ -201,7 +203,8 @@ public:
     {
         switch (state) {
             // Stay attributes
-            case State::StayIdentifier: { SetInt(&stay.stay_id, i); } break;
+            case State::StayStayId: { SetInt(&stay.stay_id, i); } break;
+            case State::StayBillId: { SetInt(&stay.bill_id, i); } break;
             case State::StaySex: {
                 if (i == 1) {
                     stay.sex = Sex::Male;
@@ -393,7 +396,6 @@ private:
     void SetErrorFlag()
     {
         minor_errors++;
-        stay.error_mask |= MaskEnum(Stay::Error::Load);
     }
 
     template <typename T>

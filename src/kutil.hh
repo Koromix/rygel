@@ -320,15 +320,15 @@ class Allocator {
     AllocatorList list = { &list, &list };
 
 public:
-    enum Flag {
-        ZeroMemory = 1,
+    enum class Flag {
+        Zero = 1,
         Resizable = 2
     };
 
     Allocator() = default;
     Allocator(Allocator &) = delete;
     Allocator &operator=(const Allocator &) = delete;
-    ~Allocator() { ReleaseAll(); }
+    ~Allocator();
 
     static void ReleaseAll(Allocator *alloc);
 
@@ -392,15 +392,11 @@ struct ArrayRef {
 
     ArrayRef Take(ArraySlice<T> slice) const
     {
-        ArrayRef<T> sub;
+        DebugAssert(slice.len <- len && slice.offset <- len - slice.len);
 
-        if (slice.len > len || slice.offset > len - slice.len) {
-            sub = {};
-            return sub;
-        }
+        ArrayRef<T> sub;
         sub.ptr = ptr + slice.offset;
         sub.len = slice.len;
-
         return sub;
     }
     ArrayRef Take(size_t offset, size_t len) const
@@ -659,7 +655,13 @@ public:
     HeapArray &operator=(const HeapArray &) = delete;
     ~HeapArray() { Clear(); }
 
-    void Clear() { SetCapacity(0); }
+    void Clear(size_t reserve_capacity = 0)
+    {
+        RemoveFrom(0);
+        if (capacity > reserve_capacity) {
+            SetCapacity(reserve_capacity);
+        }
+    }
 
     operator ArrayRef<T>() { return ArrayRef<T>(ptr, len); }
     operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
@@ -1125,7 +1127,7 @@ private:
             // We need to zero memory for POD values, we could avoid it in other
             // cases but I'll wait for widespred constexpr if (C++17) support
             data = (ValueType *)Allocator::Allocate(allocator, new_capacity * sizeof(ValueType),
-                                                    Allocator::ZeroMemory);
+                                                    (int)Allocator::Flag::Zero);
             for (size_t i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType;
             }

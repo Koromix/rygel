@@ -37,6 +37,7 @@ union GhmRootCode {
                 }
                 code.value = 0;
             }
+            code.parts.type = UpperAscii(code.parts.type);
         }
 
         return code;
@@ -89,6 +90,7 @@ union GhmCode {
                 }
                 code.value = 0;
             }
+            code.parts.type = UpperAscii(code.parts.type);
         }
 
         return code;
