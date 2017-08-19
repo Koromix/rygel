@@ -298,8 +298,8 @@ struct GhmDecisionNode {
         } test;
 
         struct {
-            int error;
             GhmCode code;
+            int16_t error;
         } ghm;
     } u;
 };

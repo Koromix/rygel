@@ -4,34 +4,29 @@
 #include "stays.hh"
 #include "tables.hh"
 
-enum class AggregateMode {
+enum class ClusterMode {
     StayModes,
     BillId,
     Disable
 };
-static const char *const AggregateModeNames[] = {
+static const char *const ClusterModeNames[] = {
     "Stay Modes",
     "Bill Id"
 };
 
-ArrayRef<const Stay> Aggregate(ArrayRef<const Stay> stays, AggregateMode group_mode,
-                               ArrayRef<const Stay> *out_remainder);
-
-struct ClassifyError {
-    int16_t code;
-    char ref_str[14];
-};
+ArrayRef<const Stay> ClusterStays(ArrayRef<const Stay> stays, ClusterMode mode,
+                                  ArrayRef<const Stay> *out_remainder);
 
 struct ClassifyResult {
     GhmCode ghm;
-    ArrayRef<ClassifyError> errors;
+    ArrayRef<int16_t> errors;
 };
 
 struct ClassifyResultSet {
     HeapArray<ClassifyResult> results;
 
     struct {
-        HeapArray<ClassifyError> errors;
+        HeapArray<int16_t> errors;
     } store;
 };
 
@@ -60,21 +55,26 @@ class Classifier {
 public:
     Classifier() = default;
 
-    bool Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays);
-
-    GhmCode Run(HeapArray<ClassifyError> *out_errors);
+    GhmCode Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+                 HeapArray<int16_t> *out_errors);
+    GhmCode Run(HeapArray<int16_t> *out_errors);
 
     const Stay *FindMainStay();
-    GhmCode RunGhmTree(HeapArray<ClassifyError> *out_errors);
-    GhmCode RunGhmSeverity(GhmCode ghm);
+    GhmCode RunGhmTree(HeapArray<int16_t> *out_errors);
+    GhmCode RunGhmSeverity(GhmCode ghm, HeapArray<int16_t> *out_errors);
 
-    int ExecuteGhmTest(const GhmDecisionNode &ghm_node);
+    int ExecuteGhmTest(const GhmDecisionNode &ghm_node, HeapArray<int16_t> *out_errors);
 
 private:
     uint8_t GetDiagnosisByte(DiagnosisCode diag_code, uint8_t byte_idx);
     uint8_t GetProcedureByte(const Procedure &proc, uint8_t byte_idx);
     bool TestExclusion(const DiagnosisInfo &cma_diag_info, const DiagnosisInfo &main_diag_info);
+
+    GhmCode AddError(HeapArray<int16_t> *out_errors, int16_t error);
 };
 
-bool ClassifyAggregates(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
-                        AggregateMode agg_mode, ClassifyResultSet *out_result_set);
+GhmCode ClassifyCluster(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+                        HeapArray<int16_t> *out_errors);
+
+void Classify(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+              ClusterMode cluster_mode, ClassifyResultSet *out_result_set);

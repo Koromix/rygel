@@ -132,7 +132,8 @@ const Stay *Classifier::FindMainStay()
     return score_stay;
 }
 
-int Classifier::ExecuteGhmTest(const GhmDecisionNode &ghm_node)
+int Classifier::ExecuteGhmTest(const GhmDecisionNode &ghm_node,
+                               HeapArray<int16_t> *out_errors)
 {
     DebugAssert(ghm_node.type == GhmDecisionNode::Type::Test);
 
@@ -275,8 +276,7 @@ int Classifier::ExecuteGhmTest(const GhmDecisionNode &ghm_node)
         } break;
 
         case 28: {
-            PrintLn("%1 -- Erreur %2", agg.stay.stay_id, ghm_node.u.test.params[0]);
-            // TODO: Add error
+            out_errors->Append(ghm_node.u.test.params[0]);
             return 0;
         } break;
 
@@ -422,32 +422,19 @@ bool Classifier::TestExclusion(const DiagnosisInfo &cma_diag_info,
     return (excl->raw[main_diag_info.cma_exclusion_offset] & main_diag_info.cma_exclusion_mask);
 }
 
-GhmCode Classifier::Run(HeapArray<ClassifyError> *out_errors)
+GhmCode Classifier::Run(HeapArray<int16_t> *out_errors)
 {
-    GhmCode ghm = RunGhmTree(out_errors);
-    ghm = RunGhmSeverity(ghm);
+    GhmCode ghm;
 
-    Print("%1 (%2) -- %3", agg.stay.stay_id, stays.len, ghm);
-    /*if (error) {
-        Print(" (err = %1)", error);
-    }*/
-#ifdef TESTING
-    if (agg.stay.test.ghm != ghm) {
-        Print(" GHM_ERROR (%1)", agg.stay.test.ghm);
-    }
-    if (agg.stay.test.rss_len != stays.len) {
-        Print(" AGG_ERROR (%1, expected %2)", stays.len, agg.stay.test.rss_len);
-    }
-#endif
-    PrintLn();
+    ghm = RunGhmTree(out_errors);
+    ghm = RunGhmSeverity(ghm, out_errors);
 
-    return {};
+    return ghm;
 }
 
-GhmCode Classifier::RunGhmTree(HeapArray<ClassifyError> *out_errors)
+GhmCode Classifier::RunGhmTree(HeapArray<int16_t> *out_errors)
 {
     GhmCode ghm = {};
-    int error;
 
     main_diagnosis = agg.stay.main_diagnosis;
     linked_diagnosis = agg.stay.linked_diagnosis;
@@ -456,17 +443,19 @@ GhmCode Classifier::RunGhmTree(HeapArray<ClassifyError> *out_errors)
     for (size_t i = 0; !ghm.IsValid(); i++) {
         if (i >= index->ghm_nodes.len) {
             LogError("Empty GHM tree or infinite loop");
-            return {}; // FIXME: Real error
+            out_errors->Append(4);
+            return GhmCode::FromString("90Z03Z");
         }
 
         const GhmDecisionNode &ghm_node = index->ghm_nodes[ghm_node_idx];
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
-                int function_ret = ExecuteGhmTest(ghm_node);
+                int function_ret = ExecuteGhmTest(ghm_node, out_errors);
                 if (function_ret < 0 || (size_t)function_ret >= ghm_node.u.test.children_count) {
-                    PrintLn("%1 -- Failed (function %2)", agg.stay.stay_id,
-                            ghm_node.u.test.function);
-                    return {};
+                    LogError("Result for GHM tree test %1 out of range (%2 - %3)",
+                             ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
+                    out_errors->Append(4);
+                    return GhmCode::FromString("90Z03Z");
                 }
 
                 ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
@@ -474,7 +463,9 @@ GhmCode Classifier::RunGhmTree(HeapArray<ClassifyError> *out_errors)
 
             case GhmDecisionNode::Type::Ghm: {
                 ghm = ghm_node.u.ghm.code;
-                error = ghm_node.u.ghm.error;
+                if (ghm_node.u.ghm.error) {
+                    out_errors->Append(ghm_node.u.ghm.error);
+                }
             } break;
         }
     }
@@ -482,12 +473,13 @@ GhmCode Classifier::RunGhmTree(HeapArray<ClassifyError> *out_errors)
     return ghm;
 }
 
-GhmCode Classifier::RunGhmSeverity(GhmCode ghm)
+GhmCode Classifier::RunGhmSeverity(GhmCode ghm, HeapArray<int16_t> *out_errors)
 {
     const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm.Root());
     if (!ghm_root_info) {
         LogError("Unknown GHM root '%1'", ghm.Root());
-        return {};
+        out_errors->Append(4);
+        return GhmCode::FromString("90Z03Z");
     }
 
     // Ambulatory and / or short duration GHM
@@ -553,6 +545,12 @@ GhmCode Classifier::RunGhmSeverity(GhmCode ghm)
     return ghm;
 }
 
+GhmCode Classifier::AddError(HeapArray<int16_t> *out_errors, int16_t error)
+{
+    out_errors->Append(error);
+    return GhmCode::FromString("90Z00Z");
+}
+
 static bool AreStaysCompatible(const Stay stay1, const Stay &stay2)
 {
     return stay2.stay_id == stay1.stay_id &&
@@ -560,15 +558,15 @@ static bool AreStaysCompatible(const Stay stay1, const Stay &stay2)
            (stay2.entry.mode == 6 || stay2.entry.mode == 0);
 }
 
-ArrayRef<const Stay> Aggregate(ArrayRef<const Stay> stays, AggregateMode agg_mode,
-                               ArrayRef<const Stay> *out_remainder)
+ArrayRef<const Stay> ClusterStays(ArrayRef<const Stay> stays, ClusterMode mode,
+                                  ArrayRef<const Stay> *out_remainder)
 {
     if (!stays.len)
         return {};
 
     size_t agg_len = 1;
-    switch (agg_mode) {
-        case AggregateMode::StayModes: {
+    switch (mode) {
+        case ClusterMode::StayModes: {
             if (!stays[0].session_count) {
                 while (agg_len < stays.len &&
                        AreStaysCompatible(stays[agg_len - 1], stays[agg_len])) {
@@ -577,16 +575,14 @@ ArrayRef<const Stay> Aggregate(ArrayRef<const Stay> stays, AggregateMode agg_mod
             }
         } break;
 
-        case AggregateMode::BillId: {
+        case ClusterMode::BillId: {
             while (agg_len < stays.len &&
                    stays[agg_len - 1].bill_id == stays[agg_len].bill_id) {
                 agg_len++;
             }
         } break;
 
-        case AggregateMode::Disable: {
-            agg_len = 1;
-        } break;
+        case ClusterMode::Disable: {} break;
     }
 
     if (out_remainder) {
@@ -595,7 +591,9 @@ ArrayRef<const Stay> Aggregate(ArrayRef<const Stay> stays, AggregateMode agg_mod
     return stays.Take(0, agg_len);
 }
 
-bool Classifier::Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays)
+// FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
+GhmCode Classifier::Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+                         HeapArray<int16_t> *out_errors)
 {
     Assert(stays.len > 0);
 
@@ -603,8 +601,9 @@ bool Classifier::Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> 
 
     index = classifier_set.FindIndex(stays[stays.len - 1].dates[1]);
     if (!index) {
-        PrintLn("Damn it: %1 (%2)", stays[stays.len - 1].dates[1], stays[stays.len - 1].stay_id);
-        return false;
+        LogError("No classifier table available on '%1'", stays[stays.len - 1].dates[1]);
+        out_errors->Append(502);
+        return GhmCode::FromString("90Z03Z");
     }
 
     agg.stay = stays[0];
@@ -683,19 +682,47 @@ bool Classifier::Init(const ClassifierSet &classifier_set, ArrayRef<const Stay> 
 
     lazy = {};
 
-    return true;
+    return {};
 }
 
-// FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
-bool ClassifyAggregates(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
-                        AggregateMode agg_mode, ClassifyResultSet *out_result_set)
+GhmCode ClassifyCluster(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+                        HeapArray<int16_t> *out_errors)
 {
+    GhmCode ghm;
     Classifier classifier;
-    while (stays.len) {
-        if (!classifier.Init(classifier_set, Aggregate(stays, agg_mode, &stays)))
-            continue;
-        classifier.Run(nullptr);
+
+    ghm = classifier.Init(classifier_set, stays, out_errors);
+    if (!ghm.IsValid()) {
+        ghm = classifier.Run(out_errors);
     }
 
-    return true;
+    return ghm;
+}
+
+void Classify(const ClassifierSet &classifier_set, ArrayRef<const Stay> stays,
+              ClusterMode cluster_mode, ClassifyResultSet *out_result_set)
+{
+    // Reuse Classifier instance to reduce heap allocations (diagnoses and procedures)
+    Classifier classifier;
+
+    while (stays.len) {
+        ArrayRef<const Stay> cluster_stays = ClusterStays(stays, cluster_mode, &stays);
+
+        ClassifyResult result;
+        {
+            result.errors.ptr = (int16_t *)out_result_set->store.errors.len;
+            result.ghm = classifier.Init(classifier_set, cluster_stays,
+                                         &out_result_set->store.errors);
+            if (!result.ghm.IsValid()) {
+                result.ghm = classifier.Run(&out_result_set->store.errors);
+            }
+            result.errors.len = out_result_set->store.errors.len - (size_t)result.errors.ptr;
+        }
+
+        out_result_set->results.Append(result);
+    }
+
+    for (ClassifyResult &result: out_result_set->results) {
+        result.errors.ptr = out_result_set->store.errors.ptr + (size_t)result.errors.ptr;
+    }
 }

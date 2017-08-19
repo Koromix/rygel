@@ -182,24 +182,38 @@ R"(Usage: moya classify [options] stay_file ...)";
     if (!classifier_set)
         return false;
 
+    LogDebug("Load");
     StaySet stay_set;
     {
         StaySetBuilder stay_set_builder;
 
-        LogDebug("Load");
         if (!stay_set_builder.LoadJson(filenames))
             return false;
-        LogDebug("Finish");
         if (!stay_set_builder.Finish(&stay_set))
             return false;
     }
-    LogDebug("%1 -- %2 -- %3",
-             stay_set.stays.len, stay_set.store.diagnoses.len, stay_set.store.procedures.len);
 
     LogDebug("Classify");
-    ClassifyAggregates(*classifier_set, stay_set.stays, AggregateMode::BillId, nullptr);
+    ClassifyResultSet result_set;
+    Classify(*classifier_set, stay_set.stays, ClusterMode::StayModes, &result_set);
 
-    LogDebug("Done");
+    LogDebug("Export");
+    for (const ClassifyResult &result: result_set.results) {
+        PrintLn("%1", result.ghm);
+        for (int16_t error: result.errors) {
+            PrintLn("  Error %1", error);
+        }
+    //#ifdef TESTING
+    #if 0
+        if (cluster_stays[0].test.ghm != ghm) {
+            Print(" GHM_ERROR (%1)", cluster_stays[0].test.ghm);
+        }
+        if (cluster_stays[0].test.rss_len != stays.len) {
+            Print(" AGG_ERROR (%1, expected %2)", stays.len, cluster_stays[0].test.rss_len);
+        }
+    #endif
+    }
+
     return true;
 }
 
