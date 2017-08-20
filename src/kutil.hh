@@ -1184,7 +1184,7 @@ static inline uint64_t DefaultHash(const char *key)
 {
     uint64_t hash = 0xCBF29CE484222325ull;
     for (size_t i = 0; key[i]; i++) {
-        hash ^= key[i];
+        hash ^= (uint64_t)key[i];
         hash *= 0x100000001B3ull;
     }
     return hash;
@@ -1269,7 +1269,7 @@ public:
 };
 
 // ------------------------------------------------------------------------
-// Date and Time
+// Date
 // ------------------------------------------------------------------------
 
 union Date {
@@ -1298,7 +1298,7 @@ union Date {
     {
         return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
     }
-    static inline int8_t DaysInMonth(uint16_t year, uint8_t month)
+    static inline int8_t DaysInMonth(int16_t year, int8_t month)
     {
         static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
         return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
@@ -1360,6 +1360,12 @@ union Date {
     Date &operator--();
     Date operator--(int) { Date date = *this; --(*this); return date; }
 };
+
+// ------------------------------------------------------------------------
+// Time
+// ------------------------------------------------------------------------
+
+extern uint64_t start_time;
 
 uint64_t GetMonotonicTime();
 
@@ -1454,6 +1460,7 @@ public:
     FmtArg(unsigned long u) : type(Type::Unsigned) { value.u = u; }
     FmtArg(long long i) : type(Type::Integer) { value.i = i; }
     FmtArg(unsigned long long u) : type(Type::Unsigned) { value.u = u; }
+    FmtArg(float f) : type(Type::Double) { value.d = { (double)f, -1 }; }
     FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
     FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
@@ -1672,6 +1679,12 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 // Option Parser
 // ------------------------------------------------------------------------
 
+static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
+{
+    return !strcmp(opt, test1) ||
+           (test2 && !strcmp(opt, test2));
+}
+
 class OptionParser {
     size_t limit;
     size_t smallopt_offset = 0;
@@ -1696,10 +1709,7 @@ public:
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
 
     const char *RequireOptionValue(const char *usage_str = nullptr);
-};
 
-static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
-{
-    return !strcmp(opt, test1) ||
-           (test2 && !strcmp(opt, test2));
-}
+    bool TestOption(const char *test1, const char *test2 = nullptr) const
+        { return ::TestOption(current_option, test1, test2); }
+};

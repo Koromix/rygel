@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\classifier.cc">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\kutil.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,11 +30,11 @@
     <ClCompile Include="src\tables.cc">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\algorithm.cc">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\classifier.hh">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\kutil.hh">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -48,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tables.hh">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\algorithm.hh">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

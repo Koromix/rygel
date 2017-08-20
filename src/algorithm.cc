@@ -29,12 +29,12 @@ static int ComputeAge(Date date, Date birthdate)
 static uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
                                 DiagnosisCode diag_code, uint8_t byte_idx)
 {
-    // FIXME: Warning / classifier errors
-    if (UNLIKELY(byte_idx >= sizeof(DiagnosisInfo::attributes[0].raw)))
-        return 0;
-
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag_code);
-    if (!diag_info)
+
+    // FIXME: Warning / classifier errors
+    if (UNLIKELY(!diag_info))
+        return 0;
+    if (UNLIKELY(byte_idx >= sizeof(DiagnosisInfo::attributes[0].raw)))
         return 0;
 
     return diag_info->Attributes(sex).raw[byte_idx];
@@ -43,11 +43,11 @@ static uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
 static uint8_t GetProcedureByte(const TableIndex &index,
                                 const Procedure &proc, uint8_t byte_idx)
 {
-    if (UNLIKELY(byte_idx >= sizeof(ProcedureInfo::bytes)))
-        return 0;
-
     const ProcedureInfo *proc_info = index.FindProcedure(proc.code, proc.phase, proc.date);
-    if (!proc_info)
+
+    if (UNLIKELY(!proc_info))
+        return 0;
+    if (UNLIKELY(byte_idx >= sizeof(ProcedureInfo::bytes)))
         return 0;
 
     return proc_info->bytes[byte_idx];
@@ -86,12 +86,8 @@ ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
             }
         } break;
 
-        case ClusterMode::Individual: {
-            agg_len = 1;
-        } break;
-
         case ClusterMode::Disable: {
-            agg_len = stays.len;
+            agg_len = 1;
         } break;
     }
     DebugAssert(agg_len);
@@ -219,8 +215,7 @@ static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> st
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
-                  HeapArray<int16_t> *out_errors)
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures)
 {
     Assert(stays.len > 0);
 
@@ -494,7 +489,7 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
             if (ctx.linked_diagnosis.IsValid() &&
                     ctx.linked_diagnosis == ctx.agg->stay.linked_diagnosis) {
                 const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(ctx.linked_diagnosis);
-                if (diag_info) {
+                if (LIKELY(diag_info)) {
                     uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
                     uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
                     if (cmd || jump != 3) {
@@ -551,7 +546,7 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
         case 41: {
             for (DiagnosisCode diag: ctx.diagnoses) {
                 const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag);
-                if (!diag_info)
+                if (UNLIKELY(!diag_info))
                     continue;
 
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
@@ -574,7 +569,7 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
                     continue;
 
                 const DiagnosisInfo *diag_info = ctx.index->FindDiagnosis(diag);
-                if (!diag_info)
+                if (UNLIKELY(!diag_info))
                     continue;
 
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
@@ -618,7 +613,8 @@ static GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
                 int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
-                if (function_ret < 0 || (size_t)function_ret >= ghm_node.u.test.children_count) {
+                if (UNLIKELY(function_ret < 0 ||
+                             (size_t)function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
                     out_errors->Append(4);
@@ -660,7 +656,7 @@ static GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
                               GhmCode ghm, HeapArray<int16_t> *out_errors)
 {
     const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
-    if (!ghm_root_info) {
+    if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         out_errors->Append(4);
         return GhmCode::FromString("90Z03Z");
@@ -698,7 +694,7 @@ static GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
                 continue;
 
             const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
-            if (!diag_info)
+            if (UNLIKELY(!diag_info))
                 continue;
 
             // TODO: Check boundaries (ghm_root CMA exclusion offset, etc.)
@@ -715,9 +711,11 @@ static GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
             }
         }
 
-        if (agg.age >= ghm_root_info->old_age_treshold && severity < ghm_root_info->old_severity_limit) {
+        if (agg.age >= ghm_root_info->old_age_treshold &&
+                severity < ghm_root_info->old_severity_limit) {
             severity++;
-        } else if (agg.age < ghm_root_info->young_age_treshold && severity < ghm_root_info->young_severity_limit) {
+        } else if (agg.age < ghm_root_info->young_age_treshold &&
+                   severity < ghm_root_info->young_severity_limit) {
             severity++;
         } else if (agg.stay.exit.mode == 9 && !severity) {
             severity = 1;
@@ -742,7 +740,7 @@ GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
 }
 
 void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
-               ClusterMode cluster_mode, ClassifyResultSet *out_result_set)
+               ClusterMode cluster_mode, SummarizeResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
@@ -750,7 +748,7 @@ void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
     HeapArray<Procedure> procedures;
 
     while (stays.len) {
-        ClassifyResult result;
+        SummarizeResult result;
 
         diagnoses.Clear(256);
         procedures.Clear(512);
@@ -759,11 +757,10 @@ void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
         result.cluster = Cluster(stays, cluster_mode, &stays);
         result.ghm = PrepareIndex(table_set, result.cluster,
                                   &result.index, &out_result_set->store.errors);
-        if (!result.ghm.IsError()) {
+        if (LIKELY(!result.ghm.IsError())) {
             result.ghm = Aggregate(*result.index, result.cluster,
-                                   &result.agg, &diagnoses, &procedures,
-                                   &out_result_set->store.errors);
-            if (!result.ghm.IsError()) {
+                                   &result.agg, &diagnoses, &procedures);
+            if (LIKELY(!result.ghm.IsError())) {
                 result.ghm = Classify(*result.index, result.agg, diagnoses, procedures,
                                       &out_result_set->store.errors);
             }
@@ -773,7 +770,7 @@ void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
         out_result_set->results.Append(result);
     }
 
-    for (ClassifyResult &result: out_result_set->results) {
+    for (SummarizeResult &result: out_result_set->results) {
         result.errors.ptr = out_result_set->store.errors.ptr + (size_t)result.errors.ptr;
     }
 }

@@ -7,7 +7,6 @@
 enum class ClusterMode {
     StayModes,
     BillId,
-    Individual,
     Disable
 };
 
@@ -17,7 +16,7 @@ struct StayAggregate {
     int age;
 };
 
-struct ClassifyResult {
+struct SummarizeResult {
     ArrayRef<const Stay> cluster;
     const TableIndex *index;
     StayAggregate agg;
@@ -26,8 +25,8 @@ struct ClassifyResult {
     ArrayRef<int16_t> errors;
 };
 
-struct ClassifyResultSet {
-    HeapArray<ClassifyResult> results;
+struct SummarizeResultSet {
+    HeapArray<SummarizeResult> results;
 
     struct {
         HeapArray<int16_t> errors;
@@ -40,11 +39,10 @@ GhmCode PrepareIndex(const TableSet &table_set, ArrayRef<const Stay> cluster_sta
                      const TableIndex **out_index, HeapArray<int16_t> *out_errors);
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
-                  HeapArray<int16_t> *out_errors);
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures);
 GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
                  ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
                  HeapArray<int16_t> *out_errors);
 
 void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
-               ClusterMode cluster_mode, ClassifyResultSet *out_result_set);
+               ClusterMode cluster_mode, SummarizeResultSet *out_result_set);

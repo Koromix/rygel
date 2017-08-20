@@ -102,7 +102,7 @@
     <ClCompile />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\classifier.cc" />
+    <ClCompile Include="src\algorithm.cc" />
     <ClCompile Include="src\dump.cc" />
     <ClCompile Include="src\kutil.cc" />
     <ClCompile Include="src\moya.cc" />
@@ -110,7 +110,7 @@
     <ClCompile Include="src\tables.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\classifier.hh" />
+    <ClInclude Include="src\algorithm.hh" />
     <ClInclude Include="src\dump.hh" />
     <ClInclude Include="src\kutil.hh" />
     <ClInclude Include="src\stays.hh" />

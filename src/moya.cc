@@ -8,14 +8,17 @@ static const char *const MainUsageText =
 R"(Usage: moya <command> [<args>]
 
 Commands:
-    classify                     Run classifier on patient data
     dump                         Dump available tables and lists
-    list                         Print diagnosis and procedure lists
+    info                         Print information about individual elements
+                                 (diagnoses, procedures, GHM roots, etc.)
+    list                         Export diagnosis and procedure lists
     pricing                      Print GHS pricing tables
-    show                         A
-    tables                       B
+    summarize                    Summarize stays
+    tables                       Show tables indexes
 
 Global options:
+    -O, --output <filename>      Dump information to file (default: stdout)
+
     -t, --table-file <filename>  Load table file
     -T, --table-dir <dir>        Load table directory)";
 
@@ -128,13 +131,24 @@ static const TableSet *GetMainTableSet()
 static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
                              const char *usage_str)
 {
-    if (TestOption(opt_parser.current_option, "-T", "--table-dir")) {
+    if (opt_parser.TestOption("-O", "--output")) {
+        const char *filename = opt_parser.RequireOptionValue(MainUsageText);
+        if (!filename)
+            return false;
+
+        if (!freopen(filename, "w", stdout)) {
+            LogError("Cannot open '%1': %2", filename, strerror(errno));
+            return false;
+        }
+
+        return true;
+    } else if (opt_parser.TestOption("-T", "--table-dir")) {
         if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
         return EnumerateDirectoryFiles(opt_parser.current_value, "*.tab", temp_alloc,
                                        &main_table_filenames, 1024);
-    } else if (TestOption(opt_parser.current_option, "-t", "--table-file")) {
+    } else if (opt_parser.TestOption("-t", "--table-file")) {
         if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
@@ -164,7 +178,7 @@ Specific options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, "%1", UsageText);
+                PrintLn("%1", UsageText);
                 return true;
             } else if (TestOption(opt, "-h", "--headers")) {
                 headers = true;
@@ -191,6 +205,88 @@ Specific options:
     return true;
 }
 
+static bool RunInfo(ArrayRef<const char *> arguments)
+{
+    static const char *const UsageText =
+R"(Usage: moya info [options] name ...)";
+
+    Allocator temp_alloc;
+    OptionParser opt_parser(arguments);
+
+    Date index_date = {};
+    HeapArray<const char *> names;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintLn("%1", UsageText);
+                return true;
+            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+                if (!opt_parser.RequireOptionValue(MainUsageText))
+                    return false;
+                index_date = Date::FromString(opt_parser.current_value);
+                if (!index_date.value)
+                    return false;
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+                return false;
+            }
+        }
+
+        opt_parser.ConsumeNonOptions(&names);
+        if (!names.len) {
+            PrintLn(stderr, "No element name provided");
+            PrintLn(stderr, UsageText);
+            return false;
+        }
+    }
+
+    const TableSet *table_set;
+    const TableIndex *index;
+    {
+        table_set = GetMainTableSet();
+        if (!table_set)
+            return false;
+        index = table_set->FindIndex(index_date);
+        if (!index) {
+            LogError("No table index available at '%1'", index_date);
+            return false;
+        }
+    }
+
+    for (const char *name: names) {
+        {
+            DiagnosisCode diag_code = DiagnosisCode::FromString(name, false);
+            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag_code);
+            if (diag_info) {
+                DumpDiagnosisTable(*diag_info, index->exclusions);
+                continue;
+            }
+        }
+
+        {
+            ProcedureCode proc_code = ProcedureCode::FromString(name, false);
+            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc_code);
+            if (proc_info.len) {
+                DumpProcedureTable(proc_info);
+                continue;
+            }
+        }
+
+        {
+            GhmRootCode ghm_root_code = GhmRootCode::FromString(name, false);
+            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root_code);
+            if (ghm_root_info) {
+                DumpGhmRootTable(*ghm_root_info);
+                continue;
+            }
+        }
+
+        PrintLn(stderr, "Unknown element '%1'", name);
+    }
+
+    return true;
+}
+
 static bool RunList(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
@@ -205,7 +301,7 @@ R"(Usage: moya list [options] list_name ...)";
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, UsageText);
+                PrintLn("%1", UsageText);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
                 if (!opt_parser.RequireOptionValue(MainUsageText))
@@ -283,106 +379,41 @@ static bool RunPricing(ArrayRef<const char *>)
     return false;
 }
 
-static bool RunInfo(ArrayRef<const char *> arguments)
-{
-    static const char *const UsageText =
-R"(Usage: moya info [options] name ...)";
-
-    Allocator temp_alloc;
-    OptionParser opt_parser(arguments);
-
-    Date index_date = {};
-    HeapArray<const char *> names;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintLn(stdout, UsageText);
-                return true;
-            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(MainUsageText))
-                    return false;
-                index_date = Date::FromString(opt_parser.current_value);
-                if (!index_date.value)
-                    return false;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
-                return false;
-            }
-        }
-
-        opt_parser.ConsumeNonOptions(&names);
-        if (!names.len) {
-            PrintLn(stderr, "No element name provided");
-            PrintLn(stderr, UsageText);
-            return false;
-        }
-    }
-
-    const TableSet *table_set;
-    const TableIndex *index;
-    {
-        table_set = GetMainTableSet();
-        if (!table_set)
-            return false;
-        index = table_set->FindIndex(index_date);
-        if (!index) {
-            LogError("No table index available at '%1'", index_date);
-            return false;
-        }
-    }
-
-    for (const char *name: names) {
-        {
-            DiagnosisCode diag_code = DiagnosisCode::FromString(name, false);
-            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag_code);
-            if (diag_info) {
-                DumpDiagnosisTable(*diag_info, index->exclusions);
-                continue;
-            }
-        }
-
-        {
-            ProcedureCode proc_code = ProcedureCode::FromString(name, false);
-            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc_code);
-            if (proc_info.len) {
-                DumpProcedureTable(proc_info);
-                continue;
-            }
-        }
-
-        {
-            GhmRootCode ghm_root_code = GhmRootCode::FromString(name, false);
-            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root_code);
-            if (ghm_root_info) {
-                DumpGhmRootTable(*ghm_root_info);
-                continue;
-            }
-        }
-
-        PrintLn(stderr, "Unknown element '%1'", name);
-    }
-
-    return true;
-}
-
 static bool RunSummarize(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya sumarize [options] stay_file ...)";
+R"(Usage: moya sumarize [options] stay_file ...
 
-    // FIXME: Temporary hack for MSVC profiling
-    freopen("grp", "w", stdout);
+Options:
+    --cluster_mode <mode>      Change stay cluster mode
+                               (stay_modes*, bill_id, disable))";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
+    ClusterMode cluster_mode = ClusterMode::StayModes;
     {
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, UsageText);
+                PrintLn("%1", UsageText);
                 return true;
+            } else if (TestOption(opt, "--cluster_mode")) {
+                const char *mode_str = opt_parser.RequireOptionValue(UsageText);
+                if (!mode_str)
+                    return false;
+
+                if (!strcmp(mode_str, "stay_modes")) {
+                    cluster_mode = ClusterMode::StayModes;
+                } else if (!strcmp(mode_str, "bill_id")) {
+                    cluster_mode = ClusterMode::BillId;
+                } else if (!strcmp(mode_str, "disable")) {
+                    cluster_mode = ClusterMode::Disable;
+                } else {
+                    LogError("Unknown cluster mode '%1'", mode_str);
+                    return false;
+                }
             } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
                 return false;
             }
@@ -412,12 +443,12 @@ R"(Usage: moya sumarize [options] stay_file ...)";
     }
 
     LogDebug("Summarize");
-    ClassifyResultSet result_set;
-    Summarize(*table_set, stay_set.stays, ClusterMode::StayModes, &result_set);
+    SummarizeResultSet result_set;
+    Summarize(*table_set, stay_set.stays, cluster_mode, &result_set);
 
     LogDebug("Export");
-    for (const ClassifyResult &result: result_set.results) {
-        PrintLn("%1 = %2", result.agg.stay.stay_id, result.ghm);
+    for (const SummarizeResult &result: result_set.results) {
+        PrintLn("%1 [%2] = %3", result.agg.stay.stay_id, result.cluster.len, result.ghm);
         for (int16_t error: result.errors) {
             PrintLn("  Error %1", error);
         }
@@ -453,7 +484,7 @@ Options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn(stdout, "%1", UsageText);
+                PrintLn("%1", UsageText);
                 return true;
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbose = true;
@@ -506,13 +537,12 @@ int main(int argc, char **argv)
 #define HANDLE_COMMAND(Cmd, Func) \
         do { \
             if (!(strcmp(cmd, STRINGIFY(Cmd)))) { \
-                return Func(arguments); \
+                return !Func(arguments); \
             } \
         } while (false)
 
     const char *cmd = argv[1];
     ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
-
 
     HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);

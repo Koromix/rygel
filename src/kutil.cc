@@ -144,7 +144,7 @@ void Allocator::ReleaseAll()
 }
 
 // ------------------------------------------------------------------------
-// Date and Time
+// Date
 // ------------------------------------------------------------------------
 
 Date Date::FromString(const char *date_str)
@@ -261,6 +261,12 @@ Date &Date::operator--()
 
     return *this;
 }
+
+// ------------------------------------------------------------------------
+// Time
+// ------------------------------------------------------------------------
+
+uint64_t start_time = GetMonotonicTime();
 
 #ifdef _WIN32
 
@@ -699,17 +705,17 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
     }
 
     {
+        double time = (double)(GetMonotonicTime() - start_time) / 1000;
         size_t ctx_len = strlen(ctx);
-        if (ctx_len > 22) {
-            fprintf(fp, " ...%s  ", ctx + ctx_len - 19);
+        if (ctx_len > 20) {
+            fprintf(fp, " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
         } else {
-            fprintf(fp, "%23s  ", ctx);
+            fprintf(fp, "%21s [%8.3f]  ", ctx, time);
         }
     }
     if (log_handlers.len) {
         log_handlers[log_handlers.len - 1](fp);
     }
-    Print(fp, "%1 -- ", GetMonotonicTime());
     FmtPrint(fp, fmt, args);
     if (end_marker) {
         fputs(end_marker, fp);

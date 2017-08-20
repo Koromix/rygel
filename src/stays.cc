@@ -217,7 +217,7 @@ public:
             } break;
             case State::StayEntryMode: {
                 if (i >= 0 && i <= 9) {
-                    stay.entry.mode = i;
+                    stay.entry.mode = (int8_t)i;
                 } else {
                     LogError("Invalid entry mode value %1", i);
                     SetErrorFlag();
@@ -225,7 +225,7 @@ public:
             } break;
             case State::StayEntryOrigin: {
                 if (i >= 0 && i <= 9) {
-                    stay.entry.origin = i;
+                    stay.entry.origin = (int8_t)i;
                 } else {
                     LogError("Invalid entry origin value %1", i);
                     SetErrorFlag();
@@ -233,7 +233,7 @@ public:
             } break;
             case State::StayExitMode: {
                 if (i >= 0 && i <= 9) {
-                    stay.exit.mode = i;
+                    stay.exit.mode = (int8_t)i;
                 } else {
                     LogError("Invalid exit mode value %1", i);
                     SetErrorFlag();
@@ -241,7 +241,7 @@ public:
             } break;
             case State::StayExitDestination: {
                 if (i >= 0 && i <= 9) {
-                    stay.exit.destination = i;
+                    stay.exit.destination = (int8_t)i;
                 } else {
                     LogError("Invalid exit destination value %1", i);
                     SetErrorFlag();
@@ -262,7 +262,7 @@ public:
             case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
             case State::ProcedureActivity: {
                 if (i >= 0 && i < 8) {
-                    proc.activities = 1 << i;
+                    proc.activities = (uint8_t)(1 << i);
                 } else {
                     LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
                     SetErrorFlag();

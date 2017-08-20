@@ -26,7 +26,7 @@ struct UnitInfo {
 struct Procedure {
     ProcedureCode code;
     int8_t phase;
-    int8_t activities;
+    uint8_t activities;
     int16_t count;
     Date date;
 };
