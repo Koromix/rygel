@@ -33,7 +33,8 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         StayAssociatedDiagnoses,
         StayProcedures,
         StayTestGhm,
-        StayTestRssLen,
+        StayTestError,
+        StayTestClusterLen,
 
         // Associated diagnosis objects
         AssociatedDiagnosisArray,
@@ -169,7 +170,8 @@ public:
                 HANDLE_KEY("stay_id", State::StayStayId);
                 HANDLE_KEY("unit", State::StayUnit);
                 HANDLE_KEY("test_ghm", State::StayTestGhm);
-                HANDLE_KEY("test_rss_len", State::StayTestRssLen);
+                HANDLE_KEY("test_error", State::StayTestError);
+                HANDLE_KEY("test_cluster_len", State::StayTestClusterLen);
 
                 LogError("Unknown stay attribute '%1'", key);
                 SetErrorFlag();
@@ -253,9 +255,11 @@ public:
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
             case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
 #ifdef TESTING
-            case State::StayTestRssLen: { SetInt(&stay.test.cluster_len, i); } break;
+            case State::StayTestError: { SetInt(&stay.test.error, i); } break;
+            case State::StayTestClusterLen: { SetInt(&stay.test.cluster_len, i); } break;
 #else
-            case State::StayTestRssLen: {} break;
+            case State::StayTestError: {} break;
+            case State::StayTestClusterLen: {} break;
 #endif
 
             // Procedure attributes

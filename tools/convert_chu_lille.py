@@ -77,6 +77,8 @@ def parse_rums(filename):
                     rum['das'] = [line[(first_das + i * 8):(first_das + (i + 1) * 8)].strip()
                                   for i in range(0, int(line[133:135]))]
                 rum['test_ghm'] = line[2:8]
+                if int(line[12:15]):
+                    rum['test_error'] = int(line[12:15])
 
                 if int(line[137:140]):
                     rum['procedures'] = [{
@@ -158,7 +160,7 @@ def process_stays(rum_filename):
 
     def update_rss_count(first, last):
         for rum in rums[first:last]:
-            rum['test_rss_len'] = last - first
+            rum['test_cluster_len'] = last - first
 
     first_rss_rum = 0
     for i, rum in enumerate(rums):

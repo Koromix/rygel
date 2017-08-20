@@ -215,7 +215,8 @@ static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> st
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures)
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
+                  HeapArray<int16_t> *out_errors)
 {
     Assert(stays.len > 0);
 
@@ -223,6 +224,11 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
     out_agg->age = ComputeAge(out_agg->stay.dates[0], out_agg->stay.birthdate);
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
+        if (!stay.main_diagnosis.IsValid()) {
+            out_errors->Append(40);
+            return GhmCode::FromString("90Z00Z");
+        }
+
         if (stay.gestational_age > 0) {
             // TODO: Must be first (newborn) or on RUM with a$41.2 only
             out_agg->stay.gestational_age = stay.gestational_age;
@@ -759,7 +765,8 @@ void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
                                   &result.index, &out_result_set->store.errors);
         if (LIKELY(!result.ghm.IsError())) {
             result.ghm = Aggregate(*result.index, result.cluster,
-                                   &result.agg, &diagnoses, &procedures);
+                                   &result.agg, &diagnoses, &procedures,
+                                   &out_result_set->store.errors);
             if (LIKELY(!result.ghm.IsError())) {
                 result.ghm = Classify(*result.index, result.agg, diagnoses, procedures,
                                       &out_result_set->store.errors);

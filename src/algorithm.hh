@@ -39,7 +39,8 @@ GhmCode PrepareIndex(const TableSet &table_set, ArrayRef<const Stay> cluster_sta
                      const TableIndex **out_index, HeapArray<int16_t> *out_errors);
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures);
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
+                  HeapArray<int16_t> *out_errors);
 GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
                  ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
                  HeapArray<int16_t> *out_errors);

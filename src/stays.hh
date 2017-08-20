@@ -62,6 +62,7 @@ struct Stay {
 #ifdef TESTING
     struct {
         GhmCode ghm;
+        int16_t error;
         uint16_t cluster_len;
     } test;
 #endif
