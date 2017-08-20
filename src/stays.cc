@@ -253,7 +253,7 @@ public:
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
             case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
 #ifdef TESTING
-            case State::StayTestRssLen: { SetInt(&stay.test.rss_len, i); } break;
+            case State::StayTestRssLen: { SetInt(&stay.test.cluster_len, i); } break;
 #else
             case State::StayTestRssLen: {} break;
 #endif

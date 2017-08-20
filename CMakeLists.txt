@@ -53,8 +53,8 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lutf8lib.c
                 lib/lua/src/loadlib.c
                 lib/lua/src/linit.c)
-set(MOYA_SRC src/classifier.cc
-             src/classifier.hh
+set(MOYA_SRC src/algorithm.cc
+             src/algorithm.hh
              src/dump.cc
              src/dump.hh
              src/moya.cc

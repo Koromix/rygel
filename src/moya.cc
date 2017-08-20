@@ -1,5 +1,5 @@
 #include "kutil.hh"
-#include "classifier.hh"
+#include "algorithm.hh"
 #include "dump.hh"
 #include "stays.hh"
 #include "tables.hh"
@@ -9,7 +9,7 @@ R"(Usage: moya <command> [<args>]
 
 Commands:
     classify                     Run classifier on patient data
-    dump                         Dump available classifier data tables
+    dump                         Dump available tables and lists
     list                         Print diagnosis and procedure lists
     pricing                      Print GHS pricing tables
     show                         A
@@ -108,21 +108,21 @@ error:
 };
 
 static HeapArray<const char *> main_table_filenames;
-static ClassifierSet main_classifier_set = {};
+static TableSet main_table_set = {};
 
-static const ClassifierSet *GetMainClassifierSet()
+static const TableSet *GetMainTableSet()
 {
-    if (!main_classifier_set.indexes.len) {
+    if (!main_table_set.indexes.len) {
         if (!main_table_filenames.len) {
             LogError("No table provided");
             return nullptr;
         }
-        LoadClassifierSet(main_table_filenames, &main_classifier_set);
-        if (!main_classifier_set.indexes.len)
+        LoadTableSet(main_table_filenames, &main_table_set);
+        if (!main_table_set.indexes.len)
             return nullptr;
     }
 
-    return &main_classifier_set;
+    return &main_table_set;
 }
 
 static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
@@ -145,76 +145,6 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
         PrintLn(stderr, "%1", usage_str);
         return false;
     }
-}
-
-static bool RunClassify(ArrayRef<const char *> arguments)
-{
-    static const char *const UsageText =
-R"(Usage: moya classify [options] stay_file ...)";
-
-	// FIXME: Temporary hack for MSVC profiling
-	freopen("grp", "w", stdout);
-
-    Allocator temp_alloc;
-    OptionParser opt_parser(arguments);
-
-    HeapArray<const char *> filenames;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintLn(stdout, UsageText);
-                return true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
-                return false;
-            }
-        }
-
-        opt_parser.ConsumeNonOptions(&filenames);
-        if (!filenames.len) {
-            PrintLn(stderr, "No filename provided");
-            PrintLn(stderr, UsageText);
-            return false;
-        }
-    }
-
-    const ClassifierSet *classifier_set = GetMainClassifierSet();
-    if (!classifier_set)
-        return false;
-
-    LogDebug("Load");
-    StaySet stay_set;
-    {
-        StaySetBuilder stay_set_builder;
-
-        if (!stay_set_builder.LoadJson(filenames))
-            return false;
-        if (!stay_set_builder.Finish(&stay_set))
-            return false;
-    }
-
-    LogDebug("Classify");
-    ClassifyResultSet result_set;
-    Classify(*classifier_set, stay_set.stays, ClusterMode::StayModes, &result_set);
-
-    LogDebug("Export");
-    for (const ClassifyResult &result: result_set.results) {
-        PrintLn("%1", result.ghm);
-        for (int16_t error: result.errors) {
-            PrintLn("  Error %1", error);
-        }
-    //#ifdef TESTING
-    #if 0
-        if (cluster_stays[0].test.ghm != ghm) {
-            Print(" GHM_ERROR (%1)", cluster_stays[0].test.ghm);
-        }
-        if (cluster_stays[0].test.rss_len != stays.len) {
-            Print(" AGG_ERROR (%1, expected %2)", stays.len, cluster_stays[0].test.rss_len);
-        }
-    #endif
-    }
-
-    return true;
 }
 
 static bool RunDump(ArrayRef<const char *> arguments)
@@ -247,15 +177,15 @@ Specific options:
     }
 
     if (filenames.len) {
-        ClassifierSet classifier_set;
-        if (!LoadClassifierSet(filenames, &classifier_set) && !classifier_set.indexes.len)
+        TableSet table_set;
+        if (!LoadTableSet(filenames, &table_set) && !table_set.indexes.len)
             return false;
-        DumpClassifierSet(classifier_set, !headers);
+        DumpTableSet(table_set, !headers);
     } else {
-        const ClassifierSet *classifier_set = GetMainClassifierSet();
-        if (!classifier_set)
+        const TableSet *table_set = GetMainTableSet();
+        if (!table_set)
             return false;
-        DumpClassifierSet(*classifier_set, !headers);
+        DumpTableSet(*table_set, !headers);
     }
 
     return true;
@@ -296,15 +226,15 @@ R"(Usage: moya list [options] list_name ...)";
         }
     }
 
-    const ClassifierSet *classifier_set;
-    const ClassifierIndex *classifier_index;
+    const TableSet *table_set;
+    const TableIndex *index;
     {
-        classifier_set = GetMainClassifierSet();
-        if (!classifier_set)
+        table_set = GetMainTableSet();
+        if (!table_set)
             return false;
-        classifier_index = classifier_set->FindIndex(index_date);
-        if (!classifier_index) {
-            LogError("No classifier index available at '%1'", index_date);
+        index = table_set->FindIndex(index_date);
+        if (!index) {
+            LogError("No table index available at '%1'", index_date);
             return false;
         }
     }
@@ -317,7 +247,7 @@ R"(Usage: moya list [options] list_name ...)";
         PrintLn("%1:", spec_str);
         switch (spec.table) {
             case ListSpecifier::Table::Diagnoses: {
-                for (const DiagnosisInfo &diag: classifier_index->diagnoses) {
+                for (const DiagnosisInfo &diag: index->diagnoses) {
                     if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
                         if (spec.Match(diag.Attributes(Sex::Male).raw)) {
                             PrintLn("  %1 (male)", diag.code);
@@ -334,7 +264,7 @@ R"(Usage: moya list [options] list_name ...)";
             } break;
 
             case ListSpecifier::Table::Procedures: {
-                for (const ProcedureInfo &proc: classifier_index->procedures) {
+                for (const ProcedureInfo &proc: index->procedures) {
                     if (spec.Match(proc.bytes)) {
                         PrintLn("  %1", proc.code);
                     }
@@ -353,10 +283,10 @@ static bool RunPricing(ArrayRef<const char *>)
     return false;
 }
 
-static bool RunShow(ArrayRef<const char *> arguments)
+static bool RunInfo(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya show [options] name ...)";
+R"(Usage: moya info [options] name ...)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -388,15 +318,15 @@ R"(Usage: moya show [options] name ...)";
         }
     }
 
-    const ClassifierSet *classifier_set;
-    const ClassifierIndex *classifier_index;
+    const TableSet *table_set;
+    const TableIndex *index;
     {
-        classifier_set = GetMainClassifierSet();
-        if (!classifier_set)
+        table_set = GetMainTableSet();
+        if (!table_set)
             return false;
-        classifier_index = classifier_set->FindIndex(index_date);
-        if (!classifier_index) {
-            LogError("No classifier index available at '%1'", index_date);
+        index = table_set->FindIndex(index_date);
+        if (!index) {
+            LogError("No table index available at '%1'", index_date);
             return false;
         }
     }
@@ -404,16 +334,16 @@ R"(Usage: moya show [options] name ...)";
     for (const char *name: names) {
         {
             DiagnosisCode diag_code = DiagnosisCode::FromString(name, false);
-            const DiagnosisInfo *diag_info = classifier_index->FindDiagnosis(diag_code);
+            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag_code);
             if (diag_info) {
-                DumpDiagnosisTable(*diag_info, classifier_index->exclusions);
+                DumpDiagnosisTable(*diag_info, index->exclusions);
                 continue;
             }
         }
 
         {
             ProcedureCode proc_code = ProcedureCode::FromString(name, false);
-            ArrayRef<const ProcedureInfo> proc_info = classifier_index->FindProcedure(proc_code);
+            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc_code);
             if (proc_info.len) {
                 DumpProcedureTable(proc_info);
                 continue;
@@ -422,7 +352,7 @@ R"(Usage: moya show [options] name ...)";
 
         {
             GhmRootCode ghm_root_code = GhmRootCode::FromString(name, false);
-            const GhmRootInfo *ghm_root_info = classifier_index->FindGhmRoot(ghm_root_code);
+            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root_code);
             if (ghm_root_info) {
                 DumpGhmRootTable(*ghm_root_info);
                 continue;
@@ -430,6 +360,78 @@ R"(Usage: moya show [options] name ...)";
         }
 
         PrintLn(stderr, "Unknown element '%1'", name);
+    }
+
+    return true;
+}
+
+static bool RunSummarize(ArrayRef<const char *> arguments)
+{
+    static const char *const UsageText =
+R"(Usage: moya sumarize [options] stay_file ...)";
+
+    // FIXME: Temporary hack for MSVC profiling
+    freopen("grp", "w", stdout);
+
+    Allocator temp_alloc;
+    OptionParser opt_parser(arguments);
+
+    HeapArray<const char *> filenames;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintLn(stdout, UsageText);
+                return true;
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+                return false;
+            }
+        }
+
+        opt_parser.ConsumeNonOptions(&filenames);
+        if (!filenames.len) {
+            PrintLn(stderr, "No filename provided");
+            PrintLn(stderr, UsageText);
+            return false;
+        }
+    }
+
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set)
+        return false;
+
+    LogDebug("Load");
+    StaySet stay_set;
+    {
+        StaySetBuilder stay_set_builder;
+
+        if (!stay_set_builder.LoadJson(filenames))
+            return false;
+        if (!stay_set_builder.Finish(&stay_set))
+            return false;
+    }
+
+    LogDebug("Summarize");
+    ClassifyResultSet result_set;
+    Summarize(*table_set, stay_set.stays, ClusterMode::StayModes, &result_set);
+
+    LogDebug("Export");
+    for (const ClassifyResult &result: result_set.results) {
+        PrintLn("%1 = %2", result.agg.stay.stay_id, result.ghm);
+        for (int16_t error: result.errors) {
+            PrintLn("  Error %1", error);
+        }
+
+#ifdef TESTING
+        if (result.ghm != result.agg.stay.test.ghm) {
+            PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
+                    result.ghm, result.agg.stay.test.ghm);
+        }
+        if (result.cluster.len != result.agg.stay.test.cluster_len) {
+            PrintLn("  Test_Error / Inadequate Cluster (%1, expected %2)",
+                    result.cluster.len, result.agg.stay.test.cluster_len);
+        }
+#endif
     }
 
     return true;
@@ -461,11 +463,11 @@ Options:
         }
     }
 
-    const ClassifierSet *classifier_set = GetMainClassifierSet();
-    if (!classifier_set)
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set)
         return false;
 
-    for (const ClassifierIndex &index: classifier_set->indexes) {
+    for (const TableIndex &index: table_set->indexes) {
         PrintLn("%1 to %2:", index.limit_dates[0], index.limit_dates[1]);
         for (const TableInfo *table: index.tables) {
             if (!table)
@@ -511,11 +513,12 @@ int main(int argc, char **argv)
     const char *cmd = argv[1];
     ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    HANDLE_COMMAND(classify, RunClassify);
+
     HANDLE_COMMAND(dump, RunDump);
+    HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pricing, RunPricing);
-    HANDLE_COMMAND(show, RunShow);
+    HANDLE_COMMAND(summarize, RunSummarize);
     HANDLE_COMMAND(tables, RunTables);
 
 #undef HANDLE_COMMAND

@@ -382,6 +382,7 @@ struct ArrayRef {
 
     bool IsValid() const { return ptr; }
 
+    // TODO: Broken
     T &operator[](size_t idx) const
     {
         DebugAssert(idx < len);

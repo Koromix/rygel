@@ -14,4 +14,4 @@ void DumpGhsDecisionTree(ArrayRef<const GhsDecisionNode> ghs_nodes);
 void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations);
 void DumpSupplementPairTable(ArrayRef<const DiagnosisProcedurePair> pairs);
 
-void DumpClassifierSet(const ClassifierSet &set, bool detail = true);
+void DumpTableSet(const TableSet &table_set, bool detail = true);

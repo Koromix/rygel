@@ -871,7 +871,7 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
 }
 
 // TODO: Validate that index has everything we need
-const ClassifierIndex *ClassifierSet::FindIndex(Date date) const
+const TableIndex *TableSet::FindIndex(Date date) const
 {
     if (date.value) {
         for (size_t i = indexes.len; i-- > 0;) {
@@ -884,12 +884,12 @@ const ClassifierIndex *ClassifierSet::FindIndex(Date date) const
     return nullptr;
 }
 
-static bool CommitClassifierIndex(ClassifierSet *set, Date start_date, Date end_sate,
-                                  LoadTableData *current_tables[])
+static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
+                             LoadTableData *current_tables[])
 {
     bool success = true;
 
-    ClassifierIndex index = {};
+    TableIndex index = {};
 
     index.limit_dates[0] = start_date;
     index.limit_dates[1] = end_sate;
@@ -965,7 +965,7 @@ static bool CommitClassifierIndex(ClassifierSet *set, Date start_date, Date end_
     return success;
 }
 
-bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out_set)
+bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
 {
     Assert(!out_set->tables.len);
     Assert(!out_set->indexes.len);
@@ -1019,7 +1019,7 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
         const TableInfo &table_info = out_set->tables[table.table_idx];
 
         while (end_date.value && table_info.limit_dates[0] >= end_date) {
-            success &= CommitClassifierIndex(out_set, start_date, end_date, active_tables);
+            success &= CommitTableIndex(out_set, start_date, end_date, active_tables);
 
             start_date = {};
             Date next_end_date = {};
@@ -1044,7 +1044,7 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
 
         if (start_date.value) {
             if (table_info.limit_dates[0] > start_date) {
-                success &= CommitClassifierIndex(out_set, start_date, table_info.limit_dates[0],
+                success &= CommitTableIndex(out_set, start_date, table_info.limit_dates[0],
                                                active_tables);
                 start_date = table_info.limit_dates[0];
             }
@@ -1057,14 +1057,14 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
 
         active_tables[(int)table_info.type] = &table;
     }
-    success &= CommitClassifierIndex(out_set, start_date, end_date, active_tables);
+    success &= CommitTableIndex(out_set, start_date, end_date, active_tables);
 
     {
         HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
         HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
         HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
-        for (ClassifierIndex &index: out_set->indexes) {
+        for (TableIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
                 index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
                                          (size_t)index.ArrayRefName.ptr
@@ -1105,7 +1105,7 @@ bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out
     return success;
 }
 
-const DiagnosisInfo *ClassifierIndex::FindDiagnosis(DiagnosisCode code) const
+const DiagnosisInfo *TableIndex::FindDiagnosis(DiagnosisCode code) const
 {
     if (!diagnoses_map)
         return nullptr;
@@ -1113,7 +1113,7 @@ const DiagnosisInfo *ClassifierIndex::FindDiagnosis(DiagnosisCode code) const
     return diagnoses_map->FindValue(code, nullptr);
 }
 
-ArrayRef<const ProcedureInfo> ClassifierIndex::FindProcedure(ProcedureCode code) const
+ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) const
 {
     if (!procedures_map)
         return {};
@@ -1134,7 +1134,7 @@ ArrayRef<const ProcedureInfo> ClassifierIndex::FindProcedure(ProcedureCode code)
     return proc;
 }
 
-const ProcedureInfo *ClassifierIndex::FindProcedure(ProcedureCode code, int8_t phase, Date date) const
+const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase, Date date) const
 {
     if (!procedures_map)
         return nullptr;
@@ -1155,7 +1155,7 @@ const ProcedureInfo *ClassifierIndex::FindProcedure(ProcedureCode code, int8_t p
     return nullptr;
 }
 
-const GhmRootInfo *ClassifierIndex::FindGhmRoot(GhmRootCode code) const
+const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
 {
     if (!ghm_roots_map)
         return nullptr;

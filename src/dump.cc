@@ -209,10 +209,10 @@ void DumpSupplementPairTable(ArrayRef<const DiagnosisProcedurePair> pairs)
     }
 }
 
-void DumpClassifierSet(const ClassifierSet &set, bool detail)
+void DumpTableSet(const TableSet &table_set, bool detail)
 {
     PrintLn("Headers:");
-    for (const TableInfo &table: set.tables) {
+    for (const TableInfo &table: table_set.tables) {
         PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table.type], table.build_date);
         PrintLn("    Raw Type: %1", table.raw_type);
         PrintLn("    Version: %1.%2", table.version[0], table.version[1]);
@@ -228,7 +228,7 @@ void DumpClassifierSet(const ClassifierSet &set, bool detail)
 
     if (detail) {
         PrintLn("Content:");
-        for (const ClassifierIndex &index: set.indexes) {
+        for (const TableIndex &index: table_set.indexes) {
             PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
             // We don't really need to loop here, but we want the switch to get
             // warnings when we introduce new table types.

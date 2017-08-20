@@ -44,6 +44,7 @@ union GhmRootCode {
     }
 
     bool IsValid() const { return value; }
+    bool IsError() const { return parts.cmd == 90; }
 
     bool operator==(GhmRootCode other) const { return value == other.value; }
     bool operator!=(GhmRootCode other) const { return value != other.value; }
@@ -97,6 +98,7 @@ union GhmCode {
     }
 
     bool IsValid() const { return value; }
+    bool IsError() const { return parts.cmd == 90; }
 
     bool operator==(GhmCode other) const { return value == other.value; }
     bool operator!=(GhmCode other) const { return value != other.value; }
@@ -291,7 +293,7 @@ struct GhmDecisionNode {
     Type type;
     union {
         struct {
-            int8_t function; // Switch to dedicated enum
+            uint8_t function; // Switch to dedicated enum
             uint8_t params[2];
             size_t children_count;
             size_t children_idx;
@@ -315,9 +317,9 @@ struct DiagnosisInfo {
     struct Attributes {
         uint8_t raw[37];
 
-        int8_t cmd;
-        int8_t jump;
-        int8_t severity;
+        uint8_t cmd;
+        uint8_t jump;
+        uint8_t severity;
     } attributes[2];
     uint16_t warnings;
 
@@ -458,7 +460,7 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
                               const TableInfo &table, size_t section_idx,
                               HeapArray<DiagnosisProcedurePair> *out_pairs);
 
-struct ClassifierIndex {
+struct TableIndex {
     Date limit_dates[2];
 
     const TableInfo *tables[CountOf(TableTypeNames)];
@@ -486,10 +488,10 @@ struct ClassifierIndex {
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
 };
 
-class ClassifierSet {
+class TableSet {
 public:
     HeapArray<TableInfo> tables;
-    HeapArray<ClassifierIndex> indexes;
+    HeapArray<TableIndex> indexes;
 
     struct {
         HeapArray<GhmDecisionNode> ghm_nodes;
@@ -511,9 +513,9 @@ public:
         HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
     } maps;
 
-    const ClassifierIndex *FindIndex(Date date) const;
-    ClassifierIndex *FindIndex(Date date)
-        { return (ClassifierIndex *)((const ClassifierSet *)this)->FindIndex(date); }
+    const TableIndex *FindIndex(Date date) const;
+    TableIndex *FindIndex(Date date)
+        { return (TableIndex *)((const TableSet *)this)->FindIndex(date); }
 };
 
-bool LoadClassifierSet(ArrayRef<const char *const> filenames, ClassifierSet *out_set);
+bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set);
