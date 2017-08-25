@@ -259,7 +259,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
             ghm_node.u.test.params[1] = raw_node.params[1];
             if (raw_node.function == 20) {
                 ghm_node.u.test.children_idx = raw_node.children_idx + (raw_node.params[0] << 8) +
-                                                                       raw_node.params[1];
+                                                                        raw_node.params[1];
                 ghm_node.u.test.children_count = 1;
             } else {
                 ghm_node.u.test.children_idx = raw_node.children_idx;
@@ -1004,13 +1004,10 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
         const TableInfo &table_info1 = out_set->tables[table1.table_idx];
         const TableInfo &table_info2 = out_set->tables[table2.table_idx];
 
-        if (table_info1.limit_dates[0] < table_info2.limit_dates[0]) {
-            return true;
-        } else if (table_info1.limit_dates[0] == table_info2.limit_dates[0]) {
-            return table_info1.build_date < table_info2.build_date;
-        } else {
-            return false;
-        }
+        return MultiCmp(table_info1.limit_dates[0] - table_info2.limit_dates[0],
+                        table_info1.version[0] - table_info2.version[0],
+                        table_info1.version[1] - table_info2.version[1],
+                        table_info1.build_date - table_info2.build_date) < 0;
     });
 
     LoadTableData *active_tables[CountOf(TableTypeNames)] = {};
@@ -1064,6 +1061,9 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
         HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
         HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
+        HashSet<GhsCode, const GhsDecisionNode *> *ghs_map = nullptr;
+        HashMap<GhmCode, const GhsDecisionNode *> *ghm_to_ghs_node_map = nullptr;
+
         for (TableIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
                 index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
@@ -1096,6 +1096,21 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
             BUILD_MAP(diagnoses, TableType::DiagnosisTable);
             BUILD_MAP(procedures, TableType::ProcedureTable);
             BUILD_MAP(ghm_roots, TableType::GhmRootTable);
+
+            if (!ghs_map || index.changed_tables & MaskEnum(TableType::GhsDecisionTree)) {
+                ghs_map = out_set->maps.ghs.Append();
+                ghm_to_ghs_node_map = out_set->maps.ghm_to_ghs_node.Append();
+
+                for (const GhsDecisionNode &ghs_node: index.ghs_nodes) {
+                    if (ghs_node.type == GhsDecisionNode::Type::Ghm) {
+                        ghm_to_ghs_node_map->Set(ghs_node.u.ghm.code, &ghs_node);
+                    } else if (ghs_node.type == GhsDecisionNode::Type::Ghs) {
+                        ghs_map->Set(&ghs_node);
+                    }
+                }
+            }
+            index.ghs_map = ghs_map;
+            index.ghm_to_ghs_node_map = ghm_to_ghs_node_map;
 
 #undef BUILD_MAP
 #undef FIX_ARRAYREF
@@ -1161,4 +1176,12 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
         return nullptr;
 
     return ghm_roots_map->FindValue(code, nullptr);
+}
+
+const GhsDecisionNode *TableIndex::FindGhs(GhsCode code) const
+{
+    if (!ghs_map)
+        return nullptr;
+
+    return ghs_map->FindValue(code, nullptr);
 }

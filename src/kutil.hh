@@ -253,6 +253,21 @@ ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
 #define DEFER_NC(Name, ...) \
     auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 
+template <typename T>
+T MultiCmp()
+{
+    return 0;
+}
+template <typename T, typename... Args>
+T MultiCmp(T cmp_value, Args... other_args)
+{
+    if (cmp_value) {
+        return cmp_value;
+    } else {
+        return MultiCmp<T>(other_args...);
+    }
+}
+
 // ------------------------------------------------------------------------
 // Overflow Safety
 // ------------------------------------------------------------------------
@@ -393,7 +408,7 @@ struct ArrayRef {
 
     ArrayRef Take(ArraySlice<T> slice) const
     {
-        DebugAssert(slice.len <- len && slice.offset <- len - slice.len);
+        DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
 
         ArrayRef<T> sub;
         sub.ptr = ptr + slice.offset;
@@ -436,21 +451,17 @@ struct ArrayRef<const char> {
         return ptr[idx];
     }
 
-    ArrayRef Take(size_t sub_offset, size_t sub_len) const
-    {
-        ArrayRef<const char> sub;
+	ArrayRef Take(ArraySlice<const char> slice) const
+	{
+		DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
 
-        if (sub_len > len || sub_offset > len - sub_len) {
-            sub = {};
-            return sub;
-        }
-        sub.ptr = ptr + sub_offset;
-        sub.len = sub_len;
-
-        return sub;
-    }
-    ArrayRef Take(const ArraySlice<const char> &slice) const
-        { return Take(slice.offset, slice.len); }
+		ArrayRef<const char> sub;
+		sub.ptr = ptr + slice.offset;
+		sub.len = slice.len;
+		return sub;
+	}
+	ArrayRef Take(size_t offset, size_t len) const
+		{ return Take(ArraySlice<const char>(offset, len)); }
 };
 template <>
 struct ArrayRef<char> {
@@ -482,21 +493,19 @@ struct ArrayRef<char> {
 
     operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
 
-    ArrayRef Take(size_t sub_offset, size_t sub_len) const
-    {
-        ArrayRef<char> sub;
+	ArrayRef Take(ArraySlice<char> slice) const
+	{
+		DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
 
-        if (sub_len > len || sub_offset > len - sub_len) {
-            sub = {};
-            return sub;
-        }
-        sub.ptr = ptr + sub_offset;
-        sub.len = sub_len;
-
-        return sub;
-    }
-    ArrayRef Take(const ArraySlice<char> &slice) const
-        { return Take(slice.offset, slice.len); }
+		ArrayRef<char> sub;
+		sub.ptr = ptr + slice.offset;
+		sub.len = slice.len;
+		return sub;
+	}
+	ArrayRef Take(size_t offset, size_t len) const
+	{
+		return Take(ArraySlice<char>(offset, len));
+	}
 };
 
 template <typename T>
@@ -1244,7 +1253,7 @@ class HashMap {
 
 public:
     HashSet<KeyType, Bucket> set;
-    Allocator *&allocator = set.table.allocator;
+    Allocator *&allocator = set.allocator;
 
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &set.Set({value, key})->value; }
@@ -1304,7 +1313,7 @@ union Date {
         return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
     }
 
-    static Date FromString(const char *date_str);
+    static Date FromString(const char *date_str, bool strict = true);
     static Date FromJulianDays(int days);
 
     bool IsValid() const

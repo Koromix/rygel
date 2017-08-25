@@ -220,13 +220,15 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
 {
     Assert(stays.len > 0);
 
+    bool valid = true;
+
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.dates[0], out_agg->stay.birthdate);
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
         if (!stay.main_diagnosis.IsValid()) {
             out_errors->Append(40);
-            return GhmCode::FromString("90Z00Z");
+            valid = false;
         }
 
         if (stay.gestational_age > 0) {
@@ -240,6 +242,31 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
     }
     out_agg->stay.dates[1] = stays[stays.len - 1].dates[1];
     out_agg->stay.exit = stays[stays.len - 1].exit;
+    out_agg->stay.diagnoses = {};
+    out_agg->stay.procedures = {};
+
+    // Consistency checks
+    if (!stays[0].birthdate.value) {
+        if (stays[0].error_mask & (uint32_t)Stay::Error::MalformedBirthdate) {
+            out_errors->Append(14);
+        } else {
+            out_errors->Append(13);
+        }
+        valid = false;
+    } else if (!stays[0].birthdate.IsValid()) {
+        out_errors->Append(39);
+        valid = false;
+    }
+    for (size_t i = 1; i < stays.len; i++) {
+        if (stays[i].birthdate != stays[0].birthdate) {
+            out_errors->Append(45);
+            valid = false;
+        }
+        if (stays[i].sex != stays[0].sex) {
+            out_errors->Append(46);
+            valid = false;
+        }
+    }
 
     // Deduplicate diagnoses
     if (out_diagnoses) {
@@ -269,11 +296,8 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
 
         std::sort(out_procedures->begin(), out_procedures->end(),
                   [](const Procedure &proc1, const Procedure &proc2) {
-            if (proc1.code.value < proc2.code.value) {
-                return true;
-            } else {
-                return proc1.phase < proc2.phase;
-            }
+            return MultiCmp(proc1.code.value - proc2.code.value,
+                            proc1.phase - proc2.phase) < 0;
         });
 
         // TODO: Warn when we deduplicate procedures with different attributes,
@@ -301,7 +325,11 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
         out_agg->stay.linked_diagnosis = main_stay->linked_diagnosis;
     }
 
-    return {};
+    if (valid) {
+        return {};
+    } else {
+        return GhmCode::FromString("90Z00Z");
+    }
 }
 
 static bool TestExclusion(const TableIndex &index,
@@ -609,8 +637,8 @@ static GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
 
     size_t ghm_node_idx = 0;
     for (size_t i = 0; !ghm.IsValid(); i++) {
-        if (i >= index.ghm_nodes.len) {
-            LogError("Empty GHM tree or infinite loop");
+        if (UNLIKELY(i >= index.ghm_nodes.len)) {
+            LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
             out_errors->Append(4);
             return GhmCode::FromString("90Z03Z");
         }

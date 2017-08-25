@@ -38,6 +38,10 @@ def parse_rums(filename):
     with open(filename) as f:
         for line in f:
             try:
+                format = int(line[9:12])
+                if format < 116:
+                    raise ValueError(f"Unsupported RUM format {format}")
+
                 first_das = 192
                 first_dad = first_das + int(line[133:135]) * 8
                 first_procedure = first_dad + int(line[135:137]) * 8
@@ -59,6 +63,8 @@ def parse_rums(filename):
                 if line[111].strip():
                     rum['exit_destination'] = int(line[111])
                 rum['unit'] = int(line[86:90])
+                if line[90:92].strip():
+                    rum['bed_authorization'] = int(line[90:92])
                 if line[131:133].strip():
                     rum['session_count'] = int(line[131:133])
                 if line[156:159].strip():
@@ -84,10 +90,10 @@ def parse_rums(filename):
                     rum['procedures'] = [{
                         'date': date_value(line[i:(i + 8)]),
                         'code': line[(i + 8):(i + 15)].strip(),
-                        'phase': int(line[i + 18]),
-                        'activity': int(line[i + 19]),
-                        'count': int(line[(i + 27):(i + 29)])
-                    } for i in range(first_procedure, first_procedure + int(line[137:140]) * 29, 29)]
+                        'phase': int(line[i + 15 + (format >= 117) * 3]),
+                        'activity': int(line[i + 16 + (format >= 117) * 3]),
+                        'count': int(line[(i + 24 + (format >= 117) * 3):(i + 26 + (format >= 117) * 3)])
+                    } for i in range(first_procedure, first_procedure + int(line[137:140]) * (26 + (format >= 117) * 3), 26 + (format >= 117) * 3)]
 
                 yield rum
             except Exception as e:

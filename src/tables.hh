@@ -13,7 +13,7 @@ static const char *const SexNames[] = {
 };
 
 union GhmRootCode {
-    uint32_t value;
+    int32_t value;
     struct {
         int8_t cmd;
         char type;
@@ -64,7 +64,7 @@ static inline bool DefaultCompare(GhmRootCode code1, GhmRootCode code2)
     { return code1 == code2; }
 
 union GhmCode {
-    uint32_t value;
+    int32_t value;
     struct {
         int8_t cmd;
         char type;
@@ -121,9 +121,12 @@ union GhmCode {
         return root_code;
     }
 };
+static inline uint64_t DefaultHash(GhmCode code) { return DefaultHash(code.value); }
+static inline bool DefaultCompare(GhmCode code1, GhmCode code2)
+    { return code1 == code2; }
 
 union DiagnosisCode {
-    uint64_t value;
+    int64_t value;
     char str[7];
 
     DiagnosisCode() = default;
@@ -184,7 +187,7 @@ static inline bool DefaultCompare(DiagnosisCode code1, DiagnosisCode code2)
     { return code1 == code2; }
 
 union ProcedureCode {
-    uint64_t value;
+    int64_t value;
     char str[8];
 
     ProcedureCode() = default;
@@ -231,6 +234,25 @@ struct GhsCode {
     GhsCode() = default;
     explicit GhsCode(int16_t number) : number(number) {}
 
+    static GhsCode FromString(const char *str, bool errors = true)
+    {
+        GhsCode code;
+
+        char *end_ptr;
+        errno = 0;
+        unsigned long l = strtoul(str, &end_ptr, 10);
+        if (!errno && !end_ptr[0] && l <= INT16_MAX) {
+            code.number = (int16_t)l;
+        } else {
+            if (errors) {
+                LogError("Malformed GHS code '%1'", str);
+            }
+            code.number = 0;
+        }
+
+        return code;
+    }
+
     bool IsValid() const { return number; }
 
     bool operator==(GhsCode other) const { return number == other.number; }
@@ -238,6 +260,9 @@ struct GhsCode {
 
     operator FmtArg() const { return FmtArg(number); }
 };
+static inline uint64_t DefaultHash(GhsCode code) { return DefaultHash(code.number); }
+static inline bool DefaultCompare(GhsCode code1, GhsCode code2)
+    { return code1 == code2; }
 
 enum class TableType {
     UnknownTable,
@@ -412,6 +437,8 @@ struct GhsDecisionNode {
             uint16_t low_duration_treshold;
         } ghs[2]; // 0 for public, 1 for private
     } u;
+
+    HASH_SET_HANDLER(GhsDecisionNode, u.ghs[0].code);
 };
 
 enum class AuthorizationType: uint8_t {
@@ -482,10 +509,17 @@ struct TableIndex {
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
     HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
+    HashSet<GhsCode, const GhsDecisionNode *> *ghs_map;
+    // TODO: Switch to HashSet when HashSet has better support for multiple
+    // transparent HashHandler types
+    HashMap<GhmCode, const GhsDecisionNode *> *ghm_to_ghs_node_map;
+
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
+
+    const GhsDecisionNode *FindGhs(GhsCode code) const;
 };
 
 class TableSet {
@@ -511,6 +545,9 @@ public:
         HeapArray<HashSet<DiagnosisCode, const DiagnosisInfo *>> diagnoses;
         HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
         HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
+
+        HeapArray<HashSet<GhsCode, const GhsDecisionNode *>> ghs;
+        HeapArray<HashMap<GhmCode, const GhsDecisionNode *>> ghm_to_ghs_node;
     } maps;
 
     const TableIndex *FindIndex(Date date) const;

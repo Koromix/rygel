@@ -32,6 +32,10 @@ struct Procedure {
 };
 
 struct Stay {
+    enum class Error: uint32_t {
+        MalformedBirthdate = 0x1
+    };
+
     int32_t stay_id;
     int32_t bill_id;
 
@@ -47,6 +51,7 @@ struct Stay {
         int8_t destination;
     } exit;
     UnitCode unit_code;
+    int8_t bed_authorization;
     int16_t session_count;
     int16_t igs2;
     Date last_menstrual_period;
@@ -59,13 +64,15 @@ struct Stay {
 
     ArrayRef<Procedure> procedures;
 
-#ifdef TESTING
+#ifndef DISABLE_TESTS
     struct {
         GhmCode ghm;
         int16_t error;
         uint16_t cluster_len;
     } test;
 #endif
+
+    uint32_t error_mask;
 };
 
 struct StaySet {

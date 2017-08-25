@@ -12,6 +12,7 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
         // Stay objects
         StayArray,
         StayObject,
+        StayBedAuthorization,
         StayBillId,
         StayBirthdate,
         StayEntryDate,
@@ -56,7 +57,6 @@ class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
 
 public:
     StaySet *out_set;
-    size_t minor_errors = 0;
 
     JsonStayHandler(StaySet *out_set = nullptr)
         : out_set(out_set)
@@ -149,6 +149,7 @@ public:
 
         switch (state) {
             case State::StayObject: {
+                HANDLE_KEY("bed_authorization", State::StayBedAuthorization);
                 HANDLE_KEY("bill_id", State::StayBillId);
                 HANDLE_KEY("birthdate", State::StayBirthdate);
                 HANDLE_KEY("entry_date", State::StayEntryDate);
@@ -174,8 +175,6 @@ public:
                 HANDLE_KEY("test_cluster_len", State::StayTestClusterLen);
 
                 LogError("Unknown stay attribute '%1'", key);
-                SetErrorFlag();
-
                 return false;
             } break;
 
@@ -187,9 +186,7 @@ public:
                 HANDLE_KEY("count", State::ProcedureCount);
 
                 LogError("Unknown procedure attribute '%1'", key);
-                SetErrorFlag();
-
-                return true;
+                return false;
             } break;
 
             default: {
@@ -206,6 +203,7 @@ public:
         switch (state) {
             // Stay attributes
             case State::StayStayId: { SetInt(&stay.stay_id, i); } break;
+            case State::StayBedAuthorization: { SetInt(&stay.bed_authorization, i); } break;
             case State::StayBillId: { SetInt(&stay.bill_id, i); } break;
             case State::StaySex: {
                 if (i == 1) {
@@ -214,7 +212,6 @@ public:
                     stay.sex = Sex::Female;
                 } else {
                     LogError("Invalid sex value %1", i);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayEntryMode: {
@@ -222,7 +219,6 @@ public:
                     stay.entry.mode = (int8_t)i;
                 } else {
                     LogError("Invalid entry mode value %1", i);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayEntryOrigin: {
@@ -230,7 +226,6 @@ public:
                     stay.entry.origin = (int8_t)i;
                 } else {
                     LogError("Invalid entry origin value %1", i);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayExitMode: {
@@ -238,7 +233,6 @@ public:
                     stay.exit.mode = (int8_t)i;
                 } else {
                     LogError("Invalid exit mode value %1", i);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayExitDestination: {
@@ -246,7 +240,6 @@ public:
                     stay.exit.destination = (int8_t)i;
                 } else {
                     LogError("Invalid exit destination value %1", i);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayUnit: { SetInt(&stay.unit_code.value, i);} break;
@@ -254,7 +247,7 @@ public:
             case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
             case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
-#ifdef TESTING
+#ifndef DISABLE_TESTS
             case State::StayTestError: { SetInt(&stay.test.error, i); } break;
             case State::StayTestClusterLen: { SetInt(&stay.test.cluster_len, i); } break;
 #else
@@ -269,14 +262,13 @@ public:
                     proc.activities = (uint8_t)(1 << i);
                 } else {
                     LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
-                    SetErrorFlag();
                 }
             } break;
             case State::ProcedureCount: { SetInt(&proc.count, i); } break;
 
             default: {
                 LogError("Unexpected integer value %1", i);
-                SetErrorFlag();
+                return false;
             } break;
         }
 
@@ -293,17 +285,16 @@ public:
                     stay.sex = Sex::Female;
                 } else {
                     LogError("Invalid sex value '%1'", str);
-                    SetErrorFlag();
                 }
             } break;
-            case State::StayBirthdate: { SetDate(&stay.birthdate, str); } break;
+            case State::StayBirthdate:
+                { SetDate(&stay.birthdate, str, Stay::Error::MalformedBirthdate); } break;
             case State::StayEntryDate: { SetDate(&stay.dates[0], str); } break;
             case State::StayEntryMode: {
                 if (str[0] && !str[1]) {
                     stay.entry.mode = str[0] - '0';
                 } else {
                     LogError("Invalid entry mode value '%1'", str);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayEntryOrigin: {
@@ -316,7 +307,6 @@ public:
                     stay.entry.origin = str[0] - '0';
                 } else {
                     LogError("Invalid entry origin value '%1'", str);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayExitDate: { SetDate(&stay.dates[1], str); } break;
@@ -325,7 +315,6 @@ public:
                     stay.exit.mode = str[0] - '0';
                 } else {
                     LogError("Invalid exit mode value '%1'", str);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayExitDestination: {
@@ -335,12 +324,11 @@ public:
                     stay.exit.destination = str[0] - '0';
                 } else {
                     LogError("Invalid exit destination value '%1'", str);
-                    SetErrorFlag();
                 }
             } break;
             case State::StayLastMenstrualPeriod:
                 { SetDate(&stay.last_menstrual_period, str); } break;
-#ifdef TESTING
+#ifndef DISABLE_TESTS
             case State::StayTestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
 #else
             case State::StayTestGhm: {} break;
@@ -366,7 +354,7 @@ public:
 
             default: {
                 LogError("Unexpected string value '%1'", str);
-                SetErrorFlag();
+                return false;
             } break;
         }
 
@@ -385,8 +373,7 @@ public:
     bool Default()
     {
         LogError("Unsupported value type (not a string or 32-bit integer)");
-        SetErrorFlag();
-        return HandleValueEnd();
+        return false;
     }
 
 private:
@@ -397,30 +384,34 @@ private:
         stay.procedures.ptr = (Procedure *)out_set->store.procedures.len;
     }
 
-    void SetErrorFlag()
-    {
-        minor_errors++;
-    }
-
     template <typename T>
-    void SetInt(T *dest, int i)
+    bool SetInt(T *dest, int i)
     {
         *dest = i;
         if (*dest != i) {
             LogError("Value %1 outside of range %2 - %3",
                      i, (int)std::numeric_limits<T>::min(), (int)std::numeric_limits<T>::max());
-            SetErrorFlag();
-            return;
+            return false;
         }
-
-        *dest = i;
+        return true;
     }
-    void SetDate(Date *dest, const char *date_str)
+    template <typename T>
+    void SetInt(T *dest, int i, Stay::Error error_flag)
     {
-        *dest = Date::FromString(date_str);
-        if (!dest->value) {
-            LogError("Invalid date string '%1'", date_str);
-            SetErrorFlag();
+        if (!SetInt(dest, i)) {
+            stay.error_mask |= (uint32_t)error_flag;
+        }
+    }
+
+    bool SetDate(Date *dest, const char *date_str)
+    {
+        *dest = Date::FromString(date_str, false);
+        return dest->value;
+    }
+    void SetDate(Date *dest, const char *date_str, Stay::Error error_flag)
+    {
+        if (!SetDate(dest, date_str)) {
+            stay.error_mask |= (uint32_t)error_flag;
         }
     }
 
@@ -549,16 +540,14 @@ bool StaySetBuilder::LoadJson(ArrayRef<const char *const> filenames)
         set.store.procedures.RemoveFrom(procedures_len);
     };
 
-    bool success = true;
     for (const char *filename: filenames) {
         JsonStayHandler json_handler(&set);
         if (!ParseJsonFile(filename, &json_handler))
             return false;
-        success &= !json_handler.minor_errors;
     }
 
     set_guard.disable();
-    return success;
+    return true;
 }
 
 bool StaySetBuilder::Finish(StaySet *out_set)

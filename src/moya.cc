@@ -281,6 +281,15 @@ R"(Usage: moya info [options] name ...)";
             }
         }
 
+        {
+            GhsCode ghs_code = GhsCode::FromString(name, false);
+            const GhsDecisionNode *ghs_node = index->FindGhs(ghs_code);
+            if (ghs_node) {
+                DumpGhsDecisionTree(*ghs_node);
+                continue;
+            }
+        }
+
         PrintLn(stderr, "Unknown element '%1'", name);
     }
 
@@ -448,12 +457,13 @@ Options:
 
     LogDebug("Export");
     for (const SummarizeResult &result: result_set.results) {
-        PrintLn("%1 [%2] = %3", result.agg.stay.stay_id, result.cluster.len, result.ghm);
+        PrintLn("%1 [%2 / %3 stays] = %4", result.agg.stay.stay_id,
+                result.agg.stay.dates[1], result.cluster.len, result.ghm);
         for (int16_t error: result.errors) {
             PrintLn("  Error %1", error);
         }
 
-#ifdef TESTING
+#ifndef DISABLE_TESTS
         if (result.ghm != result.agg.stay.test.ghm) {
             PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
                     result.ghm, result.agg.stay.test.ghm);

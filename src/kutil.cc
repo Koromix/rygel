@@ -147,7 +147,7 @@ void Allocator::ReleaseAll()
 // Date
 // ------------------------------------------------------------------------
 
-Date Date::FromString(const char *date_str)
+Date Date::FromString(const char *date_str, bool strict)
 {
     Date date = {};
 
@@ -180,7 +180,7 @@ GCC_POP_IGNORE()
     date.st.year = (int16_t)parts[0];
     date.st.month = (uint8_t)parts[1];
     date.st.day = (uint8_t)parts[2];
-    if (!date.IsValid()) {
+    if (strict && !date.IsValid()) {
         LogError("Invalid date string '%1'", date_str);
         date.value = 0;
     }

@@ -8,7 +8,7 @@ if(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-Og -gdwarf-2")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -gdwarf-2")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -gdwarf-2 -DNDEBUG")
 
 set(CMAKE_CXX_STANDARD 17)
@@ -66,4 +66,3 @@ set(MOYA_SRC src/algorithm.cc
              src/tables.hh)
 
 add_executable(moya ${MOYA_SRC})
-target_compile_definitions(moya PUBLIC TESTING)
