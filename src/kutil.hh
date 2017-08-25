@@ -1223,8 +1223,8 @@ static inline bool DefaultCompare(unsigned long long key1, unsigned long long ke
 static inline bool DefaultCompare(const char *key1, const char *key2)
     { return !strcmp(key1, key2); }
 
-#define HASH_SET_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
-    class HashHandler { \
+#define HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+    class Name { \
     public: \
         static bool IsEmpty(const ValueType &value) \
             { return value.KeyMember == (EmptyKey); } \
@@ -1239,8 +1239,12 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
                                 const decltype(ValueType::KeyMember) &key2) \
             { return CompareFunc((key1), (key2)); } \
     }
+#define HASH_SET_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+    HASH_SET_HANDLER_EX_N(HashHandler, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc)
 #define HASH_SET_HANDLER(ValueType, KeyMember) \
     HASH_SET_HANDLER_EX(ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
+#define HASH_SET_HANDLER_N(Name, ValueType, KeyMember) \
+    HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
 class HashMap {

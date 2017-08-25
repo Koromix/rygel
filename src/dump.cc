@@ -144,43 +144,43 @@ void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots)
     }
 }
 
-void DumpGhsDecisionTree(ArrayRef<const GhsDecisionNode> ghs_nodes)
+void DumpGhsTable(ArrayRef<const GhsInfo> ghs)
 {
-    // This code is simplistic and assumes that test failures always go back
-    // to a GHS (or nothing at all), which is necessarily true in ghsinfo.tab
-    // even though our representation can do more.
-    size_t test_until = SIZE_MAX;
-    int test_depth = 0;
-    for (size_t i = 0; i < ghs_nodes.len; i++) {
-        const GhsDecisionNode &node = ghs_nodes[i];
-
-        if (i == test_until) {
-            test_until = SIZE_MAX;
-            test_depth = 0;
+    GhmCode previous_ghm = {};
+    for (const GhsInfo &ghs_info: ghs) {
+        if (ghs_info.ghm != previous_ghm) {
+            PrintLn("      GHM %1:", ghs_info.ghm);
+            previous_ghm = ghs_info.ghm;
         }
+        PrintLn("        GHS %1 (public) / GHS %2 (private)",
+                ghs_info.versions[0].ghs, ghs_info.versions[1].ghs);
+        PrintLn("          Duration = %1 to %2 days",
+                ghs_info.versions[0].low_duration_treshold,
+                ghs_info.versions[0].high_duration_treshold);
 
-        switch (node.type) {
-            case GhsDecisionNode::Type::Ghm: {
-                PrintLn("      %1. GHM %2 [next %3]",
-                        i, node.u.ghm.code, node.u.ghm.next_ghm_idx);
-            } break;
-
-            case GhsDecisionNode::Type::Test: {
-                test_until = node.u.test.fail_goto_idx;
-                test_depth++;
-
-                PrintLn("      %1%2. Test %3(%4, %5) => %6",
-                        FmtArg("  ").Repeat(test_depth), i,
-                        node.u.test.function, node.u.test.params[0], node.u.test.params[1],
-                        node.u.test.fail_goto_idx);
-            } break;
-
-            case GhsDecisionNode::Type::Ghs: {
-                PrintLn("        %1%2. GHS %3 [duration = %4 to %5 days]",
-                        FmtArg("  ").Repeat(test_depth), i,
-                        node.u.ghs[0].code, node.u.ghs[0].low_duration_treshold,
-                        node.u.ghs[0].high_duration_treshold);
-            } break;
+        if (ghs_info.unit_authorization) {
+            PrintLn("          Requires unit authorization %1", ghs_info.unit_authorization);
+        }
+        if (ghs_info.bed_authorization) {
+            PrintLn("          Requires bed authorization %1", ghs_info.bed_authorization);
+        }
+        if (ghs_info.minimal_duration) {
+            PrintLn("          Requires duration >= %1 days", ghs_info.minimal_duration);
+        }
+        if (ghs_info.minimal_age) {
+            PrintLn("          Requires age >= %1 years", ghs_info.minimal_age);
+        }
+        if (ghs_info.main_diagnosis_mask) {
+            PrintLn("          Main Diagnosis List D$%1.%2",
+                    ghs_info.main_diagnosis_offset, ghs_info.main_diagnosis_mask);
+        }
+        if (ghs_info.diagnosis_mask) {
+            PrintLn("          Diagnosis List D$%1.%2",
+                    ghs_info.diagnosis_offset, ghs_info.diagnosis_mask);
+        }
+        if (ghs_info.proc_mask) {
+            PrintLn("          Procedure List A$%1.%2",
+                    ghs_info.proc_offset, ghs_info.proc_mask);
         }
     }
 }
@@ -269,9 +269,9 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         }
                     } break;
 
-                    case TableType::GhsDecisionTree: {
-                        PrintLn("    GHS Decision Tree:");
-                        DumpGhsDecisionTree(index.ghs_nodes);
+                    case TableType::GhsTable: {
+                        PrintLn("    GHS Table:");
+                        DumpGhsTable(index.ghs);
                     } break;
                     case TableType::AuthorizationTable: {
                         PrintLn("    Authorization Types:");

@@ -96,7 +96,7 @@ error:
     {
         switch (type) {
             case Type::Mask: {
-                return u.mask.offset < values.len &&
+                return LIKELY(u.mask.offset < values.len) &&
                        values[u.mask.offset] & u.mask.mask;
             } break;
 
@@ -277,15 +277,6 @@ R"(Usage: moya info [options] name ...)";
             const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root_code);
             if (ghm_root_info) {
                 DumpGhmRootTable(*ghm_root_info);
-                continue;
-            }
-        }
-
-        {
-            GhsCode ghs_code = GhsCode::FromString(name, false);
-            const GhsDecisionNode *ghs_node = index->FindGhs(ghs_code);
-            if (ghs_node) {
-                DumpGhsDecisionTree(*ghs_node);
                 continue;
             }
         }

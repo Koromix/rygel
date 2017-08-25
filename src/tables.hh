@@ -273,7 +273,7 @@ enum class TableType {
     GhmRootTable,
     SeverityTable,
 
-    GhsDecisionTree,
+    GhsTable,
     AuthorizationTable,
     SupplementPairTable
 };
@@ -286,7 +286,7 @@ static const char *const TableTypeNames[] = {
     "GHM Root Table",
     "Severity Table",
 
-    "GHS Decision Tree",
+    "GHS Table",
     "Unit Reference Table",
     "Supplement Pair Table"
 };
@@ -411,34 +411,30 @@ struct GhmRootInfo {
     HASH_SET_HANDLER(GhmRootInfo, code);
 };
 
-struct GhsDecisionNode {
-    enum class Type {
-        Ghm,
-        Test,
-        Ghs
-    };
+struct GhsInfo {
+    GhmCode ghm;
 
-    Type type;
-    union {
-        struct {
-            GhmCode code;
-            size_t next_ghm_idx;
-        } ghm;
+    struct {
+        GhsCode ghs;
+        int16_t low_duration_treshold;
+        int16_t high_duration_treshold;
+    } versions[2]; // 0 for public, 1 for private
 
-        struct {
-            int8_t function;
-            uint8_t params[2];
-            size_t fail_goto_idx;
-        } test;
+    int8_t bed_authorization;
+    int8_t unit_authorization;
+    int8_t minimal_duration;
 
-        struct {
-            GhsCode code;
-            uint16_t high_duration_treshold;
-            uint16_t low_duration_treshold;
-        } ghs[2]; // 0 for public, 1 for private
-    } u;
+    int8_t minimal_age;
 
-    HASH_SET_HANDLER(GhsDecisionNode, u.ghs[0].code);
+    uint8_t main_diagnosis_mask;
+    uint8_t main_diagnosis_offset;
+    uint8_t diagnosis_mask;
+    uint8_t diagnosis_offset;
+
+    uint8_t proc_mask;
+    uint8_t proc_offset;
+
+    HASH_SET_HANDLER_N(GhmHandler, GhsInfo, ghm);
 };
 
 enum class AuthorizationType: uint8_t {
@@ -479,8 +475,8 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
                         const TableInfo &table, size_t section_idx,
                         HeapArray<ValueRangeCell<2>> *out_cells);
 
-bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
-                           const TableInfo &table, HeapArray<GhsDecisionNode> *out_nodes);
+bool ParseGhsTable(const uint8_t *file_data, const char *filename,
+                   const TableInfo &table, HeapArray<GhsInfo> *out_nodes);
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
                              const TableInfo &table, HeapArray<AuthorizationInfo> *out_units);
 bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
@@ -501,7 +497,7 @@ struct TableIndex {
     ArrayRef<ValueRangeCell<2>> gnn_cells;
     ArrayRef<ValueRangeCell<2>> cma_cells[3];
 
-    ArrayRef<GhsDecisionNode> ghs_nodes;
+    ArrayRef<GhsInfo> ghs;
     ArrayRef<AuthorizationInfo> authorizations;
     ArrayRef<DiagnosisProcedurePair> supplement_pairs[2];
 
@@ -509,17 +505,12 @@ struct TableIndex {
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
     HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
-    HashSet<GhsCode, const GhsDecisionNode *> *ghs_map;
-    // TODO: Switch to HashSet when HashSet has better support for multiple
-    // transparent HashHandler types
-    HashMap<GhmCode, const GhsDecisionNode *> *ghm_to_ghs_node_map;
+    HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
-
-    const GhsDecisionNode *FindGhs(GhsCode code) const;
 };
 
 class TableSet {
@@ -536,7 +527,7 @@ public:
         HeapArray<ValueRangeCell<2>> gnn_cells;
         HeapArray<ValueRangeCell<2>> cma_cells[3];
 
-        HeapArray<GhsDecisionNode> ghs_nodes;
+        HeapArray<GhsInfo> ghs;
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<DiagnosisProcedurePair> supplement_pairs[2];
     } store;
@@ -546,8 +537,7 @@ public:
         HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
         HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
 
-        HeapArray<HashSet<GhsCode, const GhsDecisionNode *>> ghs;
-        HeapArray<HashMap<GhmCode, const GhsDecisionNode *>> ghm_to_ghs_node;
+        HeapArray<HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler>> ghm_to_ghs;
     } maps;
 
     const TableIndex *FindIndex(Date date) const;

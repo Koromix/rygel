@@ -194,7 +194,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         } else if (!strcmp(table.raw_type, "RGHMINFO")) {
             table.type = TableType::GhmRootTable;
         } else if (!strcmp(table.raw_type, "GHSINFO")) {
-            table.type = TableType::GhsDecisionTree;
+            table.type = TableType::GhsTable;
         } else if (!strcmp(table.raw_type, "TABCOMBI")) {
             table.type = TableType::SeverityTable;
         } else if (!strcmp(table.raw_type, "AUTOREFS")) {
@@ -666,11 +666,10 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
-                           const TableInfo &table, HeapArray<GhsDecisionNode> *out_nodes)
+bool ParseGhsTable(const uint8_t *file_data, const char *filename,
+                   const TableInfo &table, HeapArray<GhsInfo> *out_ghs)
 {
-    size_t base_len = out_nodes->len;
-    DEFER_N(out_nodes_guard) { out_nodes->RemoveFrom(base_len); };
+    DEFER_NC(out_ghs_guard, len = out_ghs->len) { out_ghs->RemoveFrom(len); };
 
 #pragma pack(push, 1)
     struct PackedGhsNode {
@@ -692,9 +691,7 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
 
-    uint32_t previous_cmd_type_seq = 0;
-    size_t ghm_node_idx = SIZE_MAX;
-    size_t first_test_idx = SIZE_MAX;
+    GhsInfo current_ghs = {};
     for (size_t i = 0; i < table.sections[0].values_count; i++) {
         PackedGhsNode raw_ghs_node;
         memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
@@ -708,72 +705,76 @@ bool ParseGhsDecisionTree(const uint8_t *file_data, const char *filename,
         }
 #endif
 
-        uint32_t cmd_type_seq = (raw_ghs_node.cmd << 16) | raw_ghs_node.type_seq;
-        if (cmd_type_seq != previous_cmd_type_seq) {
-            previous_cmd_type_seq = cmd_type_seq;
+        if (!current_ghs.ghm.IsValid()) {
+            static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
+            static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J',
+                                    'Z', 'T', '1', '2', '3', '4'};
 
-            FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
-            if (ghm_node_idx != SIZE_MAX) {
-                (*out_nodes)[ghm_node_idx].u.ghm.next_ghm_idx = out_nodes->len - base_len;
-            } else {
-                FAIL_PARSE_IF(i);
-            }
-            ghm_node_idx = out_nodes->len;
-
-            GhsDecisionNode ghm_node = {};
-            ghm_node.type = GhsDecisionNode::Type::Ghm;
-            {
-                static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
-                static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J',
-                                        'Z', 'T', '1', '2', '3', '4'};
-
-                ghm_node.u.ghm.code.parts.cmd = raw_ghs_node.cmd;
-                ghm_node.u.ghm.code.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
-                ghm_node.u.ghm.code.parts.seq = raw_ghs_node.type_seq / 100 % 100;
-                ghm_node.u.ghm.code.parts.mode = chars4[raw_ghs_node.type_seq % 100 % 13];
-            }
-            out_nodes->Append(ghm_node);
+            current_ghs.ghm.parts.cmd = (int8_t)raw_ghs_node.cmd;
+            current_ghs.ghm.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
+            current_ghs.ghm.parts.seq = raw_ghs_node.type_seq / 100 % 100;
+            current_ghs.ghm.parts.mode = chars4[raw_ghs_node.type_seq % 100 % 13];
         }
 
-        if (raw_ghs_node.function) {
-            if (first_test_idx == SIZE_MAX) {
-                first_test_idx = out_nodes->len;
-            }
+        switch (raw_ghs_node.function) {
+            case 0: {
+                FAIL_PARSE_IF(!raw_ghs_node.valid_ghs);
+            } break;
 
-            GhsDecisionNode test_node = {};
-            test_node.type = GhsDecisionNode::Type::Test;
-            test_node.u.test.function = raw_ghs_node.function;
-            test_node.u.test.params[0] = raw_ghs_node.params[0];
-            test_node.u.test.params[1] = raw_ghs_node.params[1];
-            out_nodes->Append(test_node);
-        } else {
-            FAIL_PARSE_IF(!raw_ghs_node.valid_ghs);
+            case 1: {
+                current_ghs.proc_offset = raw_ghs_node.params[0];
+                current_ghs.proc_mask = raw_ghs_node.params[1];
+            } break;
+
+            case 2: {
+                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                current_ghs.unit_authorization = raw_ghs_node.params[1];
+            } break;
+
+            case 3: {
+                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                current_ghs.bed_authorization = raw_ghs_node.params[1];
+            } break;
+
+            case 5: {
+                current_ghs.main_diagnosis_offset = raw_ghs_node.params[0];
+                current_ghs.main_diagnosis_mask = raw_ghs_node.params[1];
+            } break;
+
+            case 6: {
+                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                current_ghs.minimal_duration = (int8_t)raw_ghs_node.params[1];
+            } break;
+
+            case 7: {
+                current_ghs.diagnosis_offset = raw_ghs_node.params[0];
+                current_ghs.diagnosis_mask = raw_ghs_node.params[1];
+            } break;
+
+            case 8: {
+                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                current_ghs.minimal_age = (int8_t)raw_ghs_node.params[1];
+            } break;
+
+            default: {
+                FAIL_PARSE_IF(true);
+            } break;
         }
 
         if (raw_ghs_node.valid_ghs) {
-            // TODO: Doubts about correctness of this
-            // TODO: Put to 0 at the end
-            for (size_t j = first_test_idx; j < out_nodes->len; j++) {
-                (*out_nodes)[j].u.test.fail_goto_idx = out_nodes->len + 1 - base_len;
+            for (size_t j = 0; j < CountOf(current_ghs.versions); j++) {
+                current_ghs.versions[j].ghs.number = (int16_t)raw_ghs_node.versions[j].ghs_code;
+                current_ghs.versions[j].low_duration_treshold =
+                    (int16_t)raw_ghs_node.versions[j].low_duration_treshold;
+                current_ghs.versions[j].high_duration_treshold =
+                    (int16_t)raw_ghs_node.versions[j].high_duration_treshold;
             }
-            first_test_idx = SIZE_MAX;
-
-            GhsDecisionNode ghs_node = {};
-            ghs_node.type = GhsDecisionNode::Type::Ghs;
-            for (int j = 0; j < 2; j++) {
-                ghs_node.u.ghs[j].code.number = raw_ghs_node.versions[j].ghs_code;
-                ghs_node.u.ghs[j].high_duration_treshold =
-                    raw_ghs_node.versions[j].high_duration_treshold;
-                ghs_node.u.ghs[j].low_duration_treshold =
-                    raw_ghs_node.versions[j].low_duration_treshold;
-            }
-            out_nodes->Append(ghs_node);
+            out_ghs->Append(current_ghs);
+            current_ghs = {};
         }
     }
-    FAIL_PARSE_IF(first_test_idx != SIZE_MAX);
-    FAIL_PARSE_IF(ghm_node_idx + 1 == out_nodes->len);
 
-    out_nodes_guard.disable();
+    out_ghs_guard.disable();
     return true;
 }
 
@@ -936,8 +937,8 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
                 LOAD_TABLE(cma_cells[2], ParseSeverityTable, 3);
             } break;
 
-            case TableType::GhsDecisionTree: {
-                LOAD_TABLE(ghs_nodes, ParseGhsDecisionTree);
+            case TableType::GhsTable: {
+                LOAD_TABLE(ghs, ParseGhsTable);
             } break;
             case TableType::AuthorizationTable: {
                 LOAD_TABLE(authorizations, ParseAuthorizationTable);
@@ -1061,22 +1062,21 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
         HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
         HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
-        HashSet<GhsCode, const GhsDecisionNode *> *ghs_map = nullptr;
-        HashMap<GhmCode, const GhsDecisionNode *> *ghm_to_ghs_node_map = nullptr;
+        HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
 
         for (TableIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
                 index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
                                          (size_t)index.ArrayRefName.ptr
-#define BUILD_MAP(MemberName, TableType) \
+#define BUILD_MAP(IndexName, MapName, TableType) \
                 do { \
-                    if (!CONCAT(MemberName, _map) || index.changed_tables & MaskEnum(TableType)) { \
-                        CONCAT(MemberName, _map) = out_set->maps.MemberName.Append(); \
-                        for (auto &value: index.MemberName) { \
-                            CONCAT(MemberName, _map)->Append(&value); \
+                    if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
+                        CONCAT(MapName, _map) = out_set->maps.MapName.Append(); \
+                        for (auto &value: index.IndexName) { \
+                            CONCAT(MapName, _map)->Append(&value); \
                         } \
                     } \
-                    index.CONCAT(MemberName, _map) = CONCAT(MemberName, _map); \
+                    index.CONCAT(MapName, _map) = CONCAT(MapName, _map); \
                 } while (false)
 
             FIX_ARRAYREF(ghm_nodes);
@@ -1088,29 +1088,15 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
             FIX_ARRAYREF(cma_cells[0]);
             FIX_ARRAYREF(cma_cells[1]);
             FIX_ARRAYREF(cma_cells[2]);
-            FIX_ARRAYREF(ghs_nodes);
+            FIX_ARRAYREF(ghs);
             FIX_ARRAYREF(authorizations);
             FIX_ARRAYREF(supplement_pairs[0]);
             FIX_ARRAYREF(supplement_pairs[1]);
 
-            BUILD_MAP(diagnoses, TableType::DiagnosisTable);
-            BUILD_MAP(procedures, TableType::ProcedureTable);
-            BUILD_MAP(ghm_roots, TableType::GhmRootTable);
-
-            if (!ghs_map || index.changed_tables & MaskEnum(TableType::GhsDecisionTree)) {
-                ghs_map = out_set->maps.ghs.Append();
-                ghm_to_ghs_node_map = out_set->maps.ghm_to_ghs_node.Append();
-
-                for (const GhsDecisionNode &ghs_node: index.ghs_nodes) {
-                    if (ghs_node.type == GhsDecisionNode::Type::Ghm) {
-                        ghm_to_ghs_node_map->Set(ghs_node.u.ghm.code, &ghs_node);
-                    } else if (ghs_node.type == GhsDecisionNode::Type::Ghs) {
-                        ghs_map->Set(&ghs_node);
-                    }
-                }
-            }
-            index.ghs_map = ghs_map;
-            index.ghm_to_ghs_node_map = ghm_to_ghs_node_map;
+            BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
+            BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
+            BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
+            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsTable);
 
 #undef BUILD_MAP
 #undef FIX_ARRAYREF
@@ -1176,12 +1162,4 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
         return nullptr;
 
     return ghm_roots_map->FindValue(code, nullptr);
-}
-
-const GhsDecisionNode *TableIndex::FindGhs(GhsCode code) const
-{
-    if (!ghs_map)
-        return nullptr;
-
-    return ghs_map->FindValue(code, nullptr);
 }
