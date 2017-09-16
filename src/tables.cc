@@ -728,12 +728,12 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 
             case 2: {
                 FAIL_PARSE_IF(raw_ghs_node.params[0]);
-                current_ghs.unit_authorization = raw_ghs_node.params[1];
+                current_ghs.unit_authorization = (int8_t)raw_ghs_node.params[1];
             } break;
 
             case 3: {
                 FAIL_PARSE_IF(raw_ghs_node.params[0]);
-                current_ghs.bed_authorization = raw_ghs_node.params[1];
+                current_ghs.bed_authorization = (int8_t)raw_ghs_node.params[1];
             } break;
 
             case 5: {
@@ -794,7 +794,7 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections.len != 2);
     FAIL_PARSE_IF(table.sections[0].value_len != 3 || table.sections[0].value_len != 3);
 
-    for (int i = 0; i < 2; i++) {
+    for (size_t i = 0; i < 2; i++) {
         for (size_t j = 0; j < table.sections[i].values_count; j++) {
             AuthorizationInfo auth = {};
 
@@ -810,8 +810,8 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
             } else {
                 auth.type = AuthorizationType::Facility;
             }
-            auth.code = raw_auth.code;
-            auth.function = raw_auth.function;
+            auth.code = (int8_t)raw_auth.code;
+            auth.function = (int8_t)raw_auth.function;
 
             out_auths->Append(auth);
         }
@@ -1126,10 +1126,11 @@ ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) cons
 
     {
         const ProcedureInfo *end_proc = proc.ptr + 1;
-        while (end_proc->code == code) {
+        while (end_proc < procedures.end() &&
+               end_proc->code == code) {
             end_proc++;
         }
-        proc.len = end_proc - proc.ptr;
+        proc.len = (size_t)(end_proc - proc.ptr);
     }
 
     return proc;
@@ -1151,7 +1152,8 @@ const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase,
             continue;
 
         return proc;
-    } while (++proc < procedures.ptr + procedures.len);
+    } while (++proc < procedures.ptr + procedures.len &&
+             proc->code == code);
 
     return nullptr;
 }

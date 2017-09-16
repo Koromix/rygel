@@ -264,7 +264,7 @@ static inline uint64_t DefaultHash(GhsCode code) { return DefaultHash(code.numbe
 static inline bool DefaultCompare(GhsCode code1, GhsCode code2)
     { return code1 == code2; }
 
-enum class TableType {
+enum class TableType: uint32_t {
     UnknownTable,
 
     GhmDecisionTree,
