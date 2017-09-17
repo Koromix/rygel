@@ -4,6 +4,7 @@ from datetime import datetime, date
 import csv
 import json
 import traceback
+import io
 import operator
 
 # -------------------------------------------------------------------------
@@ -18,7 +19,8 @@ FINESS_JURIDIQUE = 590780193
 
 def date_value(date_str):
     return datetime.strptime(date_str, "%d%m%Y").date()
-def int_value(int_str, default = 0):
+def int_optional(int_str, default = None):
+    int_str = int_str.strip()
     return int(int_str) if int_str else default
 
 def write_json(data, dest):
@@ -35,66 +37,82 @@ def write_json(data, dest):
 # -------------------------------------------------------------------------
 
 def parse_rums(filename):
-    with open(filename) as f:
+    def int_optional(int_str, default = None):
+        int_str = int_str.strip()
+        return int(int_str) if int_str else default
+    def date(date_str):
+        date_str = date_str.decode()
+        return datetime.strptime(date_str, "%d%m%Y").date()
+    def date_optional(date_str, default = None):
+        date_str = date_str.strip()
+        return date(date_str) if date_str else default
+
+    with open(filename, 'rb') as f:
         for line in f:
+            buf = io.BytesIO(line)
+
             try:
-                format = int(line[9:12])
-                if format < 116:
-                    raise ValueError(f"Unsupported RUM format {format}")
-
-                first_das = 192
-                first_dad = first_das + int(line[133:135]) * 8
-                first_procedure = first_dad + int(line[135:137]) * 8
-
                 rum = {}
-                rum['stay_id'] = int(line[47:67])
-                rum['bill_id'] = int(line[27:47])
-                rum['sex'] = int(line[85])
-                rum['birthdate'] = date_value(line[77:85])
-                rum['entry_date'] = date_value(line[92:100])
-                rum['entry_mode'] = int(line[100])
-                if line[101].strip():
-                    if line[101] == 'R' or line[101] == 'r':
-                        rum['entry_origin'] = 'R'
-                    else:
-                        rum['entry_origin'] = int(line[101])
-                rum['exit_date'] = date_value(line[102:110])
-                rum['exit_mode'] = int(line[110])
-                if line[111].strip():
-                    rum['exit_destination'] = int(line[111])
-                rum['unit'] = int(line[86:90])
-                if line[90:92].strip():
-                    rum['bed_authorization'] = int(line[90:92])
-                if line[131:133].strip():
-                    rum['session_count'] = int(line[131:133])
-                if line[156:159].strip():
-                    rum['igs2'] = int(line[156:159])
-                if line[123:131].strip():
-                    rum['last_menstrual_period'] = date_value(line[123:131])
-                if line[117:121].strip():
-                    rum['newborn_weight'] = int(line[117:121])
-                if line[121:123].strip():
-                    rum['gestational_age'] = int(line[121:123])
 
-                rum['dp'] = line[140:148].strip()
-                if line[148:156].strip():
-                    rum['dr'] = line[148:156].strip()
-                if int(line[133:135]):
-                    rum['das'] = [line[(first_das + i * 8):(first_das + (i + 1) * 8)].strip()
-                                  for i in range(0, int(line[133:135]))]
-                rum['test_ghm'] = line[2:8]
-                if int(line[12:15]):
-                    rum['test_error'] = int(line[12:15])
+                buf.seek(2, io.SEEK_CUR) # Skip GHM Version
+                rum['test_ghm'] = buf.read(6).decode()
+                buf.seek(1, io.SEEK_CUR) # Skip filler byte
+                rss_version = int(buf.read(3))
+                if rss_version < 116:
+                    raise ValueError(f'Unsupported RSS format {rss_version}')
+                rum['test_error'] = int_optional(buf.read(3))
+                buf.seek(12, io.SEEK_CUR) # Skip FINESS and RUM version
+                rum['bill_id'] = int(buf.read(20))
+                rum['stay_id'] = int(buf.read(20))
+                buf.seek(10, io.SEEK_CUR) # Skip RUM identifier
+                rum['birthdate'] = date(buf.read(8))
+                rum['sex'] = int(buf.read(1))
+                rum['unit'] = int(buf.read(4))
+                rum['bed_authorization'] = int_optional(buf.read(2))
+                rum['entry_date'] = date(buf.read(8))
+                rum['entry_mode'] = int(buf.read(1))
+                rum['entry_origin'] = buf.read(1).decode().upper()
+                if rum['entry_origin'] != 'R':
+                    rum['entry_origin'] = int_optional(rum['entry_origin'])
+                rum['exit_date'] = date(buf.read(8))
+                rum['exit_mode'] = int(buf.read(1))
+                rum['exit_destination'] = int_optional(buf.read(1))
+                buf.seek(5, io.SEEK_CUR) # Skip postal code
+                rum['newborn_weight'] = int_optional(buf.read(4))
+                rum['gestational_age'] = int_optional(buf.read(2))
+                rum['last_menstrual_period'] = date_optional(buf.read(8))
+                rum['session_count'] = int_optional(buf.read(2))
+                das_count = int(buf.read(2))
+                dad_count = int(buf.read(2))
+                proc_count = int(buf.read(3))
+                rum['dp'] = buf.read(8).decode().strip()
+                rum['dr'] = buf.read(8).decode().strip()
+                if not rum['dr']:
+                    rum['dr'] = None
+                rum['igs2'] = int_optional(buf.read(3))
+                buf.seek(33, io.SEEK_CUR) # Skip confirmation, innovation, etc.
 
-                if int(line[137:140]):
-                    rum['procedures'] = [{
-                        'date': date_value(line[i:(i + 8)]),
-                        'code': line[(i + 8):(i + 15)].strip(),
-                        'phase': int(line[i + 15 + (format >= 117) * 3]),
-                        'activity': int(line[i + 16 + (format >= 117) * 3]),
-                        'count': int(line[(i + 24 + (format >= 117) * 3):(i + 26 + (format >= 117) * 3)])
-                    } for i in range(first_procedure, first_procedure + int(line[137:140]) * (26 + (format >= 117) * 3), 26 + (format >= 117) * 3)]
+                if das_count:
+                    rum['das'] = []
+                    for i in range(0, das_count):
+                        rum['das'].append(buf.read(8).decode().strip())
+                buf.seek(dad_count * 8, io.SEEK_CUR)
 
+                if proc_count:
+                    rum['procedures'] = []
+                    for i in range(0, proc_count):
+                        proc = {}
+                        proc['date'] = date(buf.read(8))
+                        proc['code'] = buf.read(7).decode().strip()
+                        if rss_version >= 117:
+                            buf.seek(3, io.SEEK_CUR) # Skip CCAM code extension
+                        proc['phase'] = int(buf.read(1))
+                        proc['activity'] = int(buf.read(1))
+                        buf.seek(7, io.SEEK_CUR) # Skip modificators, doc extension, etc.
+                        proc['count'] = int(buf.read(2))
+                        rum['procedures'].append(proc)
+
+                rum = {k: v for k, v in rum.items() if v is not None}
                 yield rum
             except Exception as e:
                 traceback.print_exc()
@@ -151,8 +169,8 @@ MAIN_USAGE = \
 """Usage: convert_chu_lille.py command options
 
 Commands:
-    stays               Convert RUM exports from CoRa
-    units               Convert structure and authorization data"""
+    authorizations      Convert structure and authorization data
+    stays               Convert RUM files"""
 STAYS_USAGE = \
 """
 """
@@ -195,7 +213,7 @@ if __name__ == "__main__":
             sys.exit(1)
 
         process_stays(sys.argv[2])
-    elif cmd == "units":
+    elif cmd == "authorizations":
         if len(sys.argv) < 4:
             print(UNITS_USAGE, file = sys.stderr)
             sys.exit(1)
