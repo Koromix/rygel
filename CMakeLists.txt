@@ -60,6 +60,8 @@ set(MOYA_SRC src/algorithm.cc
              src/moya.cc
              src/kutil.cc
              src/kutil.hh
+             src/pricing.cc
+             src/pricing.hh
              src/stays.cc
              src/stays.hh
              src/tables.cc

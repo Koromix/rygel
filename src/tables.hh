@@ -458,6 +458,8 @@ struct SrcPair {
     ProcedureCode proc_code;
 };
 
+Date ConvertDate1980(uint16_t days);
+
 bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
                        const char *filename, HeapArray<TableInfo> *out_tables);
 

@@ -61,7 +61,7 @@ static bool AreStaysCompatible(const Stay stay1, const Stay &stay2)
 }
 
 ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
-                                  ArrayRef<const Stay> *out_remainder)
+                             ArrayRef<const Stay> *out_remainder)
 {
     if (!stays.len)
         return {};

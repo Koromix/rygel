@@ -43,7 +43,7 @@ static inline void ReverseBytes(uint64_t *u)
          ((*u & 0xFF00000000000000) >> 56);
 }
 
-static Date ConvertDate1980(uint16_t days)
+Date ConvertDate1980(uint16_t days)
 {
     static const int base_days = Date(1979, 12, 31).ToJulianDays();
     return Date::FromJulianDays(base_days + days);

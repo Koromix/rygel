@@ -1,6 +1,7 @@
 #include "kutil.hh"
 #include "algorithm.hh"
 #include "dump.hh"
+#include "pricing.hh"
 #include "stays.hh"
 #include "tables.hh"
 
@@ -11,10 +12,10 @@ Commands:
     dump                         Dump available tables and lists
     info                         Print information about individual elements
                                  (diagnoses, procedures, GHM roots, etc.)
+    indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
-    pricing                      Print GHS pricing tables
+    pricings                     Print GHS pricing tables
     summarize                    Summarize stays
-    tables                       Show tables indexes
 
 Global options:
     -O, --output <filename>      Dump information to file (default: stdout)
@@ -287,6 +288,56 @@ R"(Usage: moya info [options] name ...)";
     return true;
 }
 
+static bool RunIndexes(ArrayRef<const char *> arguments)
+{
+    static const char *const UsageText =
+R"(Usage: moya indexes [options]
+
+Options:
+    -v, --verbose                Show more detailed information)";
+
+    Allocator temp_alloc;
+    OptionParser opt_parser(arguments);
+
+    bool verbose = false;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintLn("%1", UsageText);
+                return true;
+            } else if (TestOption(opt, "-v", "--verbose")) {
+                verbose = true;
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+                return false;
+            }
+        }
+    }
+
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set)
+        return false;
+
+    for (const TableIndex &index: table_set->indexes) {
+        PrintLn("%1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+        for (const TableInfo *table: index.tables) {
+            if (!table)
+                continue;
+
+            PrintLn("  %1: %2.%3",
+                    TableTypeNames[(int)table->type], table->version[0], table->version[1]);
+            if (verbose) {
+                PrintLn("    Validity: %1 to %2",
+                        table->limit_dates[0], table->limit_dates[1]);
+                PrintLn("    Build: %1", table->build_date);
+            }
+        }
+        PrintLn();
+    }
+
+    return true;
+}
+
 static bool RunList(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
@@ -373,10 +424,31 @@ R"(Usage: moya list [options] list_name ...)";
     return true;
 }
 
-static bool RunPricing(ArrayRef<const char *>)
+static bool RunPricings(ArrayRef<const char *>)
 {
-    PrintLn(stderr, "Not implemented");
-    return false;
+    Allocator temp_alloc;
+
+    ArrayRef<uint8_t> file_data;
+    if (!ReadFile(&temp_alloc, "data/ghs.nx", Megabytes(30), &file_data))
+        return false;
+
+    HeapArray<GhsPricing> ghs_pricings;
+    ParseGhsPricings(file_data, "data/ghs.nx", &ghs_pricings);
+
+    for (const GhsPricing &pricing: ghs_pricings) {
+        PrintLn("GHS %1 [%2 -- %3]",
+                pricing.ghs_code, pricing.limit_dates[0], pricing.limit_dates[1]);
+        PrintLn("  Public: %1 [exh = %2, exb = %3]",
+                FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
+                FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),
+                FmtDouble(pricing.sectors[0].exb_cents / 100.0, 2));
+        PrintLn("  Private: %1 [exh = %2, exb = %3]",
+                FmtDouble(pricing.sectors[1].price_cents / 100.0, 2),
+                FmtDouble(pricing.sectors[1].exh_cents / 100.0, 2),
+                FmtDouble(pricing.sectors[1].exb_cents / 100.0, 2));
+    }
+
+    return true;
 }
 
 static bool RunSummarize(ArrayRef<const char *> arguments)
@@ -469,56 +541,6 @@ Options:
     return true;
 }
 
-static bool RunTables(ArrayRef<const char *> arguments)
-{
-    static const char *const UsageText =
-R"(Usage: moya tables [options]
-
-Options:
-    -v, --verbose                Show more detailed information)";
-
-    Allocator temp_alloc;
-    OptionParser opt_parser(arguments);
-
-    bool verbose = false;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
-                return true;
-            } else if (TestOption(opt, "-v", "--verbose")) {
-                verbose = true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
-                return false;
-            }
-        }
-    }
-
-    const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        return false;
-
-    for (const TableIndex &index: table_set->indexes) {
-        PrintLn("%1 to %2:", index.limit_dates[0], index.limit_dates[1]);
-        for (const TableInfo *table: index.tables) {
-            if (!table)
-                continue;
-
-            PrintLn("  %1: %2.%3",
-                    TableTypeNames[(int)table->type], table->version[0], table->version[1]);
-            if (verbose) {
-                PrintLn("    Validity: %1 to %2",
-                        table->limit_dates[0], table->limit_dates[1]);
-                PrintLn("    Build: %1", table->build_date);
-            }
-        }
-        PrintLn();
-    }
-
-    return true;
-}
-
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -547,10 +569,10 @@ int main(int argc, char **argv)
 
     HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);
+    HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
-    HANDLE_COMMAND(pricing, RunPricing);
+    HANDLE_COMMAND(pricings, RunPricings);
     HANDLE_COMMAND(summarize, RunSummarize);
-    HANDLE_COMMAND(tables, RunTables);
 
 #undef HANDLE_COMMAND
 
