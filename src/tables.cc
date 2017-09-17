@@ -200,7 +200,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         } else if (!strcmp(table.raw_type, "AUTOREFS")) {
             table.type = TableType::AuthorizationTable;
         } else if (!strcmp(table.raw_type, "SRCDGACT")) {
-            table.type = TableType::SupplementPairTable;
+            table.type = TableType::SrcPairTable;
         } else {
             table.type = TableType::UnknownTable;
         }
@@ -821,9 +821,9 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
+bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
                               const TableInfo &table, size_t section_idx,
-                              HeapArray<DiagnosisProcedurePair> *out_pairs)
+                              HeapArray<SrcPair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
 
@@ -840,7 +840,7 @@ bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections[section_idx].value_len != sizeof(PackedPair));
 
     for (size_t i = 0; i < table.sections[section_idx].values_count; i++) {
-        DiagnosisProcedurePair pair = {};
+        SrcPair pair = {};
 
         PackedPair raw_pair;
         memcpy(&raw_pair, file_data + table.sections[section_idx].raw_offset +
@@ -943,9 +943,9 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
             case TableType::AuthorizationTable: {
                 LOAD_TABLE(authorizations, ParseAuthorizationTable);
             } break;
-            case TableType::SupplementPairTable: {
-                LOAD_TABLE(supplement_pairs[0], ParseSupplementPairTable, 0);
-                LOAD_TABLE(supplement_pairs[1], ParseSupplementPairTable, 1);
+            case TableType::SrcPairTable: {
+                LOAD_TABLE(src_pairs[0], ParseSrcPairTable, 0);
+                LOAD_TABLE(src_pairs[1], ParseSrcPairTable, 1);
             } break;
 
             case TableType::UnknownTable:
@@ -1090,8 +1090,8 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
             FIX_ARRAYREF(cma_cells[2]);
             FIX_ARRAYREF(ghs);
             FIX_ARRAYREF(authorizations);
-            FIX_ARRAYREF(supplement_pairs[0]);
-            FIX_ARRAYREF(supplement_pairs[1]);
+            FIX_ARRAYREF(src_pairs[0]);
+            FIX_ARRAYREF(src_pairs[1]);
 
             BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
             BUILD_MAP(procedures, procedures, TableType::ProcedureTable);

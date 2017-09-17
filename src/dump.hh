@@ -12,6 +12,6 @@ void DumpSeverityTable(ArrayRef<const ValueRangeCell<2>> cells);
 
 void DumpGhsTable(ArrayRef<const GhsInfo> ghs);
 void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations);
-void DumpSupplementPairTable(ArrayRef<const DiagnosisProcedurePair> pairs);
+void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs);
 
 void DumpTableSet(const TableSet &table_set, bool detail = true);

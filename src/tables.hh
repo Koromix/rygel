@@ -275,7 +275,7 @@ enum class TableType: uint32_t {
 
     GhsTable,
     AuthorizationTable,
-    SupplementPairTable
+    SrcPairTable
 };
 static const char *const TableTypeNames[] = {
     "Unknown Table",
@@ -287,8 +287,8 @@ static const char *const TableTypeNames[] = {
     "Severity Table",
 
     "GHS Table",
-    "Unit Reference Table",
-    "Supplement Pair Table"
+    "Authorization Table",
+    "SRC Pair Table"
 };
 
 struct TableInfo {
@@ -453,7 +453,7 @@ struct AuthorizationInfo {
     int8_t function;
 };
 
-struct DiagnosisProcedurePair {
+struct SrcPair {
     DiagnosisCode diag_code;
     ProcedureCode proc_code;
 };
@@ -478,10 +478,10 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
                    const TableInfo &table, HeapArray<GhsInfo> *out_nodes);
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table, HeapArray<AuthorizationInfo> *out_units);
-bool ParseSupplementPairTable(const uint8_t *file_data, const char *filename,
-                              const TableInfo &table, size_t section_idx,
-                              HeapArray<DiagnosisProcedurePair> *out_pairs);
+                             const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths);
+bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
+                       const TableInfo &table, size_t section_idx,
+                       HeapArray<SrcPair> *out_pairs);
 
 struct TableIndex {
     Date limit_dates[2];
@@ -499,7 +499,7 @@ struct TableIndex {
 
     ArrayRef<GhsInfo> ghs;
     ArrayRef<AuthorizationInfo> authorizations;
-    ArrayRef<DiagnosisProcedurePair> supplement_pairs[2];
+    ArrayRef<SrcPair> src_pairs[2];
 
     HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
@@ -529,7 +529,7 @@ public:
 
         HeapArray<GhsInfo> ghs;
         HeapArray<AuthorizationInfo> authorizations;
-        HeapArray<DiagnosisProcedurePair> supplement_pairs[2];
+        HeapArray<SrcPair> src_pairs[2];
     } store;
 
     struct {

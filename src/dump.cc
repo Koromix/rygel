@@ -202,9 +202,9 @@ void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations)
     }
 }
 
-void DumpSupplementPairTable(ArrayRef<const DiagnosisProcedurePair> pairs)
+void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs)
 {
-    for (const DiagnosisProcedurePair &pair: pairs) {
+    for (const SrcPair &pair: pairs) {
         PrintLn("      %1 -- %2", pair.diag_code, pair.proc_code);
     }
 }
@@ -277,10 +277,10 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         PrintLn("    Authorization Types:");
                         DumpAuthorizationTable(index.authorizations);
                     } break;
-                    case TableType::SupplementPairTable: {
-                        for (size_t j = 0; j < CountOf(index.supplement_pairs); j++) {
+                    case TableType::SrcPairTable: {
+                        for (size_t j = 0; j < CountOf(index.src_pairs); j++) {
                             PrintLn("    Supplement Pairs List %1:", j + 1);
-                            DumpSupplementPairTable(index.supplement_pairs[j]);
+                            DumpSupplementPairTable(index.src_pairs[j]);
                             PrintLn();
                         }
                     } break;
