@@ -1081,6 +1081,7 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
         HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
         HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
+        HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
 
         for (TableIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
@@ -1115,6 +1116,7 @@ bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
             BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
             BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
             BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsTable);
+            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsTable);
 
 #undef BUILD_MAP
 #undef FIX_ARRAYREF

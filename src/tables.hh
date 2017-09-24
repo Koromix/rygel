@@ -435,6 +435,7 @@ struct GhsInfo {
     uint8_t proc_offset;
 
     HASH_SET_HANDLER_N(GhmHandler, GhsInfo, ghm);
+    HASH_SET_HANDLER_N(GhmRootHandler, GhsInfo, ghm.Root());
 };
 
 enum class AuthorizationType: uint8_t {
@@ -508,6 +509,7 @@ struct TableIndex {
     HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
     HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map;
+    HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
@@ -540,6 +542,7 @@ public:
         HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
 
         HeapArray<HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler>> ghm_to_ghs;
+        HeapArray<HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler>> ghm_root_to_ghs;
     } maps;
 
     const TableIndex *FindIndex(Date date) const;
