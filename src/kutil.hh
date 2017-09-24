@@ -1229,14 +1229,14 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
         static bool IsEmpty(const ValueType &value) \
             { return value.KeyMember == (EmptyKey); } \
         static bool IsEmpty(const ValueType *value) { return !value; } \
-        static const decltype(ValueType::KeyMember) &GetKey(const ValueType &value) \
+        static decltype(ValueType::KeyMember) GetKey(const ValueType &value) \
             { return value.KeyMember; } \
-        static const decltype(ValueType::KeyMember) &GetKey(const ValueType *value) \
+        static decltype(ValueType::KeyMember) GetKey(const ValueType *value) \
             { return value->KeyMember; } \
-        static uint64_t HashKey(const decltype(ValueType::KeyMember) &key) \
+        static uint64_t HashKey(decltype(ValueType::KeyMember) key) \
             { return HashFunc(key); } \
-        static bool CompareKeys(const decltype(ValueType::KeyMember) &key1, \
-                                const decltype(ValueType::KeyMember) &key2) \
+        static bool CompareKeys(decltype(ValueType::KeyMember) key1, \
+                                decltype(ValueType::KeyMember) key2) \
             { return CompareFunc((key1), (key2)); } \
     }
 #define HASH_SET_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
