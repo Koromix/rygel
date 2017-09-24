@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Test Yaa2</title>
+        <meta charset="utf-8"/>
+        <style type="text/css">
+            html {
+                /* Fix stupid scrollbar behavior */
+                width: calc(100vw - 17px);
+            }
+            body {
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 1em;
+                font-family: Geneva, sans-serif;
+                font-size: 13px;
+            }
+
+            nav#settings {
+                margin: 0 1em 1em 1em;
+                text-align: center;
+            }
+
+            table#pricing {
+                table-layout: fixed;
+                border-collapse: collapse;
+                width: 100%;
+            }
+            table#pricing tr:first-child th:first-child { width: 120px; }
+            table#pricing th, table#pricing td {
+                border: 1px solid #a4a4a4;
+                padding: 3px;
+            }
+            table#pricing th {
+                background: white;
+                text-align: left;
+            }
+            table#pricing thead td {
+                text-align: center;
+                font-weight: bold;
+            }
+            table#pricing tbody td {
+                background: #969696;
+                text-align: right;
+            }
+            table#pricing tr:hover th {
+                filter: invert(100%);
+                -webkit-filter: invert(100%);
+            }
+            table#pricing tr:hover td {
+                filter: invert(10%);
+                -webkit-filter: invert(10%);
+            }
+            table#pricing td.desc, table#pricing tr.desc td { background: #ffc634; }
+            table#pricing td.price, table#pricing tr.price td { background: #68dc33; }
+            table#pricing td.exb, table#pricing tr.exb td { background: #ff8900; }
+            table#pricing td.exh, table#pricing tr.exh td {
+                background: #6b1b6a;
+                color: #b4cdff;
+            }
+
+            @media screen and (max-width: 580px) {
+                body {
+                    padding: 0;
+                    margin: 0;
+                }
+
+                table#pricing tr *:first-child { border-left: 0; }
+                table#pricing tr *:last-child { border-right: 0; }
+            }
+        </style>
+        <script>
+            var ghm_roots = [];
+            var ghm_roots_info = {};
+
+            function updateDatabase(json) {
+                ghm_roots = [];
+                ghm_roots_info = {};
+
+                for (var i = 0; i < json.length; i++) {
+                    ghm_roots.push(json[i].ghm_root);
+                    ghm_roots_info[json[i].ghm_root] = json[i].info;
+                }
+
+                refreshGhmRoots();
+                refreshPricingTable();
+            }
+
+            function refreshGhmRoots() {
+                var el = document.querySelector('select#ghm_roots');
+                el.innerHTML = '';
+                for (var i = 0; i < ghm_roots.length; i++) {
+                    var opt = document.createElement('option');
+                    opt.setAttribute('value', ghm_roots[i]);
+                    opt.textContent = ghm_roots[i];
+                    el.appendChild(opt);
+                }
+            }
+
+            function refreshPricingTable() {
+                var ghm_root_info = ghm_roots_info[document.querySelector('select#ghm_roots').value];
+                var merge_cells = document.querySelector('input#merge_cells').checked;
+                var max_duration = parseInt(document.querySelector('input#max_duration').value) + 1;
+
+                var table = createPricingTable(ghm_root_info, merge_cells, max_duration);
+
+                var old_table = document.querySelector('table#pricing');
+                old_table.parentNode.replaceChild(table, old_table);
+            }
+
+            function createPricingTable(ghm_root_info, merge_cells = true, max_duration = 200) {
+                function appendRow(parent, name, func) {
+                    var tr = document.createElement('tr');
+                    tr.appendChild(createSimpleElement('th', name))
+
+                    var prev_cell = [null, null];
+                    var prev_td = null;
+                    for (var i = 0; i < ghm_root_info.length; i++) {
+                        var cell = func(ghm_root_info[i]);
+                        if (cell) {
+                            if (merge_cells && cell[0] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
+                                var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
+                                prev_td.setAttribute('colspan', colspan + 1);
+                            } else {
+                                prev_td = tr.appendChild(createSimpleElement('td', cell[0], cell[1]));
+                            }
+                        } else {
+                            prev_td = tr.appendChild(createSimpleElement('td', null));
+                        }
+                        prev_cell = cell;
+                    }
+
+                    parent.appendChild(tr);
+                }
+
+                function durationText(duration) {
+                    if (duration !== undefined) {
+                        return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
+                    } else {
+                        return '';
+                    }
+                }
+                function priceText(price_cents) {
+                    if (price_cents !== undefined) {
+                        // The replace() is a bit dirty, but it gets the job done
+                        return (price_cents / 100.0).toFixed(2).replace('.', ',');
+                    } else {
+                        return '';
+                    }
+                }
+
+                var table = document.createElement('table');
+                table.id = 'pricing';
+                var thead = table.appendChild(document.createElement('thead'));
+                var tbody = table.appendChild(document.createElement('tbody'));
+
+                appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc']; });
+                appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc']; });
+                appendRow(thead, 'GHS', function(col) { return ['GHS ' + col.ghs, 'desc']; });
+                appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb']; });
+                appendRow(thead, 'Borne haute',
+                          function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh']; });
+                appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), 'price']; });
+                appendRow(thead, 'Forfait EXB €',
+                          function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', 'exb']; });
+                appendRow(thead, 'Tarif EXB €',
+                          function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', 'exb']; });
+                appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), 'exh']; });
+
+                for (var duration = 0; duration < max_duration; duration++) {
+                    appendRow(tbody, durationText(duration), function(col) {
+                        if ((col.low_duration_limit && duration < col.low_duration_limit) ||
+                            (col.high_duration_limit && duration >= col.high_duration_limit))
+                            return null;
+                        if (col.exb_treshold && duration < col.exb_treshold) {
+                            var price = col.price_cents;
+                            if (col.exb_once) {
+                                price -= col.exb_cents;
+                            } else {
+                                price -= (col.exb_treshold - duration) * col.exb_cents;
+                            }
+                            return [priceText(price), 'exb'];
+                        }
+                        if (col.exh_treshold && duration >= col.exh_treshold) {
+                            var price = col.price_cents + (duration - col.exh_treshold + 1) * col.exh_cents;
+                            return [priceText(price), 'exh'];
+                        }
+                        return [priceText(col.price_cents), 'price'];
+                    });
+                }
+
+                return table;
+            }
+
+            function createSimpleElement(tag, text, cls = null) {
+                var el = document.createElement(tag);
+                el.textContent = text;
+                if (cls)
+                    el.setAttribute('class', cls);
+                return el;
+            }
+
+            document.addEventListener('DOMContentLoaded', function(e) {
+                fetch('./pricing_demo.json')
+                    .then(response => response.json())
+                    .then(json => updateDatabase(json));
+            });
+        </script>
+    </head>
+    <body>
+        <nav id="settings">
+            <label>
+                Racine de GHM :
+                <select id="ghm_roots" onchange="refreshPricingTable();"></select>
+            </label>
+            <label>
+                Durée maximale :
+                <input id="max_duration" type="number" onchange="refreshPricingTable();" value="200" min="0" max="500" step="5"/>
+            </label>
+            <label>
+                <input id="merge_cells" type="checkbox" onchange="refreshPricingTable();" checked/>
+                Fusionner les cellules
+            </label>
+        </nav>
+
+        <table id="pricing"></table>
+    </body>
+</html>

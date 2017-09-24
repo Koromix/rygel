@@ -1,0 +1,95 @@
+[
+    {
+        "ghm_root": "01C03",
+        "info": [
+            {
+                "ghm": "01C031",
+                "ghm_mode": 1,
+
+                "ghs": 22,
+                "price_cents": 353071,
+                "exh_treshold": 17,
+                "exh_cents": 11152
+            },
+            {
+                "ghm": "01C032",
+                "ghm_mode": 2,
+                "low_duration_limit": 3,
+
+                "ghs": 23,
+                "price_cents": 718680,
+                "exh_treshold": 27,
+                "exh_cents": 8559,
+                "exb_treshold": 5,
+                "exb_cents": 365609,
+                "exb_once": true
+            },
+            {
+                "ghm": "01C033",
+                "ghm_mode": 3,
+                "low_duration_limit": 4,
+
+                "ghs": 24,
+                "price_cents": 1176131,
+                "exh_treshold": 63,
+                "exh_cents": 6152,
+                "exb_treshold": 5,
+                "exb_cents": 457451,
+                "exb_once": true
+            },
+            {
+                "ghm": "01C034",
+                "ghm_mode": 4,
+                "low_duration_limit": 5,
+
+                "ghs": 25,
+                "price_cents": 1557521,
+                "exh_treshold": 125,
+                "exh_cents": 23543,
+                "exb_treshold": 12,
+                "exb_cents": 381390,
+                "exb_once": true
+            }
+        ]
+    },
+    {
+        "ghm_root": "01C04",
+        "info": [
+            {
+                "ghm": "01C031",
+                "ghm_mode": 1,
+
+                "ghs": 22,
+                "price_cents": 353071,
+                "exh_treshold": 16,
+                "exh_cents": 11152
+            },
+            {
+                "ghm": "01C032",
+                "ghm_mode": 2,
+                "low_duration_limit": 3,
+
+                "ghs": 23,
+                "price_cents": 718680,
+                "exh_treshold": 26,
+                "exh_cents": 8559,
+                "exb_treshold": 5,
+                "exb_cents": 365609,
+                "exb_once": true
+            },
+            {
+                "ghm": "01C033",
+                "ghm_mode": 3,
+                "low_duration_limit": 4,
+
+                "ghs": 24,
+                "price_cents": 1176131,
+                "exh_treshold": 62,
+                "exh_cents": 6152,
+                "exb_treshold": 5,
+                "exb_cents": 457451,
+                "exb_once": true
+            }
+        ]
+    }
+]
