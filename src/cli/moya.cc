@@ -1,9 +1,9 @@
-#include "kutil.hh"
-#include "algorithm.hh"
+#include "../core/kutil.hh"
+#include "../core/algorithm.hh"
 #include "dump.hh"
-#include "pricing.hh"
-#include "stays.hh"
-#include "tables.hh"
+#include "../core/pricing.hh"
+#include "../core/stays.hh"
+#include "../core/tables.hh"
 
 static const char *const MainUsageText =
 R"(Usage: moya <command> [<args>]

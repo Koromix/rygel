@@ -1,6 +1,6 @@
-#include "kutil.hh"
+#include "../core/kutil.hh"
 #include "dump.hh"
-#include "tables.hh"
+#include "../core/tables.hh"
 
 static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                              size_t node_idx, int depth)

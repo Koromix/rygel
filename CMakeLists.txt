@@ -53,19 +53,19 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lutf8lib.c
                 lib/lua/src/loadlib.c
                 lib/lua/src/linit.c)
-set(MOYA_SRC src/algorithm.cc
-             src/algorithm.hh
-             src/codes.hh
-             src/dump.cc
-             src/dump.hh
-             src/moya.cc
-             src/kutil.cc
-             src/kutil.hh
-             src/pricing.cc
-             src/pricing.hh
-             src/stays.cc
-             src/stays.hh
-             src/tables.cc
-             src/tables.hh)
+set(MOYA_SRC src/core/algorithm.cc
+             src/core/algorithm.hh
+             src/core/codes.hh
+             src/core/kutil.cc
+             src/core/kutil.hh
+             src/core/pricing.cc
+             src/core/pricing.hh
+             src/core/stays.cc
+             src/core/stays.hh
+             src/core/tables.cc
+             src/core/tables.hh
+             src/cli/dump.cc
+             src/cli/dump.hh
+             src/cli/moya.cc)
 
 add_executable(moya ${MOYA_SRC})

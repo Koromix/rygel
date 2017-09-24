@@ -1,7 +1,7 @@
 #include "kutil.hh"
 #include "stays.hh"
-#include "../lib/rapidjson/reader.h"
-#include "../lib/rapidjson/error/en.h"
+#include "../../lib/rapidjson/reader.h"
+#include "../../lib/rapidjson/error/en.h"
 
 using namespace rapidjson;
 

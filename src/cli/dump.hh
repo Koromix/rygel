@@ -1,7 +1,7 @@
 #pragma once
 
-#include "kutil.hh"
-#include "tables.hh"
+#include "../core/kutil.hh"
+#include "../core/tables.hh"
 
 void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes);
 void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
