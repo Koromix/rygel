@@ -242,7 +242,7 @@ public:
                     LogError("Invalid exit destination value %1", i);
                 }
             } break;
-            case State::StayUnit: { SetInt(&stay.unit_code.value, i);} break;
+            case State::StayUnit: { SetInt(&stay.unit_code.number, i);} break;
             case State::StaySessionCount: { SetInt(&stay.session_count, i); } break;
             case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;

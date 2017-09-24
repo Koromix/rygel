@@ -1,21 +1,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "tables.hh"
-
-struct UnitCode {
-    uint32_t value;
-
-    UnitCode() = default;
-    explicit UnitCode(uint32_t code) : value(code) {}
-
-    bool IsValid() const { return value; }
-
-    bool operator==(const UnitCode &other) const { return value == other.value; }
-    bool operator!=(const UnitCode &other) const { return value != other.value; }
-
-    operator FmtArg() const { return FmtArg(value); }
-};
+#include "codes.hh"
 
 struct UnitInfo {
     UnitCode code;

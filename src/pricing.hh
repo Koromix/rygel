@@ -1,7 +1,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "tables.hh"
+#include "codes.hh"
 
 struct GhsPricing {
     GhsCode ghs_code;

@@ -55,6 +55,7 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/linit.c)
 set(MOYA_SRC src/algorithm.cc
              src/algorithm.hh
+             src/codes.hh
              src/dump.cc
              src/dump.hh
              src/moya.cc

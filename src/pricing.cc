@@ -1,5 +1,6 @@
 #include "kutil.hh"
 #include "pricing.hh"
+#include "tables.hh"
 
 static ArrayRef<const uint8_t> GetLine(ArrayRef<const uint8_t> data,
                                        ArrayRef<const uint8_t> *out_remainder = nullptr)
