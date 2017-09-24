@@ -684,9 +684,10 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             uint16_t ghs_code;
             uint16_t high_duration_treshold;
             uint16_t low_duration_treshold;
-        } versions[2];
+        } sectors[2];
 	};
 #pragma pack(pop)
+    StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().sectors));
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
@@ -699,9 +700,9 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_ghs_node.type_seq);
         for (size_t j = 0; j < 2; j++) {
-            ReverseBytes(&raw_ghs_node.versions[j].ghs_code);
-            ReverseBytes(&raw_ghs_node.versions[j].high_duration_treshold);
-            ReverseBytes(&raw_ghs_node.versions[j].low_duration_treshold);
+            ReverseBytes(&raw_ghs_node.sectors[j].ghs_code);
+            ReverseBytes(&raw_ghs_node.sectors[j].high_duration_treshold);
+            ReverseBytes(&raw_ghs_node.sectors[j].low_duration_treshold);
         }
 #endif
 
@@ -762,12 +763,12 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (size_t j = 0; j < CountOf(current_ghs.versions); j++) {
-                current_ghs.versions[j].ghs.number = (int16_t)raw_ghs_node.versions[j].ghs_code;
-                current_ghs.versions[j].low_duration_treshold =
-                    (int16_t)raw_ghs_node.versions[j].low_duration_treshold;
-                current_ghs.versions[j].high_duration_treshold =
-                    (int16_t)raw_ghs_node.versions[j].high_duration_treshold;
+            for (size_t j = 0; j < CountOf(current_ghs.sectors); j++) {
+                current_ghs.sectors[j].ghs.number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
+                current_ghs.sectors[j].low_duration_treshold =
+                    (int16_t)raw_ghs_node.sectors[j].low_duration_treshold;
+                current_ghs.sectors[j].high_duration_treshold =
+                    (int16_t)raw_ghs_node.sectors[j].high_duration_treshold;
             }
             out_ghs->Append(current_ghs);
             current_ghs = {};

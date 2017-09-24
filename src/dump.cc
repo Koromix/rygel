@@ -153,10 +153,10 @@ void DumpGhsTable(ArrayRef<const GhsInfo> ghs)
             previous_ghm = ghs_info.ghm;
         }
         PrintLn("        GHS %1 (public) / GHS %2 (private)",
-                ghs_info.versions[0].ghs, ghs_info.versions[1].ghs);
+                ghs_info.sectors[0].ghs, ghs_info.sectors[1].ghs);
         PrintLn("          Duration = %1 to %2 days",
-                ghs_info.versions[0].low_duration_treshold,
-                ghs_info.versions[0].high_duration_treshold);
+                ghs_info.sectors[0].low_duration_treshold,
+                ghs_info.sectors[0].high_duration_treshold);
 
         if (ghs_info.unit_authorization) {
             PrintLn("          Requires unit authorization %1", ghs_info.unit_authorization);
