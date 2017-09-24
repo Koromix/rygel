@@ -2,12 +2,8 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#include "../core/kutil.hh"
-#include "../core/algorithm.hh"
+#include "../core/libmoya.hh"
 #include "dump.hh"
-#include "../core/pricing.hh"
-#include "../core/stays.hh"
-#include "../core/tables.hh"
 
 static const char *const MainUsageText =
 R"(Usage: moya <command> [<args>]

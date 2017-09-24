@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "../core/kutil.hh"
-#include "../core/tables.hh"
+#include "../core/libmoya.hh"
 
 void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes);
 void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,

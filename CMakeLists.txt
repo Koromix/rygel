@@ -5,6 +5,9 @@
 cmake_minimum_required(VERSION 3.1)
 project(Moya C CXX)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include("build/cmake/Utility.cmake")
+
 set(CMAKE_CXX_STANDARD 17)
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
@@ -59,7 +62,7 @@ set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lutf8lib.c
                 lib/lua/src/loadlib.c
                 lib/lua/src/linit.c)
-set(MOYA_SRC src/core/algorithm.cc
+set(CORE_SRC src/core/algorithm.cc
              src/core/algorithm.hh
              src/core/codes.hh
              src/core/kutil.cc
@@ -69,9 +72,13 @@ set(MOYA_SRC src/core/algorithm.cc
              src/core/stays.cc
              src/core/stays.hh
              src/core/tables.cc
-             src/core/tables.hh
-             src/cli/dump.cc
-             src/cli/dump.hh
-             src/cli/moya.cc)
+             src/core/tables.hh)
+set(CLI_SRC src/cli/dump.cc
+            src/cli/dump.hh
+            src/cli/moya.cc)
 
-add_executable(moya ${MOYA_SRC})
+add_library(core STATIC ${CORE_SRC})
+add_amalgamated_file(core "${CMAKE_BINARY_DIR}/libmoya.hh" src/core/libmoya.hh)
+
+add_executable(moya ${CLI_SRC})
+target_link_libraries(moya PUBLIC core)

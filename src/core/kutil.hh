@@ -25,7 +25,9 @@
     #define ENABLE_INTSAFE_SIGNED_FUNCTIONS
     #include <intsafe.h>
     #pragma intrinsic(_BitScanReverse)
-    #pragma intrinsic(_BitScanReverse64)
+    #ifdef _WIN64
+        #pragma intrinsic(_BitScanReverse64)
+    #endif
     #pragma intrinsic(__rdtsc)
 #endif
 
