@@ -669,7 +669,8 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
                    const TableInfo &table, HeapArray<GhsInfo> *out_ghs)
 {
-    DEFER_NC(out_ghs_guard, len = out_ghs->len) { out_ghs->RemoveFrom(len); };
+    size_t start_ghs_len = out_ghs->len;
+    DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
 
 #pragma pack(push, 1)
     struct PackedGhsNode {
@@ -774,6 +775,22 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             current_ghs = {};
         }
     }
+
+    std::stable_sort(out_ghs->begin() + start_ghs_len, out_ghs->end(),
+                     [](const GhsInfo &ghs_info1, const GhsInfo &ghs_info2) {
+        int root_cmp = MultiCmp(ghs_info1.ghm.parts.cmd - ghs_info2.ghm.parts.cmd,
+                                ghs_info1.ghm.parts.type - ghs_info2.ghm.parts.type,
+                                ghs_info1.ghm.parts.seq - ghs_info2.ghm.parts.seq);
+        if (root_cmp) {
+            return root_cmp < 0;
+        } else if (ghs_info1.ghm.parts.mode >= 'J' && ghs_info2.ghm.parts.mode < 'J') {
+            return true;
+        } else if (ghs_info2.ghm.parts.mode >= 'J' && ghs_info1.ghm.parts.mode < 'J') {
+            return false;
+        } else {
+            return ghs_info1.ghm.parts.mode < ghs_info2.ghm.parts.mode;
+        }
+    });
 
     out_ghs_guard.disable();
     return true;
