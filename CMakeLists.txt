@@ -1,24 +1,26 @@
 cmake_minimum_required(VERSION 3.1)
 project(Moya C CXX)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -fno-rtti -fno-exceptions \
-                                        -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast")
-if(WIN32)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+set(CMAKE_CXX_STANDARD 17)
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -fno-rtti -fno-exceptions \
+                                            -Wall -Wextra -Wno-missing-field-initializers -Wno-old-style-cast")
+    set(CMAKE_CXX_FLAGS_DEBUG "-O0 -gdwarf-2")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -gdwarf-2 -DNDEBUG")
+
+    if(MINGW)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
+    endif()
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "-O0 -gdwarf-2")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -gdwarf-2 -DNDEBUG")
-
-set(CMAKE_CXX_STANDARD 17)
+add_definitions(-D_FILE_OFFSET_BITS=64)
 if(WIN32)
     add_definitions(-DWINVER=0x0602 -D_WIN32_WINNT=0x0602)
+    if(MINGW)
+        add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
+    endif()
 endif()
-if(MINGW)
-    add_definitions(-D__USE_MINGW_ANSI_STDIO=1)
-endif()
-add_definitions(-D_FILE_OFFSET_BITS=64)
 
 set(LIB_LUA_SRC lib/lua/src/lapi.c
                 lib/lua/src/lcode.c
