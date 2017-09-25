@@ -16,7 +16,19 @@ struct GhsPricing {
         int32_t exh_cents;
         int32_t exb_cents;
     } sectors[2];
+
+    HASH_SET_HANDLER(GhsPricing, code);
+};
+
+struct PricingSet {
+    HeapArray<GhsPricing> ghs_pricings;
+    HashSet<GhsCode, const GhsPricing *> ghs_pricings_map;
+
+    ArrayRef<const GhsPricing> FindGhsPricing(GhsCode ghs_code) const;
+    const GhsPricing *FindGhsPricing(GhsCode ghs_code, Date date) const;
 };
 
 bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_prices);
+
+bool LoadPricingSet(const char *filename, PricingSet *out_set);

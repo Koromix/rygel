@@ -112,3 +112,56 @@ bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
     out_guard.disable();
     return true;
 }
+
+bool LoadPricingSet(const char *filename, PricingSet *out_set)
+{
+    Assert(!out_set->ghs_pricings.len);
+
+    Allocator temp_alloc;
+
+    ArrayRef<uint8_t> file_data;
+    if (!ReadFile(&temp_alloc, filename, Megabytes(30), &file_data))
+        return false;
+
+    if (!ParseGhsPricings(file_data, filename, &out_set->ghs_pricings))
+        return false;
+    for (const GhsPricing &pricing: out_set->ghs_pricings) {
+        out_set->ghs_pricings_map.Append(&pricing);
+    }
+
+    return true;
+}
+
+ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs_code) const
+{
+    ArrayRef<const GhsPricing> pricings;
+    pricings.ptr = ghs_pricings_map.FindValue(ghs_code, nullptr);
+    if (!pricings.ptr)
+        return {};
+
+    {
+        const GhsPricing *end_pricing = pricings.ptr + 1;
+        while (end_pricing < ghs_pricings.end() &&
+               end_pricing->code == ghs_code) {
+            end_pricing++;
+        }
+        pricings.len = (size_t)(end_pricing - pricings.ptr);
+    }
+
+    return pricings;
+}
+
+const GhsPricing *PricingSet::FindGhsPricing(GhsCode ghs_code, Date date) const
+{
+    const GhsPricing *pricing = ghs_pricings_map.FindValue(ghs_code, nullptr);
+    if (!pricing)
+        return nullptr;
+
+    do {
+        if (date >= pricing->limit_dates[0] && date < pricing->limit_dates[1])
+            return pricing;
+    } while (++pricing < ghs_pricings.ptr + ghs_pricings.len &&
+             pricing->code == ghs_code);
+
+    return nullptr;
+}
