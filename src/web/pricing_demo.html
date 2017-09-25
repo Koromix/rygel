@@ -116,16 +116,12 @@
                     var prev_cell = [null, null];
                     var prev_td = null;
                     for (var i = 0; i < ghm_root_info.length; i++) {
-                        var cell = func(ghm_root_info[i]);
-                        if (cell) {
-                            if (merge_cells && cell[0] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
-                                var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
-                                prev_td.setAttribute('colspan', colspan + 1);
-                            } else {
-                                prev_td = tr.appendChild(createSimpleElement('td', cell[0], cell[1]));
-                            }
+                        var cell = func(ghm_root_info[i]) || [null, null];
+                        if (merge_cells && cell[0] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
+                            var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
+                            prev_td.setAttribute('colspan', colspan + 1);
                         } else {
-                            prev_td = tr.appendChild(createSimpleElement('td', null));
+                            prev_td = tr.appendChild(createSimpleElement('td', cell[0], cell[1]));
                         }
                         prev_cell = cell;
                     }
