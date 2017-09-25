@@ -1143,21 +1143,21 @@ ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) cons
     if (!procedures_map)
         return {};
 
-    ArrayRef<const ProcedureInfo> proc;
-    proc.ptr = procedures_map->FindValue(code, nullptr);
-    if (!proc.ptr)
+    ArrayRef<const ProcedureInfo> procs;
+    procs.ptr = procedures_map->FindValue(code, nullptr);
+    if (!procs.ptr)
         return {};
 
     {
-        const ProcedureInfo *end_proc = proc.ptr + 1;
+        const ProcedureInfo *end_proc = procs.ptr + 1;
         while (end_proc < procedures.end() &&
                end_proc->code == code) {
             end_proc++;
         }
-        proc.len = (size_t)(end_proc - proc.ptr);
+        procs.len = (size_t)(end_proc - procs.ptr);
     }
 
-    return proc;
+    return procs;
 }
 
 const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase, Date date) const
