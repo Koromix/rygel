@@ -436,15 +436,15 @@ static bool RunPricings(ArrayRef<const char *>)
     ParseGhsPricings(file_data, "data/ghs.nx", &ghs_pricings);
 
     for (size_t i = 0; i < ghs_pricings.len;) {
-        GhsCode ghs_code = ghs_pricings[i].ghs_code;
+        GhsCode ghs_code = ghs_pricings[i].code;
 
         PrintLn("GHS %1:", ghs_code);
 
-        for (; i < ghs_pricings.len && ghs_pricings[i].ghs_code == ghs_code; i++) {
+        for (; i < ghs_pricings.len && ghs_pricings[i].code == ghs_code; i++) {
             const GhsPricing &pricing = ghs_pricings[i];
 
             PrintLn("  %2 to %3:",
-                    pricing.ghs_code, pricing.limit_dates[0], pricing.limit_dates[1]);
+                    pricing.code, pricing.limit_dates[0], pricing.limit_dates[1]);
             PrintLn("    Public: %1 [exh = %2, exb = %3]",
                     FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
                     FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),

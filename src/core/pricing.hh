@@ -8,7 +8,7 @@
 #include "codes.hh"
 
 struct GhsPricing {
-    GhsCode ghs_code;
+    GhsCode code;
     Date limit_dates[2];
 
     struct {

@@ -49,7 +49,7 @@ bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
             int32_t price, exh, exb;
             if (sscanf((const char *)line.ptr,
                        "%*7c%04" SCNd16 "%01u%*9c%08" SCNd32 "%*1c%08" SCNd32 "%*50c%04" SCNd16 "%02" SCNd8 "%02" SCNd8 "%*1c%08" SCNd32,
-                       &pricing.ghs_code.number, &sector, &price, &exh, &pricing.limit_dates[0].st.year,
+                       &pricing.code.number, &sector, &price, &exh, &pricing.limit_dates[0].st.year,
                        &pricing.limit_dates[0].st.month, &pricing.limit_dates[0].st.day, &exb) != 8) {
                 LogError("Malformed NOEMI GHS pricing line (type 110) in '%1': %2", \
                          filename ? filename : "?", STRINGIFY(Cond)); \
@@ -76,13 +76,13 @@ bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
 
         std::stable_sort(pricings.begin(), pricings.end(),
                          [](const GhsPricing &pricing1, const GhsPricing &pricing2) {
-            return MultiCmp(pricing1.ghs_code.number - pricing2.ghs_code.number,
+            return MultiCmp(pricing1.code.number - pricing2.code.number,
                             pricing1.limit_dates[0] - pricing2.limit_dates[0]) < 0;
         });
 
         size_t j = 0;
         for (size_t i = 1; i < pricings.len; i++) {
-            if (pricings[i].ghs_code == pricings[j].ghs_code) {
+            if (pricings[i].code == pricings[j].code) {
                 if (pricings[i].limit_dates[0] == pricings[j].limit_dates[0]) {
                     if (pricings[i].sectors[0].price_cents) {
                         pricings[j].sectors[0] = pricings[i].sectors[0];
