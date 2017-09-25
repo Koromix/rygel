@@ -70,37 +70,41 @@ bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
     }
     FAIL_PARSE_IF(line.len != 0);
 
-    std::stable_sort(out_pricings->begin() + start_pricings_len, out_pricings->end(),
-              [](const GhsPricing &pricing1, const GhsPricing &pricing2) {
-        return MultiCmp(pricing1.ghs_code.number - pricing2.ghs_code.number,
-                        pricing1.limit_dates[0] - pricing2.limit_dates[0]) < 0;
-    });
     {
-        size_t j = start_pricings_len;
-        for (size_t i = start_pricings_len + 1; i < out_pricings->len; i++) {
-            if ((*out_pricings)[i].ghs_code == (*out_pricings)[j].ghs_code) {
-                if ((*out_pricings)[i].limit_dates[0] == (*out_pricings)[j].limit_dates[0]) {
-                    if ((*out_pricings)[i].sectors[0].price_cents) {
-                        (*out_pricings)[j].sectors[0] = (*out_pricings)[i].sectors[0];
-                    } else if ((*out_pricings)[i].sectors[1].price_cents) {
-                        (*out_pricings)[j].sectors[1] = (*out_pricings)[i].sectors[1];
+        ArrayRef<GhsPricing> pricings = out_pricings->Take(start_pricings_len,
+                                                           out_pricings->len - start_pricings_len);
+
+        std::stable_sort(pricings.begin(), pricings.end(),
+                         [](const GhsPricing &pricing1, const GhsPricing &pricing2) {
+            return MultiCmp(pricing1.ghs_code.number - pricing2.ghs_code.number,
+                            pricing1.limit_dates[0] - pricing2.limit_dates[0]) < 0;
+        });
+
+        size_t j = 0;
+        for (size_t i = 1; i < pricings.len; i++) {
+            if (pricings[i].ghs_code == pricings[j].ghs_code) {
+                if (pricings[i].limit_dates[0] == pricings[j].limit_dates[0]) {
+                    if (pricings[i].sectors[0].price_cents) {
+                        pricings[j].sectors[0] = pricings[i].sectors[0];
+                    } else if (pricings[i].sectors[1].price_cents) {
+                        pricings[j].sectors[1] = pricings[i].sectors[1];
                     }
                 } else {
-                    (*out_pricings)[++j] = (*out_pricings)[i];
+                    pricings[++j] = pricings[i];
 
-                    (*out_pricings)[j - 1].limit_dates[1] = (*out_pricings)[j].limit_dates[0];
-                    if (!(*out_pricings)[j].sectors[0].price_cents) {
-                        (*out_pricings)[j].sectors[0] = (*out_pricings)[j - 1].sectors[0];
+                    pricings[j - 1].limit_dates[1] = pricings[j].limit_dates[0];
+                    if (!pricings[j].sectors[0].price_cents) {
+                        pricings[j].sectors[0] = pricings[j - 1].sectors[0];
                     }
-                    if (!(*out_pricings)[j].sectors[1].price_cents) {
-                        (*out_pricings)[j].sectors[1] = (*out_pricings)[j - 1].sectors[1];
+                    if (!pricings[j].sectors[1].price_cents) {
+                        pricings[j].sectors[1] = pricings[j - 1].sectors[1];
                     }
                 }
             } else {
-                (*out_pricings)[++j] = (*out_pricings)[i];
+                pricings[++j] = pricings[i];
             }
         }
-        out_pricings->RemoveFrom(j);
+        out_pricings->RemoveFrom(start_pricings_len + j);
     }
 
 #undef FAIL_PARSE_IF
