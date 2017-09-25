@@ -113,11 +113,11 @@
                     var tr = document.createElement('tr');
                     tr.appendChild(createSimpleElement('th', name))
 
-                    var prev_cell = [null, null];
+                    var prev_cell = [null, null, false];
                     var prev_td = null;
                     for (var i = 0; i < ghm_root_info.length; i++) {
-                        var cell = func(ghm_root_info[i]) || [null, null];
-                        if (merge_cells && cell[0] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
+                        var cell = func(ghm_root_info[i]) || [null, null, false];
+                        if (merge_cells && cell[2] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
                             var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                             prev_td.setAttribute('colspan', colspan + 1);
                         } else {
@@ -150,18 +150,18 @@
                 var thead = table.appendChild(document.createElement('thead'));
                 var tbody = table.appendChild(document.createElement('tbody'));
 
-                appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc']; });
-                appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc']; });
-                appendRow(thead, 'GHS', function(col) { return ['GHS ' + col.ghs, 'desc']; });
-                appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb']; });
+                appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc', true]; });
+                appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc', true]; });
+                appendRow(thead, 'GHS', function(col) { return ['GHS ' + col.ghs, 'desc', true]; });
+                appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb', true]; });
                 appendRow(thead, 'Borne haute',
-                          function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh']; });
-                appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), 'price']; });
+                          function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh', true]; });
+                appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), 'price', true]; });
                 appendRow(thead, 'Forfait EXB €',
-                          function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', 'exb']; });
+                          function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', 'exb', true]; });
                 appendRow(thead, 'Tarif EXB €',
-                          function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', 'exb']; });
-                appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), 'exh']; });
+                          function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', 'exb', true]; });
+                appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), 'exh', true]; });
 
                 for (var duration = 0; duration < max_duration; duration++) {
                     appendRow(tbody, durationText(duration), function(col) {
@@ -175,13 +175,13 @@
                             } else {
                                 price -= (col.exb_treshold - duration) * col.exb_cents;
                             }
-                            return [priceText(price), 'exb'];
+                            return [priceText(price), 'exb', false];
                         }
                         if (col.exh_treshold && duration >= col.exh_treshold) {
                             var price = col.price_cents + (duration - col.exh_treshold + 1) * col.exh_cents;
-                            return [priceText(price), 'exh'];
+                            return [priceText(price), 'exh', false];
                         }
-                        return [priceText(col.price_cents), 'price'];
+                        return [priceText(col.price_cents), 'price', false];
                     });
                 }
 
