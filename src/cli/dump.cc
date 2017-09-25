@@ -296,3 +296,32 @@ void DumpTableSet(const TableSet &table_set, bool detail)
         }
     }
 }
+
+void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings)
+{
+    for (size_t i = 0; i < ghs_pricings.len;) {
+        GhsCode ghs_code = ghs_pricings[i].code;
+
+        PrintLn("GHS %1:", ghs_code);
+
+        for (; i < ghs_pricings.len && ghs_pricings[i].code == ghs_code; i++) {
+            const GhsPricing &pricing = ghs_pricings[i];
+
+            PrintLn("  %2 to %3:",
+                    pricing.code, pricing.limit_dates[0], pricing.limit_dates[1]);
+            PrintLn("    Public: %1 [exh = %2, exb = %3]",
+                    FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
+                    FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),
+                    FmtDouble(pricing.sectors[0].exb_cents / 100.0, 2));
+            PrintLn("    Private: %1 [exh = %2, exb = %3]",
+                    FmtDouble(pricing.sectors[1].price_cents / 100.0, 2),
+                    FmtDouble(pricing.sectors[1].exh_cents / 100.0, 2),
+                    FmtDouble(pricing.sectors[1].exb_cents / 100.0, 2));
+        }
+    }
+}
+
+void DumpPricingSet(const PricingSet &pricing_set)
+{
+    DumpGhsPricings(pricing_set.ghs_pricings);
+}

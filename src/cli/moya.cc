@@ -14,14 +14,16 @@ Commands:
                                  (diagnoses, procedures, GHM roots, etc.)
     indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
-    pricings                     Print GHS pricing tables
+    pricing                      Dump GHS pricings
     summarize                    Summarize stays
 
 Global options:
     -O, --output <filename>      Dump information to file (default: stdout)
 
     -t, --table-file <filename>  Load table file
-    -T, --table-dir <dir>        Load table directory)";
+    -T, --table-dir <dir>        Load table directory
+
+    -p, --pricing <filename>     Load pricing file)";
 
 struct ListSpecifier {
     enum class Table {
@@ -112,7 +114,10 @@ error:
 };
 
 static HeapArray<const char *> main_table_filenames;
+static const char *main_pricing_filename;
+
 static TableSet main_table_set = {};
+static PricingSet main_pricing_set = {};
 
 static const TableSet *GetMainTableSet()
 {
@@ -127,6 +132,20 @@ static const TableSet *GetMainTableSet()
     }
 
     return &main_table_set;
+}
+
+static const PricingSet *GetMainPricingSet()
+{
+    if (!main_pricing_set.ghs_pricings.len) {
+        if (!main_pricing_filename) {
+            LogError("No pricing file specified");
+            return nullptr;
+        }
+        if (!LoadPricingSet(main_pricing_filename, &main_pricing_set))
+            return nullptr;
+    }
+
+    return &main_pricing_set;
 }
 
 static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
@@ -154,6 +173,12 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
             return false;
 
         main_table_filenames.Append(opt_parser.current_value);
+        return true;
+    } else if (opt_parser.TestOption("-p", "--pricing")) {
+        if (!opt_parser.RequireOptionValue(MainUsageText))
+            return false;
+
+        main_pricing_filename = opt_parser.current_value;
         return true;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
@@ -424,38 +449,31 @@ R"(Usage: moya list [options] list_name ...)";
     return true;
 }
 
-static bool RunPricings(ArrayRef<const char *>)
+static bool RunPricing(ArrayRef<const char *> arguments)
 {
+    static const char *const UsageText =
+R"(Usage: moya pricing [options])";
+
     Allocator temp_alloc;
+    OptionParser opt_parser(arguments);
 
-    ArrayRef<uint8_t> file_data;
-    if (!ReadFile(&temp_alloc, "data/ghs.nx", Megabytes(30), &file_data))
-        return false;
-
-    HeapArray<GhsPricing> ghs_pricings;
-    ParseGhsPricings(file_data, "data/ghs.nx", &ghs_pricings);
-
-    for (size_t i = 0; i < ghs_pricings.len;) {
-        GhsCode ghs_code = ghs_pricings[i].code;
-
-        PrintLn("GHS %1:", ghs_code);
-
-        for (; i < ghs_pricings.len && ghs_pricings[i].code == ghs_code; i++) {
-            const GhsPricing &pricing = ghs_pricings[i];
-
-            PrintLn("  %2 to %3:",
-                    pricing.code, pricing.limit_dates[0], pricing.limit_dates[1]);
-            PrintLn("    Public: %1 [exh = %2, exb = %3]",
-                    FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[0].exb_cents / 100.0, 2));
-            PrintLn("    Private: %1 [exh = %2, exb = %3]",
-                    FmtDouble(pricing.sectors[1].price_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[1].exh_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[1].exb_cents / 100.0, 2));
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintLn("%1", UsageText);
+                return true;
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+                return false;
+            }
         }
     }
 
+    const PricingSet *pricing_set = GetMainPricingSet();
+    if (!pricing_set)
+        return false;
+
+    DumpPricingSet(*pricing_set);
     return true;
 }
 
@@ -579,7 +597,7 @@ int main(int argc, char **argv)
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
-    HANDLE_COMMAND(pricings, RunPricings);
+    HANDLE_COMMAND(pricing, RunPricing);
     HANDLE_COMMAND(summarize, RunSummarize);
 
 #undef HANDLE_COMMAND

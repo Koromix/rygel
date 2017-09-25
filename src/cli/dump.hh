@@ -18,3 +18,7 @@ void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations);
 void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs);
 
 void DumpTableSet(const TableSet &table_set, bool detail = true);
+
+void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings);
+
+void DumpPricingSet(const PricingSet &pricing_set);
