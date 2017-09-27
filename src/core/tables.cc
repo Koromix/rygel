@@ -685,14 +685,15 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         uint8_t params[2];
         uint8_t skip_after_failure;
         uint8_t valid_ghs;
-        struct { // 0 for public, 1 for private
+        struct {
             uint16_t ghs_code;
+             // We get those from the pricing tables, so they're ignored here
             uint16_t high_duration_treshold;
             uint16_t low_duration_treshold;
         } sectors[2];
 	};
 #pragma pack(pop)
-    StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().sectors));
+    StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().ghs));
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
@@ -768,12 +769,8 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (size_t j = 0; j < CountOf(current_ghs.sectors); j++) {
-                current_ghs.sectors[j].ghs.number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
-                current_ghs.sectors[j].low_duration_treshold =
-                    (int16_t)raw_ghs_node.sectors[j].low_duration_treshold;
-                current_ghs.sectors[j].high_duration_treshold =
-                    (int16_t)raw_ghs_node.sectors[j].high_duration_treshold;
+            for (size_t j = 0; j < CountOf(current_ghs.ghs); j++) {
+                current_ghs.ghs[j].number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
             }
             out_ghs->Append(current_ghs);
             current_ghs = {};

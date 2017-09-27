@@ -30,13 +30,17 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
             GhsPricing pricing = {};
 
             unsigned int sector;
-            int32_t price, exh, exb;
+            int16_t exh_treshold, exb_treshold;
+            int32_t price_cents, exh_cents, exb_cents;
+            char type_exb;
             if (sscanf((const char *)line.ptr,
-                       "%*7c%04" SCNd16 "%01u%*9c%08" SCNd32 "%*1c%08" SCNd32 "%*50c%04" SCNd16 "%02" SCNd8 "%02" SCNd8 "%*1c%08" SCNd32,
-                       &pricing.code.number, &sector, &price, &exh, &pricing.limit_dates[0].st.year,
-                       &pricing.limit_dates[0].st.month, &pricing.limit_dates[0].st.day, &exb) != 8) {
-                LogError("Malformed NOEMI GHS pricing line (type 110) in '%1': %2", \
-                         filename ? filename : "?", STRINGIFY(Cond)); \
+                       "%*7c%04" SCNd16 "%01u%*3c%03" SCNd16 "%03" SCNd16 "%08" SCNd32 "%*1c%08" SCNd32
+                       "%*50c%04" SCNd16 "%02" SCNd8 "%02" SCNd8 "%c%08" SCNd32,
+                       &pricing.code.number, &sector, &exh_treshold, &exb_treshold, &price_cents, &exh_cents,
+                       &pricing.limit_dates[0].st.year, &pricing.limit_dates[0].st.month,
+                       &pricing.limit_dates[0].st.day, &type_exb, &exb_cents) != 11) {
+                LogError("Malformed NOEMI GHS pricing line (type 110) in '%1'", \
+                         filename ? filename : "?"); \
                 return false;
             }
             FAIL_PARSE_IF(--sector > 1);
@@ -45,9 +49,14 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
             static const Date default_end_date = ConvertDate1980(UINT16_MAX);
             pricing.limit_dates[1] = default_end_date;
 
-            pricing.sectors[sector].price_cents = price;
-            pricing.sectors[sector].exh_cents = exh;
-            pricing.sectors[sector].exb_cents = exb;
+            pricing.sectors[sector].price_cents = price_cents;
+            pricing.sectors[sector].exh_treshold = exh_treshold ? exh_treshold + 1 : 0;
+            pricing.sectors[sector].exb_treshold = exb_treshold;
+            pricing.sectors[sector].exh_cents = exh_cents;
+            pricing.sectors[sector].exb_cents = exb_cents;
+            if (type_exb == 'F') {
+                pricing.sectors[sector].flags |= (int)GhsPricing::Flag::ExbOnce;
+            }
 
             out_pricings->Append(pricing);
         }

@@ -156,12 +156,7 @@ struct GhmRootInfo {
 
 struct GhsInfo {
     GhmCode ghm;
-
-    struct {
-        GhsCode ghs;
-        int16_t low_duration_treshold;
-        int16_t high_duration_treshold;
-    } sectors[2]; // 0 for public, 1 for private
+    GhsCode ghs[2]; // 0 for public, 1 for private
 
     int8_t bed_authorization;
     int8_t unit_authorization;

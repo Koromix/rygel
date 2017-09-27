@@ -8,13 +8,20 @@
 #include "codes.hh"
 
 struct GhsPricing {
+    enum class Flag {
+        ExbOnce = 1
+    };
+
     GhsCode code;
     Date limit_dates[2];
 
     struct {
         int32_t price_cents;
+        int16_t exh_treshold;
+        int16_t exb_treshold;
         int32_t exh_cents;
         int32_t exb_cents;
+        uint16_t flags;
     } sectors[2];
 
     HASH_SET_HANDLER(GhsPricing, code);
