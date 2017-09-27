@@ -452,7 +452,7 @@ bool ParseJsonFile(const char *filename, T *json_handler)
     {
         FILE *fp;
 
-        LocalArray<char, 65536> buffer;
+        LocalArray<char, 1024 * 1024> buffer;
         size_t buffer_offset = 0;
         size_t file_offset = 0;
 
