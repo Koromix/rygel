@@ -457,17 +457,17 @@ struct ArrayRef<const char> {
         return ptr[idx];
     }
 
-	ArrayRef Take(ArraySlice<const char> slice) const
-	{
-		DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
+    ArrayRef Take(ArraySlice<const char> slice) const
+    {
+        DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
 
-		ArrayRef<const char> sub;
-		sub.ptr = ptr + slice.offset;
-		sub.len = slice.len;
-		return sub;
-	}
-	ArrayRef Take(size_t offset, size_t len) const
-		{ return Take(ArraySlice<const char>(offset, len)); }
+        ArrayRef<const char> sub;
+        sub.ptr = ptr + slice.offset;
+        sub.len = slice.len;
+        return sub;
+    }
+    ArrayRef Take(size_t offset, size_t len) const
+        { return Take(ArraySlice<const char>(offset, len)); }
 };
 template <>
 struct ArrayRef<char> {
@@ -499,19 +499,19 @@ struct ArrayRef<char> {
 
     operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
 
-	ArrayRef Take(ArraySlice<char> slice) const
-	{
-		DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
+    ArrayRef Take(ArraySlice<char> slice) const
+    {
+        DebugAssert(slice.len <= len && slice.offset <= len - slice.len);
 
-		ArrayRef<char> sub;
-		sub.ptr = ptr + slice.offset;
-		sub.len = slice.len;
-		return sub;
-	}
-	ArrayRef Take(size_t offset, size_t len) const
-	{
-		return Take(ArraySlice<char>(offset, len));
-	}
+        ArrayRef<char> sub;
+        sub.ptr = ptr + slice.offset;
+        sub.len = slice.len;
+        return sub;
+    }
+    ArrayRef Take(size_t offset, size_t len) const
+    {
+        return Take(ArraySlice<char>(offset, len));
+    }
 };
 
 template <typename T>
