@@ -502,11 +502,11 @@ Options:
                 if (!mode_str)
                     return false;
 
-                if (!strcmp(mode_str, "stay_modes")) {
+                if (StrTest(mode_str, "stay_modes")) {
                     cluster_mode = ClusterMode::StayModes;
-                } else if (!strcmp(mode_str, "bill_id")) {
+                } else if (StrTest(mode_str, "bill_id")) {
                     cluster_mode = ClusterMode::BillId;
-                } else if (!strcmp(mode_str, "disable")) {
+                } else if (StrTest(mode_str, "disable")) {
                     cluster_mode = ClusterMode::Disable;
                 } else {
                     LogError("Unknown cluster mode '%1'", mode_str);
@@ -573,7 +573,7 @@ int main(int argc, char **argv)
         PrintLn(stderr, "%1", MainUsageText);
         return 1;
     }
-    if (!strcmp(argv[1], "--help") || !strcmp(argv[1], "help")) {
+    if (StrTest(argv[1], "--help") || StrTest(argv[1], "help")) {
         if (argc > 2 && argv[2][0] != '-') {
             std::swap(argv[1], argv[2]);
             argv[2] = (char *)"--help";
@@ -585,7 +585,7 @@ int main(int argc, char **argv)
 
 #define HANDLE_COMMAND(Cmd, Func) \
         do { \
-            if (!(strcmp(cmd, STRINGIFY(Cmd)))) { \
+            if (StrTest(cmd, STRINGIFY(Cmd))) { \
                 return !Func(arguments); \
             } \
         } while (false)

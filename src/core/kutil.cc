@@ -318,6 +318,10 @@ char *DuplicateString(Allocator *alloc, const char *str, size_t max_len)
     return new_str;
 }
 
+// ------------------------------------------------------------------------
+// Format
+// ------------------------------------------------------------------------
+
 template <typename AppendFunc>
 static inline void WriteUnsignedAsDecimal(uint64_t value, AppendFunc append)
 {

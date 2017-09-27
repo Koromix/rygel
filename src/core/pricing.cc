@@ -6,23 +6,7 @@
 #include "pricing.hh"
 #include "tables.hh"
 
-static ArrayRef<const uint8_t> GetLine(ArrayRef<const uint8_t> data,
-                                       ArrayRef<const uint8_t> *out_remainder = nullptr)
-{
-    size_t line_len = 0, line_end = 0;
-    while (line_end < data.len && data[line_end++] != '\n') {
-        line_len++;
-    }
-    if (line_len && data[line_len - 1] == '\r') {
-        line_len--;
-    }
-    if (out_remainder) {
-        *out_remainder = data.Take(line_end, data.len - line_end);
-    }
-    return data.Take(0, line_len);
-}
-
-bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
+bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_pricings)
 {
     size_t start_pricings_len = out_pricings->len;
@@ -37,11 +21,11 @@ bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
         } \
     } while (false)
 
-    ArrayRef<const uint8_t> line = GetLine(file_data, &file_data);
+    ArrayRef<const char> line = StrSplitLine(file_data, &file_data);
     FAIL_PARSE_IF(line.len != 128);
     FAIL_PARSE_IF(memcmp(line.ptr, "000AM00000001000000TABGHSCT00000001000000GHX000NXGHS", 52) != 0);
 
-    for (; line.len == 128; line = GetLine(file_data, &file_data)) {
+    for (; line.len == 128; line = StrSplitLine(file_data, &file_data)) {
         if (!memcmp(line.ptr, "110", 3)) {
             GhsPricing pricing = {};
 
@@ -119,7 +103,7 @@ bool LoadPricingSet(const char *filename, PricingSet *out_set)
 
     Allocator temp_alloc;
 
-    ArrayRef<uint8_t> file_data;
+    ArrayRef<char> file_data;
     if (!ReadFile(&temp_alloc, filename, Megabytes(30), &file_data))
         return false;
 

@@ -1425,6 +1425,136 @@ static inline char LowerAscii(char c)
     }
 }
 
+static inline bool StrTest(ArrayRef<const char> str1, ArrayRef<const char> str2)
+{
+    if (str1.len != str2.len)
+        return false;
+    for (size_t i = 0; i < str1.len; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return true;
+}
+static inline bool StrTest(ArrayRef<const char> str1, const char *str2)
+{
+    size_t i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return (i == str1.len) && !str2[i];
+}
+static inline bool StrTest(const char *str1, const char *str2)
+    { return !strcmp(str1, str2); }
+
+static inline ArrayRef<const char> StrSplit(ArrayRef<const char> str, char split_char,
+                                            ArrayRef<const char> *out_remainder = nullptr)
+{
+    size_t part_len = 0;
+    while (part_len < str.len) {
+        if (str[part_len] != split_char) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline ArrayRef<const char> StrSplit(const char *str, char split_char,
+                                            const char **out_remainder = nullptr)
+{
+    size_t part_len = 0;
+    while (str[part_len]) {
+        if (str[part_len] != split_char) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeArrayRef(str, part_len);
+        }
+        part_len++;
+    }
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeArrayRef(str, part_len);
+}
+
+static inline ArrayRef<const char> StrSplitLine(ArrayRef<const char> str,
+                                                ArrayRef<const char> *out_remainder = nullptr)
+{
+    ArrayRef<const char> part = StrSplit(str, '\n', out_remainder);
+    if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+static inline ArrayRef<const char> StrSplitLine(const char *str,
+                                                const char **out_remainder = nullptr)
+{
+    ArrayRef<const char> part = StrSplit(str, '\n', out_remainder);
+    if (str[part.len] && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+
+static inline ArrayRef<const char> StrSplitAny(ArrayRef<const char> str, const char *split_chars,
+                                               ArrayRef<const char> *out_remainder = nullptr)
+{
+    char split_mask[256 / 8] = {};
+    for (size_t i = 0; split_chars[i]; i++) {
+        split_mask[i / 8] |= 1 << (split_chars[i] % 8);
+    }
+
+    size_t part_len = 0;
+    while (part_len < str.len) {
+        if (split_mask[str[part_len] / 8] & (str[part_len] % 8)) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len, str.len - part_len);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(part_len, 0);
+    }
+    return str.Take(0, str.len);
+}
+static inline ArrayRef<const char> StrSplitAny(const char *str, const char *split_chars,
+                                               const char **out_remainder = nullptr)
+{
+    char split_mask[256 / 8] = {};
+    for (size_t i = 0; split_chars[i]; i++) {
+        split_mask[i / 8] |= 1 << (split_chars[i] % 8);
+    }
+
+    size_t part_len = 0;
+    while (str[part_len]) {
+        if (split_mask[str[part_len] / 8] & (str[part_len] % 8)) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeArrayRef(str, part_len);
+        }
+        part_len++;
+    }
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeArrayRef(str, part_len);
+}
+
+// ------------------------------------------------------------------------
+// Format
+// ------------------------------------------------------------------------
+
 class FmtArg {
 public:
     enum class Type {
@@ -1672,6 +1802,12 @@ static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_s
     *out_len = data.len;
     return true;
 }
+static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+                            ArrayRef<char> *out_data)
+    { return ReadFile(alloc, filename, max_size, (uint8_t **)&out_data->ptr, &out_data->len); }
+static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+                            char **out_data, size_t *out_len)
+    { return ReadFile(alloc, filename, max_size, (uint8_t **)out_data, out_len); }
 
 enum class FileType {
     Directory,
@@ -1700,8 +1836,8 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 
 static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
 {
-    return !strcmp(opt, test1) ||
-           (test2 && !strcmp(opt, test2));
+    return StrTest(opt, test1) ||
+           (test2 && StrTest(opt, test2));
 }
 
 class OptionParser {

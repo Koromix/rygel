@@ -189,21 +189,21 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         strncpy(table.raw_type, raw_table_header.name, sizeof(raw_table_header.name));
         table.raw_type[sizeof(table.raw_type) - 1] = '\0';
         table.raw_type[strcspn(table.raw_type, " ")] = '\0';
-        if (!strcmp(table.raw_type, "ARBREDEC")) {
+        if (StrTest(table.raw_type, "ARBREDEC")) {
             table.type = TableType::GhmDecisionTree;
-        } else if (!strcmp(table.raw_type, "DIAG10CR")) {
+        } else if (StrTest(table.raw_type, "DIAG10CR")) {
             table.type = TableType::DiagnosisTable;
-        } else if (!strcmp(table.raw_type, "CCAMCARA")) {
+        } else if (StrTest(table.raw_type, "CCAMCARA")) {
             table.type = TableType::ProcedureTable;
-        } else if (!strcmp(table.raw_type, "RGHMINFO")) {
+        } else if (StrTest(table.raw_type, "RGHMINFO")) {
             table.type = TableType::GhmRootTable;
-        } else if (!strcmp(table.raw_type, "GHSINFO")) {
+        } else if (StrTest(table.raw_type, "GHSINFO")) {
             table.type = TableType::GhsTable;
-        } else if (!strcmp(table.raw_type, "TABCOMBI")) {
+        } else if (StrTest(table.raw_type, "TABCOMBI")) {
             table.type = TableType::SeverityTable;
-        } else if (!strcmp(table.raw_type, "AUTOREFS")) {
+        } else if (StrTest(table.raw_type, "AUTOREFS")) {
             table.type = TableType::AuthorizationTable;
-        } else if (!strcmp(table.raw_type, "SRCDGACT")) {
+        } else if (StrTest(table.raw_type, "SRCDGACT")) {
             table.type = TableType::SrcPairTable;
         } else {
             table.type = TableType::UnknownTable;

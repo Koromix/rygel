@@ -145,7 +145,7 @@ public:
     bool Key(const char *key, SizeType, bool) {
 #define HANDLE_KEY(Key, State) \
             do { \
-                if (!strcmp(key, (Key))) { \
+                if (StrTest(key, (Key))) { \
                     state = State; \
                     return true; \
                 } \
@@ -283,9 +283,9 @@ public:
         switch (state) {
             // Stay attributes
             case State::StaySex: {
-                if (!strcmp(str, "H") || !strcmp(str, "h")) {
+                if (StrTest(str, "H") || StrTest(str, "h")) {
                     stay.sex = Sex::Male;
-                } else if (!strcmp(str, "F") || !strcmp(str, "f")) {
+                } else if (StrTest(str, "F") || StrTest(str, "f")) {
                     stay.sex = Sex::Female;
                 } else {
                     LogError("Invalid sex value '%1'", str);

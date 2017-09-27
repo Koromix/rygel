@@ -28,7 +28,7 @@ struct PricingSet {
     const GhsPricing *FindGhsPricing(GhsCode ghs_code, Date date) const;
 };
 
-bool ParseGhsPricings(ArrayRef<const uint8_t> file_data, const char *filename,
+bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_prices);
 
 bool LoadPricingSet(const char *filename, PricingSet *out_set);
