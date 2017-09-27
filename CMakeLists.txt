@@ -29,56 +29,9 @@ if(WIN32)
     endif()
 endif()
 
-set(LIB_LUA_SRC lib/lua/src/lapi.c
-                lib/lua/src/lcode.c
-                lib/lua/src/lctype.c
-                lib/lua/src/ldebug.c
-                lib/lua/src/ldo.c
-                lib/lua/src/ldump.c
-                lib/lua/src/lfunc.c
-                lib/lua/src/lgc.c
-                lib/lua/src/llex.c
-                lib/lua/src/lmem.c
-                lib/lua/src/lobject.c
-                lib/lua/src/lopcodes.c
-                lib/lua/src/lparser.c
-                lib/lua/src/lstate.c
-                lib/lua/src/lstring.c
-                lib/lua/src/ltable.c
-                lib/lua/src/ltm.c
-                lib/lua/src/lundump.c
-                lib/lua/src/lvm.c
-                lib/lua/src/lzio.c
-                lib/lua/src/lauxlib.c
-                lib/lua/src/lbaselib.c
-                lib/lua/src/lbitlib.c
-                lib/lua/src/lcorolib.c
-                lib/lua/src/ldblib.c
-                lib/lua/src/liolib.c
-                lib/lua/src/lmathlib.c
-                lib/lua/src/loslib.c
-                lib/lua/src/lstrlib.c
-                lib/lua/src/ltablib.c
-                lib/lua/src/lutf8lib.c
-                lib/lua/src/loadlib.c
-                lib/lua/src/linit.c)
-set(CORE_SRC src/core/algorithm.cc
-             src/core/algorithm.hh
-             src/core/codes.hh
-             src/core/kutil.cc
-             src/core/kutil.hh
-             src/core/pricing.cc
-             src/core/pricing.hh
-             src/core/stays.cc
-             src/core/stays.hh
-             src/core/tables.cc
-             src/core/tables.hh)
-set(CLI_SRC src/cli/dump.cc
-            src/cli/dump.hh
-            src/cli/moya.cc)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-add_library(core STATIC ${CORE_SRC})
-add_amalgamated_file(core "${CMAKE_BINARY_DIR}/libmoya.hh" src/core/libmoya.hh)
-
-add_executable(moya ${CLI_SRC})
-target_link_libraries(moya PUBLIC core)
+add_subdirectory(lib)
+add_subdirectory(src)
