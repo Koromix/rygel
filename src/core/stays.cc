@@ -7,9 +7,7 @@
 #include "../../lib/rapidjson/reader.h"
 #include "../../lib/rapidjson/error/en.h"
 
-using namespace rapidjson;
-
-class JsonStayHandler: public BaseReaderHandler<UTF8<>, JsonStayHandler> {
+class JsonStayHandler: public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonStayHandler> {
     enum class State {
         Default,
 
@@ -84,7 +82,7 @@ public:
 
         return true;
     }
-    bool EndArray(SizeType)
+    bool EndArray(rapidjson::SizeType)
     {
         switch (state) {
             case State::StayArray: { state = State::Default; } break;
@@ -114,7 +112,7 @@ public:
 
         return true;
     }
-    bool EndObject(SizeType)
+    bool EndObject(rapidjson::SizeType)
     {
         switch (state) {
             case State::StayObject: {
@@ -142,7 +140,7 @@ public:
         return true;
     }
 
-    bool Key(const char *key, SizeType, bool) {
+    bool Key(const char *key, rapidjson::SizeType, bool) {
 #define HANDLE_KEY(Key, State) \
             do { \
                 if (StrTest(key, (Key))) { \
@@ -278,7 +276,7 @@ public:
 
         return HandleValueEnd();
     }
-    bool String(const char *str, SizeType, bool)
+    bool String(const char *str, rapidjson::SizeType, bool)
     {
         switch (state) {
             // Stay attributes
@@ -523,9 +521,9 @@ bool ParseJsonFile(const char *filename, T *json_handler)
     DEFER { PopLogHandler(); };
 
     {
-        Reader json_reader;
+        rapidjson::Reader json_reader;
         if (!json_reader.Parse(json_stream, *json_handler)) {
-            ParseErrorCode err_code = json_reader.GetParseErrorCode();
+            rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
             LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
             return false;
         }
