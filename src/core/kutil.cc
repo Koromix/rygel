@@ -589,8 +589,12 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
 #endif
 }
 
-size_t FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
+ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
 {
+    if (!buf.len)
+        return {};
+    buf.len--;
+
     size_t real_len = 0;
 
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
@@ -604,16 +608,14 @@ size_t FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> arg
         real_len += fragment.len;
     });
     if (real_len < buf.len) {
-        buf[real_len] = 0;
-    } else if (buf.len) {
-        buf[buf.len - 1] = 0;
+        buf.len = real_len;
     }
-    real_len++;
+    buf[buf.len] = 0;
 
-    return real_len;
+    return buf;
 }
 
-char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
+ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
 {
     char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
                                             (int)Allocator::Flag::Resizable);
@@ -636,7 +638,7 @@ char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
     });
     buf[buf_len] = 0;
 
-    return buf;
+    return MakeArrayRef(buf, buf_len);
 }
 
 void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
@@ -918,7 +920,7 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
     EnumStatus status = EnumerateDirectory(dirname, filter,
                                            [&](const char *filename, const FileInfo &info) {
         if (info.type == FileType::File) {
-            out_files->Append(Fmt(&str_alloc, "%1%/%2", dirname, filename));
+            out_files->Append(Fmt(&str_alloc, "%1%/%2", dirname, filename).ptr);
         }
         return true;
     });

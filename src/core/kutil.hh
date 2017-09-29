@@ -1670,32 +1670,31 @@ enum class LogLevel {
     Error
 };
 
-size_t FmtString(ArrayRef<char> buf, const char *fmt,
-                 ArrayRef<const FmtArg> args);
-char *FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
+ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args);
+ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
 void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
 void FmtLog(LogLevel level, const char *ctx, const char *fmt,
             ArrayRef<const FmtArg> args);
 
 // Print formatted strings to fixed-size buffer
-static inline size_t Fmt(ArrayRef<char> buf, const char *fmt)
+static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt)
 {
     return FmtString(buf, fmt, {});
 }
 template <typename... Args>
-static inline size_t Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
+static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     return FmtString(buf, fmt, fmt_args);
 }
 
 // Print formatted strings to dynamic char array
-static inline char *Fmt(Allocator *alloc, const char *fmt)
+static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt)
 {
     return FmtString(alloc, fmt, {});
 }
 template <typename... Args>
-static inline char *Fmt(Allocator *alloc, const char *fmt, Args... args)
+static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     return FmtString(alloc, fmt, fmt_args);
