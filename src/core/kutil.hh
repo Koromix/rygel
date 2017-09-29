@@ -1452,7 +1452,7 @@ static inline ArrayRef<const char> StrSplit(ArrayRef<const char> str, char split
 {
     size_t part_len = 0;
     while (part_len < str.len) {
-        if (str[part_len] != split_char) {
+        if (str[part_len] == split_char) {
             if (out_remainder) {
                 *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
             }
@@ -1470,7 +1470,7 @@ static inline ArrayRef<const char> StrSplit(const char *str, char split_char,
 {
     size_t part_len = 0;
     while (str[part_len]) {
-        if (str[part_len] != split_char) {
+        if (str[part_len] == split_char) {
             if (out_remainder) {
                 *out_remainder = str + part_len + 1;
             }
