@@ -22,3 +22,10 @@ set(CLI_SRC cli/dump.cc
 add_executable(moya_cli ${CLI_SRC})
 set_target_properties(moya_cli PROPERTIES OUTPUT_NAME moya)
 target_link_libraries(moya_cli PUBLIC moya)
+
+set(WEB_SRC web/moya_web.cc
+            web/pages.cc)
+add_executable(moya_web ${WEB_SRC})
+target_link_libraries(moya_web PUBLIC moya libmicrohttpd)
+# target_include_directories(moya_web PUBLIC /usr/local/include)
+# target_link_libraries(moya_web PUBLIC moya /usr/local/lib/libmicrohttpd.so)

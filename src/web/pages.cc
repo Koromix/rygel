@@ -1,7 +1,11 @@
-<!DOCTYPE html>
+#include "../core/libmoya.hh"
+#include "pages.hh"
+
+const ArrayRef<const char> IndexPage = MakeStrRef(
+R"(<!DOCTYPE html>
 <html>
     <head>
-        <title>Test Yaa2</title>
+        <title>Talyn - Valorisation des racines de GHM</title>
         <meta charset="utf-8"/>
         <style type="text/css">
             html {
@@ -73,21 +77,28 @@
             var ghm_roots = [];
             var ghm_roots_info = {};
 
-            function updateDatabase(json) {
-                ghm_roots = [];
-                ghm_roots_info = {};
+            function updateDatabase(date) {
+                var date = document.querySelector('input#date').value;
 
-                for (var i = 0; i < json.length; i++) {
-                    ghm_roots.push(json[i].ghm_root);
-                    ghm_roots_info[json[i].ghm_root] = json[i].info;
-                }
+                fetch('catalog.json?date=' + date)
+                    .then(response => response.json())
+                    .then(function(json) {
+                        ghm_roots = [];
+                        ghm_roots_info = {};
 
-                refreshGhmRoots();
-                refreshPricingTable();
+                        for (var i = 0; i < json.length; i++) {
+                            ghm_roots.push(json[i].ghm_root);
+                            ghm_roots_info[json[i].ghm_root] = json[i].info;
+                        }
+
+                        refreshGhmRoots();
+                        refreshPricingTable();
+                    });
             }
 
             function refreshGhmRoots() {
                 var el = document.querySelector('select#ghm_roots');
+                var previous_value = el.value;
                 el.innerHTML = '';
                 for (var i = 0; i < ghm_roots.length; i++) {
                     var opt = document.createElement('option');
@@ -95,6 +106,8 @@
                     opt.textContent = ghm_roots[i];
                     el.appendChild(opt);
                 }
+                if (previous_value)
+                    el.value = previous_value;
             }
 
             function refreshPricingTable() {
@@ -197,20 +210,25 @@
             }
 
             document.addEventListener('DOMContentLoaded', function(e) {
-                fetch('./pricing_demo.json')
-                    .then(response => response.json())
-                    .then(json => updateDatabase(json));
+                var date_input = document.querySelector('input#date');
+                if (!date_input.value) {
+                    date_input.valueAsDate = new Date();
+                }
+                updateDatabase();
             });
         </script>
     </head>
     <body>
         <nav id="settings">
             <label>
-                Racine de GHM :
+                Date :
+                <input id="date" type="date" onchange="updateDatabase();"/>
+            <label>
+                Racine de GHM :
                 <select id="ghm_roots" onchange="refreshPricingTable();"></select>
             </label>
             <label>
-                Durée maximale :
+                Durée maximale :
                 <input id="max_duration" type="number" onchange="refreshPricingTable();" value="200" min="0" max="500" step="5"/>
             </label>
             <label>
@@ -221,4 +239,4 @@
 
         <table id="pricing"></table>
     </body>
-</html>
+</html>)");
