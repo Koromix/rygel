@@ -18,7 +18,7 @@ add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" core/libmoya.hh)
 
 set(CLI_SRC cli/dump.cc
             cli/dump.hh
-            cli/moya.cc)
+            cli/moya_cli.cc)
 add_executable(moya_cli ${CLI_SRC})
 set_target_properties(moya_cli PROPERTIES OUTPUT_NAME moya)
 target_link_libraries(moya_cli PUBLIC moya)
