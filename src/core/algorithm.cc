@@ -7,21 +7,6 @@
 #include "stays.hh"
 #include "tables.hh"
 
-struct ClassifyContext {
-    const TableIndex *index;
-    const StayAggregate *agg;
-
-    ArrayRef<const DiagnosisCode> diagnoses;
-    ArrayRef<const Procedure> procedures;
-
-    // Keep a copy for DP - DR reversal (function 34)
-    DiagnosisCode main_diagnosis;
-    DiagnosisCode linked_diagnosis;
-
-    // Lazy values
-    int gnn;
-};
-
 static int ComputeAge(Date date, Date birthdate)
 {
     int age = date.st.year - birthdate.st.year;
@@ -347,8 +332,8 @@ static bool TestExclusion(const TableIndex &index,
     return (excl->raw[main_diag_info.cma_exclusion_offset] & main_diag_info.cma_exclusion_mask);
 }
 
-static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
-                          HeapArray<int16_t> *out_errors)
+int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
+                   HeapArray<int16_t> *out_errors)
 {
     DebugAssert(ghm_node.type == GhmDecisionNode::Type::Test);
 
@@ -558,12 +543,12 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
         } break;
 
         case 38: {
-            return (ctx.gnn >= ghm_node.u.test.params[0] &&
-                    ctx.gnn <= ghm_node.u.test.params[1]);
+            return (ctx.cache.gnn >= ghm_node.u.test.params[0] &&
+                    ctx.cache.gnn <= ghm_node.u.test.params[1]);
         } break;
 
         case 39: {
-            if (!ctx.gnn) {
+            if (!ctx.cache.gnn) {
                 int gestational_age = ctx.agg->stay.gestational_age;
                 if (!gestational_age) {
                     gestational_age = 99;
@@ -572,7 +557,7 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
                 for (const ValueRangeCell<2> &cell: ctx.index->gnn_cells) {
                     if (cell.Test(0, ctx.agg->stay.newborn_weight) &&
                             cell.Test(1, gestational_age)) {
-                        ctx.gnn = cell.value;
+                        ctx.cache.gnn = cell.value;
                         break;
                     }
                 }
@@ -624,14 +609,14 @@ static int ExecuteGhmTest(ClassifyContext &ctx, const GhmDecisionNode &ghm_node,
     return -1;
 }
 
-static GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
-                          ArrayRef<const DiagnosisCode> diagnoses,
-                          ArrayRef<const Procedure> procedures,
-                          HeapArray<int16_t> *out_errors)
+GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
+                   ArrayRef<const DiagnosisCode> diagnoses,
+                   ArrayRef<const Procedure> procedures,
+                   HeapArray<int16_t> *out_errors)
 {
     GhmCode ghm = {};
 
-    ClassifyContext ctx = {};
+    RunGhmTreeContext ctx = {};
     ctx.index = &index;
     ctx.agg = &agg;
     ctx.diagnoses = diagnoses;
@@ -689,9 +674,9 @@ static int LimitSeverity(int duration, int severity)
     return severity;
 }
 
-static GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
-                              ArrayRef<const DiagnosisCode> diagnoses,
-                              GhmCode ghm, HeapArray<int16_t> *out_errors)
+GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
+                       ArrayRef<const DiagnosisCode> diagnoses,
+                       GhmCode ghm, HeapArray<int16_t> *out_errors)
 {
     const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {

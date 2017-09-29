@@ -20,6 +20,23 @@ struct StayAggregate {
     int age;
 };
 
+struct RunGhmTreeContext {
+    const TableIndex *index;
+    const StayAggregate *agg;
+
+    ArrayRef<const DiagnosisCode> diagnoses;
+    ArrayRef<const Procedure> procedures;
+
+    // Keep a copy for DP - DR reversal (function 34)
+    DiagnosisCode main_diagnosis;
+    DiagnosisCode linked_diagnosis;
+
+    // Lazy values
+    struct {
+        int gnn;
+    } cache;
+};
+
 struct SummarizeResult {
     ArrayRef<const Stay> cluster;
     const TableIndex *index;
@@ -39,12 +56,24 @@ struct SummarizeResultSet {
 
 ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
                              ArrayRef<const Stay> *out_remainder);
+
 GhmCode PrepareIndex(const TableSet &table_set, ArrayRef<const Stay> cluster_stays,
                      const TableIndex **out_index, HeapArray<int16_t> *out_errors);
+
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
                   HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
                   HeapArray<int16_t> *out_errors);
+
+int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
+                   HeapArray<int16_t> *out_errors);
+GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
+                       ArrayRef<const DiagnosisCode> diagnoses,
+                       GhmCode ghm, HeapArray<int16_t> *out_errors);
+GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
+                   ArrayRef<const DiagnosisCode> diagnoses,
+                   ArrayRef<const Procedure> procedures,
+                   HeapArray<int16_t> *out_errors);
 GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
                  ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
                  HeapArray<int16_t> *out_errors);
