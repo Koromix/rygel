@@ -6,7 +6,8 @@
 
 #include "../core/libmoya.hh"
 
-void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes);
+void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
+                         size_t node_idx = 0, int depth = 0);
 void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
                         ArrayRef<const ExclusionInfo> exclusions = {});
 void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures);

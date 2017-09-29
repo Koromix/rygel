@@ -5,11 +5,11 @@
 #include "../core/libmoya.hh"
 #include "dump.hh"
 
-static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
-                             size_t node_idx, int depth)
+void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
+                         size_t node_idx, int depth)
 {
-    for (;;) {
-        const GhmDecisionNode &ghm_node = nodes[node_idx];
+    while (node_idx < ghm_nodes.len) {
+        const GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
 
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
@@ -20,7 +20,7 @@ static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
 
                 if (ghm_node.u.test.function != 20) {
                     for (size_t i = 1; i < ghm_node.u.test.children_count; i++) {
-                        DumpDecisionNode(nodes, ghm_node.u.test.children_idx + i, depth + 1);
+                        DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + i, depth + 1);
                     }
 
                     node_idx = ghm_node.u.test.children_idx;
@@ -40,13 +40,6 @@ static void DumpDecisionNode(const ArrayRef<const GhmDecisionNode> nodes,
                 return;
             } break;
         }
-    }
-}
-
-void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes)
-{
-    if (ghm_nodes.len) {
-        DumpDecisionNode(ghm_nodes, 0, 0);
     }
 }
 
