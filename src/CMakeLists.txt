@@ -23,8 +23,30 @@ add_executable(moya_cli ${CLI_SRC})
 set_target_properties(moya_cli PROPERTIES OUTPUT_NAME moya)
 target_link_libraries(moya_cli PUBLIC moya)
 
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_web_pages.cmake" [=[
+set(PAGES_CC_FILENAME "${BIN_DIR}/web/pages.cc")
+file(WRITE ${PAGES_CC_FILENAME} "\
+#include \"${SRC_DIR}/core/libmoya.hh\"\n\
+#include \"${SRC_DIR}/web/pages.hh\"\n")
+foreach(page ${PAGES})
+    get_filename_component(var ${page} NAME_WE)
+    set(var "page_${var}")
+    file(READ "${SRC_DIR}/${page}" html)
+    file(APPEND ${PAGES_CC_FILENAME}
+         "\nconst ArrayRef<const char> ${var} = MakeStrRef(R\"html(${html})html\");\n")
+endforeach()
+]=])
+
+set(WEB_PAGES web/index.html)
+add_custom_command(
+    OUTPUT web/pages.cc
+    COMMAND ${CMAKE_COMMAND}
+    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DPAGES=${WEB_PAGES}
+         -P "${CMAKE_CURRENT_BINARY_DIR}/build_web_pages.cmake"
+    DEPENDS ${WEB_PAGES})
+
 set(WEB_SRC web/talyn.cc
-            web/pages.cc
+            ${CMAKE_CURRENT_BINARY_DIR}/web/pages.cc
             web/pages.hh)
-add_executable(talyn ${WEB_SRC})
+add_executable(talyn ${WEB_SRC} ${WEB_PAGES})
 target_link_libraries(talyn PUBLIC moya libmicrohttpd)

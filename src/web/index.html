@@ -1,8 +1,4 @@
-#include "../core/libmoya.hh"
-#include "pages.hh"
-
-const ArrayRef<const char> IndexPage = MakeStrRef(
-R"(<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
     <head>
         <title>Talyn - Valorisation des racines de GHM</title>
@@ -26,9 +22,9 @@ R"(<!DOCTYPE html>
             }
 
             table#pricing {
+                width: 100%;
                 table-layout: fixed;
                 border-collapse: collapse;
-                width: 100%;
             }
             table#pricing tr:first-child th:first-child { width: 120px; }
             table#pricing th, table#pricing td {
@@ -239,4 +235,4 @@ R"(<!DOCTYPE html>
 
         <table id="pricing"></table>
     </body>
-</html>)");
+</html>

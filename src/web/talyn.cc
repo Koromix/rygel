@@ -111,7 +111,8 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
     MHD_Response *response = nullptr;
     unsigned int code;
     if (StrTest(url, "/")) {
-        response = MHD_create_response_from_buffer(IndexPage.len, (void *)IndexPage.ptr,
+        response = MHD_create_response_from_buffer(page_index.len,
+                                                   (void *)page_index.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
         code = MHD_HTTP_OK;
     } else if (StrTest(url, "/catalog.json")) {
