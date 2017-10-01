@@ -18,10 +18,9 @@ add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" core/libmoya.hh)
 
 set(CLI_SRC cli/dump.cc
             cli/dump.hh
-            cli/moya_cli.cc)
-add_executable(moya_cli ${CLI_SRC})
-set_target_properties(moya_cli PROPERTIES OUTPUT_NAME moya)
-target_link_libraries(moya_cli PUBLIC moya)
+            cli/drd.cc)
+add_executable(drd ${CLI_SRC})
+target_link_libraries(drd PUBLIC moya)
 
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_web_pages.cmake" [=[
 set(PAGES_CC_FILENAME "${BIN_DIR}/web/pages.cc")
