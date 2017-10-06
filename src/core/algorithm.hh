@@ -44,6 +44,7 @@ struct SummarizeResult {
 
     GhmCode ghm;
     ArrayRef<int16_t> errors;
+    GhsCode ghs;
 };
 
 struct SummarizeResultSet {
@@ -65,6 +66,9 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
                   HeapArray<int16_t> *out_errors);
 
+int GetMinimalDurationForSeverity(int severity);
+int LimitSeverityWithDuration(int severity, int duration);
+
 int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
                    HeapArray<int16_t> *out_errors);
 GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
@@ -78,5 +82,10 @@ GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
                  ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
                  HeapArray<int16_t> *out_errors);
 
-void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
-               ClusterMode cluster_mode, SummarizeResultSet *out_result_set);
+GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_set,
+                ArrayRef<const Stay> stays, const StayAggregate &agg,
+                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures);
+
+void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
+               ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+               SummarizeResultSet *out_result_set);

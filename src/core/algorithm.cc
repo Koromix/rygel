@@ -332,6 +332,18 @@ static bool TestExclusion(const TableIndex &index,
     return (excl->raw[main_diag_info.cma_exclusion_offset] & main_diag_info.cma_exclusion_mask);
 }
 
+int GetMinimalDurationForSeverity(int severity)
+{
+    DebugAssert(severity && severity < 4);
+    return severity ? (severity + 2) : 0;
+}
+
+int LimitSeverityWithDuration(int severity, int duration)
+{
+    DebugAssert(severity && severity < 4);
+    return duration >= 3 ? std::min(duration - 2, severity) : 0;
+}
+
 int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
                    HeapArray<int16_t> *out_errors)
 {
@@ -659,21 +671,6 @@ GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
     return ghm;
 }
 
-static int LimitSeverity(int duration, int severity)
-{
-    if (severity == 3 && duration < 5) {
-        severity = 2;
-    }
-    if (severity == 2 && duration < 4) {
-        severity = 1;
-    }
-    if (severity == 1 && duration < 3) {
-        severity = 0;
-    }
-
-    return severity;
-}
-
 GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
                        ArrayRef<const DiagnosisCode> diagnoses,
                        GhmCode ghm, HeapArray<int16_t> *out_errors)
@@ -691,9 +688,7 @@ GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
     } else if (ghm_root_info->short_duration_treshold &&
                agg.duration < ghm_root_info->short_duration_treshold) {
         ghm.parts.mode = 'T';
-    }
-
-    if (ghm.parts.mode >= 'A' && ghm.parts.mode <= 'D') {
+    } else if (ghm.parts.mode >= 'A' && ghm.parts.mode <= 'D') {
         int severity = ghm.parts.mode - 'A';
 
         if (ghm_root_info->childbirth_severity_list) {
@@ -706,7 +701,7 @@ GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
             }
         }
 
-        ghm.parts.mode = 'A' + (char)LimitSeverity(agg.duration, severity);
+        ghm.parts.mode = 'A' + (char)LimitSeverityWithDuration(severity, agg.duration);
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
@@ -744,7 +739,7 @@ GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
             severity = 1;
         }
 
-        ghm.parts.mode = '1' + (char)LimitSeverity(agg.duration, severity);
+        ghm.parts.mode = '1' + (char)LimitSeverityWithDuration(severity, agg.duration);
     }
 
     return ghm;
@@ -762,8 +757,62 @@ GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
     return ghm;
 }
 
-void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
-               ClusterMode cluster_mode, SummarizeResultSet *out_result_set)
+GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_set,
+                ArrayRef<const Stay> stays, const StayAggregate &agg,
+                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
+                GhmCode ghm)
+{
+    ArrayRef<const GhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm);
+
+    for (const GhsInfo &ghs_info: compatible_ghs) {
+        if (ghs_info.minimal_age && agg.age < ghs_info.minimal_age)
+            continue;
+
+        int duration;
+        if (ghs_info.unit_authorization) {
+            duration = 0;
+            bool authorized = false;
+            for (const Stay &stay: stays) {
+                const Authorization *auth = authorization_set.FindUnit(stay.unit_code, stay.dates[1]);
+                if (auth && auth->type == ghs_info.unit_authorization) {
+                    duration += stay.dates[1] - stay.dates[0];
+                    authorized = true;
+                }
+            }
+            if (!authorized)
+                continue;
+        } else {
+            duration = agg.duration;
+        }
+        if (ghs_info.bed_authorization &&
+                std::none_of(stays.begin(), stays.end(),
+                             [&](const Stay &stay) { return stay.bed_authorization == ghs_info.bed_authorization; }))
+            continue;
+        if (ghs_info.minimal_duration && duration < ghs_info.minimal_duration)
+            continue;
+
+        // TODO: Make sure we don't need DP - DR reversal here
+        if (ghs_info.main_diagnosis_mask &&
+                !(GetDiagnosisByte(index, agg.stay.sex, agg.stay.main_diagnosis, ghs_info.main_diagnosis_offset) & ghs_info.main_diagnosis_mask))
+            continue;
+        if (ghs_info.diagnosis_mask &&
+                std::none_of(diagnoses.begin(), diagnoses.end(),
+                             [&](DiagnosisCode diag_code) { return GetDiagnosisByte(index, agg.stay.sex, diag_code, ghs_info.diagnosis_offset) & ghs_info.diagnosis_mask; }))
+            continue;
+        if (ghs_info.proc_mask &&
+                std::none_of(procedures.begin(), procedures.end(),
+                             [&](const Procedure &proc) { return GetProcedureByte(index, proc, ghs_info.proc_offset) & ghs_info.proc_mask; }))
+            continue;
+
+        return ghs_info.ghs[0];
+    }
+
+    return GhsCode(9999);
+}
+
+void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
+               ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+               SummarizeResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
@@ -771,24 +820,30 @@ void Summarize(const TableSet &table_set, ArrayRef<const Stay> stays,
     HeapArray<Procedure> procedures;
 
     while (stays.len) {
-        SummarizeResult result;
+        SummarizeResult result = {};
 
         diagnoses.Clear(256);
         procedures.Clear(512);
 
         result.errors.ptr = (int16_t *)out_result_set->store.errors.len;
-        result.cluster = Cluster(stays, cluster_mode, &stays);
-        result.ghm = PrepareIndex(table_set, result.cluster,
-                                  &result.index, &out_result_set->store.errors);
-        if (LIKELY(!result.ghm.IsError())) {
+        do {
+            result.cluster = Cluster(stays, cluster_mode, &stays);
+            result.ghm = PrepareIndex(table_set, result.cluster,
+                                      &result.index, &out_result_set->store.errors);
+            if (UNLIKELY(result.ghm.IsError()))
+                break;
             result.ghm = Aggregate(*result.index, result.cluster,
                                    &result.agg, &diagnoses, &procedures,
                                    &out_result_set->store.errors);
-            if (LIKELY(!result.ghm.IsError())) {
-                result.ghm = Classify(*result.index, result.agg, diagnoses, procedures,
-                                      &out_result_set->store.errors);
-            }
-        }
+            if (UNLIKELY(result.ghm.IsError()))
+                break;
+            result.ghm = Classify(*result.index, result.agg, diagnoses, procedures,
+                                  &out_result_set->store.errors);
+            if (UNLIKELY(result.ghm.IsError()))
+                break;
+            result.ghs = PickGhs(*result.index, authorization_set, result.cluster,
+                                 result.agg, diagnoses, procedures, result.ghm);
+        } while (false);
         result.errors.len = out_result_set->store.errors.len - (size_t)result.errors.ptr;
 
         out_result_set->results.Append(result);

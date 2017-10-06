@@ -7,10 +7,20 @@
 #include "kutil.hh"
 #include "codes.hh"
 
-struct UnitInfo {
-    UnitCode code;
+struct Authorization {
+    UnitCode unit;
     Date dates[2];
-    int32_t facility_id;
+    int8_t type;
+
+    HASH_SET_HANDLER(Authorization, unit);
+};
+
+struct AuthorizationSet {
+    HeapArray<Authorization> authorizations;
+    HashSet<UnitCode, const Authorization *> authorizations_map;
+
+    ArrayRef<const Authorization> FindUnit(UnitCode unit_code) const;
+    const Authorization *FindUnit(UnitCode unit_code, Date date) const;
 };
 
 struct Procedure {
@@ -74,11 +84,12 @@ struct StaySet {
     } store;
 };
 
+bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set);
+
 class StaySetBuilder {
     StaySet set;
 
 public:
-    bool LoadJson(ArrayRef<const char *const> filenames);
-
+    bool LoadFile(ArrayRef<const char *const> filenames);
     bool Finish(StaySet *out_set);
 };

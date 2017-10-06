@@ -106,7 +106,7 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
     return true;
 }
 
-bool LoadPricingSet(const char *filename, PricingSet *out_set)
+bool LoadPricingFile(const char *filename, PricingSet *out_set)
 {
     Assert(!out_set->ghs_pricings.len);
 

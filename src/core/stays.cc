@@ -4,10 +4,219 @@
 
 #include "kutil.hh"
 #include "stays.hh"
+#include "tables.hh"
 #include "../../lib/rapidjson/reader.h"
 #include "../../lib/rapidjson/error/en.h"
 
-class JsonStayHandler: public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonStayHandler> {
+template <typename T>
+class JsonHandler: public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonHandler<T>> {
+public:
+    bool Uint(unsigned int u)
+    {
+        if (u <= INT_MAX) {
+            return (T *)this->Int((int)u);
+        } else {
+            return (T *)this->Default();
+        }
+    }
+
+    bool Default()
+    {
+        LogError("Unsupported value type (not a string or 32-bit integer)");
+        return false;
+    }
+
+    template <typename U>
+    bool SetInt(U *dest, int i)
+    {
+        U value = (U)i;
+        if (value != i) {
+            LogError("Value %1 outside of range %2 - %3",
+                     i, (int)std::numeric_limits<U>::min(), (int)std::numeric_limits<U>::max());
+            return false;
+        }
+        *dest = value;
+        return true;
+    }
+
+    bool SetDate(Date *dest, const char *date_str)
+    {
+        Date date = Date::FromString(date_str, false);
+        if (!date.value)
+            return false;
+        *dest = date;
+        return true;
+    }
+};
+
+class JsonAuthorizationHandler: public JsonHandler<JsonAuthorizationHandler> {
+    enum class State {
+        Default,
+
+        AuthArray,
+        AuthObject,
+        AuthAuthorization,
+        AuthBeginDate,
+        AuthEndDate,
+        AuthUnit
+    };
+
+    State state = State::Default;
+
+    Authorization auth = {};
+
+public:
+    HeapArray<Authorization> *out_authorizations;
+
+    JsonAuthorizationHandler(HeapArray<Authorization> *out_authorizations = nullptr)
+        : out_authorizations(out_authorizations) {}
+
+    bool StartArray()
+    {
+        if (state != State::Default) {
+            LogError("Unexpected array");
+            return false;
+        }
+
+        state = State::AuthArray;
+        return true;
+    }
+    bool EndArray(rapidjson::SizeType)
+    {
+        if (state != State::AuthArray) {
+            LogError("Unexpected end of array");
+            return false;
+        }
+
+        state = State::Default;
+        return true;
+    }
+
+    bool StartObject()
+    {
+        if (state != State::AuthArray) {
+            LogError("Unexpected object");
+            return false;
+        }
+
+        state = State::AuthObject;
+        return true;
+    }
+    bool EndObject(rapidjson::SizeType)
+    {
+        if (state != State::AuthObject) {
+            LogError("Unexpected end of object");
+            return false;
+        }
+
+        if (!auth.dates[1].value) {
+            static const Date default_end_date = ConvertDate1980(UINT16_MAX);
+            auth.dates[1] = default_end_date;
+        }
+
+        out_authorizations->Append(auth);
+        auth = {};
+
+        state = State::AuthArray;
+        return true;
+    }
+
+    bool Key(const char *key, rapidjson::SizeType, bool) {
+#define HANDLE_KEY(Key, State) \
+            do { \
+                if (StrTest(key, (Key))) { \
+                    state = State; \
+                    return true; \
+                } \
+             } while (false)
+
+        if (state != State::AuthObject) {
+            LogError("Unexpected key token '%1'", key);
+            return false;
+        }
+
+        HANDLE_KEY("authorization", State::AuthAuthorization);
+        HANDLE_KEY("begin_date", State::AuthBeginDate);
+        HANDLE_KEY("end_date", State::AuthEndDate);
+        HANDLE_KEY("unit", State::AuthUnit);
+
+        LogError("Unknown authorization attribute '%1'", key);
+        return false;
+
+#undef HANDLE_KEY
+    }
+
+    bool Int(int i)
+    {
+        switch (state) {
+            case State::AuthAuthorization: {
+                if (i >= 0 && i < 100) {
+                    auth.type = (int8_t)i;
+                } else {
+                    LogError("Invalid authorization type %1", i);
+                }
+            } break;
+            case State::AuthUnit: {
+                if (i >= 0 && i < 10000) {
+                    auth.unit.number = (int16_t)i;
+                } else {
+                    LogError("Invalid unit code %1", i);
+                }
+            } break;
+
+            default: {
+                LogError("Unexpected integer value %1", i);
+                return false;
+            } break;
+        }
+
+        state = State::AuthObject;
+        return true;
+    }
+    bool String(const char *str, rapidjson::SizeType, bool)
+    {
+        switch (state) {
+            case State::AuthAuthorization: {
+                int8_t type;
+                if (sscanf(str, "%" SCNd8, &type) == 1 && type >= 0 && type < 100) {
+                    auth.type = type;
+                } else {
+                    LogError("Invalid authorization type '%1'", str);
+                }
+            } break;
+            case State::AuthBeginDate: { SetDate(&auth.dates[0], str); } break;
+            case State::AuthEndDate: { SetDate(&auth.dates[1], str); } break;
+            case State::AuthUnit: {
+                int16_t unit;
+                if (sscanf(str, "%" SCNd16, &unit) == 1 && unit >= 0 && unit < 10000) {
+                    auth.unit.number = unit;
+                } else {
+                    LogError("Invalid unit code '%1'", str);
+                }
+            } break;
+
+            default: {
+                LogError("Unexpected string value '%1'", str);
+                return false;
+            } break;
+        }
+
+        state = State::AuthObject;
+        return true;
+    }
+
+    // FIXME: Why do I need that?
+    bool Uint(unsigned int u)
+    {
+        if (u <= INT_MAX) {
+            return Int((int)u);
+        } else {
+            return Default();
+        }
+    }
+};
+
+class JsonStayHandler: public JsonHandler<JsonStayHandler> {
     enum class State {
         Default,
 
@@ -290,7 +499,7 @@ public:
                 }
             } break;
             case State::StayBirthdate:
-                { SetDate(&stay.birthdate, str, Stay::Error::MalformedBirthdate); } break;
+                { SetDateOrError(&stay.birthdate, str, Stay::Error::MalformedBirthdate); } break;
             case State::StayEntryDate: { SetDate(&stay.dates[0], str); } break;
             case State::StayEntryMode: {
                 if (str[0] && !str[1]) {
@@ -363,6 +572,7 @@ public:
         return HandleValueEnd();
     }
 
+    // FIXME: Why do I need that?
     bool Uint(unsigned int u)
     {
         if (u <= INT_MAX) {
@@ -370,12 +580,6 @@ public:
         } else {
             return Default();
         }
-    }
-
-    bool Default()
-    {
-        LogError("Unsupported value type (not a string or 32-bit integer)");
-        return false;
     }
 
 private:
@@ -387,30 +591,14 @@ private:
     }
 
     template <typename T>
-    bool SetInt(T *dest, int i)
-    {
-        *dest = i;
-        if (*dest != i) {
-            LogError("Value %1 outside of range %2 - %3",
-                     i, (int)std::numeric_limits<T>::min(), (int)std::numeric_limits<T>::max());
-            return false;
-        }
-        return true;
-    }
-    template <typename T>
-    void SetInt(T *dest, int i, Stay::Error error_flag)
+    void SetIntOrError(T *dest, int i, Stay::Error error_flag)
     {
         if (!SetInt(dest, i)) {
             stay.error_mask |= (uint32_t)error_flag;
         }
     }
 
-    bool SetDate(Date *dest, const char *date_str)
-    {
-        *dest = Date::FromString(date_str, false);
-        return dest->value;
-    }
-    void SetDate(Date *dest, const char *date_str, Stay::Error error_flag)
+    void SetDateOrError(Date *dest, const char *date_str, Stay::Error error_flag)
     {
         if (!SetDate(dest, date_str)) {
             stay.error_mask |= (uint32_t)error_flag;
@@ -513,14 +701,13 @@ bool ParseJsonFile(const char *filename, T *json_handler)
         }
     };
 
-    FileReadStreamEx json_stream(fp);
-
-    PushLogHandler([&](FILE *fp) {
-        Print(fp, "%1(%2:%3): ", filename, json_stream.line_number, json_stream.line_offset);
-    });
-    DEFER { PopLogHandler(); };
-
     {
+        FileReadStreamEx json_stream(fp);
+        PushLogHandler([&](FILE *fp) {
+            Print(fp, "%1(%2:%3): ", filename, json_stream.line_number, json_stream.line_offset);
+        });
+        DEFER { PopLogHandler(); };
+
         rapidjson::Reader json_reader;
         if (!json_reader.Parse(json_stream, *json_handler)) {
             rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
@@ -532,7 +719,58 @@ bool ParseJsonFile(const char *filename, T *json_handler)
     return true;
 }
 
-bool StaySetBuilder::LoadJson(ArrayRef<const char *const> filenames)
+bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
+{
+    DEFER_NC(out_guard, len = out_set->authorizations.len)
+        { out_set->authorizations.RemoveFrom(len); };
+
+    JsonAuthorizationHandler json_handler(&out_set->authorizations);
+    if (!ParseJsonFile(filename, &json_handler))
+        return false;
+
+    for (const Authorization &auth: out_set->authorizations) {
+        out_set->authorizations_map.Append(&auth);
+    }
+
+    out_guard.disable();
+    return true;
+}
+
+ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit_code) const
+{
+    ArrayRef<const Authorization> auths;
+    auths.ptr = authorizations_map.FindValue(unit_code, nullptr);
+    if (!auths.ptr)
+        return {};
+
+    {
+        const Authorization *end_auth = auths.ptr + 1;
+        while (end_auth < authorizations.end() &&
+               end_auth->unit == unit_code) {
+            end_auth++;
+        }
+        auths.len = (size_t)(end_auth - auths.ptr);
+    }
+
+    return auths;
+}
+
+const Authorization *AuthorizationSet::FindUnit(UnitCode unit_code, Date date) const
+{
+    const Authorization *auth = authorizations_map.FindValue(unit_code, nullptr);
+    if (!auth)
+        return nullptr;
+
+    do {
+        if (date >= auth->dates[0] && date < auth->dates[1])
+            return auth;
+    } while (++auth < authorizations.ptr + authorizations.len &&
+             auth->unit == unit_code);
+
+    return nullptr;
+}
+
+bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
 {
     DEFER_NC(set_guard, stays_len = set.store.diagnoses.len,
                         diagnoses_len = set.store.diagnoses.len,

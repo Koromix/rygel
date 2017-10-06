@@ -10,6 +10,7 @@ import json
 import traceback
 import io
 import operator
+import itertools
 
 # -------------------------------------------------------------------------
 # Constants
@@ -121,47 +122,38 @@ def parse_rums(filename):
             except Exception as e:
                 traceback.print_exc()
 
-def parse_structure(filename):
-    units = {}
+def parse_authorizations(*filenames):
+    def load_structure_table(filename):
+        with open(filename, newline = '') as f:
+            reader = csv.DictReader(f, delimiter = ';')
+            for row in reader:
+                if row['FINESS_GEO']:
+                    yield (row['CODE_UNITE'],
+                           datetime.strptime(row['DATE_EFFET_AUTORISATION'], '%d/%m/%y').strftime('%Y-%m-%d') if row['DATE_EFFET_AUTORISATION'] else '',
+                           row['TYPE_AUTORISATION'])
 
-    with open(filename, newline = '') as f:
-        reader = csv.DictReader(f, delimiter = ';')
-        for row in reader:
-            # TODO: We want to keep units with patients, this is not enough
-            if row['REF - Libellé long UF'].startswith('FERME'):
-                continue
-            if int(row['GEO - Matricule Finess']) == FINESS_JURIDIQUE:
-                continue
+    rows = []
+    for filename in filenames:
+        structure = load_structure_table(filename)
+        rows.extend(structure)
+    rows = sorted(rows)
 
-            uf = int(row['REF - Code UF'])
-
-            unit = {}
-            unit['facility'] = int(row['GEO - Matricule Finess'])
-
-            units[uf] = unit
-
-    return units
-
-def parse_ficum(filename):
-    authorizations = defaultdict(list)
-
-    with open(filename) as f:
-        for line in f:
-            try:
-                type = line[13:16].strip()
-                if type == '00':
-                    continue
-
-                authorization = {}
-                authorization['date'] = date_value(line[16:24])
-                if line[0:4] == '$$$$':
-                    authorization['facility'] = int(line[4:13])
-                else:
-                    authorization['unit'] = int(line[0:4])
-
-                authorizations[type].append(authorization)
-            except Exception as e:
-                print(e, file = sys.stderr)
+    authorizations = []
+    for uf, uf_rows in itertools.groupby(rows, lambda it: it[0]):
+        uf_rows = list(uf_rows)
+        prev_end = None
+        for type, type_rows in itertools.groupby(reversed(uf_rows), lambda it: it[2]):
+            type_rows = list(type_rows)
+            if type and type_rows[-1][1] != prev_end:
+                auth = {}
+                auth['unit'] = uf
+                auth['authorization'] = type
+                auth['begin_date'] = type_rows[-1][1]
+                if prev_end:
+                    auth['end_date'] = prev_end
+                authorizations.append(auth)
+            prev_end = type_rows[-1][1]
+    authorizations = sorted(authorizations, key = lambda it: (it['unit'], it['begin_date']))
 
     return authorizations
 
@@ -173,7 +165,7 @@ MAIN_USAGE = \
 """Usage: convert_chu_lille.py command options
 
 Commands:
-    authorizations      Convert structure and authorization data
+    authorizations      Convert structure to authorization data
     stays               Convert RUM files"""
 STAYS_USAGE = \
 """
@@ -199,11 +191,9 @@ def process_stays(rum_filename):
 
     write_json(rums, sys.stdout)
 
-def process_units(structure_filename, ficum_filename):
-    write_json({
-        'units': parse_structure(structure_filename),
-        'authorizations': parse_ficum(ficum_filename)
-    }, sys.stdout)
+def process_authorizations(unite_filename, hist_filename):
+    authorizations = parse_authorizations(unite_filename, hist_filename)
+    write_json(authorizations, sys.stdout)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -222,7 +212,7 @@ if __name__ == "__main__":
             print(UNITS_USAGE, file = sys.stderr)
             sys.exit(1)
 
-        process_units(sys.argv[2], sys.argv[3])
+        process_authorizations(sys.argv[2], sys.argv[3])
     else:
         print(f"Unknown command '{cmd}'", file = sys.stderr)
         print(MAIN_USAGE, file = sys.stderr)

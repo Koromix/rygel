@@ -102,6 +102,17 @@ union GhmCode {
 
     bool IsValid() const { return value; }
     bool IsError() const { return parts.cmd == 90; }
+    
+    int Severity() const
+    {
+        if (parts.mode >= '1' && parts.mode < '5') {
+            return parts.mode - '1';
+        } else if (parts.mode >= 'A' && parts.mode < 'E') {
+            return parts.mode - 'A';
+        } else {
+            return 0;
+        }
+    }
 
     bool operator==(GhmCode other) const { return value == other.value; }
     bool operator!=(GhmCode other) const { return value != other.value; }
@@ -268,7 +279,7 @@ static inline bool DefaultCompare(GhsCode code1, GhsCode code2)
     { return code1 == code2; }
 
 struct UnitCode {
-    uint32_t number;
+    int16_t number;
 
     UnitCode() = default;
     explicit UnitCode(uint32_t code) : number(code) {}

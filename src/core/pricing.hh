@@ -38,4 +38,4 @@ struct PricingSet {
 bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_prices);
 
-bool LoadPricingSet(const char *filename, PricingSet *out_set);
+bool LoadPricingFile(const char *filename, PricingSet *out_set);

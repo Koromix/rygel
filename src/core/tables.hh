@@ -253,6 +253,9 @@ struct TableIndex {
     ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
+
+    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root_code) const;
+    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmCode ghm_code) const;
 };
 
 class TableSet {
@@ -288,4 +291,4 @@ public:
         { return (TableIndex *)((const TableSet *)this)->FindIndex(date); }
 };
 
-bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set);
+bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set);

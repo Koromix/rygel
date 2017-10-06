@@ -985,7 +985,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
     return success;
 }
 
-bool LoadTableSet(ArrayRef<const char *const> filenames, TableSet *out_set)
+bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
 {
     Assert(!out_set->tables.len);
     Assert(!out_set->indexes.len);
@@ -1185,4 +1185,50 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
         return nullptr;
 
     return ghm_roots_map->FindValue(code, nullptr);
+}
+
+ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root_code) const
+{
+    if (!ghm_root_to_ghs_map)
+        return {};
+
+    ArrayRef<const GhsInfo> compatible_ghs;
+    compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root_code, nullptr);
+    if (!compatible_ghs.ptr)
+        return {};
+
+    {
+        const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
+        while (end_ghs < ghs.end() &&
+               end_ghs->ghm.Root() == ghm_root_code) {
+            end_ghs++;
+        }
+        compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);
+    }
+
+    return compatible_ghs;
+}
+
+ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm_code) const
+{
+    if (!ghm_to_ghs_map)
+        return {};
+
+    ArrayRef<const GhsInfo> compatible_ghs;
+    compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm_code, nullptr);
+    if (!compatible_ghs.ptr)
+        return {};
+
+    // TODO: Make some kind of FindContiguous() abstraction for this and
+    // the previous functions that do the same.
+    {
+        const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
+        while (end_ghs < ghs.end() &&
+               end_ghs->ghm == ghm_code) {
+            end_ghs++;
+        }
+        compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);
+    }
+
+    return compatible_ghs;
 }

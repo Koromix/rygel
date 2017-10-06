@@ -6,7 +6,7 @@
 #include "dump.hh"
 
 static const char *const MainUsageText =
-R"(Usage: moya <command> [<args>]
+R"(Usage: drd <command> [<args>]
 
 Commands:
     dump                         Dump available tables and lists
@@ -20,10 +20,11 @@ Commands:
 Global options:
     -O, --output <filename>      Dump information to file (default: stdout)
 
-    -t, --table-file <filename>  Load table file
-    -T, --table-dir <dir>        Load table directory
+    -T, --table-dir <path>       Load table directory
+        --table-file <path>      Load table file
+    -P, --pricing <path>         Load pricing file
 
-    -p, --pricing <filename>     Load pricing file)";
+    -A, --authorization <path>   Load authorization file)";
 
 struct ListSpecifier {
     enum class Table {
@@ -115,9 +116,11 @@ error:
 
 static HeapArray<const char *> main_table_filenames;
 static const char *main_pricing_filename;
+static const char *main_authorization_filename;
 
 static TableSet main_table_set = {};
 static PricingSet main_pricing_set = {};
+static AuthorizationSet main_authorization_set = {};
 
 static const TableSet *GetMainTableSet()
 {
@@ -126,7 +129,7 @@ static const TableSet *GetMainTableSet()
             LogError("No table provided");
             return nullptr;
         }
-        LoadTableSet(main_table_filenames, &main_table_set);
+        LoadTableFiles(main_table_filenames, &main_table_set);
         if (!main_table_set.indexes.len)
             return nullptr;
     }
@@ -141,11 +144,25 @@ static const PricingSet *GetMainPricingSet()
             LogError("No pricing file specified");
             return nullptr;
         }
-        if (!LoadPricingSet(main_pricing_filename, &main_pricing_set))
+        if (!LoadPricingFile(main_pricing_filename, &main_pricing_set))
             return nullptr;
     }
 
     return &main_pricing_set;
+}
+
+static AuthorizationSet *GetMainAuthorizationSet()
+{
+    if (!main_authorization_set.authorizations.len) {
+        if (!main_authorization_filename) {
+            LogError("No authorization file specified, ignoring");
+            return &main_authorization_set;
+        }
+        if (!LoadAuthorizationFile(main_authorization_filename, &main_authorization_set))
+            return nullptr;
+    }
+
+    return &main_authorization_set;
 }
 
 static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
@@ -168,17 +185,23 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
 
         return EnumerateDirectoryFiles(opt_parser.current_value, "*.tab", temp_alloc,
                                        &main_table_filenames, 1024);
-    } else if (opt_parser.TestOption("-t", "--table-file")) {
+    } else if (opt_parser.TestOption("--table-file")) {
         if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
         main_table_filenames.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("-p", "--pricing")) {
+    } else if (opt_parser.TestOption("-P", "--pricing")) {
         if (!opt_parser.RequireOptionValue(MainUsageText))
             return false;
 
         main_pricing_filename = opt_parser.current_value;
+        return true;
+    } else if (opt_parser.TestOption("-A", "--authorization")) {
+        if (!opt_parser.RequireOptionValue(MainUsageText))
+            return 1;
+
+        main_authorization_filename = opt_parser.current_value;
         return true;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
@@ -190,7 +213,7 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
 static bool RunDump(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya dump [options] [filename] ...
+R"(Usage: drd dump [options] [filename] ...
 
 Specific options:
     -h, --headers                Print only table headers)";
@@ -218,7 +241,7 @@ Specific options:
 
     if (filenames.len) {
         TableSet table_set;
-        if (!LoadTableSet(filenames, &table_set) && !table_set.indexes.len)
+        if (!LoadTableFiles(filenames, &table_set) && !table_set.indexes.len)
             return false;
         DumpTableSet(table_set, !headers);
     } else {
@@ -234,7 +257,7 @@ Specific options:
 static bool RunInfo(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya info [options] name ...)";
+R"(Usage: drd info [options] name ...)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -316,7 +339,7 @@ R"(Usage: moya info [options] name ...)";
 static bool RunIndexes(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya indexes [options]
+R"(Usage: drd indexes [options]
 
 Options:
     -v, --verbose                Show more detailed information)";
@@ -366,7 +389,7 @@ Options:
 static bool RunList(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya list [options] list_name ...)";
+R"(Usage: drd list [options] list_name ...)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -452,7 +475,7 @@ R"(Usage: moya list [options] list_name ...)";
 static bool RunPricing(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya pricing [options])";
+R"(Usage: drd pricing [options])";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -480,7 +503,7 @@ R"(Usage: moya pricing [options])";
 static bool RunSummarize(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: moya sumarize [options] stay_file ...
+R"(Usage: drd summarize [options] stay_file ...
 
 Options:
     --cluster_mode <mode>      Change stay cluster mode
@@ -528,13 +551,16 @@ Options:
     const TableSet *table_set = GetMainTableSet();
     if (!table_set)
         return false;
+    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
+    if (!authorization_set)
+        return false;
 
     LogDebug("Load");
     StaySet stay_set;
     {
         StaySetBuilder stay_set_builder;
 
-        if (!stay_set_builder.LoadJson(filenames))
+        if (!stay_set_builder.LoadFile(filenames))
             return false;
         if (!stay_set_builder.Finish(&stay_set))
             return false;
@@ -542,12 +568,12 @@ Options:
 
     LogDebug("Summarize");
     SummarizeResultSet result_set;
-    Summarize(*table_set, stay_set.stays, cluster_mode, &result_set);
+    Summarize(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
 
     LogDebug("Export");
     for (const SummarizeResult &result: result_set.results) {
-        PrintLn("%1 [%2 / %3 stays] = %4", result.agg.stay.stay_id,
-                result.agg.stay.dates[1], result.cluster.len, result.ghm);
+        PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.agg.stay.stay_id,
+                result.agg.stay.dates[1], result.cluster.len, result.ghm, result.ghs);
         for (int16_t error: result.errors) {
             PrintLn("  Error %1", error);
         }
