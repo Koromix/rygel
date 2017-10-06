@@ -24,7 +24,12 @@ set(LIB_MICROHTTPD_SRC libmicrohttpd/src/microhttpd/base64.c
                        libmicrohttpd/src/microhttpd/tsearch.c)
 add_library(libmicrohttpd STATIC EXCLUDE_FROM_ALL ${LIB_MICROHTTPD_SRC})
 target_include_directories(libmicrohttpd PUBLIC . libmicrohttpd/src/include)
-target_link_libraries(libmicrohttpd PUBLIC ws2_32)
+if(WIN32)
+    target_link_libraries(libmicrohttpd PUBLIC ws2_32)
+endif()
+if(LINUX)
+    target_link_libraries(libmicrohttpd PUBLIC pthread)
+endif()
 
 set(LIB_LUA_SRC lua/src/lapi.c
                 lua/src/lcode.c
