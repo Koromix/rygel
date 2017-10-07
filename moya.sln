@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "core", "build\vs\core.vcxproj", "{38B4D5F6-3190-40A2-A34D-1900364B738A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "moya", "build\vs\moya.vcxproj", "{38B4D5F6-3190-40A2-A34D-1900364B738A}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cli", "build\vs\cli.vcxproj", "{DD8A3348-875D-47F2-94C3-343B83032289}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "drd", "build\vs\drd.vcxproj", "{DD8A3348-875D-47F2-94C3-343B83032289}"
 	ProjectSection(ProjectDependencies) = postProject
 		{38B4D5F6-3190-40A2-A34D-1900364B738A} = {38B4D5F6-3190-40A2-A34D-1900364B738A}
 	EndProjectSection

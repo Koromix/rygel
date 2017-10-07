@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\cli\dump.cc">
+    <ClCompile Include="..\..\src\drd\dump.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\cli\moya.cc">
+    <ClCompile Include="..\..\src\drd\drd.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\cli\dump.hh">
+    <ClInclude Include="..\..\src\drd\dump.hh">
       <Filter>Fichiers sources</Filter>
     </ClInclude>
   </ItemGroup>

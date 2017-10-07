@@ -20,32 +20,32 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{38B4D5F6-3190-40A2-A34D-1900364B738A}</ProjectGuid>
-    <RootNamespace>core</RootNamespace>
+    <ProjectGuid>{DD8A3348-875D-47F2-94C3-343B83032289}</ProjectGuid>
+    <RootNamespace>drd</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -72,18 +72,22 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>drd</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>drd</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>drd</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)bin\msvc_$(Configuration)_$(Platform)\$(ProjectName)\</IntDir>
+    <TargetName>drd</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -134,20 +138,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\core\algorithm.cc" />
-    <ClCompile Include="..\..\src\core\kutil.cc" />
-    <ClCompile Include="..\..\src\core\pricing.cc" />
-    <ClCompile Include="..\..\src\core\stays.cc" />
-    <ClCompile Include="..\..\src\core\tables.cc" />
+    <ClCompile Include="..\..\src\drd\dump.cc" />
+    <ClCompile Include="..\..\src\drd\drd.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\core\algorithm.hh" />
-    <ClInclude Include="..\..\src\core\codes.hh" />
-    <ClInclude Include="..\..\src\core\kutil.hh" />
-    <ClInclude Include="..\..\src\core\libmoya.hh" />
-    <ClInclude Include="..\..\src\core\pricing.hh" />
-    <ClInclude Include="..\..\src\core\stays.hh" />
-    <ClInclude Include="..\..\src\core\tables.hh" />
+    <ClInclude Include="..\..\src\drd\dump.hh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="moya.vcxproj">
+      <Project>{38b4d5f6-3190-40a2-a34d-1900364b738a}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

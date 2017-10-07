@@ -15,42 +15,42 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\core\algorithm.cc">
+    <ClCompile Include="..\..\src\moya\algorithm.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\kutil.cc">
+    <ClCompile Include="..\..\src\moya\kutil.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\pricing.cc">
+    <ClCompile Include="..\..\src\moya\pricing.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\stays.cc">
+    <ClCompile Include="..\..\src\moya\stays.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\core\tables.cc">
+    <ClCompile Include="..\..\src\moya\tables.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\core\algorithm.hh">
+    <ClInclude Include="..\..\src\moya\algorithm.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\codes.hh">
+    <ClInclude Include="..\..\src\moya\codes.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\kutil.hh">
+    <ClInclude Include="..\..\src\moya\kutil.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\libmoya.hh">
+    <ClInclude Include="..\..\src\moya\libmoya.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\pricing.hh">
+    <ClInclude Include="..\..\src\moya\pricing.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\stays.hh">
+    <ClInclude Include="..\..\src\moya\stays.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\core\tables.hh">
+    <ClInclude Include="..\..\src\moya\tables.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
