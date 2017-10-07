@@ -1,3 +1,12 @@
+#define PACKAGE "libmicrohttpd"
+#define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
+#define PACKAGE_NAME "GNU Libmicrohttpd"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.55"
+#define PACKAGE_TARNAME "libmicrohttpd"
+#define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
+#define PACKAGE_VERSION "0.9.55"
+#define VERSION "0.9.55"
+
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
@@ -47,16 +56,8 @@
     #define MHD_NO_THREAD_NAMES 1
     #define MHD_USE_W32_THREADS 1
     #define MINGW 1
-    #define PACKAGE "libmicrohttpd"
-    #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
-    #define PACKAGE_NAME "GNU Libmicrohttpd"
-    #define PACKAGE_STRING "GNU Libmicrohttpd 0.9.55"
-    #define PACKAGE_TARNAME "libmicrohttpd"
-    #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-    #define PACKAGE_VERSION "0.9.55"
     #define STDC_HEADERS 1
     #define UPGRADE_SUPPORT 1
-    #define VERSION "0.9.55"
     #define WINDOWS 1
     #define _FILE_OFFSET_BITS 64
     #define _GNU_SOURCE 1
@@ -185,16 +186,8 @@
     #define LINUX 1
     #define LT_OBJDIR ".libs/"
     #define MHD_USE_POSIX_THREADS 1
-    #define PACKAGE "libmicrohttpd"
-    #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
-    #define PACKAGE_NAME "GNU Libmicrohttpd"
-    #define PACKAGE_STRING "GNU Libmicrohttpd 0.9.55"
-    #define PACKAGE_TARNAME "libmicrohttpd"
-    #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-    #define PACKAGE_VERSION "0.9.55"
     #define STDC_HEADERS 1
     #define UPGRADE_SUPPORT 1
-    #define VERSION "0.9.55"
     #define _GNU_SOURCE 1
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_EVENTFD 1
