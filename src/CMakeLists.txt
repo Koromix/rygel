@@ -2,31 +2,31 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-set(CORE_SRC core/algorithm.cc
-             core/algorithm.hh
-             core/codes.hh
-             core/kutil.cc
-             core/kutil.hh
-             core/pricing.cc
-             core/pricing.hh
-             core/stays.cc
-             core/stays.hh
-             core/tables.cc
-             core/tables.hh)
-add_library(moya STATIC ${CORE_SRC})
-add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" core/libmoya.hh)
+set(MOYA_SRC moya/algorithm.cc
+             moya/algorithm.hh
+             moya/codes.hh
+             moya/kutil.cc
+             moya/kutil.hh
+             moya/pricing.cc
+             moya/pricing.hh
+             moya/stays.cc
+             moya/stays.hh
+             moya/tables.cc
+             moya/tables.hh)
+add_library(moya STATIC ${MOYA_SRC})
+add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" moya/libmoya.hh)
 
-set(CLI_SRC cli/dump.cc
-            cli/dump.hh
-            cli/drd.cc)
-add_executable(drd ${CLI_SRC})
+set(DRD_SRC drd/dump.cc
+            drd/dump.hh
+            drd/drd.cc)
+add_executable(drd ${DRD_SRC})
 target_link_libraries(drd PUBLIC moya)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_web_pages.cmake" [=[
-set(PAGES_CC_FILENAME "${BIN_DIR}/web/pages.cc")
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_pages.cmake" [=[
+set(PAGES_CC_FILENAME "${BIN_DIR}/talyn/pages.cc")
 file(WRITE ${PAGES_CC_FILENAME} "\
-#include \"${SRC_DIR}/core/libmoya.hh\"\n\
-#include \"${SRC_DIR}/web/pages.hh\"\n")
+#include \"${SRC_DIR}/moya/libmoya.hh\"\n\
+#include \"${SRC_DIR}/talyn/pages.hh\"\n")
 foreach(page ${PAGES})
     get_filename_component(var ${page} NAME_WE)
     set(var "page_${var}")
@@ -36,16 +36,15 @@ foreach(page ${PAGES})
 endforeach()
 ]=])
 
-set(WEB_PAGES web/index.html)
+set(TALYN_PAGES talyn/index.html)
+set(TALYN_SRC talyn/talyn.cc
+              ${CMAKE_CURRENT_BINARY_DIR}/talyn/pages.cc
+              talyn/pages.hh)
 add_custom_command(
-    OUTPUT web/pages.cc
+    OUTPUT talyn/pages.cc
     COMMAND ${CMAKE_COMMAND}
-    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DPAGES=${WEB_PAGES}
-         -P "${CMAKE_CURRENT_BINARY_DIR}/build_web_pages.cmake"
-    DEPENDS ${WEB_PAGES})
-
-set(WEB_SRC web/talyn.cc
-            ${CMAKE_CURRENT_BINARY_DIR}/web/pages.cc
-            web/pages.hh)
-add_executable(talyn ${WEB_SRC} ${WEB_PAGES})
+    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DPAGES=${TALYN_PAGES}
+         -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_pages.cmake"
+    DEPENDS ${TALYN_PAGES})
+add_executable(talyn ${TALYN_SRC} ${TALYN_PAGES})
 target_link_libraries(talyn PUBLIC moya libmicrohttpd)

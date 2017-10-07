@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/libmoya.hh"
+#include "../moya/libmoya.hh"
 
 struct Page {
     const char *const url;

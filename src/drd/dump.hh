@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../core/libmoya.hh"
+#include "../moya/libmoya.hh"
 
 void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
                          size_t node_idx = 0, int depth = 0);
