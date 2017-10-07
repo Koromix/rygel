@@ -388,6 +388,8 @@ struct ArrayRef {
 
     ArrayRef() = default;
     constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
+    constexpr ArrayRef(std::initializer_list<T> l)
+        : ptr(l.begin()), len(l.size()) {}
     constexpr ArrayRef(T *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
     template <size_t N>
     constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
@@ -436,6 +438,8 @@ struct ArrayRef<const char> {
 
     ArrayRef() = default;
     constexpr ArrayRef(const char &value) : ptr(&value), len(1) {}
+    constexpr ArrayRef(std::initializer_list<const char> l)
+        : ptr(l.begin()), len(l.size()) {}
     explicit constexpr ArrayRef(const char *ptr_, size_t len_) : ptr(ptr_), len(len_) {}
     template <size_t N>
     explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}

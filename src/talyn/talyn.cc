@@ -4,6 +4,7 @@
 
 #include "../moya/libmoya.hh"
 #include "pages.hh"
+#include "resources.hh"
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../lib/rapidjson/memorybuffer.h"
 #include "../../lib/rapidjson/prettywriter.h"
@@ -22,7 +23,7 @@ static TableSet main_table_set = {};
 static PricingSet main_pricing_set = {};
 static AuthorizationSet main_authorization_set = {};
 
-static HashMap<const char *, ArrayRef<const char>> resources;
+static HashMap<const char *, ArrayRef<const uint8_t>> routes;
 
 // FIXME: Switch to stream / callback-based API
 static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
@@ -131,7 +132,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
             }
         }
     } else {
-        ArrayRef<const char> resource_data = resources.FindValue(url, {});
+        ArrayRef<const uint8_t> resource_data = routes.FindValue(url, {});
         if (resource_data.IsValid()) {
             response = MHD_create_response_from_buffer(resource_data.len,
                                                        (void *)resource_data.ptr,
@@ -215,10 +216,11 @@ int main(int argc, char **argv)
                                                          &main_authorization_set))
         return 1;
 
-    resources.Set("/", page_index);
+    routes.Set("/", resources::talyn_html);
     for (const Page &page: pages) {
-        resources.Set(page.url, page_index);
+        routes.Set(page.url, resources::talyn_html);
     }
+    routes.Set("/resources/logo.png", resources::logo_png);
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, 8888,

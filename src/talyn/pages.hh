@@ -12,5 +12,3 @@ static const Page pages[] = {
     {"/simulation", "Simulation"},
     {"/info", "Tables de groupage"}
 };
-
-extern const ArrayRef<const char> page_index;

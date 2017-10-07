@@ -22,29 +22,42 @@ set(DRD_SRC drd/dump.cc
 add_executable(drd ${DRD_SRC})
 target_link_libraries(drd PUBLIC moya)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_pages.cmake" [=[
-set(PAGES_CC_FILENAME "${BIN_DIR}/talyn/pages.cc")
-file(WRITE ${PAGES_CC_FILENAME} "\
-#include \"${SRC_DIR}/moya/libmoya.hh\"\n\
-#include \"${SRC_DIR}/talyn/pages.hh\"\n")
-foreach(page ${PAGES})
-    get_filename_component(var ${page} NAME_WE)
-    set(var "page_${var}")
-    file(READ "${SRC_DIR}/${page}" html)
-    file(APPEND ${PAGES_CC_FILENAME}
-         "\nconst ArrayRef<const char> ${var} = MakeStrRef(R\"html(${html})html\");\n")
-endforeach()
-]=])
-
-set(TALYN_PAGES talyn/index.html)
+set(TALYN_RESOURCES talyn/talyn.html
+                    ../resources/logo.png)
 set(TALYN_SRC talyn/talyn.cc
-              ${CMAKE_CURRENT_BINARY_DIR}/talyn/pages.cc
+              ${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc
               talyn/pages.hh)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[
+set(RESOURCES_CC_FILENAME "${BIN_DIR}/talyn/resources.cc")
+set(RESOURCES_HH_FILENAME "${BIN_DIR}/talyn/resources.hh")
+
+file(WRITE ${RESOURCES_CC_FILENAME} "\
+#include \"${SRC_DIR}/moya/libmoya.hh\"\n\
+#include \"resources.hh\"\n")
+file(WRITE ${RESOURCES_HH_FILENAME} "\
+#include \"${SRC_DIR}/moya/libmoya.hh\"\n\n\
+namespace resources {\n\n")
+
+separate_arguments(RESOURCES)
+foreach(res ${RESOURCES})
+    get_filename_component(var ${res} NAME)
+    string(MAKE_C_IDENTIFIER ${var} var)
+    file(READ "${SRC_DIR}/${res}" data HEX)
+    string(REGEX REPLACE "([a-fA-F0-9][a-fA-F0-9])" "0x\\1," data ${data})
+    file(APPEND ${RESOURCES_CC_FILENAME}
+         "\nconst ArrayRef<const uint8_t> resources::${var} = {${data}};\n")
+    file(APPEND ${RESOURCES_HH_FILENAME}
+        "extern const ArrayRef<const uint8_t> ${var};\n")
+endforeach()
+
+file(APPEND ${RESOURCES_HH_FILENAME} "\n}")
+]=])
 add_custom_command(
-    OUTPUT talyn/pages.cc
+    OUTPUT talyn/resources.cc
     COMMAND ${CMAKE_COMMAND}
-    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DPAGES=${TALYN_PAGES}
-         -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_pages.cmake"
-    DEPENDS ${TALYN_PAGES})
-add_executable(talyn ${TALYN_SRC} ${TALYN_PAGES})
+    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${TALYN_RESOURCES}"
+         -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake"
+    DEPENDS ${TALYN_RESOURCES})
+add_executable(talyn ${TALYN_SRC} ${TALYN_RESOURCES})
+target_include_directories(talyn PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/talyn")
 target_link_libraries(talyn PUBLIC moya libmicrohttpd)
