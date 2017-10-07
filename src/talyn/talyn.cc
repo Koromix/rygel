@@ -53,12 +53,19 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(&temp_alloc, "%1", ghs_info.ghm).ptr);
             writer.Key("ghm_mode"); writer.String(&ghs_info.ghm.parts.mode, 1);
-            if (ghs_info.ghm.parts.mode >= '1' && ghs_info.ghm.parts.mode < '5') {
-                int treshold;
-                if (ghs_info.ghm.parts.mode >= '2') {
-                    treshold = GetMinimalDurationForSeverity(ghs_info.ghm.parts.mode - '1');
-                } else {
-                    treshold = 0;
+            if (ghs_info.ghm.parts.mode == 'J') {
+                writer.Key("high_duration_limit"); writer.Int(1);
+            } else if (ghs_info.ghm.parts.mode == 'T') {
+                if (ghm_root_info.allow_ambulatory) {
+                    writer.Key("low_duration_limit"); writer.Int(1);
+                }
+                writer.Key("high_duration_limit"); writer.Int(ghm_root_info.short_duration_treshold);
+            } else {
+                int treshold = 0;
+                if (ghs_info.ghm.parts.mode >= '1' && ghs_info.ghm.parts.mode < '5') {
+                    treshold = GetMinimalDurationForSeverity(ghs_info.ghm.Severity());
+                } else if (ghs_info.ghm.parts.mode >= 'B' && ghs_info.ghm.parts.mode < 'E') {
+                    treshold = GetMinimalDurationForSeverity(ghs_info.ghm.parts.mode - 'A');
                 }
                 if (treshold < ghm_root_info.short_duration_treshold) {
                     treshold = ghm_root_info.short_duration_treshold;
@@ -68,16 +75,6 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
                 if (treshold) {
                     writer.Key("low_duration_limit"); writer.Int(treshold);
                 }
-            } else if (ghs_info.ghm.parts.mode >= 'B' && ghs_info.ghm.parts.mode < 'E') {
-                int treshold = GetMinimalDurationForSeverity(ghs_info.ghm.parts.mode - 'A');
-                writer.Key("low_duration_limit"); writer.Int(treshold);
-            } else if (ghs_info.ghm.parts.mode == 'J') {
-                writer.Key("high_duration_limit"); writer.Int(1);
-            } else if (ghs_info.ghm.parts.mode == 'T') {
-                if (ghm_root_info.allow_ambulatory) {
-                    writer.Key("low_duration_limit"); writer.Int(1);
-                }
-                writer.Key("high_duration_limit"); writer.Int(ghm_root_info.short_duration_treshold);
             }
             writer.Key("ghs"); writer.Int(ghs_pricing->code.number);
             writer.Key("price_cents"); writer.Int(ghs_pricing->sectors[0].price_cents);
