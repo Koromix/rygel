@@ -3,6 +3,9 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "../moya/libmoya.hh"
+#ifndef _WIN32
+    #include <signal.h>
+#endif
 #include "resources.hh"
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../lib/rapidjson/memorybuffer.h"
@@ -251,7 +254,20 @@ int main(int argc, char **argv)
         return 1;
     DEFER { MHD_stop_daemon(daemon); };
 
+#ifdef _WIN32
     (void)getchar();
+#else
+    static volatile bool run = true;
+    const auto do_exit = [](int sig) {
+        run = false;
+    };
+    signal(SIGINT, do_exit);
+    signal(SIGTERM, do_exit);
+
+    while (run) {
+        pause();
+    }
+#endif
 
     return 0;
 }
