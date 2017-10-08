@@ -969,6 +969,20 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
 
                     return success;
                 } break;
+
+                case 30: {
+                    uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+                    if (param != 0) {
+                        LogError("Incomplete GHM constraint due to session count != 0");
+                        success = false;
+                        break;
+                    }
+
+                    RUN_TREE_SUB(0, duration_mask &= 0x1);
+                    RUN_TREE_SUB(1, duration_mask &= UINT64_MAX);
+
+                    return success;
+                } break;
             }
 
             // Default case, for most functions and in case of error
