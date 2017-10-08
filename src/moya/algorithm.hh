@@ -89,3 +89,14 @@ GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_s
 void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
                ArrayRef<const Stay> stays, ClusterMode cluster_mode,
                SummarizeResultSet *out_result_set);
+
+struct GhmConstraint {
+    GhmCode ghm_code;
+
+    uint64_t duration_mask;
+
+    HASH_SET_HANDLER(GhmConstraint, ghm_code);
+};
+
+bool ComputeGhmConstraints(const TableIndex &index,
+                           HashSet<GhmCode, GhmConstraint> *out_constraints);

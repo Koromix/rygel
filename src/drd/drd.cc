@@ -9,6 +9,7 @@ static const char *const MainUsageText =
 R"(Usage: drd <command> [<args>]
 
 Commands:
+    constraints                  Compute GHM accessibility constraints
     dump                         Dump available tables and lists
     info                         Print information about individual elements
                                  (diagnoses, procedures, GHM roots, etc.)
@@ -210,6 +211,69 @@ static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
     }
 }
 
+static bool RunConstraints(ArrayRef<const char *> arguments)
+{
+    static const char *const UsageText =
+R"(Usage: drd constraints [options]
+
+Specific options:
+    -d, --date <date>            Use tables valid on specified date
+                                 (default: most recent tables))";
+
+    Allocator temp_alloc;
+    OptionParser opt_parser(arguments);
+
+    Date index_date = {};
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintLn("%1", UsageText);
+                return true;
+            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+                if (!opt_parser.RequireOptionValue(MainUsageText))
+                    return false;
+                index_date = Date::FromString(opt_parser.current_value);
+                if (!index_date.value)
+                    return false;
+            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+                return false;
+            }
+        }
+    }
+
+    const TableSet *table_set;
+    const TableIndex *index;
+    {
+        table_set = GetMainTableSet();
+        if (!table_set)
+            return false;
+        index = table_set->FindIndex(index_date);
+        if (!index) {
+            LogError("No table index available at '%1'", index_date);
+            return false;
+        }
+    }
+
+    LogDebug("Computing");
+    HashSet<GhmCode, GhmConstraint> ghm_constraints;
+    if (!ComputeGhmConstraints(*index, &ghm_constraints))
+        return false;
+
+    LogDebug("Export");
+    for (const GhsInfo &ghs_info: index->ghs)  {
+        const GhmConstraint *constraint = ghm_constraints.Find(ghs_info.ghm);
+        if (constraint) {
+            PrintLn("Constraint for %1", ghs_info.ghm);
+            PrintLn("  Duration = %1", FmtHex(constraint->duration_mask));
+        } else {
+            PrintLn("%1 unreached!", ghs_info.ghm);
+        }
+    }
+
+    return true;
+}
+
 static bool RunDump(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
@@ -389,7 +453,11 @@ Options:
 static bool RunList(ArrayRef<const char *> arguments)
 {
     static const char *const UsageText =
-R"(Usage: drd list [options] list_name ...)";
+R"(Usage: drd list [options] list_name ...
+
+Specific options:
+    -d, --date <date>            Use tables valid on specified date
+                                 (default: most recent tables)";
 
     Allocator temp_alloc;
     OptionParser opt_parser(arguments);
@@ -619,6 +687,7 @@ int main(int argc, char **argv)
     const char *cmd = argv[1];
     ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
 
+    HANDLE_COMMAND(constraints, RunConstraints);
     HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(indexes, RunIndexes);

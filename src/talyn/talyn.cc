@@ -3,11 +3,20 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "../moya/libmoya.hh"
-#include "pages.hh"
 #include "resources.hh"
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../lib/rapidjson/memorybuffer.h"
 #include "../../lib/rapidjson/prettywriter.h"
+
+struct Page {
+    const char *const url;
+    const char *const name;
+};
+
+static const Page pages[] = {
+    {"/tables", "Tables"},
+    {"/simulation", "Simulations"}
+};
 
 static const char *const UsageText =
 R"(Usage: talyn [options]
@@ -111,7 +120,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
     MHD_Response *response = nullptr;
     unsigned int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 
-    if (StrTest(url, "/catalog.json")) {
+    if (StrTest(url, "/api/catalog.json")) {
         Date date = {};
         {
             const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND,
@@ -128,6 +137,22 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                 code = MHD_HTTP_OK;
             }
         }
+    } else if (StrTest(url, "/api/pages.json")) {
+        rapidjson::MemoryBuffer buffer;
+        rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
+        writer.StartArray();
+        for (const Page &page: pages) {
+            writer.StartObject();
+            writer.Key("url"); writer.Key(page.url);
+            writer.Key("name"); writer.Key(page.name);
+            writer.EndObject();
+        }
+        writer.EndArray();
+        response = MHD_create_response_from_buffer(buffer.GetSize(),
+                                                   (void *)buffer.GetBuffer(),
+                                                   MHD_RESPMEM_MUST_COPY);
+        MHD_add_response_header(response, "Content-Type", "application/json");
+        code = MHD_HTTP_OK;
     } else {
         ArrayRef<const uint8_t> resource_data = routes.FindValue(url, {});
         if (resource_data.IsValid()) {

@@ -115,7 +115,7 @@
             function updateDatabase() {
                 var date = document.querySelector('input#pricing_date').value;
 
-                fetch('catalog.json?date=' + date)
+                fetch('api/catalog.json?date=' + date)
                     .then(response => response.json())
                     .then(function(json) {
                         ghm_roots = [];
@@ -158,8 +158,10 @@
 
             function createPricingTable(ghm_root_info, merge_cells = true, max_duration = 200) {
                 function appendRow(parent, name, func) {
-                    var tr = document.createElement('tr');
-                    tr.appendChild(createSimpleElement('th', name))
+                    var tr =
+                        createElement('tr', {},
+                            createElement('th', {}, name)
+                        );
 
                     var prev_cell = [null, null, false];
                     var prev_td = null;
@@ -169,7 +171,7 @@
                             var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                             prev_td.setAttribute('colspan', colspan + 1);
                         } else {
-                            prev_td = tr.appendChild(createSimpleElement('td', cell[0], cell[1]));
+                            prev_td = tr.appendChild(createElement('td', {class: cell[1]}, cell[0]));
                         }
                         prev_cell = cell;
                     }
@@ -193,10 +195,13 @@
                     }
                 }
 
-                var table = document.createElement('table');
-                table.id = 'pricing_table';
-                var thead = table.appendChild(document.createElement('thead'));
-                var tbody = table.appendChild(document.createElement('tbody'));
+                var table =
+                    createElement('table', {id: 'pricing_table'},
+                        createElement('thead'),
+                        createElement('tbody')
+                    );
+                var thead = table.querySelector('thead');
+                var tbody = table.querySelector('tbody');
 
                 appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc', true]; });
                 appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc', true]; });
@@ -236,28 +241,48 @@
                 return table;
             }
 
-            function createSimpleElement(tag, text, cls = null) {
+            function createElement(tag, attr) {
                 var el = document.createElement(tag);
-                el.textContent = text;
-                if (cls)
-                    el.setAttribute('class', cls);
+                if (attr) {
+                    for (var key in attr) {
+                        value = attr[key];
+                        if (value !== null)
+                            el.setAttribute(key, attr[key]);
+                    }
+                }
+                for (var i = 2; i < arguments.length; i++) {
+                    if (typeof arguments[i] === 'string') {
+                        el.appendChild(document.createTextNode(arguments[i]));
+                    } else if (arguments[i] !== null) {
+                        el.appendChild(arguments[i]);
+                    }
+                }
                 return el;
             }
 
             document.addEventListener('DOMContentLoaded', function(e) {
+                fetch('api/pages.json')
+                    .then(response => response.json())
+                    .then(function(pages) {
+                        if (url_name == '') {
+                            url_name = pages[0].url.substr(1);
+                            window.history.replaceState(null, null, url_base + '/' + url_name);
+                        }
+
+                        var ul = document.querySelector('#menu ul');
+                        for (var i = 0; i < pages.length; i++) {
+                            var page_url = pages[i].url.substr(1);
+                            var li =
+                                createElement('li', {},
+                                    createElement('a', {href: page_url,
+                                                        class: page_url == url_name ? 'active' : null}, pages[i].name)
+                                );
+                            ul.appendChild(li);
+                        }
+                    });
+
                 url_base = window.location.pathname.substr(0, window.location.pathname.lastIndexOf('/'));
                 url_name = window.location.pathname.substr(url_base.length + 1);
-                if (url_name == '') {
-                    url_name = 'pricing';
-                    window.history.replaceState(null, null, url_base + '/' + url_name);
-                }
-
-                menu_anchors = document.querySelectorAll('nav#menu li a');
-                for (var i = 0; i < menu_anchors.length; i++) {
-                    if (menu_anchors[i].getAttribute('href') == url_name) {
-                        menu_anchors[i].classList.add('active');
-                    }
-                }
 
                 var date_input = document.querySelector('input#pricing_date');
                 if (!date_input.value) {
@@ -271,9 +296,6 @@
         <nav id="menu">
             <img id="logo" src="resources/logo.png" alt="Moya Logo"/>
             <ul>
-                <li><a href="pricing">Valorisation des GHM</a></li>
-                <li><a href="simulation">Simulations</a></li>
-                <li><a href="info">Arbre de groupage</a></li>
             </ul>
         </nav>
 
@@ -283,6 +305,7 @@
                     <label>
                         Date :
                         <input id="pricing_date" type="date" onchange="updateDatabase();"/>
+                    </label>
                     <label>
                         Racine de GHM :
                         <select id="pricing_ghm_roots" onchange="refreshPricingTable();"

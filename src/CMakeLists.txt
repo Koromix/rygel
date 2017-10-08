@@ -25,8 +25,7 @@ target_link_libraries(drd PUBLIC moya)
 set(TALYN_RESOURCES talyn/talyn.html
                     ../resources/logo.png)
 set(TALYN_SRC talyn/talyn.cc
-              ${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc
-              talyn/pages.hh)
+              ${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[
 set(RESOURCES_CC_FILENAME "${BIN_DIR}/talyn/resources.cc")
 set(RESOURCES_HH_FILENAME "${BIN_DIR}/talyn/resources.hh")
