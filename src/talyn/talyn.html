@@ -88,12 +88,17 @@
                 -webkit-filter: invert(10%);
             }
             table#pricing_table td.desc, table#pricing_table tr.desc td { background: #ffc634; }
+            table#pricing_table td.conditions, table#pricing_table tr.conditions td {
+                background: #b70202;
+                color: white;
+            }
             table#pricing_table td.price, table#pricing_table tr.price td { background: #68dc33; }
             table#pricing_table td.exb, table#pricing_table tr.exb td { background: #ff8900; }
             table#pricing_table td.exh, table#pricing_table tr.exh td {
                 background: #6b1b6a;
                 color: #b4cdff;
             }
+            table#pricing_table td.age, table#pricing_table tr.age td { background: #99ffff; }
 
             @media screen and (max-width: 580px) {
                 body {
@@ -163,11 +168,16 @@
                             createElement('th', {}, name)
                         );
 
-                    var prev_cell = [null, null, false];
+                    var prev_cell = [document.createTextNode(''), null, false];
                     var prev_td = null;
                     for (var i = 0; i < ghm_root_info.length; i++) {
                         var cell = func(ghm_root_info[i]) || [null, null, false];
-                        if (merge_cells && cell[2] && cell[0] == prev_cell[0] && cell[1] == prev_cell[1]) {
+                        if (cell[0] === null) {
+                            cell[0] = document.createTextNode('');
+                        } else if (typeof cell[0] === 'string') {
+                            cell[0] = document.createTextNode(cell[0]);
+                        }
+                        if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) && cell[1] == prev_cell[1]) {
                             var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                             prev_td.setAttribute('colspan', colspan + 1);
                         } else {
@@ -195,6 +205,14 @@
                     }
                 }
 
+                function conditionsContent(conditions) {
+                    var el =
+                        createElement('div', {title: conditions.join('\n')},
+                            conditions.length ? conditions.length.toString() : ''
+                        );
+                    return el;
+                }
+
                 var table =
                     createElement('table', {id: 'pricing_table'},
                         createElement('thead'),
@@ -206,6 +224,8 @@
                 appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc', true]; });
                 appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc', true]; });
                 appendRow(thead, 'GHS', function(col) { return ['GHS ' + col.ghs, 'desc', true]; });
+                appendRow(thead, 'Conditions',
+                          function(col) { return [conditionsContent(col.conditions), 'conditions', true]; })
                 appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb', true]; });
                 appendRow(thead, 'Borne haute',
                           function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh', true]; });
