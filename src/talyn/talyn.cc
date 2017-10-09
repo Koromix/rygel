@@ -89,6 +89,37 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
                 }
             }
             writer.Key("ghs"); writer.Int(ghs_pricing->code.number);
+
+            writer.Key("conditions"); writer.StartArray();
+            if (ghs_info.bed_authorization) {
+                writer.String(Fmt(&temp_alloc, "Autorisation Lit %1", ghs_info.bed_authorization).ptr);
+            }
+            if (ghs_info.unit_authorization) {
+                writer.String(Fmt(&temp_alloc, "Autorisation Unité %1", ghs_info.unit_authorization).ptr);
+                if (ghs_info.minimal_duration) {
+                    writer.String(Fmt(&temp_alloc, "Durée Unitée Autorisée ≥ %1", ghs_info.minimal_duration).ptr);
+                }
+            } else if (ghs_info.minimal_duration) {
+                // TODO: Take into account in addition to constraints (when we plug them in)
+                writer.String(Fmt(&temp_alloc, "Durée ≥ %1", ghs_info.minimal_duration).ptr);
+            }
+            if (ghs_info.minimal_age) {
+                writer.String(Fmt(&temp_alloc, "Age ≥ %1", ghs_info.minimal_age).ptr);
+            }
+            if (ghs_info.main_diagnosis_mask) {
+                writer.String(Fmt(&temp_alloc, "DP de la liste D$%1.%2",
+                                  ghs_info.main_diagnosis_offset, ghs_info.main_diagnosis_mask).ptr);
+            }
+            if (ghs_info.diagnosis_mask) {
+                writer.String(Fmt(&temp_alloc, "Diagnostic de la liste D$%1.%2",
+                                  ghs_info.diagnosis_offset, ghs_info.diagnosis_mask).ptr);
+            }
+            if (ghs_info.proc_mask) {
+                writer.String(Fmt(&temp_alloc, "Acte de la liste A$%1.%2",
+                                  ghs_info.proc_offset, ghs_info.proc_mask).ptr);
+            }
+            writer.EndArray();
+
             writer.Key("price_cents"); writer.Int(ghs_pricing->sectors[0].price_cents);
             if (ghs_pricing->sectors[0].exh_treshold) {
                 writer.Key("exh_treshold"); writer.Int(ghs_pricing->sectors[0].exh_treshold);
