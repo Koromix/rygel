@@ -88,6 +88,14 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
                     writer.Key("low_duration_limit"); writer.Int(treshold);
                 }
             }
+            if (ghm_root_info.young_severity_limit) {
+                writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
+                writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
+            }
+            if (ghm_root_info.old_severity_limit) {
+                writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
+                writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
+            }
             writer.Key("ghs"); writer.Int(ghs_pricing->code.number);
 
             writer.Key("conditions"); writer.StartArray();

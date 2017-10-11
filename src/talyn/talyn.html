@@ -235,6 +235,19 @@
                 appendRow(thead, 'Tarif EXB €',
                           function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', 'exb', true]; });
                 appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), 'exh', true]; });
+                appendRow(thead, 'Age', function(col) {
+                    var texts = [];
+                    if (col.ghm_mode >= '1' && col.ghm_mode < '5') {
+                        var severity = col.ghm_mode.charCodeAt(0) - '1'.charCodeAt(0);
+                        if (severity < col.young_severity_limit) {
+                            texts.push('< ' + col.young_age_treshold.toString());
+                        }
+                        if (severity < col.old_severity_limit) {
+                            texts.push('≥ ' + col.old_age_treshold.toString());
+                        }
+                    }
+                    return [texts.join(', '), 'age', true];
+                });
 
                 for (var duration = 0; duration < max_duration; duration++) {
                     appendRow(tbody, durationText(duration), function(col) {
