@@ -45,7 +45,6 @@
             }
             div#pricing table {
                 width: 100%;
-                table-layout: fixed;
                 border-collapse: collapse;
             }
             div#pricing th, div#pricing td {
@@ -54,6 +53,7 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
+                min-width: 70px;
             }
             div#pricing th {
                 background: white;
@@ -142,8 +142,7 @@
                 }
                 div#menu nav a {
                     height: 40px;
-                    margin-left: 42px;
-                    padding: 10px;
+                    padding: 10px 10px 10px 52px;
                     color: white;
                     font-size: 16px;
                 }
@@ -175,6 +174,7 @@
                     text-align: left;
                 }
 
+                div#pricing tr:first-child th:first-child { width: 80px; }
                 div#pricing tr:first-child th,
                     div#pricing tr:first-child td { border-top: 0; }
                 div#pricing tr *:first-child { border-left: 0; }
