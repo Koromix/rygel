@@ -43,33 +43,33 @@
                 margin: 0 1em 1em 1em;
                 text-align: center;
             }
-           div#pricing table {
+            div#pricing table {
                 width: 100%;
                 table-layout: fixed;
                 border-collapse: collapse;
             }
-           div#pricing th, div#pricing td {
+            div#pricing th, div#pricing td {
                 border: 1px solid #a4a4a4;
                 padding: 3px;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: nowrap;
             }
-           div#pricing th {
+            div#pricing th {
                 background: white;
                 text-align: left;
                 font-style: italic;
                 font-weight: normal;
             }
-           div#pricing thead td {
+            div#pricing thead td {
                 text-align: center;
                 font-weight: bold;
             }
-           div#pricing tbody td {
+            div#pricing tbody td {
                 background: #969696;
                 text-align: right;
             }
-           div#pricing tr:hover th {
+            div#pricing tr:hover th {
                 filter: invert(100%);
                 -webkit-filter: invert(100%);
             }
@@ -188,7 +188,8 @@
             var ghm_roots = [];
             var ghm_roots_info = {};
 
-            function updateDatabase() {
+            function updateDatabase()
+            {
                 var date = document.querySelector('input#pricing_date').value;
 
                 fetch('api/catalog.json?date=' + date)
@@ -207,7 +208,8 @@
                     });
             }
 
-            function refreshGhmRoots() {
+            function refreshGhmRoots()
+            {
                 var el = document.querySelector('select#pricing_ghm_roots');
                 var previous_value = el.value;
                 el.innerHTML = '';
@@ -221,7 +223,8 @@
                     el.value = previous_value;
             }
 
-            function refreshPricingTable() {
+            function refreshPricingTable()
+            {
                 var ghm_root_info = ghm_roots_info[document.querySelector('select#pricing_ghm_roots').value];
                 var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
                 var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
@@ -232,8 +235,10 @@
                 old_table.parentNode.replaceChild(table, old_table);
             }
 
-            function createPricingTable(ghm_root_info, merge_cells = true, max_duration = 200) {
-                function appendRow(parent, name, func) {
+            function createPricingTable(ghm_root_info, merge_cells = true, max_duration = 200)
+            {
+                function appendRow(parent, name, func)
+                {
                     var tr =
                         createElement('tr', {},
                             createElement('th', {}, name)
@@ -260,14 +265,16 @@
                     parent.appendChild(tr);
                 }
 
-                function durationText(duration) {
+                function durationText(duration)
+                {
                     if (duration !== undefined) {
                         return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
                     } else {
                         return '';
                     }
                 }
-                function priceText(price_cents) {
+                function priceText(price_cents)
+                {
                     if (price_cents !== undefined) {
                         // The replace() is a bit dirty, but it gets the job done
                         return (price_cents / 100.0).toFixed(2).replace('.', ',');
@@ -342,7 +349,8 @@
                 return table;
             }
 
-            function createElement(tag, attr) {
+            function createElement(tag, attr)
+            {
                 var el = document.createElement(tag);
                 if (attr) {
                     for (var key in attr) {
