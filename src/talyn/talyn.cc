@@ -18,7 +18,6 @@ struct Page {
 
 static const Page pages[] = {
     {"/tables", "Tables"},
-    {"/simulation", "Simulations"}
 };
 
 static const char *const UsageText =
