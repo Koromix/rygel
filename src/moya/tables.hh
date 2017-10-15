@@ -68,7 +68,7 @@ struct GhmDecisionNode {
         } test;
 
         struct {
-            GhmCode code;
+            GhmCode ghm;
             int16_t error;
         } ghm;
     } u;
@@ -79,7 +79,7 @@ struct DiagnosisInfo {
         SexDifference = 1
     };
 
-    DiagnosisCode code;
+    DiagnosisCode diag;
 
     uint16_t flags;
     struct Attributes {
@@ -101,7 +101,7 @@ struct DiagnosisInfo {
         return attributes[(int)sex - 1];
     }
 
-    HASH_SET_HANDLER(DiagnosisInfo, code);
+    HASH_SET_HANDLER(DiagnosisInfo, diag);
 };
 
 struct ExclusionInfo {
@@ -109,13 +109,13 @@ struct ExclusionInfo {
 };
 
 struct ProcedureInfo {
-    ProcedureCode code;
+    ProcedureCode proc;
     int8_t phase;
 
     Date limit_dates[2];
     uint8_t bytes[55];
 
-    HASH_SET_HANDLER(ProcedureInfo, code);
+    HASH_SET_HANDLER(ProcedureInfo, proc);
 };
 
 template <size_t N>
@@ -134,7 +134,7 @@ struct ValueRangeCell {
 };
 
 struct GhmRootInfo {
-    GhmRootCode code;
+    GhmRootCode ghm_root;
 
     int8_t confirm_duration_treshold;
 
@@ -151,7 +151,7 @@ struct GhmRootInfo {
     uint8_t cma_exclusion_offset;
     uint8_t cma_exclusion_mask;
 
-    HASH_SET_HANDLER(GhmRootInfo, code);
+    HASH_SET_HANDLER(GhmRootInfo, ghm_root);
 };
 
 struct GhsInfo {
@@ -193,8 +193,8 @@ struct AuthorizationInfo {
 };
 
 struct SrcPair {
-    DiagnosisCode diag_code;
-    ProcedureCode proc_code;
+    DiagnosisCode diag;
+    ProcedureCode proc;
 };
 
 Date ConvertDate1980(uint16_t days);
@@ -254,8 +254,8 @@ struct TableIndex {
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
 
-    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root_code) const;
-    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmCode ghm_code) const;
+    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
+    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmCode ghm) const;
 };
 
 class TableSet {

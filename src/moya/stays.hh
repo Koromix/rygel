@@ -19,12 +19,12 @@ struct AuthorizationSet {
     HeapArray<Authorization> authorizations;
     HashSet<UnitCode, const Authorization *> authorizations_map;
 
-    ArrayRef<const Authorization> FindUnit(UnitCode unit_code) const;
-    const Authorization *FindUnit(UnitCode unit_code, Date date) const;
+    ArrayRef<const Authorization> FindUnit(UnitCode unit) const;
+    const Authorization *FindUnit(UnitCode unit, Date date) const;
 };
 
-struct Procedure {
-    ProcedureCode code;
+struct ProcedureRealisation {
+    ProcedureCode proc;
     int8_t phase;
     uint8_t activities;
     int16_t count;
@@ -50,7 +50,7 @@ struct Stay {
         int8_t mode;
         int8_t destination;
     } exit;
-    UnitCode unit_code;
+    UnitCode unit;
     int8_t bed_authorization;
     int16_t session_count;
     int16_t igs2;
@@ -62,7 +62,7 @@ struct Stay {
     DiagnosisCode linked_diagnosis;
     ArrayRef<DiagnosisCode> diagnoses;
 
-    ArrayRef<Procedure> procedures;
+    ArrayRef<ProcedureRealisation> procedures;
 
 #ifndef DISABLE_TESTS
     struct {
@@ -80,7 +80,7 @@ struct StaySet {
 
     struct {
         HeapArray<DiagnosisCode> diagnoses;
-        HeapArray<Procedure> procedures;
+        HeapArray<ProcedureRealisation> procedures;
     } store;
 };
 

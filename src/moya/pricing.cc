@@ -36,7 +36,7 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
             if (sscanf((const char *)line.ptr,
                        "%*7c%04" SCNd16 "%01u%*3c%03" SCNd16 "%03" SCNd16 "%08" SCNd32 "%*1c%08" SCNd32
                        "%*50c%04" SCNd16 "%02" SCNd8 "%02" SCNd8 "%c%08" SCNd32,
-                       &pricing.code.number, &sector, &exh_treshold, &exb_treshold, &price_cents, &exh_cents,
+                       &pricing.ghs.number, &sector, &exh_treshold, &exb_treshold, &price_cents, &exh_cents,
                        &pricing.limit_dates[0].st.year, &pricing.limit_dates[0].st.month,
                        &pricing.limit_dates[0].st.day, &type_exb, &exb_cents) != 11) {
                 LogError("Malformed NOEMI GHS pricing line (type 110) in '%1'", \
@@ -69,13 +69,13 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
 
         std::stable_sort(pricings.begin(), pricings.end(),
                          [](const GhsPricing &pricing1, const GhsPricing &pricing2) {
-            return MultiCmp(pricing1.code.number - pricing2.code.number,
+            return MultiCmp(pricing1.ghs.number - pricing2.ghs.number,
                             pricing1.limit_dates[0] - pricing2.limit_dates[0]) < 0;
         });
 
         size_t j = 0;
         for (size_t i = 1; i < pricings.len; i++) {
-            if (pricings[i].code == pricings[j].code) {
+            if (pricings[i].ghs == pricings[j].ghs) {
                 if (pricings[i].limit_dates[0] == pricings[j].limit_dates[0]) {
                     if (pricings[i].sectors[0].price_cents) {
                         pricings[j].sectors[0] = pricings[i].sectors[0];
@@ -125,17 +125,17 @@ bool LoadPricingFile(const char *filename, PricingSet *out_set)
     return true;
 }
 
-ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs_code) const
+ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs) const
 {
     ArrayRef<const GhsPricing> pricings;
-    pricings.ptr = ghs_pricings_map.FindValue(ghs_code, nullptr);
+    pricings.ptr = ghs_pricings_map.FindValue(ghs, nullptr);
     if (!pricings.ptr)
         return {};
 
     {
         const GhsPricing *end_pricing = pricings.ptr + 1;
         while (end_pricing < ghs_pricings.end() &&
-               end_pricing->code == ghs_code) {
+               end_pricing->ghs == ghs) {
             end_pricing++;
         }
         pricings.len = (size_t)(end_pricing - pricings.ptr);
@@ -144,9 +144,9 @@ ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs_code) const
     return pricings;
 }
 
-const GhsPricing *PricingSet::FindGhsPricing(GhsCode ghs_code, Date date) const
+const GhsPricing *PricingSet::FindGhsPricing(GhsCode ghs, Date date) const
 {
-    const GhsPricing *pricing = ghs_pricings_map.FindValue(ghs_code, nullptr);
+    const GhsPricing *pricing = ghs_pricings_map.FindValue(ghs, nullptr);
     if (!pricing)
         return nullptr;
 
@@ -154,7 +154,7 @@ const GhsPricing *PricingSet::FindGhsPricing(GhsCode ghs_code, Date date) const
         if (date >= pricing->limit_dates[0] && date < pricing->limit_dates[1])
             return pricing;
     } while (++pricing < ghs_pricings.ptr + ghs_pricings.len &&
-             pricing->code == ghs_code);
+             pricing->ghs == ghs);
 
     return nullptr;
 }

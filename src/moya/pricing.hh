@@ -12,7 +12,7 @@ struct GhsPricing {
         ExbOnce = 1
     };
 
-    GhsCode code;
+    GhsCode ghs;
     Date limit_dates[2];
 
     struct {
@@ -24,15 +24,15 @@ struct GhsPricing {
         uint16_t flags;
     } sectors[2];
 
-    HASH_SET_HANDLER(GhsPricing, code);
+    HASH_SET_HANDLER(GhsPricing, ghs);
 };
 
 struct PricingSet {
     HeapArray<GhsPricing> ghs_pricings;
     HashSet<GhsCode, const GhsPricing *> ghs_pricings_map;
 
-    ArrayRef<const GhsPricing> FindGhsPricing(GhsCode ghs_code) const;
-    const GhsPricing *FindGhsPricing(GhsCode ghs_code, Date date) const;
+    ArrayRef<const GhsPricing> FindGhsPricing(GhsCode ghs) const;
+    const GhsPricing *FindGhsPricing(GhsCode ghs, Date date) const;
 };
 
 bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,

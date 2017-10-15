@@ -279,10 +279,10 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
             static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
             ghm_node.type = GhmDecisionNode::Type::Ghm;
-            ghm_node.u.ghm.code.parts.cmd = raw_node.params[1];
-            ghm_node.u.ghm.code.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
-            ghm_node.u.ghm.code.parts.seq = (raw_node.children_idx / 10) % 100;
-            ghm_node.u.ghm.code.parts.mode = chars4[raw_node.children_idx % 10];
+            ghm_node.u.ghm.ghm.parts.cmd = raw_node.params[1];
+            ghm_node.u.ghm.ghm.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
+            ghm_node.u.ghm.ghm.parts.seq = (raw_node.children_idx / 10) % 100;
+            ghm_node.u.ghm.ghm.parts.mode = chars4[raw_node.children_idx % 10];
             ghm_node.u.ghm.error = raw_node.params[0];
         }
 
@@ -348,7 +348,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                 FAIL_PARSE_IF(raw_diag_ptr.section4_idx >= table.sections[4].values_count);
             }
 
-            diag.code = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
+            diag.diag = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
 
             // Flags and warnings
             {
@@ -485,8 +485,8 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 
             // CCAM code and phase
             {
-                memcpy(proc.code.str, code123, 3);
-                snprintf(proc.code.str + 3, sizeof(proc.code.str) - 3, "%c%03u",
+                memcpy(proc.proc.str, code123, 3);
+                snprintf(proc.proc.str + 3, sizeof(proc.proc.str) - 3, "%c%03u",
                          (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
                 proc.phase = raw_proc_ptr.seq_phase % 10;
             }
@@ -556,9 +556,9 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
 
-            ghm_root.code.parts.cmd = raw_ghm_root.cmd;
-            ghm_root.code.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
-            ghm_root.code.parts.seq = raw_ghm_root.type_seq % 100;
+            ghm_root.ghm_root.parts.cmd = raw_ghm_root.cmd;
+            ghm_root.ghm_root.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
+            ghm_root.ghm_root.parts.seq = raw_ghm_root.type_seq % 100;
         }
 
         switch (raw_ghm_root.duration_severity_mode) {
@@ -871,14 +871,14 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
         ReverseBytes(&raw_pair.proc_code456);
 #endif
 
-        pair.diag_code = ConvertDiagnosisCode(raw_pair.diag_code123, raw_pair.diag_code456);
+        pair.diag = ConvertDiagnosisCode(raw_pair.diag_code123, raw_pair.diag_code456);
         {
             uint16_t code123_remain = raw_pair.proc_code123;
             for (int j = 0; j < 3; j++) {
-                pair.proc_code.str[2 - j] = (code123_remain % 26) + 65;
+                pair.proc.str[2 - j] = (code123_remain % 26) + 65;
                 code123_remain /= 26;
             }
-            snprintf(pair.proc_code.str + 3, sizeof(pair.proc_code.str) - 3, "%c%03u",
+            snprintf(pair.proc.str + 3, sizeof(pair.proc.str) - 3, "%c%03u",
                      (raw_pair.proc_code456 / 1000 % 26) + 65,
                      raw_pair.proc_code456 % 1000);
         }
@@ -1148,7 +1148,7 @@ ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) cons
     {
         const ProcedureInfo *end_proc = procs.ptr + 1;
         while (end_proc < procedures.end() &&
-               end_proc->code == code) {
+               end_proc->proc == code) {
             end_proc++;
         }
         procs.len = (size_t)(end_proc - procs.ptr);
@@ -1174,7 +1174,7 @@ const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase,
 
         return proc;
     } while (++proc < procedures.ptr + procedures.len &&
-             proc->code == code);
+             proc->proc == code);
 
     return nullptr;
 }
@@ -1187,20 +1187,20 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
     return ghm_roots_map->FindValue(code, nullptr);
 }
 
-ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root_code) const
+ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
 {
     if (!ghm_root_to_ghs_map)
         return {};
 
     ArrayRef<const GhsInfo> compatible_ghs;
-    compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root_code, nullptr);
+    compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root, nullptr);
     if (!compatible_ghs.ptr)
         return {};
 
     {
         const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
         while (end_ghs < ghs.end() &&
-               end_ghs->ghm.Root() == ghm_root_code) {
+               end_ghs->ghm.Root() == ghm_root) {
             end_ghs++;
         }
         compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);
@@ -1209,13 +1209,13 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root_code)
     return compatible_ghs;
 }
 
-ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm_code) const
+ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 {
     if (!ghm_to_ghs_map)
         return {};
 
     ArrayRef<const GhsInfo> compatible_ghs;
-    compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm_code, nullptr);
+    compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm, nullptr);
     if (!compatible_ghs.ptr)
         return {};
 
@@ -1224,7 +1224,7 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm_code) const
     {
         const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
         while (end_ghs < ghs.end() &&
-               end_ghs->ghm == ghm_code) {
+               end_ghs->ghm == ghm) {
             end_ghs++;
         }
         compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);

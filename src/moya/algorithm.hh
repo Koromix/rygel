@@ -25,7 +25,7 @@ struct RunGhmTreeContext {
     const StayAggregate *agg;
 
     ArrayRef<const DiagnosisCode> diagnoses;
-    ArrayRef<const Procedure> procedures;
+    ArrayRef<const ProcedureRealisation> procedures;
 
     // Keep a copy for DP - DR reversal (function 34)
     DiagnosisCode main_diagnosis;
@@ -63,7 +63,7 @@ GhmCode PrepareIndex(const TableSet &table_set, ArrayRef<const Stay> cluster_sta
 
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<ProcedureRealisation> *out_procedures,
                   HeapArray<int16_t> *out_errors);
 
 int GetMinimalDurationForSeverity(int severity);
@@ -76,26 +76,26 @@ GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
                        GhmCode ghm, HeapArray<int16_t> *out_errors);
 GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
                    ArrayRef<const DiagnosisCode> diagnoses,
-                   ArrayRef<const Procedure> procedures,
+                   ArrayRef<const ProcedureRealisation> procedures,
                    HeapArray<int16_t> *out_errors);
 GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
-                 ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
+                 ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const ProcedureRealisation> procedures,
                  HeapArray<int16_t> *out_errors);
 
 GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_set,
                 ArrayRef<const Stay> stays, const StayAggregate &agg,
-                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures);
+                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const ProcedureRealisation> procedures);
 
 void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
                ArrayRef<const Stay> stays, ClusterMode cluster_mode,
                SummarizeResultSet *out_result_set);
 
 struct GhmConstraint {
-    GhmCode ghm_code;
+    GhmCode ghm;
 
     uint64_t duration_mask;
 
-    HASH_SET_HANDLER(GhmConstraint, ghm_code);
+    HASH_SET_HANDLER(GhmConstraint, ghm);
 };
 
 bool ComputeGhmConstraints(const TableIndex &index,

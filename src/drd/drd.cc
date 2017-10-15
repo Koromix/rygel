@@ -368,8 +368,8 @@ R"(Usage: drd info [options] name ...)";
 
     for (const char *name: names) {
         {
-            DiagnosisCode diag_code = DiagnosisCode::FromString(name, false);
-            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag_code);
+            DiagnosisCode diag = DiagnosisCode::FromString(name, false);
+            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
             if (diag_info) {
                 DumpDiagnosisTable(*diag_info, index->exclusions);
                 continue;
@@ -377,8 +377,8 @@ R"(Usage: drd info [options] name ...)";
         }
 
         {
-            ProcedureCode proc_code = ProcedureCode::FromString(name, false);
-            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc_code);
+            ProcedureCode proc = ProcedureCode::FromString(name, false);
+            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc);
             if (proc_info.len) {
                 DumpProcedureTable(proc_info);
                 continue;
@@ -386,8 +386,8 @@ R"(Usage: drd info [options] name ...)";
         }
 
         {
-            GhmRootCode ghm_root_code = GhmRootCode::FromString(name, false);
-            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root_code);
+            GhmRootCode ghm_root = GhmRootCode::FromString(name, false);
+            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
             if (ghm_root_info) {
                 DumpGhmRootTable(*ghm_root_info);
                 continue;
@@ -513,14 +513,14 @@ Specific options:
                 for (const DiagnosisInfo &diag: index->diagnoses) {
                     if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
                         if (spec.Match(diag.Attributes(Sex::Male).raw)) {
-                            PrintLn("  %1 (male)", diag.code);
+                            PrintLn("  %1 (male)", diag.diag);
                         }
                         if (spec.Match(diag.Attributes(Sex::Female).raw)) {
-                            PrintLn("  %1 (female)", diag.code);
+                            PrintLn("  %1 (female)", diag.diag);
                         }
                     } else {
                         if (spec.Match(diag.Attributes(Sex::Male).raw)) {
-                            PrintLn("  %1", diag.code);
+                            PrintLn("  %1", diag.diag);
                         }
                     }
                 }
@@ -529,7 +529,7 @@ Specific options:
             case ListSpecifier::Table::Procedures: {
                 for (const ProcedureInfo &proc: index->procedures) {
                     if (spec.Match(proc.bytes)) {
-                        PrintLn("  %1", proc.code);
+                        PrintLn("  %1", proc.proc);
                     }
                 }
             } break;

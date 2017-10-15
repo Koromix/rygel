@@ -32,10 +32,10 @@ void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
             case GhmDecisionNode::Type::Ghm: {
                 if (ghm_node.u.ghm.error) {
                     PrintLn("      %1%2. %3 (err = %4)", FmtArg("  ").Repeat(depth), node_idx,
-                            ghm_node.u.ghm.code, ghm_node.u.ghm.error);
+                            ghm_node.u.ghm.ghm, ghm_node.u.ghm.error);
                 } else {
                     PrintLn("      %1%2. %3", FmtArg("  ").Repeat(depth), node_idx,
-                            ghm_node.u.ghm.code);
+                            ghm_node.u.ghm.ghm);
                 }
                 return;
             } break;
@@ -54,7 +54,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
             PrintLn();
         };
 
-        PrintLn("      %1:", diag.code);
+        PrintLn("      %1:", diag.diag);
         if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
             PrintLn("        Male:");
             PrintLn("          Category: %1", diag.Attributes(Sex::Male).cmd);
@@ -82,7 +82,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
                     const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
                     for (const DiagnosisInfo &excl_diag: diagnoses) {
                         if (excl->raw[excl_diag.cma_exclusion_offset] & excl_diag.cma_exclusion_mask) {
-                            Print(" %1", excl_diag.code);
+                            Print(" %1", excl_diag.diag);
                         }
                     }
                 } else {
@@ -97,7 +97,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
 void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
 {
     for (const ProcedureInfo &proc: procedures) {
-        Print("      %1/%2 =", proc.code, proc.phase);
+        Print("      %1/%2 =", proc.proc, proc.phase);
         for (size_t i = 0; i < CountOf(proc.bytes); i++) {
             Print(" %1", FmtBin(proc.bytes[i]));
         }
@@ -110,7 +110,7 @@ void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
 void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots)
 {
     for (const GhmRootInfo &ghm_root: ghm_roots) {
-        PrintLn("      %1:", ghm_root.code);
+        PrintLn("      %1:", ghm_root.ghm_root);
 
         if (ghm_root.confirm_duration_treshold) {
             PrintLn("        Confirm if < %1 days (except for deaths and MCO transfers)",
@@ -198,7 +198,7 @@ void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations)
 void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs)
 {
     for (const SrcPair &pair: pairs) {
-        PrintLn("      %1 -- %2", pair.diag_code, pair.proc_code);
+        PrintLn("      %1 -- %2", pair.diag, pair.proc);
     }
 }
 
@@ -290,15 +290,15 @@ void DumpTableSet(const TableSet &table_set, bool detail)
 void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings)
 {
     for (size_t i = 0; i < ghs_pricings.len;) {
-        GhsCode ghs_code = ghs_pricings[i].code;
+        GhsCode ghs = ghs_pricings[i].ghs;
 
-        PrintLn("GHS %1:", ghs_code);
+        PrintLn("GHS %1:", ghs);
 
-        for (; i < ghs_pricings.len && ghs_pricings[i].code == ghs_code; i++) {
+        for (; i < ghs_pricings.len && ghs_pricings[i].ghs == ghs; i++) {
             const GhsPricing &pricing = ghs_pricings[i];
 
             PrintLn("  %2 to %3:",
-                    pricing.code, pricing.limit_dates[0], pricing.limit_dates[1]);
+                    pricing.ghs, pricing.limit_dates[0], pricing.limit_dates[1]);
             PrintLn("    Public: %1 [exh = %2, exb = %3]",
                     FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
                     FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),

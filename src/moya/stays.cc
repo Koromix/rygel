@@ -251,7 +251,7 @@ class JsonStayHandler: public JsonHandler<JsonStayHandler> {
         // Associated diagnosis objects
         AssociatedDiagnosisArray,
 
-        // Procedure objects
+        // Procedure realisation objects
         ProcedureArray,
         ProcedureObject,
         ProcedureCode,
@@ -264,7 +264,7 @@ class JsonStayHandler: public JsonHandler<JsonStayHandler> {
     State state = State::Default;
 
     Stay stay;
-    Procedure proc = {};
+    ProcedureRealisation proc = {};
 
 public:
     StaySet *out_set;
@@ -453,7 +453,7 @@ public:
                     LogError("Invalid exit destination value %1", i);
                 }
             } break;
-            case State::StayUnit: { SetInt(&stay.unit_code.number, i);} break;
+            case State::StayUnit: { SetInt(&stay.unit.number, i);} break;
             case State::StaySessionCount: { SetInt(&stay.session_count, i); } break;
             case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
@@ -560,7 +560,7 @@ public:
             } break;
 
             // Procedure attributes
-            case State::ProcedureCode: { proc.code = ProcedureCode::FromString(str); } break;
+            case State::ProcedureCode: { proc.proc = ProcedureCode::FromString(str); } break;
             case State::ProcedureDate: { SetDate(&proc.date, str); } break;
 
             default: {
@@ -587,7 +587,7 @@ private:
     {
         stay = {};
         stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
-        stay.procedures.ptr = (Procedure *)out_set->store.procedures.len;
+        stay.procedures.ptr = (ProcedureRealisation *)out_set->store.procedures.len;
     }
 
     template <typename T>
@@ -736,17 +736,17 @@ bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
     return true;
 }
 
-ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit_code) const
+ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
 {
     ArrayRef<const Authorization> auths;
-    auths.ptr = authorizations_map.FindValue(unit_code, nullptr);
+    auths.ptr = authorizations_map.FindValue(unit, nullptr);
     if (!auths.ptr)
         return {};
 
     {
         const Authorization *end_auth = auths.ptr + 1;
         while (end_auth < authorizations.end() &&
-               end_auth->unit == unit_code) {
+               end_auth->unit == unit) {
             end_auth++;
         }
         auths.len = (size_t)(end_auth - auths.ptr);
@@ -755,9 +755,9 @@ ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit_code) con
     return auths;
 }
 
-const Authorization *AuthorizationSet::FindUnit(UnitCode unit_code, Date date) const
+const Authorization *AuthorizationSet::FindUnit(UnitCode unit, Date date) const
 {
-    const Authorization *auth = authorizations_map.FindValue(unit_code, nullptr);
+    const Authorization *auth = authorizations_map.FindValue(unit, nullptr);
     if (!auth)
         return nullptr;
 
@@ -765,7 +765,7 @@ const Authorization *AuthorizationSet::FindUnit(UnitCode unit_code, Date date) c
         if (date >= auth->dates[0] && date < auth->dates[1])
             return auth;
     } while (++auth < authorizations.ptr + authorizations.len &&
-             auth->unit == unit_code);
+             auth->unit == unit);
 
     return nullptr;
 }

@@ -128,11 +128,11 @@ union GhmCode {
 
     GhmRootCode Root() const
     {
-        GhmRootCode root_code = {};
-        root_code.parts.cmd = parts.cmd;
-        root_code.parts.type = parts.type;
-        root_code.parts.seq = parts.seq;
-        return root_code;
+        GhmRootCode ghm_root = {};
+        ghm_root.parts.cmd = parts.cmd;
+        ghm_root.parts.type = parts.type;
+        ghm_root.parts.seq = parts.seq;
+        return ghm_root;
     }
 };
 static inline uint64_t DefaultHash(GhmCode code) { return DefaultHash(code.value); }

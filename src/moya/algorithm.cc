@@ -16,9 +16,9 @@ static int ComputeAge(Date date, Date birthdate)
 }
 
 static uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
-                                DiagnosisCode diag_code, uint8_t byte_idx)
+                                DiagnosisCode diag, uint8_t byte_idx)
 {
-    const DiagnosisInfo *diag_info = index.FindDiagnosis(diag_code);
+    const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
 
     // FIXME: Warning / classifier errors
     if (UNLIKELY(!diag_info))
@@ -30,9 +30,9 @@ static uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
 }
 
 static uint8_t GetProcedureByte(const TableIndex &index,
-                                const Procedure &proc, uint8_t byte_idx)
+                                const ProcedureRealisation &proc, uint8_t byte_idx)
 {
-    const ProcedureInfo *proc_info = index.FindProcedure(proc.code, proc.phase, proc.date);
+    const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, proc.date);
 
     if (UNLIKELY(!proc_info))
         return 0;
@@ -123,9 +123,9 @@ static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> st
         int stay_score = base_score;
 
         proc_priority = 0;
-        for (const Procedure &proc: stay.procedures) {
+        for (const ProcedureRealisation &proc: stay.procedures) {
             const ProcedureInfo *proc_info =
-                index.FindProcedure(proc.code, proc.phase, proc.date);
+                index.FindProcedure(proc.proc, proc.phase, proc.date);
             if (!proc_info)
                 continue;
 
@@ -204,7 +204,7 @@ static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> st
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
                   StayAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<Procedure> *out_procedures,
+                  HeapArray<DiagnosisCode> *out_diagnoses, HeapArray<ProcedureRealisation> *out_procedures,
                   HeapArray<int16_t> *out_errors)
 {
     Assert(stays.len > 0);
@@ -284,8 +284,8 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
         }
 
         std::sort(out_procedures->begin(), out_procedures->end(),
-                  [](const Procedure &proc1, const Procedure &proc2) {
-            return MultiCmp(proc1.code.value - proc2.code.value,
+                  [](const ProcedureRealisation &proc1, const ProcedureRealisation &proc2) {
+            return MultiCmp(proc1.proc.value - proc2.proc.value,
                             proc1.phase - proc2.phase) < 0;
         });
 
@@ -293,7 +293,7 @@ GhmCode Aggregate(const TableIndex &index, ArrayRef<const Stay> stays,
         // such as when the two procedures fall into different date ranges / limits.
         size_t j = 0;
         for (size_t i = 1; i < out_procedures->len; i++) {
-            if ((*out_procedures)[i].code == (*out_procedures)[j].code &&
+            if ((*out_procedures)[i].proc == (*out_procedures)[j].proc &&
                     (*out_procedures)[i].phase == (*out_procedures)[j].phase) {
                 (*out_procedures)[j].activities |= (*out_procedures)[i].activities;
                 (*out_procedures)[j].count += (*out_procedures)[i].count;
@@ -357,7 +357,7 @@ int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
         } break;
 
         case 2: {
-            for (const Procedure &proc: ctx.procedures) {
+            for (const ProcedureRealisation &proc: ctx.procedures) {
                 uint8_t proc_byte = GetProcedureByte(*ctx.index, proc, ghm_node.u.test.params[0]);
                 if (proc_byte & ghm_node.u.test.params[1])
                     return 1;
@@ -408,7 +408,7 @@ int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
 
         case 9: {
             int result = 0;
-            for (const Procedure &proc: ctx.procedures) {
+            for (const ProcedureRealisation &proc: ctx.procedures) {
                 if (GetProcedureByte(*ctx.index, proc, 0) & 0x80) {
                     uint8_t proc_byte = GetProcedureByte(*ctx.index, proc,
                                                          ghm_node.u.test.params[0]);
@@ -424,7 +424,7 @@ int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
 
         case 10: {
             size_t matches = 0;
-            for (const Procedure &proc: ctx.procedures) {
+            for (const ProcedureRealisation &proc: ctx.procedures) {
                 uint8_t proc_byte = GetProcedureByte(*ctx.index, proc,
                                                      ghm_node.u.test.params[0]);
                 if (proc_byte & ghm_node.u.test.params[1]) {
@@ -512,7 +512,7 @@ int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
         } break;
 
         case 33: {
-            for (const Procedure &proc: ctx.procedures) {
+            for (const ProcedureRealisation &proc: ctx.procedures) {
                 if (proc.activities & (1 << ghm_node.u.test.params[0]))
                     return 1;
             }
@@ -623,7 +623,7 @@ int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
 
 GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
                    ArrayRef<const DiagnosisCode> diagnoses,
-                   ArrayRef<const Procedure> procedures,
+                   ArrayRef<const ProcedureRealisation> procedures,
                    HeapArray<int16_t> *out_errors)
 {
     GhmCode ghm = {};
@@ -661,7 +661,7 @@ GhmCode RunGhmTree(const TableIndex &index, const StayAggregate &agg,
             } break;
 
             case GhmDecisionNode::Type::Ghm: {
-                ghm = ghm_node.u.ghm.code;
+                ghm = ghm_node.u.ghm.ghm;
                 if (ghm_node.u.ghm.error) {
                     out_errors->Append(ghm_node.u.ghm.error);
                 }
@@ -747,7 +747,7 @@ GhmCode RunGhmSeverity(const TableIndex &index, const StayAggregate &agg,
 }
 
 GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
-                 ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
+                 ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const ProcedureRealisation> procedures,
                  HeapArray<int16_t> *out_errors)
 {
     GhmCode ghm;
@@ -760,7 +760,7 @@ GhmCode Classify(const TableIndex &index, const StayAggregate &agg,
 
 GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_set,
                 ArrayRef<const Stay> stays, const StayAggregate &agg,
-                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const Procedure> procedures,
+                ArrayRef<const DiagnosisCode> diagnoses, ArrayRef<const ProcedureRealisation> procedures,
                 GhmCode ghm)
 {
     ArrayRef<const GhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm);
@@ -774,7 +774,7 @@ GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_s
             duration = 0;
             bool authorized = false;
             for (const Stay &stay: stays) {
-                const Authorization *auth = authorization_set.FindUnit(stay.unit_code, stay.dates[1]);
+                const Authorization *auth = authorization_set.FindUnit(stay.unit, stay.dates[1]);
                 if (auth && auth->type == ghs_info.unit_authorization) {
                     duration += stay.dates[1] - stay.dates[0];
                     authorized = true;
@@ -798,11 +798,11 @@ GhsCode PickGhs(const TableIndex &index, const AuthorizationSet &authorization_s
             continue;
         if (ghs_info.diagnosis_mask &&
                 std::none_of(diagnoses.begin(), diagnoses.end(),
-                             [&](DiagnosisCode diag_code) { return GetDiagnosisByte(index, agg.stay.sex, diag_code, ghs_info.diagnosis_offset) & ghs_info.diagnosis_mask; }))
+                             [&](DiagnosisCode diag) { return GetDiagnosisByte(index, agg.stay.sex, diag, ghs_info.diagnosis_offset) & ghs_info.diagnosis_mask; }))
             continue;
         if (ghs_info.proc_mask &&
                 std::none_of(procedures.begin(), procedures.end(),
-                             [&](const Procedure &proc) { return GetProcedureByte(index, proc, ghs_info.proc_offset) & ghs_info.proc_mask; }))
+                             [&](const ProcedureRealisation &proc) { return GetProcedureByte(index, proc, ghs_info.proc_offset) & ghs_info.proc_mask; }))
             continue;
 
         return ghs_info.ghs[0];
@@ -818,7 +818,7 @@ void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
     HeapArray<DiagnosisCode> diagnoses;
-    HeapArray<Procedure> procedures;
+    HeapArray<ProcedureRealisation> procedures;
 
     while (stays.len) {
         SummarizeResult result = {};
@@ -856,17 +856,17 @@ void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_
 }
 
 static bool MergeConstraint(const TableIndex &index,
-                            const GhmCode ghm_code, GhmConstraint constraint,
+                            const GhmCode ghm, GhmConstraint constraint,
                             HashSet<GhmCode, GhmConstraint> *out_constraints)
 {
     // TODO: Simplify with AppendOrGet() in HashSet
 #define MERGE_CONSTRAINT(ModeChar, DurationMask) \
         do { \
             GhmConstraint new_constraint = constraint; \
-            new_constraint.ghm_code.parts.mode = (ModeChar); \
+            new_constraint.ghm.parts.mode = (ModeChar); \
             new_constraint.duration_mask &= (DurationMask); \
             if (new_constraint.duration_mask) { \
-                GhmConstraint *prev_constraint = out_constraints->Find(new_constraint.ghm_code); \
+                GhmConstraint *prev_constraint = out_constraints->Find(new_constraint.ghm); \
                 if (prev_constraint) { \
                     prev_constraint->duration_mask |= new_constraint.duration_mask; \
                 } else { \
@@ -875,11 +875,11 @@ static bool MergeConstraint(const TableIndex &index,
             } \
         } while (false)
 
-    constraint.ghm_code = ghm_code;
+    constraint.ghm = ghm;
 
-    const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm_code.Root());
+    const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
     if (!ghm_root_info) {
-        LogError("Unknown GHM root '%1'", ghm_code.Root());
+        LogError("Unknown GHM root '%1'", ghm.Root());
         return false;
     }
 
@@ -894,14 +894,14 @@ static bool MergeConstraint(const TableIndex &index,
         constraint.duration_mask &= ~short_mask;
     }
 
-    if (!ghm_code.parts.mode) {
+    if (!ghm.parts.mode) {
         for (int severity = 0; severity < 4; severity++) {
             uint64_t mode_mask = ~((uint64_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
             MERGE_CONSTRAINT('1' + (char)severity, mode_mask);
         }
-    } else if (ghm_code.parts.mode != 'J' && ghm_code.parts.mode != 'T') {
+    } else if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
         // FIXME: Ugly construct
-        MERGE_CONSTRAINT(ghm_code.parts.mode, UINT64_MAX);
+        MERGE_CONSTRAINT(ghm.parts.mode, UINT64_MAX);
     }
 
 #undef MERGE_CONSTRAINT
@@ -987,7 +987,7 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
         } break;
 
         case GhmDecisionNode::Type::Ghm: {
-            success &= MergeConstraint(index, ghm_node.u.ghm.code, constraint, out_constraints);
+            success &= MergeConstraint(index, ghm_node.u.ghm.ghm, constraint, out_constraints);
         } break;
     }
 

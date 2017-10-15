@@ -52,10 +52,10 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
     for (const GhmRootInfo &ghm_root_info: index->ghm_roots) {
         writer.StartObject();
         // TODO: Use buffer-based Fmt API
-        writer.Key("ghm_root"); writer.String(Fmt(&temp_alloc, "%1", ghm_root_info.code).ptr);
+        writer.Key("ghm_root"); writer.String(Fmt(&temp_alloc, "%1", ghm_root_info.ghm_root).ptr);
         writer.Key("info"); writer.StartArray();
 
-        ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.code);
+        ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
             const GhsPricing *ghs_pricing = main_pricing_set.FindGhsPricing(ghs_info.ghs[0], date);
             if (!ghs_pricing)
@@ -95,7 +95,7 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
                 writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
                 writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
             }
-            writer.Key("ghs"); writer.Int(ghs_pricing->code.number);
+            writer.Key("ghs"); writer.Int(ghs_pricing->ghs.number);
 
             writer.Key("conditions"); writer.StartArray();
             if (ghs_info.bed_authorization) {
