@@ -895,12 +895,6 @@ static bool MergeConstraint(const TableIndex &index,
     }
 
     if (!ghm_code.parts.mode) {
-        const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm_code.Root());
-        if (!ghm_root_info) {
-            LogError("Unknown GHM root '%1'", ghm_code.Root());
-            return false;
-        }
-
         for (int severity = 0; severity < 4; severity++) {
             uint64_t mode_mask = ~((uint64_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
             MERGE_CONSTRAINT('1' + (char)severity, mode_mask);
