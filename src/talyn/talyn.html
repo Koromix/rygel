@@ -352,9 +352,23 @@
                 return table;
             }
 
+            function getFullNamespace(ns)
+            {
+                return ({
+                    svg: 'http://www.w3.org/2000/svg',
+                    html: 'http://www.w3.org/1999/xhtml'
+                })[ns] || ns;
+            }
             function createElement(tag, attr)
             {
-                var el = document.createElement(tag);
+                var args = [].slice.call(arguments);
+                args.unshift('html');
+                return createElementNS.apply(this, args);
+            }
+            function createElementNS(ns, tag, attr)
+            {
+                ns = getFullNamespace(ns);
+                var el = document.createElementNS(ns, tag);
                 if (attr) {
                     for (var key in attr) {
                         value = attr[key];
@@ -362,7 +376,7 @@
                             el.setAttribute(key, attr[key]);
                     }
                 }
-                for (var i = 2; i < arguments.length; i++) {
+                for (var i = 3; i < arguments.length; i++) {
                     if (typeof arguments[i] === 'string') {
                         el.appendChild(document.createTextNode(arguments[i]));
                     } else if (arguments[i] !== null) {
