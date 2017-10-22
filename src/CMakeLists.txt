@@ -23,6 +23,8 @@ add_executable(drd ${DRD_SRC})
 target_link_libraries(drd PUBLIC moya)
 
 set(TALYN_RESOURCES talyn/talyn.html
+                    talyn/talyn.css
+                    talyn/talyn.js
                     ../resources/logo.png)
 set(TALYN_SRC talyn/talyn.cc
               ${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc)

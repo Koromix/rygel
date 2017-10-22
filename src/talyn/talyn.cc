@@ -283,6 +283,8 @@ int main(int argc, char **argv)
     for (const Page &page: pages) {
         routes.Set(page.url, resources::talyn_html);
     }
+    routes.Set("/resources/talyn.css", resources::talyn_css);
+    routes.Set("/resources/talyn.js", resources::talyn_js);
     routes.Set("/resources/logo.png", resources::logo_png);
 
     MHD_Daemon *daemon = MHD_start_daemon(
