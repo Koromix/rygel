@@ -4,7 +4,7 @@
 
 #include "kutil.hh"
 #include "algorithm.hh"
-#include "stays.hh"
+#include "data.hh"
 #include "tables.hh"
 
 static int ComputeAge(Date date, Date birthdate)

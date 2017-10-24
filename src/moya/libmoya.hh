@@ -6,15 +6,15 @@
 
 #include "algorithm.hh"
 #include "codes.hh"
+#include "data.hh"
 #include "kutil.hh"
 #include "pricing.hh"
-#include "stays.hh"
 #include "tables.hh"
 
 #ifdef MOYA_IMPLEMENTATION
     #include "algorithm.cc"
+    #include "data_json.cc"
     #include "kutil.cc"
     #include "pricing.cc"
-    #include "stays.cc"
     #include "tables.cc"
 #endif

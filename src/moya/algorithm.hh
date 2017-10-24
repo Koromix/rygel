@@ -5,7 +5,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "stays.hh"
+#include "data.hh"
 #include "tables.hh"
 
 enum class ClusterMode {

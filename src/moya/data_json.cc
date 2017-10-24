@@ -3,7 +3,7 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "stays.hh"
+#include "data.hh"
 #include "tables.hh"
 #include "../../lib/rapidjson/reader.h"
 #include "../../lib/rapidjson/error/en.h"

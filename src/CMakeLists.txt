@@ -5,12 +5,12 @@
 set(MOYA_SRC moya/algorithm.cc
              moya/algorithm.hh
              moya/codes.hh
+             moya/data_json.cc
+             moya/data.hh
              moya/kutil.cc
              moya/kutil.hh
              moya/pricing.cc
              moya/pricing.hh
-             moya/stays.cc
-             moya/stays.hh
              moya/tables.cc
              moya/tables.hh)
 add_library(moya STATIC ${MOYA_SRC})
