@@ -640,20 +640,20 @@ Options:
 
     LogDebug("Export");
     for (const SummarizeResult &result: result_set.results) {
-        PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.agg.stay.stay_id,
-                result.agg.stay.dates[1], result.cluster.len, result.ghm, result.ghs);
+        PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.stays[0].stay_id,
+                Date(2016, 5, 1), result.stays.len, result.ghm, result.ghs);
         for (int16_t error: result.errors) {
             PrintLn("  Error %1", error);
         }
 
 #ifndef DISABLE_TESTS
-        if (result.ghm != result.agg.stay.test.ghm) {
+        if (result.ghm != result.stays[0].test.ghm) {
             PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
-                    result.ghm, result.agg.stay.test.ghm);
+                    result.ghm, result.stays[0].test.ghm);
         }
-        if (result.cluster.len != result.agg.stay.test.cluster_len) {
+        if (result.stays.len != result.stays[0].test.cluster_len) {
             PrintLn("  Test_Error / Inadequate Cluster (%1, expected %2)",
-                    result.cluster.len, result.agg.stay.test.cluster_len);
+                    result.stays.len, result.stays[0].test.cluster_len);
         }
 #endif
     }
