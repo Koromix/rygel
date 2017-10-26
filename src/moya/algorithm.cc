@@ -787,15 +787,18 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 
         // TODO: Make sure we don't need DP - DR reversal here
         if (ghs_info.main_diagnosis_mask &&
-                !(GetDiagnosisByte(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, ghs_info.main_diagnosis_offset) & ghs_info.main_diagnosis_mask))
+                !(GetDiagnosisByte(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, ghs_info.main_diagnosis_offset) &
+                  ghs_info.main_diagnosis_mask))
             continue;
         if (ghs_info.diagnosis_mask &&
                 std::none_of(agg.diagnoses.begin(), agg.diagnoses.end(),
-                             [&](DiagnosisCode diag) { return GetDiagnosisByte(*agg.index, agg.stay.sex, diag, ghs_info.diagnosis_offset) & ghs_info.diagnosis_mask; }))
+                             [&](DiagnosisCode diag) { return GetDiagnosisByte(*agg.index, agg.stay.sex, diag, ghs_info.diagnosis_offset) &
+                                                              ghs_info.diagnosis_mask; }))
             continue;
         if (ghs_info.proc_mask &&
                 std::none_of(agg.procedures.begin(), agg.procedures.end(),
-                             [&](const ProcedureRealisation &proc) { return GetProcedureByte(*agg.index, proc, ghs_info.proc_offset) & ghs_info.proc_mask; }))
+                             [&](const ProcedureRealisation &proc) { return GetProcedureByte(*agg.index, proc, ghs_info.proc_offset) &
+                                                                            ghs_info.proc_mask; }))
             continue;
 
         return ghs_info.ghs[0];
