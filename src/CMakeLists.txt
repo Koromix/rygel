@@ -4,6 +4,8 @@
 
 set(MOYA_SRC moya/algorithm.cc
              moya/algorithm.hh
+             moya/constraints.cc
+             moya/constraints.hh
              moya/codes.hh
              moya/data_json.cc
              moya/data.hh

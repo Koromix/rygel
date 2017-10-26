@@ -63,14 +63,3 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
                ArrayRef<const Stay> stays, ClusterMode cluster_mode,
                SummarizeResultSet *out_result_set);
-
-struct GhmConstraint {
-    GhmCode ghm;
-
-    uint64_t duration_mask;
-
-    HASH_SET_HANDLER(GhmConstraint, ghm);
-};
-
-bool ComputeGhmConstraints(const TableIndex &index,
-                           HashSet<GhmCode, GhmConstraint> *out_constraints);

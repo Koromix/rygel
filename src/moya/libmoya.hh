@@ -5,6 +5,7 @@
 #pragma once
 
 #include "algorithm.hh"
+#include "constraints.hh"
 #include "codes.hh"
 #include "data.hh"
 #include "kutil.hh"
@@ -13,6 +14,7 @@
 
 #ifdef MOYA_IMPLEMENTATION
     #include "algorithm.cc"
+    #include "constraints.cc"
     #include "data_json.cc"
     #include "kutil.cc"
     #include "pricing.cc"
