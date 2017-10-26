@@ -829,10 +829,10 @@ void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_
             result.ghm = ClassifyGhm(agg, &out_result_set->store.errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
-
-            result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
         } while (false);
         result.errors.len = out_result_set->store.errors.len - (size_t)result.errors.ptr;
+
+        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
 
         out_result_set->results.Append(result);
     }
