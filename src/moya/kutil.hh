@@ -320,7 +320,7 @@ T MultiCmp(T cmp_value, Args... other_args)
     #undef OVERFLOW_OPERATIONS
     #undef DEFINE_OVERFLOW_OPERATION
 #else
-    #error Overflow operations are not implemented for this compilter
+    #error Overflow operations are not implemented for this compiler
 #endif
 
 // ------------------------------------------------------------------------
@@ -1815,7 +1815,7 @@ static inline bool ReadFile(Allocator *alloc, const char *filename, size_t max_s
 enum class FileType {
     Directory,
     File,
-    Special
+    Unknown
 };
 
 struct FileInfo {
@@ -1828,10 +1828,16 @@ enum class EnumStatus {
     Done
 };
 
+bool TestPath(const char *path, FileType type);
+
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                               std::function<bool(const char *, const FileInfo &)> func);
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator &str_alloc,
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
                              HeapArray<const char *> *out_files, size_t max_files);
+
+
+const char *GetExecutablePath();
+const char *GetExecutableDirectory();
 
 // ------------------------------------------------------------------------
 // Option Parser
@@ -1866,7 +1872,7 @@ public:
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
 
-    const char *RequireOptionValue(const char *usage_str = nullptr);
+    const char *RequireOptionValue(void (*usage_func)(FILE *fp) = nullptr);
 
     bool TestOption(const char *test1, const char *test2 = nullptr) const
         { return ::TestOption(current_option, test1, test2); }

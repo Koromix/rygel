@@ -748,6 +748,9 @@ void PopLogHandler()
 // System
 // ------------------------------------------------------------------------
 
+static char executable_path[4096];
+static char executable_dir[4096];
+
 bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
               ArrayRef<uint8_t> *out_data)
 {
@@ -804,6 +807,34 @@ static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
     return str_buf;
 }
 
+bool TestPath(const char *path, FileType type)
+{
+    DWORD attr = GetFileAttributes(path);
+    if (attr == INVALID_FILE_ATTRIBUTES)
+        return false;
+
+    switch (type) {
+        case FileType::Directory: {
+            if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                LogError("Path '%1' exists but is not a directory", path);
+                return false;
+            }
+        } break;
+        case FileType::File: {
+            if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+                LogError("Path '%1' exists but is not a file", path);
+                return false;
+            }
+        } break;
+
+        case FileType::Unknown: {
+            // Ignore file type
+        } break;
+    }
+
+    return true;
+}
+
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                               std::function<bool(const char *, const FileInfo &)> func)
 {
@@ -851,6 +882,34 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 
 #else
 
+bool TestPath(const char *path, FileType type)
+{
+    struct stat sb;
+    if (stat(path, &sb) < 0)
+        return false;
+
+    switch (type) {
+        case FileType::Directory: {
+            if (!S_ISDIR(sb.st_mode)) {
+                LogError("Path '%1' exists but is not a directory", path);
+                return false;
+            }
+        } break;
+        case FileType::File: {
+            if (!S_ISREG(sb.st_mode)) {
+                LogError("Path '%1' exists but is not a file", path);
+                return false;
+            }
+        } break;
+
+        case FileType::Unknown: {
+            // Ignore file type
+        } break;
+    }
+
+    return true;
+}
+
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                               std::function<bool(const char *, const FileInfo &)> func)
 {
@@ -875,7 +934,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                 switch (dent->d_type) {
                     case DT_DIR: { file_info.type = FileType::Directory; } break;
                     case DT_REG: { file_info.type = FileType::File; } break;
-                    default: { file_info.type = FileType::Special; } break;
+                    default: { file_info.type = FileType::Unknown; } break;
                 }
             } else
 #endif
@@ -891,7 +950,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                 } else if (S_ISREG(sb.st_mode)) {
                     file_info.type = FileType::File;
                 } else {
-                    file_info.type = FileType::Special;
+                    file_info.type = FileType::Unknown;
                 }
             }
 
@@ -910,7 +969,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 
 #endif
 
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator &str_alloc,
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
                              HeapArray<const char *> *out_files, size_t max_files)
 {
     Assert(max_files > 0);
@@ -920,7 +979,7 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
     EnumStatus status = EnumerateDirectory(dirname, filter,
                                            [&](const char *filename, const FileInfo &info) {
         if (info.type == FileType::File) {
-            out_files->Append(Fmt(&str_alloc, "%1%/%2", dirname, filename).ptr);
+            out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
         }
         return true;
     });
@@ -933,6 +992,49 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 
     out_guard.disable();
     return true;
+}
+
+static void InitExecutablePaths()
+{
+    if (executable_path[0])
+        return;
+
+    size_t path_len;
+#if defined(_WIN32)
+    path_len = GetModuleFileName(nullptr, executable_path, sizeof(executable_path));
+    Assert(path_len);
+    Assert(path_len < sizeof(executable_path));
+#elif defined(__linux__)
+    {
+        char *path_buf = realpath("/proc/self/exe", nullptr);
+        Assert(path_buf);
+        path_len = strlen(path_buf);
+        Assert(path_len < sizeof(executable_path));
+        strcpy(executable_path, path_buf);
+        free(path_buf);
+    }
+#else
+    #error InitExecutablePaths() not implemented for this platform
+#endif
+
+    {
+        size_t dir_len = path_len;
+        while (dir_len && !strchr(PATH_SEPARATORS, executable_path[--dir_len]));
+        memcpy(executable_dir, executable_path, dir_len);
+        executable_dir[dir_len] = 0;
+    }
+}
+
+const char *GetExecutablePath()
+{
+    InitExecutablePaths();
+    return executable_path;
+}
+
+const char *GetExecutableDirectory()
+{
+    InitExecutablePaths();
+    return executable_dir;
 }
 
 // ------------------------------------------------------------------------
@@ -1090,12 +1192,12 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
     }
 }
 
-const char *OptionParser::RequireOptionValue(const char *usage_str)
+const char *OptionParser::RequireOptionValue(void (*usage_func)(FILE *fp))
 {
     if (!ConsumeOptionValue()) {
         PrintLn(stderr, "Option '%1' needs an argument", current_option);
-        if (usage_str) {
-            PrintLn(stderr, "%1", usage_str);
+        if (usage_func) {
+            usage_func(stderr);
         }
     }
 

@@ -20,26 +20,16 @@ static const Page pages[] = {
     {"/tables", "Tables"},
 };
 
-static const char *const UsageText =
-R"(Usage: talyn [options]
-
-Options:
-    -T, --table-dir <path>       Load table directory
-        --table-file <path>      Load table file
-    -P, --pricing <path>         Load pricing file
-
-    -A, --authorization <path>   Load authorization file)";
-
-static TableSet main_table_set = {};
-static PricingSet main_pricing_set = {};
-static AuthorizationSet main_authorization_set = {};
+static const TableSet *table_set;
+static const PricingSet *pricing_set;
+static const AuthorizationSet *authorization_set;
 
 static HashMap<const char *, ArrayRef<const uint8_t>> routes;
 
 // FIXME: Switch to stream / callback-based API
 static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
 {
-    const TableIndex *index = main_table_set.FindIndex(date);
+    const TableIndex *index = table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         return false;
@@ -57,7 +47,7 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
 
         ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
-            const GhsPricing *ghs_pricing = main_pricing_set.FindGhsPricing(ghs_info.ghs[0], date);
+            const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_info.ghs[0], date);
             if (!ghs_pricing)
                 continue;
 
@@ -216,67 +206,62 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
 
 int main(int argc, char **argv)
 {
-    Allocator temp_alloc;
-    OptionParser opt_parser(argc, argv);
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: talyn [options]
 
-    HeapArray<const char *> table_filenames;
-    const char *pricing_filename = nullptr;
-    const char *authorization_filename = nullptr;
+Talyn options:
+    -p, --port <port>            Web server port
+                                 (default: 8888)
+
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    Allocator temp_alloc;
+
+    // Add default data directory
     {
+        const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", GetExecutableDirectory()).ptr;
+        main_data_directories.Append(default_data_dir);
+    }
+
+    uint16_t port = 8888;
+    {
+        OptionParser opt_parser(argc, argv);
+
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return 0;
-            } else if (opt_parser.TestOption("-T", "--table-dir")) {
-                if (!opt_parser.RequireOptionValue(UsageText))
+            } else if (TestOption(opt, "-p", "--port")) {
+                if (!opt_parser.RequireOptionValue(PrintUsage))
                     return 1;
 
-                if (!EnumerateDirectoryFiles(opt_parser.current_value, "*.tab", temp_alloc,
-                                             &table_filenames, 1024))
+                char *end_ptr;
+                long new_port = strtol(opt_parser.current_value, &end_ptr, 10);
+                if (end_ptr == opt_parser.current_value || end_ptr[0] ||
+                        new_port < 0 || new_port >= 65536) {
+                    LogError("Option '--port' requires a value between 0 and 65535");
                     return 1;
-            } else if (opt_parser.TestOption("--table-file")) {
-                if (!opt_parser.RequireOptionValue(UsageText))
-                    return 1;
-
-                table_filenames.Append(opt_parser.current_value);
-            } else if (opt_parser.TestOption("-P", "--pricing")) {
-                if (!opt_parser.RequireOptionValue(UsageText))
-                    return 1;
-
-                pricing_filename = opt_parser.current_value;
-            } else if (opt_parser.TestOption("-A", "--authorization")) {
-                if (!opt_parser.RequireOptionValue(UsageText))
-                    return 1;
-
-                authorization_filename = opt_parser.current_value;
-            } else {
-                PrintLn(stderr, "Unknown option '%1'", opt);
-                PrintLn(stderr, "%1", UsageText);
+                }
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return 1;
             }
         }
     }
-    if (!table_filenames.len) {
-        LogError("No table provided");
-        return 1;
-    }
-    if (!pricing_filename) {
-        LogError("No pricing file specified");
-        return 1;
-    }
-    if (!authorization_filename || !authorization_filename[0]) {
-        LogError("No authorization file specified, ignoring");
-        authorization_filename = nullptr;
-    }
 
-    LoadTableFiles(table_filenames, &main_table_set);
-    if (!main_table_set.indexes.len)
+    table_set = GetMainTableSet();
+    if (!table_set)
         return 1;
-    if (!LoadPricingFile(pricing_filename, &main_pricing_set))
+    pricing_set = GetMainPricingSet();
+    if (!pricing_set)
         return 1;
-    if (authorization_filename && !LoadAuthorizationFile(authorization_filename,
-                                                         &main_authorization_set))
+    authorization_set = GetMainAuthorizationSet();
+    if (!authorization_set)
         return 1;
 
     routes.Set("/", resources::talyn_html);
@@ -288,7 +273,7 @@ int main(int argc, char **argv)
     routes.Set("/resources/logo.png", resources::logo_png);
 
     MHD_Daemon *daemon = MHD_start_daemon(
-        MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, 8888,
+        MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
         nullptr, nullptr, HandleHttpConnection, nullptr, MHD_OPTION_END);
     if (!daemon)
         return 1;
@@ -297,15 +282,17 @@ int main(int argc, char **argv)
 #ifdef _WIN32
     (void)getchar();
 #else
-    static volatile bool run = true;
-    const auto do_exit = [](int sig) {
-        run = false;
-    };
-    signal(SIGINT, do_exit);
-    signal(SIGTERM, do_exit);
+    {
+        static volatile bool run = true;
+        const auto do_exit = [](int) {
+            run = false;
+        };
+        signal(SIGINT, do_exit);
+        signal(SIGTERM, do_exit);
 
-    while (run) {
-        pause();
+        while (run) {
+            pause();
+        }
     }
 #endif
 

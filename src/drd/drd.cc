@@ -5,28 +5,6 @@
 #include "../moya/libmoya.hh"
 #include "dump.hh"
 
-static const char *const MainUsageText =
-R"(Usage: drd <command> [<args>]
-
-Commands:
-    constraints                  Compute GHM accessibility constraints
-    dump                         Dump available tables and lists
-    info                         Print information about individual elements
-                                 (diagnoses, procedures, GHM roots, etc.)
-    indexes                      Show table and price indexes
-    list                         Export diagnosis and procedure lists
-    pricing                      Dump GHS pricings
-    summarize                    Summarize stays
-
-Global options:
-    -O, --output <filename>      Dump information to file (default: stdout)
-
-    -T, --table-dir <path>       Load table directory
-        --table-file <path>      Load table file
-    -P, --pricing <path>         Load pricing file
-
-    -A, --authorization <path>   Load authorization file)";
-
 struct ListSpecifier {
     enum class Table {
         Diagnoses,
@@ -115,112 +93,19 @@ error:
     }
 };
 
-static HeapArray<const char *> main_table_filenames;
-static const char *main_pricing_filename;
-static const char *main_authorization_filename;
-
-static TableSet main_table_set = {};
-static PricingSet main_pricing_set = {};
-static AuthorizationSet main_authorization_set = {};
-
-static const TableSet *GetMainTableSet()
-{
-    if (!main_table_set.indexes.len) {
-        if (!main_table_filenames.len) {
-            LogError("No table provided");
-            return nullptr;
-        }
-        LoadTableFiles(main_table_filenames, &main_table_set);
-        if (!main_table_set.indexes.len)
-            return nullptr;
-    }
-
-    return &main_table_set;
-}
-
-static const PricingSet *GetMainPricingSet()
-{
-    if (!main_pricing_set.ghs_pricings.len) {
-        if (!main_pricing_filename) {
-            LogError("No pricing file specified");
-            return nullptr;
-        }
-        if (!LoadPricingFile(main_pricing_filename, &main_pricing_set))
-            return nullptr;
-    }
-
-    return &main_pricing_set;
-}
-
-static AuthorizationSet *GetMainAuthorizationSet()
-{
-    if (!main_authorization_set.authorizations.len) {
-        if (!main_authorization_filename) {
-            LogError("No authorization file specified, ignoring");
-            return &main_authorization_set;
-        }
-        if (!LoadAuthorizationFile(main_authorization_filename, &main_authorization_set))
-            return nullptr;
-    }
-
-    return &main_authorization_set;
-}
-
-static bool HandleMainOption(OptionParser &opt_parser, Allocator &temp_alloc,
-                             const char *usage_str)
-{
-    if (opt_parser.TestOption("-O", "--output")) {
-        const char *filename = opt_parser.RequireOptionValue(MainUsageText);
-        if (!filename)
-            return false;
-
-        if (!freopen(filename, "w", stdout)) {
-            LogError("Cannot open '%1': %2", filename, strerror(errno));
-            return false;
-        }
-
-        return true;
-    } else if (opt_parser.TestOption("-T", "--table-dir")) {
-        if (!opt_parser.RequireOptionValue(MainUsageText))
-            return false;
-
-        return EnumerateDirectoryFiles(opt_parser.current_value, "*.tab", temp_alloc,
-                                       &main_table_filenames, 1024);
-    } else if (opt_parser.TestOption("--table-file")) {
-        if (!opt_parser.RequireOptionValue(MainUsageText))
-            return false;
-
-        main_table_filenames.Append(opt_parser.current_value);
-        return true;
-    } else if (opt_parser.TestOption("-P", "--pricing")) {
-        if (!opt_parser.RequireOptionValue(MainUsageText))
-            return false;
-
-        main_pricing_filename = opt_parser.current_value;
-        return true;
-    } else if (opt_parser.TestOption("-A", "--authorization")) {
-        if (!opt_parser.RequireOptionValue(MainUsageText))
-            return 1;
-
-        main_authorization_filename = opt_parser.current_value;
-        return true;
-    } else {
-        PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-        PrintLn(stderr, "%1", usage_str);
-        return false;
-    }
-}
-
 static bool RunConstraints(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
 R"(Usage: drd constraints [options]
 
-Specific options:
+Constraints options:
     -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables))";
+                                 (default: most recent tables)
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     Date index_date = {};
@@ -228,15 +113,17 @@ Specific options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(MainUsageText))
+                if (!opt_parser.RequireOptionValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -276,13 +163,16 @@ Specific options:
 
 static bool RunDump(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
 R"(Usage: drd dump [options] [filename] ...
 
-Specific options:
-    -h, --headers                Print only table headers)";
+Dump options:
+    -h, --headers                Print only table headers
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     bool headers = false;
@@ -291,11 +181,13 @@ Specific options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-h", "--headers")) {
                 headers = true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -320,10 +212,13 @@ Specific options:
 
 static bool RunInfo(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
-R"(Usage: drd info [options] name ...)";
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd info [options] name ...
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     Date index_date = {};
@@ -332,15 +227,17 @@ R"(Usage: drd info [options] name ...)";
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(MainUsageText))
+                if (!opt_parser.RequireOptionValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -348,7 +245,7 @@ R"(Usage: drd info [options] name ...)";
         opt_parser.ConsumeNonOptions(&names);
         if (!names.len) {
             PrintLn(stderr, "No element name provided");
-            PrintLn(stderr, UsageText);
+            PrintUsage(stderr);
             return false;
         }
     }
@@ -402,13 +299,16 @@ R"(Usage: drd info [options] name ...)";
 
 static bool RunIndexes(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
 R"(Usage: drd indexes [options]
 
-Options:
-    -v, --verbose                Show more detailed information)";
+Indexes options:
+    -v, --verbose                Show more detailed information
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     bool verbose = false;
@@ -416,11 +316,13 @@ Options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbose = true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -452,14 +354,17 @@ Options:
 
 static bool RunList(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
 R"(Usage: drd list [options] list_name ...
 
-Specific options:
+List options:
     -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables)";
+                                 (default: most recent tables)
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     Date index_date = {};
@@ -468,15 +373,17 @@ Specific options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(MainUsageText))
+                if (!opt_parser.RequireOptionValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -484,7 +391,7 @@ Specific options:
         opt_parser.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
             PrintLn(stderr, "No specifier provided");
-            PrintLn(stderr, UsageText);
+            PrintUsage(stderr);
             return false;
         }
     }
@@ -542,19 +449,24 @@ Specific options:
 
 static bool RunPricing(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
-R"(Usage: drd pricing [options])";
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd pricing [options]
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     {
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -570,14 +482,17 @@ R"(Usage: drd pricing [options])";
 
 static bool RunSummarize(ArrayRef<const char *> arguments)
 {
-    static const char *const UsageText =
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
 R"(Usage: drd summarize [options] stay_file ...
 
-Options:
-    --cluster_mode <mode>      Change stay cluster mode
-                               (stay_modes*, bill_id, disable))";
+Summarize options:
+        --cluster_mode <mode>    Change stay cluster mode
+                                 (stay_modes*, bill_id, disable)
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
 
-    Allocator temp_alloc;
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
@@ -586,10 +501,10 @@ Options:
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
-                PrintLn("%1", UsageText);
+                PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "--cluster_mode")) {
-                const char *mode_str = opt_parser.RequireOptionValue(UsageText);
+                const char *mode_str = opt_parser.RequireOptionValue(PrintUsage);
                 if (!mode_str)
                     return false;
 
@@ -603,7 +518,9 @@ Options:
                     LogError("Unknown cluster mode '%1'", mode_str);
                     return false;
                 }
-            } else if (!HandleMainOption(opt_parser, temp_alloc, UsageText)) {
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -611,7 +528,7 @@ Options:
         opt_parser.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             PrintLn(stderr, "No filename provided");
-            PrintLn(stderr, UsageText);
+            PrintUsage(stderr);
             return false;
         }
     }
@@ -663,8 +580,27 @@ Options:
 
 int main(int argc, char **argv)
 {
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd <command> [<args>]
+
+Commands:
+    constraints                  Compute GHM accessibility constraints
+    dump                         Dump available tables and lists
+    info                         Print information about individual elements
+                                 (diagnoses, procedures, GHM roots, etc.)
+    indexes                      Show table and price indexes
+    list                         Export diagnosis and procedure lists
+    pricing                      Dump GHS pricings
+    summarize                    Summarize stays
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    Allocator temp_alloc;
+
     if (argc < 2) {
-        PrintLn(stderr, "%1", MainUsageText);
+        PrintUsage(stderr);
         return 1;
     }
     if (StrTest(argv[1], "--help") || StrTest(argv[1], "help")) {
@@ -672,9 +608,15 @@ int main(int argc, char **argv)
             std::swap(argv[1], argv[2]);
             argv[2] = (char *)"--help";
         } else {
-            PrintLn("%1", MainUsageText);
-            return 1;
+            PrintUsage(stdout);
+            return 0;
         }
+    }
+
+    // Add default data directory
+    {
+        const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", GetExecutableDirectory()).ptr;
+        main_data_directories.Append(default_data_dir);
     }
 
 #define HANDLE_COMMAND(Cmd, Func) \
@@ -698,6 +640,6 @@ int main(int argc, char **argv)
 #undef HANDLE_COMMAND
 
     PrintLn(stderr, "Unknown command '%1'", cmd);
-    PrintLn(stderr, "%1", MainUsageText);
+    PrintUsage(stderr);
     return 1;
 }

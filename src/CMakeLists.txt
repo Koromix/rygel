@@ -11,6 +11,8 @@ set(MOYA_SRC moya/algorithm.cc
              moya/data.hh
              moya/kutil.cc
              moya/kutil.hh
+             moya/main.cc
+             moya/main.hh
              moya/pricing.cc
              moya/pricing.hh
              moya/tables.cc

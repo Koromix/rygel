@@ -4,19 +4,21 @@
 
 #pragma once
 
+#include "kutil.hh"
+#include "codes.hh"
+#include "tables.hh"
+#include "pricing.hh"
+#include "data.hh"
 #include "algorithm.hh"
 #include "constraints.hh"
-#include "codes.hh"
-#include "data.hh"
-#include "kutil.hh"
-#include "pricing.hh"
-#include "tables.hh"
+#include "main.hh"
 
 #ifdef MOYA_IMPLEMENTATION
+    #include "kutil.cc"
+    #include "tables.cc"
+    #include "pricing.cc"
+    #include "data_json.cc"
     #include "algorithm.cc"
     #include "constraints.cc"
-    #include "data_json.cc"
-    #include "kutil.cc"
-    #include "pricing.cc"
-    #include "tables.cc"
+    #include "main.cc"
 #endif
