@@ -957,6 +957,8 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
             if (!func(dent->d_name, file_info))
                 return EnumStatus::Partial;
         }
+
+        errno = 0;
     }
 
     if (errno) {
