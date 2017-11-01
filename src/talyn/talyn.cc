@@ -247,8 +247,6 @@ Talyn options:
                     return 1;
                 }
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return 1;
             }
         }

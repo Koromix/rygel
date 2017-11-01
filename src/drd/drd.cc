@@ -122,8 +122,6 @@ Constraints options:
                 if (!index_date.value)
                     return false;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -186,8 +184,6 @@ Dump options:
             } else if (TestOption(opt, "-h", "--headers")) {
                 headers = true;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -236,8 +232,6 @@ R"(Usage: drd info [options] name ...
                 if (!index_date.value)
                     return false;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -321,8 +315,6 @@ Indexes options:
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbose = true;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -382,8 +374,6 @@ List options:
                 if (!index_date.value)
                     return false;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -465,8 +455,6 @@ R"(Usage: drd pricing [options]
                 PrintUsage(stdout);
                 return true;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -519,8 +507,6 @@ Summarize options:
                     return false;
                 }
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
-                PrintUsage(stderr);
                 return false;
             }
         }
