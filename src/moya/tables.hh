@@ -226,7 +226,7 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
 struct TableIndex {
     Date limit_dates[2];
 
-    const TableInfo *tables[CountOf(TableTypeNames)];
+    const TableInfo *tables[ARRAY_SIZE(TableTypeNames)];
     uint32_t changed_tables;
 
     ArrayRef<GhmDecisionNode> ghm_nodes;

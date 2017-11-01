@@ -33,7 +33,7 @@
 static Allocator default_allocator;
 
 #define PTR_TO_BUCKET(Ptr) \
-    ((AllocatorBucket *)((uint8_t *)(Ptr) - OffsetOf(AllocatorBucket, data)))
+    ((AllocatorBucket *)((uint8_t *)(Ptr) - OFFSET_OF(AllocatorBucket, data)))
 
 Allocator::~Allocator()
 {
@@ -645,11 +645,11 @@ void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
 {
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
-        if (fragment.len > CountOf(buf.data) - buf.len) {
+        if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
             fwrite(buf.data, 1, buf.len, fp);
             buf.len = 0;
         }
-        if (fragment.len >= CountOf(buf.data)) {
+        if (fragment.len >= ARRAY_SIZE(buf.data)) {
             fwrite(fragment.ptr, 1, fragment.len, fp);
         } else {
             memcpy(buf.data + buf.len, fragment.ptr, fragment.len);

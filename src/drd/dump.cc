@@ -48,7 +48,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
 {
     for (const DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](Sex sex) {
-            for (size_t i = 0; i < CountOf(diag.Attributes(sex).raw); i++) {
+            for (size_t i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
                 Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
             }
             PrintLn();
@@ -99,7 +99,7 @@ void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
 {
     for (const ProcedureInfo &proc: procedures) {
         Print("      %1/%2 =", proc.proc, proc.phase);
-        for (size_t i = 0; i < CountOf(proc.bytes); i++) {
+        for (size_t i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
             Print(" %1", FmtBin(proc.bytes[i]));
         }
         PrintLn();
@@ -225,7 +225,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
             PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
             // We don't really need to loop here, but we want the switch to get
             // warnings when we introduce new table types.
-            for (size_t i = 0; i < CountOf(index.tables); i++) {
+            for (size_t i = 0; i < ARRAY_SIZE(index.tables); i++) {
                 if (!index.tables[i])
                     continue;
 
@@ -255,7 +255,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         DumpSeverityTable(index.gnn_cells);
                         PrintLn();
 
-                        for (size_t j = 0; j < CountOf(index.cma_cells); j++) {
+                        for (size_t j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
                             PrintLn("    CMA Table %1:", j + 1);
                             DumpSeverityTable(index.cma_cells[j]);
                             PrintLn();
@@ -271,7 +271,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         DumpAuthorizationTable(index.authorizations);
                     } break;
                     case TableType::SrcPairTable: {
-                        for (size_t j = 0; j < CountOf(index.src_pairs); j++) {
+                        for (size_t j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
                             PrintLn("    Supplement Pairs List %1:", j + 1);
                             DumpSupplementPairTable(index.src_pairs[j]);
                             PrintLn();

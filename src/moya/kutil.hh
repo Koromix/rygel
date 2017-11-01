@@ -142,13 +142,11 @@ constexpr size_t Kibibytes(size_t len) { return len * 1024; }
 constexpr size_t Megabytes(size_t len) { return len * 1000 * 1000; }
 constexpr size_t Kilobytes(size_t len) { return len * 1000; }
 
-#define OffsetOf(Type, Member) ((size_t)&(((Type *)nullptr)->Member))
+#define OFFSET_OF(Type, Member) ((size_t)&(((Type *)nullptr)->Member))
 
-template <typename T, size_t N>
-constexpr size_t CountOf(T const (&)[N])
-{
-    return N;
-}
+template <typename T, unsigned N>
+char (&ComputeArraySize(T const (&)[N]))[N];
+#define ARRAY_SIZE(Array) sizeof(ComputeArraySize(Array))
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)

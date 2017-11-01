@@ -90,6 +90,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         uint8_t sections_count;
         uint8_t pad2[4];
 	};
+    StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
     struct PackedSection1111 {
         uint8_t pad1[18];
         uint16_t values_count;
@@ -102,10 +103,8 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         uint16_t date_range[2];
         uint8_t pad1[2]; // No idea what those two bytes are for
         uint32_t raw_offset;
-	};
+    };
 #pragma pack(pop)
-
-    StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
 
     PackedHeader1111 raw_main_header;
     PackedSection1111 raw_main_section;
@@ -148,13 +147,13 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         }
 
         PackedHeader1111 raw_table_header;
-        PackedSection1111 raw_table_sections[CountOf(table.sections.data)];
+        PackedSection1111 raw_table_sections[ARRAY_SIZE(table.sections.data)];
         {
             memcpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset,
                    sizeof(PackedHeader1111));
             FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset +
                                      raw_table_header.sections_count * sizeof(PackedSection1111));
-            FAIL_PARSE_IF(raw_table_header.sections_count > CountOf(raw_table_sections));
+            FAIL_PARSE_IF(raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset +
@@ -692,8 +691,8 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             uint16_t low_duration_treshold;
         } sectors[2];
 	};
+    StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(GhsInfo().ghs));
 #pragma pack(pop)
-    // FIXME: StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().ghs));
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
@@ -772,7 +771,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (size_t j = 0; j < CountOf(current_ghs.ghs); j++) {
+            for (size_t j = 0; j < ARRAY_SIZE(current_ghs.ghs); j++) {
                 current_ghs.ghs[j].number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
             }
             out_ghs->Append(current_ghs);
@@ -931,7 +930,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
         } while (false)
 
     size_t active_count = 0;
-    for (size_t i = 0; i < CountOf(index.tables); i++) {
+    for (size_t i = 0; i < ARRAY_SIZE(index.tables); i++) {
         if (!current_tables[i])
             continue;
 
@@ -1033,7 +1032,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
                         table_info1.build_date - table_info2.build_date) < 0;
     });
 
-    LoadTableData *active_tables[CountOf(TableTypeNames)] = {};
+    LoadTableData *active_tables[ARRAY_SIZE(TableTypeNames)] = {};
     Date start_date = {}, end_date = {};
     for (LoadTableData &table: tables) {
         const TableInfo &table_info = out_set->tables[table.table_idx];
@@ -1043,7 +1042,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
 
             start_date = {};
             Date next_end_date = {};
-            for (size_t i = 0; i < CountOf(active_tables); i++) {
+            for (size_t i = 0; i < ARRAY_SIZE(active_tables); i++) {
                 if (!active_tables[i])
                     continue;
 
