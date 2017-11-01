@@ -476,7 +476,7 @@ R"(Usage: drd summarize [options] stay_file ...
 
 Summarize options:
         --cluster_mode <mode>    Change stay cluster mode
-                                 (stay_modes*, bill_id, disable)
+                                 (bill_id*, stay_modes, disable)
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -484,7 +484,7 @@ Summarize options:
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
-    ClusterMode cluster_mode = ClusterMode::StayModes;
+    ClusterMode cluster_mode = ClusterMode::BillId;
     {
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
@@ -496,10 +496,10 @@ Summarize options:
                 if (!mode_str)
                     return false;
 
-                if (StrTest(mode_str, "stay_modes")) {
-                    cluster_mode = ClusterMode::StayModes;
-                } else if (StrTest(mode_str, "bill_id")) {
+                if (StrTest(mode_str, "bill_id")) {
                     cluster_mode = ClusterMode::BillId;
+                } else if (StrTest(mode_str, "stay_modes")) {
+                    cluster_mode = ClusterMode::StayModes;
                 } else if (StrTest(mode_str, "disable")) {
                     cluster_mode = ClusterMode::Disable;
                 } else {
