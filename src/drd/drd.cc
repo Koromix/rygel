@@ -544,19 +544,67 @@ Summarize options:
     LogDebug("Export");
     for (const SummarizeResult &result: result_set.results) {
         PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.stays[0].stay_id,
-                Date(2016, 5, 1), result.stays.len, result.ghm, result.ghs);
+                result.stays[result.stays.len - 1].dates[1], result.stays.len,
+                result.ghm, result.ghs);
+        if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
+                result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
+                result.supplements.nn3 || result.supplements.rep) {
+            PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                    result.supplements.rea, result.supplements.reasi, result.supplements.si,
+                    result.supplements.src, result.supplements.nn1, result.supplements.nn2,
+                    result.supplements.nn3, result.supplements.rep);
+        }
         for (int16_t error: result.errors) {
             PrintLn("  Error %1", error);
         }
 
 #ifndef DISABLE_TESTS
-        if (result.ghm != result.stays[0].test.ghm) {
-            PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
-                    result.ghm, result.stays[0].test.ghm);
-        }
         if (result.stays.len != result.stays[0].test.cluster_len) {
             PrintLn("  Test_Error / Inadequate Cluster (%1, expected %2)",
                     result.stays.len, result.stays[0].test.cluster_len);
+        }
+        if (result.stays[0].test.ghm.IsValid()
+                && result.ghm != result.stays[0].test.ghm) {
+            PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
+                    result.ghm, result.stays[0].test.ghm);
+        }
+        if (result.stays[0].test.ghs.IsValid()) {
+            if (result.ghs != result.stays[0].test.ghs) {
+                PrintLn("  Test_Error / Wrong GHS (%1, expected %2)",
+                        result.ghs, result.stays[0].test.ghs);
+            }
+            if (result.stays[0].test.supplements.rea != result.supplements.rea) {
+                PrintLn("  Test_Error / Wrong Supplement REA (%1, expected %2)",
+                        result.supplements.rea, result.stays[0].test.supplements.rea);
+            }
+            if (result.stays[0].test.supplements.reasi != result.supplements.reasi) {
+                PrintLn("  Test_Error / Wrong Supplement REASI (%1, expected %2)",
+                        result.supplements.reasi, result.stays[0].test.supplements.reasi);
+            }
+            if (result.stays[0].test.supplements.si != result.supplements.si) {
+                PrintLn("  Test_Error / Wrong Supplement SI (%1, expected %2)",
+                        result.supplements.si, result.stays[0].test.supplements.si);
+            }
+            if (result.stays[0].test.supplements.src != result.supplements.src) {
+                PrintLn("  Test_Error / Wrong Supplement SRC (%1, expected %2)",
+                        result.supplements.src, result.stays[0].test.supplements.src);
+            }
+            if (result.stays[0].test.supplements.nn1 != result.supplements.nn1) {
+                PrintLn("  Test_Error / Wrong Supplement NN1 (%1, expected %2)",
+                        result.supplements.nn1, result.stays[0].test.supplements.nn1);
+            }
+            if (result.stays[0].test.supplements.nn2 != result.supplements.nn2) {
+                PrintLn("  Test_Error / Wrong Supplement NN2 (%1, expected %2)",
+                        result.supplements.nn2, result.stays[0].test.supplements.nn2);
+            }
+            if (result.stays[0].test.supplements.nn3 != result.supplements.nn3) {
+                PrintLn("  Test_Error / Wrong Supplement NN3 (%1, expected %2)",
+                        result.supplements.nn3, result.stays[0].test.supplements.nn3);
+            }
+            if (result.stays[0].test.supplements.rep != result.supplements.rep) {
+                PrintLn("  Test_Error / Wrong Supplement REP (%1, expected %2)",
+                        result.supplements.rep, result.stays[0].test.supplements.rep);
+            }
         }
 #endif
     }

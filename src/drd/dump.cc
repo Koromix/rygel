@@ -81,7 +81,8 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
                 if (diag.exclusion_set_idx <= exclusions.len) {
                     const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
                     for (const DiagnosisInfo &excl_diag: diagnoses) {
-                        if (excl->raw[excl_diag.cma_exclusion_offset] & excl_diag.cma_exclusion_mask) {
+                        if (excl->raw[excl_diag.cma_exclusion_mask.offset] &
+                                excl_diag.cma_exclusion_mask.value) {
                             Print(" %1", excl_diag.diag);
                         }
                     }
@@ -163,17 +164,16 @@ void DumpGhsTable(ArrayRef<const GhsInfo> ghs)
         if (ghs_info.minimal_age) {
             PrintLn("          Requires age >= %1 years", ghs_info.minimal_age);
         }
-        if (ghs_info.main_diagnosis_mask) {
+        if (ghs_info.main_diagnosis_mask.value) {
             PrintLn("          Main Diagnosis List D$%1.%2",
-                    ghs_info.main_diagnosis_offset, ghs_info.main_diagnosis_mask);
+                    ghs_info.main_diagnosis_mask.offset, ghs_info.main_diagnosis_mask.value);
         }
-        if (ghs_info.diagnosis_mask) {
+        if (ghs_info.diagnosis_mask.value) {
             PrintLn("          Diagnosis List D$%1.%2",
-                    ghs_info.diagnosis_offset, ghs_info.diagnosis_mask);
+                    ghs_info.diagnosis_mask.offset, ghs_info.diagnosis_mask.value);
         }
-        if (ghs_info.proc_mask) {
-            PrintLn("          Procedure List A$%1.%2",
-                    ghs_info.proc_offset, ghs_info.proc_mask);
+        for (const ListMask &mask: ghs_info.procedure_masks) {
+            PrintLn("          Procedure List A$%1.%2", mask.offset, mask.value);
         }
     }
 }

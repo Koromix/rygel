@@ -20,11 +20,22 @@ struct ClassifyAggregate {
     const TableIndex *index;
 
     Stay stay;
-    HeapArray<DiagnosisCode> diagnoses;
-    HeapArray<ProcedureRealisation> procedures;
+    ArrayRef<DiagnosisCode> diagnoses;
+    ArrayRef<ProcedureRealisation> procedures;
 
     int age;
     int duration;
+};
+
+struct SupplementCounters {
+    int16_t rea;
+    int16_t reasi;
+    int16_t si;
+    int16_t src;
+    int16_t nn1;
+    int16_t nn2;
+    int16_t nn3;
+    int16_t rep;
 };
 
 struct SummarizeResult {
@@ -32,7 +43,9 @@ struct SummarizeResult {
 
     GhmCode ghm;
     ArrayRef<int16_t> errors;
+
     GhsCode ghs;
+    SupplementCounters supplements;
 };
 
 struct SummarizeResultSet {
@@ -47,7 +60,10 @@ ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
                              ArrayRef<const Stay> *out_remainder);
 
 GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
-                  ClassifyAggregate *out_agg, HeapArray<int16_t> *out_errors);
+                  ClassifyAggregate *out_agg,
+                  HeapArray<DiagnosisCode> *out_diagnoses,
+                  HeapArray<ProcedureRealisation> *out_procedures,
+                  HeapArray<int16_t> *out_errors);
 
 int GetMinimalDurationForSeverity(int severity);
 int LimitSeverityWithDuration(int severity, int duration);
@@ -59,6 +75,8 @@ GhmCode ClassifyGhm(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors
 
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
                     GhmCode ghm);
+void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
+                      SupplementCounters *out_counters);
 
 void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
                ArrayRef<const Stay> stays, ClusterMode cluster_mode,

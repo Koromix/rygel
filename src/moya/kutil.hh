@@ -1828,7 +1828,7 @@ enum class EnumStatus {
     Done
 };
 
-bool TestPath(const char *path, FileType type);
+bool TestPath(const char *path, FileType type = FileType::Unknown);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                               std::function<bool(const char *, const FileInfo &)> func);

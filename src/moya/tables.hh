@@ -34,6 +34,11 @@ static const char *const TableTypeNames[] = {
     "SRC Pair Table"
 };
 
+struct ListMask {
+    uint8_t offset;
+    uint8_t value;
+};
+
 struct TableInfo {
     struct Section {
         size_t raw_offset;
@@ -92,8 +97,7 @@ struct DiagnosisInfo {
     uint16_t warnings;
 
     uint16_t exclusion_set_idx;
-    uint8_t cma_exclusion_offset;
-    uint8_t cma_exclusion_mask;
+    ListMask cma_exclusion_mask;
 
     const Attributes &Attributes(Sex sex) const
     {
@@ -148,8 +152,7 @@ struct GhmRootInfo {
 
     int8_t childbirth_severity_list;
 
-    uint8_t cma_exclusion_offset;
-    uint8_t cma_exclusion_mask;
+    ListMask cma_exclusion_mask;
 
     HASH_SET_HANDLER(GhmRootInfo, ghm_root);
 };
@@ -164,13 +167,9 @@ struct GhsInfo {
 
     int8_t minimal_age;
 
-    uint8_t main_diagnosis_mask;
-    uint8_t main_diagnosis_offset;
-    uint8_t diagnosis_mask;
-    uint8_t diagnosis_offset;
-
-    uint8_t proc_mask;
-    uint8_t proc_offset;
+    ListMask main_diagnosis_mask;
+    ListMask diagnosis_mask;
+    LocalArray<ListMask, 4> procedure_masks;
 
     HASH_SET_HANDLER_N(GhmHandler, GhsInfo, ghm);
     HASH_SET_HANDLER_N(GhmRootHandler, GhsInfo, ghm.Root());

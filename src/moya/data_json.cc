@@ -188,7 +188,9 @@ public:
             case State::AuthEndDate: { SetDate(&auth.dates[1], str); } break;
             case State::AuthUnit: {
                 int16_t unit;
-                if (sscanf(str, "%" SCNd16, &unit) == 1 && unit >= 0 && unit < 10000) {
+                if (StrTest(str, "facility")) {
+                    auth.unit.number = INT16_MAX;
+                } else if (sscanf(str, "%" SCNd16, &unit) == 1 && unit >= 0 && unit < 10000) {
                     auth.unit.number = unit;
                 } else {
                     LogError("Invalid unit code '%1'", str);
@@ -216,6 +218,7 @@ public:
     }
 };
 
+// TODO: Flag errors and translate to FG errors
 class JsonStayHandler: public JsonHandler<JsonStayHandler> {
     enum class State {
         Default,
@@ -244,9 +247,7 @@ class JsonStayHandler: public JsonHandler<JsonStayHandler> {
         StayLinkedDiagnosis,
         StayAssociatedDiagnoses,
         StayProcedures,
-        StayTestGhm,
-        StayTestError,
-        StayTestClusterLen,
+        StayTest,
 
         // Associated diagnosis objects
         AssociatedDiagnosisArray,
@@ -258,7 +259,22 @@ class JsonStayHandler: public JsonHandler<JsonStayHandler> {
         ProcedureDate,
         ProcedurePhase,
         ProcedureActivity,
-        ProcedureCount
+        ProcedureCount,
+
+        // Test values
+        TestObject,
+        TestClusterLen,
+        TestGhm,
+        TestError,
+        TestGhs,
+        TestRea,
+        TestReaSi,
+        TestSi,
+        TestSrc,
+        TestNn1,
+        TestNn2,
+        TestNn3,
+        TestRep
     };
 
     State state = State::Default;
@@ -312,6 +328,7 @@ public:
         switch (state) {
             case State::StayArray: { state = State::StayObject; } break;
             case State::ProcedureArray: { state = State::ProcedureObject; } break;
+            case State::StayTest: { state = State::TestObject; } break;
 
             default: {
                 LogError("Unexpected object");
@@ -339,6 +356,8 @@ public:
                 out_set->store.procedures.Append(proc);
                 proc = {};
             } break;
+
+            case State::TestObject: { state = State::StayObject; } break;
 
             default: {
                 LogError("Unexpected end of object");
@@ -381,9 +400,7 @@ public:
                 HANDLE_KEY("sex", State::StaySex);
                 HANDLE_KEY("stay_id", State::StayStayId);
                 HANDLE_KEY("unit", State::StayUnit);
-                HANDLE_KEY("test_ghm", State::StayTestGhm);
-                HANDLE_KEY("test_error", State::StayTestError);
-                HANDLE_KEY("test_cluster_len", State::StayTestClusterLen);
+                HANDLE_KEY("test", State::StayTest);
 
                 LogError("Unknown stay attribute '%1'", key);
                 return false;
@@ -397,6 +414,24 @@ public:
                 HANDLE_KEY("count", State::ProcedureCount);
 
                 LogError("Unknown procedure attribute '%1'", key);
+                return false;
+            } break;
+
+            case State::TestObject: {
+                HANDLE_KEY("cluster_len", State::TestClusterLen);
+                HANDLE_KEY("ghm", State::TestGhm);
+                HANDLE_KEY("error", State::TestError);
+                HANDLE_KEY("ghs", State::TestGhs);
+                HANDLE_KEY("rea", State::TestRea);
+                HANDLE_KEY("reasi", State::TestReaSi);
+                HANDLE_KEY("si", State::TestSi);
+                HANDLE_KEY("src", State::TestSrc);
+                HANDLE_KEY("nn1", State::TestNn1);
+                HANDLE_KEY("nn2", State::TestNn2);
+                HANDLE_KEY("nn3", State::TestNn3);
+                HANDLE_KEY("rep", State::TestRep);
+
+                LogError("Unknown test attribute '%1'", key);
                 return false;
             } break;
 
@@ -458,13 +493,6 @@ public:
             case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
             case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
             case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
-#ifndef DISABLE_TESTS
-            case State::StayTestError: { SetInt(&stay.test.error, i); } break;
-            case State::StayTestClusterLen: { SetInt(&stay.test.cluster_len, i); } break;
-#else
-            case State::StayTestError: {} break;
-            case State::StayTestClusterLen: {} break;
-#endif
 
             // Procedure attributes
             case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
@@ -476,6 +504,36 @@ public:
                 }
             } break;
             case State::ProcedureCount: { SetInt(&proc.count, i); } break;
+
+            // Test attributes
+#ifndef DISABLE_TESTS
+            case State::TestClusterLen: { SetInt(&stay.test.cluster_len, i); } break;
+            case State::TestError: { SetInt(&stay.test.error, i); } break;
+            case State::TestGhs: {
+                // TODO: Use GhsCode() constructor to validate number
+                SetInt(&stay.test.ghs.number, i);
+            } break;
+            case State::TestRea: { SetInt(&stay.test.supplements.rea, i); } break;
+            case State::TestReaSi: { SetInt(&stay.test.supplements.reasi, i); } break;
+            case State::TestSi: { SetInt(&stay.test.supplements.si, i); } break;
+            case State::TestSrc: { SetInt(&stay.test.supplements.src, i); } break;
+            case State::TestNn1: { SetInt(&stay.test.supplements.nn1, i); } break;
+            case State::TestNn2: { SetInt(&stay.test.supplements.nn2, i); } break;
+            case State::TestNn3: { SetInt(&stay.test.supplements.nn3, i); } break;
+            case State::TestRep: { SetInt(&stay.test.supplements.rep, i); } break;
+#else
+            case State::TestClusterLen: {} break;
+            case State::TestError: {} break;
+            case State::TestGhs: {} break;
+            case State::TestRea: {} break;
+            case State::TestReaSi: {} break;
+            case State::TestSi: {} break;
+            case State::TestSrc: {} break;
+            case State::TestNn1: {} break;
+            case State::TestNn2: {} break;
+            case State::TestNn3: {} break;
+            case State::TestRep: {} break;
+#endif
 
             default: {
                 LogError("Unexpected integer value %1", i);
@@ -539,11 +597,6 @@ public:
             } break;
             case State::StayLastMenstrualPeriod:
                 { SetDate(&stay.last_menstrual_period, str); } break;
-#ifndef DISABLE_TESTS
-            case State::StayTestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
-#else
-            case State::StayTestGhm: {} break;
-#endif
 
             // Diagnoses (part of Stay, separated for clarity)
             case State::StayMainDiagnosis: {
@@ -562,6 +615,13 @@ public:
             // Procedure attributes
             case State::ProcedureCode: { proc.proc = ProcedureCode::FromString(str); } break;
             case State::ProcedureDate: { SetDate(&proc.date, str); } break;
+
+            // Test attributes
+#ifndef DISABLE_TESTS
+            case State::TestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
+#else
+            case State::TestGhm: {} break;
+#endif
 
             default: {
                 LogError("Unexpected string value '%1'", str);
@@ -607,7 +667,10 @@ private:
 
     bool HandleValueEnd()
     {
-        if ((int)state >= (int)State::ProcedureArray) {
+        if ((int)state >= (int)State::TestObject) {
+            state = State::TestObject;
+            return true;
+        } else if ((int)state >= (int)State::ProcedureArray) {
             state = State::ProcedureObject;
             return true;
         } else if ((int)state >= (int)State::AssociatedDiagnosisArray) {

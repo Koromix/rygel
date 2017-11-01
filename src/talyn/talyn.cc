@@ -103,17 +103,17 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
             if (ghs_info.minimal_age) {
                 writer.String(Fmt(&temp_alloc, "Age ≥ %1", ghs_info.minimal_age).ptr);
             }
-            if (ghs_info.main_diagnosis_mask) {
+            if (ghs_info.main_diagnosis_mask.value) {
                 writer.String(Fmt(&temp_alloc, "DP de la liste D$%1.%2",
-                                  ghs_info.main_diagnosis_offset, ghs_info.main_diagnosis_mask).ptr);
+                                  ghs_info.main_diagnosis_mask.offset, ghs_info.main_diagnosis_mask.value).ptr);
             }
-            if (ghs_info.diagnosis_mask) {
+            if (ghs_info.diagnosis_mask.value) {
                 writer.String(Fmt(&temp_alloc, "Diagnostic de la liste D$%1.%2",
-                                  ghs_info.diagnosis_offset, ghs_info.diagnosis_mask).ptr);
+                                  ghs_info.diagnosis_mask.offset, ghs_info.diagnosis_mask.value).ptr);
             }
-            if (ghs_info.proc_mask) {
+            for (const ListMask &mask: ghs_info.procedure_masks) {
                 writer.String(Fmt(&temp_alloc, "Acte de la liste A$%1.%2",
-                                  ghs_info.proc_offset, ghs_info.proc_mask).ptr);
+                                  mask.offset, mask.value).ptr);
             }
             writer.EndArray();
 

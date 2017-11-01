@@ -66,9 +66,22 @@ struct Stay {
 
 #ifndef DISABLE_TESTS
     struct {
+        uint16_t cluster_len;
+
         GhmCode ghm;
         int16_t error;
-        uint16_t cluster_len;
+
+        GhsCode ghs;
+        struct {
+            int16_t rea;
+            int16_t reasi;
+            int16_t si;
+            int16_t src;
+            int16_t nn1;
+            int16_t nn2;
+            int16_t nn3;
+            int16_t rep;
+        } supplements;
     } test;
 #endif
 

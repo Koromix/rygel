@@ -385,8 +385,8 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                 }
 
                 diag.exclusion_set_idx = raw_diag_ptr.section4_idx;
-                diag.cma_exclusion_offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
-                diag.cma_exclusion_mask = 0x80 >> (raw_diag_ptr.section4_bit & 0x7);
+                diag.cma_exclusion_mask.offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
+                diag.cma_exclusion_mask.value = 0x80 >> (raw_diag_ptr.section4_bit & 0x7);
             }
 
             out_diags->Append(diag);
@@ -614,8 +614,8 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
             ghm_root.childbirth_severity_list = raw_ghm_root.childbirth_severity_mode - 1;
         }
 
-        ghm_root.cma_exclusion_offset = raw_ghm_root.cma_exclusion_offset;
-        ghm_root.cma_exclusion_mask = raw_ghm_root.cma_exclusion_mask;
+        ghm_root.cma_exclusion_mask.offset = raw_ghm_root.cma_exclusion_offset;
+        ghm_root.cma_exclusion_mask.value = raw_ghm_root.cma_exclusion_mask;
 
         out_ghm_roots->Append(ghm_root);
     }
@@ -693,7 +693,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         } sectors[2];
 	};
 #pragma pack(pop)
-    StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().ghs));
+    // FIXME: StaticAssert(CountOf(PackedGhsNode().sectors) == CountOf(GhsInfo().ghs));
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
@@ -729,8 +729,11 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             } break;
 
             case 1: {
-                current_ghs.proc_offset = raw_ghs_node.params[0];
-                current_ghs.proc_mask = raw_ghs_node.params[1];
+                ListMask mask;
+                mask.offset = raw_ghs_node.params[0];
+                mask.value = raw_ghs_node.params[1];
+                // FIXME: Warn and avoid Append() if full
+                current_ghs.procedure_masks.Append(mask);
             } break;
 
             case 2: {
@@ -744,18 +747,18 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             } break;
 
             case 5: {
-                current_ghs.main_diagnosis_offset = raw_ghs_node.params[0];
-                current_ghs.main_diagnosis_mask = raw_ghs_node.params[1];
+                current_ghs.main_diagnosis_mask.offset = raw_ghs_node.params[0];
+                current_ghs.main_diagnosis_mask.value = raw_ghs_node.params[1];
             } break;
 
             case 6: {
                 FAIL_PARSE_IF(raw_ghs_node.params[0]);
-                current_ghs.minimal_duration = (int8_t)raw_ghs_node.params[1];
+                current_ghs.minimal_duration = (int8_t)raw_ghs_node.params[1] + 1;
             } break;
 
             case 7: {
-                current_ghs.diagnosis_offset = raw_ghs_node.params[0];
-                current_ghs.diagnosis_mask = raw_ghs_node.params[1];
+                current_ghs.diagnosis_mask.offset = raw_ghs_node.params[0];
+                current_ghs.diagnosis_mask.value = raw_ghs_node.params[1];
             } break;
 
             case 8: {
