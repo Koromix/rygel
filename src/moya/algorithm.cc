@@ -1122,9 +1122,9 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
 }
 
-void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
-               ArrayRef<const Stay> stays, ClusterMode cluster_mode,
-               SummarizeResultSet *out_result_set)
+void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
+              ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              ClassifyResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
@@ -1132,7 +1132,7 @@ void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_
     HeapArray<ProcedureRealisation> procedures;
 
     while (stays.len) {
-        SummarizeResult result = {};
+        ClassifyResult result = {};
         ClassifyAggregate agg;
 
         diagnoses.Clear(256);
@@ -1158,7 +1158,7 @@ void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_
         out_result_set->results.Append(result);
     }
 
-    for (SummarizeResult &result: out_result_set->results) {
+    for (ClassifyResult &result: out_result_set->results) {
         result.errors.ptr = out_result_set->store.errors.ptr + (size_t)result.errors.ptr;
     }
 }

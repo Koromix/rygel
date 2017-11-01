@@ -38,7 +38,7 @@ struct SupplementCounters {
     int16_t rep;
 };
 
-struct SummarizeResult {
+struct ClassifyResult {
     ArrayRef<const Stay> stays;
 
     GhmCode ghm;
@@ -48,8 +48,8 @@ struct SummarizeResult {
     SupplementCounters supplements;
 };
 
-struct SummarizeResultSet {
-    HeapArray<SummarizeResult> results;
+struct ClassifyResultSet {
+    HeapArray<ClassifyResult> results;
 
     struct {
         HeapArray<int16_t> errors;
@@ -78,6 +78,6 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
                       SupplementCounters *out_counters);
 
-void Summarize(const TableSet &table_set, const AuthorizationSet &authorization_set,
-               ArrayRef<const Stay> stays, ClusterMode cluster_mode,
-               SummarizeResultSet *out_result_set);
+void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
+              ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              ClassifyResultSet *out_result_set);

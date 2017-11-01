@@ -93,6 +93,150 @@ error:
     }
 };
 
+static bool RunClassify(ArrayRef<const char *> arguments)
+{
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd classify [options] stay_file ...
+
+Classify options:
+        --cluster_mode <mode>    Change stay cluster mode
+                                 (bill_id*, stay_modes, disable)
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    OptionParser opt_parser(arguments);
+
+    HeapArray<const char *> filenames;
+    ClusterMode cluster_mode = ClusterMode::BillId;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintUsage(stdout);
+                return true;
+            } else if (TestOption(opt, "--cluster_mode")) {
+                const char *mode_str = opt_parser.RequireOptionValue(PrintUsage);
+                if (!mode_str)
+                    return false;
+
+                if (StrTest(mode_str, "bill_id")) {
+                    cluster_mode = ClusterMode::BillId;
+                } else if (StrTest(mode_str, "stay_modes")) {
+                    cluster_mode = ClusterMode::StayModes;
+                } else if (StrTest(mode_str, "disable")) {
+                    cluster_mode = ClusterMode::Disable;
+                } else {
+                    LogError("Unknown cluster mode '%1'", mode_str);
+                    return false;
+                }
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                return false;
+            }
+        }
+
+        opt_parser.ConsumeNonOptions(&filenames);
+        if (!filenames.len) {
+            PrintLn(stderr, "No filename provided");
+            PrintUsage(stderr);
+            return false;
+        }
+    }
+
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set)
+        return false;
+    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
+    if (!authorization_set)
+        return false;
+
+    LogDebug("Load");
+    StaySet stay_set;
+    {
+        StaySetBuilder stay_set_builder;
+
+        if (!stay_set_builder.LoadFile(filenames))
+            return false;
+        if (!stay_set_builder.Finish(&stay_set))
+            return false;
+    }
+
+    LogDebug("Classify");
+    ClassifyResultSet result_set;
+    Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
+
+    LogDebug("Export");
+    for (const ClassifyResult &result: result_set.results) {
+        PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.stays[0].stay_id,
+                result.stays[result.stays.len - 1].dates[1], result.stays.len,
+                result.ghm, result.ghs);
+        if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
+                result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
+                result.supplements.nn3 || result.supplements.rep) {
+            PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                    result.supplements.rea, result.supplements.reasi, result.supplements.si,
+                    result.supplements.src, result.supplements.nn1, result.supplements.nn2,
+                    result.supplements.nn3, result.supplements.rep);
+        }
+        for (int16_t error: result.errors) {
+            PrintLn("  Error %1", error);
+        }
+
+#ifndef DISABLE_TESTS
+        if (result.stays.len != result.stays[0].test.cluster_len) {
+            PrintLn("  Test_Error / Inadequate Cluster (%1, expected %2)",
+                    result.stays.len, result.stays[0].test.cluster_len);
+        }
+        if (result.stays[0].test.ghm.IsValid()
+                && result.ghm != result.stays[0].test.ghm) {
+            PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
+                    result.ghm, result.stays[0].test.ghm);
+        }
+        if (result.stays[0].test.ghs.IsValid()) {
+            if (result.ghs != result.stays[0].test.ghs) {
+                PrintLn("  Test_Error / Wrong GHS (%1, expected %2)",
+                        result.ghs, result.stays[0].test.ghs);
+            }
+            if (result.stays[0].test.supplements.rea != result.supplements.rea) {
+                PrintLn("  Test_Error / Wrong Supplement REA (%1, expected %2)",
+                        result.supplements.rea, result.stays[0].test.supplements.rea);
+            }
+            if (result.stays[0].test.supplements.reasi != result.supplements.reasi) {
+                PrintLn("  Test_Error / Wrong Supplement REASI (%1, expected %2)",
+                        result.supplements.reasi, result.stays[0].test.supplements.reasi);
+            }
+            if (result.stays[0].test.supplements.si != result.supplements.si) {
+                PrintLn("  Test_Error / Wrong Supplement SI (%1, expected %2)",
+                        result.supplements.si, result.stays[0].test.supplements.si);
+            }
+            if (result.stays[0].test.supplements.src != result.supplements.src) {
+                PrintLn("  Test_Error / Wrong Supplement SRC (%1, expected %2)",
+                        result.supplements.src, result.stays[0].test.supplements.src);
+            }
+            if (result.stays[0].test.supplements.nn1 != result.supplements.nn1) {
+                PrintLn("  Test_Error / Wrong Supplement NN1 (%1, expected %2)",
+                        result.supplements.nn1, result.stays[0].test.supplements.nn1);
+            }
+            if (result.stays[0].test.supplements.nn2 != result.supplements.nn2) {
+                PrintLn("  Test_Error / Wrong Supplement NN2 (%1, expected %2)",
+                        result.supplements.nn2, result.stays[0].test.supplements.nn2);
+            }
+            if (result.stays[0].test.supplements.nn3 != result.supplements.nn3) {
+                PrintLn("  Test_Error / Wrong Supplement NN3 (%1, expected %2)",
+                        result.supplements.nn3, result.stays[0].test.supplements.nn3);
+            }
+            if (result.stays[0].test.supplements.rep != result.supplements.rep) {
+                PrintLn("  Test_Error / Wrong Supplement REP (%1, expected %2)",
+                        result.supplements.rep, result.stays[0].test.supplements.rep);
+            }
+        }
+#endif
+    }
+
+    return true;
+}
+
 static bool RunConstraints(ArrayRef<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -468,150 +612,6 @@ R"(Usage: drd pricing [options]
     return true;
 }
 
-static bool RunSummarize(ArrayRef<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
-R"(Usage: drd summarize [options] stay_file ...
-
-Summarize options:
-        --cluster_mode <mode>    Change stay cluster mode
-                                 (bill_id*, stay_modes, disable)
-)");
-        PrintLn(fp, "%1", main_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    HeapArray<const char *> filenames;
-    ClusterMode cluster_mode = ClusterMode::BillId;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (TestOption(opt, "--cluster_mode")) {
-                const char *mode_str = opt_parser.RequireOptionValue(PrintUsage);
-                if (!mode_str)
-                    return false;
-
-                if (StrTest(mode_str, "bill_id")) {
-                    cluster_mode = ClusterMode::BillId;
-                } else if (StrTest(mode_str, "stay_modes")) {
-                    cluster_mode = ClusterMode::StayModes;
-                } else if (StrTest(mode_str, "disable")) {
-                    cluster_mode = ClusterMode::Disable;
-                } else {
-                    LogError("Unknown cluster mode '%1'", mode_str);
-                    return false;
-                }
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-
-        opt_parser.ConsumeNonOptions(&filenames);
-        if (!filenames.len) {
-            PrintLn(stderr, "No filename provided");
-            PrintUsage(stderr);
-            return false;
-        }
-    }
-
-    const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        return false;
-    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set)
-        return false;
-
-    LogDebug("Load");
-    StaySet stay_set;
-    {
-        StaySetBuilder stay_set_builder;
-
-        if (!stay_set_builder.LoadFile(filenames))
-            return false;
-        if (!stay_set_builder.Finish(&stay_set))
-            return false;
-    }
-
-    LogDebug("Summarize");
-    SummarizeResultSet result_set;
-    Summarize(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
-
-    LogDebug("Export");
-    for (const SummarizeResult &result: result_set.results) {
-        PrintLn("%1 [%2 / %3 stays] = %4 (GHS %5)", result.stays[0].stay_id,
-                result.stays[result.stays.len - 1].dates[1], result.stays.len,
-                result.ghm, result.ghs);
-        if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
-                result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
-                result.supplements.nn3 || result.supplements.rep) {
-            PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                    result.supplements.rea, result.supplements.reasi, result.supplements.si,
-                    result.supplements.src, result.supplements.nn1, result.supplements.nn2,
-                    result.supplements.nn3, result.supplements.rep);
-        }
-        for (int16_t error: result.errors) {
-            PrintLn("  Error %1", error);
-        }
-
-#ifndef DISABLE_TESTS
-        if (result.stays.len != result.stays[0].test.cluster_len) {
-            PrintLn("  Test_Error / Inadequate Cluster (%1, expected %2)",
-                    result.stays.len, result.stays[0].test.cluster_len);
-        }
-        if (result.stays[0].test.ghm.IsValid()
-                && result.ghm != result.stays[0].test.ghm) {
-            PrintLn("  Test_Error / Wrong GHM (%1, expected %2)",
-                    result.ghm, result.stays[0].test.ghm);
-        }
-        if (result.stays[0].test.ghs.IsValid()) {
-            if (result.ghs != result.stays[0].test.ghs) {
-                PrintLn("  Test_Error / Wrong GHS (%1, expected %2)",
-                        result.ghs, result.stays[0].test.ghs);
-            }
-            if (result.stays[0].test.supplements.rea != result.supplements.rea) {
-                PrintLn("  Test_Error / Wrong Supplement REA (%1, expected %2)",
-                        result.supplements.rea, result.stays[0].test.supplements.rea);
-            }
-            if (result.stays[0].test.supplements.reasi != result.supplements.reasi) {
-                PrintLn("  Test_Error / Wrong Supplement REASI (%1, expected %2)",
-                        result.supplements.reasi, result.stays[0].test.supplements.reasi);
-            }
-            if (result.stays[0].test.supplements.si != result.supplements.si) {
-                PrintLn("  Test_Error / Wrong Supplement SI (%1, expected %2)",
-                        result.supplements.si, result.stays[0].test.supplements.si);
-            }
-            if (result.stays[0].test.supplements.src != result.supplements.src) {
-                PrintLn("  Test_Error / Wrong Supplement SRC (%1, expected %2)",
-                        result.supplements.src, result.stays[0].test.supplements.src);
-            }
-            if (result.stays[0].test.supplements.nn1 != result.supplements.nn1) {
-                PrintLn("  Test_Error / Wrong Supplement NN1 (%1, expected %2)",
-                        result.supplements.nn1, result.stays[0].test.supplements.nn1);
-            }
-            if (result.stays[0].test.supplements.nn2 != result.supplements.nn2) {
-                PrintLn("  Test_Error / Wrong Supplement NN2 (%1, expected %2)",
-                        result.supplements.nn2, result.stays[0].test.supplements.nn2);
-            }
-            if (result.stays[0].test.supplements.nn3 != result.supplements.nn3) {
-                PrintLn("  Test_Error / Wrong Supplement NN3 (%1, expected %2)",
-                        result.supplements.nn3, result.stays[0].test.supplements.nn3);
-            }
-            if (result.stays[0].test.supplements.rep != result.supplements.rep) {
-                PrintLn("  Test_Error / Wrong Supplement REP (%1, expected %2)",
-                        result.supplements.rep, result.stays[0].test.supplements.rep);
-            }
-        }
-#endif
-    }
-
-    return true;
-}
-
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -619,6 +619,7 @@ int main(int argc, char **argv)
 R"(Usage: drd <command> [<args>]
 
 Commands:
+    classify                     Classify stays
     constraints                  Compute GHM accessibility constraints
     dump                         Dump available tables and lists
     info                         Print information about individual elements
@@ -626,7 +627,6 @@ Commands:
     indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
     pricing                      Dump GHS pricings
-    summarize                    Summarize stays
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -663,13 +663,13 @@ Commands:
     const char *cmd = argv[1];
     ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
 
+    HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);
     HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pricing, RunPricing);
-    HANDLE_COMMAND(summarize, RunSummarize);
 
 #undef HANDLE_COMMAND
 
