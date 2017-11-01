@@ -1024,21 +1024,21 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
         switch (auth_info->function) {
             case 1: {
-                if (ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
                     counter = &out_counters->nn1;
                     priority = 1;
                 }
             } break;
 
             case 2: {
-                if (ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
                     counter = &out_counters->nn2;
                     priority = 3;
                 }
             } break;
 
             case 3: {
-                if (ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
                     if (TestSupplementRea(agg, stay, 1)) {
                         counter = &out_counters->nn3;
                         priority = 6;
@@ -1074,23 +1074,25 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
             } break;
 
             case 9: {
-                if (agg.age < 18) {
-                    if (TestSupplementRea(agg, stay, 1)) {
-                        counter = &out_counters->rep;
-                        priority = 8;
-                        reanimation = true;
+                if (ghs != GhsCode(5903)) {
+                    if (agg.age < 18) {
+                        if (TestSupplementRea(agg, stay, 1)) {
+                            counter = &out_counters->rep;
+                            priority = 8;
+                            reanimation = true;
+                        } else {
+                            counter = &out_counters->reasi;
+                            priority = 5;
+                        }
                     } else {
-                        counter = &out_counters->reasi;
-                        priority = 5;
-                    }
-                } else {
-                    if (TestSupplementRea(agg, stay, 3)) {
-                        counter = &out_counters->rea;
-                        priority = 7;
-                        reanimation = true;
-                    } else {
-                        counter = &out_counters->reasi;
-                        priority = 5;
+                        if (TestSupplementRea(agg, stay, 3)) {
+                            counter = &out_counters->rea;
+                            priority = 7;
+                            reanimation = true;
+                        } else {
+                            counter = &out_counters->reasi;
+                            priority = 5;
+                        }
                     }
                 }
             } break;
