@@ -12,28 +12,41 @@
 #include "../../lib/rapidjson/prettywriter.h"
 
 struct Page {
+    const char *const category;
     const char *const url;
     const char *const name;
 };
 
 static const Page pages[] = {
-    {"/tables", "Tables"},
+    {"Tarifs",   "/pricing/table",        "Table"},
+    {"Tarifs",   "/pricing/chart",        "Graphique"},
+    {"Listes",   "/lists/ghm_tree",       "Arbre de groupage"},
+    {"Listes",   "/lists/ghm_roots",      "Racines de GHM"},
+    {"Listes",   "/lists/ghs",            "GHS"},
+    {"Listes",   "/lists/diagnoses",      "Diagnostics"},
+    {"Listes",   "/lists/procedures",     "Actes"},
+    {"Groupage", "/classifier/simple",    "Simple"},
+    {"Groupage", "/classifier/scenarios", "Scénarios"},
 };
 
 static const TableSet *table_set;
+HeapArray<HashSet<GhmCode, GhmConstraint>> table_set_constraints;
+
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
 
 static HashMap<const char *, ArrayRef<const uint8_t>> routes;
 
 // FIXME: Switch to stream / callback-based API
-static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
+static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
 {
     const TableIndex *index = table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         return false;
     }
+    const HashSet<GhmCode, GhmConstraint> &constraints =
+        table_set_constraints[(size_t)(index - table_set->indexes.ptr)];
 
     Allocator temp_alloc;
     rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(*out_buffer);
@@ -47,6 +60,9 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
 
         ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
+            const GhmConstraint *constraint = constraints.Find(ghs_info.ghm);
+            if (!constraint)
+                continue;
             const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_info.ghs[0], date);
             if (!ghs_pricing)
                 continue;
@@ -54,29 +70,7 @@ static bool BuildYaaJson(Date date, rapidjson::MemoryBuffer *out_buffer)
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(&temp_alloc, "%1", ghs_info.ghm).ptr);
             writer.Key("ghm_mode"); writer.String(&ghs_info.ghm.parts.mode, 1);
-            if (ghs_info.ghm.parts.mode == 'J') {
-                writer.Key("high_duration_limit"); writer.Int(1);
-            } else if (ghs_info.ghm.parts.mode == 'T') {
-                if (ghm_root_info.allow_ambulatory) {
-                    writer.Key("low_duration_limit"); writer.Int(1);
-                }
-                writer.Key("high_duration_limit"); writer.Int(ghm_root_info.short_duration_treshold);
-            } else {
-                int treshold = 0;
-                if (ghs_info.ghm.parts.mode >= '1' && ghs_info.ghm.parts.mode < '5') {
-                    treshold = GetMinimalDurationForSeverity(ghs_info.ghm.Severity());
-                } else if (ghs_info.ghm.parts.mode >= 'B' && ghs_info.ghm.parts.mode < 'E') {
-                    treshold = GetMinimalDurationForSeverity(ghs_info.ghm.parts.mode - 'A');
-                }
-                if (treshold < ghm_root_info.short_duration_treshold) {
-                    treshold = ghm_root_info.short_duration_treshold;
-                } else if (!treshold && ghm_root_info.allow_ambulatory) {
-                    treshold = 1;
-                }
-                if (treshold) {
-                    writer.Key("low_duration_limit"); writer.Int(treshold);
-                }
-            }
+            writer.Key("duration_mask"); writer.Uint(constraint->duration_mask);
             if (ghm_root_info.young_severity_limit) {
                 writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
                 writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
@@ -160,7 +154,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
         }
         if (date.value) {
             rapidjson::MemoryBuffer buffer;
-            if (BuildYaaJson(date, &buffer)) {
+            if (BuildCatalog(date, &buffer)) {
                 response = MHD_create_response_from_buffer(buffer.GetSize(),
                                                            (void *)buffer.GetBuffer(),
                                                            MHD_RESPMEM_MUST_COPY);
@@ -172,10 +166,19 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
         rapidjson::MemoryBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
         writer.StartArray();
-        for (const Page &page: pages) {
+        for (size_t i = 0; i < ARRAY_SIZE(pages);) {
             writer.StartObject();
-            writer.Key("url"); writer.Key(page.url);
-            writer.Key("name"); writer.Key(page.name);
+            writer.Key("category"); writer.String(pages[i].category);
+            writer.Key("pages"); writer.StartArray();
+            size_t j = i;
+            for (; j < ARRAY_SIZE(pages) && pages[j].category == pages[i].category; j++) {
+                writer.StartObject();
+                writer.Key("url"); writer.String(pages[j].url + 1);
+                writer.Key("name"); writer.Key(pages[j].name);
+                writer.EndObject();
+            }
+            i = j;
+            writer.EndArray();
             writer.EndObject();
         }
         writer.EndArray();
@@ -262,13 +265,21 @@ Talyn options:
     if (!authorization_set)
         return 1;
 
+    for (size_t i = 0; i < table_set->indexes.len; i++) {
+        LogDebug("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
+        HashSet<GhmCode, GhmConstraint> *constraints = table_set_constraints.Append();
+        if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
+            return 1;
+    }
+
     routes.Set("/", resources::talyn_html);
     for (const Page &page: pages) {
         routes.Set(page.url, resources::talyn_html);
     }
-    routes.Set("/resources/talyn.css", resources::talyn_css);
-    routes.Set("/resources/talyn.js", resources::talyn_js);
-    routes.Set("/resources/logo.png", resources::logo_png);
+    routes.Set("/static/talyn.css", resources::talyn_css);
+    routes.Set("/static/talyn.js", resources::talyn_js);
+    routes.Set("/static/logo.png", resources::logo_png);
+    routes.Set("/static/chart.min.js", resources::chart_min_js);
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,

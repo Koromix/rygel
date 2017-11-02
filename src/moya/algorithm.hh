@@ -6,6 +6,7 @@
 
 #include "kutil.hh"
 #include "data.hh"
+#include "pricing.hh"
 #include "tables.hh"
 
 enum class ClusterMode {
@@ -28,14 +29,14 @@ struct ClassifyAggregate {
 };
 
 struct SupplementCounters {
-    int16_t rea;
-    int16_t reasi;
-    int16_t si;
-    int16_t src;
-    int16_t nn1;
-    int16_t nn2;
-    int16_t nn3;
-    int16_t rep;
+    int32_t rea;
+    int32_t reasi;
+    int32_t si;
+    int32_t src;
+    int32_t nn1;
+    int32_t nn2;
+    int32_t nn3;
+    int32_t rep;
 };
 
 struct ClassifyResult {
@@ -46,10 +47,14 @@ struct ClassifyResult {
 
     GhsCode ghs;
     SupplementCounters supplements;
+    int ghs_price_cents;
 };
 
 struct ClassifyResultSet {
     HeapArray<ClassifyResult> results;
+
+    SupplementCounters supplements;
+    int64_t ghs_total_cents;
 
     struct {
         HeapArray<int16_t> errors;
@@ -78,6 +83,9 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
                       SupplementCounters *out_counters);
 
+int PriceGhs(const GhsPricing &pricing, int duration);
+int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration);
+
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet *pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set);

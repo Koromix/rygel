@@ -17,7 +17,7 @@
     #include "kutil.cc"
     #include "tables.cc"
     #include "pricing.cc"
-    #include "data_json.cc"
+    #include "data.cc"
     #include "algorithm.cc"
     #include "constraints.cc"
     #include "main.cc"

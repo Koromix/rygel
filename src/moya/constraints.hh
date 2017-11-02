@@ -11,7 +11,7 @@
 struct GhmConstraint {
     GhmCode ghm;
 
-    uint64_t duration_mask;
+    uint32_t duration_mask;
 
     HASH_SET_HANDLER(GhmConstraint, ghm);
 };

@@ -1,3 +1,5 @@
+.inactive { display: none !important; }
+
 body {
     margin: 0;
     padding: 0;
@@ -15,10 +17,10 @@ div#menu nav a {
     display: block;
     box-sizing: border-box;
     width: 100%;
-    padding: 0.5em;
     text-decoration: none;
     color: black;
 }
+div#menu nav a.category { font-weight: bold; }
 div#menu nav a.active {
     background: #262626;
     color: white;
@@ -31,6 +33,8 @@ img#logo {
     display: block;
     margin: 1em auto;
 }
+
+main > div:not(.active) { display: none; }
 
 div#pricing nav {
     margin: 0 1em 1em 1em;
@@ -86,6 +90,7 @@ div#pricing td.age, div#pricing tr.age td { background: #99ffff; }
         width: 200px;
     }
     div#menu nav a { padding: 0.5em; }
+    div#menu nav a:not(.category) { padding-left: 2em; }
 
     main {
         max-width: 800px;
@@ -141,7 +146,7 @@ div#pricing td.age, div#pricing tr.age td { background: #99ffff; }
     }
     div#menu nav a:not(.active) { font-style: italic; }
     div#menu nav:not(.active) a:not(.active) { display: none; }
-    div#pricing table { margin-top: 40px; }
+    main { padding-top: 40px; }
 
     div#pricing nav {
         position: fixed;

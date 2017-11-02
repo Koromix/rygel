@@ -95,6 +95,8 @@ struct StaySet {
         HeapArray<DiagnosisCode> diagnoses;
         HeapArray<ProcedureRealisation> procedures;
     } store;
+
+    bool SaveBundle(FILE *fp, const char *filename) const;
 };
 
 bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set);

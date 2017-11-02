@@ -65,37 +65,91 @@ function downloadJson(url, func)
     xhr.send();
 }
 
-document.addEventListener('DOMContentLoaded', function(e) {
-    var url_base = window.location.pathname.substr(0, window.location.pathname.lastIndexOf('/'));
-    var url_name = window.location.pathname.substr(url_base.length + 1);
+// ------------------------------------------------------------------------
+// Pages
+// ------------------------------------------------------------------------
 
-    downloadJson('api/pages.json', function(pages) {
+document.addEventListener('DOMContentLoaded', function(e) {
+    var url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/') + 1);
+    var url_name = window.location.pathname.substr(url_base.length);
+
+    downloadJson('api/pages.json', function(categories) {
         if (url_name == '') {
-            url_name = pages[0].url.substr(1);
-            window.history.replaceState(null, null, url_base + '/' + url_name);
+            url_name = categories[0].pages[0].url;
+            window.history.replaceState(null, null, url_base + url_name);
         }
 
         var ul = document.querySelector('div#menu nav ul');
-        for (var i = 0; i < pages.length; i++) {
-            var page_url = pages[i].url.substr(1);
+        function addMenuItem(name, url)
+        {
             var li =
                 createElement('li', {},
-                    createElement('a', {href: page_url,
-                                        class: page_url == url_name ? 'active' : null}, pages[i].name)
+                    createElement('a', {href: url, class: url == url_name ? 'active' : null}, name)
                 );
             ul.appendChild(li);
         }
+
+        for (var i = 0; i < categories.length; i++) {
+            var pages = categories[i].pages;
+
+            var li =
+                createElement('li', {},
+                    createElement('a', {href: pages[0].url, class: 'category'},
+                                  categories[i].category)
+                );
+            ul.appendChild(li);
+
+            for (var j = 0; j < pages.length; j++) {
+                var li =
+                    createElement('li', {},
+                        createElement('a', {href: pages[j].url,
+                                            onclick: 'switchPage("' + pages[j].url + '"); return false;'},
+                                      pages[j].name)
+                    );
+                ul.appendChild(li);
+            }
+        }
+
+        switchPage(url_name);
     });
 });
 
+function switchPage(page_url)
+{
+    var page_divs = document.querySelectorAll('main > div');
+    for (var i = 0; i < page_divs.length; i++) {
+        page_divs[i].classList.remove('active');
+    }
+
+    if (page_url == 'pricing/table') {
+        document.querySelector('div#pricing').classList.add('active');
+        document.querySelector('div#pricing > div.table').classList.remove('inactive');
+        document.querySelector('div#pricing > div.chart').classList.add('inactive');
+        // pricing.refreshPricing();
+    } else if (page_url == 'pricing/chart') {
+        document.querySelector('div#pricing').classList.add('active');
+        document.querySelector('div#pricing > div.table').classList.add('inactive');
+        document.querySelector('div#pricing > div.chart').classList.remove('inactive');
+        // pricing.refreshPricing();
+    }
+
+    var menu_anchors = document.querySelectorAll('div#menu nav a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        var active = (menu_anchors[i].getAttribute('href') == page_url &&
+                      !menu_anchors[i].classList.contains('category'));
+        menu_anchors[i].classList.toggle('active', active);
+    }
+}
+
 // ------------------------------------------------------------------------
-// Tables
+// Pricing
 // ------------------------------------------------------------------------
 
 var pricing = {};
 (function() {
     var ghm_roots = [];
     var ghm_roots_info = {};
+    var chart = null;
 
     function updateDatabase()
     {
@@ -111,7 +165,7 @@ var pricing = {};
             }
 
             refreshGhmRoots();
-            refreshTable();
+            refreshPricing();
         });
     }
     this.updateDatabase = updateDatabase;
@@ -131,18 +185,72 @@ var pricing = {};
             el.value = previous_value;
     }
 
-    function refreshTable()
+    function refreshPricing()
     {
         var ghm_root_info = ghm_roots_info[document.querySelector('select#pricing_ghm_roots').value];
         var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
         var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
 
         var table = createTable(ghm_root_info, merge_cells, max_duration);
-
-        var old_table = document.querySelector('div#pricing table');
+        var old_table = document.querySelector('div#pricing > div.table > table');
         old_table.parentNode.replaceChild(table, old_table);
+
+        data = {
+            labels: [],
+            datasets: []
+        };
+        for (var i = 0; i < max_duration; i++) {
+            data.labels.push(i);
+        }
+        for (var i = 0; i < ghm_root_info.length; i++) {
+            var dataset = {
+                label: ghm_root_info[i].ghm,
+                data: [],
+                fill: false
+            };
+            for (var duration = 0; duration < max_duration; duration++) {
+                p = computePrice(ghm_root_info[i], duration);
+                if (p !== null)
+                    dataset.data.push({
+                        x: duration,
+                        y: p[0] / 100
+                    });
+            }
+            data.datasets.push(dataset);
+        }
+        var ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
+        if (chart) {
+            chart.data = data;
+            chart.update();
+        } else {
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    tooltips: {
+                        mode: 'x',
+                        intersect: false,
+                        position: 'nearest'
+                    },
+                    hover: {
+                        mode: 'x',
+                        intersect: false
+                    },
+                    elements: {
+                        line: {
+                            tension: 0
+                        },
+                        point: {
+                            radius: 1,
+                            hitRadius: 0
+                        }
+                    }
+                },
+            });
+        }
     }
-    this.refreshTable = refreshTable;
+    this.refreshPricing = refreshPricing;
 
     function createTable(ghm_root_info, merge_cells, max_duration)
     {
@@ -214,7 +322,7 @@ var pricing = {};
                     col.conditions.length ? col.conditions.length.toString() : ''
                 );
             return [el, 'conditions', true];
-        })
+        });
         appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb', true]; });
         appendRow(thead, 'Borne haute',
                   function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh', true]; });
@@ -240,27 +348,43 @@ var pricing = {};
 
         for (var duration = 0; duration < max_duration; duration++) {
             appendRow(tbody, durationText(duration), function(col) {
-                if ((col.low_duration_limit && duration < col.low_duration_limit) ||
-                    (col.high_duration_limit && duration >= col.high_duration_limit))
+                info = computePrice(col, duration);
+                if (info === null)
                     return null;
-                if (col.exb_treshold && duration < col.exb_treshold) {
-                    var price = col.price_cents;
-                    if (col.exb_once) {
-                        price -= col.exb_cents;
-                    } else {
-                        price -= (col.exb_treshold - duration) * col.exb_cents;
-                    }
-                    return [priceText(price), 'exb', false];
-                }
-                if (col.exh_treshold && duration >= col.exh_treshold) {
-                    var price = col.price_cents + (duration - col.exh_treshold + 1) * col.exh_cents;
-                    return [priceText(price), 'exh', false];
-                }
-                return [priceText(col.price_cents), 'price', false];
+                info[0] = priceText(info[0]);
+                info.push(false);
+                return info;
             });
         }
 
         return table;
+    }
+
+    function computePrice(col, duration)
+    {
+        var duration_mask_test;
+        if (duration < 32) {
+            duration_mask_test = 1 << duration;
+        } else {
+            duration_mask_test = 1 << 31;
+        }
+        if (!(col.duration_mask & duration_mask_test))
+            return null;
+
+        if (col.exb_treshold && duration < col.exb_treshold) {
+            var price = col.price_cents;
+            if (col.exb_once) {
+                price -= col.exb_cents;
+            } else {
+                price -= (col.exb_treshold - duration) * col.exb_cents;
+            }
+            return [price, 'exb'];
+        }
+        if (col.exh_treshold && duration >= col.exh_treshold) {
+            var price = col.price_cents + (duration - col.exh_treshold + 1) * col.exh_cents;
+            return [price, 'exh'];
+        }
+        return [col.price_cents, 'price'];
     }
 }).call(pricing);
 

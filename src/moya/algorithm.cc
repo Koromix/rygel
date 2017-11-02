@@ -787,7 +787,7 @@ static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
     } else {
         const Authorization *auth = authorization_set.FindUnit(unit, date);
         if (UNLIKELY(!auth)) {
-            LogDebug("Unit %1 is missing from authorization set", unit);
+            // TODO: LogDebug("Unit %1 is missing from authorization set", unit);
             return 0;
         }
         return auth->type;
@@ -1000,7 +1000,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
     const Stay *ambu_stay = nullptr;
     int ambu_priority = 0;
-    int16_t *ambu_counter = nullptr;
+    int32_t *ambu_counter = nullptr;
 
     for (const Stay &stay: agg.stays) {
         const AuthorizationInfo *auth_info = nullptr;
@@ -1018,7 +1018,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
         if (!auth_info)
             continue;
 
-        int16_t *counter = nullptr;
+        int32_t *counter = nullptr;
         int priority = 0;
         bool reanimation = false;
 
@@ -1122,8 +1122,35 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
 }
 
+int PriceGhs(const GhsPricing &pricing, int duration)
+{
+    int price_cents = pricing.sectors[0].price_cents;
+    if (duration < pricing.sectors[0].exb_treshold) {
+        if (pricing.sectors[0].flags & (int)GhsPricing::Flag::ExbOnce) {
+            price_cents -= pricing.sectors[0].exb_cents;
+        } else {
+            price_cents -= pricing.sectors[0].exb_cents * (pricing.sectors[0].exb_treshold - duration);
+        }
+    } else if (duration >= pricing.sectors[0].exh_treshold) {
+        price_cents += pricing.sectors[0].exh_cents * (duration - pricing.sectors[0].exh_treshold);
+    }
+
+    return price_cents;
+}
+
+int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration)
+{
+    const GhsPricing *pricing = pricing_set.FindGhsPricing(ghs, date);
+    if (!pricing) {
+        // LogDebug("Cannot find price for GHS %1 on %2", ghs, date);
+        return 0;
+    }
+
+    return PriceGhs(*pricing, duration);
+}
+
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet *pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
@@ -1153,7 +1180,21 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         result.errors.len = out_result_set->store.errors.len - (size_t)result.errors.ptr;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
+        if (pricing_set) {
+            result.ghs_price_cents = PriceGhs(*pricing_set, result.ghs,
+                                              agg.stay.dates[1], agg.duration);
+            out_result_set->ghs_total_cents += result.ghs_price_cents;
+        }
+
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+        out_result_set->supplements.rea += result.supplements.rea;
+        out_result_set->supplements.reasi += result.supplements.reasi;
+        out_result_set->supplements.si += result.supplements.si;
+        out_result_set->supplements.src += result.supplements.src;
+        out_result_set->supplements.nn1 += result.supplements.nn1;
+        out_result_set->supplements.nn2 += result.supplements.nn2;
+        out_result_set->supplements.nn3 += result.supplements.nn3;
+        out_result_set->supplements.rep += result.supplements.rep;
 
         out_result_set->results.Append(result);
     }

@@ -135,18 +135,22 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\moya\algorithm.cc" />
+    <ClCompile Include="..\..\src\moya\constraints.cc" />
+    <ClCompile Include="..\..\src\moya\data.cc" />
     <ClCompile Include="..\..\src\moya\kutil.cc" />
+    <ClCompile Include="..\..\src\moya\main.cc" />
     <ClCompile Include="..\..\src\moya\pricing.cc" />
-    <ClCompile Include="..\..\src\moya\stays.cc" />
     <ClCompile Include="..\..\src\moya\tables.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\moya\algorithm.hh" />
     <ClInclude Include="..\..\src\moya\codes.hh" />
+    <ClInclude Include="..\..\src\moya\constraints.hh" />
+    <ClInclude Include="..\..\src\moya\data.hh" />
     <ClInclude Include="..\..\src\moya\kutil.hh" />
     <ClInclude Include="..\..\src\moya\libmoya.hh" />
+    <ClInclude Include="..\..\src\moya\main.hh" />
     <ClInclude Include="..\..\src\moya\pricing.hh" />
-    <ClInclude Include="..\..\src\moya\stays.hh" />
     <ClInclude Include="..\..\src\moya\tables.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -8,6 +8,13 @@
 #include "../../lib/rapidjson/reader.h"
 #include "../../lib/rapidjson/error/en.h"
 
+// TODO: Version this data structure, deal with endianness
+struct BundleHeader {
+    size_t stays_len;
+    size_t diagnoses_len;
+    size_t procedures_len;
+};
+
 template <typename T>
 class JsonHandler: public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonHandler<T>> {
 public:
@@ -685,6 +692,31 @@ private:
     }
 };
 
+bool StaySet::SaveBundle(FILE *fp, const char *filename) const
+{
+    BundleHeader bh;
+
+    bh.stays_len = stays.len;
+    bh.diagnoses_len = store.diagnoses.len;
+    bh.procedures_len = store.procedures.len;
+
+    clearerr(fp);
+    fwrite(&bh, 1, sizeof(bh), fp);
+    fwrite(stays.ptr, sizeof(*stays.ptr), stays.len, fp);
+    for (const Stay &stay: stays) {
+        fwrite(stay.diagnoses.ptr, sizeof(*stay.diagnoses.ptr), stay.diagnoses.len, fp);
+    }
+    for (const Stay &stay: stays) {
+        fwrite(stay.procedures.ptr, sizeof(*stay.procedures.ptr), stay.procedures.len, fp);
+    }
+    if (ferror(fp)) {
+        LogError("Error while writing stay bundle to '%1'", filename ? filename : "?");
+        return false;
+    }
+
+    return true;
+}
+
 template <typename T>
 bool ParseJsonFile(const char *filename, T *json_handler)
 {
@@ -833,6 +865,59 @@ const Authorization *AuthorizationSet::FindUnit(UnitCode unit, Date date) const
     return nullptr;
 }
 
+static bool LoadStayBundle(const char *filename, StaySet *out_set)
+{
+    FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
+    if (!fp) {
+        LogError("Cannot open '%1': %2", filename, strerror(errno));
+        return false;
+    }
+    DEFER { fclose(fp); };
+
+    size_t diagnoses_offset;
+    size_t procedures_offset;
+
+    BundleHeader bh;
+    if (fread(&bh, sizeof(bh), 1, fp) != 1)
+        goto error;
+
+    out_set->stays.Grow(bh.stays_len);
+    if (fread(out_set->stays.end(), sizeof(*out_set->stays.ptr), bh.stays_len, fp) != bh.stays_len)
+        goto error;
+    out_set->stays.len += bh.stays_len;
+
+    out_set->store.diagnoses.Grow(bh.diagnoses_len);
+    if (fread(out_set->store.diagnoses.end(), sizeof(*out_set->store.diagnoses.ptr),
+              bh.diagnoses_len, fp) != bh.diagnoses_len)
+        goto error;
+    out_set->store.procedures.Grow(bh.procedures_len);
+    if (fread(out_set->store.procedures.end(), sizeof(*out_set->store.procedures.ptr),
+              bh.procedures_len, fp) != bh.procedures_len)
+        goto error;
+
+    diagnoses_offset = out_set->store.diagnoses.len;
+    procedures_offset = out_set->store.procedures.len;
+    for (size_t i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
+        Stay *stay = &out_set->stays[i];
+
+        if (stay->diagnoses.len) {
+            stay->diagnoses.ptr = (DiagnosisCode *)(out_set->store.diagnoses.len - diagnoses_offset);
+            out_set->store.diagnoses.len += stay->diagnoses.len;
+        }
+        if (stay->procedures.len) {
+            stay->procedures.ptr = (ProcedureRealisation *)(out_set->store.procedures.len - procedures_offset);
+            out_set->store.procedures.len += stay->procedures.len;
+        }
+    }
+
+    return true;
+
+error:
+    // TODO: Adapt message depending on error code
+    LogError("Stay bundle file '%1' is corrupted", filename);
+    return false;
+}
+
 bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
 {
     DEFER_NC(set_guard, stays_len = set.store.diagnoses.len,
@@ -844,9 +929,24 @@ bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
     };
 
     for (const char *filename: filenames) {
-        JsonStayHandler json_handler(&set);
-        if (!ParseJsonFile(filename, &json_handler))
+        const char *ext = strrchr(filename, '.');
+        if (!ext || strpbrk(ext, PATH_SEPARATORS)) {
+            LogError("Cannot load stays from file '%1' without extension", filename);
             return false;
+        }
+
+        if (StrTest(ext, ".json")) {
+            JsonStayHandler json_handler(&set);
+            if (!ParseJsonFile(filename, &json_handler))
+                return false;
+        } else if (StrTest(ext, ".stb")) {
+            if (!LoadStayBundle(filename, &set))
+                return false;
+        } else {
+            LogError("Cannot load stays from file '%1' with unsupported format '%2'",
+                     filename, ext);
+            return false;
+        }
     }
 
     set_guard.disable();

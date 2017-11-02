@@ -31,6 +31,8 @@ struct PricingSet {
     HeapArray<GhsPricing> ghs_pricings;
     HashSet<GhsCode, const GhsPricing *> ghs_pricings_map;
 
+    Allocator str_alloc;
+
     ArrayRef<const GhsPricing> FindGhsPricing(GhsCode ghs) const;
     const GhsPricing *FindGhsPricing(GhsCode ghs, Date date) const;
 };

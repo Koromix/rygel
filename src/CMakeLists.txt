@@ -7,7 +7,7 @@ set(MOYA_SRC moya/algorithm.cc
              moya/constraints.cc
              moya/constraints.hh
              moya/codes.hh
-             moya/data_json.cc
+             moya/data.cc
              moya/data.hh
              moya/kutil.cc
              moya/kutil.hh
@@ -29,7 +29,8 @@ target_link_libraries(drd PUBLIC moya)
 set(TALYN_RESOURCES talyn/talyn.html
                     talyn/talyn.css
                     talyn/talyn.js
-                    ../resources/logo.png)
+                    ../resources/logo.png
+                    ../lib/chartjs/chart.min.js)
 set(TALYN_SRC talyn/talyn.cc
               ${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[

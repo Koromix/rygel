@@ -37,22 +37,26 @@ static bool MergeConstraint(const TableIndex &index,
     if (ghm_root_info->allow_ambulatory) {
         MERGE_CONSTRAINT('J', 0x1);
         // Update base mask so that following GHM can't overlap with this one
-        constraint.duration_mask &= ~(uint64_t)0x1;
+        constraint.duration_mask &= ~(uint32_t)0x1;
     }
     if (ghm_root_info->short_duration_treshold) {
-        uint64_t short_mask = (uint64_t)(1 << ghm_root_info->short_duration_treshold) - 1;
+        uint32_t short_mask = (uint32_t)(1 << ghm_root_info->short_duration_treshold) - 1;
         MERGE_CONSTRAINT('T', short_mask);
         constraint.duration_mask &= ~short_mask;
     }
 
     if (!ghm.parts.mode) {
         for (int severity = 0; severity < 4; severity++) {
-            uint64_t mode_mask = ~((uint64_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
+            uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
             MERGE_CONSTRAINT('1' + (char)severity, mode_mask);
         }
+    } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
+        int severity = ghm.parts.mode - 'A';
+        uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
+        MERGE_CONSTRAINT('A' + (char)severity, mode_mask);
     } else if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
         // FIXME: Ugly construct
-        MERGE_CONSTRAINT(ghm.parts.mode, UINT64_MAX);
+        MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX);
     }
 
 #undef MERGE_CONSTRAINT
@@ -87,13 +91,13 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
             switch (ghm_node.u.test.function) {
                 case 22: {
                     uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-                    if (param >= 63) {
-                        LogError("Incomplete GHM constraint due to duration >= 63 nights");
+                    if (param >= 31) {
+                        LogError("Incomplete GHM constraint due to duration >= 31 nights");
                         success = false;
                         break;
                     }
 
-                    uint64_t test_mask = ((uint64_t)1 << param) - 1;
+                    uint32_t test_mask = ((uint32_t)1 << param) - 1;
                     RUN_TREE_SUB(0, duration_mask &= ~test_mask);
                     RUN_TREE_SUB(1, duration_mask &= test_mask);
 
@@ -102,13 +106,13 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
 
                 case 29: {
                     uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-                    if (param >= 63) {
-                        LogError("Incomplete GHM constraint due to duration >= 63 nights");
+                    if (param >= 31) {
+                        LogError("Incomplete GHM constraint due to duration >= 31 nights");
                         success = false;
                         break;
                     }
 
-                    uint64_t test_mask = (uint64_t)1 << param;
+                    uint32_t test_mask = (uint32_t)1 << param;
                     RUN_TREE_SUB(0, duration_mask &= ~test_mask);
                     RUN_TREE_SUB(1, duration_mask &= test_mask);
 
@@ -124,7 +128,7 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
                     }
 
                     RUN_TREE_SUB(0, duration_mask &= 0x1);
-                    RUN_TREE_SUB(1, duration_mask &= UINT64_MAX);
+                    RUN_TREE_SUB(1, duration_mask &= UINT32_MAX);
 
                     return success;
                 } break;
