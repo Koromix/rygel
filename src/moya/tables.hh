@@ -35,16 +35,16 @@ static const char *const TableTypeNames[] = {
 };
 
 struct ListMask {
-    uint8_t offset;
+    int16_t offset;
     uint8_t value;
 };
 
 struct TableInfo {
     struct Section {
-        size_t raw_offset;
-        size_t raw_len;
-        size_t values_count;
-        size_t value_len;
+        Size raw_offset;
+        Size raw_len;
+        Size values_count;
+        Size value_len;
     };
 
     Date build_date;
@@ -68,8 +68,8 @@ struct GhmDecisionNode {
         struct {
             uint8_t function; // Switch to dedicated enum
             uint8_t params[2];
-            size_t children_count;
-            size_t children_idx;
+            Size children_count;
+            Size children_idx;
         } test;
 
         struct {
@@ -122,7 +122,7 @@ struct ProcedureInfo {
     HASH_SET_HANDLER(ProcedureInfo, proc);
 };
 
-template <size_t N>
+template <Size N>
 struct ValueRangeCell {
     struct {
         int min;
@@ -130,7 +130,7 @@ struct ValueRangeCell {
     } limits[N];
     int value;
 
-    bool Test(size_t idx, int value) const
+    bool Test(Size idx, int value) const
     {
         DebugAssert(idx < N);
         return (value >= limits[idx].min && value < limits[idx].max);
@@ -212,7 +212,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
                        const TableInfo &table, HeapArray<GhmRootInfo> *out_ghm_roots);
 bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
-                        const TableInfo &table, size_t section_idx,
+                        const TableInfo &table, int section_idx,
                         HeapArray<ValueRangeCell<2>> *out_cells);
 
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
@@ -220,7 +220,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
                              const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths);
 bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, size_t section_idx,
+                       const TableInfo &table, int section_idx,
                        HeapArray<SrcPair> *out_pairs);
 
 struct TableIndex {

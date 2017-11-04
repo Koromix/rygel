@@ -6,7 +6,7 @@
 #include "dump.hh"
 
 void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
-                         size_t node_idx, int depth)
+                         Size node_idx, int depth)
 {
     while (node_idx < ghm_nodes.len) {
         const GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
@@ -19,7 +19,7 @@ void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
                         ghm_node.u.test.children_count);
 
                 if (ghm_node.u.test.function != 20) {
-                    for (size_t i = 1; i < ghm_node.u.test.children_count; i++) {
+                    for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
                         DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + i, depth + 1);
                     }
 
@@ -48,7 +48,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
 {
     for (const DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](Sex sex) {
-            for (size_t i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
+            for (Size i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
                 Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
             }
             PrintLn();
@@ -99,7 +99,7 @@ void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
 {
     for (const ProcedureInfo &proc: procedures) {
         Print("      %1/%2 =", proc.proc, proc.phase);
-        for (size_t i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
+        for (Size i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
             Print(" %1", FmtBin(proc.bytes[i]));
         }
         PrintLn();
@@ -211,9 +211,9 @@ void DumpTableSet(const TableSet &table_set, bool detail)
         PrintLn("    Version: %1.%2", table.version[0], table.version[1]);
         PrintLn("    Validity: %1 to %2", table.limit_dates[0], table.limit_dates[1]);
         PrintLn("    Sections:");
-        for (size_t i = 0; i < table.sections.len; i++) {
+        for (Size i = 0; i < table.sections.len; i++) {
             PrintLn("      %1. %2 -- %3 bytes -- %4 elements (%5 bytes / element)",
-                    i, FmtHex(table.sections[i].raw_offset), table.sections[i].raw_len,
+                    i, FmtHex((uint64_t)table.sections[i].raw_offset), table.sections[i].raw_len,
                     table.sections[i].values_count, table.sections[i].value_len);
         }
         PrintLn();
@@ -225,7 +225,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
             PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
             // We don't really need to loop here, but we want the switch to get
             // warnings when we introduce new table types.
-            for (size_t i = 0; i < ARRAY_SIZE(index.tables); i++) {
+            for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
                 if (!index.tables[i])
                     continue;
 
@@ -255,7 +255,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         DumpSeverityTable(index.gnn_cells);
                         PrintLn();
 
-                        for (size_t j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
+                        for (Size j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
                             PrintLn("    CMA Table %1:", j + 1);
                             DumpSeverityTable(index.cma_cells[j]);
                             PrintLn();
@@ -271,7 +271,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
                         DumpAuthorizationTable(index.authorizations);
                     } break;
                     case TableType::SrcPairTable: {
-                        for (size_t j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
+                        for (Size j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
                             PrintLn("    Supplement Pairs List %1:", j + 1);
                             DumpSupplementPairTable(index.src_pairs[j]);
                             PrintLn();
@@ -289,7 +289,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
 
 void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings)
 {
-    for (size_t i = 0; i < ghs_pricings.len;) {
+    for (Size i = 0; i < ghs_pricings.len;) {
         GhsCode ghs = ghs_pricings[i].ghs;
 
         PrintLn("GHS %1:", ghs);

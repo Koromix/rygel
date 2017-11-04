@@ -10,9 +10,9 @@
 
 // TODO: Version this data structure, deal with endianness
 struct BundleHeader {
-    size_t stays_len;
-    size_t diagnoses_len;
-    size_t procedures_len;
+    Size stays_len;
+    Size diagnoses_len;
+    Size procedures_len;
 };
 
 template <typename T>
@@ -351,8 +351,8 @@ public:
             case State::StayObject: {
                 state = State::StayArray;
 
-                stay.diagnoses.len = out_set->store.diagnoses.len - (size_t)stay.diagnoses.ptr;
-                stay.procedures.len = out_set->store.procedures.len - (size_t)stay.procedures.ptr;
+                stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
+                stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
                 out_set->stays.Append(stay);
                 ResetStay();
             } break;
@@ -701,13 +701,13 @@ bool StaySet::SaveBundle(FILE *fp, const char *filename) const
     bh.procedures_len = store.procedures.len;
 
     clearerr(fp);
-    fwrite(&bh, 1, sizeof(bh), fp);
-    fwrite(stays.ptr, sizeof(*stays.ptr), stays.len, fp);
+    fwrite(&bh, 1, SIZE(bh), fp);
+    fwrite(stays.ptr, SIZE(*stays.ptr), (size_t)stays.len, fp);
     for (const Stay &stay: stays) {
-        fwrite(stay.diagnoses.ptr, sizeof(*stay.diagnoses.ptr), stay.diagnoses.len, fp);
+        fwrite(stay.diagnoses.ptr, SIZE(*stay.diagnoses.ptr), (size_t)stay.diagnoses.len, fp);
     }
     for (const Stay &stay: stays) {
-        fwrite(stay.procedures.ptr, sizeof(*stay.procedures.ptr), stay.procedures.len, fp);
+        fwrite(stay.procedures.ptr, SIZE(*stay.procedures.ptr), (size_t)stay.procedures.len, fp);
     }
     if (ferror(fp)) {
         LogError("Error while writing stay bundle to '%1'", filename ? filename : "?");
@@ -734,14 +734,14 @@ bool ParseJsonFile(const char *filename, T *json_handler)
         FILE *fp;
 
         LocalArray<char, 1024 * 1024> buffer;
-        size_t buffer_offset = 0;
-        size_t file_offset = 0;
+        Size buffer_offset = 0;
+        Size file_offset = 0;
 
     public:
         typedef char Ch MAYBE_UNUSED;
 
-        size_t line_number = 1;
-        size_t line_offset = 1;
+        Size line_number = 1;
+        Size line_offset = 1;
 
         FileReadStreamEx(FILE *fp)
             : fp(fp)
@@ -762,13 +762,13 @@ bool ParseJsonFile(const char *filename, T *json_handler)
             Read();
             return c;
         }
-        size_t Tell() const { return file_offset + buffer_offset; }
+        Size Tell() const { return file_offset + buffer_offset; }
 
         // Not implemented
         void Put(char) {}
         void Flush() {}
         char *PutBegin() { return 0; }
-        size_t PutEnd(char *) { return 0; }
+        Size PutEnd(char *) { return 0; }
 
         // For encoding detection only
         const char *Peek4() const
@@ -785,10 +785,10 @@ bool ParseJsonFile(const char *filename, T *json_handler)
                 buffer_offset++;
             } else if (fp) {
                 file_offset += buffer.len;
-                buffer.len = fread(buffer.data, 1, sizeof(buffer.data), fp);
+                buffer.len = (Size)fread(buffer.data, 1, SIZE(buffer.data), fp);
                 buffer_offset = 0;
 
-                if (buffer.len < sizeof(buffer.data)) {
+                if (buffer.len < SIZE(buffer.data)) {
                     buffer.Append('\0');
                     fp = nullptr;
                 }
@@ -844,7 +844,7 @@ ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
                end_auth->unit == unit) {
             end_auth++;
         }
-        auths.len = (size_t)(end_auth - auths.ptr);
+        auths.len = end_auth - auths.ptr;
     }
 
     return auths;
@@ -874,30 +874,31 @@ static bool LoadStayBundle(const char *filename, StaySet *out_set)
     }
     DEFER { fclose(fp); };
 
-    size_t diagnoses_offset;
-    size_t procedures_offset;
+    Size diagnoses_offset;
+    Size procedures_offset;
 
     BundleHeader bh;
-    if (fread(&bh, sizeof(bh), 1, fp) != 1)
+    if (fread(&bh, SIZE(bh), 1, fp) != 1)
         goto error;
 
     out_set->stays.Grow(bh.stays_len);
-    if (fread(out_set->stays.end(), sizeof(*out_set->stays.ptr), bh.stays_len, fp) != bh.stays_len)
+    if (fread(out_set->stays.end(), SIZE(*out_set->stays.ptr),
+              (size_t)bh.stays_len, fp) != (size_t)bh.stays_len)
         goto error;
     out_set->stays.len += bh.stays_len;
 
     out_set->store.diagnoses.Grow(bh.diagnoses_len);
-    if (fread(out_set->store.diagnoses.end(), sizeof(*out_set->store.diagnoses.ptr),
-              bh.diagnoses_len, fp) != bh.diagnoses_len)
+    if (fread(out_set->store.diagnoses.end(), SIZE(*out_set->store.diagnoses.ptr),
+              (size_t)bh.diagnoses_len, fp) != (size_t)bh.diagnoses_len)
         goto error;
     out_set->store.procedures.Grow(bh.procedures_len);
-    if (fread(out_set->store.procedures.end(), sizeof(*out_set->store.procedures.ptr),
-              bh.procedures_len, fp) != bh.procedures_len)
+    if (fread(out_set->store.procedures.end(), SIZE(*out_set->store.procedures.ptr),
+              (size_t)bh.procedures_len, fp) != (size_t)bh.procedures_len)
         goto error;
 
     diagnoses_offset = out_set->store.diagnoses.len;
     procedures_offset = out_set->store.procedures.len;
-    for (size_t i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
+    for (Size i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
         Stay *stay = &out_set->stays[i];
 
         if (stay->diagnoses.len) {
@@ -963,7 +964,7 @@ bool StaySetBuilder::Finish(StaySet *out_set)
     for (Stay &stay: set.stays) {
 #define FIX_ARRAYREF(ArrayRefName) \
             stay.ArrayRefName.ptr = set.store.ArrayRefName.ptr + \
-                                    (size_t)stay.ArrayRefName.ptr
+                                    (Size)stay.ArrayRefName.ptr
 
         FIX_ARRAYREF(diagnoses);
         FIX_ARRAYREF(procedures);
@@ -971,8 +972,8 @@ bool StaySetBuilder::Finish(StaySet *out_set)
 #undef FIX_ARRAYREF
     }
 
-    memcpy(out_set, &set, sizeof(set));
-    memset(&set, 0, sizeof(set));
+    memcpy(out_set, &set, SIZE(set));
+    memset(&set, 0, SIZE(set));
 
     return true;
 }

@@ -65,7 +65,7 @@ static bool MergeConstraint(const TableIndex &index,
 }
 
 // TODO: Convert to non-recursive code
-static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_node_idx,
+static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_idx,
                            GhmConstraint constraint,
                            HashSet<GhmCode, GhmConstraint> *out_constraints)
 {
@@ -135,7 +135,7 @@ static bool RecurseGhmTree(const TableIndex &index, size_t depth, size_t ghm_nod
             }
 
             // Default case, for most functions and in case of error
-            for (size_t i = 0; i < ghm_node.u.test.children_count; i++) {
+            for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
                 success &= RecurseGhmTree(index, depth + 1, ghm_node.u.test.children_idx + i,
                                           constraint, out_constraints);
             }
@@ -157,7 +157,7 @@ bool ComputeGhmConstraints(const TableIndex &index,
     Assert(!out_constraints->count);
 
     GhmConstraint null_constraint = {};
-    null_constraint.duration_mask = UINT64_MAX;
+    null_constraint.duration_mask = UINT32_MAX;
 
     return RecurseGhmTree(index, 0, 0, null_constraint, out_constraints);
 }

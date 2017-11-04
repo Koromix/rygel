@@ -50,7 +50,7 @@ void Allocator::ReleaseAll(Allocator *alloc)
     alloc->ReleaseAll();
 }
 
-void *Allocator::Allocate(Allocator *alloc, size_t size, unsigned int flags)
+void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -58,7 +58,7 @@ void *Allocator::Allocate(Allocator *alloc, size_t size, unsigned int flags)
     return alloc->Allocate(size, flags);
 }
 
-void Allocator::Resize(Allocator *alloc, void **ptr, size_t old_size, size_t new_size,
+void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags)
 {
     if (!alloc) {
@@ -67,7 +67,7 @@ void Allocator::Resize(Allocator *alloc, void **ptr, size_t old_size, size_t new
     alloc->Resize(ptr, old_size, new_size, flags);
 }
 
-void Allocator::Release(Allocator *alloc, void *ptr, size_t size)
+void Allocator::Release(Allocator *alloc, void *ptr, Size size)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -75,12 +75,14 @@ void Allocator::Release(Allocator *alloc, void *ptr, size_t size)
     alloc->Release(ptr, size);
 }
 
-void *Allocator::Allocate(size_t size, unsigned int flags)
+void *Allocator::Allocate(Size size, unsigned int flags)
 {
+    DebugAssert(size >= 0);
+
     if (!size)
         return nullptr;
 
-    AllocatorBucket *bucket = (AllocatorBucket *)malloc(sizeof(*bucket) + size);
+    AllocatorBucket *bucket = (AllocatorBucket *)malloc(SIZE(*bucket) + size);
     if (!bucket) {
         LogError("Failed to allocate %1 of memory", FmtMemSize(size));
         abort();
@@ -91,14 +93,17 @@ void *Allocator::Allocate(size_t size, unsigned int flags)
     bucket->head.next = &list;
 
     if (flags & (int)Flag::Zero) {
-        memset(bucket->data, 0, size);
+        memset(bucket->data, 0, (size_t)size);
     }
 
     return bucket->data;
 }
 
-void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned int flags)
+void Allocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
+    DebugAssert(old_size >= 0);
+    DebugAssert(new_size >= 0);
+
     if (!*ptr) {
         *ptr = Allocate(new_size, flags | (int)Flag::Resizable);
         return;
@@ -110,7 +115,8 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
     }
 
     AllocatorBucket *bucket = PTR_TO_BUCKET(*ptr);
-    AllocatorBucket *new_bucket = (AllocatorBucket *)realloc(bucket, sizeof(*new_bucket) + new_size);
+    AllocatorBucket *new_bucket =
+        (AllocatorBucket *)realloc(bucket, (size_t)(SIZE(*new_bucket) + new_size));
     if (!new_bucket) {
         LogError("Failed to resize %1 memory block to %2",
                  FmtMemSize(old_size), FmtMemSize(new_size));
@@ -121,12 +127,14 @@ void Allocator::Resize(void **ptr, size_t old_size, size_t new_size, unsigned in
     *ptr = new_bucket->data;
 
     if (flags & (int)Flag::Zero && new_size > old_size) {
-        memset(new_bucket->data + old_size, 0, new_size - old_size);
+        memset(new_bucket->data + old_size, 0, (size_t)(new_size - old_size));
     }
 }
 
-void Allocator::Release(void *ptr, size_t)
+void Allocator::Release(void *ptr, Size size)
 {
+    DebugAssert(size >= 0);
+
     if (!ptr)
         return;
 
@@ -182,8 +190,8 @@ GCC_POP_IGNORE()
     }
 
     date.st.year = (int16_t)parts[0];
-    date.st.month = (uint8_t)parts[1];
-    date.st.day = (uint8_t)parts[2];
+    date.st.month = (int8_t)parts[1];
+    date.st.day = (int8_t)parts[2];
     if (strict && !date.IsValid()) {
         LogError("Invalid date string '%1'", date_str);
         date.value = 0;
@@ -206,7 +214,7 @@ Date Date::FromJulianDays(int days)
         int h = 5 * g + 2;
         date.st.day = h % 153 / 5 + 1;
         date.st.month = (h / 153 + 2) % 12 + 1;
-        date.st.year = (e / 1461) - 4716 + (date.st.month < 3);
+        date.st.year = (int16_t)((e / 1461) - 4716 + (date.st.month < 3));
     }
 
     return date;
@@ -301,19 +309,19 @@ uint64_t GetMonotonicTime()
 char *MakeString(Allocator *alloc, ArrayRef<const char> bytes)
 {
     char *str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
-    memcpy(str, bytes.ptr, bytes.len);
+    memcpy(str, bytes.ptr, (size_t)bytes.len);
     str[bytes.len] = 0;
     return str;
 }
 
-char *DuplicateString(Allocator *alloc, const char *str, size_t max_len)
+char *DuplicateString(Allocator *alloc, const char *str, Size max_len)
 {
-    size_t str_len = strlen(str);
+    Size str_len = (Size)strlen(str);
     if (str_len > max_len) {
         str_len = max_len;
     }
     char *new_str = (char *)Allocator::Allocate(alloc, str_len + 1);
-    memcpy(new_str, str, str_len);
+    memcpy(new_str, str, (size_t)str_len);
     new_str[str_len] = 0;
     return new_str;
 }
@@ -328,14 +336,14 @@ static inline void WriteUnsignedAsDecimal(uint64_t value, AppendFunc append)
     static const char literals[] = "0123456789";
 
     char buf[32];
-    size_t len = sizeof(buf);
+    Size len = SIZE(buf);
     do {
         uint64_t digit = value % 10;
         value /= 10;
         buf[--len] = literals[digit];
     } while (value);
 
-    append(ArrayRef<const char>(buf + len, sizeof(buf) - len));
+    append(ArrayRef<const char>(buf + len, SIZE(buf) - len));
 }
 
 template <typename AppendFunc>
@@ -344,22 +352,22 @@ static inline void WriteUnsignedAsHex(uint64_t value, AppendFunc append)
     static const char literals[] = "0123456789ABCDEF";
 
     char buf[32];
-    size_t len = sizeof(buf);
+    Size len = SIZE(buf);
     do {
         uint64_t digit = value & 0xF;
         value >>= 4;
         buf[--len] = literals[digit];
     } while (value);
 
-    append(ArrayRef<const char>(buf + len, sizeof(buf) - len));
+    append(ArrayRef<const char>(buf + len, SIZE(buf) - len));
 }
 
 template <typename AppendFunc>
 static inline void WriteUnsignedAsBinary(uint64_t value, AppendFunc append)
 {
     char buf[64];
-    size_t msb = 64 - (size_t)CountLeadingZeros(value);
-    for (size_t i = 0; i < msb; i++) {
+    Size msb = 64 - (Size)CountLeadingZeros(value);
+    for (Size i = 0; i < msb; i++) {
         bool bit = (value >> (msb - i - 1)) & 0x1;
         buf[i] = bit ? '1' : '0';
     }
@@ -374,13 +382,13 @@ static inline void WriteDouble(double value, int precision, AppendFunc append)
     // That's the lazy way to do it, it'll do for now
     int buf_len;
     if (precision >= 0) {
-        buf_len = snprintf(buf, sizeof(buf), "%.*f", precision, value);
+        buf_len = snprintf(buf, SIZE(buf), "%.*f", precision, value);
     } else {
-        buf_len = snprintf(buf, sizeof(buf), "%g", value);
+        buf_len = snprintf(buf, SIZE(buf), "%g", value);
     }
-    Assert(buf_len >= 0 && (size_t)buf_len <= sizeof(buf));
+    Assert(buf_len >= 0 && buf_len <= SIZE(buf));
 
-    append(MakeArrayRef(buf, (size_t)buf_len));
+    append(MakeArrayRef(buf, (Size)buf_len));
 }
 
 template <typename AppendFunc>
@@ -444,31 +452,45 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::MemorySize: {
-                if (arg.value.size > 1024 * 1024) {
-                    double len_mib = (double)arg.value.size / (1024.0 * 1024.0);
-                    WriteDouble(len_mib, 2, append);
+                size_t size_unsigned;
+                if (arg.value.size >= 0) {
+                    size_unsigned = (size_t)arg.value.size;
+                    append(MakeStrRef("-"));
+                } else {
+                    size_unsigned = (size_t)-arg.value.size;
+                }
+                if (size_unsigned > 1024 * 1024) {
+                    double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
+                    WriteDouble(size_mib, 2, append);
                     append(MakeStrRef(" MiB"));
-                } else if (arg.value.size > 1024) {
-                    double len_kib = (double)arg.value.size / 1024.0;
-                    WriteDouble(len_kib, 2, append);
+                } else if (size_unsigned > 1024) {
+                    double size_kib = (double)size_unsigned / 1024.0;
+                    WriteDouble(size_kib, 2, append);
                     append(MakeStrRef(" kiB"));
                 } else {
-                    WriteUnsignedAsDecimal(arg.value.size, append);
+                    WriteUnsignedAsDecimal(size_unsigned, append);
                     append(MakeStrRef(" B"));
                 }
             } break;
 
             case FmtArg::Type::DiskSize: {
-                if (arg.value.size > 1000 * 1000) {
-                    double len_mb = (double)arg.value.size / (1000.0 * 1000.0);
-                    WriteDouble(len_mb, 2, append);
+                size_t size_unsigned;
+                if (arg.value.size >= 0) {
+                    size_unsigned = (size_t)arg.value.size;
+                    append(MakeStrRef("-"));
+                } else {
+                    size_unsigned = (size_t)-arg.value.size;
+                }
+                if (size_unsigned > 1000 * 1000) {
+                    double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
+                    WriteDouble(size_mib, 2, append);
                     append(MakeStrRef(" MB"));
-                } else if (arg.value.size > 1000) {
-                    double len_kb = (double)arg.value.size / 1000.0;
-                    WriteDouble(len_kb, 2, append);
+                } else if (size_unsigned > 1024) {
+                    double size_kib = (double)size_unsigned / 1000.0;
+                    WriteDouble(size_kib, 2, append);
                     append(MakeStrRef(" kB"));
                 } else {
-                    WriteUnsignedAsDecimal(arg.value.size, append);
+                    WriteUnsignedAsDecimal(size_unsigned, append);
                     append(MakeStrRef(" B"));
                 }
             } break;
@@ -487,24 +509,24 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 } else if (year < 1000) {
                     append(MakeStrRef("0"));
                 }
-                WriteUnsignedAsDecimal(year, append);
+                WriteUnsignedAsDecimal((uint64_t)year, append);
                 append(MakeStrRef("-"));
                 if (arg.value.date.st.month < 10) {
                     append(MakeStrRef("0"));
                 }
-                WriteUnsignedAsDecimal(arg.value.date.st.month, append);
+                WriteUnsignedAsDecimal((uint64_t)arg.value.date.st.month, append);
                 append(MakeStrRef("-"));
                 if (arg.value.date.st.day < 10) {
                     append(MakeStrRef("0"));
                 }
-                WriteUnsignedAsDecimal(arg.value.date.st.day, append);
+                WriteUnsignedAsDecimal((uint64_t)arg.value.date.st.day, append);
             } break;
 
             case FmtArg::Type::List: {
                 if (arg.value.list.args.len) {
                     ProcessArg(arg.value.list.args[0], append);
                     ArrayRef<const char> separator = MakeStrRef(arg.value.list.separator);
-                    for (size_t j = 1; j < arg.value.list.args.len; j++) {
+                    for (Size j = 1; j < arg.value.list.args.len; j++) {
                         append(separator);
                         ProcessArg(arg.value.list.args[j], append);
                     }
@@ -530,13 +552,13 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
         while (marker_ptr[0] && marker_ptr[0] != '%') {
             marker_ptr++;
         }
-        append(ArrayRef<const char>(fmt_ptr, (size_t)(marker_ptr - fmt_ptr)));
+        append(ArrayRef<const char>(fmt_ptr, (Size)(marker_ptr - fmt_ptr)));
         if (!marker_ptr[0])
             break;
 
         // Try to interpret this marker as a number
-        size_t idx = 0;
-        size_t idx_end = 1;
+        Size idx = 0;
+        Size idx_end = 1;
         for (;;) {
             // Unsigned cast makes the test below quicker, don't remove it or it'll break
             unsigned int digit = (unsigned int)marker_ptr[idx_end] - '0';
@@ -591,19 +613,21 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
 
 ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
 {
+    DebugAssert(buf.len >= 0);
+
     if (!buf.len)
         return {};
     buf.len--;
 
-    size_t real_len = 0;
+    Size real_len = 0;
 
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         if (real_len < buf.len) {
-            size_t copy_len = fragment.len;
+            Size copy_len = fragment.len;
             if (copy_len > buf.len - real_len) {
                 copy_len = buf.len - real_len;
             }
-            memcpy(buf.ptr + real_len, fragment.ptr, copy_len);
+            memcpy(buf.ptr + real_len, fragment.ptr, (size_t)copy_len);
         }
         real_len += fragment.len;
     });
@@ -619,21 +643,21 @@ ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtAr
 {
     char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
                                             (int)Allocator::Flag::Resizable);
-    size_t buf_len = 0;
+    Size buf_len = 0;
     // Cheat a little bit to make room for the NUL byte
-    size_t buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
+    Size buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
 
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         // Same thing, use >= and <= to make sure we have enough place for the NUL byte
         if (fragment.len >= buf_capacity - buf_len) {
-            size_t new_capacity = buf_capacity;
+            Size new_capacity = buf_capacity;
             do {
-                new_capacity = (size_t)(new_capacity * FMT_STRING_GROWTH_FACTOR);
+                new_capacity = (Size)(new_capacity * FMT_STRING_GROWTH_FACTOR);
             } while (fragment.len <= new_capacity - buf_len);
             Allocator::Resize(alloc, (void **)&buf, buf_capacity, new_capacity);
             buf_capacity = new_capacity;
         }
-        memcpy(buf + buf_len, fragment.ptr, fragment.len);
+        memcpy(buf + buf_len, fragment.ptr, (size_t)fragment.len);
         buf_len += fragment.len;
     });
     buf[buf_len] = 0;
@@ -646,17 +670,17 @@ void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
         if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
-            fwrite(buf.data, 1, buf.len, fp);
+            fwrite(buf.data, 1, (size_t)buf.len, fp);
             buf.len = 0;
         }
         if (fragment.len >= ARRAY_SIZE(buf.data)) {
-            fwrite(fragment.ptr, 1, fragment.len, fp);
+            fwrite(fragment.ptr, 1, (size_t)fragment.len, fp);
         } else {
-            memcpy(buf.data + buf.len, fragment.ptr, fragment.len);
+            memcpy(buf.data + buf.len, fragment.ptr, (size_t)fragment.len);
             buf.len += fragment.len;
         }
     });
-    fwrite(buf.data, 1, buf.len, fp);
+    fwrite(buf.data, 1, (size_t)buf.len, fp);
 }
 
 // ------------------------------------------------------------------------
@@ -716,7 +740,7 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
 
     {
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
-        size_t ctx_len = strlen(ctx);
+        Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
             fprintf(fp, " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
         } else {
@@ -751,7 +775,7 @@ void PopLogHandler()
 static char executable_path[4096];
 static char executable_dir[4096];
 
-bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
+bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
               ArrayRef<uint8_t> *out_data)
 {
     FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
@@ -772,7 +796,7 @@ bool ReadFile(Allocator *alloc, const char *filename, size_t max_size,
 
     data.ptr = (uint8_t *)Allocator::Allocate(alloc, data.len);
     DEFER_N(data_guard) { Allocator::Release(alloc, data.ptr, data.len); };
-    if (fread(data.ptr, 1, data.len, fp) != data.len || ferror(fp)) {
+    if (fread(data.ptr, 1, (size_t)data.len, fp) != (size_t)data.len || ferror(fp)) {
         LogError("Error while reading file '%1'", filename);
         return false;
     }
@@ -793,7 +817,7 @@ static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
     static thread_local char str_buf[256];
     DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                                   nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                  str_buf, sizeof(str_buf), nullptr);
+                                  str_buf, SIZE(str_buf), nullptr);
     if (fmt_ret) {
         char *str_end = str_buf + strlen(str_buf);
         // FormatMessage adds newlines, remove them
@@ -842,8 +866,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
     if (!filter) {
         filter = "*";
     }
-    if (snprintf(find_filter, sizeof(find_filter), "%s\\%s", dirname, filter)
-            >= (int)sizeof(find_filter)) {
+    if (snprintf(find_filter, SIZE(find_filter), "%s\\%s", dirname, filter) >= SIZE(find_filter)) {
         LogError("Cannot enumerate directory '%1': Path too long", dirname);
         return EnumStatus::Error;
     }
@@ -972,7 +995,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 #endif
 
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
-                             HeapArray<const char *> *out_files, size_t max_files)
+                             HeapArray<const char *> *out_files, Size max_files)
 {
     Assert(max_files > 0);
 
@@ -1001,17 +1024,17 @@ static void InitExecutablePaths()
     if (executable_path[0])
         return;
 
-    size_t path_len;
+    Size path_len;
 #if defined(_WIN32)
-    path_len = GetModuleFileName(nullptr, executable_path, sizeof(executable_path));
+    path_len = GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
     Assert(path_len);
-    Assert(path_len < sizeof(executable_path));
+    Assert(path_len < SIZE(executable_path));
 #elif defined(__linux__)
     {
         char *path_buf = realpath("/proc/self/exe", nullptr);
         Assert(path_buf);
         path_len = strlen(path_buf);
-        Assert(path_len < sizeof(executable_path));
+        Assert(path_len < SIZE_OF(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -1020,9 +1043,9 @@ static void InitExecutablePaths()
 #endif
 
     {
-        size_t dir_len = path_len;
+        Size dir_len = path_len;
         while (dir_len && !strchr(PATH_SEPARATORS, executable_path[--dir_len]));
-        memcpy(executable_dir, executable_path, dir_len);
+        memcpy(executable_dir, executable_path, (size_t)dir_len);
         executable_dir[dir_len] = 0;
     }
 }
@@ -1058,16 +1081,16 @@ static inline bool IsDashDash(const char *arg)
     return arg[0] == '-' && arg[1] == '-' && !arg[2];
 }
 
-static void ReverseArgs(const char **args, size_t start, size_t end)
+static void ReverseArgs(const char **args, Size start, Size end)
 {
-    for (size_t i = 0; i < (end - start) / 2; i++) {
+    for (Size i = 0; i < (end - start) / 2; i++) {
         const char *tmp = args[start + i];
         args[start + i] = args[end - i - 1];
         args[end - i - 1] = tmp;
     }
 }
 
-static void RotateArgs(const char **args, size_t start, size_t mid, size_t end)
+static void RotateArgs(const char **args, Size start, Size mid, Size end)
 {
     if (start == mid || mid == end)
         return;
@@ -1079,7 +1102,7 @@ static void RotateArgs(const char **args, size_t start, size_t mid, size_t end)
 
 const char *OptionParser::ConsumeOption()
 {
-    size_t next_index;
+    Size next_index;
     const char *opt;
 
     current_option = nullptr;
@@ -1118,11 +1141,11 @@ const char *OptionParser::ConsumeOption()
             // We can reorder args, but we don't want to change strings. So copy the
             // option up to '=' in our buffer. And store the part after '=' as the
             // current value.
-            size_t len = (size_t)(needle - opt);
-            if (len > sizeof(buf) - 1) {
-                len = sizeof(buf) - 1;
+            Size len = needle - opt;
+            if (len > SIZE(buf) - 1) {
+                len = SIZE(buf) - 1;
             }
-            memcpy(buf, opt, len);
+            memcpy(buf, opt, (size_t)len);
             buf[len] = 0;
             current_option = buf;
             current_value = needle + 1;

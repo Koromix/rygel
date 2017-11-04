@@ -9,7 +9,7 @@
 bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_pricings)
 {
-    size_t start_pricings_len = out_pricings->len;
+    Size start_pricings_len = out_pricings->len;
     DEFER_N(out_guard) { out_pricings->RemoveFrom(start_pricings_len); };
 
 #define FAIL_PARSE_IF(Cond) \
@@ -73,31 +73,33 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
                             pricing1.limit_dates[0] - pricing2.limit_dates[0]) < 0;
         });
 
-        size_t j = 0;
-        for (size_t i = 1; i < pricings.len; i++) {
-            if (pricings[i].ghs == pricings[j].ghs) {
-                if (pricings[i].limit_dates[0] == pricings[j].limit_dates[0]) {
-                    if (pricings[i].sectors[0].price_cents) {
-                        pricings[j].sectors[0] = pricings[i].sectors[0];
-                    } else if (pricings[i].sectors[1].price_cents) {
-                        pricings[j].sectors[1] = pricings[i].sectors[1];
+        if (pricings.len) {
+            Size j = 0;
+            for (Size i = 1; i < pricings.len; i++) {
+                if (pricings[i].ghs == pricings[j].ghs) {
+                    if (pricings[i].limit_dates[0] == pricings[j].limit_dates[0]) {
+                        if (pricings[i].sectors[0].price_cents) {
+                            pricings[j].sectors[0] = pricings[i].sectors[0];
+                        } else if (pricings[i].sectors[1].price_cents) {
+                            pricings[j].sectors[1] = pricings[i].sectors[1];
+                        }
+                    } else {
+                        pricings[++j] = pricings[i];
+
+                        pricings[j - 1].limit_dates[1] = pricings[j].limit_dates[0];
+                        if (!pricings[j].sectors[0].price_cents) {
+                            pricings[j].sectors[0] = pricings[j - 1].sectors[0];
+                        }
+                        if (!pricings[j].sectors[1].price_cents) {
+                            pricings[j].sectors[1] = pricings[j - 1].sectors[1];
+                        }
                     }
                 } else {
                     pricings[++j] = pricings[i];
-
-                    pricings[j - 1].limit_dates[1] = pricings[j].limit_dates[0];
-                    if (!pricings[j].sectors[0].price_cents) {
-                        pricings[j].sectors[0] = pricings[j - 1].sectors[0];
-                    }
-                    if (!pricings[j].sectors[1].price_cents) {
-                        pricings[j].sectors[1] = pricings[j - 1].sectors[1];
-                    }
                 }
-            } else {
-                pricings[++j] = pricings[i];
             }
+            out_pricings->RemoveFrom(start_pricings_len + j + 1);
         }
-        out_pricings->RemoveFrom(start_pricings_len + j);
     }
 
 #undef FAIL_PARSE_IF
@@ -138,7 +140,7 @@ ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs) const
                end_pricing->ghs == ghs) {
             end_pricing++;
         }
-        pricings.len = (size_t)(end_pricing - pricings.ptr);
+        pricings.len = end_pricing - pricings.ptr;
     }
 
     return pricings;

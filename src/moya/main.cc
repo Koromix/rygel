@@ -65,7 +65,7 @@ const PricingSet *GetMainPricingSet()
             if (main_pricing_filename) {
                 filename = main_pricing_filename;
             } else {
-                for (size_t i = main_data_directories.len; i-- > 0;) {
+                for (Size i = main_data_directories.len; i-- > 0;) {
                     const char *data_dir = main_data_directories[i];
 
                     const char *test_filename = Fmt(&temp_alloc, "%1%/pricing.nx", data_dir).ptr;
@@ -99,7 +99,7 @@ const AuthorizationSet *GetMainAuthorizationSet()
             if (main_authorization_filename) {
                 filename = main_authorization_filename;
             } else {
-                for (size_t i = main_data_directories.len; i-- > 0;) {
+                for (Size i = main_data_directories.len; i-- > 0;) {
                     const char *data_dir = main_data_directories[i];
 
                     const char *test_filename = Fmt(&temp_alloc, "%1%/authorizations.json", data_dir).ptr;

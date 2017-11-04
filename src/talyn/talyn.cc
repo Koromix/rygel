@@ -46,7 +46,7 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
         return false;
     }
     const HashSet<GhmCode, GhmConstraint> &constraints =
-        table_set_constraints[(size_t)(index - table_set->indexes.ptr)];
+        table_set_constraints[index - table_set->indexes.ptr];
 
     Allocator temp_alloc;
     rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(*out_buffer);
@@ -166,11 +166,11 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
         rapidjson::MemoryBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
         writer.StartArray();
-        for (size_t i = 0; i < ARRAY_SIZE(pages);) {
+        for (Size i = 0; i < ARRAY_SIZE(pages);) {
             writer.StartObject();
             writer.Key("category"); writer.String(pages[i].category);
             writer.Key("pages"); writer.StartArray();
-            size_t j = i;
+            Size j = i;
             for (; j < ARRAY_SIZE(pages) && pages[j].category == pages[i].category; j++) {
                 writer.StartObject();
                 writer.Key("url"); writer.String(pages[j].url + 1);
@@ -265,7 +265,7 @@ Talyn options:
     if (!authorization_set)
         return 1;
 
-    for (size_t i = 0; i < table_set->indexes.len; i++) {
+    for (Size i = 0; i < table_set->indexes.len; i++) {
         LogDebug("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
         HashSet<GhmCode, GhmConstraint> *constraints = table_set_constraints.Append();
         if (!ComputeGhmConstraints(table_set->indexes[i], constraints))

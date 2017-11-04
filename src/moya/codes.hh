@@ -57,7 +57,7 @@ union GhmRootCode {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
         // TODO: Improve Fmt API to avoid snprintf everywhere
-        snprintf(arg.value.str_buf, sizeof(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16,
+        snprintf(arg.value.str_buf, SIZE(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16,
                  parts.cmd, parts.type, parts.seq);
         return arg;
     }
@@ -121,7 +121,7 @@ union GhmCode {
     {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
-        snprintf(arg.value.str_buf, sizeof(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16 "%c",
+        snprintf(arg.value.str_buf, SIZE(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16 "%c",
                  parts.cmd, parts.type, parts.seq, parts.mode);
         return arg;
     }
@@ -151,7 +151,7 @@ union DiagnosisCode {
 
         code.value = 0;
         if (str[0]) {
-            for (size_t i = 0; i < sizeof(code.str) - 1 && str[i] && str[i] != ' '; i++) {
+            for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
                 code.str[i] = UpperAscii(str[i]);
             }
 
@@ -212,7 +212,7 @@ union ProcedureCode {
 
         code.value = 0;
         if (str[0]) {
-            for (size_t i = 0; i < sizeof(code.str) - 1 && str[i] && str[i] != ' '; i++) {
+            for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
                 code.str[i] = UpperAscii(str[i]);
             }
 

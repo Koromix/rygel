@@ -25,14 +25,14 @@ static int ComputeAge(Date date, Date birthdate)
 }
 
 static inline uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
-                                       DiagnosisCode diag, uint8_t byte_idx)
+                                       DiagnosisCode diag, int16_t byte_idx)
 {
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
 
     // FIXME: Warning / classifier errors
     if (UNLIKELY(!diag_info))
         return 0;
-    if (UNLIKELY(byte_idx >= sizeof(DiagnosisInfo::attributes[0].raw)))
+    if (UNLIKELY(byte_idx >= SIZE(DiagnosisInfo::attributes[0].raw)))
         return 0;
 
     return diag_info->Attributes(sex).raw[byte_idx];
@@ -44,19 +44,19 @@ static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
     return GetDiagnosisByte(index, sex, diag, mask.offset) & mask.value;
 }
 static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
-                                 DiagnosisCode diag, uint8_t offset, uint8_t value)
+                                 DiagnosisCode diag, int16_t offset, uint8_t value)
 {
     return GetDiagnosisByte(index, sex, diag, offset) & value;
 }
 
 static inline uint8_t GetProcedureByte(const TableIndex &index,
-                                       const ProcedureRealisation &proc, uint8_t byte_idx)
+                                       const ProcedureRealisation &proc, int16_t byte_idx)
 {
     const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, proc.date);
 
     if (UNLIKELY(!proc_info))
         return 0;
-    if (UNLIKELY(byte_idx >= sizeof(ProcedureInfo::bytes)))
+    if (UNLIKELY(byte_idx >= SIZE(ProcedureInfo::bytes)))
         return 0;
 
     return proc_info->bytes[byte_idx];
@@ -68,7 +68,7 @@ static inline bool TestProcedure(const TableIndex &index,
     return GetProcedureByte(index, proc, mask.offset) & mask.value;
 }
 static inline bool TestProcedure(const TableIndex &index,
-                                 const ProcedureRealisation &proc, uint8_t offset, uint8_t value)
+                                 const ProcedureRealisation &proc, int16_t offset, uint8_t value)
 {
     return GetProcedureByte(index, proc, offset) & value;
 }
@@ -86,7 +86,7 @@ ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
     if (!stays.len)
         return {};
 
-    size_t agg_len = 0;
+    Size agg_len = 0;
     switch (mode) {
         case ClusterMode::StayModes: {
             agg_len = 1;
@@ -263,7 +263,7 @@ GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
 
     // Consistency checks
     if (!stays[0].birthdate.value) {
-        if (stays[0].error_mask & (uint32_t)Stay::Error::MalformedBirthdate) {
+        if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
             out_errors->Append(14);
         } else {
             out_errors->Append(13);
@@ -273,7 +273,7 @@ GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
         out_errors->Append(39);
         valid = false;
     }
-    for (size_t i = 1; i < stays.len; i++) {
+    for (Size i = 1; i < stays.len; i++) {
         if (stays[i].birthdate != stays[0].birthdate) {
             out_errors->Append(45);
             valid = false;
@@ -295,20 +295,22 @@ GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
             return code1.value < code2.value;
         });
 
-        size_t j = 0;
-        for (size_t i = 1; i < out_diagnoses->len; i++) {
-            if ((*out_diagnoses)[i] != (*out_diagnoses)[j]) {
-                (*out_diagnoses)[++j] = (*out_diagnoses)[i];
+        if (out_diagnoses->len) {
+            Size j = 0;
+            for (Size i = 1; i < out_diagnoses->len; i++) {
+                if ((*out_diagnoses)[i] != (*out_diagnoses)[j]) {
+                    (*out_diagnoses)[++j] = (*out_diagnoses)[i];
+                }
             }
+            out_diagnoses->RemoveFrom(j + 1);
         }
-        out_diagnoses->RemoveFrom(j + 1);
 
         out_agg->diagnoses = *out_diagnoses;
     }
 
     // Deduplicate procedures
     if (out_procedures) {
-        size_t procedures_start = out_procedures->len;
+        Size procedures_start = out_procedures->len;
         for (const Stay &stay: stays) {
             out_procedures->Append(stay.procedures);
         }
@@ -323,20 +325,22 @@ GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
 
         // TODO: Warn when we deduplicate procedures with different attributes,
         // such as when the two procedures fall into different date ranges / limits.
-        size_t j = 0;
-        for (size_t i = 1; i < out_procedures->len; i++) {
-            if ((*out_procedures)[i].proc == (*out_procedures)[j].proc &&
-                    (*out_procedures)[i].phase == (*out_procedures)[j].phase) {
-                (*out_procedures)[j].activities |= (*out_procedures)[i].activities;
-                (*out_procedures)[j].count += (*out_procedures)[i].count;
-                if (UNLIKELY((*out_procedures)[j].count > 9999)) {
-                    (*out_procedures)[j].count = 9999;
+        if (out_procedures->len) {
+            Size j = 0;
+            for (Size i = 1; i < out_procedures->len; i++) {
+                if ((*out_procedures)[i].proc == (*out_procedures)[j].proc &&
+                        (*out_procedures)[i].phase == (*out_procedures)[j].phase) {
+                    (*out_procedures)[j].activities |= (*out_procedures)[i].activities;
+                    (*out_procedures)[j].count += (*out_procedures)[i].count;
+                    if (UNLIKELY((*out_procedures)[j].count > 9999)) {
+                        (*out_procedures)[j].count = 9999;
+                    }
+                } else {
+                    (*out_procedures)[++j] = (*out_procedures)[i];
                 }
-            } else {
-                (*out_procedures)[++j] = (*out_procedures)[i];
             }
+            out_procedures->RemoveFrom(j + 1);
         }
-        out_procedures->RemoveFrom(j + 1);
 
         out_agg->procedures = *out_procedures;
     }
@@ -369,13 +373,13 @@ static bool TestExclusion(const TableIndex &index,
 
 int GetMinimalDurationForSeverity(int severity)
 {
-    DebugAssert(severity && severity < 4);
+    DebugAssert(severity >= 0 && severity < 4);
     return severity ? (severity + 2) : 0;
 }
 
 int LimitSeverityWithDuration(int severity, int duration)
 {
-    DebugAssert(severity && severity < 4);
+    DebugAssert(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
@@ -452,7 +456,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 10: {
-            size_t matches = 0;
+            Size matches = 0;
             for (const ProcedureRealisation &proc: ctx.agg->procedures) {
                 if (TestProcedure(*ctx.agg->index, proc,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
@@ -475,7 +479,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 18: {
-            size_t matches = 0, special_matches = 0;
+            Size matches = 0, special_matches = 0;
             for (DiagnosisCode diag: ctx.agg->diagnoses) {
                 if (TestDiagnosis(*ctx.agg->index, ctx.agg->stay.sex, diag,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
@@ -654,8 +658,8 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
     ctx.main_diagnosis = agg.stay.main_diagnosis;
     ctx.linked_diagnosis = agg.stay.linked_diagnosis;
 
-    size_t ghm_node_idx = 0;
-    for (size_t i = 0; !ghm.IsValid(); i++) {
+    Size ghm_node_idx = 0;
+    for (Size i = 0; !ghm.IsValid(); i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
             if (out_errors) {
@@ -669,8 +673,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
                 int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
-                if (UNLIKELY(function_ret < 0 ||
-                             (size_t)function_ret >= ghm_node.u.test.children_count)) {
+                if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
                     if (out_errors) {
@@ -679,7 +682,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
                     return GhmCode::FromString("90Z03Z");
                 }
 
-                ghm_node_idx = ghm_node.u.test.children_idx + (size_t)function_ret;
+                ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
             } break;
 
             case GhmDecisionNode::Type::Ghm: {
@@ -899,10 +902,10 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 }
 
 static bool TestSupplementRea(const ClassifyAggregate &agg, const Stay &stay,
-                              size_t list2_treshold)
+                              Size list2_treshold)
 {
     if (stay.igs2 >= 15 || agg.age < 18) {
-        size_t list2_matches = 0;
+        Size list2_matches = 0;
         for (const ProcedureRealisation &proc: stay.procedures) {
             if (TestProcedure(*agg.index, proc, 27, 0x10))
                 return true;
@@ -1177,7 +1180,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
             if (UNLIKELY(result.ghm.IsError()))
                 break;
         } while (false);
-        result.errors.len = out_result_set->store.errors.len - (size_t)result.errors.ptr;
+        result.errors.len = out_result_set->store.errors.len - (Size)result.errors.ptr;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
         if (pricing_set) {
@@ -1200,6 +1203,6 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
     }
 
     for (ClassifyResult &result: out_result_set->results) {
-        result.errors.ptr = out_result_set->store.errors.ptr + (size_t)result.errors.ptr;
+        result.errors.ptr = out_result_set->store.errors.ptr + (Size)result.errors.ptr;
     }
 }

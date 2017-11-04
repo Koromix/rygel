@@ -6,7 +6,7 @@
 #include "tables.hh"
 
 struct LoadTableData {
-    size_t table_idx;
+    Size table_idx;
     const char *filename;
     ArrayRef<uint8_t> raw_data;
     bool loaded;
@@ -53,18 +53,18 @@ Date ConvertDate1980(uint16_t days)
     return Date::FromJulianDays(base_days + days);
 }
 
-static DiagnosisCode ConvertDiagnosisCode(uint16_t code123, uint16_t code456)
+static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
 {
     DiagnosisCode code = {};
 
-    snprintf(code.str, sizeof(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
+    snprintf(code.str, SIZE(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
 
     static const char code456_chars[] = " 0123456789+";
     code456 %= 1584;
     code.str[3] = code456_chars[code456 / 132]; code456 %= 132;
     code.str[4] = code456_chars[code456 / 11]; code456 %= 11;
     code.str[5] = code456_chars[code456];
-    for (size_t i = 5; i >= 3 && code.str[i] == ' '; i--) {
+    for (int i = 5; i >= 3 && code.str[i] == ' '; i--) {
         code.str[i] = '\0';
     }
 
@@ -90,7 +90,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         uint8_t sections_count;
         uint8_t pad2[4];
 	};
-    StaticAssert(sizeof(TableInfo::raw_type) > sizeof(PackedHeader1111::name));
+    StaticAssert(SIZE(TableInfo::raw_type) > SIZE(PackedHeader1111::name));
     struct PackedSection1111 {
         uint8_t pad1[18];
         uint16_t values_count;
@@ -109,12 +109,12 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
     PackedHeader1111 raw_main_header;
     PackedSection1111 raw_main_section;
     {
-        FAIL_PARSE_IF(file_data.len < sizeof(PackedHeader1111) + sizeof(PackedSection1111));
+        FAIL_PARSE_IF(file_data.len < SIZE(PackedHeader1111) + SIZE(PackedSection1111));
 
-        memcpy(&raw_main_header, file_data.ptr, sizeof(PackedHeader1111));
+        memcpy(&raw_main_header, file_data.ptr, SIZE(PackedHeader1111));
         FAIL_PARSE_IF(raw_main_header.sections_count != 1);
 
-        memcpy(&raw_main_section, file_data.ptr + sizeof(PackedHeader1111), sizeof(PackedSection1111));
+        memcpy(&raw_main_section, file_data.ptr + SIZE(PackedHeader1111), SIZE(PackedSection1111));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_main_section.values_count);
         ReverseBytes(&raw_main_section.value_len);
@@ -125,9 +125,9 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         int version = 0, revision = 0;
         sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
         FAIL_PARSE_IF(version < 11 || (version == 11 && revision < 10));
-        FAIL_PARSE_IF(raw_main_section.value_len != sizeof(PackedTablePtr1111));
-        FAIL_PARSE_IF(file_data.len < sizeof(PackedHeader1111) +
-                                 raw_main_section.values_count * sizeof(PackedTablePtr1111));
+        FAIL_PARSE_IF(raw_main_section.value_len != SIZE(PackedTablePtr1111));
+        FAIL_PARSE_IF(file_data.len < SIZE(PackedHeader1111) +
+                                      raw_main_section.values_count * SIZE(PackedTablePtr1111));
     }
 
     for (int i = 0; i < raw_main_section.values_count; i++) {
@@ -135,31 +135,31 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
 
         PackedTablePtr1111 raw_table_ptr;
         {
-            memcpy(&raw_table_ptr, file_data.ptr + sizeof(PackedHeader1111) +
-                                   sizeof(PackedSection1111) + i * sizeof(PackedTablePtr1111),
-                   sizeof(PackedTablePtr1111));
+            memcpy(&raw_table_ptr, file_data.ptr + SIZE(PackedHeader1111) +
+                                   SIZE(PackedSection1111) + i * SIZE(PackedTablePtr1111),
+                   SIZE(PackedTablePtr1111));
 #ifdef ARCH_LITTLE_ENDIAN
             ReverseBytes(&raw_table_ptr.date_range[0]);
             ReverseBytes(&raw_table_ptr.date_range[1]);
             ReverseBytes(&raw_table_ptr.raw_offset);
 #endif
-            FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset + sizeof(PackedHeader1111));
+            FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset + SIZE(PackedHeader1111));
         }
 
         PackedHeader1111 raw_table_header;
         PackedSection1111 raw_table_sections[ARRAY_SIZE(table.sections.data)];
         {
             memcpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset,
-                   sizeof(PackedHeader1111));
+                   SIZE(PackedHeader1111));
             FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset +
-                                     raw_table_header.sections_count * sizeof(PackedSection1111));
+                                          raw_table_header.sections_count * SIZE(PackedSection1111));
             FAIL_PARSE_IF(raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset +
-                                               sizeof(PackedHeader1111) +
-                                               j * sizeof(PackedSection1111),
-                       sizeof(PackedSection1111));
+                                               SIZE(PackedHeader1111) +
+                                               j * SIZE(PackedSection1111),
+                       SIZE(PackedSection1111));
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_table_sections[j].values_count);
                 ReverseBytes(&raw_table_sections[j].value_len);
@@ -185,8 +185,8 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         FAIL_PARSE_IF(table.limit_dates[1] <= table.limit_dates[0]);
 
         // Table type
-        strncpy(table.raw_type, raw_table_header.name, sizeof(raw_table_header.name));
-        table.raw_type[sizeof(table.raw_type) - 1] = '\0';
+        strncpy(table.raw_type, raw_table_header.name, SIZE(raw_table_header.name));
+        table.raw_type[SIZE(table.raw_type) - 1] = '\0';
         table.raw_type[strcspn(table.raw_type, " ")] = '\0';
         if (StrTest(table.raw_type, "ARBREDEC")) {
             table.type = TableType::GhmDecisionTree;
@@ -243,14 +243,14 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
-    FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedTreeNode));
+    FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedTreeNode));
 
-    for (size_t i = 0; i < table.sections[0].values_count; i++) {
+    for (Size i = 0; i < table.sections[0].values_count; i++) {
         GhmDecisionNode ghm_node = {};
 
         PackedTreeNode raw_node;
         memcpy(&raw_node, file_data + table.sections[0].raw_offset +
-                          i * sizeof(PackedTreeNode), sizeof(PackedTreeNode));
+                          (size_t)(i * SIZE(PackedTreeNode)), SIZE(PackedTreeNode));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_node.children_idx);
 #endif
@@ -278,7 +278,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
             static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
 
             ghm_node.type = GhmDecisionNode::Type::Ghm;
-            ghm_node.u.ghm.ghm.parts.cmd = raw_node.params[1];
+            ghm_node.u.ghm.ghm.parts.cmd = (int8_t)raw_node.params[1];
             ghm_node.u.ghm.ghm.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
             ghm_node.u.ghm.ghm.parts.seq = (raw_node.children_idx / 10) % 100;
             ghm_node.u.ghm.ghm.parts.mode = chars4[raw_node.children_idx % 10];
@@ -310,31 +310,31 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
 
     FAIL_PARSE_IF(table.sections.len != 5);
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedDiagnosisPtr));
+    FAIL_PARSE_IF(table.sections[1].value_len != SIZE(PackedDiagnosisPtr));
     FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > sizeof(DiagnosisInfo::attributes[0].raw));
+                  table.sections[2].value_len / 2 > SIZE(DiagnosisInfo::attributes[0].raw));
     FAIL_PARSE_IF(!table.sections[3].value_len ||
-                  table.sections[3].value_len > sizeof(DiagnosisInfo::warnings) * 8);
+                  table.sections[3].value_len > SIZE(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(!table.sections[4].value_len);
 
-    size_t block_start = table.sections[1].raw_offset;
-    for (size_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
-        size_t block_end;
+    Size block_start = table.sections[1].raw_offset;
+    for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
+        Size block_end;
         {
             uint16_t end_idx = *(uint16_t *)(file_data + table.sections[0].raw_offset +
                                              root_idx * 2);
             ReverseBytes(&end_idx);
             FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedDiagnosisPtr);
+            block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedDiagnosisPtr);
         }
 
-        for (size_t block_offset = block_start; block_offset < block_end;
-             block_offset += sizeof(PackedDiagnosisPtr)) {
+        for (Size block_offset = block_start; block_offset < block_end;
+             block_offset += SIZE(PackedDiagnosisPtr)) {
             DiagnosisInfo diag = {};
 
             PackedDiagnosisPtr raw_diag_ptr;
             {
-                memcpy(&raw_diag_ptr, file_data + block_offset, sizeof(PackedDiagnosisPtr));
+                memcpy(&raw_diag_ptr, file_data + block_offset, SIZE(PackedDiagnosisPtr));
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_diag_ptr.code456);
                 ReverseBytes(&raw_diag_ptr.section2_idx);
@@ -353,10 +353,10 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             {
                 const uint8_t *sex_data = file_data + table.sections[2].raw_offset +
                                           raw_diag_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(diag.attributes[0].raw, sex_data, table.sections[2].value_len / 2);
+                memcpy(diag.attributes[0].raw, sex_data, (size_t)(table.sections[2].value_len / 2));
                 memcpy(diag.attributes[1].raw, sex_data + table.sections[2].value_len / 2,
-                       table.sections[2].value_len / 2);
-                if (memcmp(diag.attributes[0].raw, diag.attributes[1].raw, sizeof(diag.attributes[0].raw))) {
+                       (size_t)(table.sections[2].value_len / 2));
+                if (memcmp(diag.attributes[0].raw, diag.attributes[1].raw, SIZE(diag.attributes[0].raw))) {
                     diag.flags |= (int)DiagnosisInfo::Flag::SexDifference;
                 }
 
@@ -377,7 +377,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
 
                 const uint8_t *warn_data = file_data + table.sections[3].raw_offset +
                                            raw_diag_ptr.section3_idx * table.sections[3].value_len;
-                for (size_t i = 0; i < table.sections[3].value_len; i++) {
+                for (Size i = 0; i < table.sections[3].value_len; i++) {
                     if (warn_data[i]) {
                         diag.warnings |= 1 << i;
                     }
@@ -406,15 +406,15 @@ bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
 
     FAIL_PARSE_IF(table.sections.len != 5);
     FAIL_PARSE_IF(!table.sections[4].value_len);
-    FAIL_PARSE_IF(table.sections[4].value_len > sizeof(ExclusionInfo::raw));
+    FAIL_PARSE_IF(table.sections[4].value_len > SIZE(ExclusionInfo::raw));
 
-    for (size_t i = 0; i < table.sections[4].values_count; i++) {
+    for (Size i = 0; i < table.sections[4].values_count; i++) {
         ExclusionInfo *excl = out_exclusions->Append();
         memcpy(excl->raw, file_data + table.sections[4].raw_offset +
-                           i * table.sections[4].value_len, table.sections[4].value_len);
-        if (table.sections[4].value_len > sizeof(excl->raw)) {
-            memset(excl->raw + table.sections[4].value_len,
-                   0, sizeof(excl->raw) - table.sections[4].value_len);
+                          i * table.sections[4].value_len, (size_t)table.sections[4].value_len);
+        if (table.sections[4].value_len > SIZE(excl->raw)) {
+            memset(excl->raw + table.sections[4].value_len, 0,
+                   (size_t)(SIZE(excl->raw) - table.sections[4].value_len));
         }
     }
 
@@ -441,37 +441,37 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections.len != 3);
     FAIL_PARSE_IF(table.sections[0].values_count != 26 * 26 * 26 ||
                   table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != sizeof(PackedProcedurePtr));
+    FAIL_PARSE_IF(table.sections[1].value_len != SIZE(PackedProcedurePtr));
     FAIL_PARSE_IF(!table.sections[2].value_len ||
-                  table.sections[2].value_len > sizeof(ProcedureInfo::bytes));
+                  table.sections[2].value_len > SIZE(ProcedureInfo::bytes));
 
-    size_t block_start = table.sections[1].raw_offset;
-    for (size_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
-        size_t block_end;
+    Size block_start = table.sections[1].raw_offset;
+    for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
+        Size block_end;
         {
             uint16_t end_idx = *(uint16_t *)(file_data + table.sections[0].raw_offset +
                                              root_idx * 2);
             ReverseBytes(&end_idx);
             FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
-            block_end = table.sections[1].raw_offset + end_idx * sizeof(PackedProcedurePtr);
+            block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedProcedurePtr);
         }
 
         char code123[3];
         {
-            size_t root_idx_remain = root_idx;
+            int16_t root_idx_remain = root_idx;
             for (int i = 0; i < 3; i++) {
                 code123[2 - i] = (root_idx_remain % 26) + 65;
                 root_idx_remain /= 26;
             }
         }
 
-        for (size_t block_offset = block_start; block_offset < block_end;
-             block_offset += sizeof(PackedProcedurePtr)) {
+        for (Size block_offset = block_start; block_offset < block_end;
+             block_offset += SIZE(PackedProcedurePtr)) {
             ProcedureInfo proc = {};
 
             PackedProcedurePtr raw_proc_ptr;
             {
-                memcpy(&raw_proc_ptr, file_data + block_offset, sizeof(PackedProcedurePtr));
+                memcpy(&raw_proc_ptr, file_data + block_offset, SIZE(PackedProcedurePtr));
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_proc_ptr.seq_phase);
                 ReverseBytes(&raw_proc_ptr.section2_idx);
@@ -485,7 +485,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
             // CCAM code and phase
             {
                 memcpy(proc.proc.str, code123, 3);
-                snprintf(proc.proc.str + 3, sizeof(proc.proc.str) - 3, "%c%03u",
+                snprintf(proc.proc.str + 3, SIZE(proc.proc.str) - 3, "%c%03u",
                          (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
                 proc.phase = raw_proc_ptr.seq_phase % 10;
             }
@@ -501,7 +501,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 
                 const uint8_t *proc_data = file_data + table.sections[2].raw_offset +
                                            raw_proc_ptr.section2_idx * table.sections[2].value_len;
-                memcpy(proc.bytes, proc_data, table.sections[2].value_len);
+                memcpy(proc.bytes, proc_data, (size_t)table.sections[2].value_len);
             }
 
             out_procs->Append(proc);
@@ -536,17 +536,18 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 
     FAIL_PARSE_IF(table.sections.len != 1);
     if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 14)) {
-        FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhmRoot));
+        FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhmRoot));
     } else {
-        FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhmRoot) - 1);
+        FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhmRoot) - 1);
     }
 
-    for (size_t i = 0; i < table.sections[0].values_count; i++) {
+    for (Size i = 0; i < table.sections[0].values_count; i++) {
         GhmRootInfo ghm_root = {};
 
         PackedGhmRoot raw_ghm_root;
         memcpy(&raw_ghm_root, file_data + table.sections[0].raw_offset +
-                              i * table.sections[0].value_len, table.sections[0].value_len);
+                              i * table.sections[0].value_len,
+               (size_t)table.sections[0].value_len);
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_ghm_root.type_seq);
 #endif
@@ -555,7 +556,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
 
-            ghm_root.ghm_root.parts.cmd = raw_ghm_root.cmd;
+            ghm_root.ghm_root.parts.cmd = (int8_t)raw_ghm_root.cmd;
             ghm_root.ghm_root.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
             ghm_root.ghm_root.parts.seq = raw_ghm_root.type_seq % 100;
         }
@@ -574,7 +575,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
                 ghm_root.short_duration_treshold = 3;
             } break;
         }
-        ghm_root.confirm_duration_treshold = raw_ghm_root.confirm_duration_treshold;
+        ghm_root.confirm_duration_treshold = (int8_t)raw_ghm_root.confirm_duration_treshold;
 
         if (raw_ghm_root.young_severity_mode == 1) {
             ghm_root.young_age_treshold = 2;
@@ -610,7 +611,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         if (table.sections[0].value_len >= 12 && raw_ghm_root.childbirth_severity_mode) {
             FAIL_PARSE_IF(raw_ghm_root.childbirth_severity_mode < 2 ||
                           raw_ghm_root.childbirth_severity_mode > 4);
-            ghm_root.childbirth_severity_list = raw_ghm_root.childbirth_severity_mode - 1;
+            ghm_root.childbirth_severity_list = (int8_t)(raw_ghm_root.childbirth_severity_mode - 1);
         }
 
         ghm_root.cma_exclusion_mask.offset = raw_ghm_root.cma_exclusion_offset;
@@ -624,7 +625,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
-                        const TableInfo &table, size_t section_idx,
+                        const TableInfo &table, int section_idx,
                         HeapArray<ValueRangeCell<2>> *out_cells)
 {
     DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
@@ -640,14 +641,14 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 #pragma pack(pop)
 
     FAIL_PARSE_IF(section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.sections[section_idx].value_len != sizeof(PackedCell));
+    FAIL_PARSE_IF(table.sections[section_idx].value_len != SIZE(PackedCell));
 
-    for (size_t i = 0; i < table.sections[section_idx].values_count; i++) {
+    for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         ValueRangeCell<2> cell = {};
 
         PackedCell raw_cell;
         memcpy(&raw_cell, file_data + table.sections[section_idx].raw_offset +
-                          i * sizeof(PackedCell), sizeof(PackedCell));
+                          i * SIZE(PackedCell), SIZE(PackedCell));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_cell.var1_min);
         ReverseBytes(&raw_cell.var1_max);
@@ -672,7 +673,7 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
                    const TableInfo &table, HeapArray<GhsInfo> *out_ghs)
 {
-    size_t start_ghs_len = out_ghs->len;
+    Size start_ghs_len = out_ghs->len;
     DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
 
 #pragma pack(push, 1)
@@ -695,16 +696,16 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
-    FAIL_PARSE_IF(table.sections[0].value_len != sizeof(PackedGhsNode));
+    FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhsNode));
 
     GhsInfo current_ghs = {};
-    for (size_t i = 0; i < table.sections[0].values_count; i++) {
+    for (Size i = 0; i < table.sections[0].values_count; i++) {
         PackedGhsNode raw_ghs_node;
         memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
-                         i * sizeof(PackedGhsNode), sizeof(PackedGhsNode));
+                         i * SIZE(PackedGhsNode), SIZE(PackedGhsNode));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_ghs_node.type_seq);
-        for (size_t j = 0; j < 2; j++) {
+        for (int j = 0; j < 2; j++) {
             ReverseBytes(&raw_ghs_node.sectors[j].ghs_code);
             ReverseBytes(&raw_ghs_node.sectors[j].high_duration_treshold);
             ReverseBytes(&raw_ghs_node.sectors[j].low_duration_treshold);
@@ -771,7 +772,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         }
 
         if (raw_ghs_node.valid_ghs) {
-            for (size_t j = 0; j < ARRAY_SIZE(current_ghs.ghs); j++) {
+            for (Size j = 0; j < ARRAY_SIZE(current_ghs.ghs); j++) {
                 current_ghs.ghs[j].number = (int16_t)raw_ghs_node.sectors[j].ghs_code;
             }
             out_ghs->Append(current_ghs);
@@ -815,14 +816,14 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
     FAIL_PARSE_IF(table.sections.len != 2);
     FAIL_PARSE_IF(table.sections[0].value_len != 3 || table.sections[0].value_len != 3);
 
-    for (size_t i = 0; i < 2; i++) {
-        for (size_t j = 0; j < table.sections[i].values_count; j++) {
+    for (Size i = 0; i < 2; i++) {
+        for (Size j = 0; j < table.sections[i].values_count; j++) {
             AuthorizationInfo auth = {};
 
             PackedAuthorization raw_auth;
             memcpy(&raw_auth, file_data + table.sections[i].raw_offset +
-                                          j * sizeof(PackedAuthorization),
-                   sizeof(PackedAuthorization));
+                                          j * SIZE(PackedAuthorization),
+                   SIZE(PackedAuthorization));
 
             if (i == 0) {
                 auth.type = AuthorizationType::Bed;
@@ -843,7 +844,7 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
-                              const TableInfo &table, size_t section_idx,
+                              const TableInfo &table, int section_idx,
                               HeapArray<SrcPair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
@@ -858,14 +859,14 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
 #pragma pack(pop)
 
     FAIL_PARSE_IF(section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.sections[section_idx].value_len != sizeof(PackedPair));
+    FAIL_PARSE_IF(table.sections[section_idx].value_len != SIZE(PackedPair));
 
-    for (size_t i = 0; i < table.sections[section_idx].values_count; i++) {
+    for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         SrcPair pair = {};
 
         PackedPair raw_pair;
         memcpy(&raw_pair, file_data + table.sections[section_idx].raw_offset +
-                          i * sizeof(PackedPair), sizeof(PackedPair));
+                          i * SIZE(PackedPair), SIZE(PackedPair));
 #ifdef ARCH_LITTLE_ENDIAN
         ReverseBytes(&raw_pair.diag_code123);
         ReverseBytes(&raw_pair.diag_code456);
@@ -873,14 +874,14 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
         ReverseBytes(&raw_pair.proc_code456);
 #endif
 
-        pair.diag = ConvertDiagnosisCode(raw_pair.diag_code123, raw_pair.diag_code456);
+        pair.diag = ConvertDiagnosisCode((int16_t)raw_pair.diag_code123, raw_pair.diag_code456);
         {
             uint16_t code123_remain = raw_pair.proc_code123;
             for (int j = 0; j < 3; j++) {
                 pair.proc.str[2 - j] = (code123_remain % 26) + 65;
                 code123_remain /= 26;
             }
-            snprintf(pair.proc.str + 3, sizeof(pair.proc.str) - 3, "%c%03u",
+            snprintf(pair.proc.str + 3, SIZE(pair.proc.str) - 3, "%c%03u",
                      (raw_pair.proc_code456 / 1000 % 26) + 65,
                      raw_pair.proc_code456 % 1000);
         }
@@ -896,7 +897,7 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
 const TableIndex *TableSet::FindIndex(Date date) const
 {
     if (date.value) {
-        for (size_t i = indexes.len; i-- > 0;) {
+        for (Size i = indexes.len; i-- > 0;) {
             if (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])
                 return &indexes[i];
         }
@@ -922,15 +923,15 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
                 index.MemberName.ptr = (decltype(index.MemberName.ptr))set->store.MemberName.len; \
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
                                     table_info, ##__VA_ARGS__, &set->store.MemberName); \
-                index.MemberName.len = set->store.MemberName.len - (size_t)index.MemberName.ptr; \
+                index.MemberName.len = set->store.MemberName.len - (Size)index.MemberName.ptr; \
                 index.changed_tables |= 1 << i; \
             } else { \
                 index.MemberName = set->indexes[set->indexes.len - 1].MemberName; \
             } \
         } while (false)
 
-    size_t active_count = 0;
-    for (size_t i = 0; i < ARRAY_SIZE(index.tables); i++) {
+    Size active_count = 0;
+    for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
         if (!current_tables[i])
             continue;
 
@@ -1004,12 +1005,12 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
             continue;
         }
 
-        size_t start_len = out_set->tables.len;
+        Size start_len = out_set->tables.len;
         if (!ParseTableHeaders(raw_data, filename, &out_set->tables)) {
             success = false;
             continue;
         }
-        for (size_t i = start_len; i < out_set->tables.len; i++) {
+        for (Size i = start_len; i < out_set->tables.len; i++) {
             if (out_set->tables[i].type == TableType::UnknownTable)
                 continue;
 
@@ -1042,7 +1043,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
 
             start_date = {};
             Date next_end_date = {};
-            for (size_t i = 0; i < ARRAY_SIZE(active_tables); i++) {
+            for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
                 if (!active_tables[i])
                     continue;
 
@@ -1089,7 +1090,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
         for (TableIndex &index: out_set->indexes) {
 #define FIX_ARRAYREF(ArrayRefName) \
                 index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
-                                         (size_t)index.ArrayRefName.ptr
+                                         (Size)index.ArrayRefName.ptr
 #define BUILD_MAP(IndexName, MapName, TableType) \
                 do { \
                     if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
@@ -1153,7 +1154,7 @@ ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) cons
                end_proc->proc == code) {
             end_proc++;
         }
-        procs.len = (size_t)(end_proc - procs.ptr);
+        procs.len = end_proc - procs.ptr;
     }
 
     return procs;
@@ -1205,7 +1206,7 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) cons
                end_ghs->ghm.Root() == ghm_root) {
             end_ghs++;
         }
-        compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);
+        compatible_ghs.len = end_ghs - compatible_ghs.ptr;
     }
 
     return compatible_ghs;
@@ -1229,7 +1230,7 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
                end_ghs->ghm == ghm) {
             end_ghs++;
         }
-        compatible_ghs.len = (size_t)(end_ghs - compatible_ghs.ptr);
+        compatible_ghs.len = end_ghs - compatible_ghs.ptr;
     }
 
     return compatible_ghs;
