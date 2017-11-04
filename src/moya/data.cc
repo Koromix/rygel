@@ -5,8 +5,13 @@
 #include "kutil.hh"
 #include "data.hh"
 #include "tables.hh"
+
+GCC_PUSH_IGNORE(-Wconversion)
+GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/rapidjson/reader.h"
 #include "../../lib/rapidjson/error/en.h"
+GCC_POP_IGNORE()
+GCC_POP_IGNORE()
 
 // TODO: Version this data structure, deal with endianness
 struct BundleHeader {
@@ -16,14 +21,14 @@ struct BundleHeader {
 };
 
 template <typename T>
-class JsonHandler: public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JsonHandler<T>> {
+class JsonHandler {
 public:
     bool Uint(unsigned int u)
     {
         if (u <= INT_MAX) {
-            return (T *)this->Int((int)u);
+            return ((T *)this)->Int((int)u);
         } else {
-            return (T *)this->Default();
+            return ((T *)this)->Default();
         }
     }
 
@@ -32,6 +37,20 @@ public:
         LogError("Unsupported value type (not a string or 32-bit integer)");
         return false;
     }
+
+    bool Null() { return ((T *)this)->Default(); }
+    bool Bool(bool) { return ((T *)this)->Default(); }
+    bool Int(int) { return ((T *)this)->Default(); }
+    bool Int64(int64_t) { return ((T *)this)->Default(); }
+    bool Uint64(uint64_t) { return ((T *)this)->Default(); }
+    bool Double(double) { return ((T *)this)->Default();; }
+    bool RawNumber(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool String(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool StartObject() { return ((T *)this)->Default(); }
+    bool Key(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool EndObject(Size) { return ((T *)this)->Default(); }
+    bool StartArray() { return ((T *)this)->Default(); }
+    bool EndArray(Size) { return ((T *)this)->Default(); }
 
     template <typename U>
     bool SetInt(U *dest, int i)
@@ -212,16 +231,6 @@ public:
 
         state = State::AuthObject;
         return true;
-    }
-
-    // FIXME: Why do I need that?
-    bool Uint(unsigned int u)
-    {
-        if (u <= INT_MAX) {
-            return Int((int)u);
-        } else {
-            return Default();
-        }
     }
 };
 
@@ -568,7 +577,7 @@ public:
             case State::StayEntryDate: { SetDate(&stay.dates[0], str); } break;
             case State::StayEntryMode: {
                 if (str[0] && !str[1]) {
-                    stay.entry.mode = str[0] - '0';
+                    stay.entry.mode = (char)(str[0] - '0');
                 } else {
                     LogError("Invalid entry mode value '%1'", str);
                 }
@@ -580,7 +589,7 @@ public:
                             || str[0] == 'R' || str[0] == 'r') && !str[1]) {
                     // This is probably incorrect for either 'R' or 'r' but this is what
                     // the machine code in FG2017.exe does, so keep it that way.
-                    stay.entry.origin = str[0] - '0';
+                    stay.entry.origin = (char)(str[0] - '0');
                 } else {
                     LogError("Invalid entry origin value '%1'", str);
                 }
@@ -588,7 +597,7 @@ public:
             case State::StayExitDate: { SetDate(&stay.dates[1], str); } break;
             case State::StayExitMode: {
                 if (str[0] && !str[1]) {
-                    stay.exit.mode = str[0] - '0';
+                    stay.exit.mode = (char)(str[0] - '0');
                 } else {
                     LogError("Invalid exit mode value '%1'", str);
                 }
@@ -597,7 +606,7 @@ public:
                 if (!str[0]) {
                     stay.exit.destination = 0;
                 } else if ((str[0] >= '0' && str[0] <= '9') && !str[1]) {
-                    stay.exit.destination = str[0] - '0';
+                    stay.exit.destination = (char)(str[0] - '0');
                 } else {
                     LogError("Invalid exit destination value '%1'", str);
                 }
@@ -637,16 +646,6 @@ public:
         }
 
         return HandleValueEnd();
-    }
-
-    // FIXME: Why do I need that?
-    bool Uint(unsigned int u)
-    {
-        if (u <= INT_MAX) {
-            return Int((int)u);
-        } else {
-            return Default();
-        }
     }
 
 private:
@@ -874,9 +873,6 @@ static bool LoadStayBundle(const char *filename, StaySet *out_set)
     }
     DEFER { fclose(fp); };
 
-    Size diagnoses_offset;
-    Size procedures_offset;
-
     BundleHeader bh;
     if (fread(&bh, SIZE(bh), 1, fp) != 1)
         goto error;
@@ -896,26 +892,28 @@ static bool LoadStayBundle(const char *filename, StaySet *out_set)
               (size_t)bh.procedures_len, fp) != (size_t)bh.procedures_len)
         goto error;
 
-    diagnoses_offset = out_set->store.diagnoses.len;
-    procedures_offset = out_set->store.procedures.len;
-    for (Size i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
-        Stay *stay = &out_set->stays[i];
+    {
+        Size diagnoses_offset = out_set->store.diagnoses.len;
+        Size procedures_offset = out_set->store.procedures.len;
 
-        if (stay->diagnoses.len) {
-            stay->diagnoses.ptr = (DiagnosisCode *)(out_set->store.diagnoses.len - diagnoses_offset);
-            out_set->store.diagnoses.len += stay->diagnoses.len;
-        }
-        if (stay->procedures.len) {
-            stay->procedures.ptr = (ProcedureRealisation *)(out_set->store.procedures.len - procedures_offset);
-            out_set->store.procedures.len += stay->procedures.len;
+        for (Size i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
+            Stay *stay = &out_set->stays[i];
+
+            if (stay->diagnoses.len) {
+                stay->diagnoses.ptr = (DiagnosisCode *)(out_set->store.diagnoses.len - diagnoses_offset);
+                out_set->store.diagnoses.len += stay->diagnoses.len;
+            }
+            if (stay->procedures.len) {
+                stay->procedures.ptr = (ProcedureRealisation *)(out_set->store.procedures.len - procedures_offset);
+                out_set->store.procedures.len += stay->procedures.len;
+            }
         }
     }
 
     return true;
 
 error:
-    // TODO: Adapt message depending on error code
-    LogError("Stay bundle file '%1' is corrupted", filename);
+    LogError("Error while reading stay bundle file '%1'", filename);
     return false;
 }
 

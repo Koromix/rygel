@@ -330,8 +330,11 @@ GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
             for (Size i = 1; i < out_procedures->len; i++) {
                 if ((*out_procedures)[i].proc == (*out_procedures)[j].proc &&
                         (*out_procedures)[i].phase == (*out_procedures)[j].phase) {
-                    (*out_procedures)[j].activities |= (*out_procedures)[i].activities;
-                    (*out_procedures)[j].count += (*out_procedures)[i].count;
+                    (*out_procedures)[j].activities =
+                        (uint8_t)((*out_procedures)[j].activities | (*out_procedures)[i].activities);
+                    // TODO: Prevent possible overflow
+                    (*out_procedures)[j].count =
+                        (int16_t)((*out_procedures)[j].count + (*out_procedures)[i].count);
                     if (UNLIKELY((*out_procedures)[j].count > 9999)) {
                         (*out_procedures)[j].count = 9999;
                     }
@@ -728,7 +731,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
             }
         }
 
-        ghm.parts.mode = 'A' + (char)LimitSeverityWithDuration(severity, agg.duration);
+        ghm.parts.mode = (char)('A' + LimitSeverityWithDuration(severity, agg.duration));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
@@ -766,7 +769,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
             severity = 1;
         }
 
-        ghm.parts.mode = '1' + (char)LimitSeverityWithDuration(severity, agg.duration);
+        ghm.parts.mode = (char)('1' + LimitSeverityWithDuration(severity, agg.duration));
     }
 
     return ghm;
@@ -786,7 +789,7 @@ static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
                                    UnitCode unit, Date date)
 {
     if (unit.number >= 10000) {
-        return unit.number % 100;
+        return (int8_t)(unit.number % 100);
     } else {
         const Authorization *auth = authorization_set.FindUnit(unit, date);
         if (UNLIKELY(!auth)) {

@@ -254,7 +254,7 @@ Classify options:
 
     LogDebug("Summary");
     PrintLn("Summary:");
-    PrintLn("  Total GHS: %1 €", FmtDouble(result_set.ghs_total_cents / 100.0, 2));
+    PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
     PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
             result_set.supplements.rea, result_set.supplements.reasi, result_set.supplements.si,
             result_set.supplements.src, result_set.supplements.nn1, result_set.supplements.nn2,

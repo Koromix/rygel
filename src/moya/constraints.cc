@@ -14,7 +14,7 @@ static bool MergeConstraint(const TableIndex &index,
 #define MERGE_CONSTRAINT(ModeChar, DurationMask) \
         do { \
             GhmConstraint new_constraint = constraint; \
-            new_constraint.ghm.parts.mode = (ModeChar); \
+            new_constraint.ghm.parts.mode = (char)(ModeChar); \
             new_constraint.duration_mask &= (DurationMask); \
             if (new_constraint.duration_mask) { \
                 GhmConstraint *prev_constraint = out_constraints->Find(new_constraint.ghm); \
@@ -48,12 +48,12 @@ static bool MergeConstraint(const TableIndex &index,
     if (!ghm.parts.mode) {
         for (int severity = 0; severity < 4; severity++) {
             uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
-            MERGE_CONSTRAINT('1' + (char)severity, mode_mask);
+            MERGE_CONSTRAINT('1' + severity, mode_mask);
         }
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
         uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
-        MERGE_CONSTRAINT('A' + (char)severity, mode_mask);
+        MERGE_CONSTRAINT('A' + severity, mode_mask);
     } else if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
         // FIXME: Ugly construct
         MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX);

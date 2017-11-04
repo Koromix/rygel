@@ -282,7 +282,7 @@ struct UnitCode {
     int16_t number;
 
     UnitCode() = default;
-    explicit UnitCode(uint32_t code) : number(code) {}
+    explicit UnitCode(int16_t code) : number(code) {}
 
     bool IsValid() const { return number; }
 

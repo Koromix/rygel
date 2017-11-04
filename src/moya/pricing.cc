@@ -50,7 +50,7 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
             pricing.limit_dates[1] = default_end_date;
 
             pricing.sectors[sector].price_cents = price_cents;
-            pricing.sectors[sector].exh_treshold = exh_treshold ? exh_treshold + 1 : 0;
+            pricing.sectors[sector].exh_treshold = (int16_t)(exh_treshold ? exh_treshold + 1 : 0);
             pricing.sectors[sector].exb_treshold = exb_treshold;
             pricing.sectors[sector].exh_cents = exh_cents;
             pricing.sectors[sector].exb_cents = exb_cents;

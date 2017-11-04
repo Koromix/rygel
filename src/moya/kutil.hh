@@ -212,7 +212,8 @@ char (&ComputeArraySize(T const (&)[N]))[N];
 template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
 typename std::underlying_type<T>::type MaskEnum(T value)
 {
-    return 1 << static_cast<typename std::underlying_type<T>::type>(value);
+    auto mask = 1 << static_cast<typename std::underlying_type<T>::type>(value);
+    return (typename std::underlying_type<T>::type)mask;
 }
 
 template <typename Fun>
@@ -392,7 +393,7 @@ struct ArrayRef {
     ArrayRef() = default;
     constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
     constexpr ArrayRef(std::initializer_list<T> l)
-        : ptr(l.begin()), len(l.size()) {}
+        : ptr(l.begin()), len((Size)l.size()) {}
     constexpr ArrayRef(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
     constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
@@ -442,7 +443,7 @@ struct ArrayRef<const char> {
     ArrayRef() = default;
     constexpr ArrayRef(const char &value) : ptr(&value), len(1) {}
     constexpr ArrayRef(std::initializer_list<const char> l)
-        : ptr(l.begin()), len(l.size()) {}
+        : ptr(l.begin()), len((Size)l.size()) {}
     explicit constexpr ArrayRef(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
     explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}
@@ -1038,7 +1039,7 @@ public:
             return nullptr;
 
         uint64_t hash = Handler::HashKey(key);
-        Size idx = hash & (capacity - 1);
+        Size idx = HashToIndex(hash);
         return Find(idx, key);
     }
     ValueType FindValue(const KeyType &key, const ValueType &default_value)
@@ -1057,7 +1058,7 @@ public:
         if (capacity) {
             Size idx = HashToIndex(hash);
             if (!Find(idx, key)) {
-                if (count >= (Size)(capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                 }
@@ -1082,7 +1083,7 @@ public:
             Size idx = HashToIndex(hash);
             ValueType *it = Find(idx, key);
             if (!it) {
-                if (count >= (Size)(capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                 }
@@ -1190,7 +1191,7 @@ private:
 
     Size HashToIndex(uint64_t hash) const
     {
-        return hash & (capacity - 1);
+        return (Size)(hash & (uint64_t)(capacity - 1));
     }
     Size KeyToIndex(const KeyType &key) const
     {
@@ -1336,7 +1337,7 @@ union Date {
     static inline int8_t DaysInMonth(int16_t year, int8_t month)
     {
         static const int8_t DaysPerMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-        return DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year));
+        return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
     static Date FromString(const char *date_str, bool strict = true);
@@ -1409,7 +1410,7 @@ uint64_t GetMonotonicTime();
 // ------------------------------------------------------------------------
 
 char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
-char *DuplicateString(Allocator *alloc, const char *str, Size max_len = SIZE_MAX);
+char *DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
 
 static inline bool IsAsciiAlpha(char c)
 {
@@ -1427,7 +1428,7 @@ static inline bool IsAsciiAlphaOrDigit(char c)
 static inline char UpperAscii(char c)
 {
     if (c >= 'a' && c <= 'z') {
-        return c - 32;
+        return (char)(c - 32);
     } else {
         return c;
     }
@@ -1435,7 +1436,7 @@ static inline char UpperAscii(char c)
 static inline char LowerAscii(char c)
 {
     if (c >= 'A' && c <= 'Z') {
-        return c + 32;
+        return (char)(c + 32);
     } else {
         return c;
     }
@@ -1524,7 +1525,7 @@ static inline ArrayRef<const char> StrSplitAny(ArrayRef<const char> str, const c
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask[i / 8] |= 1 << (split_chars[i] % 8);
+        split_mask[i / 8] |= (char)(1 << (split_chars[i] % 8));
     }
 
     Size part_len = 0;
@@ -1548,7 +1549,7 @@ static inline ArrayRef<const char> StrSplitAny(const char *str, const char *spli
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask[i / 8] |= 1 << (split_chars[i] % 8);
+        split_mask[i / 8] |= (char)(1 << (split_chars[i] % 8));
     }
 
     Size part_len = 0;

@@ -35,18 +35,6 @@ static inline void ReverseBytes(uint32_t *u)
          ((*u & 0xFF000000) >> 24);
 }
 
-static inline void ReverseBytes(uint64_t *u)
-{
-    *u = ((*u & 0x00000000000000FF) << 56) |
-         ((*u & 0x000000000000FF00) << 40) |
-         ((*u & 0x0000000000FF0000) << 24) |
-         ((*u & 0x00000000FF000000) << 8)  |
-         ((*u & 0x000000FF00000000) >> 8)  |
-         ((*u & 0x0000FF0000000000) >> 24) |
-         ((*u & 0x00FF000000000000) >> 40) |
-         ((*u & 0xFF00000000000000) >> 56);
-}
-
 Date ConvertDate1980(uint16_t days)
 {
     static const int base_days = Date(1979, 12, 31).ToJulianDays();
@@ -176,7 +164,7 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         sscanf(raw_main_header.date, "%2" SCNd8 "%2" SCNd8 "%4" SCNd16,
                &table.build_date.st.day, &table.build_date.st.month,
                &table.build_date.st.year);
-        table.build_date.st.year += 2000;
+        table.build_date.st.year = (int16_t)(table.build_date.st.year + 2000);
         FAIL_PARSE_IF(!table.build_date.IsValid());
         sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
                &table.version[0], &table.version[1]);
@@ -280,7 +268,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
             ghm_node.type = GhmDecisionNode::Type::Ghm;
             ghm_node.u.ghm.ghm.parts.cmd = (int8_t)raw_node.params[1];
             ghm_node.u.ghm.ghm.parts.type = chars1[(raw_node.children_idx / 1000) % 10];
-            ghm_node.u.ghm.ghm.parts.seq = (raw_node.children_idx / 10) % 100;
+            ghm_node.u.ghm.ghm.parts.seq = (int8_t)((raw_node.children_idx / 10) % 100);
             ghm_node.u.ghm.ghm.parts.mode = chars4[raw_node.children_idx % 10];
             ghm_node.u.ghm.error = raw_node.params[0];
         }
@@ -379,13 +367,14 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                                            raw_diag_ptr.section3_idx * table.sections[3].value_len;
                 for (Size i = 0; i < table.sections[3].value_len; i++) {
                     if (warn_data[i]) {
-                        diag.warnings |= 1 << i;
+                        diag.warnings |= (uint16_t)(1 << i);
                     }
                 }
 
                 diag.exclusion_set_idx = raw_diag_ptr.section4_idx;
                 diag.cma_exclusion_mask.offset = (uint8_t)(raw_diag_ptr.section4_bit >> 3);
-                diag.cma_exclusion_mask.value = 0x80 >> (raw_diag_ptr.section4_bit & 0x7);
+                diag.cma_exclusion_mask.value =
+                    (uint8_t)(0x80 >> (raw_diag_ptr.section4_bit & 0x7));
             }
 
             out_diags->Append(diag);
@@ -460,7 +449,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
         {
             int16_t root_idx_remain = root_idx;
             for (int i = 0; i < 3; i++) {
-                code123[2 - i] = (root_idx_remain % 26) + 65;
+                code123[2 - i] = (char)((root_idx_remain % 26) + 65);
                 root_idx_remain /= 26;
             }
         }
@@ -487,14 +476,14 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                 memcpy(proc.proc.str, code123, 3);
                 snprintf(proc.proc.str + 3, SIZE(proc.proc.str) - 3, "%c%03u",
                          (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
-                proc.phase = raw_proc_ptr.seq_phase % 10;
+                proc.phase = (char)(raw_proc_ptr.seq_phase % 10);
             }
 
             // CCAM information and lists
             {
                 proc.limit_dates[0] = ConvertDate1980(raw_proc_ptr.date_min);
                 if (raw_proc_ptr.date_max < UINT16_MAX) {
-                    proc.limit_dates[1] = ConvertDate1980(raw_proc_ptr.date_max + 1);
+                    proc.limit_dates[1] = ConvertDate1980((uint16_t)(raw_proc_ptr.date_max + 1));
                 } else {
                     proc.limit_dates[1] = ConvertDate1980(UINT16_MAX);
                 }
@@ -558,7 +547,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 
             ghm_root.ghm_root.parts.cmd = (int8_t)raw_ghm_root.cmd;
             ghm_root.ghm_root.parts.type = chars1[raw_ghm_root.type_seq / 100 % 10];
-            ghm_root.ghm_root.parts.seq = raw_ghm_root.type_seq % 100;
+            ghm_root.ghm_root.parts.seq = (int8_t)(raw_ghm_root.type_seq % 100);
         }
 
         switch (raw_ghm_root.duration_severity_mode) {
@@ -719,7 +708,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 
             current_ghs.ghm.parts.cmd = (int8_t)raw_ghs_node.cmd;
             current_ghs.ghm.parts.type = chars1[raw_ghs_node.type_seq / 10000 % 6];
-            current_ghs.ghm.parts.seq = raw_ghs_node.type_seq / 100 % 100;
+            current_ghs.ghm.parts.seq = (int8_t)(raw_ghs_node.type_seq / 100 % 100);
             current_ghs.ghm.parts.mode = chars4[raw_ghs_node.type_seq % 100 % 13];
         }
 
@@ -753,7 +742,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 
             case 6: {
                 FAIL_PARSE_IF(raw_ghs_node.params[0]);
-                current_ghs.minimal_duration = (int8_t)raw_ghs_node.params[1] + 1;
+                current_ghs.minimal_duration = (int8_t)(raw_ghs_node.params[1] + 1);
             } break;
 
             case 7: {
@@ -878,7 +867,7 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
         {
             uint16_t code123_remain = raw_pair.proc_code123;
             for (int j = 0; j < 3; j++) {
-                pair.proc.str[2 - j] = (code123_remain % 26) + 65;
+                pair.proc.str[2 - j] = (char)((code123_remain % 26) + 65);
                 code123_remain /= 26;
             }
             snprintf(pair.proc.str + 3, SIZE(pair.proc.str) - 3, "%c%03u",
@@ -924,7 +913,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
                                     table_info, ##__VA_ARGS__, &set->store.MemberName); \
                 index.MemberName.len = set->store.MemberName.len - (Size)index.MemberName.ptr; \
-                index.changed_tables |= 1 << i; \
+                index.changed_tables |= (uint32_t)(1 << i); \
             } else { \
                 index.MemberName = set->indexes[set->indexes.len - 1].MemberName; \
             } \

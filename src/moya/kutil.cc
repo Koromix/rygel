@@ -82,7 +82,7 @@ void *Allocator::Allocate(Size size, unsigned int flags)
     if (!size)
         return nullptr;
 
-    AllocatorBucket *bucket = (AllocatorBucket *)malloc(SIZE(*bucket) + size);
+    AllocatorBucket *bucket = (AllocatorBucket *)malloc((size_t)(SIZE(*bucket) + size));
     if (!bucket) {
         LogError("Failed to allocate %1 of memory", FmtMemSize(size));
         abort();
@@ -212,8 +212,8 @@ Date Date::FromJulianDays(int days)
         int e = 4 * f + 3;
         int g = e % 1461 / 4;
         int h = 5 * g + 2;
-        date.st.day = h % 153 / 5 + 1;
-        date.st.month = (h / 153 + 2) % 12 + 1;
+        date.st.day = (int8_t)(h % 153 / 5 + 1);
+        date.st.month = (int8_t)((h / 153 + 2) % 12 + 1);
         date.st.year = (int16_t)((e / 1461) - 4716 + (date.st.month < 3));
     }
 
@@ -317,7 +317,7 @@ char *MakeString(Allocator *alloc, ArrayRef<const char> bytes)
 char *DuplicateString(Allocator *alloc, const char *str, Size max_len)
 {
     Size str_len = (Size)strlen(str);
-    if (str_len > max_len) {
+    if (max_len >= 0 && str_len > max_len) {
         str_len = max_len;
     }
     char *new_str = (char *)Allocator::Allocate(alloc, str_len + 1);
@@ -652,7 +652,7 @@ ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtAr
         if (fragment.len >= buf_capacity - buf_len) {
             Size new_capacity = buf_capacity;
             do {
-                new_capacity = (Size)(new_capacity * FMT_STRING_GROWTH_FACTOR);
+                new_capacity = (Size)((float)new_capacity * FMT_STRING_GROWTH_FACTOR);
             } while (fragment.len <= new_capacity - buf_len);
             Allocator::Resize(alloc, (void **)&buf, buf_capacity, new_capacity);
             buf_capacity = new_capacity;
@@ -1034,7 +1034,7 @@ static void InitExecutablePaths()
         char *path_buf = realpath("/proc/self/exe", nullptr);
         Assert(path_buf);
         path_len = strlen(path_buf);
-        Assert(path_len < SIZE_OF(executable_path));
+        Assert(path_len < SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }

@@ -7,9 +7,14 @@
     #include <signal.h>
 #endif
 #include "resources.hh"
+
+GCC_PUSH_IGNORE(-Wconversion)
+GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../lib/rapidjson/memorybuffer.h"
 #include "../../lib/rapidjson/prettywriter.h"
+GCC_POP_IGNORE()
+GCC_POP_IGNORE()
 
 struct Page {
     const char *const category;
@@ -30,7 +35,7 @@ static const Page pages[] = {
 };
 
 static const TableSet *table_set;
-HeapArray<HashSet<GhmCode, GhmConstraint>> table_set_constraints;
+static HeapArray<HashSet<GhmCode, GhmConstraint>> table_set_constraints;
 
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
@@ -190,7 +195,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
     } else {
         ArrayRef<const uint8_t> resource_data = routes.FindValue(url, {});
         if (resource_data.IsValid()) {
-            response = MHD_create_response_from_buffer(resource_data.len,
+            response = MHD_create_response_from_buffer((size_t)resource_data.len,
                                                        (void *)resource_data.ptr,
                                                        MHD_RESPMEM_PERSISTENT);
             code = MHD_HTTP_OK;
