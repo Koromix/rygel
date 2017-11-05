@@ -93,71 +93,6 @@ error:
     }
 };
 
-static bool RunBundle(ArrayRef<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
-R"(Usage: drd bundle [options] stay_file ... dest_file
-)");
-        PrintLn(fp, "%1", main_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    HeapArray<const char *> filenames;
-    const char *dest_filename;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-
-        opt_parser.ConsumeNonOptions(&filenames);
-        if (filenames.len < 2) {
-            if (filenames.len) {
-                PrintLn(stderr, "A destination filename must be provided");
-            } else {
-                PrintLn(stderr, "No filename provided");
-            }
-            PrintUsage(stderr);
-            return false;
-        }
-        dest_filename = filenames[filenames.len - 1];
-        filenames.RemoveLast(1);
-    }
-
-    LogDebug("Load");
-    StaySet stay_set;
-    {
-        StaySetBuilder stay_set_builder;
-
-        if (!stay_set_builder.LoadFile(filenames))
-            return false;
-        if (!stay_set_builder.Finish(&stay_set))
-            return false;
-    }
-
-    LogDebug("Bundle");
-    {
-        FILE *fp = fopen(dest_filename, "wb" FOPEN_COMMON_FLAGS);
-        if (!fp) {
-            LogError("Cannot open '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-        DEFER { fclose(fp); };
-
-        if (!stay_set.SaveBundle(fp, dest_filename))
-            return false;
-    }
-
-    return true;
-}
-
 static bool RunClassify(ArrayRef<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -265,9 +200,9 @@ Classify options:
         LogDebug("Export");
         PrintLn("Details:");
         for (const ClassifyResult &result: result_set.results) {
-            PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5", result.stays[0].stay_id,
+            PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
                     result.stays[0].dates[0], result.stays[result.stays.len - 1].dates[1],
-                    result.stays.len, result.ghm);
+                    result.stays.len, result.ghm, result.ghs);
 
             if (verbosity >= 2) {
                 if (result.errors.len) {
@@ -278,8 +213,7 @@ Classify options:
                     PrintLn();
                 }
 
-                PrintLn("    GHS: %1 => %2 €",
-                        result.ghs, FmtDouble(result.ghs_price_cents / 100.0, 2));
+                PrintLn("    GHS price: %1 €", FmtDouble(result.ghs_price_cents / 100.0, 2));
                 if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
                         result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
                         result.supplements.nn3 || result.supplements.rep) {
@@ -691,6 +625,71 @@ List options:
     return true;
 }
 
+static bool RunPack(ArrayRef<const char *> arguments)
+{
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd pack [options] stay_file ... dest_file
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    OptionParser opt_parser(arguments);
+
+    HeapArray<const char *> filenames;
+    const char *dest_filename;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintUsage(stdout);
+                return true;
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                return false;
+            }
+        }
+
+        opt_parser.ConsumeNonOptions(&filenames);
+        if (filenames.len < 2) {
+            if (filenames.len) {
+                PrintLn(stderr, "A destination filename must be provided");
+            } else {
+                PrintLn(stderr, "No filename provided");
+            }
+            PrintUsage(stderr);
+            return false;
+        }
+        dest_filename = filenames[filenames.len - 1];
+        filenames.RemoveLast(1);
+    }
+
+    LogDebug("Load");
+    StaySet stay_set;
+    {
+        StaySetBuilder stay_set_builder;
+
+        if (!stay_set_builder.LoadFile(filenames))
+            return false;
+        if (!stay_set_builder.Finish(&stay_set))
+            return false;
+    }
+
+    LogDebug("Pack");
+    {
+        FILE *fp = fopen(dest_filename, "wb" FOPEN_COMMON_FLAGS);
+        if (!fp) {
+            LogError("Cannot open '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+        DEFER { fclose(fp); };
+
+        if (!stay_set.SavePack(fp, dest_filename))
+            return false;
+    }
+
+    return true;
+}
+
 static bool RunPricing(ArrayRef<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -729,7 +728,6 @@ int main(int argc, char **argv)
 R"(Usage: drd <command> [<args>]
 
 Commands:
-    bundle                       Bundle stays for quicker loads
     classify                     Classify stays
     constraints                  Compute GHM accessibility constraints
     dump                         Dump available tables and lists
@@ -737,6 +735,7 @@ Commands:
                                  (diagnoses, procedures, GHM roots, etc.)
     indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
+    pack                         Pack stays for quicker loads
     pricing                      Dump GHS pricings
 )");
         PrintLn(fp, "%1", main_options_usage);
@@ -774,13 +773,13 @@ Commands:
     const char *cmd = argv[1];
     ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    HANDLE_COMMAND(bundle, RunBundle);
     HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);
     HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
+    HANDLE_COMMAND(pack, RunPack);
     HANDLE_COMMAND(pricing, RunPricing);
 
 #undef HANDLE_COMMAND

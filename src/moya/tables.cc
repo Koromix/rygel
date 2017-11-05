@@ -21,20 +21,6 @@ struct LoadTableData {
         } \
     } while (false)
 
-static inline void ReverseBytes(uint16_t *u)
-{
-    *u = (uint16_t)(((*u & 0x00FF) << 8) |
-                    ((*u & 0xFF00) >> 8));
-}
-
-static inline void ReverseBytes(uint32_t *u)
-{
-    *u = ((*u & 0x000000FF) << 24) |
-         ((*u & 0x0000FF00) << 8)  |
-         ((*u & 0x00FF0000) >> 8)  |
-         ((*u & 0xFF000000) >> 24);
-}
-
 Date ConvertDate1980(uint16_t days)
 {
     static const int base_days = Date(1979, 12, 31).ToJulianDays();
@@ -1139,8 +1125,7 @@ ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) cons
 
     {
         const ProcedureInfo *end_proc = procs.ptr + 1;
-        while (end_proc < procedures.end() &&
-               end_proc->proc == code) {
+        while (end_proc < procedures.end() && end_proc->proc == code) {
             end_proc++;
         }
         procs.len = end_proc - procs.ptr;
@@ -1165,8 +1150,7 @@ const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase,
             continue;
 
         return proc;
-    } while (++proc < procedures.ptr + procedures.len &&
-             proc->proc == code);
+    } while (++proc < procedures.end() && proc->proc == code);
 
     return nullptr;
 }
@@ -1191,8 +1175,7 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) cons
 
     {
         const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
-        while (end_ghs < ghs.end() &&
-               end_ghs->ghm.Root() == ghm_root) {
+        while (end_ghs < ghs.end() && end_ghs->ghm.Root() == ghm_root) {
             end_ghs++;
         }
         compatible_ghs.len = end_ghs - compatible_ghs.ptr;
@@ -1215,8 +1198,7 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
     // the previous functions that do the same.
     {
         const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
-        while (end_ghs < ghs.end() &&
-               end_ghs->ghm == ghm) {
+        while (end_ghs < ghs.end() && end_ghs->ghm == ghm) {
             end_ghs++;
         }
         compatible_ghs.len = end_ghs - compatible_ghs.ptr;

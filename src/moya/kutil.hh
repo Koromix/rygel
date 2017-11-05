@@ -50,12 +50,19 @@
 // Utilities
 // ------------------------------------------------------------------------
 
+enum class Endianness {
+    LittleEndian,
+    BigEndian
+};
+
 #if defined(__x86_64__) || defined(_M_X64)
     typedef int64_t Size;
     #define ARCH_LITTLE_ENDIAN
+    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
 #elif defined(__i386__) || defined(_M_IX86)
     typedef int32_t Size;
     #define ARCH_LITTLE_ENDIAN
+    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
 #else
     #error Machine architecture not supported
 #endif
@@ -152,6 +159,32 @@ template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
 #define ARRAY_SIZE(Array) SIZE(ComputeArraySize(Array))
 #define OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
+
+static inline void ReverseBytes(uint16_t *u)
+{
+    *u = (uint16_t)(((*u & 0x00FF) << 8) |
+                    ((*u & 0xFF00) >> 8));
+}
+
+static inline void ReverseBytes(uint32_t *u)
+{
+    *u = ((*u & 0x000000FF) << 24) |
+         ((*u & 0x0000FF00) << 8)  |
+         ((*u & 0x00FF0000) >> 8)  |
+         ((*u & 0xFF000000) >> 24);
+}
+
+static inline void ReverseBytes(uint64_t *u)
+{
+    *u = ((*u & 0x00000000000000FF) << 56) |
+         ((*u & 0x000000000000FF00) << 40) |
+         ((*u & 0x0000000000FF0000) << 24) |
+         ((*u & 0x00000000FF000000) << 8)  |
+         ((*u & 0x000000FF00000000) >> 8)  |
+         ((*u & 0x0000FF0000000000) >> 24) |
+         ((*u & 0x00FF000000000000) >> 40) |
+         ((*u & 0xFF00000000000000) >> 56);
+}
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
@@ -1848,9 +1881,70 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
                              HeapArray<const char *> *out_files, Size max_files);
 
-
 const char *GetExecutablePath();
 const char *GetExecutableDirectory();
+
+// ------------------------------------------------------------------------
+// Streams
+// ------------------------------------------------------------------------
+
+enum class CompressionType {
+    None,
+    Deflate
+};
+
+class StreamReader {
+public:
+    enum class SourceType {
+        File
+    };
+
+    const char *filename;
+
+    struct {
+        SourceType type;
+        union {
+            FILE *fp;
+        } u;
+        bool owned = false;
+
+        bool eof;
+        bool error;
+    } source;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        union {
+            struct MinizInflateContext *miniz;
+        } u;
+    } compression;
+
+    bool eof;
+    bool error;
+
+    Allocator str_alloc;
+
+    StreamReader() { Close(); }
+    StreamReader(FILE *fp, const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(fp, filename, compression_type); }
+    StreamReader(const char *filename, CompressionType compression_type = CompressionType::None)
+        { Open(filename, compression_type); }
+    ~StreamReader() { Close(); }
+
+    bool Open(FILE *fp, const char *filename,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    void Close();
+
+    Size Read(Size max_len, void *out_buf);
+
+private:
+    bool InitDecompressor(CompressionType type);
+    void ReleaseResources();
+
+    Size ReadRaw(Size max_len, void *out_buf);
+};
 
 // ------------------------------------------------------------------------
 // Option Parser

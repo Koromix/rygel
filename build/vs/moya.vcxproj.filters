@@ -36,6 +36,9 @@
     <ClCompile Include="..\..\src\moya\main.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\lib\miniz\miniz.c">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\moya\algorithm.hh">

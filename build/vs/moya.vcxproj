@@ -134,6 +134,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\lib\miniz\miniz.c" />
     <ClCompile Include="..\..\src\moya\algorithm.cc" />
     <ClCompile Include="..\..\src\moya\constraints.cc" />
     <ClCompile Include="..\..\src\moya\data.cc" />

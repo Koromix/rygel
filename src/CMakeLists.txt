@@ -18,6 +18,7 @@ set(MOYA_SRC moya/algorithm.cc
              moya/tables.cc
              moya/tables.hh)
 add_library(moya STATIC ${MOYA_SRC})
+target_link_libraries(moya PUBLIC miniz)
 add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" moya/libmoya.hh)
 
 set(DRD_SRC drd/dump.cc

@@ -69,9 +69,12 @@ function downloadJson(url, func)
 // Pages
 // ------------------------------------------------------------------------
 
+var url_base;
+var url_name;
+
 document.addEventListener('DOMContentLoaded', function(e) {
-    var url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/') + 1);
-    var url_name = window.location.pathname.substr(url_base.length);
+    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/') + 1);
+    url_name = window.location.pathname.substr(url_base.length);
 
     downloadJson('api/pages.json', function(categories) {
         if (url_name == '') {
@@ -139,6 +142,11 @@ function switchPage(page_url)
                       !menu_anchors[i].classList.contains('category'));
         menu_anchors[i].classList.toggle('active', active);
     }
+
+    if (page_url != url_name) {
+        url_name = page_url;
+        window.history.pushState(null, null, url_base + url_name);
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -200,7 +208,7 @@ var pricing = {};
             datasets: []
         };
         for (var i = 0; i < max_duration; i++) {
-            data.labels.push(i);
+            data.labels.push('' + i + ' days');
         }
         for (var i = 0; i < ghm_root_info.length; i++) {
             var dataset = {
@@ -212,7 +220,7 @@ var pricing = {};
                 p = computePrice(ghm_root_info[i], duration);
                 if (p !== null)
                     dataset.data.push({
-                        x: duration,
+                        x: '' + duration + ' days',
                         y: p[0] / 100
                     });
             }

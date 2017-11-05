@@ -22,6 +22,17 @@
 
 #include "kutil.hh"
 
+#if __has_include("../../lib/miniz/miniz.h")
+    #define MINIZ_NO_STDIO
+    #define MINIZ_NO_TIME
+    #define MINIZ_NO_ARCHIVE_APIS
+    #define MINIZ_NO_ARCHIVE_WRITING_APIS
+    #define MINIZ_NO_ZLIB_APIS
+    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+    #define MINIZ_NO_MALLOC
+    #include "../../lib/miniz/miniz.h"
+#endif
+
 // ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------
@@ -695,22 +706,21 @@ static bool ConfigTerminalOutput()
 
     if (!init) {
 #ifdef _WIN32
-        static HANDLE stdout_handle;
+        static HANDLE stderr_handle;
         static DWORD orig_console_mode;
 
-        stdout_handle = (HANDLE)_get_osfhandle(_fileno(stdout));
-        output_is_terminal = GetConsoleMode(stdout_handle, &orig_console_mode);
+        stderr_handle = (HANDLE)_get_osfhandle(_fileno(stderr));
+        output_is_terminal = GetConsoleMode(stderr_handle, &orig_console_mode);
         if (output_is_terminal && !(orig_console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
             // Enable VT100 escape sequences, introduced in Windows 10
             DWORD new_mode = orig_console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-            output_is_terminal = SetConsoleMode(stdout_handle, new_mode);
+            output_is_terminal = SetConsoleMode(stderr_handle, new_mode);
             atexit([]() {
-                SetConsoleMode(stdout_handle, orig_console_mode);
+                SetConsoleMode(stderr_handle, orig_console_mode);
             });
         }
 #else
-        int stdout_fd = fileno(stdout);
-        output_is_terminal = isatty(stdout_fd);
+        output_is_terminal = isatty(fileno(stderr));
 #endif
 
         init = true;
@@ -721,18 +731,16 @@ static bool ConfigTerminalOutput()
 
 void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
 {
-    FILE *fp = stderr;
     const char *end_marker = nullptr;
-
     if (ConfigTerminalOutput()) {
         switch (level)  {
             case LogLevel::Error: {
-                fputs("\x1B[31m", fp);
+                fputs("\x1B[31m", stderr);
                 end_marker = "\x1B[0m";
             } break;
             case LogLevel::Info: break;
             case LogLevel::Debug: {
-                fputs("\x1B[36m", fp);
+                fputs("\x1B[36m", stderr);
                 end_marker = "\x1B[0m";
             } break;
         }
@@ -742,19 +750,19 @@ void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
-            fprintf(fp, " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
+            fprintf(stderr, " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
         } else {
-            fprintf(fp, "%21s [%8.3f]  ", ctx, time);
+            fprintf(stderr, "%21s [%8.3f]  ", ctx, time);
         }
     }
     if (log_handlers.len) {
-        log_handlers[log_handlers.len - 1](fp);
+        log_handlers[log_handlers.len - 1](stderr);
     }
-    FmtPrint(fp, fmt, args);
+    FmtPrint(stderr, fmt, args);
     if (end_marker) {
-        fputs(end_marker, fp);
+        fputs(end_marker, stderr);
     }
-    fputc('\n', fp);
+    fputc('\n', stderr);
 }
 
 void PushLogHandler(std::function<void(FILE *)> handler)
@@ -1060,6 +1068,235 @@ const char *GetExecutableDirectory()
 {
     InitExecutablePaths();
     return executable_dir;
+}
+
+// ------------------------------------------------------------------------
+// Streams
+// ------------------------------------------------------------------------
+
+#ifdef MZ_VERSION
+struct MinizInflateContext {
+    tinfl_decompressor inflator;
+    bool done;
+
+    uint8_t in[256 * 1024];
+    uint8_t *in_ptr;
+    Size in_len;
+
+    uint8_t out[256 * 1024];
+    uint8_t *out_ptr;
+    Size out_len;
+
+};
+StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
+#endif
+
+bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    if (filename) {
+        this->filename = DuplicateString(&str_alloc, filename);
+    }
+
+    if (!InitDecompressor(compression_type))
+        return false;
+    source.type = SourceType::File;
+    source.u.fp = fp;
+
+    error_guard.disable();
+    return true;
+}
+
+bool StreamReader::Open(const char *filename, CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    this->filename = DuplicateString(&str_alloc, filename);
+
+    if (!InitDecompressor(compression_type))
+        return false;
+    source.type = SourceType::File;
+    source.u.fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
+    if (!source.u.fp) {
+        LogError("Cannot open file '%1'", filename);
+        source.error = true;
+        return false;
+    }
+    source.owned = true;
+
+    error_guard.disable();
+    return true;
+}
+
+void StreamReader::Close()
+{
+    ReleaseResources();
+
+    filename = "?";
+    source.error = false;
+    source.eof = false;
+    error = false;
+    eof = false;
+    Allocator::ReleaseAll(&str_alloc);
+}
+
+Size StreamReader::Read(Size max_len, void *out_buf)
+{
+    switch (compression.type) {
+        case CompressionType::None: {
+            Size read_len = ReadRaw(max_len, out_buf);
+            error |= source.error;
+            return read_len;
+        } break;
+
+        case CompressionType::Deflate: {
+#ifdef MZ_VERSION
+            MinizInflateContext *ctx = compression.u.miniz;
+
+            Size read_len = 0;
+            for (;;) {
+                if (max_len < ctx->out_len) {
+                    memcpy(out_buf, ctx->out_ptr, (size_t)max_len);
+                    read_len += max_len;
+                    ctx->out_ptr += max_len;
+                    ctx->out_len -= max_len;
+
+                    return read_len;
+                } else {
+                    memcpy(out_buf, ctx->out_ptr, (size_t)ctx->out_len);
+                    read_len += ctx->out_len;
+                    out_buf = (uint8_t *)out_buf + ctx->out_len;
+                    max_len -= ctx->out_len;
+                    ctx->out_ptr = ctx->out;
+                    ctx->out_len = 0;
+
+                    if (ctx->done) {
+                        eof = true;
+                        return read_len;
+                    }
+                }
+
+                while (ctx->out_len < SIZE(ctx->out)) {
+                    if (!ctx->in_len) {
+                        ctx->in_ptr = ctx->in;
+                        ctx->in_len = ReadRaw(SIZE(ctx->in), ctx->in);
+                        if (ctx->in_len < 0) {
+                            if (read_len) {
+                                return read_len;
+                            } else {
+                                error |= source.error;
+                                return ctx->in_len;
+                            }
+                        }
+                    }
+
+                    size_t in_arg = (size_t)ctx->in_len;
+                    size_t out_arg = (size_t)(SIZE(ctx->out) - ctx->out_len);
+                    uint32_t flags = TINFL_FLAG_PARSE_ZLIB_HEADER;
+                    if (!source.eof) {
+                        flags |= TINFL_FLAG_HAS_MORE_INPUT;
+                    }
+                    tinfl_status status = tinfl_decompress(&ctx->inflator, ctx->in_ptr, &in_arg,
+                                                           ctx->out, ctx->out + ctx->out_len,
+                                                           &out_arg, flags);
+
+                    ctx->in_ptr += (Size)in_arg;
+                    ctx->in_len -= (Size)in_arg;
+                    ctx->out_len += (Size)out_arg;
+
+                    if (status == TINFL_STATUS_DONE) {
+                        ctx->done = true;
+                        break;
+                    } else if (status < TINFL_STATUS_DONE) {
+                        LogError("Failed to decompress '%1' (Deflate)", filename);
+                        error = true;
+                        return -1;
+                    }
+                }
+            }
+#endif
+        } break;
+    }
+    Assert(false);
+}
+
+bool StreamReader::InitDecompressor(CompressionType type)
+{
+    switch (type) {
+        case CompressionType::None: {} break;
+        case CompressionType::Deflate: {
+#ifdef MZ_VERSION
+            compression.u.miniz =
+                (MinizInflateContext *)Allocator::Allocate(nullptr, SIZE(MinizInflateContext),
+                                                           (int)Allocator::Flag::Zero);
+            tinfl_init(&compression.u.miniz->inflator);
+#else
+            LogError("Deflate compression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
+        } break;
+    }
+    compression.type = type;
+
+    return true;
+}
+
+void StreamReader::ReleaseResources()
+{
+    switch (compression.type) {
+        case CompressionType::None: {} break;
+        case CompressionType::Deflate: {
+#ifdef MZ_VERSION
+            Allocator::Release(nullptr, compression.u.miniz, SIZE(*compression.u.miniz));
+#endif
+        } break;
+    }
+    compression.type = CompressionType::None;
+
+    if (source.owned) {
+        switch (source.type) {
+            case SourceType::File: {
+                if (source.u.fp) {
+                    fclose(source.u.fp);
+                }
+            } break;
+        }
+        source.owned = false;
+    }
+}
+
+Size StreamReader::ReadRaw(Size max_len, void *out_buf)
+{
+    if (UNLIKELY(source.error))
+        return -1;
+
+    switch (source.type) {
+        case SourceType::File: {
+            size_t read_len = fread(out_buf, 1, (size_t)max_len, source.u.fp);
+            if (ferror(source.u.fp)) {
+                LogError("Error while reading file '%1'", filename);
+                source.error = true;
+                return -1;
+            }
+            if (feof(source.u.fp)) {
+                source.eof = true;
+            }
+            return (Size)read_len;
+        }
+    }
+    Assert(false);
 }
 
 // ------------------------------------------------------------------------

@@ -136,8 +136,7 @@ ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs) const
 
     {
         const GhsPricing *end_pricing = pricings.ptr + 1;
-        while (end_pricing < ghs_pricings.end() &&
-               end_pricing->ghs == ghs) {
+        while (end_pricing < ghs_pricings.end() && end_pricing->ghs == ghs) {
             end_pricing++;
         }
         pricings.len = end_pricing - pricings.ptr;
@@ -155,8 +154,7 @@ const GhsPricing *PricingSet::FindGhsPricing(GhsCode ghs, Date date) const
     do {
         if (date >= pricing->limit_dates[0] && date < pricing->limit_dates[1])
             return pricing;
-    } while (++pricing < ghs_pricings.ptr + ghs_pricings.len &&
-             pricing->ghs == ghs);
+    } while (++pricing < ghs_pricings.end() && pricing->ghs == ghs);
 
     return nullptr;
 }

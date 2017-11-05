@@ -2,6 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+#define KUTIL_ENABLE_MINIZ
 #include "kutil.hh"
 #include "data.hh"
 #include "tables.hh"
@@ -13,12 +14,23 @@ GCC_PUSH_IGNORE(-Wsign-conversion)
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 
-// TODO: Version this data structure, deal with endianness
-struct BundleHeader {
+#pragma pack(push, 1)
+struct PackHeader {
+    char signature[13];
+    int8_t version;
+    int8_t native_size;
+    int8_t endianness;
+
+    Size stay_size;
     Size stays_len;
+
     Size diagnoses_len;
     Size procedures_len;
 };
+#pragma pack(pop)
+#define PACK_VERSION 1
+#define PACK_SIGNATURE "MOYASTAYPACK"
+StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 
 template <typename T>
 class JsonHandler {
@@ -691,10 +703,15 @@ private:
     }
 };
 
-bool StaySet::SaveBundle(FILE *fp, const char *filename) const
+bool StaySet::SavePack(FILE *fp, const char *filename) const
 {
-    BundleHeader bh;
+    PackHeader bh = {};
 
+    strcpy(bh.signature, PACK_SIGNATURE);
+    bh.version = PACK_VERSION;
+    bh.native_size = (uint8_t)SIZE(Size);
+    bh.endianness = (int8_t)ARCH_ENDIANNESS;
+    bh.stay_size = SIZE(*stays.ptr);
     bh.stays_len = stays.len;
     bh.diagnoses_len = store.diagnoses.len;
     bh.procedures_len = store.procedures.len;
@@ -709,7 +726,7 @@ bool StaySet::SaveBundle(FILE *fp, const char *filename) const
         fwrite(stay.procedures.ptr, SIZE(*stay.procedures.ptr), (size_t)stay.procedures.len, fp);
     }
     if (ferror(fp)) {
-        LogError("Error while writing stay bundle to '%1'", filename ? filename : "?");
+        LogError("Error while writing pack file to '%1'", filename ? filename : "?");
         return false;
     }
 
@@ -717,20 +734,12 @@ bool StaySet::SaveBundle(FILE *fp, const char *filename) const
 }
 
 template <typename T>
-bool ParseJsonFile(const char *filename, T *json_handler)
+bool ParseJsonFile(StreamReader &st, T *json_handler)
 {
-    FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
-    if (!fp) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return false;
-    }
-    DEFER { fclose(fp); };
-
     // This is mostly copied from RapidJSON's FileReadStream, but this
     // version calculates current line number and offset.
-    class FileReadStreamEx
-    {
-        FILE *fp;
+    class FileReadStreamEx {
+        StreamReader *st;
 
         LocalArray<char, 1024 * 1024> buffer;
         Size buffer_offset = 0;
@@ -742,8 +751,8 @@ bool ParseJsonFile(const char *filename, T *json_handler)
         Size line_number = 1;
         Size line_offset = 1;
 
-        FileReadStreamEx(FILE *fp)
-            : fp(fp)
+        FileReadStreamEx(StreamReader *st)
+            : st(st)
         {
             Read();
         }
@@ -782,23 +791,23 @@ bool ParseJsonFile(const char *filename, T *json_handler)
         {
             if (buffer_offset + 1 < buffer.len) {
                 buffer_offset++;
-            } else if (fp) {
+            } else if (st) {
                 file_offset += buffer.len;
-                buffer.len = (Size)fread(buffer.data, 1, SIZE(buffer.data), fp);
+                buffer.len = st->Read(SIZE(buffer.data), buffer.data);
                 buffer_offset = 0;
 
                 if (buffer.len < SIZE(buffer.data)) {
                     buffer.Append('\0');
-                    fp = nullptr;
+                    st = nullptr;
                 }
             }
         }
     };
 
     {
-        FileReadStreamEx json_stream(fp);
+        FileReadStreamEx json_stream(&st);
         PushLogHandler([&](FILE *fp) {
-            Print(fp, "%1(%2:%3): ", filename, json_stream.line_number, json_stream.line_offset);
+            Print(fp, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
         });
         DEFER { PopLogHandler(); };
 
@@ -818,9 +827,15 @@ bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
     DEFER_NC(out_guard, len = out_set->authorizations.len)
         { out_set->authorizations.RemoveFrom(len); };
 
-    JsonAuthorizationHandler json_handler(&out_set->authorizations);
-    if (!ParseJsonFile(filename, &json_handler))
-        return false;
+    {
+        StreamReader st(filename);
+        if (st.error)
+            return false;
+
+        JsonAuthorizationHandler json_handler(&out_set->authorizations);
+        if (!ParseJsonFile(st, &json_handler))
+            return false;
+    }
 
     for (const Authorization &auth: out_set->authorizations) {
         out_set->authorizations_map.Append(&auth);
@@ -858,38 +873,38 @@ const Authorization *AuthorizationSet::FindUnit(UnitCode unit, Date date) const
     do {
         if (date >= auth->dates[0] && date < auth->dates[1])
             return auth;
-    } while (++auth < authorizations.ptr + authorizations.len &&
-             auth->unit == unit);
+    } while (++auth < authorizations.end() && auth->unit == unit);
 
     return nullptr;
 }
 
-static bool LoadStayBundle(const char *filename, StaySet *out_set)
+static bool LoadStayPack(StreamReader &st, StaySet *out_set)
 {
-    FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
-    if (!fp) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
-        return false;
-    }
-    DEFER { fclose(fp); };
-
-    BundleHeader bh;
-    if (fread(&bh, SIZE(bh), 1, fp) != 1)
+    PackHeader bh;
+    if (st.Read(SIZE(bh), &bh) != SIZE(bh))
+        goto error;
+    if (bh.version != PACK_VERSION)
+        goto error;
+    if (bh.native_size != (uint8_t)SIZE(Size))
+        goto error;
+    if (bh.endianness != (int8_t)ARCH_ENDIANNESS)
         goto error;
 
+    if (bh.stay_size != SIZE(Stay))
+        goto error;
     out_set->stays.Grow(bh.stays_len);
-    if (fread(out_set->stays.end(), SIZE(*out_set->stays.ptr),
-              (size_t)bh.stays_len, fp) != (size_t)bh.stays_len)
+    if (st.Read(SIZE(*out_set->stays.ptr) * bh.stays_len,
+                out_set->stays.end()) != SIZE(*out_set->stays.ptr) * bh.stays_len)
         goto error;
     out_set->stays.len += bh.stays_len;
 
     out_set->store.diagnoses.Grow(bh.diagnoses_len);
-    if (fread(out_set->store.diagnoses.end(), SIZE(*out_set->store.diagnoses.ptr),
-              (size_t)bh.diagnoses_len, fp) != (size_t)bh.diagnoses_len)
+    if (st.Read(SIZE(*out_set->store.diagnoses.ptr) * bh.diagnoses_len,
+                out_set->store.diagnoses.end()) != SIZE(*out_set->store.diagnoses.ptr) * bh.diagnoses_len)
         goto error;
     out_set->store.procedures.Grow(bh.procedures_len);
-    if (fread(out_set->store.procedures.end(), SIZE(*out_set->store.procedures.ptr),
-              (size_t)bh.procedures_len, fp) != (size_t)bh.procedures_len)
+    if (st.Read(SIZE(*out_set->store.procedures.ptr) * bh.procedures_len,
+                out_set->store.procedures.end()) != SIZE(*out_set->store.procedures.ptr) * bh.procedures_len)
         goto error;
 
     {
@@ -913,7 +928,7 @@ static bool LoadStayBundle(const char *filename, StaySet *out_set)
     return true;
 
 error:
-    LogError("Error while reading stay bundle file '%1'", filename);
+    LogError("Error while reading stay pack file '%1'", st.filename);
     return false;
 }
 
@@ -927,24 +942,63 @@ bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
         set.store.procedures.RemoveFrom(procedures_len);
     };
 
+    enum class FileType {
+        Json,
+        Pack
+    };
+
     for (const char *filename: filenames) {
-        const char *ext = strrchr(filename, '.');
-        if (!ext || strpbrk(ext, PATH_SEPARATORS)) {
-            LogError("Cannot load stays from file '%1' without extension", filename);
+        const char *extension = strrchr(filename, '.');
+        if (!extension || strpbrk(extension, PATH_SEPARATORS)) {
+            extension = "<empty extension>";
+        }
+
+        FileType file_type;
+        CompressionType compression_type;
+
+        if (StrTest(extension, ".mjson")) {
+            file_type = FileType::Json;
+            compression_type = CompressionType::None;
+        } else if (StrTest(extension, ".mjsonz")) {
+            file_type = FileType::Json;
+            compression_type = CompressionType::Deflate;
+        } else if (StrTest(extension, ".mpak")) {
+            file_type = FileType::Pack;
+            compression_type = CompressionType::None;
+        } else if (StrTest(extension, ".mpakz")) {
+            file_type = FileType::Pack;
+            compression_type = CompressionType::Deflate;
+        } else {
+            LogError("Cannot load stays from file '%1' with unknown extension '%2'",
+                     filename, extension);
             return false;
         }
 
-        if (StrTest(ext, ".json")) {
-            JsonStayHandler json_handler(&set);
-            if (!ParseJsonFile(filename, &json_handler))
-                return false;
-        } else if (StrTest(ext, ".stb")) {
-            if (!LoadStayBundle(filename, &set))
-                return false;
-        } else {
-            LogError("Cannot load stays from file '%1' with unsupported format '%2'",
-                     filename, ext);
+        StreamReader st(filename, compression_type);
+        if (st.error)
             return false;
+
+        switch (file_type) {
+            case FileType::Json: {
+                Size start_len = set.stays.len;
+
+                JsonStayHandler json_handler(&set);
+                if (!ParseJsonFile(st, &json_handler))
+                    return false;
+
+                std::stable_sort(set.stays.begin() + start_len, set.stays.end(),
+                                 [](const Stay &stay1, const Stay &stay2) {
+                    return MultiCmp(stay1.stay_id - stay2.stay_id,
+                                    stay1.bill_id - stay2.bill_id) < 0;
+                });
+            } break;
+
+            case FileType::Pack: {
+                if (!LoadStayPack(st, &set))
+                    return false;
+
+                // Assume the stays are already sorted
+            } break;
         }
     }
 
@@ -954,11 +1008,6 @@ bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
 
 bool StaySetBuilder::Finish(StaySet *out_set)
 {
-    std::stable_sort(set.stays.begin(), set.stays.end(),
-              [](const Stay &stay1, const Stay &stay2) {
-        return stay1.stay_id < stay2.stay_id;
-    });
-
     for (Stay &stay: set.stays) {
 #define FIX_ARRAYREF(ArrayRefName) \
             stay.ArrayRefName.ptr = set.store.ArrayRefName.ptr + \

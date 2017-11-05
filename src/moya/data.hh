@@ -96,7 +96,7 @@ struct StaySet {
         HeapArray<ProcedureRealisation> procedures;
     } store;
 
-    bool SaveBundle(FILE *fp, const char *filename) const;
+    bool SavePack(FILE *fp, const char *filename) const;
 };
 
 bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set);
