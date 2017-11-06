@@ -73,7 +73,8 @@ var url_base;
 var url_name;
 
 document.addEventListener('DOMContentLoaded', function(e) {
-    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/') + 1);
+    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
+               document.querySelector('base').getAttribute('href');
     url_name = window.location.pathname.substr(url_base.length);
 
     downloadJson('api/pages.json', function(categories) {
