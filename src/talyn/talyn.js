@@ -203,13 +203,31 @@ var pricing = {};
         var old_table = document.querySelector('div#pricing > div.table > table');
         old_table.parentNode.replaceChild(table, old_table);
 
+        var chart_ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
+        chart = refreshChart(chart, chart_ctx, ghm_root_info, max_duration);
+    }
+    this.refreshPricing = refreshPricing;
+
+    function refreshChart(chart, chart_ctx, ghm_root_info, max_duration)
+    {
+        function createDurationLabel(duration)
+        {
+            if (duration >= 2) {
+                return '' + duration + ' jours';
+            } else {
+                return '' + duration + ' jour';
+            }
+        }
+
         data = {
             labels: [],
             datasets: []
         };
+
         for (var i = 0; i < max_duration; i++) {
-            data.labels.push('' + i + ' days');
+            data.labels.push(createDurationLabel(i));
         }
+
         for (var i = 0; i < ghm_root_info.length; i++) {
             var dataset = {
                 label: ghm_root_info[i].ghm,
@@ -218,20 +236,23 @@ var pricing = {};
             };
             for (var duration = 0; duration < max_duration; duration++) {
                 p = computePrice(ghm_root_info[i], duration);
-                if (p !== null)
+                if (p !== null) {
                     dataset.data.push({
-                        x: '' + duration + ' days',
+                        x: createDurationLabel(duration),
                         y: p[0] / 100
                     });
+                } else {
+                    dataset.data.push(null);
+                }
             }
             data.datasets.push(dataset);
         }
-        var ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
+
         if (chart) {
             chart.data = data;
             chart.update();
         } else {
-            chart = new Chart(ctx, {
+            chart = new Chart(chart_ctx, {
                 type: 'line',
                 data: data,
                 options: {
@@ -257,8 +278,9 @@ var pricing = {};
                 },
             });
         }
+
+        return chart;
     }
-    this.refreshPricing = refreshPricing;
 
     function createTable(ghm_root_info, merge_cells, max_duration)
     {
