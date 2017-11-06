@@ -213,6 +213,23 @@ var pricing = {};
 
     function refreshChart(chart, chart_ctx, ghm_root_info, max_duration)
     {
+        function modeToColor(mode) {
+            return {
+                "J": "#fdae6b",
+                "T": "#fdae6b",
+                "1": "#fd8d3c",
+                "2": "#f16913",
+                "3": "#d94801",
+                "4": "#a63603",
+                "A": "#fd8d3c",
+                "B": "#f16913",
+                "C": "#d94801",
+                "D": "#a63603",
+                "E": "#7f2704",
+                "Z": "#9a9a9a"
+            }[mode] || "black";
+        }
+
         data = {
             labels: [],
             datasets: []
@@ -223,8 +240,11 @@ var pricing = {};
 
         for (var i = 0; i < ghm_root_info.length; i++) {
             var dataset = {
-                label: ghm_root_info[i].ghm,
+                label: '' + ghm_root_info[i].ghs + ' (' + ghm_root_info[i].ghm + ')',
                 data: [],
+                borderColor: modeToColor(ghm_root_info[i].ghm_mode),
+                backgroundColor: modeToColor(ghm_root_info[i].ghm_mode),
+                borderDash: (ghm_root_info[i].conditions.length ? [5, 5] : undefined),
                 fill: false
             };
             for (var duration = 0; duration < max_duration; duration++) {
@@ -243,7 +263,7 @@ var pricing = {};
 
         if (chart) {
             chart.data = data;
-            chart.update();
+            chart.update({duration: 0});
         } else {
             chart = new Chart(chart_ctx, {
                 type: 'line',
