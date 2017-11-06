@@ -1041,7 +1041,7 @@ static void InitExecutablePaths()
     {
         char *path_buf = realpath("/proc/self/exe", nullptr);
         Assert(path_buf);
-        path_len = strlen(path_buf);
+        path_len = (Size)strlen(path_buf);
         Assert(path_len < SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);

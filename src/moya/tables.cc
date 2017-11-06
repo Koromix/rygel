@@ -351,9 +351,9 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
 
                 const uint8_t *warn_data = file_data + table.sections[3].raw_offset +
                                            raw_diag_ptr.section3_idx * table.sections[3].value_len;
-                for (Size i = 0; i < table.sections[3].value_len; i++) {
+                for (int i = 0; i < table.sections[3].value_len; i++) {
                     if (warn_data[i]) {
-                        diag.warnings |= (uint16_t)(1 << i);
+                        diag.warnings = (uint16_t)(diag.warnings | (1 << i));
                     }
                 }
 
