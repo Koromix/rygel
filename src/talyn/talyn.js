@@ -218,9 +218,8 @@ var pricing = {};
             datasets: []
         };
 
-        for (var i = 0; i < max_duration; i++) {
+        for (var i = 0; i < max_duration; i++)
             data.labels.push(durationText(i));
-        }
 
         for (var i = 0; i < ghm_root_info.length; i++) {
             var dataset = {
@@ -342,12 +341,10 @@ var pricing = {};
             var texts = [];
             if (col.ghm_mode >= '1' && col.ghm_mode < '5') {
                 var severity = col.ghm_mode.charCodeAt(0) - '1'.charCodeAt(0);
-                if (severity < col.young_severity_limit) {
+                if (severity < col.young_severity_limit)
                     texts.push('< ' + col.young_age_treshold.toString());
-                }
-                if (severity < col.old_severity_limit) {
+                if (severity < col.old_severity_limit)
                     texts.push('≥ ' + col.old_age_treshold.toString());
-                }
             }
             return [texts.join(', '), 'age', true];
         });
