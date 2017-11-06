@@ -98,7 +98,9 @@ document.addEventListener('DOMContentLoaded', function(e) {
 
             var li =
                 createElement('li', {},
-                    createElement('a', {href: pages[0].url, class: 'category'},
+                    createElement('a', {href: pages[0].url,
+                                        onclick: 'switchPage("' + pages[0].url + '"); return false;',
+                                        class: 'category'},
                                   categories[i].category)
                 );
             ul.appendChild(li);
