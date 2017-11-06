@@ -213,22 +213,13 @@ var pricing = {};
 
     function refreshChart(chart, chart_ctx, ghm_root_info, max_duration)
     {
-        function createDurationLabel(duration)
-        {
-            if (duration >= 2) {
-                return '' + duration + ' jours';
-            } else {
-                return '' + duration + ' jour';
-            }
-        }
-
         data = {
             labels: [],
             datasets: []
         };
 
         for (var i = 0; i < max_duration; i++) {
-            data.labels.push(createDurationLabel(i));
+            data.labels.push(durationText(i));
         }
 
         for (var i = 0; i < ghm_root_info.length; i++) {
@@ -241,7 +232,7 @@ var pricing = {};
                 p = computePrice(ghm_root_info[i], duration);
                 if (p !== null) {
                     dataset.data.push({
-                        x: createDurationLabel(duration),
+                        x: durationText(duration),
                         y: p[0] / 100
                     });
                 } else {
@@ -318,24 +309,6 @@ var pricing = {};
             }
 
             parent.appendChild(tr);
-        }
-
-        function durationText(duration)
-        {
-            if (duration !== undefined) {
-                return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
-            } else {
-                return '';
-            }
-        }
-        function priceText(price_cents)
-        {
-            if (price_cents !== undefined) {
-                // The replace() is a bit dirty, but it gets the job done
-                return (price_cents / 100.0).toFixed(2).replace('.', ',');
-            } else {
-                return '';
-            }
         }
 
         var table =
@@ -418,6 +391,25 @@ var pricing = {};
             return [price, 'exh'];
         }
         return [col.price_cents, 'price'];
+    }
+
+    function durationText(duration)
+    {
+        if (duration !== undefined) {
+            return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
+        } else {
+            return '';
+        }
+    }
+
+    function priceText(price_cents)
+    {
+        if (price_cents !== undefined) {
+            // The replace() is a bit dirty, but it gets the job done
+            return (price_cents / 100.0).toFixed(2).replace('.', ',');
+        } else {
+            return '';
+        }
     }
 }).call(pricing);
 
