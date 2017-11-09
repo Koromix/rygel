@@ -35,7 +35,8 @@ static const Page pages[] = {
 };
 
 static const TableSet *table_set;
-static HeapArray<HashSet<GhmCode, GhmConstraint>> table_set_constraints;
+static HeapArray<HashSet<GhmCode, GhmConstraint>> constraints_set;
+static HeapArray<HashSet<GhmCode, GhmConstraint> *> index_to_constraints;
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
 
@@ -125,7 +126,7 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
         return false;
     }
     const HashSet<GhmCode, GhmConstraint> &constraints =
-        table_set_constraints[index - table_set->indexes.ptr];
+        *index_to_constraints[index - table_set->indexes.ptr];
 
     Allocator temp_alloc;
     rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(*out_buffer);
@@ -351,9 +352,14 @@ Talyn options:
 
     for (Size i = 0; i < table_set->indexes.len; i++) {
         LogDebug("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
-        HashSet<GhmCode, GhmConstraint> *constraints = table_set_constraints.Append();
-        if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
-            return 1;
+
+        // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
+        if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
+            HashSet<GhmCode, GhmConstraint> *constraints = constraints_set.Append();
+            if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
+                return 1;
+        }
+        index_to_constraints.Append(&constraints_set[constraints_set.len - 1]);
     }
 
 #if !defined(NDEBUG) && defined(_WIN32)
