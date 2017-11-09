@@ -425,8 +425,7 @@ struct ArrayRef {
 
     ArrayRef() = default;
     constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
-    constexpr ArrayRef(std::initializer_list<T> l)
-        : ptr(l.begin()), len((Size)l.size()) {}
+    constexpr ArrayRef(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
     constexpr ArrayRef(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
     constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
@@ -1305,20 +1304,22 @@ static inline bool DefaultCompare(const char *key1, const char *key2)
 template <typename KeyType, typename ValueType>
 class HashMap {
     struct Bucket {
-        ValueType value; // Keep first, see Remove(it) method
         KeyType key;
+        ValueType value;
 
         HASH_SET_HANDLER(Bucket, key);
     };
 
-public:
     HashSet<KeyType, Bucket> set;
+
+public:
     Allocator *&allocator = set.allocator;
 
     ValueType *Set(const KeyType &key, const ValueType &value)
-        { return &set.Set({value, key})->value; }
+        { return &set.Set({key, value})->value; }
 
-    void Remove(ValueType *it) { set.Remove((Bucket *)it); }
+    void Remove(ValueType *it)
+        { set.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value))); }
     void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
