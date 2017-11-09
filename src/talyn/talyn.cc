@@ -277,14 +277,14 @@ Talyn options:
             return 1;
     }
 
-    routes.Set("/", resources::talyn_html);
+    Assert(resources.len > 0);
+    routes.Set("/", resources[0].data);
     for (const Page &page: pages) {
-        routes.Set(page.url, resources::talyn_html);
+        routes.Set(page.url, resources[0].data);
     }
-    routes.Set("/static/talyn.css", resources::talyn_css);
-    routes.Set("/static/talyn.js", resources::talyn_js);
-    routes.Set("/static/logo.png", resources::logo_png);
-    routes.Set("/static/chart.min.js", resources::chart_min_js);
+    for (const Resource &res: resources) {
+        routes.Set(res.url, res.data);
+    }
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
