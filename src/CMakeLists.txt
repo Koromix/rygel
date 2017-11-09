@@ -21,15 +21,15 @@ add_library(moya STATIC ${MOYA_SRC})
 target_link_libraries(moya PUBLIC miniz)
 add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" moya/libmoya.hh)
 
-set(DRD_SRC drd/dump.cc
-            drd/dump.hh
-            drd/drd.cc)
+set(DRD_SRC drd/drd.cc
+            drd/dump.cc
+            drd/dump.hh)
 add_executable(drd ${DRD_SRC})
 target_link_libraries(drd PUBLIC moya)
 
-set(TALYN_RESOURCES talyn/talyn.html
-                    talyn/talyn.css
-                    talyn/talyn.js
+set(TALYN_RESOURCES talyn/static/talyn.html
+                    talyn/static/talyn.css
+                    talyn/static/talyn.js
                     ../resources/logo.png
                     ../lib/chartjs/chart.min.js)
 set(TALYN_SRC talyn/talyn.cc
