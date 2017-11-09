@@ -553,7 +553,7 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
 {
 #ifndef NDEBUG
     bool invalid_marker = false;
-    uint32_t unused_arguments = (1 << args.len) - 1;
+    uint32_t unused_arguments = ((uint32_t)1 << args.len) - 1;
 #endif
 
     const char *fmt_ptr = fmt;
@@ -585,7 +585,7 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
             if (idx < args.len) {
                 ProcessArg<AppendFunc>(args[idx], append);
 #ifndef NDEBUG
-                unused_arguments &= ~(1 << idx);
+                unused_arguments &= ~((uint32_t)1 << idx);
             } else {
                 invalid_marker = true;
 #endif
