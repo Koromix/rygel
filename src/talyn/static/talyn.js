@@ -213,7 +213,13 @@ var pricing = {};
 
     function refreshChart(chart, chart_ctx, ghm_root_info, max_duration)
     {
-        function modeToColor(mode) {
+        function ghsLabel(ghs)
+        {
+            return '' + ghs.ghs + (ghs.conditions.length ? '*' : '') + ' (' + ghs.ghm + ')';
+        }
+
+        function modeToColor(mode)
+        {
             return {
                 "J": "#fdae6b",
                 "T": "#fdae6b",
@@ -240,7 +246,7 @@ var pricing = {};
 
         for (var i = 0; i < ghm_root_info.length; i++) {
             var dataset = {
-                label: '' + ghm_root_info[i].ghs + ' (' + ghm_root_info[i].ghm + ')',
+                label: ghsLabel(ghm_root_info[i]),
                 data: [],
                 borderColor: modeToColor(ghm_root_info[i].ghm_mode),
                 backgroundColor: modeToColor(ghm_root_info[i].ghm_mode),
