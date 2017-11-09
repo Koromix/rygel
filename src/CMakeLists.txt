@@ -27,22 +27,23 @@ set(DRD_SRC drd/drd.cc
 add_executable(drd ${DRD_SRC})
 target_link_libraries(drd PUBLIC moya)
 
+# Application HTML must be kept first
 set(TALYN_RESOURCES talyn/static/talyn.html
                     talyn/static/talyn.css
                     talyn/static/talyn.js
                     ../resources/logo.png
                     ../lib/chartjs/chart.min.js)
-set(TALYN_SRC talyn/talyn.cc)
-if(NOT ${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[
+set(TALYN_SRC talyn/talyn.cc
+              talyn/resources.hh)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[
 set(RESOURCES_CC_FILENAME "${BIN_DIR}/talyn/resources.cc")
-set(RESOURCES_HH_FILENAME "${BIN_DIR}/talyn/resources.hh")
 
 file(WRITE ${RESOURCES_CC_FILENAME} "\
 #include \"${SRC_DIR}/moya/libmoya.hh\"\n\
-#include \"resources.hh\"\n\
+#include \"${SRC_DIR}/talyn/resources.hh\"\n\
 \n\
-const ArrayRef<const Resource> resources = {\n")
+EXPORT extern const ArrayRef<const Resource> static_resources;
+const ArrayRef<const Resource> static_resources = {\n")
 separate_arguments(RESOURCES)
 foreach(res ${RESOURCES})
     get_filename_component(name ${res} NAME)
@@ -53,22 +54,17 @@ foreach(res ${RESOURCES})
     file(APPEND ${RESOURCES_CC_FILENAME} "    {\"/static/${name}\", {${data}}},\n")
 endforeach()
 file(APPEND ${RESOURCES_CC_FILENAME} "};\n")
-
-file(WRITE ${RESOURCES_HH_FILENAME} "\
-#include \"${SRC_DIR}/moya/libmoya.hh\"\n\n\
-struct Resource {\n\
-    const char *url;\n\
-    ArrayRef<const uint8_t> data;\n\
-};\n\n\
-extern const ArrayRef<const Resource> resources;\n")
 ]=])
-
-    add_custom_command(
-        OUTPUT talyn/resources.cc
-        COMMAND ${CMAKE_COMMAND}
-        ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${TALYN_RESOURCES}"
-             -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake"
-        DEPENDS ${TALYN_RESOURCES})
+add_custom_command(
+    OUTPUT talyn/resources.cc
+    COMMAND ${CMAKE_COMMAND}
+    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${TALYN_RESOURCES}"
+         -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake"
+    DEPENDS ${TALYN_RESOURCES})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_library(talyn_res SHARED "${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc")
+    set_target_properties(talyn_res PROPERTIES PREFIX "")
+else()
     list(APPEND TALYN_SRC "${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc")
 endif()
 add_executable(talyn ${TALYN_SRC} ${TALYN_RESOURCES})

@@ -36,11 +36,85 @@ static const Page pages[] = {
 
 static const TableSet *table_set;
 static HeapArray<HashSet<GhmCode, GhmConstraint>> table_set_constraints;
-
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
 
+#if !defined(NDEBUG) && defined(_WIN32)
+static HeapArray<Resource> static_resources;
+static Allocator static_alloc;
+#else
+extern const ArrayRef<const Resource> static_resources;
+#endif
+
 static HashMap<const char *, ArrayRef<const uint8_t>> routes;
+
+static void InitRoutes()
+{
+    Assert(static_resources.len > 0);
+    routes.Set("/", static_resources[0].data);
+    for (const Page &page: pages) {
+        routes.Set(page.url, static_resources[0].data);
+    }
+
+    for (const Resource &res: static_resources) {
+        routes.Set(res.url, res.data);
+    }
+}
+
+#if !defined(NDEBUG) && defined(_WIN32)
+static bool UpdateStaticResources()
+{
+    Allocator temp_alloc;
+
+    const char *filename = Fmt(&temp_alloc, "%1%/talyn_res.dll", GetExecutableDirectory()).ptr;
+    {
+        static FILETIME last_time;
+
+        WIN32_FILE_ATTRIBUTE_DATA attr;
+        if (!GetFileAttributesEx(filename, GetFileExInfoStandard, &attr)) {
+            LogError("Cannot stat file '%1'", filename);
+            return false;
+        }
+
+        if (attr.ftLastWriteTime.dwHighDateTime == last_time.dwHighDateTime &&
+                attr.ftLastWriteTime.dwLowDateTime == last_time.dwLowDateTime)
+            return true;
+
+        last_time = attr.ftLastWriteTime;
+    }
+
+    HMODULE h = LoadLibrary(filename);
+    if (!h) {
+        LogError("Cannot load library '%1'", filename);
+        return false;
+    }
+    DEFER { FreeLibrary(h); };
+
+    const ArrayRef<const Resource> *dll_resources =
+        (const ArrayRef<const Resource> *)GetProcAddress(h, "static_resources");
+    if (!dll_resources) {
+        LogError("Cannot find symbol 'static_resources' in library '%1'", filename);
+        return false;
+    }
+
+    static_resources.Clear();
+    Allocator::ReleaseAll(&static_alloc);
+    for (const Resource &res: *dll_resources) {
+        Resource new_res;
+        new_res.url = DuplicateString(&static_alloc, res.url);
+        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&static_alloc, res.data.len);
+        memcpy(data_ptr, res.data.ptr, (size_t)res.data.len);
+        new_res.data = {data_ptr, res.data.len};
+        static_resources.Append(new_res);
+    }
+
+    routes.Clear();
+    InitRoutes();
+
+    LogInfo("Loaded resources from '%1'", filename);
+    return true;
+}
+#endif
 
 // FIXME: Switch to stream / callback-based API
 static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
@@ -157,6 +231,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                                                                "date");
             date = Date::FromString(date_str);
         }
+
         if (date.value) {
             rapidjson::MemoryBuffer buffer;
             if (BuildCatalog(date, &buffer)) {
@@ -193,6 +268,10 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
         MHD_add_response_header(response, "Content-Type", "application/json");
         code = MHD_HTTP_OK;
     } else {
+#if !defined(NDEBUG) && defined(_WIN32)
+        UpdateStaticResources();
+#endif
+
         ArrayRef<const uint8_t> resource_data = routes.FindValue(url, {});
         if (resource_data.IsValid()) {
             response = MHD_create_response_from_buffer((size_t)resource_data.len,
@@ -277,14 +356,11 @@ Talyn options:
             return 1;
     }
 
-    Assert(resources.len > 0);
-    routes.Set("/", resources[0].data);
-    for (const Page &page: pages) {
-        routes.Set(page.url, resources[0].data);
-    }
-    for (const Resource &res: resources) {
-        routes.Set(res.url, res.data);
-    }
+#if !defined(NDEBUG) && defined(_WIN32)
+    if (!UpdateStaticResources())
+        return false;
+#endif
+    InitRoutes();
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
