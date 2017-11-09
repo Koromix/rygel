@@ -128,20 +128,10 @@ enum class Endianness {
 #define StaticAssert(Cond) \
     static_assert((Cond), STRINGIFY(Cond))
 
-#define READ_ONLY_GLOBAL(Type, Name) \
-    static Type Name##_priv; \
-    const Type *const Name = &Name##_priv
-#if defined(SEPARATE_RUNNER) && defined(_WIN32)
-    #ifdef BUILDING_RUNNER
-        #define RUNNER_SYMBOL __declspec(dllexport)
-        #define CORE_SYMBOL __declspec(dllimport)
-    #else
-        #define RUNNER_SYMBOL __declspec(dllimport)
-        #define CORE_SYMBOL __declspec(dllexport)
-    #endif
+#ifdef _WIN32
+    #define EXPORT __declspec(dllexport)
 #else
-    #define RUNNER_SYMBOL
-    #define CORE_SYMBOL
+    #define EXPORT
 #endif
 
 constexpr uint16_t MakeUInt16(uint8_t high, uint8_t low)
@@ -1313,7 +1303,11 @@ class HashMap {
     HashSet<KeyType, Bucket> set;
 
 public:
+    Size &count = set.count;
+    Size &capacity = set.capacity;
     Allocator *&allocator = set.allocator;
+
+    void Clear() { set.Clear(); }
 
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &set.Set({key, value})->value; }
