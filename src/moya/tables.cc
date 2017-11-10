@@ -1206,3 +1206,5 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 
     return compatible_ghs;
 }
+
+#undef FAIL_PARSE_IF

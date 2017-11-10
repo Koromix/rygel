@@ -23,15 +23,16 @@ struct Page {
 };
 
 static const Page pages[] = {
-    {"Tarifs",   "/pricing/table",        "Table"},
-    {"Tarifs",   "/pricing/chart",        "Graphique"},
-    {"Listes",   "/lists/ghm_tree",       "Arbre de groupage"},
-    {"Listes",   "/lists/ghm_roots",      "Racines de GHM"},
-    {"Listes",   "/lists/ghs",            "GHS"},
-    {"Listes",   "/lists/diagnoses",      "Diagnostics"},
-    {"Listes",   "/lists/procedures",     "Actes"},
-    {"Groupage", "/classifier/simple",    "Simple"},
-    {"Groupage", "/classifier/scenarios", "Scénarios"},
+    {"Tarifs",   "/pricing/table",     "Table"},
+    {"Tarifs",   "/pricing/chart",     "Graphique"},
+    {"Listes",   "/lists/ghm_tree",    "Arbre de groupage"},
+    {"Listes",   "/lists/ghm_roots",   "Racines de GHM"},
+    {"Listes",   "/lists/ghs",         "GHS"},
+    {"Listes",   "/lists/diagnoses",   "Diagnostics"},
+    {"Listes",   "/lists/exclusions",  "Exclusions"},
+    {"Listes",   "/lists/procedures",  "Actes"},
+    {"Groupage", "/classifier/simple", "Simple"},
+    {"Groupage", "/classifier/global", "Global"},
 };
 
 static const TableSet *table_set;
@@ -125,8 +126,10 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
         LogError("No table index available on '%1'", date);
         return false;
     }
-    const HashSet<GhmCode, GhmConstraint> &constraints =
-        *index_to_constraints[index - table_set->indexes.ptr];
+    const HashSet<GhmCode, GhmConstraint> *constraints = nullptr;
+    if (index_to_constraints.len) {
+        constraints = index_to_constraints[index - table_set->indexes.ptr];
+    }
 
     Allocator temp_alloc;
     rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(*out_buffer);
@@ -140,9 +143,9 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
 
         ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
-            const GhmConstraint *constraint = constraints.Find(ghs_info.ghm);
-            if (!constraint)
-                continue;
+            const GhmConstraint *constraint = constraints ? constraints->Find(ghs_info.ghm) : nullptr;
+//            if (!constraint)
+//                continue;
             const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_info.ghs[0], date);
             if (!ghs_pricing)
                 continue;
@@ -150,7 +153,11 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(&temp_alloc, "%1", ghs_info.ghm).ptr);
             writer.Key("ghm_mode"); writer.String(&ghs_info.ghm.parts.mode, 1);
-            writer.Key("duration_mask"); writer.Uint(constraint->duration_mask);
+            if (constraint) {
+                writer.Key("duration_mask"); writer.Uint(constraint->duration_mask);
+            } else {
+                writer.Key("duration_mask"); writer.Uint(UINT_MAX);
+            }
             if (ghm_root_info.young_severity_limit) {
                 writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
                 writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
@@ -268,6 +275,72 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                                                    MHD_RESPMEM_MUST_COPY);
         MHD_add_response_header(response, "Content-Type", "application/json");
         code = MHD_HTTP_OK;
+    } else if (StrTest(url, "/api/classify.json")) {
+        Allocator temp_alloc;
+
+        const char *stays_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "stays");
+        if (stays_str) {
+            StaySet stay_set;
+
+            {
+                StaySetBuilder stay_set_builder;
+                StreamReader st(MakeArrayRef((uint8_t *)stays_str, (Size)strlen(stays_str)));
+
+                if (!stay_set_builder.Load(st, StaySetDataType::Json))
+                    return false;
+                if (!stay_set_builder.Finish(&stay_set))
+                    return false;
+            }
+
+            ClassifyResultSet result_set;
+            Classify(*table_set, *authorization_set, pricing_set, stay_set.stays,
+                     ClusterMode::BillId, &result_set);
+
+            rapidjson::MemoryBuffer buffer;
+            rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
+
+            writer.StartObject();
+            writer.Key("ghs_total_cents"); writer.Int64(result_set.ghs_total_cents);
+            writer.Key("supplements"); writer.StartObject();
+            writer.Key("rea"); writer.Int(result_set.supplements.rea);
+            writer.Key("reasi"); writer.Int(result_set.supplements.reasi);
+            writer.Key("si"); writer.Int(result_set.supplements.si);
+            writer.Key("src"); writer.Int(result_set.supplements.src);
+            writer.Key("nn1"); writer.Int(result_set.supplements.nn1);
+            writer.Key("nn2"); writer.Int(result_set.supplements.nn2);
+            writer.Key("nn3"); writer.Int(result_set.supplements.nn3);
+            writer.Key("rep"); writer.Int(result_set.supplements.rep);
+            writer.EndObject();
+
+            writer.Key("results");
+            writer.StartArray();
+            for (const ClassifyResult &result: result_set.results) {
+                writer.StartObject();
+                writer.Key("bill_id"); writer.Int(result.stays[0].bill_id);
+                writer.Key("ghm"); writer.String(Fmt(&temp_alloc, "%1", result.ghm).ptr);
+                writer.Key("ghs"); writer.Int(result.ghs.number);
+                writer.Key("ghs_price_cents"); writer.Int(result.ghs_price_cents);
+                writer.Key("supplements"); writer.StartObject();
+                writer.Key("rea"); writer.Int(result.supplements.rea);
+                writer.Key("reasi"); writer.Int(result.supplements.reasi);
+                writer.Key("si"); writer.Int(result.supplements.si);
+                writer.Key("src"); writer.Int(result.supplements.src);
+                writer.Key("nn1"); writer.Int(result.supplements.nn1);
+                writer.Key("nn2"); writer.Int(result.supplements.nn2);
+                writer.Key("nn3"); writer.Int(result.supplements.nn3);
+                writer.Key("rep"); writer.Int(result.supplements.rep);
+                writer.EndObject();
+                writer.EndObject();
+            }
+            writer.EndArray();
+            writer.EndObject();
+
+            response = MHD_create_response_from_buffer(buffer.GetSize(),
+                                                       (void *)buffer.GetBuffer(),
+                                                       MHD_RESPMEM_MUST_COPY);
+            MHD_add_response_header(response, "Content-Type", "application/json");
+            code = MHD_HTTP_OK;
+        }
     } else {
 #if !defined(NDEBUG) && defined(_WIN32)
         UpdateStaticResources();
@@ -350,6 +423,7 @@ Talyn options:
     if (!authorization_set)
         return 1;
 
+#ifdef NDEBUG
     for (Size i = 0; i < table_set->indexes.len; i++) {
         LogDebug("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
 
@@ -359,8 +433,10 @@ Talyn options:
             if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
                 return 1;
         }
+
         index_to_constraints.Append(&constraints_set[constraints_set.len - 1]);
     }
+#endif
 
 #if !defined(NDEBUG) && defined(_WIN32)
     if (!UpdateStaticResources())
@@ -370,7 +446,8 @@ Talyn options:
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
-        nullptr, nullptr, HandleHttpConnection, nullptr, MHD_OPTION_END);
+        nullptr, nullptr, HandleHttpConnection, nullptr,
+        MHD_OPTION_CONNECTION_MEMORY_LIMIT, Megabytes(1), MHD_OPTION_END);
     if (!daemon)
         return 1;
     DEFER { MHD_stop_daemon(daemon); };

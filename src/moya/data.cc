@@ -576,7 +576,8 @@ public:
         switch (state) {
             // Stay attributes
             case State::StaySex: {
-                if (StrTest(str, "H") || StrTest(str, "h")) {
+                if (StrTest(str, "H") || StrTest(str, "h") ||
+                        StrTest(str, "M") || StrTest(str, "m")) {
                     stay.sex = Sex::Male;
                 } else if (StrTest(str, "F") || StrTest(str, "f")) {
                     stay.sex = Sex::Female;
@@ -600,7 +601,7 @@ public:
                 } else if (((str[0] >= '0' && str[0] <= '9')
                             || str[0] == 'R' || str[0] == 'r') && !str[1]) {
                     // This is probably incorrect for either 'R' or 'r' but this is what
-                    // the machine code in FG2017.exe does, so keep it that way.
+                    // the machine code in FG2017 does, so keep it that way.
                     stay.entry.origin = (char)(str[0] - '0');
                 } else {
                     LogError("Invalid entry origin value '%1'", str);
@@ -932,7 +933,7 @@ error:
     return false;
 }
 
-bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
+bool StaySetBuilder::Load(StreamReader &st, StaySetDataType type)
 {
     DEFER_NC(set_guard, stays_len = set.store.diagnoses.len,
                         diagnoses_len = set.store.diagnoses.len,
@@ -942,31 +943,54 @@ bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
         set.store.procedures.RemoveFrom(procedures_len);
     };
 
-    enum class FileType {
-        Json,
-        Pack
-    };
+    switch (type) {
+        case StaySetDataType::Json: {
+            Size start_len = set.stays.len;
 
+            JsonStayHandler json_handler(&set);
+            if (!ParseJsonFile(st, &json_handler))
+                return false;
+
+            std::stable_sort(set.stays.begin() + start_len, set.stays.end(),
+                             [](const Stay &stay1, const Stay &stay2) {
+                return MultiCmp(stay1.stay_id - stay2.stay_id,
+                                stay1.bill_id - stay2.bill_id) < 0;
+            });
+        } break;
+
+        case StaySetDataType::Pack: {
+            if (!LoadStayPack(st, &set))
+                return false;
+
+            // Assume stays are already sorted in pak files
+        } break;
+    }
+
+    set_guard.disable();
+    return true;
+}
+
+bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
+{
     for (const char *filename: filenames) {
         const char *extension = strrchr(filename, '.');
         if (!extension || strpbrk(extension, PATH_SEPARATORS)) {
             extension = "<empty extension>";
         }
 
-        FileType file_type;
+        StaySetDataType data_type;
         CompressionType compression_type;
-
         if (StrTest(extension, ".mjson")) {
-            file_type = FileType::Json;
+            data_type = StaySetDataType::Json;
             compression_type = CompressionType::None;
         } else if (StrTest(extension, ".mjsonz")) {
-            file_type = FileType::Json;
+            data_type = StaySetDataType::Json;
             compression_type = CompressionType::Deflate;
         } else if (StrTest(extension, ".mpak")) {
-            file_type = FileType::Pack;
+            data_type = StaySetDataType::Pack;
             compression_type = CompressionType::None;
         } else if (StrTest(extension, ".mpakz")) {
-            file_type = FileType::Pack;
+            data_type = StaySetDataType::Pack;
             compression_type = CompressionType::Deflate;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
@@ -977,32 +1001,10 @@ bool StaySetBuilder::LoadFile(ArrayRef<const char *const> filenames)
         StreamReader st(filename, compression_type);
         if (st.error)
             return false;
-
-        switch (file_type) {
-            case FileType::Json: {
-                Size start_len = set.stays.len;
-
-                JsonStayHandler json_handler(&set);
-                if (!ParseJsonFile(st, &json_handler))
-                    return false;
-
-                std::stable_sort(set.stays.begin() + start_len, set.stays.end(),
-                                 [](const Stay &stay1, const Stay &stay2) {
-                    return MultiCmp(stay1.stay_id - stay2.stay_id,
-                                    stay1.bill_id - stay2.bill_id) < 0;
-                });
-            } break;
-
-            case FileType::Pack: {
-                if (!LoadStayPack(st, &set))
-                    return false;
-
-                // Assume the stays are already sorted
-            } break;
-        }
+        if (!Load(st, data_type))
+            return false;
     }
 
-    set_guard.disable();
     return true;
 }
 

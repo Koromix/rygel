@@ -1131,6 +1131,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 int PriceGhs(const GhsPricing &pricing, int duration)
 {
     int price_cents = pricing.sectors[0].price_cents;
+
     if (duration < pricing.sectors[0].exb_treshold) {
         if (pricing.sectors[0].flags & (int)GhsPricing::Flag::ExbOnce) {
             price_cents -= pricing.sectors[0].exb_cents;
@@ -1146,6 +1147,9 @@ int PriceGhs(const GhsPricing &pricing, int duration)
 
 int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration)
 {
+    if (ghs == GhsCode(9999))
+        return 0;
+
     const GhsPricing *pricing = pricing_set.FindGhsPricing(ghs, date);
     if (!pricing) {
         // LogDebug("Cannot find price for GHS %1 on %2", ghs, date);

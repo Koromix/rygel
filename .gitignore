@@ -1,3 +1,4 @@
 /bin/
 /.vs/
 CMakeLists.txt.user*
+.Rproj.user

@@ -22,7 +22,7 @@
 
 #include "kutil.hh"
 
-#if __has_include("../../lib/miniz/miniz.h")
+#if __has_include("../../lib/miniz/miniz.h") && !defined(KUTIL_NO_MINIZ)
     #define MINIZ_NO_STDIO
     #define MINIZ_NO_TIME
     #define MINIZ_NO_ARCHIVE_APIS
@@ -1091,6 +1091,30 @@ struct MinizInflateContext {
 StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
 
+bool StreamReader::Open(ArrayRef<const uint8_t> buf, const char *filename,
+                        CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    if (filename) {
+        this->filename = DuplicateString(&str_alloc, filename);
+    }
+
+    if (!InitDecompressor(compression_type))
+        return false;
+    source.type = SourceType::Memory;
+    source.u.memory.buf = buf;
+    source.u.memory.pos = 0;
+
+    error_guard.disable();
+    return true;
+}
+
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
     Close();
@@ -1272,6 +1296,8 @@ void StreamReader::ReleaseResources()
                     fclose(source.u.fp);
                 }
             } break;
+
+            case SourceType::Memory: {} break;
         }
         source.owned = false;
     }
@@ -1295,6 +1321,16 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             }
             return (Size)read_len;
         }
+
+        case SourceType::Memory: {
+            Size copy_len = source.u.memory.buf.len - source.u.memory.pos;
+            if (copy_len > max_len) {
+                copy_len = max_len;
+            }
+            memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)copy_len);
+            source.u.memory.pos += copy_len;
+            return copy_len;
+        } break;
     }
     Assert(false);
 }

@@ -101,10 +101,17 @@ struct StaySet {
 
 bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set);
 
+enum class StaySetDataType {
+    Json,
+    Pack
+};
+
 class StaySetBuilder {
     StaySet set;
 
 public:
-    bool LoadFile(ArrayRef<const char *const> filenames);
+    bool Load(StreamReader &st, StaySetDataType type);
+    bool LoadFiles(ArrayRef<const char *const> filenames);
+
     bool Finish(StaySet *out_set);
 };

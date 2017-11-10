@@ -176,7 +176,7 @@ Classify options:
     {
         StaySetBuilder stay_set_builder;
 
-        if (!stay_set_builder.LoadFile(filenames))
+        if (!stay_set_builder.LoadFiles(filenames))
             return false;
         if (!stay_set_builder.Finish(&stay_set))
             return false;
@@ -189,6 +189,7 @@ Classify options:
 
     LogDebug("Summary");
     PrintLn("Summary:");
+    PrintLn("  N: %1", result_set.results.len);
     PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
     PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
             result_set.supplements.rea, result_set.supplements.reasi, result_set.supplements.si,
@@ -668,7 +669,7 @@ R"(Usage: drd pack [options] stay_file ... dest_file
     {
         StaySetBuilder stay_set_builder;
 
-        if (!stay_set_builder.LoadFile(filenames))
+        if (!stay_set_builder.LoadFiles(filenames))
             return false;
         if (!stay_set_builder.Finish(&stay_set))
             return false;

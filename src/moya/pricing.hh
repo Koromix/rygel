@@ -22,7 +22,7 @@ struct GhsPricing {
         int32_t exh_cents;
         int32_t exb_cents;
         uint16_t flags;
-    } sectors[2];
+    } sectors[2]; // 0 for public, 1 for private
 
     HASH_SET_HANDLER(GhsPricing, ghs);
 };

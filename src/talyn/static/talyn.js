@@ -50,10 +50,21 @@ function toggleNav(id)
     }
 }
 
-function downloadJson(url, func)
+function downloadJson(method, url, arguments, func)
 {
+    var keys = Object.keys(arguments);
+    if (keys.length) {
+        var query_arguments = [];
+        var keys = Object.keys(arguments);
+        for (var i = 0; i < keys.length; i++) {
+            var arg = escape(keys[i]) + '=' + escape(arguments[keys[i]]);
+            query_arguments.push(arg);
+        }
+        url += '?' + query_arguments.join('&');
+    }
+
     var xhr = new XMLHttpRequest();
-    xhr.open('get', url, true);
+    xhr.open(method, url, true);
     xhr.responseType = 'json';
     xhr.onload = function(e) {
         if (this.status === 200) {
@@ -77,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function(e) {
                document.querySelector('base').getAttribute('href');
     url_name = window.location.pathname.substr(url_base.length);
 
-    downloadJson('api/pages.json', function(categories) {
+    downloadJson('get', 'api/pages.json', {}, function(categories) {
         if (url_name == '') {
             url_name = categories[0].pages[0].url;
             window.history.replaceState(null, null, url_base + url_name);
@@ -137,6 +148,8 @@ function switchPage(page_url)
         document.querySelector('div#pricing > div.table').classList.add('inactive');
         document.querySelector('div#pricing > div.chart').classList.remove('inactive');
         // pricing.refreshPricing();
+    } else if (page_url == 'classifier/simple') {
+        document.querySelector('div#simulation').classList.add('active');
     }
 
     var menu_anchors = document.querySelectorAll('div#menu nav a');
@@ -166,7 +179,7 @@ var pricing = {};
     {
         var date = document.querySelector('input#pricing_date').value;
 
-        downloadJson('api/catalog.json?date=' + date, function(json) {
+        downloadJson('get', 'api/catalog.json?date=' + date, {}, function(json) {
             ghm_roots = [];
             ghm_roots_info = {};
 
@@ -442,3 +455,125 @@ document.addEventListener('DOMContentLoaded', function(e) {
     }
     pricing.updateDatabase();
 });
+
+// ------------------------------------------------------------------------
+// Classifier
+// ------------------------------------------------------------------------
+
+var classifier = {};
+(function() {
+    var editor;
+
+    function initEditor()
+    {
+        var container = document.querySelector('div#simulation > div.editor');
+        editor = new JSONEditor(container, {
+            modes: ['code', 'tree'],
+            templates: [
+                {
+                    text: 'RUM',
+                    title: 'Insérer un nouveau RUM',
+                    value: {
+                        'bill_id': 1,
+                        'birthdate': '2001-01-01',
+                        'das': [],
+                        'dp': '',
+                        'entry_date': '2016-01-01',
+                        'entry_mode': 8,
+                        'entry_origin': '',
+                        'exit_date': '2016-01-02',
+                        'exit_destination': '',
+                        'exit_mode': 9,
+                        'igs2': 0,
+                        'gestational_age': 0,
+                        'last_menstrual_period': '',
+                        'newborn_weight': 0,
+                        'procedures': [],
+                        'session_count': 0,
+                        'sex': 1,
+                        'stay_id': 0,
+                        'unit': 10000
+                    }
+                }
+            ]
+        });
+        editor.set([]);
+    }
+    this.initEditor = initEditor;
+
+    function classify()
+    {
+        var stays_str = JSON.stringify(editor.get());
+
+        var old_table = document.querySelector('div#simulation > div.table > table');
+        old_table.parentNode.replaceChild(createResultsTable(), old_table);
+
+        downloadJson('get', 'api/classify.json', {'stays': stays_str}, function(result_set) {
+            var table = createResultsTable(result_set);
+            var old_table = document.querySelector('div#simulation > div.table > table');
+            old_table.parentNode.replaceChild(table, old_table);
+        });
+    }
+    this.classify = classify;
+
+    function createResultsTable(result_set)
+    {
+        var table =
+            createElement('table', {class: "export"},
+                createElement('thead', {},
+                    createElement('tr', {},
+                        createElement('th', {}, 'N° RSS'),
+                        createElement('th', {}, 'GHS'),
+                        createElement('th', {}, 'Tarif GHS (€)'),
+                        createElement('th', {}, 'REA (j)'),
+                        createElement('th', {}, 'REASI (j)'),
+                        createElement('th', {}, 'SI (j)'),
+                        createElement('th', {}, 'SRC (j)'),
+                        createElement('th', {}, 'NN1 (j)'),
+                        createElement('th', {}, 'NN2 (j)'),
+                        createElement('th', {}, 'NN3 (j)'),
+                        createElement('th', {}, 'REP (j)')
+                    )
+                ),
+                createElement('tbody')
+            );
+        var tbody = table.querySelector('tbody');
+
+        if (result_set) {
+            var summary = createElement('tr', {class: 'summary'},
+                createElement('td', {colspan: 2}, 'Total'),
+                createElement('td', {}, '' + (result_set.ghs_total_cents / 100.0)),
+                createElement('td', {}, '' + result_set.supplements.rea),
+                createElement('td', {}, '' + result_set.supplements.reasi),
+                createElement('td', {}, '' + result_set.supplements.si),
+                createElement('td', {}, '' + result_set.supplements.src),
+                createElement('td', {}, '' + result_set.supplements.nn1),
+                createElement('td', {}, '' + result_set.supplements.nn2),
+                createElement('td', {}, '' + result_set.supplements.nn3),
+                createElement('td', {}, '' + result_set.supplements.rep)
+            )
+            tbody.appendChild(summary);
+
+            for (var i = 0; i < result_set.results.length; i++) {
+                var row = createElement('tr', {},
+                    createElement('td', {}, '' + result_set.results[i].bill_id),
+                    createElement('td', {}, '' + result_set.results[i].ghs),
+                    createElement('td', {}, '' + (result_set.results[i].ghs_price_cents / 100.0)),
+                    createElement('td', {}, '' + result_set.results[i].supplements.rea),
+                    createElement('td', {}, '' + result_set.results[i].supplements.reasi),
+                    createElement('td', {}, '' + result_set.results[i].supplements.si),
+                    createElement('td', {}, '' + result_set.results[i].supplements.src),
+                    createElement('td', {}, '' + result_set.results[i].supplements.nn1),
+                    createElement('td', {}, '' + result_set.results[i].supplements.nn2),
+                    createElement('td', {}, '' + result_set.results[i].supplements.nn3),
+                    createElement('td', {}, '' + result_set.results[i].supplements.rep)
+                );
+                tbody.appendChild(row);
+            }
+        }
+
+        return table;
+    }
+}).call(classifier);
+
+document.addEventListener('DOMContentLoaded', classifier.initEditor);

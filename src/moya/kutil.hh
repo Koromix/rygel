@@ -1803,18 +1803,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     FmtLog(level, ctx, fmt, fmt_args);
 }
 
-static inline constexpr const char *SimplifyLogContext(const char *ctx)
-{
-    const char *new_ctx = ctx;
-    for(; *ctx; ctx++) {
-        if (*ctx == '/' || *ctx == '\\') {
-            new_ctx = ctx + 1;
-        }
-    }
-    return new_ctx;
-}
-
-#define LOG_LOCATION SimplifyLogContext(__FILE__ ":" STRINGIFY(__LINE__))
+#define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
 #define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
 #define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
@@ -1891,7 +1880,8 @@ enum class CompressionType {
 class StreamReader {
 public:
     enum class SourceType {
-        File
+        File,
+        Memory
     };
 
     const char *filename;
@@ -1900,6 +1890,10 @@ public:
         SourceType type;
         union {
             FILE *fp;
+            struct {
+                ArrayRef<const uint8_t> buf;
+                Size pos;
+            } memory;
         } u;
         bool owned = false;
 
@@ -1920,14 +1914,20 @@ public:
     Allocator str_alloc;
 
     StreamReader() { Close(); }
-    StreamReader(FILE *fp, const char *filename,
+    StreamReader(ArrayRef<const uint8_t> buf, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(buf, filename, compression_type); }
+    StreamReader(FILE *fp, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(fp, filename, compression_type); }
-    StreamReader(const char *filename, CompressionType compression_type = CompressionType::None)
+    StreamReader(const char *filename,
+                 CompressionType compression_type = CompressionType::None)
         { Open(filename, compression_type); }
     ~StreamReader() { Close(); }
 
-    bool Open(FILE *fp, const char *filename,
+    bool Open(ArrayRef<const uint8_t> buf, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(FILE *fp, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     void Close();
