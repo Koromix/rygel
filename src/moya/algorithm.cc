@@ -790,13 +790,15 @@ static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
 {
     if (unit.number >= 10000) {
         return (int8_t)(unit.number % 100);
-    } else {
+    } else if (unit.number) {
         const Authorization *auth = authorization_set.FindUnit(unit, date);
         if (UNLIKELY(!auth)) {
             // TODO: LogDebug("Unit %1 is missing from authorization set", unit);
             return 0;
         }
         return auth->type;
+    } else {
+        return 0;
     }
 }
 

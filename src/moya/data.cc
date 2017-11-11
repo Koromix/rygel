@@ -308,7 +308,7 @@ class JsonStayHandler: public JsonHandler<JsonStayHandler> {
     State state = State::Default;
 
     Stay stay;
-    ProcedureRealisation proc = {};
+    ProcedureRealisation proc;
 
 public:
     StaySet *out_set;
@@ -317,6 +317,7 @@ public:
         : out_set(out_set)
     {
         ResetStay();
+        ResetProc();
     }
 
     bool StartArray()
@@ -382,7 +383,7 @@ public:
                 state = State::ProcedureArray;
 
                 out_set->store.procedures.Append(proc);
-                proc = {};
+                ResetProc();
             } break;
 
             case State::TestObject: { state = State::StayObject; } break;
@@ -667,6 +668,12 @@ private:
         stay = {};
         stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
         stay.procedures.ptr = (ProcedureRealisation *)out_set->store.procedures.len;
+    }
+
+    void ResetProc()
+    {
+        proc = {};
+        proc.count = 1;
     }
 
     template <typename T>

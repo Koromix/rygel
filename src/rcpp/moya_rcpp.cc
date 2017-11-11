@@ -9,10 +9,28 @@
 
 #include <Rcpp.h>
 
+template <int RTYPE, typename T>
+T optionalAt(Rcpp::Vector<RTYPE> &vec, R_xlen_t i, T default_value)
+{
+    if (UNLIKELY(i >= vec.size()))
+        return default_value;
+    auto value = vec[i % vec.size()];
+    if (vec.is_na(value))
+        return default_value;
+    return value;
+}
+
 // [[Rcpp::export(name = '.moya.classify')]]
 Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
                              Rcpp::DataFrame procedures_df)
 {
+#define LOAD_OPTIONAL_COLUMN(Var, Name) \
+        do { \
+            if ((Var ## _df).containsElementNamed(STRINGIFY(Name))) { \
+                (Var).Name = (Var ##_df)[STRINGIFY(Name)]; \
+            } \
+        } while (false)
+
     struct {
         Rcpp::IntegerVector id;
 
@@ -57,34 +75,33 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
     // FIXME: There's nearly no error checking, can crash easily
 
     stays.id = stays_df["id"];
-    stays.bill_id = stays_df["bill_id"];
-    stays.stay_id = stays_df["stay_id"];
+    LOAD_OPTIONAL_COLUMN(stays, bill_id);
+    LOAD_OPTIONAL_COLUMN(stays, stay_id);
     stays.birthdate = stays_df["birthdate"];
     stays.sex = stays_df["sex"];
     stays.entry_date = stays_df["entry_date"];
     stays.entry_mode = stays_df["entry_mode"];
-    stays.entry_origin = stays_df["entry_origin"];
+    LOAD_OPTIONAL_COLUMN(stays, entry_origin);
     stays.exit_date = stays_df["exit_date"];
     stays.exit_mode = stays_df["exit_mode"];
-    stays.exit_destination = stays_df["exit_destination"];
-    stays.unit = stays_df["unit"];
-    stays.bed_authorization = stays_df["bed_authorization"];
-    stays.session_count = stays_df["session_count"];
-    stays.igs2 = stays_df["igs2"];
-    stays.gestational_age = stays_df["gestational_age"];
-    stays.newborn_weight = stays_df["newborn_weight"];
-    stays.last_menstrual_period = stays_df["last_menstrual_period"];
+    LOAD_OPTIONAL_COLUMN(stays, exit_destination);
+    LOAD_OPTIONAL_COLUMN(stays, unit);
+    LOAD_OPTIONAL_COLUMN(stays, bed_authorization);
+    LOAD_OPTIONAL_COLUMN(stays, igs2);
+    LOAD_OPTIONAL_COLUMN(stays, gestational_age);
+    LOAD_OPTIONAL_COLUMN(stays, newborn_weight);
+    LOAD_OPTIONAL_COLUMN(stays, last_menstrual_period);
     stays.main_diagnosis = stays_df["main_diagnosis"];
-    stays.linked_diagnosis = stays_df["linked_diagnosis"];
+    LOAD_OPTIONAL_COLUMN(stays, linked_diagnosis);
 
     diagnoses.id = diagnoses_df["id"];
     diagnoses.diag = diagnoses_df["diag"];
 
     procedures.id = procedures_df["id"];
     procedures.proc = procedures_df["code"];
-    procedures.phase = procedures_df["phase"];
+    LOAD_OPTIONAL_COLUMN(procedures, phase);
     procedures.activities = procedures_df["activities"];
-    procedures.count = procedures_df["count"];
+    LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
 
     // TODO: Don't require sorted id column (id)
@@ -98,24 +115,25 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
         for (int i = 0; i < stays_df.nrow(); i++) {
             Stay stay = {};
 
-            stay.bill_id = stays.bill_id[i];
-            stay.stay_id = stays.stay_id[i];
+            stay.bill_id = optionalAt(stays.bill_id, i, 0);
+            stay.stay_id = optionalAt(stays.stay_id, i, 0);
             stay.birthdate = Date::FromString(stays.birthdate[i]);
             stay.sex = (Sex)stays.sex[i];
             stay.dates[0] = Date::FromString(stays.entry_date[i]);
             stay.dates[1] = Date::FromString(stays.exit_date[i]);
             stay.entry.mode = strtol(stays.entry_mode[i], nullptr, 10);
-            if (stays.entry_origin[i] == "R" || stays.entry_origin[i] == "r") {
+            if (strcmp(optionalAt(stays.entry_origin, i, ""), "R") ||
+                    strcmp(optionalAt(stays.entry_origin, i, ""), "r")) {
                 stay.entry.origin = 34;
             } else {
-                stay.entry.origin = strtol(stays.entry_origin[i], nullptr, 10);
+                stay.entry.origin = strtol(optionalAt(stays.entry_origin, i, ""), nullptr, 10);
             }
             stay.exit.mode = strtol(stays.exit_mode[i], nullptr, 10);
             stay.exit.destination = strtol(stays.exit_destination[i], nullptr, 10);
-            stay.unit.number = stays.unit[i];
-            stay.bed_authorization = stays.bed_authorization[i];
-            stay.session_count = stays.session_count[i];
-            stay.igs2 = stays.igs2[i];
+            stay.unit.number = optionalAt(stays.unit, i, 0);
+            stay.bed_authorization = optionalAt(stays.bed_authorization, i, 0);
+            stay.session_count = optionalAt(stays.session_count, i, 0);
+            stay.igs2 = optionalAt(stays.igs2, i, 0);
             stay.gestational_age = stays.gestational_age[i];
             stay.newborn_weight = stays.newborn_weight[i];
             if (stays.last_menstrual_period[i] != NA_STRING) {
@@ -124,7 +142,7 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
             if (LIKELY(stays.main_diagnosis[i] != NA_STRING)) {
                stay.main_diagnosis = DiagnosisCode::FromString(stays.main_diagnosis[i]);
             }
-            if (stays.linked_diagnosis[i] != NA_STRING) {
+            if (optionalAt(stays.linked_diagnosis, i, "")[0]) {
                 stay.linked_diagnosis = DiagnosisCode::FromString(stays.linked_diagnosis[i]);
             }
 
@@ -156,9 +174,9 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
             while (k < procedures_df.nrow() && procedures.id[k] == stays.id[i]) {
                 ProcedureRealisation proc;
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
-                proc.phase = procedures.phase[k];
+                proc.phase = optionalAt(procedures.phase, k, 0);
                 proc.activities = procedures.activities[k];
-                proc.count = procedures.count[k];
+                proc.count = optionalAt(procedures.count, k, 1);
                 proc.date = Date::FromString(procedures.date[k]);
 
                 // PrintLn("%1 -- %2 -- %3 -- %4 -- %5", proc.proc, proc.phase, proc.activities, proc.count, proc.date);
@@ -232,6 +250,8 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
             Rcpp::Named("stringsAsFactors") = false
         );
     }
+
+#undef LOAD_OPTIONAL_COLUMN
 
     return retval;
 }
