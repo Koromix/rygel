@@ -636,11 +636,10 @@ public:
         }
     }
 
-    // TODO: Check behavior of Append() after Clear()
     void Clear()
     {
         for (Size i = 0; i < len; i++) {
-            data[i].~T();
+            data[i] = T();
         }
         len = 0;
     }
@@ -692,7 +691,7 @@ public:
         DebugAssert(first >= 0 && first <= len);
 
         for (Size i = first; i < len; i++) {
-            data[i].~T();
+            data[i] = T();
         }
         len = first;
     }
