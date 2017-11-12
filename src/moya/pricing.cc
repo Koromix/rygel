@@ -21,11 +21,11 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
         } \
     } while (false)
 
-    ArrayRef<const char> line = StrSplitLine(file_data, &file_data);
+    ArrayRef<const char> line = SplitStrLine(file_data, &file_data);
     FAIL_PARSE_IF(line.len != 128);
     FAIL_PARSE_IF(memcmp(line.ptr, "000AM00000001000000TABGHSCT00000001000000GHX000NXGHS", 52) != 0);
 
-    for (; line.len == 128; line = StrSplitLine(file_data, &file_data)) {
+    for (; line.len == 128; line = SplitStrLine(file_data, &file_data)) {
         if (!memcmp(line.ptr, "110", 3)) {
             GhsPricing pricing = {};
 

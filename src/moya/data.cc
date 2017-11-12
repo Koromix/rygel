@@ -162,7 +162,7 @@ public:
     bool Key(const char *key, rapidjson::SizeType, bool) {
 #define HANDLE_KEY(Key, State) \
             do { \
-                if (StrTest(key, (Key))) { \
+                if (TestStr(key, (Key))) { \
                     state = State; \
                     return true; \
                 } \
@@ -226,7 +226,7 @@ public:
             case State::AuthEndDate: { SetDate(&auth.dates[1], str); } break;
             case State::AuthUnit: {
                 int16_t unit;
-                if (StrTest(str, "facility")) {
+                if (TestStr(str, "facility")) {
                     auth.unit.number = INT16_MAX;
                 } else if (sscanf(str, "%" SCNd16, &unit) == 1 && unit >= 0 && unit < 10000) {
                     auth.unit.number = unit;
@@ -400,7 +400,7 @@ public:
     bool Key(const char *key, rapidjson::SizeType, bool) {
 #define HANDLE_KEY(Key, State) \
             do { \
-                if (StrTest(key, (Key))) { \
+                if (TestStr(key, (Key))) { \
                     state = State; \
                     return true; \
                 } \
@@ -586,10 +586,10 @@ public:
         switch (state) {
             // Stay attributes
             case State::StaySex: {
-                if (StrTest(str, "H") || StrTest(str, "h") ||
-                        StrTest(str, "M") || StrTest(str, "m")) {
+                if (TestStr(str, "H") || TestStr(str, "h") ||
+                        TestStr(str, "M") || TestStr(str, "m")) {
                     stay.sex = Sex::Male;
-                } else if (StrTest(str, "F") || StrTest(str, "f")) {
+                } else if (TestStr(str, "F") || TestStr(str, "f")) {
                     stay.sex = Sex::Female;
                 } else {
                     LogError("Invalid sex value '%1'", str);
@@ -823,8 +823,14 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
 
     {
         FileReadStreamEx json_stream(&st);
-        PushLogHandler([&](FILE *fp) {
-            Print(fp, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+        PushLogHandler([&](LogLevel level, const char *ctx,
+                           const char *fmt, ArrayRef<const FmtArg> args) {
+            StartConsoleLog(level);
+            Print(stderr, ctx);
+            Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+            PrintFmt(stderr, fmt, args);
+            PrintLn(stderr);
+            EndConsoleLog();
         });
         DEFER { PopLogHandler(); };
 
@@ -996,16 +1002,16 @@ bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
 
         StaySetDataType data_type;
         CompressionType compression_type;
-        if (StrTest(extension, ".mjson")) {
+        if (TestStr(extension, ".mjson")) {
             data_type = StaySetDataType::Json;
             compression_type = CompressionType::None;
-        } else if (StrTest(extension, ".mjsonz")) {
+        } else if (TestStr(extension, ".mjsonz")) {
             data_type = StaySetDataType::Json;
             compression_type = CompressionType::Deflate;
-        } else if (StrTest(extension, ".mpak")) {
+        } else if (TestStr(extension, ".mpak")) {
             data_type = StaySetDataType::Pack;
             compression_type = CompressionType::None;
-        } else if (StrTest(extension, ".mpakz")) {
+        } else if (TestStr(extension, ".mpakz")) {
             data_type = StaySetDataType::Pack;
             compression_type = CompressionType::Deflate;
         } else {

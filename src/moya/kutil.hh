@@ -584,6 +584,15 @@ public:
     typedef T value_type;
     typedef T *iterator_type;
 
+    FixedArray() = default;
+    FixedArray(std::initializer_list<T> l)
+    {
+        DebugAssert(l.size() <= N);
+        for (Size i = 0; i < l.size(); i++) {
+            data[i] = l[i];
+        }
+    }
+
     operator ArrayRef<T>() { return ArrayRef<T>(data, N); }
     operator ArrayRef<const T>() const { return ArrayRef<const T>(data, N); }
 
@@ -617,6 +626,15 @@ public:
 
     typedef T value_type;
     typedef T *iterator_type;
+
+    LocalArray() = default;
+    LocalArray(std::initializer_list<T> l)
+    {
+        DebugAssert(l.size() <= N);
+        for (const T &val: l) {
+            Append(val);
+        }
+    }
 
     // TODO: Check behavior of Append() after Clear()
     void Clear()
@@ -700,6 +718,13 @@ public:
     typedef T *iterator_type;
 
     HeapArray() = default;
+    HeapArray(std::initializer_list<T> l)
+    {
+        Reserve(l.size());
+        for (const T &val: l) {
+            Append(val);
+        }
+    }
     HeapArray(HeapArray &) = delete;
     HeapArray &operator=(const HeapArray &) = delete;
     ~HeapArray() { Clear(); }
@@ -1470,7 +1495,7 @@ static inline char LowerAscii(char c)
     }
 }
 
-static inline bool StrTest(ArrayRef<const char> str1, ArrayRef<const char> str2)
+static inline bool TestStr(ArrayRef<const char> str1, ArrayRef<const char> str2)
 {
     if (str1.len != str2.len)
         return false;
@@ -1480,7 +1505,7 @@ static inline bool StrTest(ArrayRef<const char> str1, ArrayRef<const char> str2)
     }
     return true;
 }
-static inline bool StrTest(ArrayRef<const char> str1, const char *str2)
+static inline bool TestStr(ArrayRef<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
@@ -1489,10 +1514,10 @@ static inline bool StrTest(ArrayRef<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
-static inline bool StrTest(const char *str1, const char *str2)
+static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
-static inline ArrayRef<const char> StrSplit(ArrayRef<const char> str, char split_char,
+static inline ArrayRef<const char> SplitStr(ArrayRef<const char> str, char split_char,
                                             ArrayRef<const char> *out_remainder = nullptr)
 {
     Size part_len = 0;
@@ -1510,7 +1535,7 @@ static inline ArrayRef<const char> StrSplit(ArrayRef<const char> str, char split
     }
     return str;
 }
-static inline ArrayRef<const char> StrSplit(const char *str, char split_char,
+static inline ArrayRef<const char> SplitStr(const char *str, char split_char,
                                             const char **out_remainder = nullptr)
 {
     Size part_len = 0;
@@ -1529,26 +1554,26 @@ static inline ArrayRef<const char> StrSplit(const char *str, char split_char,
     return MakeArrayRef(str, part_len);
 }
 
-static inline ArrayRef<const char> StrSplitLine(ArrayRef<const char> str,
+static inline ArrayRef<const char> SplitStrLine(ArrayRef<const char> str,
                                                 ArrayRef<const char> *out_remainder = nullptr)
 {
-    ArrayRef<const char> part = StrSplit(str, '\n', out_remainder);
+    ArrayRef<const char> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
-static inline ArrayRef<const char> StrSplitLine(const char *str,
+static inline ArrayRef<const char> SplitStrLine(const char *str,
                                                 const char **out_remainder = nullptr)
 {
-    ArrayRef<const char> part = StrSplit(str, '\n', out_remainder);
+    ArrayRef<const char> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
 
-static inline ArrayRef<const char> StrSplitAny(ArrayRef<const char> str, const char *split_chars,
+static inline ArrayRef<const char> SplitStrAny(ArrayRef<const char> str, const char *split_chars,
                                                ArrayRef<const char> *out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
@@ -1572,7 +1597,7 @@ static inline ArrayRef<const char> StrSplitAny(ArrayRef<const char> str, const c
     }
     return str.Take(0, str.len);
 }
-static inline ArrayRef<const char> StrSplitAny(const char *str, const char *split_chars,
+static inline ArrayRef<const char> SplitStrAny(const char *str, const char *split_chars,
                                                const char **out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
@@ -1715,58 +1740,56 @@ enum class LogLevel {
     Error
 };
 
-ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args);
-ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
-void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
-void FmtLog(LogLevel level, const char *ctx, const char *fmt,
-            ArrayRef<const FmtArg> args);
+ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args);
+ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
+void PrintFmt(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
 
 // Print formatted strings to fixed-size buffer
 static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt)
 {
-    return FmtString(buf, fmt, {});
+    return FmtFmt(buf, fmt, {});
 }
 template <typename... Args>
 static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtString(buf, fmt, fmt_args);
+    return FmtFmt(buf, fmt, fmt_args);
 }
 
 // Print formatted strings to dynamic char array
 static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt)
 {
-    return FmtString(alloc, fmt, {});
+    return FmtFmt(alloc, fmt, {});
 }
 template <typename... Args>
 static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtString(alloc, fmt, fmt_args);
+    return FmtFmt(alloc, fmt, fmt_args);
 }
 
 // Print formatted strings to stdio FILE
-static inline  void Print(FILE *fp, const char *fmt)
+static inline void Print(FILE *fp, const char *fmt)
 {
-    FmtPrint(fp, fmt, {});
+    PrintFmt(fp, fmt, {});
 }
 template <typename... Args>
 static inline void Print(FILE *fp, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtPrint(fp, fmt, fmt_args);
+    PrintFmt(fp, fmt, fmt_args);
 }
 
 // Print formatted strings to stdout
 static inline void Print(const char *fmt)
 {
-    FmtPrint(stdout, fmt, {});
+    PrintFmt(stdout, fmt, {});
 }
 template <typename... Args>
 static inline void Print(const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtPrint(stdout, fmt, fmt_args);
+    PrintFmt(stdout, fmt, fmt_args);
 }
 
 // Variants of the Print() functions with terminating newline
@@ -1782,25 +1805,30 @@ static inline void PrintLn(const char *fmt, Args... args)
     Print(stdout, fmt, args...);
     putchar('\n');
 }
-static inline void PrintLn()
+static inline void PrintLn(FILE *fp = stdout)
 {
-    putchar('\n');
+    fputc('\n', fp);
 }
 
 // ------------------------------------------------------------------------
 // Debug and errors
 // ------------------------------------------------------------------------
 
+typedef void LogHandlerFunc(LogLevel level, const char *ctx,
+                            const char *fmt, ArrayRef<const FmtArg> args);
+
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args);
+
 // Log text line to stderr with context, for the Log() macros below
 static inline void Log(LogLevel level, const char *ctx, const char *fmt)
 {
-    FmtLog(level, ctx, fmt, {});
+    LogFmt(level, ctx, fmt, {});
 }
 template <typename... Args>
 static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    FmtLog(level, ctx, fmt, fmt_args);
+    LogFmt(level, ctx, fmt, fmt_args);
 }
 
 #define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
@@ -1808,7 +1836,13 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 #define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
 
-void PushLogHandler(std::function<void(FILE *)> handler);
+void DefaultLogHandler(LogLevel level, const char *ctx,
+                       const char *fmt, ArrayRef<const FmtArg> args);
+
+void StartConsoleLog(LogLevel level);
+void EndConsoleLog();
+
+void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
 
 // ------------------------------------------------------------------------
@@ -1947,8 +1981,8 @@ private:
 
 static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
 {
-    return StrTest(opt, test1) ||
-           (test2 && StrTest(opt, test2));
+    return TestStr(opt, test1) ||
+           (test2 && TestStr(opt, test2));
 }
 
 class OptionParser {

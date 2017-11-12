@@ -232,7 +232,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
     MHD_Response *response = nullptr;
     unsigned int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 
-    if (StrTest(url, "/api/catalog.json")) {
+    if (TestStr(url, "/api/catalog.json")) {
         Date date = {};
         {
             const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND,
@@ -250,7 +250,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                 code = MHD_HTTP_OK;
             }
         }
-    } else if (StrTest(url, "/api/pages.json")) {
+    } else if (TestStr(url, "/api/pages.json")) {
         rapidjson::MemoryBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
         writer.StartArray();
@@ -275,7 +275,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                                                    MHD_RESPMEM_MUST_COPY);
         MHD_add_response_header(response, "Content-Type", "application/json");
         code = MHD_HTTP_OK;
-    } else if (StrTest(url, "/api/classify.json")) {
+    } else if (TestStr(url, "/api/classify.json")) {
         Allocator temp_alloc;
 
         const char *stays_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "stays");

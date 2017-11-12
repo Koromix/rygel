@@ -622,7 +622,7 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
 #endif
 }
 
-ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
+ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
 {
     DebugAssert(buf.len >= 0);
 
@@ -633,7 +633,7 @@ ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const Fmt
     Size real_len = 0;
 
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
-        if (real_len < buf.len) {
+        if (LIKELY(real_len < buf.len)) {
             Size copy_len = fragment.len;
             if (copy_len > buf.len - real_len) {
                 copy_len = buf.len - real_len;
@@ -650,7 +650,7 @@ ArrayRef<char> FmtString(ArrayRef<char> buf, const char *fmt, ArrayRef<const Fmt
     return buf;
 }
 
-ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
+ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
 {
     char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
                                             (int)Allocator::Flag::Resizable);
@@ -664,7 +664,7 @@ ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtAr
             Size new_capacity = buf_capacity;
             do {
                 new_capacity = (Size)((float)new_capacity * FMT_STRING_GROWTH_FACTOR);
-            } while (fragment.len <= new_capacity - buf_len);
+            } while (fragment.len >= new_capacity - buf_len);
             Allocator::Resize(alloc, (void **)&buf, buf_capacity, new_capacity);
             buf_capacity = new_capacity;
         }
@@ -676,7 +676,7 @@ ArrayRef<char> FmtString(Allocator *alloc, const char *fmt, ArrayRef<const FmtAr
     return MakeArrayRef(buf, buf_len);
 }
 
-void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
+void PrintFmt(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
 {
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
@@ -698,9 +698,11 @@ void FmtPrint(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
 // Debug and errors
 // ------------------------------------------------------------------------
 
-static LocalArray<std::function<void(FILE *)>, 16> log_handlers;
+static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
+    DefaultLogHandler
+};
 
-static bool ConfigTerminalOutput()
+static bool ConfigLogTerminalOutput()
 {
     static bool init, output_is_terminal;
 
@@ -729,50 +731,62 @@ static bool ConfigTerminalOutput()
     return output_is_terminal;
 }
 
-void FmtLog(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
 {
-    const char *end_marker = nullptr;
-    if (ConfigTerminalOutput()) {
-        switch (level)  {
-            case LogLevel::Error: {
-                fputs("\x1B[31m", stderr);
-                end_marker = "\x1B[0m";
-            } break;
-            case LogLevel::Info: break;
-            case LogLevel::Debug: {
-                fputs("\x1B[36m", stderr);
-                end_marker = "\x1B[0m";
-            } break;
-        }
-    }
+    if (!log_handlers.len)
+        return;
 
+    char ctx_buf[128];
     {
         double time = (double)(GetMonotonicTime() - start_time) / 1000;
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
-            fprintf(stderr, " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
+            snprintf(ctx_buf, SIZE(ctx_buf), " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
         } else {
-            fprintf(stderr, "%21s [%8.3f]  ", ctx, time);
+            snprintf(ctx_buf, SIZE(ctx_buf), "%21s [%8.3f]  ", ctx, time);
         }
     }
-    if (log_handlers.len) {
-        log_handlers[log_handlers.len - 1](stderr);
-    }
-    FmtPrint(stderr, fmt, args);
-    if (end_marker) {
-        fputs(end_marker, stderr);
-    }
-    fputc('\n', stderr);
+
+    log_handlers[log_handlers.len - 1](level, ctx_buf, fmt, args);
 }
 
-void PushLogHandler(std::function<void(FILE *)> handler)
+void DefaultLogHandler(LogLevel level, const char *ctx,
+                       const char *fmt, ArrayRef<const FmtArg> args)
+{
+    StartConsoleLog(level);
+    Print(stderr, ctx);
+    PrintFmt(stderr, fmt, args);
+    PrintLn(stderr);
+    EndConsoleLog();
+}
+
+void StartConsoleLog(LogLevel level)
+{
+    if (!ConfigLogTerminalOutput())
+        return;
+
+    switch (level)  {
+        case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
+        case LogLevel::Info: break;
+        case LogLevel::Debug: { fputs("\x1B[36m", stderr); } break;
+    }
+}
+
+void EndConsoleLog()
+{
+    if (!ConfigLogTerminalOutput())
+        return;
+
+    fputs("\x1B[0m", stderr);
+}
+
+void PushLogHandler(std::function<LogHandlerFunc> handler)
 {
     log_handlers.Append(handler);
 }
 
 void PopLogHandler()
 {
-    DebugAssert(log_handlers.len > 0);
     log_handlers.RemoveLast();
 }
 

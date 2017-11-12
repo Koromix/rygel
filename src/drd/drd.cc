@@ -126,11 +126,11 @@ Classify options:
                 if (!mode_str)
                     return false;
 
-                if (StrTest(mode_str, "bill_id")) {
+                if (TestStr(mode_str, "bill_id")) {
                     cluster_mode = ClusterMode::BillId;
-                } else if (StrTest(mode_str, "stay_modes")) {
+                } else if (TestStr(mode_str, "stay_modes")) {
                     cluster_mode = ClusterMode::StayModes;
-                } else if (StrTest(mode_str, "disable")) {
+                } else if (TestStr(mode_str, "disable")) {
                     cluster_mode = ClusterMode::Disable;
                 } else {
                     LogError("Unknown cluster mode '%1'", mode_str);
@@ -748,7 +748,7 @@ Commands:
         PrintUsage(stderr);
         return 1;
     }
-    if (StrTest(argv[1], "--help") || StrTest(argv[1], "help")) {
+    if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
         if (argc > 2 && argv[2][0] != '-') {
             std::swap(argv[1], argv[2]);
             argv[2] = (char *)"--help";
@@ -766,7 +766,7 @@ Commands:
 
 #define HANDLE_COMMAND(Cmd, Func) \
         do { \
-            if (StrTest(cmd, STRINGIFY(Cmd))) { \
+            if (TestStr(cmd, STRINGIFY(Cmd))) { \
                 return !Func(arguments); \
             } \
         } while (false)

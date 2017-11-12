@@ -1,10 +1,32 @@
 #include "moya_lib.hpp"
 #include <Rcpp.h>
 
-static void StopWithLastError()
+static thread_local DynamicQueue<const char *> log_messages;
+static thread_local bool log_missing_messages = false;
+
+static void DumpWarnings()
 {
-    // TODO: Stop with last error message
-    Rcpp::stop("error");
+    for (const char *msg: log_messages) {
+        Rcpp::warning(msg);
+    }
+    log_messages.Clear();
+
+    if (log_missing_messages) {
+        Rcpp::warning("There were too many warnings, some have been lost");
+        log_missing_messages = false;
+    }
+}
+
+static void StopWithLastMessage()
+{
+    if (log_messages.len) {
+        std::string error_msg = log_messages[log_messages.len - 1];
+        log_messages.RemoveLast();
+        DumpWarnings();
+        Rcpp::stop(error_msg);
+    } else {
+        Rcpp::stop("Unknown error");
+    }
 }
 
 template <int RTYPE, typename T>
@@ -78,6 +100,20 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
         Rcpp::CharacterVector date;
     } procedures;
 
+    PushLogHandler([](LogLevel level, const char *ctx,
+                      const char *fmt, ArrayRef<const FmtArg> args) {
+        const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr;
+        log_messages.Append(msg);
+        if (log_messages.len > 100) {
+            log_messages.RemoveFirst();
+            log_missing_messages = true;
+        }
+    });
+    DEFER {
+        DumpWarnings();
+        PopLogHandler();
+    };
+
     stays.id = stays_df["id"];
     LOAD_OPTIONAL_COLUMN(stays, bill_id);
     LOAD_OPTIONAL_COLUMN(stays, stay_id);
@@ -126,18 +162,18 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
             stay.birthdate = Date::FromString(stays.birthdate[i]);
             {
                 const char *sex = stays.sex[i];
-                if (StrTest(sex, "1") || StrTest(sex, "M") || StrTest(sex, "m") ||
-                        StrTest(sex, "H") || StrTest(sex, "h")) {
+                if (TestStr(sex, "1") || TestStr(sex, "M") || TestStr(sex, "m") ||
+                        TestStr(sex, "H") || TestStr(sex, "h")) {
                     stay.sex = Sex::Male;
-                } else if (StrTest(sex, "2") || StrTest(sex, "F") || StrTest(sex, "f")) {
+                } else if (TestStr(sex, "2") || TestStr(sex, "F") || TestStr(sex, "f")) {
                     stay.sex = Sex::Female;
                 } else {
                     LogError("Unexpected sex '%1' on row %2", sex, i + 1);
-                    StopWithLastError();
                 }
             }
             stay.dates[0] = Date::FromString(stays.entry_date[i]);
             stay.dates[1] = Date::FromString(stays.exit_date[i]);
+            // TODO: Harmonize who deals with format errors (for example sex is dealt with here, not modes)
             stay.entry.mode = ParseEntryExitCharacter(stays.entry_mode[i]);
             stay.entry.origin = ParseEntryExitCharacter(GetOptionalValue(stays.entry_origin, i, ""));
             stay.exit.mode = ParseEntryExitCharacter(stays.exit_mode[i]);
@@ -162,13 +198,13 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
 
                 if (diagnoses.type.size()) {
                     const char *type = diagnoses.type[j];
-                    if (StrTest(type, "P") || StrTest(type, "p")) {
+                    if (TestStr(type, "P") || TestStr(type, "p")) {
                         stay.main_diagnosis = diag;
-                    } else if (StrTest(type, "R") || StrTest(type, "r")) {
+                    } else if (TestStr(type, "R") || TestStr(type, "r")) {
                         stay.linked_diagnosis = diag;
-                    } else if (StrTest(type, "S") || StrTest(type, "s")) {
+                    } else if (TestStr(type, "S") || TestStr(type, "s")) {
                         stay_set.store.diagnoses.Append(diag);
-                    } else if (StrTest(type, "D") || StrTest(type, "d")) {
+                    } else if (TestStr(type, "D") || TestStr(type, "d")) {
                         // Ignore documentary diagnoses
                     } else {
                         LogError("Unexpected diagnosis type '%1' on row %2", type, j + 1);
@@ -222,10 +258,10 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
 
     const TableSet *table_set = GetMainTableSet();
     if (!table_set)
-        StopWithLastError();
+        StopWithLastMessage();
     const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
     if (!authorization_set)
-        StopWithLastError();
+        StopWithLastMessage();
     const PricingSet *pricing_set = GetMainPricingSet();
     if (!pricing_set) {
         LogError("No pricing information will be available");
