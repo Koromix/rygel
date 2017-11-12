@@ -1195,10 +1195,12 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         if (pricing_set) {
             result.ghs_price_cents = PriceGhs(*pricing_set, result.ghs,
                                               agg.stay.dates[1], agg.duration);
-            out_result_set->ghs_total_cents += result.ghs_price_cents;
         }
-
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+
+        out_result_set->results.Append(result);
+
+        out_result_set->ghs_total_cents += result.ghs_price_cents;
         out_result_set->supplements.rea += result.supplements.rea;
         out_result_set->supplements.reasi += result.supplements.reasi;
         out_result_set->supplements.si += result.supplements.si;
@@ -1207,8 +1209,6 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         out_result_set->supplements.nn2 += result.supplements.nn2;
         out_result_set->supplements.nn3 += result.supplements.nn3;
         out_result_set->supplements.rep += result.supplements.rep;
-
-        out_result_set->results.Append(result);
     }
 
     for (ClassifyResult &result: out_result_set->results) {

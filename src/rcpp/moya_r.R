@@ -1,8 +1,7 @@
-library(data.table)
 library(Rcpp)
 
-Sys.setenv(PKG_CXXFLAGS="-std=c++1y")
-sourceCpp('moya_rcpp.cc')
+Sys.setenv(PKG_CXXFLAGS = '-std=c++1y -D__USE_MINGW_ANSI_STDIO=1')
+sourceCpp('moya_r.cpp')
 
 moya.summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
                           'src', 'nn1', 'nn2', 'nn3', 'rep')
@@ -55,7 +54,7 @@ moya.compare <- function(summary1, summary2, ...) {
     return(diff)
 }
 
-summary.moya.result_set <- function(result_set, by = 1) {
+summary.moya.result_set <- function(result_set, by = list(group = 1)) {
     by_val <- eval(substitute(by), result_set, parent.frame())
     if (!is.list(by_val)) {
         by_val <- list(by_val)
@@ -79,7 +78,6 @@ summary.moya.result_set <- function(result_set, by = 1) {
     if (nrow(result_set) > 0) {
         agg <- aggregate(result_set[, moya.summary_columns], by = by_val, FUN = sum)
         colnames(agg)[seq_along(by_val)] <- by_names
-
         agg <- agg[do.call('order', agg[, by_names, drop = FALSE]),]
     } else {
         agg <- data.frame()

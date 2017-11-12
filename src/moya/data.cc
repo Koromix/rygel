@@ -526,10 +526,19 @@ public:
             // Procedure attributes
             case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
             case State::ProcedureActivity: {
-                if (i >= 0 && i < 8) {
-                    proc.activities = (uint8_t)(1 << i);
+                if (LIKELY(i >= 0)) {
+                    int activities_dec = i;
+                    while (activities_dec) {
+                        int activity = activities_dec % 10;
+                        activities_dec /= 10;
+                        if (LIKELY(activity < 8)) {
+                            proc.activities |= (uint8_t)(1 << activity);
+                        } else {
+                            LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
+                        }
+                    }
                 } else {
-                    LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
+                    LogError("Procedure activity %1 cannot be a negative value", i);
                 }
             } break;
             case State::ProcedureCount: { SetInt(&proc.count, i); } break;

@@ -3,8 +3,6 @@ library(jsonlite)
 stays <- fromJSON("V:/chu/rsa/lille_2016.mjson", flatten = TRUE)
 stays <- data.table(stays)
 
-# save(stays, file = 'V:/test.RData')
-
 stays[, `:=`(
     test.cluster_len = NULL,
     test.error = NULL,
@@ -20,8 +18,6 @@ stays[, `:=`(
     test.src = NULL
 )]
 setnames(stays, c('dp', 'dr'), c('main_diagnosis', 'linked_diagnosis'))
-
-# save(stays, file = 'V:/test2.RData')
 
 diagnoses <- rbindlist(lapply(1:nrow(stays), function(i) {
     das <- unlist(stays$das[i])
@@ -43,12 +39,6 @@ procedures <- rbindlist(lapply(1:nrow(stays), function(i) {
         NULL
     }
 }))
-procedures[, `:=`(
-    activities = (2 ^ activity),
-    activity = NULL
-)]
-
-# save(stays, file = 'V:/test3.RData')
 
 stays[, `:=`(
     id = 1:nrow(stays),
