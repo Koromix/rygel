@@ -49,7 +49,7 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
 
 // [[Rcpp::export(name = '.moya.classify')]]
 Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
-                             Rcpp::DataFrame procedures_df)
+                             Rcpp::DataFrame procedures_df, bool debug = false)
 {
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
@@ -100,19 +100,56 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
         Rcpp::CharacterVector date;
     } procedures;
 
-    PushLogHandler([](LogLevel level, const char *ctx,
-                      const char *fmt, ArrayRef<const FmtArg> args) {
-        const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr;
-        log_messages.Append(msg);
-        if (log_messages.len > 100) {
-            log_messages.RemoveFirst();
-            log_missing_messages = true;
+    PushLogHandler([&](LogLevel level, const char *ctx,
+                       const char *fmt, ArrayRef<const FmtArg> args) {
+        switch (level) {
+            case LogLevel::Error: {
+                const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr;
+                log_messages.Append(msg);
+                if (log_messages.len > 100) {
+                    log_messages.RemoveFirst();
+                    log_missing_messages = true;
+                }
+            } break;
+
+            case LogLevel::Info: {
+                Print("%1", ctx);
+                PrintFmt(stdout, fmt, args);
+                PrintLn();
+            } break;
+
+            case LogLevel::Debug: {
+                if (debug) {
+                    Print("%1", ctx);
+                    PrintFmt(stdout, fmt, args);
+                    PrintLn();
+                }
+            } break;
         }
     });
     DEFER {
         DumpWarnings();
         PopLogHandler();
     };
+
+    LogDebug("Tables");
+
+    if (!main_data_directories.len) {
+        main_data_directories.Append("C:/projects/moya/data");
+    }
+
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set)
+        StopWithLastMessage();
+    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
+    if (!authorization_set)
+        StopWithLastMessage();
+    const PricingSet *pricing_set = GetMainPricingSet();
+    if (!pricing_set) {
+        LogError("No pricing information will be available");
+    }
+
+    LogDebug("Start");
 
     stays.id = stays_df["id"];
     LOAD_OPTIONAL_COLUMN(stays, bill_id);
@@ -145,6 +182,8 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
     procedures.activity = procedures_df["activity"];
     LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
+
+    LogDebug("Copy");
 
     // TODO: Don't require sorted id column (id)
     StaySet stay_set;
@@ -252,24 +291,13 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
         }
     }
 
-    if (!main_data_directories.len) {
-        main_data_directories.Append("C:/projects/moya/data");
-    }
-
-    const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        StopWithLastMessage();
-    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set)
-        StopWithLastMessage();
-    const PricingSet *pricing_set = GetMainPricingSet();
-    if (!pricing_set) {
-        LogError("No pricing information will be available");
-    }
+    LogDebug("Classify");
 
     ClassifyResultSet result_set = {};
     Classify(*table_set, *authorization_set, pricing_set, stay_set.stays, ClusterMode::BillId,
              &result_set);
+
+    LogDebug("Export");
 
     Rcpp::DataFrame retval;
     {
@@ -316,6 +344,8 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
             Rcpp::Named("stringsAsFactors") = false
         );
     }
+
+    LogDebug("Done");
 
 #undef LOAD_OPTIONAL_COLUMN
 

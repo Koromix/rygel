@@ -2,12 +2,12 @@ moya.summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
                           'src', 'nn1', 'nn2', 'nn3', 'rep')
 
 moya.classify <- function(stays, diagnoses, procedures,
-                          copy_columns = FALSE) {
+                          copy_columns = FALSE, debug = FALSE) {
     stays <- stays[order(stays$id),]
     diagnoses <- diagnoses[order(diagnoses$id),]
     procedures <- procedures[order(procedures$id),]
 
-    result_set <- .moya.classify(stays, diagnoses, procedures)
+    result_set <- .moya.classify(stays, diagnoses, procedures, debug = debug)
 
     if (is.logical(copy_columns)) {
         if (copy_columns) {
