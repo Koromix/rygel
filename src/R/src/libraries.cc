@@ -5,4 +5,4 @@
 
 #define MOYA_IMPLEMENTATION
 #define KUTIL_NO_MINIZ
-#include "moya_lib.hpp"
+#include "../../moya/libmoya.hh"

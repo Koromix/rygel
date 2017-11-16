@@ -1,16 +1,11 @@
-library(Rcpp)
-
-Sys.setenv(PKG_CXXFLAGS = '-std=c++1y -D__USE_MINGW_ANSI_STDIO=1')
-sourceCpp('moya_r.cpp')
-
 moya.summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
                           'src', 'nn1', 'nn2', 'nn3', 'rep')
 
 moya.classify <- function(stays, diagnoses, procedures,
                           copy_columns = FALSE) {
-    setorder(stays, id)
-    setorder(diagnoses, id)
-    setorder(procedures, id)
+    stays <- stays[order(stays$id),]
+    diagnoses <- diagnoses[order(diagnoses$id),]
+    procedures <- procedures[order(procedures$id),]
 
     result_set <- .moya.classify(stays, diagnoses, procedures)
 
