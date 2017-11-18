@@ -1,8 +1,47 @@
 #include "libraries.hh"
 #include <Rcpp.h>
 
+struct ClassifierSet {
+    TableSet table_set;
+    PricingSet pricing_set;
+    AuthorizationSet authorization_set;
+};
+
 static thread_local DynamicQueue<const char *> log_messages;
 static thread_local bool log_missing_messages = false;
+
+#define SETUP_LOG_HANDLER(EnableDebug) \
+    PushLogHandler([debug = (EnableDebug)](LogLevel level, const char *ctx, \
+                      const char *fmt, ArrayRef<const FmtArg> args) { \
+        switch (level) { \
+            case LogLevel::Error: { \
+                const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr; \
+                log_messages.Append(msg); \
+                if (log_messages.len > 100) { \
+                    log_messages.RemoveFirst(); \
+                    log_missing_messages = true; \
+                } \
+            } break; \
+ \
+            case LogLevel::Info: { \
+                Print("%1", ctx); \
+                PrintFmt(stdout, fmt, args); \
+                PrintLn(); \
+            } break; \
+ \
+            case LogLevel::Debug: { \
+                if (debug) { \
+                    Print("%1", ctx); \
+                    PrintFmt(stdout, fmt, args); \
+                    PrintLn(); \
+                } \
+            } break; \
+        } \
+    }); \
+    DEFER { \
+        DumpWarnings(); \
+        PopLogHandler(); \
+    };
 
 static void DumpWarnings()
 {
@@ -47,16 +86,69 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
     return str[0] - '0';
 }
 
-// [[Rcpp::export(name = '.moya.classify')]]
-Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
-                             Rcpp::DataFrame procedures_df, bool debug = false)
+// [[Rcpp::export(name = 'moya')]]
+SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
+            Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
+            Rcpp::CharacterVector table_filenames = Rcpp::CharacterVector::create(),
+            Rcpp::Nullable<Rcpp::String> pricing_filename = R_NilValue,
+            Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue,
+            bool debug = false)
 {
+    SETUP_LOG_HANDLER(debug);
+
+    ClassifierSet *set = new ClassifierSet;
+    DEFER_N(set_guard) { delete set; };
+
+    HeapArray<const char *> data_dirs2;
+    HeapArray<const char *> table_dirs2;
+    HeapArray<const char *> table_filenames2;
+    const char *pricing_filename2 = nullptr;
+    const char *authorization_filename2 = nullptr;
+    for (const char *str: data_dirs) {
+        data_dirs2.Append(str);
+    }
+    for (const char *str: table_dirs) {
+        table_dirs2.Append(str);
+    }
+    for (const char *str: table_filenames) {
+        table_filenames2.Append(str);
+    }
+    if (pricing_filename.isNotNull()) {
+        pricing_filename2 = pricing_filename.as().get_cstring();
+    }
+    if (authorization_filename.isNotNull()) {
+        authorization_filename2 = authorization_filename.as().get_cstring();
+    }
+
+    if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
+            !set->table_set.indexes.len)
+        StopWithLastMessage();
+    if (!InitPricingSet(data_dirs2, pricing_filename2,
+                        &set->pricing_set)) // Tolerate empty pricing sets
+        StopWithLastMessage();
+    if (!InitAuthorizationSet(data_dirs2, authorization_filename2,
+                              &set->authorization_set)) // Tolerate missing authorizations
+        StopWithLastMessage();
+
+    set_guard.disable();
+    return Rcpp::XPtr<ClassifierSet>(set, true);
+}
+
+// [[Rcpp::export(name = '.classify')]]
+Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
+                           Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
+                           Rcpp::DataFrame procedures_df, bool debug = false)
+{
+    SETUP_LOG_HANDLER(debug);
+
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
             if ((Var ## _df).containsElementNamed(STRINGIFY(Name))) { \
                 (Var).Name = (Var ##_df)[STRINGIFY(Name)]; \
             } \
         } while (false)
+
+    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
 
     struct {
         Rcpp::IntegerVector id;
@@ -99,55 +191,6 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
         Rcpp::IntegerVector count;
         Rcpp::CharacterVector date;
     } procedures;
-
-    PushLogHandler([&](LogLevel level, const char *ctx,
-                       const char *fmt, ArrayRef<const FmtArg> args) {
-        switch (level) {
-            case LogLevel::Error: {
-                const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr;
-                log_messages.Append(msg);
-                if (log_messages.len > 100) {
-                    log_messages.RemoveFirst();
-                    log_missing_messages = true;
-                }
-            } break;
-
-            case LogLevel::Info: {
-                Print("%1", ctx);
-                PrintFmt(stdout, fmt, args);
-                PrintLn();
-            } break;
-
-            case LogLevel::Debug: {
-                if (debug) {
-                    Print("%1", ctx);
-                    PrintFmt(stdout, fmt, args);
-                    PrintLn();
-                }
-            } break;
-        }
-    });
-    DEFER {
-        DumpWarnings();
-        PopLogHandler();
-    };
-
-    LogDebug("Tables");
-
-    if (!main_data_directories.len) {
-        main_data_directories.Append("C:/projects/moya/data");
-    }
-
-    const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        StopWithLastMessage();
-    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set)
-        StopWithLastMessage();
-    const PricingSet *pricing_set = GetMainPricingSet();
-    if (!pricing_set) {
-        LogError("No pricing information will be available");
-    }
 
     LogDebug("Start");
 
@@ -294,7 +337,8 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
     LogDebug("Classify");
 
     ClassifyResultSet result_set = {};
-    Classify(*table_set, *authorization_set, pricing_set, stay_set.stays, ClusterMode::BillId,
+    Classify(classifier_set->table_set, classifier_set->authorization_set,
+             classifier_set->pricing_set,stay_set.stays, ClusterMode::BillId,
              &result_set);
 
     LogDebug("Export");
@@ -351,3 +395,5 @@ Rcpp::DataFrame moyaClassify(Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses
 
     return retval;
 }
+
+#undef SETUP_LOG_HANDLER

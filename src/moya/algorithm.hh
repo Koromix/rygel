@@ -87,5 +87,5 @@ int PriceGhs(const GhsPricing &pricing, int duration);
 int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration);
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet *pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet &pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set);

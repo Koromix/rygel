@@ -1162,7 +1162,7 @@ int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet *pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet &pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
@@ -1192,8 +1192,8 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         result.errors.len = out_result_set->store.errors.len - (Size)result.errors.ptr;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
-        if (pricing_set) {
-            result.ghs_price_cents = PriceGhs(*pricing_set, result.ghs,
+        if (pricing_set.ghs_pricings.len) {
+            result.ghs_price_cents = PriceGhs(pricing_set, result.ghs,
                                               agg.stay.dates[1], agg.duration);
         }
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);

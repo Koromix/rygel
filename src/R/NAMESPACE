@@ -1,3 +1,6 @@
 useDynLib(moyaR, .registration=TRUE)
-exportPattern("^[[:alpha:]]+")
+export(moya,
+       classify,
+       compare,
+       summary.moya.result_set)
 importFrom(Rcpp, evalCpp)

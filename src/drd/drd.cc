@@ -161,15 +161,14 @@ Classify options:
 #endif
 
     const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        return false;
-    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set)
+    if (!table_set || !table_set->indexes.len)
         return false;
     const PricingSet *pricing_set = GetMainPricingSet();
-    if (!pricing_set) {
-        LogError("No pricing information will be available");
-    }
+    if (!pricing_set) // Tolerate empty pricing sets
+        return false;
+    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
+    if (!authorization_set) // Tolerate missing authorizations
+        return false;
 
     LogDebug("Load");
     StaySet stay_set;
@@ -184,7 +183,7 @@ Classify options:
 
     LogDebug("Classify");
     ClassifyResultSet result_set = {};
-    Classify(*table_set, *authorization_set, pricing_set, stay_set.stays, cluster_mode,
+    Classify(*table_set, *authorization_set, *pricing_set, stay_set.stays, cluster_mode,
              &result_set);
 
     LogDebug("Summary");

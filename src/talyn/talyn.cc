@@ -293,8 +293,8 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
             }
 
             ClassifyResultSet result_set;
-            Classify(*table_set, *authorization_set, pricing_set, stay_set.stays,
-                     ClusterMode::BillId, &result_set);
+            Classify(*table_set, *authorization_set, *pricing_set,
+                     stay_set.stays, ClusterMode::BillId, &result_set);
 
             rapidjson::MemoryBuffer buffer;
             rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
@@ -414,10 +414,10 @@ Talyn options:
     }
 
     table_set = GetMainTableSet();
-    if (!table_set)
+    if (!table_set || !table_set->indexes.len)
         return 1;
     pricing_set = GetMainPricingSet();
-    if (!pricing_set)
+    if (!pricing_set || !pricing_set->ghs_pricings.len)
         return 1;
     authorization_set = GetMainAuthorizationSet();
     if (!authorization_set)

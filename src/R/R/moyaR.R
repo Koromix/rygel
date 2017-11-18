@@ -1,13 +1,13 @@
-moya.summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
-                          'src', 'nn1', 'nn2', 'nn3', 'rep')
+summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
+                     'src', 'nn1', 'nn2', 'nn3', 'rep')
 
-moya.classify <- function(stays, diagnoses, procedures,
-                          copy_columns = FALSE, debug = FALSE) {
+classify <- function(classifier_set, stays, diagnoses, procedures,
+                     copy_columns = FALSE, debug = FALSE) {
     stays <- stays[order(stays$id),]
     diagnoses <- diagnoses[order(diagnoses$id),]
     procedures <- procedures[order(procedures$id),]
 
-    result_set <- .moya.classify(stays, diagnoses, procedures, debug = debug)
+    result_set <- .classify(classifier_set, stays, diagnoses, procedures, debug = debug)
 
     if (is.logical(copy_columns)) {
         if (copy_columns) {
@@ -21,7 +21,7 @@ moya.classify <- function(stays, diagnoses, procedures,
     return(result_set)
 }
 
-moya.compare <- function(summary1, summary2, ...) {
+compare <- function(summary1, summary2, ...) {
     if (!('moya.result_summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
     }
@@ -29,7 +29,7 @@ moya.compare <- function(summary1, summary2, ...) {
         summary2 <- summary(summary2, ...)
     }
 
-    groups <- setdiff(colnames(summary1), moya.summary_columns)
+    groups <- setdiff(colnames(summary1), summary_columns)
 
     m <- merge(summary1, summary2, by = groups, all = TRUE)
     for (col in setdiff(colnames(m), groups)) {
@@ -38,11 +38,11 @@ moya.compare <- function(summary1, summary2, ...) {
 
     diff <- cbind(
         m[, groups, drop = FALSE],
-        as.data.frame(sapply(moya.summary_columns, function(col) {
+        as.data.frame(sapply(summary_columns, function(col) {
             m[[paste0(col, '.x')]] - m[[paste0(col, '.y')]]
         }, simplify = FALSE))
     )
-    diff <- diff[rowSums(diff[, moya.summary_columns]) != 0,]
+    diff <- diff[rowSums(diff[, summary_columns]) != 0,]
     diff <- diff[do.call('order', diff[, groups, drop = FALSE]),]
 
     class(diff) <- c('moya.result_diff', class(diff))
@@ -71,7 +71,7 @@ summary.moya.result_set <- function(result_set, by = list(group = 1)) {
     }
 
     if (nrow(result_set) > 0) {
-        agg <- aggregate(result_set[, moya.summary_columns], by = by_val, FUN = sum)
+        agg <- aggregate(result_set[, summary_columns], by = by_val, FUN = sum)
         colnames(agg)[seq_along(by_val)] <- by_names
         agg <- agg[do.call('order', agg[, by_names, drop = FALSE]),]
     } else {

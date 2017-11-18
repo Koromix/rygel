@@ -18,37 +18,117 @@ static TableSet main_table_set;
 static PricingSet main_pricing_set;
 static AuthorizationSet main_authorization_set;
 
+bool InitTableSet(ArrayRef<const char *> data_directories,
+                  ArrayRef<const char *> table_directories,
+                  ArrayRef<const char *> table_filenames,
+                  TableSet *out_set)
+{
+    Allocator temp_alloc;
+
+    HeapArray<const char *> filenames;
+    {
+        bool success = true;
+        for (const char *data_dir: data_directories) {
+            const char *dir = Fmt(&temp_alloc, "%1%/tables", data_dir).ptr;
+            if (TestPath(dir, FileType::Directory)) {
+                success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
+                                                   &filenames, 1024);
+            }
+        }
+        for (const char *dir: table_directories) {
+            success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
+                                               &filenames, 1024);
+        }
+        filenames.Append(table_filenames);
+        if (!success)
+            return false;
+    }
+
+    if (!filenames.len) {
+        LogError("No table specified or found");
+        return true;
+    }
+
+    LoadTableFiles(filenames, out_set);
+    if (!out_set->indexes.len)
+        return false;
+
+    return true;
+}
+
+bool InitPricingSet(ArrayRef<const char *> data_directories,
+                    const char *pricing_filename,
+                    PricingSet *out_set)
+{
+    Allocator temp_alloc;
+
+    const char *filename = nullptr;
+    {
+        if (pricing_filename) {
+            filename = pricing_filename;
+        } else {
+            for (Size i = data_directories.len; i-- > 0;) {
+                const char *data_dir = data_directories[i];
+
+                const char *test_filename = Fmt(&temp_alloc, "%1%/pricing.nx", data_dir).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!filename || !filename[0]) {
+        LogError("No pricing file specified or found");
+        return true;
+    }
+
+    if (!LoadPricingFile(filename, out_set))
+        return false;
+
+    return true;
+}
+
+bool InitAuthorizationSet(ArrayRef<const char *> data_directories,
+                          const char *authorization_filename,
+                          AuthorizationSet *out_set)
+{
+    Allocator temp_alloc;
+
+    const char *filename = nullptr;
+    {
+        if (authorization_filename) {
+            filename = authorization_filename;
+        } else {
+            for (Size i = data_directories.len; i-- > 0;) {
+                const char *data_dir = data_directories[i];
+
+                const char *test_filename = Fmt(&temp_alloc, "%1%/authorizations.json", data_dir).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!filename || !filename[0]) {
+        LogError("No authorization file specified or found");
+        return true;
+    }
+
+    if (!LoadAuthorizationFile(filename, out_set))
+        return false;
+
+    return true;
+}
+
 const TableSet *GetMainTableSet()
 {
     if (!main_table_set.indexes.len) {
-        Allocator temp_alloc;
-
-        HeapArray<const char *> table_filenames;
-        {
-            bool success = true;
-            for (const char *data_dir: main_data_directories) {
-                const char *dir = Fmt(&temp_alloc, "%1%/tables", data_dir).ptr;
-                if (TestPath(dir, FileType::Directory)) {
-                    success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
-                                                       &table_filenames, 1024);
-                }
-            }
-            for (const char *dir: main_table_directories) {
-                success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
-                                                   &table_filenames, 1024);
-            }
-            table_filenames.Append(main_table_filenames);
-            if (!success)
-                return nullptr;
-        }
-
-        if (!table_filenames.len) {
-            LogError("No table provided");
-            return nullptr;
-        }
-
-        LoadTableFiles(table_filenames, &main_table_set);
-        if (!main_table_set.indexes.len)
+        if (!InitTableSet(main_data_directories, main_table_directories,
+                          main_table_filenames, &main_table_set))
             return nullptr;
     }
 
@@ -58,31 +138,8 @@ const TableSet *GetMainTableSet()
 const PricingSet *GetMainPricingSet()
 {
     if (!main_pricing_set.ghs_pricings.len) {
-        Allocator temp_alloc;
-
-        const char *filename = nullptr;
-        {
-            if (main_pricing_filename) {
-                filename = main_pricing_filename;
-            } else {
-                for (Size i = main_data_directories.len; i-- > 0;) {
-                    const char *data_dir = main_data_directories[i];
-
-                    const char *test_filename = Fmt(&temp_alloc, "%1%/pricing.nx", data_dir).ptr;
-                    if (TestPath(test_filename, FileType::File)) {
-                        filename = test_filename;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!filename || !filename[0]) {
-            LogError("No pricing file specified");
-            return nullptr;
-        }
-
-        if (!LoadPricingFile(filename, &main_pricing_set))
+        if (!InitPricingSet(main_data_directories, main_pricing_filename,
+                            &main_pricing_set))
             return nullptr;
     }
 
@@ -92,31 +149,8 @@ const PricingSet *GetMainPricingSet()
 const AuthorizationSet *GetMainAuthorizationSet()
 {
     if (!main_authorization_set.authorizations.len) {
-        Allocator temp_alloc;
-
-        const char *filename = nullptr;
-        {
-            if (main_authorization_filename) {
-                filename = main_authorization_filename;
-            } else {
-                for (Size i = main_data_directories.len; i-- > 0;) {
-                    const char *data_dir = main_data_directories[i];
-
-                    const char *test_filename = Fmt(&temp_alloc, "%1%/authorizations.json", data_dir).ptr;
-                    if (TestPath(test_filename, FileType::File)) {
-                        filename = test_filename;
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (!filename || !filename[0]) {
-            LogError("No authorization file specified, ignoring");
-            return &main_authorization_set;
-        }
-
-        if (!LoadAuthorizationFile(filename, &main_authorization_set))
+        if (!InitAuthorizationSet(main_data_directories, main_authorization_filename,
+                                  &main_authorization_set))
             return nullptr;
     }
 
