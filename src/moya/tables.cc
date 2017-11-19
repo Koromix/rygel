@@ -123,8 +123,17 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
         PackedHeader1111 raw_table_header;
         PackedSection1111 raw_table_sections[ARRAY_SIZE(table.sections.data)];
         {
+            bool weird_section = false;
+
             memcpy(&raw_table_header, file_data.ptr + raw_table_ptr.raw_offset,
                    SIZE(PackedHeader1111));
+            if (UNLIKELY(!memcmp(raw_table_header.signature, "GESTCOMP", 8))) {
+                weird_section = true;
+
+                memmove(&raw_table_header.pad1, raw_table_header.name,
+                        SIZE(PackedHeader1111) - OFFSET_OF(PackedHeader1111, pad1));
+                memcpy(&raw_table_header.name, raw_table_header.signature, SIZE(raw_table_header.name));
+            }
             FAIL_PARSE_IF(file_data.len < raw_table_ptr.raw_offset +
                                           raw_table_header.sections_count * SIZE(PackedSection1111));
             FAIL_PARSE_IF(raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
@@ -134,6 +143,10 @@ bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
                                                SIZE(PackedHeader1111) +
                                                j * SIZE(PackedSection1111),
                        SIZE(PackedSection1111));
+                if (UNLIKELY(weird_section)) {
+                    memmove((uint8_t *)&raw_table_sections[j] + 8, &raw_table_sections[j],
+                            SIZE(PackedSection1111) - 8);
+                }
 #ifdef ARCH_LITTLE_ENDIAN
                 ReverseBytes(&raw_table_sections[j].values_count);
                 ReverseBytes(&raw_table_sections[j].value_len);
