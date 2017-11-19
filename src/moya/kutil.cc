@@ -1100,7 +1100,6 @@ struct MinizInflateContext {
     uint8_t out[256 * 1024];
     uint8_t *out_ptr;
     Size out_len;
-
 };
 StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
@@ -1191,6 +1190,11 @@ void StreamReader::Close()
 
 Size StreamReader::Read(Size max_len, void *out_buf)
 {
+    if (UNLIKELY(error)) {
+        LogError("Cannot read from '%1' after error", filename);
+        return -1;
+    }
+
     switch (compression.type) {
         case CompressionType::None: {
             Size read_len = ReadRaw(max_len, out_buf);
@@ -1198,7 +1202,7 @@ Size StreamReader::Read(Size max_len, void *out_buf)
             return read_len;
         } break;
 
-        case CompressionType::Deflate: {
+        case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             MinizInflateContext *ctx = compression.u.miniz;
 
@@ -1273,7 +1277,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
 {
     switch (type) {
         case CompressionType::None: {} break;
-        case CompressionType::Deflate: {
+        case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             compression.u.miniz =
                 (MinizInflateContext *)Allocator::Allocate(nullptr, SIZE(MinizInflateContext),
@@ -1295,7 +1299,7 @@ void StreamReader::ReleaseResources()
 {
     switch (compression.type) {
         case CompressionType::None: {} break;
-        case CompressionType::Deflate: {
+        case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             Allocator::Release(nullptr, compression.u.miniz, SIZE(*compression.u.miniz));
 #endif

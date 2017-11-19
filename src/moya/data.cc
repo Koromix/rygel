@@ -840,6 +840,8 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
             LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
             return false;
         }
+        if (st.error)
+            return false;
     }
 
     return true;
@@ -1007,13 +1009,13 @@ bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
             compression_type = CompressionType::None;
         } else if (TestStr(extension, ".mjsonz")) {
             data_type = StaySetDataType::Json;
-            compression_type = CompressionType::Deflate;
+            compression_type = CompressionType::Zlib;
         } else if (TestStr(extension, ".mpak")) {
             data_type = StaySetDataType::Pack;
             compression_type = CompressionType::None;
         } else if (TestStr(extension, ".mpakz")) {
             data_type = StaySetDataType::Pack;
-            compression_type = CompressionType::Deflate;
+            compression_type = CompressionType::Zlib;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);

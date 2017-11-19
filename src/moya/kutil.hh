@@ -1907,7 +1907,7 @@ const char *GetExecutableDirectory();
 
 enum class CompressionType {
     None,
-    Deflate
+    Zlib
 };
 
 class StreamReader {
