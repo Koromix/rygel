@@ -38,15 +38,17 @@ function createElementNS(ns, tag, attr)
     return el;
 }
 
-function toggleNav(id)
+function toggleNav(id, enable)
 {
     var el = document.querySelector('div#' + id + ' nav');
-    if (el.classList.contains('active')) {
-        el.classList.remove('active');
-    } else {
+    if (enable === undefined)
+        enable = !el.classList.contains('active');
+    if (enable) {
         var els = document.querySelectorAll('div nav');
         for (var i = 0; i < els.length; i++)
             els[i].classList.toggle('active', els[i] == el);
+    } else {
+        el.classList.remove('active');
     }
 }
 
@@ -161,6 +163,8 @@ function switchPage(page_url)
         url_name = page_url;
         window.history.pushState(null, null, url_base + url_name);
     }
+
+    toggleNav('menu', false);
 }
 
 // ------------------------------------------------------------------------
