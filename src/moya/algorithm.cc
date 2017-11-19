@@ -1130,24 +1130,24 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
 }
 
-int PriceGhs(const GhsPricing &pricing, int duration)
+int PriceGhs(const GhsPricing &pricing, int duration, bool death)
 {
     int price_cents = pricing.sectors[0].price_cents;
 
-    if (duration < pricing.sectors[0].exb_treshold) {
+    if (duration < pricing.sectors[0].exb_treshold && !death) {
         if (pricing.sectors[0].flags & (int)GhsPricing::Flag::ExbOnce) {
             price_cents -= pricing.sectors[0].exb_cents;
         } else {
             price_cents -= pricing.sectors[0].exb_cents * (pricing.sectors[0].exb_treshold - duration);
         }
-    } else if (duration >= pricing.sectors[0].exh_treshold) {
-        price_cents += pricing.sectors[0].exh_cents * (duration - pricing.sectors[0].exh_treshold);
+    } else if (duration + death > pricing.sectors[0].exh_treshold) {
+        price_cents += pricing.sectors[0].exh_cents * (duration + death - pricing.sectors[0].exh_treshold);
     }
 
     return price_cents;
 }
 
-int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration)
+int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration, bool death)
 {
     if (ghs == GhsCode(9999))
         return 0;
@@ -1158,7 +1158,7 @@ int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration
         return 0;
     }
 
-    return PriceGhs(*pricing, duration);
+    return PriceGhs(*pricing, duration, death);
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
@@ -1195,7 +1195,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
         if (pricing_set.ghs_pricings.len) {
             result.ghs_price_cents = PriceGhs(pricing_set, result.ghs,
-                                              agg.stay.dates[1], agg.duration);
+                                              agg.stay.dates[1], agg.duration, agg.stay.exit.mode == 9);
         }
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
 
