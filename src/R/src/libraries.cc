@@ -4,5 +4,4 @@
 #endif
 
 #define MOYA_IMPLEMENTATION
-#define KUTIL_NO_MINIZ
-#include "../../moya/libmoya.hh"
+#include "libraries.hh"
