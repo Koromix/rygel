@@ -64,7 +64,7 @@ add_custom_command(
     ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${TALYN_RESOURCES}"
          -P "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake"
     DEPENDS ${TALYN_RESOURCES})
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND WIN32)
     add_library(talyn_res SHARED "${CMAKE_CURRENT_BINARY_DIR}/talyn/resources.cc")
     set_target_properties(talyn_res PROPERTIES PREFIX "")
 else()
