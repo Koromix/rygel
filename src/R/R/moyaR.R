@@ -1,21 +1,12 @@
 summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
                      'src', 'nn1', 'nn2', 'nn3', 'rep')
 
-classify <- function(classifier_set, stays, diagnoses, procedures,
-                     copy_columns = FALSE, debug = FALSE) {
+classify <- function(classifier_set, stays, diagnoses, procedures, debug = FALSE) {
     stays <- stays[order(stays$id),]
     diagnoses <- diagnoses[order(diagnoses$id),]
     procedures <- procedures[order(procedures$id),]
 
     result_set <- .classify(classifier_set, stays, diagnoses, procedures, debug = debug)
-
-    if (is.logical(copy_columns)) {
-        if (copy_columns) {
-            result_set <- cbind(stays, result_set)
-        }
-    } else {
-        result_set <- cbind(stays[, copy_columns], result_set)
-    }
 
     class(result_set) <- c('moya.result_set', class(result_set))
     return(result_set)
