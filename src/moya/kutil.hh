@@ -1974,6 +1974,58 @@ private:
     Size ReadRaw(Size max_len, void *out_buf);
 };
 
+class StreamWriter {
+public:
+    enum class DestinationType {
+        File
+    };
+
+    const char *filename;
+
+    struct {
+        DestinationType type;
+        union {
+            FILE *fp;
+        } u;
+        bool owned = false;
+    } dest;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        union {
+            struct MinizDeflateContext *miniz;
+        } u;
+    } compression;
+
+    bool dirty = false;
+    bool error;
+
+    Allocator str_alloc;
+
+    StreamWriter() { Close(); }
+    StreamWriter(FILE *fp, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(fp, filename, compression_type); }
+    StreamWriter(const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(filename, compression_type); }
+    ~StreamWriter() { Close(); }
+
+    bool Open(FILE *fp, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Close();
+
+    bool Write(ArrayRef<const uint8_t> buf);
+    bool Write(const void *buf, Size len) { return Write(MakeArrayRef((const uint8_t *)buf, len)); }
+
+private:
+    bool InitCompressor(CompressionType type);
+    void ReleaseResources();
+
+    bool WriteRaw(ArrayRef<const uint8_t> buf);
+};
+
 // ------------------------------------------------------------------------
 // Option Parser
 // ------------------------------------------------------------------------

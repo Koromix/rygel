@@ -676,14 +676,8 @@ R"(Usage: drd pack [options] stay_file ... dest_file
 
     LogDebug("Pack");
     {
-        FILE *fp = fopen(dest_filename, "wb" FOPEN_COMMON_FLAGS);
-        if (!fp) {
-            LogError("Cannot open '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-        DEFER { fclose(fp); };
-
-        if (!stay_set.SavePack(fp, dest_filename))
+        StreamWriter st(dest_filename, CompressionType::Zlib);
+        if (!stay_set.SavePack(st))
             return false;
     }
 

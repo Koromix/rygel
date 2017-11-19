@@ -1353,6 +1353,218 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
     Assert(false);
 }
 
+#ifdef MZ_VERSION
+struct MinizDeflateContext {
+    tdefl_compressor deflator;
+};
+#endif
+
+bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    if (filename) {
+        this->filename = DuplicateString(&str_alloc, filename);
+    }
+
+    if (!InitCompressor(compression_type))
+        return false;
+    dest.type = DestinationType::File;
+    dest.u.fp = fp;
+
+    error_guard.disable();
+    return true;
+}
+
+bool StreamWriter::Open(const char *filename, CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    this->filename = DuplicateString(&str_alloc, filename);
+
+    if (!InitCompressor(compression_type))
+        return false;
+    dest.type = DestinationType::File;
+    dest.u.fp = fopen(filename, "wb" FOPEN_COMMON_FLAGS);
+    if (!dest.u.fp) {
+        LogError("Cannot open file '%1'", filename);
+        return false;
+    }
+    dest.owned = true;
+
+    error_guard.disable();
+    return true;
+}
+
+bool StreamWriter::Close()
+{
+    bool success = !error;
+
+    if (dirty && !error) {
+        switch (compression.type) {
+            case CompressionType::None: {} break;
+
+            case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+                MinizDeflateContext *ctx = compression.u.miniz;
+
+                tdefl_status status = tdefl_compress_buffer(&ctx->deflator, nullptr, 0,
+                                                            TDEFL_FINISH);
+                if (status != TDEFL_STATUS_DONE) {
+                    if (status != TDEFL_STATUS_PUT_BUF_FAILED) {
+                        LogError("Failed to end Deflate stream for '%1", filename);
+                    }
+                    success = false;
+                }
+#endif
+            } break;
+        }
+
+        switch (dest.type) {
+            case DestinationType::File: {
+#ifdef _WIN32
+                if (fflush(dest.u.fp) != 0 ||
+                        _commit(_fileno(dest.u.fp)) < 0) {
+#else
+                if (fflush(dest.u.fp) != 0 ||
+                        fsync(fileno(dest.u.fp)) < 0) {
+#endif
+                    LogError("Failed to finalize writing to '%1'", filename);
+                    success = false;
+                }
+            } break;
+        }
+    }
+
+    ReleaseResources();
+
+    filename = "?";
+    dirty = false;
+    error = false;
+    Allocator::ReleaseAll(&str_alloc);
+
+    return success;
+}
+
+bool StreamWriter::Write(ArrayRef<const uint8_t> buf)
+{
+    if (UNLIKELY(error)) {
+        LogError("Cannot write to '%1' after error", filename);
+        return false;
+    }
+
+    dirty |= !!buf.len;
+
+    switch (compression.type) {
+        case CompressionType::None: {
+            return WriteRaw(buf);
+        } break;
+
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            MinizDeflateContext *ctx = compression.u.miniz;
+
+            tdefl_status status = tdefl_compress_buffer(&ctx->deflator, buf.ptr, (size_t)buf.len,
+                                                        TDEFL_NO_FLUSH);
+            if (status < TDEFL_STATUS_OKAY) {
+                if (status != TDEFL_STATUS_BAD_PARAM) {
+                    LogError("Failed to ");
+                }
+                error = true;
+                return false;
+            }
+
+            return true;
+#endif
+        } break;
+    }
+    Assert(false);
+}
+
+bool StreamWriter::InitCompressor(CompressionType type)
+{
+    switch (type) {
+        case CompressionType::None: {} break;
+
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            compression.u.miniz =
+                (MinizDeflateContext *)Allocator::Allocate(nullptr, SIZE(MinizDeflateContext),
+                                                           (int)Allocator::Flag::Zero);
+
+            int flags = TDEFL_WRITE_ZLIB_HEADER | 32;
+            tdefl_status status = tdefl_init(&compression.u.miniz->deflator,
+                                             [](const void *buf, int len, void *udata) {
+                StreamWriter *st = (StreamWriter *)udata;
+                return (int)st->WriteRaw(MakeArrayRef((uint8_t *)buf, len));
+            }, this, flags);
+            if (status != TDEFL_STATUS_OKAY) {
+                LogError("Failed to initialize Deflate compression for '%1'", filename);
+                error = true;
+                return false;
+            }
+#else
+            LogError("Deflate compression not available for '%1'", filename);
+            error = true;
+            return false;
+#endif
+        } break;
+    }
+    compression.type = type;
+
+    return true;
+}
+
+void StreamWriter::ReleaseResources()
+{
+    switch (compression.type) {
+        case CompressionType::None: {} break;
+        case CompressionType::Zlib: {
+#ifdef MZ_VERSION
+            Allocator::Release(nullptr, compression.u.miniz, SIZE(*compression.u.miniz));
+#endif
+        } break;
+    }
+    compression.type = CompressionType::None;
+
+    if (dest.owned) {
+        switch (dest.type) {
+            case DestinationType::File: {
+                if (dest.u.fp) {
+                    fclose(dest.u.fp);
+                }
+            } break;
+        }
+        dest.owned = false;
+    }
+}
+
+bool StreamWriter::WriteRaw(ArrayRef<const uint8_t> buf)
+{
+    switch (dest.type) {
+        case DestinationType::File: {
+            if (fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.fp) != (size_t)buf.len) {
+                LogError("Failed to write to '%1'", filename);
+                error = true;
+                return false;
+            }
+
+            return true;
+        } break;
+    }
+    Assert(false);
+}
+
 // ------------------------------------------------------------------------
 // Option Parser
 // ------------------------------------------------------------------------

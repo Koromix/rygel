@@ -720,7 +720,7 @@ private:
     }
 };
 
-bool StaySet::SavePack(FILE *fp, const char *filename) const
+bool StaySet::SavePack(StreamWriter &st) const
 {
     PackHeader bh = {};
 
@@ -733,19 +733,16 @@ bool StaySet::SavePack(FILE *fp, const char *filename) const
     bh.diagnoses_len = store.diagnoses.len;
     bh.procedures_len = store.procedures.len;
 
-    clearerr(fp);
-    fwrite(&bh, 1, SIZE(bh), fp);
-    fwrite(stays.ptr, SIZE(*stays.ptr), (size_t)stays.len, fp);
+    st.Write(&bh, SIZE(bh));
+    st.Write(stays.ptr, stays.len * SIZE(*stays.ptr));
     for (const Stay &stay: stays) {
-        fwrite(stay.diagnoses.ptr, SIZE(*stay.diagnoses.ptr), (size_t)stay.diagnoses.len, fp);
+        st.Write(stay.diagnoses.ptr, stay.diagnoses.len * SIZE(*stay.diagnoses.ptr));
     }
     for (const Stay &stay: stays) {
-        fwrite(stay.procedures.ptr, SIZE(*stay.procedures.ptr), (size_t)stay.procedures.len, fp);
+        st.Write(stay.procedures.ptr, stay.procedures.len * SIZE(*stay.procedures.ptr));
     }
-    if (ferror(fp)) {
-        LogError("Error while writing pack file to '%1'", filename ? filename : "?");
+    if (!st.Close())
         return false;
-    }
 
     return true;
 }
