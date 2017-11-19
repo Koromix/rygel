@@ -348,6 +348,8 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Allocator temp_alloc;
 
         Rcpp::IntegerVector bill_id(result_set.results.len);
+        Rcpp::CharacterVector exit_date(result_set.results.len);
+        Rcpp::IntegerVector duration(result_set.results.len);
         Rcpp::CharacterVector ghm(result_set.results.len);
         Rcpp::IntegerVector ghs(result_set.results.len);
         Rcpp::NumericVector ghs_price(result_set.results.len);
@@ -361,18 +363,22 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector rep(result_set.results.len);
 
         for (Size i = 0; i < result_set.results.len; i++) {
-            bill_id[i] = result_set.results[i].stays[0].bill_id;
-            ghm[i] = Fmt(&temp_alloc, "%1", result_set.results[i].ghm).ptr;
-            ghs[i] = result_set.results[i].ghs.number;
-            ghs_price[i] = (double)result_set.results[i].ghs_price_cents / 100.0;
-            rea[i] = result_set.results[i].supplements.rea;
-            reasi[i] = result_set.results[i].supplements.reasi;
-            si[i] = result_set.results[i].supplements.si;
-            src[i] = result_set.results[i].supplements.src;
-            nn1[i] = result_set.results[i].supplements.nn1;
-            nn2[i] = result_set.results[i].supplements.nn2;
-            nn3[i] = result_set.results[i].supplements.nn3;
-            rep[i] = result_set.results[i].supplements.rep;
+            const ClassifyResult &result = result_set.results[i];
+
+            bill_id[i] = result.stays[0].bill_id;
+            exit_date[i] = Fmt(&temp_alloc, "%1", result.stays[result.stays.len - 1].dates[1]).ptr;
+            duration[i] = result.duration;
+            ghm[i] = Fmt(&temp_alloc, "%1", result.ghm).ptr;
+            ghs[i] = result.ghs.number;
+            ghs_price[i] = (double)result.ghs_price_cents / 100.0;
+            rea[i] = result.supplements.rea;
+            reasi[i] = result.supplements.reasi;
+            si[i] = result.supplements.si;
+            src[i] = result.supplements.src;
+            nn1[i] = result.supplements.nn1;
+            nn2[i] = result.supplements.nn2;
+            nn3[i] = result.supplements.nn3;
+            rep[i] = result.supplements.rep;
 
             if (i % 1024 == 0) {
                 Rcpp::checkUserInterrupt();
@@ -380,7 +386,9 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         }
 
         retval = Rcpp::DataFrame::create(
-            Rcpp::Named("bill_id") = bill_id, Rcpp::Named("ghm") = ghm,
+            Rcpp::Named("bill_id") = bill_id,
+            Rcpp::Named("exit_date") = exit_date, Rcpp::Named("duration") = duration,
+            Rcpp::Named("ghm") = ghm,
             Rcpp::Named("ghs") = ghs, Rcpp::Named("ghs_price") = ghs_price,
             Rcpp::Named("rea") = rea, Rcpp::Named("reasi") = reasi, Rcpp::Named("si") = si,
             Rcpp::Named("src") = src, Rcpp::Named("nn1") = nn1, Rcpp::Named("nn2") = nn2,

@@ -1183,6 +1183,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
 
             result.ghm = Aggregate(table_set, result.stays,
                                    &agg, &diagnoses, &procedures, &out_result_set->store.errors);
+            result.duration = agg.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.ghm = ClassifyGhm(agg, &out_result_set->store.errors);

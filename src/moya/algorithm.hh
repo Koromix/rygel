@@ -41,6 +41,7 @@ struct SupplementCounters {
 
 struct ClassifyResult {
     ArrayRef<const Stay> stays;
+    int duration;
 
     GhmCode ghm;
     ArrayRef<int16_t> errors;
@@ -83,8 +84,8 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
                       SupplementCounters *out_counters);
 
-int PriceGhs(const GhsPricing &pricing, int duration);
-int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration);
+int PriceGhs(const GhsPricing &pricing, int duration, bool death);
+int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration, bool death);
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               const PricingSet &pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
