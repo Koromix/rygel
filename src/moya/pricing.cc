@@ -33,7 +33,16 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
             int16_t exh_treshold, exb_treshold;
             int32_t price_cents, exh_cents, exb_cents;
             char type_exb;
+#ifdef __GLIBC__
+            // Work around glibc trying to scan the whole string for a NUL byte, which makes
+            // sscanf() very slow. Eventually I will make my own sscanf() to parse non-C strings.
+            char line_buf[129];
+            memcpy(line_buf, line.ptr, 128);
+            line_buf[128] = 0;
+            if (sscanf(line_buf,
+#else
             if (sscanf((const char *)line.ptr,
+#endif
                        "%*7c%04" SCNd16 "%01u%*3c%03" SCNd16 "%03" SCNd16 "%08" SCNd32 "%*1c%08" SCNd32
                        "%*50c%04" SCNd16 "%02" SCNd8 "%02" SCNd8 "%c%08" SCNd32,
                        &pricing.ghs.number, &sector, &exh_treshold, &exb_treshold, &price_cents, &exh_cents,
