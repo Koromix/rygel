@@ -213,7 +213,7 @@ Classify options:
                     PrintLn();
                 }
 
-                PrintLn("    GHS price: %1 €", FmtDouble(result.ghs_price_cents / 100.0, 2));
+                PrintLn("    GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
                 if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
                         result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
                         result.supplements.nn3 || result.supplements.rep) {
