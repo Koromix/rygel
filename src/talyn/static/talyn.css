@@ -189,14 +189,3 @@ div#simulation > button {
     box-sizing: border-box;
     width: 100%;
 }
-
-table.export {
-    border-collapse: collapse;
-    width: 100%;
-}
-table.export th, table.export td {
-    padding: 3px;
-    border: 1px solid #a4a4a4;
-}
-table.export tbody th { text-align: left; }
-table.export tbody td { text-align: right; }

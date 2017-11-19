@@ -30,9 +30,7 @@ static const Page pages[] = {
     {"Listes",   "/lists/ghs",         "GHS"},
     {"Listes",   "/lists/diagnoses",   "Diagnostics"},
     {"Listes",   "/lists/exclusions",  "Exclusions"},
-    {"Listes",   "/lists/procedures",  "Actes"},
-    {"Groupage", "/classifier/simple", "Simple"},
-    {"Groupage", "/classifier/global", "Global"},
+    {"Listes",   "/lists/procedures",  "Actes"}
 };
 
 static const TableSet *table_set;
@@ -275,72 +273,6 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                                                    MHD_RESPMEM_MUST_COPY);
         MHD_add_response_header(response, "Content-Type", "application/json");
         code = MHD_HTTP_OK;
-    } else if (TestStr(url, "/api/classify.json")) {
-        Allocator temp_alloc;
-
-        const char *stays_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "stays");
-        if (stays_str) {
-            StaySet stay_set;
-
-            {
-                StaySetBuilder stay_set_builder;
-                StreamReader st(MakeArrayRef((uint8_t *)stays_str, (Size)strlen(stays_str)));
-
-                if (!stay_set_builder.Load(st, StaySetDataType::Json))
-                    return false;
-                if (!stay_set_builder.Finish(&stay_set))
-                    return false;
-            }
-
-            ClassifyResultSet result_set;
-            Classify(*table_set, *authorization_set, *pricing_set,
-                     stay_set.stays, ClusterMode::BillId, &result_set);
-
-            rapidjson::MemoryBuffer buffer;
-            rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
-
-            writer.StartObject();
-            writer.Key("ghs_total_cents"); writer.Int64(result_set.ghs_total_cents);
-            writer.Key("supplements"); writer.StartObject();
-            writer.Key("rea"); writer.Int(result_set.supplements.rea);
-            writer.Key("reasi"); writer.Int(result_set.supplements.reasi);
-            writer.Key("si"); writer.Int(result_set.supplements.si);
-            writer.Key("src"); writer.Int(result_set.supplements.src);
-            writer.Key("nn1"); writer.Int(result_set.supplements.nn1);
-            writer.Key("nn2"); writer.Int(result_set.supplements.nn2);
-            writer.Key("nn3"); writer.Int(result_set.supplements.nn3);
-            writer.Key("rep"); writer.Int(result_set.supplements.rep);
-            writer.EndObject();
-
-            writer.Key("results");
-            writer.StartArray();
-            for (const ClassifyResult &result: result_set.results) {
-                writer.StartObject();
-                writer.Key("bill_id"); writer.Int(result.stays[0].bill_id);
-                writer.Key("ghm"); writer.String(Fmt(&temp_alloc, "%1", result.ghm).ptr);
-                writer.Key("ghs"); writer.Int(result.ghs.number);
-                writer.Key("ghs_price_cents"); writer.Int(result.ghs_price_cents);
-                writer.Key("supplements"); writer.StartObject();
-                writer.Key("rea"); writer.Int(result.supplements.rea);
-                writer.Key("reasi"); writer.Int(result.supplements.reasi);
-                writer.Key("si"); writer.Int(result.supplements.si);
-                writer.Key("src"); writer.Int(result.supplements.src);
-                writer.Key("nn1"); writer.Int(result.supplements.nn1);
-                writer.Key("nn2"); writer.Int(result.supplements.nn2);
-                writer.Key("nn3"); writer.Int(result.supplements.nn3);
-                writer.Key("rep"); writer.Int(result.supplements.rep);
-                writer.EndObject();
-                writer.EndObject();
-            }
-            writer.EndArray();
-            writer.EndObject();
-
-            response = MHD_create_response_from_buffer(buffer.GetSize(),
-                                                       (void *)buffer.GetBuffer(),
-                                                       MHD_RESPMEM_MUST_COPY);
-            MHD_add_response_header(response, "Content-Type", "application/json");
-            code = MHD_HTTP_OK;
-        }
     } else {
 #if !defined(NDEBUG) && defined(_WIN32)
         UpdateStaticResources();

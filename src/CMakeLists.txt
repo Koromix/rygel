@@ -32,10 +32,7 @@ set(TALYN_RESOURCES talyn/static/talyn.html
                     talyn/static/talyn.css
                     talyn/static/talyn.js
                     ../resources/logo.png
-                    ../lib/chartjs/chart.min.js
-                    ../lib/jsoneditor/jsoneditor.min.css
-                    ../lib/jsoneditor/jsoneditor.min.js
-                    ../lib/jsoneditor/jsoneditor-icons.svg)
+                    ../lib/chartjs/chart.min.js)
 set(TALYN_SRC talyn/talyn.cc
               talyn/resources.hh)
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_talyn_resources.cmake" [=[
