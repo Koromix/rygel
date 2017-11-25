@@ -297,8 +297,7 @@ void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings)
         for (; i < ghs_pricings.len && ghs_pricings[i].ghs == ghs; i++) {
             const GhsPricing &pricing = ghs_pricings[i];
 
-            PrintLn("  %2 to %3:",
-                    pricing.ghs, pricing.limit_dates[0], pricing.limit_dates[1]);
+            PrintLn("  %1 to %2:", pricing.limit_dates[0], pricing.limit_dates[1]);
             PrintLn("    Public: %1 [exh = %2, exb = %3]",
                     FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
                     FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),

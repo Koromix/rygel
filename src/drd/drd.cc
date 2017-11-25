@@ -676,7 +676,7 @@ R"(Usage: drd pack [options] stay_file ... dest_file
 
     LogDebug("Pack");
     {
-        StreamWriter st(dest_filename, CompressionType::Zlib);
+        StreamWriter st(dest_filename, CompressionType::Gzip);
         if (!stay_set.SavePack(st))
             return false;
     }

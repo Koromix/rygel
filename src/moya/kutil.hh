@@ -150,31 +150,55 @@ char (&ComputeArraySize(T const (&)[N]))[N];
 #define ARRAY_SIZE(Array) SIZE(ComputeArraySize(Array))
 #define OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
 
-static inline void ReverseBytes(uint16_t *u)
+static inline constexpr uint16_t ReverseBytes(uint16_t u)
 {
-    *u = (uint16_t)(((*u & 0x00FF) << 8) |
-                    ((*u & 0xFF00) >> 8));
+    return (uint16_t)(((u & 0x00FF) << 8) |
+                      ((u & 0xFF00) >> 8));
 }
 
-static inline void ReverseBytes(uint32_t *u)
+static inline constexpr uint32_t ReverseBytes(uint32_t u)
 {
-    *u = ((*u & 0x000000FF) << 24) |
-         ((*u & 0x0000FF00) << 8)  |
-         ((*u & 0x00FF0000) >> 8)  |
-         ((*u & 0xFF000000) >> 24);
+    return ((u & 0x000000FF) << 24) |
+           ((u & 0x0000FF00) << 8)  |
+           ((u & 0x00FF0000) >> 8)  |
+           ((u & 0xFF000000) >> 24);
 }
 
-static inline void ReverseBytes(uint64_t *u)
+static inline constexpr uint64_t ReverseBytes(uint64_t u)
 {
-    *u = ((*u & 0x00000000000000FF) << 56) |
-         ((*u & 0x000000000000FF00) << 40) |
-         ((*u & 0x0000000000FF0000) << 24) |
-         ((*u & 0x00000000FF000000) << 8)  |
-         ((*u & 0x000000FF00000000) >> 8)  |
-         ((*u & 0x0000FF0000000000) >> 24) |
-         ((*u & 0x00FF000000000000) >> 40) |
-         ((*u & 0xFF00000000000000) >> 56);
+    return ((u & 0x00000000000000FF) << 56) |
+           ((u & 0x000000000000FF00) << 40) |
+           ((u & 0x0000000000FF0000) << 24) |
+           ((u & 0x00000000FF000000) << 8)  |
+           ((u & 0x000000FF00000000) >> 8)  |
+           ((u & 0x0000FF0000000000) >> 24) |
+           ((u & 0x00FF000000000000) >> 40) |
+           ((u & 0xFF00000000000000) >> 56);
 }
+
+static inline constexpr int16_t ReverseBytes(int16_t i)
+    { return (int16_t)ReverseBytes((uint16_t)i); }
+static inline constexpr int32_t ReverseBytes(int32_t i)
+    { return (int32_t)ReverseBytes((uint32_t)i); }
+static inline constexpr int64_t ReverseBytes(int64_t i)
+    { return (int64_t)ReverseBytes((uint64_t)i); }
+
+template <typename T>
+void ReverseBytes(T *v) { *v = ReverseBytes(*v); }
+
+#ifdef ARCH_LITTLE_ENDIAN
+    template <typename T>
+    constexpr T LittleEndian(T v) { return v; }
+
+    template <typename T>
+    constexpr T BigEndian(T v) { return ReverseBytes(v); }
+#else
+    template <typename T>
+    constexpr T LittleEndian(T v) { return ReverseBytes(v); }
+
+    template <typename T>
+    constexpr T BigEndian(T v) { return v; }
+#endif
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
@@ -522,7 +546,12 @@ struct ArrayRef<char> {
 
     bool IsValid() const { return ptr; }
 
-    char &operator[](Size idx) const
+    char &operator[](Size idx)
+    {
+        DebugAssert(idx >= 0 && idx < len);
+        return ptr[idx];
+    }
+    const char &operator[](Size idx) const
     {
         DebugAssert(idx >= 0 && idx < len);
         return ptr[idx];
@@ -1845,69 +1874,13 @@ void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
 
 // ------------------------------------------------------------------------
-// System
-// ------------------------------------------------------------------------
-
-#ifdef _WIN32
-    #define PATH_SEPARATORS "\\/"
-    #define FOPEN_COMMON_FLAGS
-#else
-    #define PATH_SEPARATORS "/"
-    #define FOPEN_COMMON_FLAGS "e"
-#endif
-
-bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-              ArrayRef<uint8_t> *out_data);
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            uint8_t **out_data, Size *out_len)
-{
-    ArrayRef<uint8_t> data;
-    if (!ReadFile(alloc, filename, max_size, &data))
-        return false;
-    *out_data = data.ptr;
-    *out_len = data.len;
-    return true;
-}
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            ArrayRef<char> *out_data)
-    { return ReadFile(alloc, filename, max_size, (uint8_t **)&out_data->ptr, &out_data->len); }
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            char **out_data, Size *out_len)
-    { return ReadFile(alloc, filename, max_size, (uint8_t **)out_data, out_len); }
-
-enum class FileType {
-    Directory,
-    File,
-    Unknown
-};
-
-struct FileInfo {
-    FileType type;
-};
-
-enum class EnumStatus {
-    Error,
-    Partial,
-    Done
-};
-
-bool TestPath(const char *path, FileType type = FileType::Unknown);
-
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
-                              std::function<bool(const char *, const FileInfo &)> func);
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
-                             HeapArray<const char *> *out_files, Size max_files);
-
-const char *GetExecutablePath();
-const char *GetExecutableDirectory();
-
-// ------------------------------------------------------------------------
 // Streams
 // ------------------------------------------------------------------------
 
 enum class CompressionType {
     None,
-    Zlib
+    Zlib,
+    Gzip
 };
 
 class StreamReader {
@@ -1971,6 +1944,8 @@ private:
     bool InitDecompressor(CompressionType type);
     void ReleaseResources();
 
+    Size Deflate(Size max_len, void *out_buf);
+
     Size ReadRaw(Size max_len, void *out_buf);
 };
 
@@ -1997,7 +1972,7 @@ public:
         } u;
     } compression;
 
-    bool dirty = false;
+    bool open = false;
     bool error;
 
     Allocator str_alloc;
@@ -2025,6 +2000,72 @@ private:
 
     bool WriteRaw(ArrayRef<const uint8_t> buf);
 };
+
+// ------------------------------------------------------------------------
+// System
+// ------------------------------------------------------------------------
+
+#ifdef _WIN32
+    #define PATH_SEPARATORS "\\/"
+    #define FOPEN_COMMON_FLAGS
+#else
+    #define PATH_SEPARATORS "/"
+    #define FOPEN_COMMON_FLAGS "e"
+#endif
+
+bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
+              ArrayRef<uint8_t> *out_data);
+static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
+                            uint8_t **out_data, Size *out_len)
+{
+    ArrayRef<uint8_t> data;
+    if (!ReadFile(alloc, filename, max_size, &data))
+        return false;
+    *out_data = data.ptr;
+    *out_len = data.len;
+    return true;
+}
+static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
+                            ArrayRef<char> *out_data)
+    { return ReadFile(alloc, filename, max_size, (uint8_t **)&out_data->ptr, &out_data->len); }
+static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
+                            char **out_data, Size *out_len)
+    { return ReadFile(alloc, filename, max_size, (uint8_t **)out_data, out_len); }
+
+enum class FileType {
+    Directory,
+    File,
+    Unknown
+};
+
+struct FileInfo {
+    FileType type;
+};
+
+enum class EnumStatus {
+    Error,
+    Partial,
+    Done
+};
+
+bool TestPath(const char *path, FileType type = FileType::Unknown);
+
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+                              std::function<bool(const char *, const FileInfo &)> func);
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
+                             HeapArray<const char *> *out_files, Size max_files);
+
+const char *GetExecutablePath();
+const char *GetExecutableDirectory();
+
+Size GetPathExtension(const char *filename, ArrayRef<char> out_buf,
+                      CompressionType *out_compression_type = nullptr);
+
+// ------------------------------------------------------------------------
+// Checksum
+// ------------------------------------------------------------------------
+
+uint32_t ComputeCRC32(ArrayRef<const uint8_t> buf, uint32_t crc = 0);
 
 // ------------------------------------------------------------------------
 // Option Parser

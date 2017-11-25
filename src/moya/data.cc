@@ -811,6 +811,9 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
                 buffer_offset = 0;
 
                 if (buffer.len < SIZE(buffer.data)) {
+                    if (UNLIKELY(buffer.len < 0)) {
+                        buffer.len = 0;
+                    }
                     buffer.Append('\0');
                     st = nullptr;
                 }
@@ -833,8 +836,12 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
 
         rapidjson::Reader json_reader;
         if (!json_reader.Parse(json_stream, *json_handler)) {
-            rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
-            LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
+            // Parse error is likely after I/O error (missing token, etc.) but
+            // it's irrelevant, the I/O error has already been issued.
+            if (!st.error) {
+                rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
+                LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
+            }
             return false;
         }
         if (st.error)
@@ -994,25 +1001,16 @@ bool StaySetBuilder::Load(StreamReader &st, StaySetDataType type)
 bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
 {
     for (const char *filename: filenames) {
-        const char *extension = strrchr(filename, '.');
-        if (!extension || strpbrk(extension, PATH_SEPARATORS)) {
-            extension = "<empty extension>";
-        }
+        LocalArray<char, 16> extension;
+        CompressionType compression_type;
+        extension.len = GetPathExtension(filename, MakeArrayRef(extension.data),
+                                         &compression_type);
 
         StaySetDataType data_type;
-        CompressionType compression_type;
         if (TestStr(extension, ".mjson")) {
             data_type = StaySetDataType::Json;
-            compression_type = CompressionType::None;
-        } else if (TestStr(extension, ".mjsonz")) {
-            data_type = StaySetDataType::Json;
-            compression_type = CompressionType::Zlib;
         } else if (TestStr(extension, ".mpak")) {
             data_type = StaySetDataType::Pack;
-            compression_type = CompressionType::None;
-        } else if (TestStr(extension, ".mpakz")) {
-            data_type = StaySetDataType::Pack;
-            compression_type = CompressionType::Zlib;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
