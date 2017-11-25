@@ -101,7 +101,7 @@ static bool UpdateStaticResources()
     Allocator::ReleaseAll(&static_alloc);
     for (const Resource &res: *dll_resources) {
         Resource new_res;
-        new_res.url = DuplicateString(&static_alloc, res.url);
+        new_res.url = DuplicateString(&static_alloc, res.url).ptr;
         uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&static_alloc, res.data.len);
         memcpy(data_ptr, res.data.ptr, (size_t)res.data.len);
         new_res.data = {data_ptr, res.data.len};

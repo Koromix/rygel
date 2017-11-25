@@ -317,15 +317,15 @@ uint64_t GetMonotonicTime()
 // Strings
 // ------------------------------------------------------------------------
 
-char *MakeString(Allocator *alloc, Span<const char> bytes)
+Span<const char> MakeString(Allocator *alloc, Span<const char> bytes)
 {
-    char *str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
-    memcpy(str, bytes.ptr, (size_t)bytes.len);
-    str[bytes.len] = 0;
-    return str;
+    char *new_str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
+    memcpy(new_str, bytes.ptr, (size_t)bytes.len);
+    new_str[bytes.len] = 0;
+    return MakeSpan(new_str, bytes.len);
 }
 
-char *DuplicateString(Allocator *alloc, const char *str, Size max_len)
+Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len)
 {
     Size str_len = (Size)strlen(str);
     if (max_len >= 0 && str_len > max_len) {
@@ -334,7 +334,7 @@ char *DuplicateString(Allocator *alloc, const char *str, Size max_len)
     char *new_str = (char *)Allocator::Allocate(alloc, str_len + 1);
     memcpy(new_str, str, (size_t)str_len);
     new_str[str_len] = 0;
-    return new_str;
+    return MakeSpan(new_str, str_len);
 }
 
 // ------------------------------------------------------------------------
@@ -412,7 +412,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::StrBuf: {
-                append(MakeStrRef(arg.value.str_buf));
+                append(arg.value.str_buf);
             } break;
 
             case FmtArg::Type::Char: {
@@ -421,15 +421,15 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Bool: {
                 if (arg.value.b) {
-                    append(MakeStrRef("true"));
+                    append("true");
                 } else {
-                    append(MakeStrRef("false"));
+                    append("false");
                 }
             } break;
 
             case FmtArg::Type::Integer: {
                 if (arg.value.i < 0) {
-                    append(MakeStrRef("-"));
+                    append("-");
                     WriteUnsignedAsDecimal((uint64_t)-arg.value.i, append);
                 } else {
                     WriteUnsignedAsDecimal((uint64_t)arg.value.i, append);
@@ -446,7 +446,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Binary: {
                 if (arg.value.u) {
-                    append(MakeStrRef("0b"));
+                    append("0b");
                     WriteUnsignedAsBinary(arg.value.u, append);
                 } else {
                     append('0');
@@ -455,7 +455,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Hexadecimal: {
                 if (arg.value.u) {
-                    append(MakeStrRef("0x"));
+                    append("0x");
                     WriteUnsignedAsHex(arg.value.u, append);
                 } else {
                     append('0');
@@ -466,21 +466,21 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size >= 0) {
                     size_unsigned = (size_t)arg.value.size;
-                    append(MakeStrRef("-"));
+                    append("-");
                 } else {
                     size_unsigned = (size_t)-arg.value.size;
                 }
                 if (size_unsigned > 1024 * 1024) {
                     double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
                     WriteDouble(size_mib, 2, append);
-                    append(MakeStrRef(" MiB"));
+                    append(" MiB");
                 } else if (size_unsigned > 1024) {
                     double size_kib = (double)size_unsigned / 1024.0;
                     WriteDouble(size_kib, 2, append);
-                    append(MakeStrRef(" kiB"));
+                    append(" kiB");
                 } else {
                     WriteUnsignedAsDecimal(size_unsigned, append);
-                    append(MakeStrRef(" B"));
+                    append(" B");
                 }
             } break;
 
@@ -488,21 +488,21 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size >= 0) {
                     size_unsigned = (size_t)arg.value.size;
-                    append(MakeStrRef("-"));
+                    append("-");
                 } else {
                     size_unsigned = (size_t)-arg.value.size;
                 }
                 if (size_unsigned > 1000 * 1000) {
                     double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
                     WriteDouble(size_mib, 2, append);
-                    append(MakeStrRef(" MB"));
+                    append(" MB");
                 } else if (size_unsigned > 1024) {
                     double size_kib = (double)size_unsigned / 1000.0;
                     WriteDouble(size_kib, 2, append);
-                    append(MakeStrRef(" kB"));
+                    append(" kB");
                 } else {
                     WriteUnsignedAsDecimal(size_unsigned, append);
-                    append(MakeStrRef(" B"));
+                    append(" B");
                 }
             } break;
 
@@ -510,25 +510,25 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 DebugAssert(arg.value.date.IsValid());
                 int year = arg.value.date.st.year;
                 if (year < 0) {
-                    append(MakeStrRef("-"));
+                    append("-");
                     year = -year;
                 }
                 if (year < 10) {
-                    append(MakeStrRef("000"));
+                    append("000");
                 } else if (year < 100) {
-                    append(MakeStrRef("00"));
+                    append("00");
                 } else if (year < 1000) {
-                    append(MakeStrRef("0"));
+                    append("0");
                 }
                 WriteUnsignedAsDecimal((uint64_t)year, append);
-                append(MakeStrRef("-"));
+                append("-");
                 if (arg.value.date.st.month < 10) {
-                    append(MakeStrRef("0"));
+                    append("0");
                 }
                 WriteUnsignedAsDecimal((uint64_t)arg.value.date.st.month, append);
-                append(MakeStrRef("-"));
+                append("-");
                 if (arg.value.date.st.day < 10) {
-                    append(MakeStrRef("0"));
+                    append("0");
                 }
                 WriteUnsignedAsDecimal((uint64_t)arg.value.date.st.day, append);
             } break;
@@ -536,7 +536,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtArg::Type::List: {
                 if (arg.value.list.args.len) {
                     ProcessArg(arg.value.list.args[0], append);
-                    Span<const char> separator = MakeStrRef(arg.value.list.separator);
+
+                    Span<const char> separator = arg.value.list.separator;
                     for (Size j = 1; j < arg.value.list.args.len; j++) {
                         append(separator);
                         ProcessArg(arg.value.list.args[j], append);
@@ -1151,7 +1152,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename);
+        this->filename = DuplicateString(&str_alloc, filename).ptr;
     }
 
     if (!InitDecompressor(compression_type))
@@ -1174,7 +1175,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename);
+        this->filename = DuplicateString(&str_alloc, filename).ptr;
     }
 
     if (!InitDecompressor(compression_type))
@@ -1195,7 +1196,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    this->filename = DuplicateString(&str_alloc, filename);
+    this->filename = DuplicateString(&str_alloc, filename).ptr;
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -1527,7 +1528,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename);
+        this->filename = DuplicateString(&str_alloc, filename).ptr;
     }
 
     if (!InitCompressor(compression_type))
@@ -1549,7 +1550,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    this->filename = DuplicateString(&str_alloc, filename);
+    this->filename = DuplicateString(&str_alloc, filename).ptr;
 
     if (!InitCompressor(compression_type))
         return false;

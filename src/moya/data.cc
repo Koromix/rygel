@@ -1003,8 +1003,7 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
     for (const char *filename: filenames) {
         LocalArray<char, 16> extension;
         CompressionType compression_type;
-        extension.len = GetPathExtension(filename, MakeSpan(extension.data),
-                                         &compression_type);
+        extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
         StaySetDataType data_type;
         if (TestStr(extension, ".mjson")) {

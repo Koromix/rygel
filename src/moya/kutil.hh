@@ -477,22 +477,23 @@ struct Span {
         { return Take(ArraySlice<T>(offset, len)); }
 };
 
-// Unfortunately C strings ("foobar") are implicity converted to Span<T> with the
-// templated array constructor. But the NUL terminator is obviously counted in. Since I
-// don't want to give up implicit conversion for every type, so instead we need to
-// specialize Span<const char> and Span<char>.
+// Use strlen() to build Span<const char> instead of the template-based
+// array constructor.
 template <>
 struct Span<const char> {
     const char *ptr;
     Size len;
 
     Span() = default;
-    constexpr Span(const char &value) : ptr(&value), len(1) {}
-    constexpr Span(std::initializer_list<const char> l)
-        : ptr(l.begin()), len((Size)l.size()) {}
-    explicit constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    template <Size N>
-    explicit constexpr Span(const char (&arr)[N]) : ptr(arr), len(N) {}
+    constexpr Span(const char &ch) : ptr(&ch), len(1) {}
+    constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+#if defined(__clang__)
+    constexpr Span(const char *const &str) : ptr(str), len((Size)__builtin_strlen(str)) {}
+#elif defined(__GNUC__)
+    constexpr Span(const char *const &str) : ptr(str), len((Size)strlen(str)) {}
+#else
+    Span(const char *const &str) : ptr(str), len((Size)strlen(str)) {}
+#endif
 
     void Reset()
     {
@@ -505,7 +506,7 @@ struct Span<const char> {
 
     bool IsValid() const { return ptr; }
 
-    const char &operator[](Size idx) const
+    char operator[](Size idx) const
     {
         DebugAssert(idx >= 0 && idx < len);
         return ptr[idx];
@@ -524,56 +525,6 @@ struct Span<const char> {
     Span Take(Size offset, Size len) const
         { return Take(ArraySlice<const char>(offset, len)); }
 };
-template <>
-struct Span<char> {
-    char *ptr;
-    Size len;
-
-    Span() = default;
-    constexpr Span(char &value) : ptr(&value), len(1) {}
-    explicit constexpr Span(char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    template <Size N>
-    explicit constexpr Span(char (&arr)[N]) : ptr(arr), len(N) {}
-
-    void Reset()
-    {
-        ptr = nullptr;
-        len = 0;
-    }
-
-    char *begin() const { return ptr; }
-    char *end() const { return ptr + len; }
-
-    bool IsValid() const { return ptr; }
-
-    char &operator[](Size idx)
-    {
-        DebugAssert(idx >= 0 && idx < len);
-        return ptr[idx];
-    }
-    const char &operator[](Size idx) const
-    {
-        DebugAssert(idx >= 0 && idx < len);
-        return ptr[idx];
-    }
-
-    operator Span<const char>() const { return Span<const char>(ptr, len); }
-
-    Span Take(ArraySlice<char> slice) const
-    {
-        DebugAssert(slice.len >= 0 && slice.len <= len);
-        DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
-
-        Span<char> sub;
-        sub.ptr = ptr + slice.offset;
-        sub.len = slice.len;
-        return sub;
-    }
-    Span Take(Size offset, Size len) const
-    {
-        return Take(ArraySlice<char>(offset, len));
-    }
-};
 
 template <typename T>
 static inline constexpr Span<T> MakeSpan(T *ptr, Size len)
@@ -584,25 +535,6 @@ template <typename T, Size N>
 static inline constexpr Span<T> MakeSpan(T (&arr)[N])
 {
     return Span<T>(arr, N);
-}
-
-static inline Span<char> MakeStrRef(char *str)
-{
-    return Span<char>(str, (Size)strlen(str));
-}
-static inline Span<const char> MakeStrRef(const char *str)
-{
-    return Span<const char>(str, (Size)strlen(str));
-}
-static inline Span<char> MakeStrRef(char *str, Size max_len)
-{
-    DebugAssert(max_len >= 0);
-    return Span<char>(str, (Size)strnlen(str, (size_t)max_len));
-}
-static inline Span<const char> MakeStrRef(const char *str, Size max_len)
-{
-    DebugAssert(max_len >= 0);
-    return Span<const char>(str, (Size)strnlen(str, (size_t)max_len));
 }
 
 template <typename T, Size N>
@@ -1490,8 +1422,8 @@ uint64_t GetMonotonicTime();
 // Strings
 // ------------------------------------------------------------------------
 
-char *MakeString(Allocator *alloc, Span<const char> bytes);
-char *DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
+Span<const char> MakeString(Allocator *alloc, Span<const char> str);
+Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
 
 static inline bool IsAsciiAlpha(char c)
 {
@@ -1694,7 +1626,7 @@ public:
     int repeat = 1;
 
     FmtArg() = default;
-    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
+    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = str ? str : "(null)"; }
     FmtArg(Span<const char> str) : type(Type::StrRef) { value.str_ref = str; }
     FmtArg(char c) : type(Type::Char) { value.ch = c; }
     FmtArg(bool b) : type(Type::Bool) { value.b = b; }
