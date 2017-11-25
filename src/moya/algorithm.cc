@@ -80,8 +80,8 @@ static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2)
            (stay2.entry.mode == 6 || stay2.entry.mode == 0);
 }
 
-ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
-                             ArrayRef<const Stay> *out_remainder)
+Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
+                             Span<const Stay> *out_remainder)
 {
     if (!stays.len)
         return {};
@@ -118,7 +118,7 @@ ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
     return stays.Take(0, agg_len);
 }
 
-static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> stays,
+static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
                                 int duration)
 {
     int max_duration = -1;
@@ -216,7 +216,7 @@ static const Stay *FindMainStay(const TableIndex &index, ArrayRef<const Stay> st
 }
 
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
-GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
+GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
                   HeapArray<DiagnosisCode> *out_diagnoses,
                   HeapArray<ProcedureRealisation> *out_procedures,
@@ -808,7 +808,7 @@ static bool TestAuthorization(const AuthorizationSet &authorization_set,
     if (GetAuthorizationType(authorization_set, unit, date) == authorization)
         return true;
 
-    ArrayRef<const Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
+    Span<const Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
     for (const Authorization &auth: facility_auths) {
         if (auth.type == authorization)
             return true;
@@ -897,7 +897,7 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
         }
     }
 
-    ArrayRef<const GhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+    Span<const GhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
 
     for (const GhsInfo &ghs_info: compatible_ghs) {
         if (TestGhs(agg, authorization_set, ghs_info))
@@ -1162,7 +1162,7 @@ int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet &pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet &pricing_set, Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations

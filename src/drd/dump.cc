@@ -5,7 +5,7 @@
 #include "../moya/libmoya.hh"
 #include "dump.hh"
 
-void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
+void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
                          Size node_idx, int depth)
 {
     while (node_idx < ghm_nodes.len) {
@@ -43,8 +43,8 @@ void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
     }
 }
 
-void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
-                        ArrayRef<const ExclusionInfo> exclusions)
+void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
+                        Span<const ExclusionInfo> exclusions)
 {
     for (const DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](Sex sex) {
@@ -95,7 +95,7 @@ void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
     }
 }
 
-void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
+void DumpProcedureTable(Span<const ProcedureInfo> procedures)
 {
     for (const ProcedureInfo &proc: procedures) {
         Print("      %1/%2 =", proc.proc, proc.phase);
@@ -108,7 +108,7 @@ void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures)
     }
 }
 
-void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots)
+void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots)
 {
     for (const GhmRootInfo &ghm_root: ghm_roots) {
         PrintLn("      %1:", ghm_root.ghm_root);
@@ -141,7 +141,7 @@ void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots)
     }
 }
 
-void DumpGhsTable(ArrayRef<const GhsInfo> ghs)
+void DumpGhsTable(Span<const GhsInfo> ghs)
 {
     GhmCode previous_ghm = {};
     for (const GhsInfo &ghs_info: ghs) {
@@ -178,7 +178,7 @@ void DumpGhsTable(ArrayRef<const GhsInfo> ghs)
     }
 }
 
-void DumpSeverityTable(ArrayRef<const ValueRangeCell<2>> cells)
+void DumpSeverityTable(Span<const ValueRangeCell<2>> cells)
 {
     for (const ValueRangeCell<2> &cell: cells) {
         PrintLn("      %1-%2 and %3-%4 = %5",
@@ -187,7 +187,7 @@ void DumpSeverityTable(ArrayRef<const ValueRangeCell<2>> cells)
     }
 }
 
-void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations)
+void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations)
 {
     for (const AuthorizationInfo &auth: authorizations) {
         PrintLn("      %1 [%2] => Function %3",
@@ -195,7 +195,7 @@ void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations)
     }
 }
 
-void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs)
+void DumpSupplementPairTable(Span<const SrcPair> pairs)
 {
     for (const SrcPair &pair: pairs) {
         PrintLn("      %1 -- %2", pair.diag, pair.proc);
@@ -287,7 +287,7 @@ void DumpTableSet(const TableSet &table_set, bool detail)
     }
 }
 
-void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings)
+void DumpGhsPricings(Span<const GhsPricing> ghs_pricings)
 {
     for (Size i = 0; i < ghs_pricings.len;) {
         GhsCode ghs = ghs_pricings[i].ghs;

@@ -18,9 +18,9 @@ static TableSet main_table_set;
 static PricingSet main_pricing_set;
 static AuthorizationSet main_authorization_set;
 
-bool InitTableSet(ArrayRef<const char *> data_directories,
-                  ArrayRef<const char *> table_directories,
-                  ArrayRef<const char *> table_filenames,
+bool InitTableSet(Span<const char *> data_directories,
+                  Span<const char *> table_directories,
+                  Span<const char *> table_filenames,
                   TableSet *out_set)
 {
     Allocator temp_alloc;
@@ -56,7 +56,7 @@ bool InitTableSet(ArrayRef<const char *> data_directories,
     return true;
 }
 
-bool InitPricingSet(ArrayRef<const char *> data_directories,
+bool InitPricingSet(Span<const char *> data_directories,
                     const char *pricing_filename,
                     PricingSet *out_set)
 {
@@ -90,7 +90,7 @@ bool InitPricingSet(ArrayRef<const char *> data_directories,
     return true;
 }
 
-bool InitAuthorizationSet(ArrayRef<const char *> data_directories,
+bool InitAuthorizationSet(Span<const char *> data_directories,
                           const char *authorization_filename,
                           AuthorizationSet *out_set)
 {

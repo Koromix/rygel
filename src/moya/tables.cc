@@ -8,7 +8,7 @@
 struct LoadTableData {
     Size table_idx;
     const char *filename;
-    ArrayRef<uint8_t> raw_data;
+    Span<uint8_t> raw_data;
     bool loaded;
 };
 
@@ -46,7 +46,7 @@ static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
 }
 
 // TODO: Be careful with overflow in offset and length checks
-bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
+bool ParseTableHeaders(const Span<const uint8_t> file_data,
                        const char *filename, HeapArray<TableInfo> *out_tables)
 {
     DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
@@ -976,7 +976,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
     return success;
 }
 
-bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
+bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
 {
     Assert(!out_set->tables.len);
     Assert(!out_set->indexes.len);
@@ -987,7 +987,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
 
     HeapArray<LoadTableData> tables;
     for (const char *filename: filenames) {
-        ArrayRef<uint8_t> raw_data;
+        Span<uint8_t> raw_data;
         if (!ReadFile(&file_alloc, filename, Megabytes(8), &raw_data)) {
             success = false;
             continue;
@@ -1076,9 +1076,8 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
         HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
 
         for (TableIndex &index: out_set->indexes) {
-#define FIX_ARRAYREF(ArrayRefName) \
-                index.ArrayRefName.ptr = out_set->store.ArrayRefName.ptr + \
-                                         (Size)index.ArrayRefName.ptr
+#define FIX_SPAN(SpanName) \
+                index.SpanName.ptr = out_set->store.SpanName.ptr + (Size)index.SpanName.ptr
 #define BUILD_MAP(IndexName, MapName, TableType) \
                 do { \
                     if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
@@ -1090,19 +1089,19 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
                     index.CONCAT(MapName, _map) = CONCAT(MapName, _map); \
                 } while (false)
 
-            FIX_ARRAYREF(ghm_nodes);
-            FIX_ARRAYREF(diagnoses);
-            FIX_ARRAYREF(exclusions);
-            FIX_ARRAYREF(procedures);
-            FIX_ARRAYREF(ghm_roots);
-            FIX_ARRAYREF(gnn_cells);
-            FIX_ARRAYREF(cma_cells[0]);
-            FIX_ARRAYREF(cma_cells[1]);
-            FIX_ARRAYREF(cma_cells[2]);
-            FIX_ARRAYREF(ghs);
-            FIX_ARRAYREF(authorizations);
-            FIX_ARRAYREF(src_pairs[0]);
-            FIX_ARRAYREF(src_pairs[1]);
+            FIX_SPAN(ghm_nodes);
+            FIX_SPAN(diagnoses);
+            FIX_SPAN(exclusions);
+            FIX_SPAN(procedures);
+            FIX_SPAN(ghm_roots);
+            FIX_SPAN(gnn_cells);
+            FIX_SPAN(cma_cells[0]);
+            FIX_SPAN(cma_cells[1]);
+            FIX_SPAN(cma_cells[2]);
+            FIX_SPAN(ghs);
+            FIX_SPAN(authorizations);
+            FIX_SPAN(src_pairs[0]);
+            FIX_SPAN(src_pairs[1]);
 
             BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
             BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
@@ -1111,7 +1110,7 @@ bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set)
             BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsTable);
 
 #undef BUILD_MAP
-#undef FIX_ARRAYREF
+#undef FIX_SPAN
         }
     }
 
@@ -1126,12 +1125,12 @@ const DiagnosisInfo *TableIndex::FindDiagnosis(DiagnosisCode code) const
     return diagnoses_map->FindValue(code, nullptr);
 }
 
-ArrayRef<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) const
+Span<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) const
 {
     if (!procedures_map)
         return {};
 
-    ArrayRef<const ProcedureInfo> procs;
+    Span<const ProcedureInfo> procs;
     procs.ptr = procedures_map->FindValue(code, nullptr);
     if (!procs.ptr)
         return {};
@@ -1176,12 +1175,12 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
     return ghm_roots_map->FindValue(code, nullptr);
 }
 
-ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
+Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
 {
     if (!ghm_root_to_ghs_map)
         return {};
 
-    ArrayRef<const GhsInfo> compatible_ghs;
+    Span<const GhsInfo> compatible_ghs;
     compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root, nullptr);
     if (!compatible_ghs.ptr)
         return {};
@@ -1197,12 +1196,12 @@ ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) cons
     return compatible_ghs;
 }
 
-ArrayRef<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
+Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 {
     if (!ghm_to_ghs_map)
         return {};
 
-    ArrayRef<const GhsInfo> compatible_ghs;
+    Span<const GhsInfo> compatible_ghs;
     compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm, nullptr);
     if (!compatible_ghs.ptr)
         return {};

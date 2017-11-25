@@ -19,7 +19,7 @@ struct AuthorizationSet {
     HeapArray<Authorization> authorizations;
     HashSet<UnitCode, const Authorization *> authorizations_map;
 
-    ArrayRef<const Authorization> FindUnit(UnitCode unit) const;
+    Span<const Authorization> FindUnit(UnitCode unit) const;
     const Authorization *FindUnit(UnitCode unit, Date date) const;
 };
 
@@ -60,9 +60,9 @@ struct Stay {
 
     DiagnosisCode main_diagnosis;
     DiagnosisCode linked_diagnosis;
-    ArrayRef<DiagnosisCode> diagnoses;
+    Span<DiagnosisCode> diagnoses;
 
-    ArrayRef<ProcedureRealisation> procedures;
+    Span<ProcedureRealisation> procedures;
 
 #ifndef DISABLE_TESTS
     struct {
@@ -111,7 +111,7 @@ class StaySetBuilder {
 
 public:
     bool Load(StreamReader &st, StaySetDataType type);
-    bool LoadFiles(ArrayRef<const char *const> filenames);
+    bool LoadFiles(Span<const char *const> filenames);
 
     bool Finish(StaySet *out_set);
 };

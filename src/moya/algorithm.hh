@@ -16,13 +16,13 @@ enum class ClusterMode {
 };
 
 struct ClassifyAggregate {
-    ArrayRef<const Stay> stays;
+    Span<const Stay> stays;
 
     const TableIndex *index;
 
     Stay stay;
-    ArrayRef<DiagnosisCode> diagnoses;
-    ArrayRef<ProcedureRealisation> procedures;
+    Span<DiagnosisCode> diagnoses;
+    Span<ProcedureRealisation> procedures;
 
     int age;
     int duration;
@@ -40,11 +40,11 @@ struct SupplementCounters {
 };
 
 struct ClassifyResult {
-    ArrayRef<const Stay> stays;
+    Span<const Stay> stays;
     int duration;
 
     GhmCode ghm;
-    ArrayRef<int16_t> errors;
+    Span<int16_t> errors;
 
     GhsCode ghs;
     SupplementCounters supplements;
@@ -62,10 +62,10 @@ struct ClassifyResultSet {
     } store;
 };
 
-ArrayRef<const Stay> Cluster(ArrayRef<const Stay> stays, ClusterMode mode,
-                             ArrayRef<const Stay> *out_remainder);
+Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
+                             Span<const Stay> *out_remainder);
 
-GhmCode Aggregate(const TableSet &table_set, ArrayRef<const Stay> stays,
+GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
                   HeapArray<DiagnosisCode> *out_diagnoses,
                   HeapArray<ProcedureRealisation> *out_procedures,
@@ -88,5 +88,5 @@ int PriceGhs(const GhsPricing &pricing, int duration, bool death);
 int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration, bool death);
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet &pricing_set, ArrayRef<const Stay> stays, ClusterMode cluster_mode,
+              const PricingSet &pricing_set, Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set);

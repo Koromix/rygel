@@ -43,10 +43,10 @@ static const AuthorizationSet *authorization_set;
 static HeapArray<Resource> static_resources;
 static Allocator static_alloc;
 #else
-extern const ArrayRef<const Resource> static_resources;
+extern const Span<const Resource> static_resources;
 #endif
 
-static HashMap<const char *, ArrayRef<const uint8_t>> routes;
+static HashMap<const char *, Span<const uint8_t>> routes;
 
 static void InitRoutes()
 {
@@ -90,8 +90,8 @@ static bool UpdateStaticResources()
     }
     DEFER { FreeLibrary(h); };
 
-    const ArrayRef<const Resource> *dll_resources =
-        (const ArrayRef<const Resource> *)GetProcAddress(h, "static_resources");
+    const Span<const Resource> *dll_resources =
+        (const Span<const Resource> *)GetProcAddress(h, "static_resources");
     if (!dll_resources) {
         LogError("Cannot find symbol 'static_resources' in library '%1'", filename);
         return false;
@@ -139,7 +139,7 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
         writer.Key("ghm_root"); writer.String(Fmt(&temp_alloc, "%1", ghm_root_info.ghm_root).ptr);
         writer.Key("info"); writer.StartArray();
 
-        ArrayRef<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+        Span<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
             const GhmConstraint *constraint = constraints ? constraints->Find(ghs_info.ghm) : nullptr;
 //            if (!constraint)
@@ -278,7 +278,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
         UpdateStaticResources();
 #endif
 
-        ArrayRef<const uint8_t> resource_data = routes.FindValue(url, {});
+        Span<const uint8_t> resource_data = routes.FindValue(url, {});
         if (resource_data.IsValid()) {
             response = MHD_create_response_from_buffer((size_t)resource_data.len,
                                                        (void *)resource_data.ptr,

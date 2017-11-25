@@ -6,20 +6,20 @@
 
 #include "../moya/libmoya.hh"
 
-void DumpGhmDecisionTree(ArrayRef<const GhmDecisionNode> ghm_nodes,
+void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
                          Size node_idx = 0, int depth = 0);
-void DumpDiagnosisTable(ArrayRef<const DiagnosisInfo> diagnoses,
-                        ArrayRef<const ExclusionInfo> exclusions = {});
-void DumpProcedureTable(ArrayRef<const ProcedureInfo> procedures);
-void DumpGhmRootTable(ArrayRef<const GhmRootInfo> ghm_roots);
-void DumpSeverityTable(ArrayRef<const ValueRangeCell<2>> cells);
+void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
+                        Span<const ExclusionInfo> exclusions = {});
+void DumpProcedureTable(Span<const ProcedureInfo> procedures);
+void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots);
+void DumpSeverityTable(Span<const ValueRangeCell<2>> cells);
 
-void DumpGhsTable(ArrayRef<const GhsInfo> ghs);
-void DumpAuthorizationTable(ArrayRef<const AuthorizationInfo> authorizations);
-void DumpSupplementPairTable(ArrayRef<const SrcPair> pairs);
+void DumpGhsTable(Span<const GhsInfo> ghs);
+void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations);
+void DumpSupplementPairTable(Span<const SrcPair> pairs);
 
 void DumpTableSet(const TableSet &table_set, bool detail = true);
 
-void DumpGhsPricings(ArrayRef<const GhsPricing> ghs_pricings);
+void DumpGhsPricings(Span<const GhsPricing> ghs_pricings);
 
 void DumpPricingSet(const PricingSet &pricing_set);

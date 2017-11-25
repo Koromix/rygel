@@ -6,7 +6,7 @@
 #include "pricing.hh"
 #include "tables.hh"
 
-bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
+bool ParseGhsPricings(Span<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_pricings)
 {
     Size start_pricings_len = out_pricings->len;
@@ -21,7 +21,7 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
         } \
     } while (false)
 
-    ArrayRef<const char> line = SplitStrLine(file_data, &file_data);
+    Span<const char> line = SplitStrLine(file_data, &file_data);
     FAIL_PARSE_IF(line.len != 128);
     FAIL_PARSE_IF(memcmp(line.ptr, "000AM00000001000000TABGHSCT00000001000000GHX000NXGHS", 52) != 0);
 
@@ -73,7 +73,7 @@ bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
     FAIL_PARSE_IF(line.len != 0);
 
     {
-        ArrayRef<GhsPricing> pricings = out_pricings->Take(start_pricings_len,
+        Span<GhsPricing> pricings = out_pricings->Take(start_pricings_len,
                                                            out_pricings->len - start_pricings_len);
 
         std::stable_sort(pricings.begin(), pricings.end(),
@@ -123,7 +123,7 @@ bool LoadPricingFile(const char *filename, PricingSet *out_set)
 
     Allocator temp_alloc;
 
-    ArrayRef<char> file_data;
+    Span<char> file_data;
     if (!ReadFile(&temp_alloc, filename, Megabytes(30), &file_data))
         return false;
 
@@ -136,9 +136,9 @@ bool LoadPricingFile(const char *filename, PricingSet *out_set)
     return true;
 }
 
-ArrayRef<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs) const
+Span<const GhsPricing> PricingSet::FindGhsPricing(GhsCode ghs) const
 {
-    ArrayRef<const GhsPricing> pricings;
+    Span<const GhsPricing> pricings;
     pricings.ptr = ghs_pricings_map.FindValue(ghs, nullptr);
     if (!pricings.ptr)
         return {};

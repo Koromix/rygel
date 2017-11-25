@@ -317,7 +317,7 @@ uint64_t GetMonotonicTime()
 // Strings
 // ------------------------------------------------------------------------
 
-char *MakeString(Allocator *alloc, ArrayRef<const char> bytes)
+char *MakeString(Allocator *alloc, Span<const char> bytes)
 {
     char *str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
     memcpy(str, bytes.ptr, (size_t)bytes.len);
@@ -354,7 +354,7 @@ static inline void WriteUnsignedAsDecimal(uint64_t value, AppendFunc append)
         buf[--len] = literals[digit];
     } while (value);
 
-    append(ArrayRef<const char>(buf + len, SIZE(buf) - len));
+    append(MakeSpan(buf + len, SIZE(buf) - len));
 }
 
 template <typename AppendFunc>
@@ -370,7 +370,7 @@ static inline void WriteUnsignedAsHex(uint64_t value, AppendFunc append)
         buf[--len] = literals[digit];
     } while (value);
 
-    append(ArrayRef<const char>(buf + len, SIZE(buf) - len));
+    append(MakeSpan(buf + len, SIZE(buf) - len));
 }
 
 template <typename AppendFunc>
@@ -383,7 +383,7 @@ static inline void WriteUnsignedAsBinary(uint64_t value, AppendFunc append)
         buf[i] = bit ? '1' : '0';
     }
 
-    append(ArrayRef<const char>(buf, msb));
+    append(MakeSpan(buf, msb));
 }
 
 template <typename AppendFunc>
@@ -399,7 +399,7 @@ static inline void WriteDouble(double value, int precision, AppendFunc append)
     }
     Assert(buf_len >= 0 && buf_len <= SIZE(buf));
 
-    append(MakeArrayRef(buf, (Size)buf_len));
+    append(MakeSpan(buf, (Size)buf_len));
 }
 
 template <typename AppendFunc>
@@ -416,7 +416,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::Char: {
-                append(ArrayRef<const char>(&arg.value.ch, 1));
+                append(Span<const char>(&arg.value.ch, 1));
             } break;
 
             case FmtArg::Type::Bool: {
@@ -536,7 +536,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtArg::Type::List: {
                 if (arg.value.list.args.len) {
                     ProcessArg(arg.value.list.args[0], append);
-                    ArrayRef<const char> separator = MakeStrRef(arg.value.list.separator);
+                    Span<const char> separator = MakeStrRef(arg.value.list.separator);
                     for (Size j = 1; j < arg.value.list.args.len; j++) {
                         append(separator);
                         ProcessArg(arg.value.list.args[j], append);
@@ -548,7 +548,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 }
 
 template <typename AppendFunc>
-static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
+static inline void DoFormat(const char *fmt, Span<const FmtArg> args,
                             AppendFunc append)
 {
 #ifndef NDEBUG
@@ -563,7 +563,7 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
         while (marker_ptr[0] && marker_ptr[0] != '%') {
             marker_ptr++;
         }
-        append(ArrayRef<const char>(fmt_ptr, (Size)(marker_ptr - fmt_ptr)));
+        append(MakeSpan(fmt_ptr, (Size)(marker_ptr - fmt_ptr)));
         if (!marker_ptr[0])
             break;
 
@@ -622,7 +622,7 @@ static inline void DoFormat(const char *fmt, ArrayRef<const FmtArg> args,
 #endif
 }
 
-ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args)
+Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args)
 {
     DebugAssert(buf.len >= 0);
 
@@ -632,7 +632,7 @@ ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg
 
     Size real_len = 0;
 
-    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
+    DoFormat(fmt, args, [&](Span<const char> fragment) {
         if (LIKELY(real_len < buf.len)) {
             Size copy_len = fragment.len;
             if (copy_len > buf.len - real_len) {
@@ -650,7 +650,7 @@ ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg
     return buf;
 }
 
-ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args)
+Span<char> FmtFmt(Allocator *alloc, const char *fmt, Span<const FmtArg> args)
 {
     char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
                                             (int)Allocator::Flag::Resizable);
@@ -658,7 +658,7 @@ ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> 
     // Cheat a little bit to make room for the NUL byte
     Size buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
 
-    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
+    DoFormat(fmt, args, [&](Span<const char> fragment) {
         // Same thing, use >= and <= to make sure we have enough place for the NUL byte
         if (fragment.len >= buf_capacity - buf_len) {
             Size new_capacity = buf_capacity;
@@ -673,13 +673,13 @@ ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> 
     });
     buf[buf_len] = 0;
 
-    return MakeArrayRef(buf, buf_len);
+    return MakeSpan(buf, buf_len);
 }
 
-void PrintFmt(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args)
+void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args)
 {
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](ArrayRef<const char> fragment) {
+    DoFormat(fmt, args, [&](Span<const char> fragment) {
         if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
             fwrite(buf.data, 1, (size_t)buf.len, fp);
             buf.len = 0;
@@ -731,7 +731,7 @@ static bool ConfigLogTerminalOutput()
     return output_is_terminal;
 }
 
-void LogFmt(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args)
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
     if (!log_handlers.len)
         return;
@@ -751,7 +751,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const Fmt
 }
 
 void DefaultLogHandler(LogLevel level, const char *ctx,
-                       const char *fmt, ArrayRef<const FmtArg> args)
+                       const char *fmt, Span<const FmtArg> args)
 {
     StartConsoleLog(level);
     Print(stderr, ctx);
@@ -798,7 +798,7 @@ static char executable_path[4096];
 static char executable_dir[4096];
 
 bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-              ArrayRef<uint8_t> *out_data)
+              Span<uint8_t> *out_data)
 {
     FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
     if (!fp) {
@@ -807,7 +807,7 @@ bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
     }
     DEFER { fclose(fp); };
 
-    ArrayRef<uint8_t> data;
+    Span<uint8_t> data;
     fseek(fp, 0, SEEK_END);
     data.len = ftell(fp);
     if (data.len > max_size) {
@@ -1084,7 +1084,7 @@ const char *GetExecutableDirectory()
     return executable_dir;
 }
 
-Size GetPathExtension(const char *filename, ArrayRef<char> out_buf,
+Size GetPathExtension(const char *filename, Span<char> out_buf,
                       CompressionType *out_compression_type)
 {
     Size len = (Size)strlen(filename);
@@ -1140,7 +1140,7 @@ struct MinizInflateContext {
 StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
 
-bool StreamReader::Open(ArrayRef<const uint8_t> buf, const char *filename,
+bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
     Close();
@@ -1347,7 +1347,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                 goto truncated_error;
             uint16_t crc16 = (uint16_t)(header[1] << 8 | header[0]);
             // TODO: Test this actually works
-            if ((ComputeCRC32(MakeArrayRef(header, header_offset)) & 0xFFFF) == crc16) {
+            if ((ComputeCRC32(MakeSpan(header, header_offset)) & 0xFFFF) == crc16) {
                 LogError("Failed header CRC16 check in '%s'", filename);
                 error = true;
                 return -1;
@@ -1413,8 +1413,8 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                                                        &out_arg, flags);
 
                 if (compression.type == CompressionType::Gzip) {
-                    ctx->crc32 = ComputeCRC32(MakeArrayRef(ctx->out + ctx->out_len,
-                                                           (Size)out_arg), ctx->crc32);
+                    ctx->crc32 = ComputeCRC32(MakeSpan(ctx->out + ctx->out_len,
+                                                       (Size)out_arg), ctx->crc32);
                     ctx->uncompressed_size += (Size)out_arg;
                 }
 
@@ -1594,7 +1594,7 @@ bool StreamWriter::Close()
                         LittleEndian((uint32_t)ctx->uncompressed_size)
                     };
 
-                    success &= WriteRaw(MakeArrayRef((uint8_t *)gzip_footer, SIZE(gzip_footer)));
+                    success &= WriteRaw(MakeSpan((uint8_t *)gzip_footer, SIZE(gzip_footer)));
                 }
 #endif
             } break;
@@ -1626,7 +1626,7 @@ bool StreamWriter::Close()
     return success;
 }
 
-bool StreamWriter::Write(ArrayRef<const uint8_t> buf)
+bool StreamWriter::Write(Span<const uint8_t> buf)
 {
     if (UNLIKELY(error)) {
         LogError("Cannot write to '%1' after error", filename);
@@ -1694,7 +1694,7 @@ bool StreamWriter::InitCompressor(CompressionType type)
             tdefl_status status = tdefl_init(&compression.u.miniz->deflator,
                                              [](const void *buf, int len, void *udata) {
                 StreamWriter *st = (StreamWriter *)udata;
-                return (int)st->WriteRaw(MakeArrayRef((uint8_t *)buf, len));
+                return (int)st->WriteRaw(MakeSpan((uint8_t *)buf, len));
             }, this, flags);
             if (status != TDEFL_STATUS_OKAY) {
                 LogError("Failed to initialize Deflate compression for '%1'", filename);
@@ -1739,7 +1739,7 @@ void StreamWriter::ReleaseResources()
     }
 }
 
-bool StreamWriter::WriteRaw(ArrayRef<const uint8_t> buf)
+bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
     switch (dest.type) {
         case DestinationType::File: {
@@ -1805,7 +1805,7 @@ static uint32_t crc32_table[] = {
     0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-uint32_t ComputeCRC32(ArrayRef<const uint8_t> buf, uint32_t crc)
+uint32_t ComputeCRC32(Span<const uint8_t> buf, uint32_t crc)
 {
     // TODO: Implement / reuse faster version
     crc = ~crc;

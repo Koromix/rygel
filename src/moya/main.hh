@@ -30,14 +30,14 @@ extern HeapArray<const char *> main_table_filenames;
 extern const char *main_pricing_filename;
 extern const char *main_authorization_filename;
 
-bool InitTableSet(ArrayRef<const char *> data_directories,
-                  ArrayRef<const char *> table_directories,
-                  ArrayRef<const char *> table_filenames,
+bool InitTableSet(Span<const char *> data_directories,
+                  Span<const char *> table_directories,
+                  Span<const char *> table_filenames,
                   TableSet *out_set);
-bool InitPricingSet(ArrayRef<const char *> data_directories,
+bool InitPricingSet(Span<const char *> data_directories,
                     const char *pricing_filename,
                     PricingSet *out_set);
-bool InitAuthorizationSet(ArrayRef<const char *> data_directories,
+bool InitAuthorizationSet(Span<const char *> data_directories,
                           const char *authorization_filename,
                           AuthorizationSet *out_set);
 

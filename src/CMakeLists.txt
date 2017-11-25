@@ -42,8 +42,8 @@ file(WRITE ${RESOURCES_CC_FILENAME} "\
 #include \"${SRC_DIR}/moya/libmoya.hh\"\n\
 #include \"${SRC_DIR}/talyn/resources.hh\"\n\
 \n\
-EXPORT extern const ArrayRef<const Resource> static_resources;
-const ArrayRef<const Resource> static_resources = {\n")
+EXPORT extern const Span<const Resource> static_resources;
+const Span<const Resource> static_resources = {\n")
 separate_arguments(RESOURCES)
 foreach(res ${RESOURCES})
     get_filename_component(name ${res} NAME)

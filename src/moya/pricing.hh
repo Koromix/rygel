@@ -33,11 +33,11 @@ struct PricingSet {
 
     Allocator str_alloc;
 
-    ArrayRef<const GhsPricing> FindGhsPricing(GhsCode ghs) const;
+    Span<const GhsPricing> FindGhsPricing(GhsCode ghs) const;
     const GhsPricing *FindGhsPricing(GhsCode ghs, Date date) const;
 };
 
-bool ParseGhsPricings(ArrayRef<const char> file_data, const char *filename,
+bool ParseGhsPricings(Span<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_prices);
 
 bool LoadPricingFile(const char *filename, PricingSet *out_set);

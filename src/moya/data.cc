@@ -824,7 +824,7 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
     {
         FileReadStreamEx json_stream(&st);
         PushLogHandler([&](LogLevel level, const char *ctx,
-                           const char *fmt, ArrayRef<const FmtArg> args) {
+                           const char *fmt, Span<const FmtArg> args) {
             StartConsoleLog(level);
             Print(stderr, ctx);
             Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
@@ -874,9 +874,9 @@ bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
     return true;
 }
 
-ArrayRef<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
+Span<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
 {
-    ArrayRef<const Authorization> auths;
+    Span<const Authorization> auths;
     auths.ptr = authorizations_map.FindValue(unit, nullptr);
     if (!auths.ptr)
         return {};
@@ -998,12 +998,12 @@ bool StaySetBuilder::Load(StreamReader &st, StaySetDataType type)
     return true;
 }
 
-bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
+bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
 {
     for (const char *filename: filenames) {
         LocalArray<char, 16> extension;
         CompressionType compression_type;
-        extension.len = GetPathExtension(filename, MakeArrayRef(extension.data),
+        extension.len = GetPathExtension(filename, MakeSpan(extension.data),
                                          &compression_type);
 
         StaySetDataType data_type;
@@ -1030,14 +1030,13 @@ bool StaySetBuilder::LoadFiles(ArrayRef<const char *const> filenames)
 bool StaySetBuilder::Finish(StaySet *out_set)
 {
     for (Stay &stay: set.stays) {
-#define FIX_ARRAYREF(ArrayRefName) \
-            stay.ArrayRefName.ptr = set.store.ArrayRefName.ptr + \
-                                    (Size)stay.ArrayRefName.ptr
+#define FIX_SPAN(SpanName) \
+            stay.SpanName.ptr = set.store.SpanName.ptr + (Size)stay.SpanName.ptr
 
-        FIX_ARRAYREF(diagnoses);
-        FIX_ARRAYREF(procedures);
+        FIX_SPAN(diagnoses);
+        FIX_SPAN(procedures);
 
-#undef FIX_ARRAYREF
+#undef FIX_SPAN
     }
 
     memcpy(out_set, &set, SIZE(set));

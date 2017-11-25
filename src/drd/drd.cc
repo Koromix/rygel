@@ -75,7 +75,7 @@ error:
 
     bool IsValid() const { return valid; }
 
-    bool Match(ArrayRef<const uint8_t> values) const
+    bool Match(Span<const uint8_t> values) const
     {
         switch (type) {
             case Type::Mask: {
@@ -93,7 +93,7 @@ error:
     }
 };
 
-static bool RunClassify(ArrayRef<const char *> arguments)
+static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -281,7 +281,7 @@ Classify options:
     return true;
 }
 
-static bool RunConstraints(ArrayRef<const char *> arguments)
+static bool RunConstraints(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -347,7 +347,7 @@ Constraints options:
     return true;
 }
 
-static bool RunDump(ArrayRef<const char *> arguments)
+static bool RunDump(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -394,7 +394,7 @@ Dump options:
     return true;
 }
 
-static bool RunInfo(ArrayRef<const char *> arguments)
+static bool RunInfo(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -457,7 +457,7 @@ R"(Usage: drd info [options] name ...
 
         {
             ProcedureCode proc = ProcedureCode::FromString(name, false);
-            ArrayRef<const ProcedureInfo> proc_info = index->FindProcedure(proc);
+            Span<const ProcedureInfo> proc_info = index->FindProcedure(proc);
             if (proc_info.len) {
                 DumpProcedureTable(proc_info);
                 continue;
@@ -479,7 +479,7 @@ R"(Usage: drd info [options] name ...
     return true;
 }
 
-static bool RunIndexes(ArrayRef<const char *> arguments)
+static bool RunIndexes(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -532,7 +532,7 @@ Indexes options:
     return true;
 }
 
-static bool RunList(ArrayRef<const char *> arguments)
+static bool RunList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -625,7 +625,7 @@ List options:
     return true;
 }
 
-static bool RunPack(ArrayRef<const char *> arguments)
+static bool RunPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -684,7 +684,7 @@ R"(Usage: drd pack [options] stay_file ... dest_file
     return true;
 }
 
-static bool RunPricing(ArrayRef<const char *> arguments)
+static bool RunPricing(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -765,7 +765,7 @@ Commands:
         } while (false)
 
     const char *cmd = argv[1];
-    ArrayRef<const char *> arguments((const char **)argv + 2, argc - 2);
+    Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
     HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);

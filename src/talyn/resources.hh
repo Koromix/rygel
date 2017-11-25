@@ -8,5 +8,5 @@
 
 struct Resource {
     const char *url;
-    ArrayRef<const uint8_t> data;
+    Span<const uint8_t> data;
 };

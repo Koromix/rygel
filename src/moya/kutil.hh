@@ -430,19 +430,19 @@ struct ArraySlice {
     ArraySlice(Size offset, Size len) : offset(offset), len(len) {}
 };
 
-// I'd love to make ArrayRef default to { nullptr, 0 } but unfortunately that makes
+// I'd love to make Span default to { nullptr, 0 } but unfortunately that makes
 // it a non-POD and prevents putting it in a union.
 template <typename T>
-struct ArrayRef {
+struct Span {
     T *ptr;
     Size len;
 
-    ArrayRef() = default;
-    constexpr ArrayRef(T &value) : ptr(&value), len(1) {}
-    constexpr ArrayRef(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
-    constexpr ArrayRef(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+    Span() = default;
+    constexpr Span(T &value) : ptr(&value), len(1) {}
+    constexpr Span(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
+    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
-    constexpr ArrayRef(T (&arr)[N]) : ptr(arr), len(N) {}
+    constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
 
     void Reset()
     {
@@ -461,38 +461,38 @@ struct ArrayRef {
         return ptr[idx];
     }
 
-    operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
+    operator Span<const T>() const { return Span<const T>(ptr, len); }
 
-    ArrayRef Take(ArraySlice<T> slice) const
+    Span Take(ArraySlice<T> slice) const
     {
         DebugAssert(slice.len >= 0 && slice.len <= len);
         DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
 
-        ArrayRef<T> sub;
+        Span<T> sub;
         sub.ptr = ptr + slice.offset;
         sub.len = slice.len;
         return sub;
     }
-    ArrayRef Take(Size offset, Size len) const
+    Span Take(Size offset, Size len) const
         { return Take(ArraySlice<T>(offset, len)); }
 };
 
-// Unfortunately C strings ("foobar") are implicity converted to ArrayRef<T> with the
+// Unfortunately C strings ("foobar") are implicity converted to Span<T> with the
 // templated array constructor. But the NUL terminator is obviously counted in. Since I
 // don't want to give up implicit conversion for every type, so instead we need to
-// specialize ArrayRef<const char> and ArrayRef<char>.
+// specialize Span<const char> and Span<char>.
 template <>
-struct ArrayRef<const char> {
+struct Span<const char> {
     const char *ptr;
     Size len;
 
-    ArrayRef() = default;
-    constexpr ArrayRef(const char &value) : ptr(&value), len(1) {}
-    constexpr ArrayRef(std::initializer_list<const char> l)
+    Span() = default;
+    constexpr Span(const char &value) : ptr(&value), len(1) {}
+    constexpr Span(std::initializer_list<const char> l)
         : ptr(l.begin()), len((Size)l.size()) {}
-    explicit constexpr ArrayRef(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+    explicit constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
-    explicit constexpr ArrayRef(const char (&arr)[N]) : ptr(arr), len(N) {}
+    explicit constexpr Span(const char (&arr)[N]) : ptr(arr), len(N) {}
 
     void Reset()
     {
@@ -511,29 +511,29 @@ struct ArrayRef<const char> {
         return ptr[idx];
     }
 
-    ArrayRef Take(ArraySlice<const char> slice) const
+    Span Take(ArraySlice<const char> slice) const
     {
         DebugAssert(slice.len >= 0 && slice.len <= len);
         DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
 
-        ArrayRef<const char> sub;
+        Span<const char> sub;
         sub.ptr = ptr + slice.offset;
         sub.len = slice.len;
         return sub;
     }
-    ArrayRef Take(Size offset, Size len) const
+    Span Take(Size offset, Size len) const
         { return Take(ArraySlice<const char>(offset, len)); }
 };
 template <>
-struct ArrayRef<char> {
+struct Span<char> {
     char *ptr;
     Size len;
 
-    ArrayRef() = default;
-    constexpr ArrayRef(char &value) : ptr(&value), len(1) {}
-    explicit constexpr ArrayRef(char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+    Span() = default;
+    constexpr Span(char &value) : ptr(&value), len(1) {}
+    explicit constexpr Span(char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
-    explicit constexpr ArrayRef(char (&arr)[N]) : ptr(arr), len(N) {}
+    explicit constexpr Span(char (&arr)[N]) : ptr(arr), len(N) {}
 
     void Reset()
     {
@@ -557,52 +557,52 @@ struct ArrayRef<char> {
         return ptr[idx];
     }
 
-    operator ArrayRef<const char>() const { return ArrayRef<const char>(ptr, len); }
+    operator Span<const char>() const { return Span<const char>(ptr, len); }
 
-    ArrayRef Take(ArraySlice<char> slice) const
+    Span Take(ArraySlice<char> slice) const
     {
         DebugAssert(slice.len >= 0 && slice.len <= len);
         DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
 
-        ArrayRef<char> sub;
+        Span<char> sub;
         sub.ptr = ptr + slice.offset;
         sub.len = slice.len;
         return sub;
     }
-    ArrayRef Take(Size offset, Size len) const
+    Span Take(Size offset, Size len) const
     {
         return Take(ArraySlice<char>(offset, len));
     }
 };
 
 template <typename T>
-static inline constexpr ArrayRef<T> MakeArrayRef(T *ptr, Size len)
+static inline constexpr Span<T> MakeSpan(T *ptr, Size len)
 {
-    return ArrayRef<T>(ptr, len);
+    return Span<T>(ptr, len);
 }
 template <typename T, Size N>
-static inline constexpr ArrayRef<T> MakeArrayRef(T (&arr)[N])
+static inline constexpr Span<T> MakeSpan(T (&arr)[N])
 {
-    return ArrayRef<T>(arr, N);
+    return Span<T>(arr, N);
 }
 
-static inline ArrayRef<char> MakeStrRef(char *str)
+static inline Span<char> MakeStrRef(char *str)
 {
-    return ArrayRef<char>(str, (Size)strlen(str));
+    return Span<char>(str, (Size)strlen(str));
 }
-static inline ArrayRef<const char> MakeStrRef(const char *str)
+static inline Span<const char> MakeStrRef(const char *str)
 {
-    return ArrayRef<const char>(str, (Size)strlen(str));
+    return Span<const char>(str, (Size)strlen(str));
 }
-static inline ArrayRef<char> MakeStrRef(char *str, Size max_len)
+static inline Span<char> MakeStrRef(char *str, Size max_len)
 {
     DebugAssert(max_len >= 0);
-    return ArrayRef<char>(str, (Size)strnlen(str, (size_t)max_len));
+    return Span<char>(str, (Size)strnlen(str, (size_t)max_len));
 }
-static inline ArrayRef<const char> MakeStrRef(const char *str, Size max_len)
+static inline Span<const char> MakeStrRef(const char *str, Size max_len)
 {
     DebugAssert(max_len >= 0);
-    return ArrayRef<const char>(str, (Size)strnlen(str, (size_t)max_len));
+    return Span<const char>(str, (Size)strnlen(str, (size_t)max_len));
 }
 
 template <typename T, Size N>
@@ -622,8 +622,8 @@ public:
         }
     }
 
-    operator ArrayRef<T>() { return ArrayRef<T>(data, N); }
-    operator ArrayRef<const T>() const { return ArrayRef<const T>(data, N); }
+    operator Span<T>() { return Span<T>(data, N); }
+    operator Span<const T>() const { return Span<const T>(data, N); }
 
     T *begin() { return data; }
     const T *begin() const { return data; }
@@ -641,10 +641,10 @@ public:
         return data[idx];
     }
 
-    ArrayRef<T> Take(Size offset, Size len) const
-        { return ArrayRef<T>(data, N).Take(offset, len); }
-    ArrayRef<T> Take(ArraySlice<T> slice) const
-        { return ArrayRef<T>(data, N).Take(slice); }
+    Span<T> Take(Size offset, Size len) const
+        { return Span<T>(data, N).Take(offset, len); }
+    Span<T> Take(ArraySlice<T> slice) const
+        { return Span<T>(data, N).Take(slice); }
 };
 
 template <typename T, Size N>
@@ -673,8 +673,8 @@ public:
         len = 0;
     }
 
-    operator ArrayRef<T>() { return ArrayRef<T>(data, len); }
-    operator ArrayRef<const T>() const { return ArrayRef<const T>(data, len); }
+    operator Span<T>() { return Span<T>(data, len); }
+    operator Span<const T>() const { return Span<const T>(data, len); }
 
     T *begin() { return data; }
     const T *begin() const { return data; }
@@ -702,7 +702,7 @@ public:
 
         return it;
     }
-    T *Append(ArrayRef<const T> values)
+    T *Append(Span<const T> values)
     {
         DebugAssert(values.len <= N - len);
 
@@ -726,10 +726,10 @@ public:
     }
     void RemoveLast(Size count = 1) { RemoveFrom(len - count); }
 
-    ArrayRef<T> Take(Size offset, Size len) const
-        { return ArrayRef<T>(data, this->len).Take(offset, len); }
-    ArrayRef<T> Take(ArraySlice<T> slice) const
-        { return ArrayRef<T>(data, this->len).Take(slice); }
+    Span<T> Take(Size offset, Size len) const
+        { return Span<T>(data, this->len).Take(offset, len); }
+    Span<T> Take(ArraySlice<T> slice) const
+        { return Span<T>(data, this->len).Take(slice); }
 };
 
 template <typename T>
@@ -765,8 +765,8 @@ public:
         }
     }
 
-    operator ArrayRef<T>() { return ArrayRef<T>(ptr, len); }
-    operator ArrayRef<const T>() const { return ArrayRef<const T>(ptr, len); }
+    operator Span<T>() { return Span<T>(ptr, len); }
+    operator Span<const T>() const { return Span<const T>(ptr, len); }
 
     T *begin() { return ptr; }
     const T *begin() const { return ptr; }
@@ -860,7 +860,7 @@ public:
         ptr[len++] = value;
         return first;
     }
-    T *Append(ArrayRef<const T> values)
+    T *Append(Span<const T> values)
     {
         if (values.len > capacity - len) {
             Grow(values.len);
@@ -885,10 +885,10 @@ public:
     }
     void RemoveLast(Size count = 1) { RemoveFrom(len - count); }
 
-    ArrayRef<T> Take(Size offset, Size len) const
-        { return ArrayRef<T>(ptr, this->len).Take(offset, len); }
-    ArrayRef<T> Take(ArraySlice<T> slice) const
-        { return ArrayRef<T>(ptr, this->len).Take(slice); }
+    Span<T> Take(Size offset, Size len) const
+        { return Span<T>(ptr, this->len).Take(offset, len); }
+    Span<T> Take(ArraySlice<T> slice) const
+        { return Span<T>(ptr, this->len).Take(slice); }
 };
 
 template <typename T, Size BucketSize = 1024>
@@ -1490,7 +1490,7 @@ uint64_t GetMonotonicTime();
 // Strings
 // ------------------------------------------------------------------------
 
-char *MakeString(Allocator *alloc, ArrayRef<const char> bytes);
+char *MakeString(Allocator *alloc, Span<const char> bytes);
 char *DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
 
 static inline bool IsAsciiAlpha(char c)
@@ -1523,7 +1523,7 @@ static inline char LowerAscii(char c)
     }
 }
 
-static inline bool TestStr(ArrayRef<const char> str1, ArrayRef<const char> str2)
+static inline bool TestStr(Span<const char> str1, Span<const char> str2)
 {
     if (str1.len != str2.len)
         return false;
@@ -1533,7 +1533,7 @@ static inline bool TestStr(ArrayRef<const char> str1, ArrayRef<const char> str2)
     }
     return true;
 }
-static inline bool TestStr(ArrayRef<const char> str1, const char *str2)
+static inline bool TestStr(Span<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
@@ -1545,8 +1545,8 @@ static inline bool TestStr(ArrayRef<const char> str1, const char *str2)
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
-static inline ArrayRef<const char> SplitStr(ArrayRef<const char> str, char split_char,
-                                            ArrayRef<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStr(Span<const char> str, char split_char,
+                                            Span<const char> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -1563,7 +1563,7 @@ static inline ArrayRef<const char> SplitStr(ArrayRef<const char> str, char split
     }
     return str;
 }
-static inline ArrayRef<const char> SplitStr(const char *str, char split_char,
+static inline Span<const char> SplitStr(const char *str, char split_char,
                                             const char **out_remainder = nullptr)
 {
     Size part_len = 0;
@@ -1572,37 +1572,37 @@ static inline ArrayRef<const char> SplitStr(const char *str, char split_char,
             if (out_remainder) {
                 *out_remainder = str + part_len + 1;
             }
-            return MakeArrayRef(str, part_len);
+            return MakeSpan(str, part_len);
         }
         part_len++;
     }
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
-    return MakeArrayRef(str, part_len);
+    return MakeSpan(str, part_len);
 }
 
-static inline ArrayRef<const char> SplitStrLine(ArrayRef<const char> str,
-                                                ArrayRef<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStrLine(Span<const char> str,
+                                                Span<const char> *out_remainder = nullptr)
 {
-    ArrayRef<const char> part = SplitStr(str, '\n', out_remainder);
+    Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
-static inline ArrayRef<const char> SplitStrLine(const char *str,
+static inline Span<const char> SplitStrLine(const char *str,
                                                 const char **out_remainder = nullptr)
 {
-    ArrayRef<const char> part = SplitStr(str, '\n', out_remainder);
+    Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
 
-static inline ArrayRef<const char> SplitStrAny(ArrayRef<const char> str, const char *split_chars,
-                                               ArrayRef<const char> *out_remainder = nullptr)
+static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
+                                               Span<const char> *out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
@@ -1625,7 +1625,7 @@ static inline ArrayRef<const char> SplitStrAny(ArrayRef<const char> str, const c
     }
     return str.Take(0, str.len);
 }
-static inline ArrayRef<const char> SplitStrAny(const char *str, const char *split_chars,
+static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
                                                const char **out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
@@ -1639,14 +1639,14 @@ static inline ArrayRef<const char> SplitStrAny(const char *str, const char *spli
             if (out_remainder) {
                 *out_remainder = str + part_len + 1;
             }
-            return MakeArrayRef(str, part_len);
+            return MakeSpan(str, part_len);
         }
         part_len++;
     }
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
-    return MakeArrayRef(str, part_len);
+    return MakeSpan(str, part_len);
 }
 
 // ------------------------------------------------------------------------
@@ -1673,7 +1673,7 @@ public:
 
     Type type;
     union {
-        ArrayRef<const char> str_ref;
+        Span<const char> str_ref;
         char str_buf[12];
         char ch;
         bool b;
@@ -1687,7 +1687,7 @@ public:
         Size size;
         Date date;
         struct {
-            ArrayRef<FmtArg> args;
+            Span<FmtArg> args;
             const char *separator;
         } list;
     } value;
@@ -1695,7 +1695,7 @@ public:
 
     FmtArg() = default;
     FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = MakeStrRef(str ? str : "(null)"); }
-    FmtArg(ArrayRef<const char> str) : type(Type::StrRef) { value.str_ref = str; }
+    FmtArg(Span<const char> str) : type(Type::StrRef) { value.str_ref = str; }
     FmtArg(char c) : type(Type::Char) { value.ch = c; }
     FmtArg(bool b) : type(Type::Bool) { value.b = b; }
     FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
@@ -1753,7 +1753,7 @@ static inline FmtArg FmtDiskSize(Size size)
     arg.value.size = size;
     return arg;
 }
-static inline FmtArg FmtList(ArrayRef<FmtArg> args, const char *sep = ", ")
+static inline FmtArg FmtList(Span<FmtArg> args, const char *sep = ", ")
 {
     FmtArg arg;
     arg.type = FmtArg::Type::List;
@@ -1768,29 +1768,29 @@ enum class LogLevel {
     Error
 };
 
-ArrayRef<char> FmtFmt(ArrayRef<char> buf, const char *fmt, ArrayRef<const FmtArg> args);
-ArrayRef<char> FmtFmt(Allocator *alloc, const char *fmt, ArrayRef<const FmtArg> args);
-void PrintFmt(FILE *fp, const char *fmt, ArrayRef<const FmtArg> args);
+Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args);
+Span<char> FmtFmt(Allocator *alloc, const char *fmt, Span<const FmtArg> args);
+void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args);
 
 // Print formatted strings to fixed-size buffer
-static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt)
+static inline Span<char> Fmt(Span<char> buf, const char *fmt)
 {
     return FmtFmt(buf, fmt, {});
 }
 template <typename... Args>
-static inline ArrayRef<char> Fmt(ArrayRef<char> buf, const char *fmt, Args... args)
+static inline Span<char> Fmt(Span<char> buf, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     return FmtFmt(buf, fmt, fmt_args);
 }
 
 // Print formatted strings to dynamic char array
-static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt)
+static inline Span<char> Fmt(Allocator *alloc, const char *fmt)
 {
     return FmtFmt(alloc, fmt, {});
 }
 template <typename... Args>
-static inline ArrayRef<char> Fmt(Allocator *alloc, const char *fmt, Args... args)
+static inline Span<char> Fmt(Allocator *alloc, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     return FmtFmt(alloc, fmt, fmt_args);
@@ -1843,9 +1843,9 @@ static inline void PrintLn(FILE *fp = stdout)
 // ------------------------------------------------------------------------
 
 typedef void LogHandlerFunc(LogLevel level, const char *ctx,
-                            const char *fmt, ArrayRef<const FmtArg> args);
+                            const char *fmt, Span<const FmtArg> args);
 
-void LogFmt(LogLevel level, const char *ctx, const char *fmt, ArrayRef<const FmtArg> args);
+void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
 // Log text line to stderr with context, for the Log() macros below
 static inline void Log(LogLevel level, const char *ctx, const char *fmt)
@@ -1865,7 +1865,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
 
 void DefaultLogHandler(LogLevel level, const char *ctx,
-                       const char *fmt, ArrayRef<const FmtArg> args);
+                       const char *fmt, Span<const FmtArg> args);
 
 void StartConsoleLog(LogLevel level);
 void EndConsoleLog();
@@ -1897,7 +1897,7 @@ public:
         union {
             FILE *fp;
             struct {
-                ArrayRef<const uint8_t> buf;
+                Span<const uint8_t> buf;
                 Size pos;
             } memory;
         } u;
@@ -1920,7 +1920,7 @@ public:
     Allocator str_alloc;
 
     StreamReader() { Close(); }
-    StreamReader(ArrayRef<const uint8_t> buf, const char *filename = nullptr,
+    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(buf, filename, compression_type); }
     StreamReader(FILE *fp, const char *filename = nullptr,
@@ -1931,7 +1931,7 @@ public:
         { Open(filename, compression_type); }
     ~StreamReader() { Close(); }
 
-    bool Open(ArrayRef<const uint8_t> buf, const char *filename = nullptr,
+    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
@@ -1991,14 +1991,14 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Close();
 
-    bool Write(ArrayRef<const uint8_t> buf);
-    bool Write(const void *buf, Size len) { return Write(MakeArrayRef((const uint8_t *)buf, len)); }
+    bool Write(Span<const uint8_t> buf);
+    bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
     bool InitCompressor(CompressionType type);
     void ReleaseResources();
 
-    bool WriteRaw(ArrayRef<const uint8_t> buf);
+    bool WriteRaw(Span<const uint8_t> buf);
 };
 
 // ------------------------------------------------------------------------
@@ -2014,11 +2014,11 @@ private:
 #endif
 
 bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-              ArrayRef<uint8_t> *out_data);
+              Span<uint8_t> *out_data);
 static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
                             uint8_t **out_data, Size *out_len)
 {
-    ArrayRef<uint8_t> data;
+    Span<uint8_t> data;
     if (!ReadFile(alloc, filename, max_size, &data))
         return false;
     *out_data = data.ptr;
@@ -2026,7 +2026,7 @@ static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_siz
     return true;
 }
 static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            ArrayRef<char> *out_data)
+                            Span<char> *out_data)
     { return ReadFile(alloc, filename, max_size, (uint8_t **)&out_data->ptr, &out_data->len); }
 static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
                             char **out_data, Size *out_len)
@@ -2058,14 +2058,14 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 const char *GetExecutablePath();
 const char *GetExecutableDirectory();
 
-Size GetPathExtension(const char *filename, ArrayRef<char> out_buf,
+Size GetPathExtension(const char *filename, Span<char> out_buf,
                       CompressionType *out_compression_type = nullptr);
 
 // ------------------------------------------------------------------------
 // Checksum
 // ------------------------------------------------------------------------
 
-uint32_t ComputeCRC32(ArrayRef<const uint8_t> buf, uint32_t crc = 0);
+uint32_t ComputeCRC32(Span<const uint8_t> buf, uint32_t crc = 0);
 
 // ------------------------------------------------------------------------
 // Option Parser
@@ -2083,13 +2083,13 @@ class OptionParser {
     char buf[80];
 
 public:
-    ArrayRef<const char *> args;
+    Span<const char *> args;
     Size pos = 0;
 
     const char *current_option = nullptr;
     const char *current_value = nullptr;
 
-    OptionParser(ArrayRef<const char *> args)
+    OptionParser(Span<const char *> args)
         : limit(args.len), args(args) {}
     OptionParser(int argc, char **argv)
         : limit(argc > 0 ? argc - 1 : 0),

@@ -198,7 +198,7 @@ struct SrcPair {
 
 Date ConvertDate1980(uint16_t days);
 
-bool ParseTableHeaders(const ArrayRef<const uint8_t> file_data,
+bool ParseTableHeaders(const Span<const uint8_t> file_data,
                        const char *filename, HeapArray<TableInfo> *out_tables);
 
 bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
@@ -229,17 +229,17 @@ struct TableIndex {
     const TableInfo *tables[ARRAY_SIZE(TableTypeNames)];
     uint32_t changed_tables;
 
-    ArrayRef<GhmDecisionNode> ghm_nodes;
-    ArrayRef<DiagnosisInfo> diagnoses;
-    ArrayRef<ExclusionInfo> exclusions;
-    ArrayRef<ProcedureInfo> procedures;
-    ArrayRef<GhmRootInfo> ghm_roots;
-    ArrayRef<ValueRangeCell<2>> gnn_cells;
-    ArrayRef<ValueRangeCell<2>> cma_cells[3];
+    Span<GhmDecisionNode> ghm_nodes;
+    Span<DiagnosisInfo> diagnoses;
+    Span<ExclusionInfo> exclusions;
+    Span<ProcedureInfo> procedures;
+    Span<GhmRootInfo> ghm_roots;
+    Span<ValueRangeCell<2>> gnn_cells;
+    Span<ValueRangeCell<2>> cma_cells[3];
 
-    ArrayRef<GhsInfo> ghs;
-    ArrayRef<AuthorizationInfo> authorizations;
-    ArrayRef<SrcPair> src_pairs[2];
+    Span<GhsInfo> ghs;
+    Span<AuthorizationInfo> authorizations;
+    Span<SrcPair> src_pairs[2];
 
     HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
@@ -249,12 +249,12 @@ struct TableIndex {
     HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
-    ArrayRef<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
+    Span<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
 
-    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
-    ArrayRef<const GhsInfo> FindCompatibleGhs(GhmCode ghm) const;
+    Span<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
+    Span<const GhsInfo> FindCompatibleGhs(GhmCode ghm) const;
 };
 
 class TableSet {
@@ -290,4 +290,4 @@ public:
         { return (TableIndex *)((const TableSet *)this)->FindIndex(date); }
 };
 
-bool LoadTableFiles(ArrayRef<const char *const> filenames, TableSet *out_set);
+bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set);
