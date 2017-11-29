@@ -12,7 +12,7 @@ static thread_local bool log_missing_messages = false;
 
 #define SETUP_LOG_HANDLER(EnableDebug) \
     PushLogHandler([debug = (EnableDebug)](LogLevel level, const char *ctx, \
-                      const char *fmt, ArrayRef<const FmtArg> args) { \
+                      const char *fmt, Span<const FmtArg> args) { \
         switch (level) { \
             case LogLevel::Error: { \
                 const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr; \

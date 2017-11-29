@@ -1466,14 +1466,14 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
             }
         }
     }
-#else
-    Assert(false);
-#endif
 
 truncated_error:
     LogError("Truncated gzip header in '%1'", filename);
     error = true;
     return -1;
+#else
+    Assert(false);
+#endif
 }
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
