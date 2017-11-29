@@ -22,17 +22,6 @@
 
 #include "kutil.hh"
 
-#if __has_include("../../lib/miniz/miniz.h") && !defined(KUTIL_NO_MINIZ)
-    #define MINIZ_NO_STDIO
-    #define MINIZ_NO_TIME
-    #define MINIZ_NO_ARCHIVE_APIS
-    #define MINIZ_NO_ARCHIVE_WRITING_APIS
-    #define MINIZ_NO_ZLIB_APIS
-    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #define MINIZ_NO_MALLOC
-    #include "../../lib/miniz/miniz.h"
-#endif
-
 // ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------
