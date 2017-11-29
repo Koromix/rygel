@@ -1945,24 +1945,24 @@ private:
     #define FOPEN_COMMON_FLAGS "e"
 #endif
 
-bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-              Span<uint8_t> *out_data);
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            uint8_t **out_data, Size *out_len)
+bool ReadFile(const char *filename, Size max_size,
+              Allocator *alloc, Span<uint8_t> *out_data);
+static inline bool ReadFile(const char *filename, Size max_size,
+                            Allocator *alloc, uint8_t **out_data, Size *out_len)
 {
     Span<uint8_t> data;
-    if (!ReadFile(alloc, filename, max_size, &data))
+    if (!ReadFile(filename, max_size, alloc, &data))
         return false;
     *out_data = data.ptr;
     *out_len = data.len;
     return true;
 }
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            Span<char> *out_data)
-    { return ReadFile(alloc, filename, max_size, (uint8_t **)&out_data->ptr, &out_data->len); }
-static inline bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-                            char **out_data, Size *out_len)
-    { return ReadFile(alloc, filename, max_size, (uint8_t **)out_data, out_len); }
+static inline bool ReadFile(const char *filename, Size max_size,
+                            Allocator *alloc, Span<char> *out_data)
+    { return ReadFile(filename, max_size, alloc, (uint8_t **)&out_data->ptr, &out_data->len); }
+static inline bool ReadFile(const char *filename, Size max_size,
+                            Allocator *alloc, char **out_data, Size *out_len)
+    { return ReadFile(filename, max_size, alloc, (uint8_t **)out_data, out_len); }
 
 enum class FileType {
     Directory,

@@ -23,3 +23,6 @@ void DumpTableSet(const TableSet &table_set, bool detail = true);
 void DumpGhsPricings(Span<const GhsPricing> ghs_pricings);
 
 void DumpPricingSet(const PricingSet &pricing_set);
+
+void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots);
+void DumpCatalogSet(const CatalogSet &catalog_set);

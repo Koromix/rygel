@@ -787,8 +787,8 @@ void PopLogHandler()
 static char executable_path[4096];
 static char executable_dir[4096];
 
-bool ReadFile(Allocator *alloc, const char *filename, Size max_size,
-              Span<uint8_t> *out_data)
+bool ReadFile(const char *filename, Size max_size,
+              Allocator *alloc, Span<uint8_t> *out_data)
 {
     FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
     if (!fp) {

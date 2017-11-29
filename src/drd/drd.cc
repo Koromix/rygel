@@ -93,6 +93,37 @@ error:
     }
 };
 
+static bool RunCatalogs(Span<const char *> arguments)
+{
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd catalogs [options]
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    OptionParser opt_parser(arguments);
+
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintUsage(stdout);
+                return true;
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                return false;
+            }
+        }
+    }
+
+    const CatalogSet *catalog_set = GetMainCatalogSet();
+    if (!catalog_set)
+        return false;
+    DumpCatalogSet(*catalog_set);
+
+    return true;
+}
+
 static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -342,53 +373,6 @@ Constraints options:
         } else {
             PrintLn("%1 unreached!", ghs_info.ghm);
         }
-    }
-
-    return true;
-}
-
-static bool RunDump(Span<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
-R"(Usage: drd dump [options] [filename] ...
-
-Dump options:
-    -h, --headers                Print only table headers
-)");
-        PrintLn(fp, "%1", main_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    bool headers = false;
-    HeapArray<const char *> filenames;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (TestOption(opt, "-h", "--headers")) {
-                headers = true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-
-        opt_parser.ConsumeNonOptions(&filenames);
-    }
-
-    if (filenames.len) {
-        TableSet table_set;
-        if (!LoadTableFiles(filenames, &table_set) && !table_set.indexes.len)
-            return false;
-        DumpTableSet(table_set, !headers);
-    } else {
-        const TableSet *table_set = GetMainTableSet();
-        if (!table_set)
-            return false;
-        DumpTableSet(*table_set, !headers);
     }
 
     return true;
@@ -684,7 +668,7 @@ R"(Usage: drd pack [options] stay_file ... dest_file
     return true;
 }
 
-static bool RunPricing(Span<const char *> arguments)
+static bool RunPrices(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
@@ -715,6 +699,53 @@ R"(Usage: drd pricing [options]
     return true;
 }
 
+static bool RunTables(Span<const char *> arguments)
+{
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp, "%1",
+R"(Usage: drd tables [options] [filename] ...
+
+Dump options:
+    -h, --headers                Print only table headers
+)");
+        PrintLn(fp, "%1", main_options_usage);
+    };
+
+    OptionParser opt_parser(arguments);
+
+    bool headers = false;
+    HeapArray<const char *> filenames;
+    {
+        const char *opt;
+        while ((opt = opt_parser.ConsumeOption())) {
+            if (TestOption(opt, "--help")) {
+                PrintUsage(stdout);
+                return true;
+            } else if (TestOption(opt, "-h", "--headers")) {
+                headers = true;
+            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+                return false;
+            }
+        }
+
+        opt_parser.ConsumeNonOptions(&filenames);
+    }
+
+    if (filenames.len) {
+        TableSet table_set;
+        if (!LoadTableFiles(filenames, &table_set) && !table_set.indexes.len)
+            return false;
+        DumpTableSet(table_set, !headers);
+    } else {
+        const TableSet *table_set = GetMainTableSet();
+        if (!table_set)
+            return false;
+        DumpTableSet(*table_set, !headers);
+    }
+
+    return true;
+}
+
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -724,13 +755,13 @@ R"(Usage: drd <command> [<args>]
 Commands:
     classify                     Classify stays
     constraints                  Compute GHM accessibility constraints
-    dump                         Dump available tables and lists
     info                         Print information about individual elements
                                  (diagnoses, procedures, GHM roots, etc.)
     indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
     pack                         Pack stays for quicker loads
-    pricing                      Dump GHS pricings
+    prices                       Dump GHS pricings
+    tables                       Dump available tables and lists
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -767,14 +798,15 @@ Commands:
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
+    HANDLE_COMMAND(catalogs, RunCatalogs);
     HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);
-    HANDLE_COMMAND(dump, RunDump);
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pack, RunPack);
-    HANDLE_COMMAND(pricing, RunPricing);
+    HANDLE_COMMAND(pricing, RunPrices);
+    HANDLE_COMMAND(tables, RunTables);
 
 #undef HANDLE_COMMAND
 

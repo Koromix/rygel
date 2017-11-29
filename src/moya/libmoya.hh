@@ -7,6 +7,7 @@
 #include "kutil.hh"
 #include "d_codes.hh"
 #include "d_authorizations.hh"
+#include "d_desc.hh"
 #include "d_prices.hh"
 #include "d_tables.hh"
 #include "d_stays.hh"
@@ -17,6 +18,7 @@
 #ifdef MOYA_IMPLEMENTATION
     #include "kutil.cc"
     #include "d_authorizations.cc"
+    #include "d_desc.cc"
     #include "d_prices.cc"
     #include "d_stays.cc"
     #include "d_tables.cc"

@@ -314,3 +314,19 @@ void DumpPricingSet(const PricingSet &pricing_set)
 {
     DumpGhsPricings(pricing_set.ghs_pricings);
 }
+
+void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots)
+{
+    for (const GhmRootDesc &desc: ghm_roots) {
+        PrintLn("  %1:", desc.ghm_root);
+        PrintLn("    Description: %1", desc.ghm_root_desc);
+        PrintLn("    DA: %1 -- %2", desc.da, desc.da_desc);
+        PrintLn("    GA: %1 -- %2", desc.ga, desc.ga_desc);
+    }
+}
+
+void DumpCatalogSet(const CatalogSet &catalog_set)
+{
+    PrintLn("GHM Roots:");
+    DumpGhmRootCatalog(catalog_set.ghm_roots);
+}

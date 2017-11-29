@@ -988,7 +988,7 @@ bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
     HeapArray<LoadTableData> tables;
     for (const char *filename: filenames) {
         Span<uint8_t> raw_data;
-        if (!ReadFile(&file_alloc, filename, Megabytes(8), &raw_data)) {
+        if (!ReadFile(filename, Megabytes(8), &file_alloc, &raw_data)) {
             success = false;
             continue;
         }

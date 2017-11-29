@@ -9,6 +9,8 @@ set(MOYA_SRC moya/a_classifier.cc
              moya/d_authorizations.cc
              moya/d_authorizations.hh
              moya/d_codes.hh
+             moya/d_desc.cc
+             moya/d_desc.hh
              moya/d_prices.cc
              moya/d_prices.hh
              moya/d_stays.cc
@@ -19,7 +21,11 @@ set(MOYA_SRC moya/a_classifier.cc
              moya/kutil.hh
              moya/main.cc
              moya/main.hh)
-add_library(moya STATIC ${MOYA_SRC})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_library(moya SHARED ${MOYA_SRC})
+else()
+    add_library(moya STATIC ${MOYA_SRC})
+endif()
 target_link_libraries(moya PUBLIC miniz)
 add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" moya/libmoya.hh)
 

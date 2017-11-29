@@ -89,7 +89,6 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
 // [[Rcpp::export(name = 'moya')]]
 SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
             Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
-            Rcpp::CharacterVector table_filenames = Rcpp::CharacterVector::create(),
             Rcpp::Nullable<Rcpp::String> pricing_filename = R_NilValue,
             Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue,
             bool debug = false)
@@ -101,7 +100,6 @@ SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 
     HeapArray<const char *> data_dirs2;
     HeapArray<const char *> table_dirs2;
-    HeapArray<const char *> table_filenames2;
     const char *pricing_filename2 = nullptr;
     const char *authorization_filename2 = nullptr;
     for (const char *str: data_dirs) {
@@ -110,9 +108,6 @@ SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
     for (const char *str: table_dirs) {
         table_dirs2.Append(str);
     }
-    for (const char *str: table_filenames) {
-        table_filenames2.Append(str);
-    }
     if (pricing_filename.isNotNull()) {
         pricing_filename2 = pricing_filename.as().get_cstring();
     }
@@ -120,7 +115,7 @@ SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
         authorization_filename2 = authorization_filename.as().get_cstring();
     }
 
-    if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
+    if (!InitTableSet(data_dirs2, table_dirs2, &set->table_set) ||
             !set->table_set.indexes.len)
         StopWithLastMessage();
     if (!InitPricingSet(data_dirs2, pricing_filename2,
