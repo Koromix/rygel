@@ -16,13 +16,18 @@ struct GhmRootDesc {
 
     char ga[5];
     const char *ga_desc;
+
+    HASH_SET_HANDLER(GhmRootDesc, ghm_root);
 };
 
 struct CatalogSet {
     HeapArray<GhmRootDesc> ghm_roots;
 
+    HashSet<GhmRootCode, GhmRootDesc> ghm_roots_map;
+
     Allocator str_alloc;
 };
 
 bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
-                        HeapArray<GhmRootDesc> *out_catalog);
+                        HeapArray<GhmRootDesc> *out_catalog,
+                        HashSet<GhmRootCode, GhmRootDesc> *out_map = nullptr);

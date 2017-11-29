@@ -174,20 +174,20 @@ function switchPage(page_url)
 var pricing = {};
 (function() {
     var ghm_roots = [];
-    var ghm_roots_info = {};
+    var ghm_roots_map = {};
     var chart = null;
 
     function updateDatabase()
     {
         var date = document.querySelector('input#pricing_date').value;
 
-        downloadJson('get', 'api/catalog.json?date=' + date, {}, function(json) {
+        downloadJson('get', 'api/price_map.json?date=' + date, {}, function(json) {
             ghm_roots = [];
-            ghm_roots_info = {};
+            ghm_roots_map = {};
 
             for (var i = 0; i < json.length; i++) {
                 ghm_roots.push(json[i].ghm_root);
-                ghm_roots_info[json[i].ghm_root] = json[i].info;
+                ghm_roots_map[json[i].ghm_root] = json[i];
             }
 
             refreshGhmRoots();
@@ -213,20 +213,23 @@ var pricing = {};
 
     function refreshPricing()
     {
-        var ghm_root_info = ghm_roots_info[document.querySelector('select#pricing_ghm_roots').value];
+        var ghm_root_info = ghm_roots_map[document.querySelector('select#pricing_ghm_roots').value];
         var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
         var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
 
-        var table = createTable(ghm_root_info, merge_cells, max_duration);
+        var h1 = document.querySelector('div#pricing > nav > h1');
+        h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
+
+        var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
         var old_table = document.querySelector('div#pricing > div.table > table');
         old_table.parentNode.replaceChild(table, old_table);
 
         var chart_ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
-        chart = refreshChart(chart, chart_ctx, ghm_root_info, max_duration);
+        chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
     }
     this.refreshPricing = refreshPricing;
 
-    function refreshChart(chart, chart_ctx, ghm_root_info, max_duration)
+    function refreshChart(chart, chart_ctx, ghs, max_duration)
     {
         function ghsLabel(ghs)
         {
@@ -259,17 +262,17 @@ var pricing = {};
         for (var i = 0; i < max_duration; i++)
             data.labels.push(durationText(i));
 
-        for (var i = 0; i < ghm_root_info.length; i++) {
+        for (var i = 0; i < ghs.length; i++) {
             var dataset = {
-                label: ghsLabel(ghm_root_info[i]),
+                label: ghsLabel(ghs[i]),
                 data: [],
-                borderColor: modeToColor(ghm_root_info[i].ghm_mode),
-                backgroundColor: modeToColor(ghm_root_info[i].ghm_mode),
-                borderDash: (ghm_root_info[i].conditions.length ? [5, 5] : undefined),
+                borderColor: modeToColor(ghs[i].ghm_mode),
+                backgroundColor: modeToColor(ghs[i].ghm_mode),
+                borderDash: (ghs[i].conditions.length ? [5, 5] : undefined),
                 fill: false
             };
             for (var duration = 0; duration < max_duration; duration++) {
-                p = computePrice(ghm_root_info[i], duration);
+                p = computePrice(ghs[i], duration);
                 if (p !== null) {
                     dataset.data.push({
                         x: durationText(duration),
@@ -315,7 +318,7 @@ var pricing = {};
         return chart;
     }
 
-    function createTable(ghm_root_info, merge_cells, max_duration)
+    function createTable(ghs, merge_cells, max_duration)
     {
         if (merge_cells === undefined)
             merge_cells = true;
@@ -331,8 +334,8 @@ var pricing = {};
 
             var prev_cell = [document.createTextNode(''), null, false];
             var prev_td = null;
-            for (var i = 0; i < ghm_root_info.length; i++) {
-                var cell = func(ghm_root_info[i]) || [null, null, false];
+            for (var i = 0; i < ghs.length; i++) {
+                var cell = func(ghs[i]) || [null, null, false];
                 if (cell[0] === null) {
                     cell[0] = document.createTextNode('');
                 } else if (typeof cell[0] === 'string') {

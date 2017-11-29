@@ -38,6 +38,7 @@ static HeapArray<HashSet<GhmCode, GhmConstraint>> constraints_set;
 static HeapArray<HashSet<GhmCode, GhmConstraint> *> index_to_constraints;
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
+static const CatalogSet *catalog_set;
 
 #if !defined(NDEBUG) && defined(_WIN32)
 static HeapArray<Resource> static_resources;
@@ -134,10 +135,15 @@ static bool BuildCatalog(Date date, rapidjson::MemoryBuffer *out_buffer)
 
     writer.StartArray();
     for (const GhmRootInfo &ghm_root_info: index->ghm_roots) {
+        const GhmRootDesc *ghm_root_desc = catalog_set->ghm_roots_map.Find(ghm_root_info.ghm_root);
+
         writer.StartObject();
         // TODO: Use buffer-based Fmt API
         writer.Key("ghm_root"); writer.String(Fmt(&temp_alloc, "%1", ghm_root_info.ghm_root).ptr);
-        writer.Key("info"); writer.StartArray();
+        if (ghm_root_desc) {
+            writer.Key("ghm_root_desc"); writer.String(ghm_root_desc->ghm_root_desc);
+        }
+        writer.Key("ghs"); writer.StartArray();
 
         Span<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
         for (const GhsInfo &ghs_info: compatible_ghs) {
@@ -230,7 +236,7 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
     MHD_Response *response = nullptr;
     unsigned int code = MHD_HTTP_INTERNAL_SERVER_ERROR;
 
-    if (TestStr(url, "/api/catalog.json")) {
+    if (TestStr(url, "/api/price_map.json")) {
         Date date = {};
         {
             const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND,
@@ -248,6 +254,28 @@ static int HandleHttpConnection(void *, struct MHD_Connection *conn,
                 code = MHD_HTTP_OK;
             }
         }
+    } else if (TestStr(url, "/api/ghm_roots.json")) {
+        Allocator temp_alloc;
+
+        rapidjson::MemoryBuffer buffer;
+        rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
+        writer.StartArray();
+        for (const GhmRootDesc &desc: catalog_set->ghm_roots) {
+            writer.StartObject();
+            writer.Key("ghm_root"); writer.String(Fmt(&temp_alloc, "%1", desc.ghm_root).ptr);
+            writer.Key("ghm_root_desc"); writer.String(desc.ghm_root_desc);
+            writer.Key("da"); writer.String(desc.da);
+            writer.Key("da_desc"); writer.String(desc.da_desc);
+            writer.Key("ga"); writer.String(desc.ga);
+            writer.Key("ga_desc"); writer.String(desc.ga_desc);
+            writer.EndObject();
+        }
+        writer.EndArray();
+        response = MHD_create_response_from_buffer(buffer.GetSize(),
+                                                   (void *)buffer.GetBuffer(),
+                                                   MHD_RESPMEM_MUST_COPY);
+        MHD_add_response_header(response, "Content-Type", "application/json");
+        code = MHD_HTTP_OK;
     } else if (TestStr(url, "/api/pages.json")) {
         rapidjson::MemoryBuffer buffer;
         rapidjson::PrettyWriter<rapidjson::MemoryBuffer> writer(buffer);
@@ -353,6 +381,9 @@ Talyn options:
         return 1;
     authorization_set = GetMainAuthorizationSet();
     if (!authorization_set)
+        return 1;
+    catalog_set = GetMainCatalogSet();
+    if (!catalog_set)
         return 1;
 
 #ifdef NDEBUG

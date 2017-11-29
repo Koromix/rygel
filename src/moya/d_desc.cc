@@ -139,10 +139,9 @@ public:
 };
 
 bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
-                        HeapArray<GhmRootDesc> *out_catalog)
+                        HeapArray<GhmRootDesc> *out_catalog, HashSet<GhmRootCode, GhmRootDesc> *out_map)
 {
-    DEFER_NC(out_guard, len = out_catalog->len)
-        { out_catalog->RemoveFrom(len); };
+    DEFER_NC(out_guard, len = out_catalog->len) { out_catalog->RemoveFrom(len); };
 
     {
         StreamReader st(filename);
@@ -152,6 +151,12 @@ bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
         JsonGhmRootDescHandler json_handler(out_catalog, str_alloc);
         if (!ParseJsonFile(st, &json_handler))
             return false;
+    }
+
+    if (out_map) {
+        for (const GhmRootDesc &desc: *out_catalog) {
+            out_map->Append(desc);
+        }
     }
 
     out_guard.disable();

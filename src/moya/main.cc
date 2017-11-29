@@ -147,7 +147,8 @@ bool InitCatalogSet(Span<const char *const> data_directories,
         if (!out_set->ghm_roots.len) {
             const char *filename = Fmt(&temp_alloc, "%1%/ghm_roots.json", directories[i]).ptr;
             if (TestPath(filename, FileType::File)) {
-                success &= LoadGhmRootCatalog(filename, &out_set->str_alloc, &out_set->ghm_roots);
+                success &= LoadGhmRootCatalog(filename, &out_set->str_alloc, &out_set->ghm_roots,
+                                              &out_set->ghm_roots_map);
             }
         }
     }

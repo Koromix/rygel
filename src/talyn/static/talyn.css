@@ -40,6 +40,10 @@ div#pricing nav {
     margin: 0 1em 1em 1em;
     text-align: center;
 }
+div#pricing h1 {
+    margin: 0.5em 3px 0 3px;
+    font-size: 1.2em;
+}
 div#pricing table {
     width: 100%;
     border-collapse: collapse;
@@ -173,8 +177,6 @@ div#pricing td.age, div#pricing tr.age td { background: #99ffff; }
     }
 
     div#pricing tr:first-child th:first-child { width: 80px; }
-    div#pricing tr:first-child th,
-        div#pricing tr:first-child td { border-top: 0; }
     div#pricing tr *:first-child { border-left: 0; }
     div#pricing tr *:last-child { border-right: 0; }
 }
