@@ -70,7 +70,7 @@ bool InitPricingSet(Span<const char *> data_directories,
             for (Size i = data_directories.len; i-- > 0;) {
                 const char *data_dir = data_directories[i];
 
-                const char *test_filename = Fmt(&temp_alloc, "%1%/pricing.nx", data_dir).ptr;
+                const char *test_filename = Fmt(&temp_alloc, "%1%/prices.nx", data_dir).ptr;
                 if (TestPath(test_filename, FileType::File)) {
                     filename = test_filename;
                     break;

@@ -17,7 +17,7 @@ R"(Common options:
                                  (default: <data_dir>/tables)
         --table-file <path>      Add table file
         --pricing-file <path>    Set pricing file
-                                 (default: <data_dir>/pricing.nx)
+                                 (default: <data_dir>/prices.nx)
         --auth-file <path>       Set authorization file
                                  (default: <data_dir>/authorizations.json)
 
