@@ -5,20 +5,22 @@
 #pragma once
 
 #include "kutil.hh"
-#include "codes.hh"
-#include "tables.hh"
-#include "pricing.hh"
-#include "data.hh"
-#include "algorithm.hh"
-#include "constraints.hh"
+#include "d_codes.hh"
+#include "d_authorizations.hh"
+#include "d_prices.hh"
+#include "d_tables.hh"
+#include "d_stays.hh"
+#include "a_classifier.hh"
+#include "a_constraints.hh"
 #include "main.hh"
 
 #ifdef MOYA_IMPLEMENTATION
     #include "kutil.cc"
-    #include "tables.cc"
-    #include "pricing.cc"
-    #include "data.cc"
-    #include "algorithm.cc"
-    #include "constraints.cc"
+    #include "d_authorizations.cc"
+    #include "d_prices.cc"
+    #include "d_stays.cc"
+    #include "d_tables.cc"
+    #include "a_classifier.cc"
+    #include "a_constraints.cc"
     #include "main.cc"
 #endif

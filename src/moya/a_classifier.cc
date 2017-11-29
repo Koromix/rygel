@@ -3,9 +3,9 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "algorithm.hh"
-#include "data.hh"
-#include "tables.hh"
+#include "a_classifier.hh"
+#include "d_stays.hh"
+#include "d_tables.hh"
 
 struct RunGhmTreeContext {
     const ClassifyAggregate *agg;

@@ -5,9 +5,10 @@
 #pragma once
 
 #include "kutil.hh"
-#include "data.hh"
-#include "pricing.hh"
-#include "tables.hh"
+#include "d_authorizations.hh"
+#include "d_stays.hh"
+#include "d_prices.hh"
+#include "d_tables.hh"
 
 enum class ClusterMode {
     StayModes,

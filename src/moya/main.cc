@@ -3,10 +3,10 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "data.hh"
+#include "d_stays.hh"
 #include "main.hh"
-#include "pricing.hh"
-#include "tables.hh"
+#include "d_prices.hh"
+#include "d_tables.hh"
 
 HeapArray<const char *> main_data_directories;
 HeapArray<const char *> main_table_directories;

@@ -5,23 +5,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "codes.hh"
-
-struct Authorization {
-    UnitCode unit;
-    Date dates[2];
-    int8_t type;
-
-    HASH_SET_HANDLER(Authorization, unit);
-};
-
-struct AuthorizationSet {
-    HeapArray<Authorization> authorizations;
-    HashSet<UnitCode, const Authorization *> authorizations_map;
-
-    Span<const Authorization> FindUnit(UnitCode unit) const;
-    const Authorization *FindUnit(UnitCode unit, Date date) const;
-};
+#include "d_codes.hh"
 
 struct ProcedureRealisation {
     ProcedureCode proc;
@@ -98,8 +82,6 @@ struct StaySet {
 
     bool SavePack(StreamWriter &st) const;
 };
-
-bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set);
 
 enum class StaySetDataType {
     Json,

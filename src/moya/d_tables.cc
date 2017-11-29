@@ -3,7 +3,7 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "tables.hh"
+#include "d_tables.hh"
 
 struct LoadTableData {
     Size table_idx;

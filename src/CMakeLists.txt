@@ -2,21 +2,23 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-set(MOYA_SRC moya/algorithm.cc
-             moya/algorithm.hh
-             moya/constraints.cc
-             moya/constraints.hh
-             moya/codes.hh
-             moya/data.cc
-             moya/data.hh
+set(MOYA_SRC moya/a_classifier.cc
+             moya/a_classifier.hh
+             moya/a_constraints.cc
+             moya/a_constraints.hh
+             moya/d_authorizations.cc
+             moya/d_authorizations.hh
+             moya/d_codes.hh
+             moya/d_prices.cc
+             moya/d_prices.hh
+             moya/d_stays.cc
+             moya/d_stays.hh
+             moya/d_tables.cc
+             moya/d_tables.hh
              moya/kutil.cc
              moya/kutil.hh
              moya/main.cc
-             moya/main.hh
-             moya/pricing.cc
-             moya/pricing.hh
-             moya/tables.cc
-             moya/tables.hh)
+             moya/main.hh)
 add_library(moya STATIC ${MOYA_SRC})
 target_link_libraries(moya PUBLIC miniz)
 add_amalgamated_file(moya "${CMAKE_BINARY_DIR}/libmoya.hh" moya/libmoya.hh)

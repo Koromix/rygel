@@ -5,8 +5,8 @@
 #pragma once
 
 #include "kutil.hh"
-#include "data.hh"
-#include "tables.hh"
+#include "d_stays.hh"
+#include "d_tables.hh"
 
 struct GhmConstraint {
     GhmCode ghm;

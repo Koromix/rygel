@@ -3,8 +3,8 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "pricing.hh"
-#include "tables.hh"
+#include "d_prices.hh"
+#include "d_tables.hh"
 
 bool ParseGhsPricings(Span<const char> file_data, const char *filename,
                       HeapArray<GhsPricing> *out_pricings)

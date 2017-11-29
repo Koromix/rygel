@@ -3,8 +3,8 @@
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #include "kutil.hh"
-#include "constraints.hh"
-#include "algorithm.hh"
+#include "a_constraints.hh"
+#include "a_classifier.hh"
 
 static bool MergeConstraint(const TableIndex &index,
                             const GhmCode ghm, GhmConstraint constraint,

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "kutil.hh"
-#include "codes.hh"
+#include "d_codes.hh"
 
 enum class TableType: uint32_t {
     UnknownTable,
