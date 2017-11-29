@@ -36,7 +36,7 @@ compare <- function(summary1, summary2, ...) {
     diff <- diff[rowSums(diff[, summary_columns]) != 0,]
     diff <- diff[do.call('order', diff[, groups, drop = FALSE]),]
 
-    class(diff) <- c('moya.result_diff', class(diff))
+    class(diff) <- c('moya.result_set', class(diff))
     return(diff)
 }
 
