@@ -2037,3 +2037,184 @@ public:
     bool TestOption(const char *test1, const char *test2 = nullptr) const
         { return ::TestOption(current_option, test1, test2); }
 };
+
+// ------------------------------------------------------------------------
+// JSON (using RapidJSON)
+// ------------------------------------------------------------------------
+
+#if __has_include("../../lib/rapidjson/rapidjson.h") && !defined(KUTIL_NO_RAPIDJSON)
+    GCC_PUSH_IGNORE(-Wconversion)
+    GCC_PUSH_IGNORE(-Wsign-conversion)
+    #include "../../lib/rapidjson/reader.h"
+    #include "../../lib/rapidjson/error/en.h"
+    GCC_POP_IGNORE()
+    GCC_POP_IGNORE()
+#endif
+
+#ifdef RAPIDJSON_VERSION_STRING
+template <typename T>
+bool ParseJsonFile(StreamReader &st, T *json_handler)
+{
+    // This is mostly copied from RapidJSON's FileReadStream, but this
+    // version calculates current line number and offset.
+    class FileReadStreamEx {
+        StreamReader *st;
+
+        LocalArray<char, 1024 * 1024> buffer;
+        Size buffer_offset = 0;
+        Size file_offset = 0;
+
+    public:
+        typedef char Ch MAYBE_UNUSED;
+
+        Size line_number = 1;
+        Size line_offset = 1;
+
+        FileReadStreamEx(StreamReader *st)
+            : st(st)
+        {
+            Read();
+        }
+
+        char Peek() const { return buffer[buffer_offset]; }
+        char Take()
+        {
+            char c = buffer[buffer_offset];
+            if (c == '\n') {
+                line_number++;
+                line_offset = 1;
+            } else {
+                line_offset++;
+            }
+            Read();
+            return c;
+        }
+        Size Tell() const { return file_offset + buffer_offset; }
+
+        // Not implemented
+        void Put(char) {}
+        void Flush() {}
+        char *PutBegin() { return 0; }
+        Size PutEnd(char *) { return 0; }
+
+        // For encoding detection only
+        const char *Peek4() const
+        {
+            if (buffer.len - buffer_offset < 4)
+                return 0;
+            return buffer.data + buffer_offset;
+        }
+
+    private:
+        void Read()
+        {
+            if (buffer_offset + 1 < buffer.len) {
+                buffer_offset++;
+            } else if (st) {
+                file_offset += buffer.len;
+                buffer.len = st->Read(SIZE(buffer.data), buffer.data);
+                buffer_offset = 0;
+
+                if (buffer.len < SIZE(buffer.data)) {
+                    if (UNLIKELY(buffer.len < 0)) {
+                        buffer.len = 0;
+                    }
+                    buffer.Append('\0');
+                    st = nullptr;
+                }
+            }
+        }
+    };
+
+    {
+        FileReadStreamEx json_stream(&st);
+        PushLogHandler([&](LogLevel level, const char *ctx,
+                           const char *fmt, Span<const FmtArg> args) {
+            StartConsoleLog(level);
+            Print(stderr, ctx);
+            Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+            PrintFmt(stderr, fmt, args);
+            PrintLn(stderr);
+            EndConsoleLog();
+        });
+        DEFER { PopLogHandler(); };
+
+        rapidjson::Reader json_reader;
+        if (!json_reader.Parse(json_stream, *json_handler)) {
+            // Parse error is likely after I/O error (missing token, etc.) but
+            // it's irrelevant, the I/O error has already been issued.
+            if (!st.error) {
+                rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
+                LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
+            }
+            return false;
+        }
+        if (st.error)
+            return false;
+    }
+
+    return true;
+}
+
+template <typename T>
+class BaseJsonHandler {
+public:
+    bool Default()
+    {
+        LogError("Unsupported value type");
+        return false;
+    }
+
+    bool Uint(unsigned int u)
+    {
+        if (u <= INT_MAX) {
+            return ((T *)this)->Int((int)u);
+        } else {
+            return ((T *)this)->Default();
+        }
+    }
+    bool Uint64(uint64_t u)
+    {
+        if (u <= INT64_MAX) {
+            return ((T *)this)->Int64((int64_t)u);
+        } else {
+            return ((T *)this)->Default();
+        }
+    }
+
+    bool Null() { return ((T *)this)->Default(); }
+    bool Bool(bool) { return ((T *)this)->Default(); }
+    bool Int(int) { return ((T *)this)->Default(); }
+    bool Int64(int64_t) { return ((T *)this)->Default(); }
+    bool Double(double) { return ((T *)this)->Default();; }
+    bool RawNumber(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool String(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool StartObject() { return ((T *)this)->Default(); }
+    bool Key(const char *, Size, bool) { return ((T *)this)->Default(); }
+    bool EndObject(Size) { return ((T *)this)->Default(); }
+    bool StartArray() { return ((T *)this)->Default(); }
+    bool EndArray(Size) { return ((T *)this)->Default(); }
+
+    template <typename U>
+    bool SetInt(U *dest, int i)
+    {
+        U value = (U)i;
+        if (value != i) {
+            LogError("Value %1 outside of range %2 - %3",
+                     i, (int)std::numeric_limits<U>::min(), (int)std::numeric_limits<U>::max());
+            return false;
+        }
+        *dest = value;
+        return true;
+    }
+
+    bool SetDate(Date *dest, const char *date_str)
+    {
+        Date date = Date::FromString(date_str, false);
+        if (!date.value)
+            return false;
+        *dest = date;
+        return true;
+    }
+};
+#endif
