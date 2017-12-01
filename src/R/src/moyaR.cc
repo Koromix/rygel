@@ -43,6 +43,62 @@ static thread_local bool log_missing_messages = false;
         PopLogHandler(); \
     };
 
+class FlexibleDateVector {
+    enum class Type {
+        Character,
+        Date
+    };
+
+    Type type;
+    struct { // FIXME: I want union
+        Rcpp::CharacterVector chr;
+        Rcpp::NumericVector num;
+    } u;
+
+public:
+    FlexibleDateVector() = default;
+    FlexibleDateVector(SEXP xp)
+    {
+        if (Rcpp::is<Rcpp::CharacterVector>(xp)) {
+            type = Type::Character;
+            u.chr = xp;
+        } else if ((Rcpp::is<Rcpp::NumericVector>(xp) || Rcpp::is<Rcpp::IntegerVector>(xp)) &&
+                   Rf_inherits(xp, "Date")) {
+            type = Type::Date;
+            u.num = xp;
+        } else {
+            Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
+        }
+    }
+
+    Date operator[](int idx) const
+    {
+        switch (type) {
+            case Type::Character: {
+                SEXP str = u.chr[idx].get();
+                if (str != NA_STRING) {
+                    return Date::FromString(CHAR(str));
+                } else {
+                    return {};
+                }
+            } break;
+
+            case Type::Date: {
+                double value = u.num[idx];
+                if (value != NA_REAL) {
+                    Rcpp::Datetime dt = value * 86400;
+                    Date date(dt.getYear(), dt.getMonth(), dt.getDay());
+                    DebugAssert(date.IsValid());
+                    return date;
+                } else {
+                    return {};
+                }
+            } break;
+        }
+        Assert(false);
+    }
+};
+
 static void DumpWarnings()
 {
     for (const char *msg: log_messages) {
@@ -150,12 +206,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
         Rcpp::IntegerVector bill_id;
         Rcpp::IntegerVector stay_id;
-        Rcpp::CharacterVector birthdate;
+        FlexibleDateVector birthdate;
         Rcpp::CharacterVector sex;
-        Rcpp::CharacterVector entry_date;
+        FlexibleDateVector entry_date;
         Rcpp::CharacterVector entry_mode;
         Rcpp::CharacterVector entry_origin;
-        Rcpp::CharacterVector exit_date;
+        FlexibleDateVector exit_date;
         Rcpp::CharacterVector exit_mode;
         Rcpp::CharacterVector exit_destination;
         Rcpp::IntegerVector unit;
@@ -164,7 +220,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector igs2;
         Rcpp::IntegerVector gestational_age;
         Rcpp::IntegerVector newborn_weight;
-        Rcpp::CharacterVector last_menstrual_period;
+        FlexibleDateVector last_menstrual_period;
 
         Rcpp::CharacterVector main_diagnosis;
         Rcpp::CharacterVector linked_diagnosis;
@@ -184,7 +240,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector phase;
         Rcpp::IntegerVector activity;
         Rcpp::IntegerVector count;
-        Rcpp::CharacterVector date;
+        FlexibleDateVector date;
     } procedures;
 
     LogDebug("Start");
@@ -236,7 +292,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
             stay.bill_id = GetOptionalValue(stays.bill_id, i, 0);
             stay.stay_id = GetOptionalValue(stays.stay_id, i, 0);
-            stay.birthdate = Date::FromString(stays.birthdate[i]);
+            stay.birthdate = stays.birthdate[i];
             {
                 const char *sex = stays.sex[i];
                 if (TestStr(sex, "1") || TestStr(sex, "M") || TestStr(sex, "m") ||
@@ -248,8 +304,8 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     LogError("Unexpected sex '%1' on row %2", sex, i + 1);
                 }
             }
-            stay.dates[0] = Date::FromString(stays.entry_date[i]);
-            stay.dates[1] = Date::FromString(stays.exit_date[i]);
+            stay.dates[0] = stays.entry_date[i];
+            stay.dates[1] = stays.exit_date[i];
             // TODO: Harmonize who deals with format errors (for example sex is dealt with here, not modes)
             stay.entry.mode = ParseEntryExitCharacter(stays.entry_mode[i]);
             stay.entry.origin = ParseEntryExitCharacter(GetOptionalValue(stays.entry_origin, i, ""));
@@ -261,9 +317,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.igs2 = GetOptionalValue(stays.igs2, i, 0);
             stay.gestational_age = stays.gestational_age[i];
             stay.newborn_weight = stays.newborn_weight[i];
-            if (stays.last_menstrual_period[i] != NA_STRING) {
-                stay.last_menstrual_period = Date::FromString(stays.last_menstrual_period[i]);
-            }
+            stay.last_menstrual_period = stays.last_menstrual_period[i];
             stay.main_diagnosis =
                 DiagnosisCode::FromString(GetOptionalValue(stays.main_diagnosis, i, ""));
             stay.linked_diagnosis =
@@ -314,7 +368,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     }
                 }
                 proc.count = GetOptionalValue(procedures.count, k, 1);
-                proc.date = Date::FromString(procedures.date[k]);
+                proc.date = procedures.date[k];
 
                 stay_set.store.procedures.Append(proc);
                 k++;
