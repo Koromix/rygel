@@ -121,6 +121,8 @@ Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
 static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
                                 int duration)
 {
+    DebugAssert(duration >= 0);
+
     int max_duration = -1;
     const Stay *zx_stay = nullptr;
     int zx_duration = -1;
@@ -261,28 +263,41 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
 
-    // Consistency checks
-    if (!stays[0].birthdate.value) {
-        if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
-            out_errors->Append(14);
-        } else {
-            out_errors->Append(13);
+    // Individual checks
+    for (const Stay &stay: stays) {
+        if (UNLIKELY(!stay.birthdate.value)) {
+            if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
+                out_errors->Append(14);
+            } else {
+                out_errors->Append(13);
+            }
+            valid = false;
+        } else if (UNLIKELY(!stay.birthdate.IsValid())) {
+            out_errors->Append(39);
+            valid = false;
         }
-        valid = false;
-    } else if (!stays[0].birthdate.IsValid()) {
-        out_errors->Append(39);
-        valid = false;
+        if (UNLIKELY(stay.dates[1] < stay.dates[0])) {
+            out_errors->Append(32);
+            valid = false;
+        }
     }
+
+    // Coherency checks
     for (Size i = 1; i < stays.len; i++) {
-        if (stays[i].birthdate != stays[0].birthdate) {
+        const Stay &stay = stays[i];
+
+        if (UNLIKELY(stay.birthdate != stays[0].birthdate)) {
             out_errors->Append(45);
             valid = false;
         }
-        if (stays[i].sex != stays[0].sex) {
+        if (UNLIKELY(stay.sex != stays[0].sex)) {
             out_errors->Append(46);
             valid = false;
         }
     }
+
+    if (!valid)
+        return GhmCode::FromString("90Z00Z");
 
     // Deduplicate diagnoses
     if (out_diagnoses) {
@@ -355,11 +370,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->stay.linked_diagnosis = main_stay->linked_diagnosis;
     }
 
-    if (valid) {
-        return {};
-    } else {
-        return GhmCode::FromString("90Z00Z");
-    }
+    return {};
 }
 
 static bool TestExclusion(const TableIndex &index,
