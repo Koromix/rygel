@@ -882,6 +882,9 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
                     GhmCode ghm)
 {
+    if (UNLIKELY(!ghm.IsValid() || ghm.IsError()))
+        return GhsCode(9999);
+
     // Deal with UHCD-only stays
     if (agg.duration > 0 && agg.stays[0].entry.mode == 8 &&
             agg.stays[agg.stays.len - 1].exit.mode == 8) {
