@@ -10,8 +10,8 @@ include("build/cmake/Utility.cmake")
 
 set(CMAKE_CXX_STANDARD 14)
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fvisibility=hidden -fno-rtti -fno-exceptions \
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fno-rtti -fno-exceptions \
                                             -Wall -Wextra -Wsign-conversion -Wconversion -Wsign-promo \
                                             -Wno-missing-field-initializers -Wno-old-style-cast -Wno-stringop-overflow")
     set(CMAKE_CXX_FLAGS_DEBUG "-O0 -gdwarf-2")
