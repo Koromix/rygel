@@ -302,6 +302,13 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     for (Size i = 1; i < stays.len; i++) {
         const Stay &stay = stays[i];
 
+        if (UNLIKELY(stay.dates[0] != stays[i - 1].dates[1])) {
+            if (stay.entry.mode != 0 || stays[i - 1].exit.mode != 0 ||
+                    stay.dates[0] - stays[i - 1].dates[1] > 1) {
+                SetError(out_errors, 0, 23);
+                valid = false;
+            }
+        }
         if (UNLIKELY(stay.birthdate != stays[0].birthdate)) {
             SetError(out_errors, 0, 45);
             valid = false;
