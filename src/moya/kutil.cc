@@ -692,6 +692,18 @@ static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
     DefaultLogHandler
 };
 
+bool enable_debug = []() {
+    const char *debug = getenv("MOYA_DEBUG");
+    if (!debug || TestStr(debug, "0")) {
+        return false;
+    } else if (TestStr(debug, "1")) {
+        return true;
+    } else {
+        LogError("MOYA_DEBUG should contain value '0' or '1'");
+        return true;
+    }
+}();
+
 static bool ConfigLogTerminalOutput()
 {
     static bool init, output_is_terminal;
@@ -724,6 +736,8 @@ static bool ConfigLogTerminalOutput()
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
     if (!log_handlers.len)
+        return;
+    if (level == LogLevel::Debug && !enable_debug)
         return;
 
     char ctx_buf[128];

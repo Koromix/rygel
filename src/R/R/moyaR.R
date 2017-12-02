@@ -1,12 +1,12 @@
 summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
                      'src', 'nn1', 'nn2', 'nn3', 'rep')
 
-classify <- function(classifier_set, stays, diagnoses, procedures, debug = FALSE) {
+classify <- function(classifier_set, stays, diagnoses, procedures) {
     stays <- stays[order(stays$id),]
     diagnoses <- diagnoses[order(diagnoses$id),]
     procedures <- procedures[order(procedures$id),]
 
-    result_set <- .classify(classifier_set, stays, diagnoses, procedures, debug = debug)
+    result_set <- .classify(classifier_set, stays, diagnoses, procedures)
 
     class(result_set) <- c('moya.result_set', class(result_set))
     return(result_set)

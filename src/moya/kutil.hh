@@ -2006,6 +2006,8 @@ static inline void PrintLn(FILE *fp = stdout)
 // Debug and errors
 // ------------------------------------------------------------------------
 
+extern bool enable_debug;
+
 typedef void LogHandlerFunc(LogLevel level, const char *ctx,
                             const char *fmt, Span<const FmtArg> args);
 

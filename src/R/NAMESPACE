@@ -1,5 +1,6 @@
 useDynLib(moyaR, .registration=TRUE)
-export(moya,
+export(moya.options,
+       moya,
        classify,
        compare,
        summary.moya.result_set)

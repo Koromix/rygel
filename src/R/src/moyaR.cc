@@ -10,8 +10,8 @@ struct ClassifierSet {
 static thread_local DynamicQueue<const char *> log_messages;
 static thread_local bool log_missing_messages = false;
 
-#define SETUP_LOG_HANDLER(EnableDebug) \
-    PushLogHandler([debug = (EnableDebug)](LogLevel level, const char *ctx, \
+#define SETUP_LOG_HANDLER() \
+    PushLogHandler([](LogLevel level, const char *ctx, \
                       const char *fmt, Span<const FmtArg> args) { \
         switch (level) { \
             case LogLevel::Error: { \
@@ -23,18 +23,11 @@ static thread_local bool log_missing_messages = false;
                 } \
             } break; \
  \
-            case LogLevel::Info: { \
+            case LogLevel::Info: \
+            case LogLevel::Debug: { \
                 Print("%1", ctx); \
                 PrintFmt(stdout, fmt, args); \
                 PrintLn(); \
-            } break; \
- \
-            case LogLevel::Debug: { \
-                if (debug) { \
-                    Print("%1", ctx); \
-                    PrintFmt(stdout, fmt, args); \
-                    PrintLn(); \
-                } \
             } break; \
         } \
     }); \
@@ -142,14 +135,25 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
     return str[0] - '0';
 }
 
+// [[Rcpp::export(name = 'moya.options')]]
+SEXP R_Options(SEXP debug = R_NilValue)
+{
+    if (!Rf_isNull(debug)) {
+        enable_debug = Rcpp::as<bool>(debug);
+    }
+
+    return Rcpp::List::create(
+        Rcpp::Named("debug") = enable_debug
+    );
+}
+
 // [[Rcpp::export(name = 'moya')]]
 SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
             Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
             Rcpp::Nullable<Rcpp::String> pricing_filename = R_NilValue,
-            Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue,
-            bool debug = false)
+            Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
 {
-    SETUP_LOG_HANDLER(debug);
+    SETUP_LOG_HANDLER();
 
     ClassifierSet *set = new ClassifierSet;
     DEFER_N(set_guard) { delete set; };
@@ -188,9 +192,9 @@ SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 // [[Rcpp::export(name = '.classify')]]
 Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                            Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
-                           Rcpp::DataFrame procedures_df, bool debug = false)
+                           Rcpp::DataFrame procedures_df)
 {
-    SETUP_LOG_HANDLER(debug);
+    SETUP_LOG_HANDLER();
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
