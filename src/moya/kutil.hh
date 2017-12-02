@@ -1092,6 +1092,164 @@ private:
     }
 };
 
+template <Size N>
+class Bitset {
+public:
+    class Iterator {
+    public:
+        Bitset<N> *bitset;
+        Size offset;
+        size_t bits = 0;
+        int ctz;
+
+        Iterator(Bitset<N> *bitset, Size offset)
+            : bitset(bitset), offset(offset - 1)
+        {
+            operator++();
+        }
+
+        Size operator*() {
+            DebugAssert(offset <= ARRAY_SIZE(bitset->data));
+
+            if (offset == ARRAY_SIZE(bitset->data))
+                return -1;
+            return offset * SIZE(size_t) * 8 + ctz;
+        }
+
+        const Iterator &operator++()
+        {
+            DebugAssert(offset <= ARRAY_SIZE(bitset->data));
+
+            while (!bits) {
+                if (offset == ARRAY_SIZE(bitset->data) - 1)
+                    return *this;
+                bits = bitset->data[++offset];
+            }
+
+            ctz = CountTrailingZeros(bits);
+            bits ^= (size_t)(1 << ctz);
+
+            return *this;
+        }
+
+        Iterator operator++(int)
+        {
+            Iterator ret = *this;
+            ++ret;
+            return ret;
+        }
+
+        bool operator==(const Iterator &other) const
+            { return bitset == other.bitset && offset == other.offset; }
+        bool operator!=(const Iterator &other) const { return !(*this == other); }
+    };
+
+    size_t data[(N + SIZE(size_t) - 1) / SIZE(size_t)] = {};
+
+    typedef Size value_type;
+    typedef Iterator iterator_type;
+
+    void Clear()
+    {
+        memset(data, 0, SIZE(data));
+    }
+
+    Iterator begin() { return Iterator(this, 0); }
+    const Iterator begin() const { return Iterator(this, 0); }
+    Iterator end() { return Iterator(this, ARRAY_SIZE(data)); }
+    const Iterator end() const { return Iterator(this, ARRAY_SIZE(data)); }
+
+    Size PopCount() const
+    {
+        Size count = 0;
+        for (size_t bits: data) {
+            count += PopCount(bits);
+        }
+        return count;
+    }
+
+    inline bool Test(Size idx) const
+    {
+        DebugAssert(idx >= 0 && idx < N);
+        return data[idx / (SIZE(size_t) * 8)] & (1 << idx % (SIZE(size_t) * 8));
+    }
+    inline void Set(Size idx, bool value = true)
+    {
+        DebugAssert(idx >= 0 && idx < N);
+        if (value) {
+            data[idx / (SIZE(size_t) * 8)] |= (size_t)1 << idx % (SIZE(size_t) * 8);
+        } else {
+            data[idx / (SIZE(size_t) * 8)] &= ~((size_t)1 << idx % (SIZE(size_t) * 8));
+        }
+    }
+
+    Bitset &operator&=(const Bitset &other)
+    {
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            data[i] &= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator&(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            ret.data[i] = data[i] & other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &operator|=(const Bitset &other)
+    {
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            data[i] |= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator|(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            ret.data[i] = data[i] | other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &operator^=(const Bitset &other)
+    {
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            data[i] ^= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator^(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            ret.data[i] = data[i] ^ other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &Flip()
+    {
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            data[i] = ~data[i];
+        }
+        return *this;
+    }
+    Bitset operator~()
+    {
+        Bitset ret;
+        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+            ret.data[i] = ~data[i];
+        }
+        return ret;
+    }
+
+    // TODO: Shift operators
+};
+
 template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashSet {
