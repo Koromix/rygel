@@ -223,12 +223,44 @@ void ReverseBytes(T *v) { *v = ReverseBytes(*v); }
         #error Neither unsigned long nor unsigned long long is a 64-bit unsigned integer
     #endif
     }
+
+    static inline int CountTrailingZeros(uint32_t u)
+    {
+        if (!u) {
+            return 32;
+        }
+
+        return __builtin_ctz(u);
+    }
+    static inline int CountTrailingZeros(uint64_t u)
+    {
+        if (!u) {
+            return 64;
+        }
+
+    #if UINT64_MAX == ULONG_MAX
+        return __builtin_ctzl(u);
+    #elif UINT64_MAX == ULLONG_MAX
+        return __builtin_ctzll(u);
+    #else
+        #error Neither unsigned long nor unsigned long long is a 64-bit unsigned integer
+    #endif
+    }
+
+    static inline int PopCount(uint32_t u)
+    {
+        return __builtin_popcount(u);
+    }
+    static inline int PopCount(uint64_t u)
+    {
+        return __builtin_popcountll(u);
+    }
 #elif defined(_MSC_VER)
     static inline int CountLeadingZeros(uint32_t u)
     {
         unsigned long leading_zero;
         if (_BitScanReverse(&leading_zero, u)) {
-            return 31 - leading_zero;
+            return (int)(31 - leading_zero);
         } else {
             return 32;
         }
@@ -238,22 +270,64 @@ void ReverseBytes(T *v) { *v = ReverseBytes(*v); }
         unsigned long leading_zero;
     #ifdef _WIN64
         if (_BitScanReverse64(&leading_zero, u)) {
-            return 63 - leading_zero;
+            return (int)(63 - leading_zero);
         } else {
             return 64;
         }
     #else
         if (_BitScanReverse(&leading_zero, u >> 32)) {
-            return 31 - leading_zero;
+            return (int)(31 - leading_zero);
         } else if (_BitScanReverse(&leading_zero, (uint32_t)u)) {
-            return 63 - leading_zero;
+            return (int)(63 - leading_zero);
         } else {
             return 64;
         }
     #endif
     }
+
+    static inline int CountTrailingZeros(uint32_t u)
+    {
+        unsigned long trailing_zero;
+        if (_BitScanForward(&trailing_zero, u)) {
+            return (int)trailing_zero;
+        } else {
+            return 32;
+        }
+    }
+    static inline int CountTrailingZeros(uint64_t u)
+    {
+        unsigned long trailing_zero;
+    #ifdef _WIN64
+        if (_BitScanForward64(&trailing_zero, u)) {
+            return (int)trailing_zero;
+        } else {
+            return 64;
+        }
+    #else
+        if (_BitScanForward(&trailing_zero, (uint32_t)u)) {
+            return trailing_zero;
+        } else if (_BitScanForward(&trailing_zero, u >> 32)) {
+            return 32 + trailing_zero;
+        } else {
+            return 64;
+        }
+    #endif
+    }
+
+    static inline int PopCount(uint32_t u)
+    {
+        return __popcnt(u);
+    }
+    static inline int PopCount(uint64_t u)
+    {
+    #ifdef _WIN64
+        return (int)__popcnt64(u);
+    #else
+        return __popcnt(u >> 32) + __popcnt((uint32_t)u);
+    #endif
+    }
 #else
-    #error No implementation of CountLeadingZeros() for this compiler / toolchain
+    #error No implementation of CountLeadingZeros(), CountTrailingZeros() and PopCount() for this compiler / toolchain
 #endif
 
 template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
