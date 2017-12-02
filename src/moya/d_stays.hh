@@ -81,6 +81,7 @@ struct StaySet {
     } store;
 
     bool SavePack(StreamWriter &st) const;
+    bool SavePack(const char *filename) const;
 };
 
 enum class StaySetDataType {

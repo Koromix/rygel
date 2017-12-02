@@ -524,6 +524,21 @@ bool StaySet::SavePack(StreamWriter &st) const
     return true;
 }
 
+bool StaySet::SavePack(const char *filename) const
+{
+    LocalArray<char, 16> extension;
+    CompressionType compression_type;
+
+    extension.len = GetPathExtension(filename, extension.data, &compression_type);
+
+    if (!TestStr(extension, ".mpak")) {
+        LogError("Unknown packing extension '%1', prefer '.mpak'", extension);
+    }
+
+    StreamWriter st(filename, compression_type);
+    return SavePack(st);
+}
+
 static bool LoadStayPack(StreamReader &st, StaySet *out_set)
 {
     PackHeader bh;

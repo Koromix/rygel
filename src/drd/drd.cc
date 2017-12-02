@@ -609,7 +609,7 @@ static bool RunPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd pack [options] stay_file ... dest_file
+R"(Usage: drd pack [options] stay_file ... -O output_file
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -617,30 +617,33 @@ R"(Usage: drd pack [options] stay_file ... dest_file
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
-    const char *dest_filename;
+    const char *dest_filename = nullptr;
     {
         const char *opt;
         while ((opt = opt_parser.ConsumeOption())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-O", "--output")) {
+                if (!opt_parser.RequireOptionValue(PrintUsage))
+                    return false;
+                dest_filename = opt_parser.current_value;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
 
         opt_parser.ConsumeNonOptions(&filenames);
-        if (filenames.len < 2) {
-            if (filenames.len) {
-                PrintLn(stderr, "A destination filename must be provided");
-            } else {
-                PrintLn(stderr, "No filename provided");
-            }
+        if (!dest_filename) {
+            PrintLn(stderr, "A destination file must be provided (--output)");
             PrintUsage(stderr);
             return false;
         }
-        dest_filename = filenames[filenames.len - 1];
-        filenames.RemoveLast(1);
+        if (!filenames.len) {
+            PrintLn(stderr, "No stay file provided");
+            PrintUsage(stderr);
+            return false;
+        }
     }
 
     LogDebug("Load");
@@ -655,11 +658,8 @@ R"(Usage: drd pack [options] stay_file ... dest_file
     }
 
     LogDebug("Pack");
-    {
-        StreamWriter st(dest_filename, CompressionType::Gzip);
-        if (!stay_set.SavePack(st))
-            return false;
-    }
+    if (!stay_set.SavePack(dest_filename))
+        return false;
 
     return true;
 }
