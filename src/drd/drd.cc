@@ -236,12 +236,8 @@ Classify options:
                     result.stays.len, result.ghm, result.ghs);
 
             if (verbosity >= 2) {
-                if (result.errors.len) {
-                    Print("    Errors:");
-                    for (int16_t error: result.errors) {
-                        Print(" %1", error);
-                    }
-                    PrintLn();
+                if (result.main_error) {
+                    PrintLn("    Error: %1", result.main_error);
                 }
 
                 PrintLn("    GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));

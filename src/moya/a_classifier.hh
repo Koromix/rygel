@@ -40,12 +40,17 @@ struct SupplementCounters {
     int32_t rep;
 };
 
+struct ClassifyErrorSet {
+    int16_t main_error;
+    Bitset<512> errors;
+};
+
 struct ClassifyResult {
     Span<const Stay> stays;
     int duration;
 
     GhmCode ghm;
-    Span<int16_t> errors;
+    int16_t main_error;
 
     GhsCode ghs;
     SupplementCounters supplements;
@@ -57,10 +62,6 @@ struct ClassifyResultSet {
 
     SupplementCounters supplements;
     int64_t ghs_total_cents;
-
-    struct {
-        HeapArray<int16_t> errors;
-    } store;
 };
 
 Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
@@ -70,15 +71,15 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
                   HeapArray<DiagnosisCode> *out_diagnoses,
                   HeapArray<ProcedureRealisation> *out_procedures,
-                  HeapArray<int16_t> *out_errors);
+                  ClassifyErrorSet *out_errors);
 
 int GetMinimalDurationForSeverity(int severity);
 int LimitSeverityWithDuration(int severity, int duration);
 
-GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors);
+GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
 GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
-                       HeapArray<int16_t> *out_errors);
-GhmCode ClassifyGhm(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors);
+                       ClassifyErrorSet *out_errors);
+GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
 
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
                     GhmCode ghm);

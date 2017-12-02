@@ -217,12 +217,29 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     return score_stay;
 }
 
+static GhmCode SetError(ClassifyErrorSet *error_set, int8_t category, int16_t error)
+{
+    static GhmCode base_error_ghm = GhmCode::FromString("90Z00Z");
+
+    DebugAssert(error >= 0 && error < 512); // FIXME: Ugly
+    if (error_set) {
+        if (!error_set->main_error || error < error_set->main_error) {
+            error_set->main_error = error;
+        }
+        error_set->errors.Set(error);
+    }
+
+    GhmCode error_ghm = base_error_ghm;
+    error_ghm.parts.seq = category;
+    return error_ghm;
+}
+
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
                   HeapArray<DiagnosisCode> *out_diagnoses,
                   HeapArray<ProcedureRealisation> *out_procedures,
-                  HeapArray<int16_t> *out_errors)
+                  ClassifyErrorSet *out_errors)
 {
     Assert(stays.len > 0);
 
@@ -233,8 +250,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->index = table_set.FindIndex(date);
         if (!out_agg->index) {
             LogError("No table available on '%1'", stays[stays.len - 1].dates[1]);
-            out_errors->Append(502);
-            return GhmCode::FromString("90Z03Z");
+            return SetError(out_errors, 3, 502);
         }
     }
 
@@ -245,7 +261,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
         if (!stay.main_diagnosis.IsValid()) {
-            out_errors->Append(40);
+            SetError(out_errors, 0, 40);
             valid = false;
         }
 
@@ -267,17 +283,17 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     for (const Stay &stay: stays) {
         if (UNLIKELY(!stay.birthdate.value)) {
             if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
-                out_errors->Append(14);
+                SetError(out_errors, 0, 14);
             } else {
-                out_errors->Append(13);
+                SetError(out_errors, 0, 13);
             }
             valid = false;
         } else if (UNLIKELY(!stay.birthdate.IsValid())) {
-            out_errors->Append(39);
+            SetError(out_errors, 0, 39);
             valid = false;
         }
         if (UNLIKELY(stay.dates[1] < stay.dates[0])) {
-            out_errors->Append(32);
+            SetError(out_errors, 0, 32);
             valid = false;
         }
     }
@@ -287,11 +303,11 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         const Stay &stay = stays[i];
 
         if (UNLIKELY(stay.birthdate != stays[0].birthdate)) {
-            out_errors->Append(45);
+            SetError(out_errors, 0, 45);
             valid = false;
         }
         if (UNLIKELY(stay.sex != stays[0].sex)) {
-            out_errors->Append(46);
+            SetError(out_errors, 0, 46);
             valid = false;
         }
     }
@@ -398,7 +414,7 @@ int LimitSeverityWithDuration(int severity, int duration)
 }
 
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
-                          HeapArray<int16_t> *out_errors)
+                          ClassifyErrorSet *out_errors)
 {
     DebugAssert(ghm_node.type == GhmDecisionNode::Type::Test);
 
@@ -540,9 +556,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 28: {
-            if (out_errors) {
-                out_errors->Append(ghm_node.u.test.params[0]);
-            }
+            SetError(out_errors, 1, ghm_node.u.test.params[0]);
             return 0;
         } break;
 
@@ -663,7 +677,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     return -1;
 }
 
-GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
+GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 {
     GhmCode ghm = {};
 
@@ -676,10 +690,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
     for (Size i = 0; !ghm.IsValid(); i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
-            if (out_errors) {
-                out_errors->Append(4);
-            }
-            return GhmCode::FromString("90Z03Z");
+            return SetError(out_errors, 3, 4);
         }
 
         // FIXME: Check ghm_node_idx against CountOf()
@@ -690,10 +701,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
                 if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
-                    if (out_errors) {
-                        out_errors->Append(4);
-                    }
-                    return GhmCode::FromString("90Z03Z");
+                    return SetError(out_errors, 3, 4);
                 }
 
                 ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
@@ -702,7 +710,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
             case GhmDecisionNode::Type::Ghm: {
                 ghm = ghm_node.u.ghm.ghm;
                 if (ghm_node.u.ghm.error && out_errors) {
-                    out_errors->Append(ghm_node.u.ghm.error);
+                    SetError(out_errors, ghm.parts.seq, ghm_node.u.ghm.error);
                 }
             } break;
         }
@@ -712,15 +720,12 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
 }
 
 GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
-                       HeapArray<int16_t> *out_errors)
+                       ClassifyErrorSet *out_errors)
 {
     const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
-        if (out_errors) {
-            out_errors->Append(4);
-        }
-        return GhmCode::FromString("90Z03Z");
+        return SetError(out_errors, 3, 4);
     }
 
     // Ambulatory and / or short duration GHM
@@ -786,7 +791,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     return ghm;
 }
 
-GhmCode ClassifyGhm(const ClassifyAggregate &agg, HeapArray<int16_t> *out_errors)
+GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 {
     GhmCode ghm;
 
@@ -1181,6 +1186,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
+    ClassifyErrorSet errors;
     HeapArray<DiagnosisCode> diagnoses;
     HeapArray<ProcedureRealisation> procedures;
 
@@ -1188,23 +1194,22 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         ClassifyResult result = {};
         ClassifyAggregate agg;
 
+        errors.main_error = 0;
         diagnoses.Clear(256);
         procedures.Clear(512);
 
-        result.errors.ptr = (int16_t *)out_result_set->store.errors.len;
         do {
             result.stays = Cluster(stays, cluster_mode, &stays);
 
             result.ghm = Aggregate(table_set, result.stays,
-                                   &agg, &diagnoses, &procedures, &out_result_set->store.errors);
+                                   &agg, &diagnoses, &procedures, &errors);
             result.duration = agg.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
-            result.ghm = ClassifyGhm(agg, &out_result_set->store.errors);
+            result.ghm = ClassifyGhm(agg, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
         } while (false);
-        result.errors.len = out_result_set->store.errors.len - (Size)result.errors.ptr;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
         if (pricing_set.ghs_pricings.len) {
@@ -1213,6 +1218,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         }
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
 
+        result.main_error = errors.main_error;
         out_result_set->results.Append(result);
 
         out_result_set->ghs_total_cents += result.ghs_price_cents;
@@ -1224,9 +1230,5 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         out_result_set->supplements.nn2 += result.supplements.nn2;
         out_result_set->supplements.nn3 += result.supplements.nn3;
         out_result_set->supplements.rep += result.supplements.rep;
-    }
-
-    for (ClassifyResult &result: out_result_set->results) {
-        result.errors.ptr = out_result_set->store.errors.ptr + (Size)result.errors.ptr;
     }
 }
