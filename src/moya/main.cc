@@ -137,11 +137,6 @@ bool InitCatalogSet(Span<const char *const> data_directories,
         directories.Append(catalog_directories);
     }
 
-    if (!directories.len) {
-        LogError("No catalog specified or found");
-        return true;
-    }
-
     bool success = true;
     for (Size i = directories.len - 1; i >= 0; i--) {
         if (!out_set->ghm_roots.len) {
@@ -154,6 +149,11 @@ bool InitCatalogSet(Span<const char *const> data_directories,
     }
     if (!success)
         return false;
+
+    if (!out_set->ghm_roots.len) {
+        LogError("No catalog specified or found");
+        return false;
+    }
 
     return true;
 }
