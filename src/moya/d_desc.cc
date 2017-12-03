@@ -4,16 +4,8 @@
 class JsonGhmRootDescHandler: public BaseJsonHandler<JsonGhmRootDescHandler> {
     enum class State {
         Default,
-
         DescArray,
-        DescObject,
-
-        DescGhmRoot,
-        DescGhmRootDesc,
-        DescDa,
-        DescDaDesc,
-        DescGa,
-        DescGaDesc
+        DescObject
     };
 
     State state = State::Default;
@@ -28,109 +20,60 @@ public:
                            Allocator *out_alloc = nullptr)
         : out_catalog(out_catalog), out_alloc(out_alloc) {}
 
-    bool StartArray()
+    bool Branch(JsonBranchType type, const char *)
     {
-        if (state != State::Default) {
-            LogError("Unexpected array");
-            return false;
+        if (state == State::Default && type == JsonBranchType::Array) {
+            state = State::DescArray;
+        } else if (state == State::DescArray && type == JsonBranchType::EndArray) {
+            state = State::Default;
+        } else if (state == State::DescArray && type == JsonBranchType::Object) {
+            state = State::DescObject;
+        } else if (state == State::DescObject && type == JsonBranchType::EndObject) {
+            out_catalog->Append(desc);
+            desc = {};
+
+            state = State::DescArray;
+        } else {
+            return UnexpectedBranch(type);
         }
 
-        state = State::DescArray;
-        return true;
-    }
-    bool EndArray(rapidjson::SizeType)
-    {
-        if (state != State::DescArray) {
-            LogError("Unexpected end of array");
-            return false;
-        }
-
-        state = State::Default;
-        return true;
-    }
-
-    bool StartObject()
-    {
-        if (state != State::DescArray) {
-            LogError("Unexpected object");
-            return false;
-        }
-
-        state = State::DescObject;
-        return true;
-    }
-    bool EndObject(rapidjson::SizeType)
-    {
-        if (state != State::DescObject) {
-            LogError("Unexpected end of object");
-            return false;
-        }
-
-        out_catalog->Append(desc);
-        desc = {};
-
-        state = State::DescArray;
         return true;
     }
 
-    bool Key(const char *key, rapidjson::SizeType, bool) {
-#define HANDLE_KEY(Key, State) \
-            do { \
-                if (TestStr(key, (Key))) { \
-                    state = State; \
-                    return true; \
-                } \
-             } while (false)
-
-        if (state != State::DescObject) {
-            LogError("Unexpected key token '%1'", key);
-            return false;
-        }
-
-        HANDLE_KEY("root", State::DescGhmRoot);
-        HANDLE_KEY("root_desc", State::DescGhmRootDesc);
-        HANDLE_KEY("da", State::DescDa);
-        HANDLE_KEY("da_desc", State::DescDaDesc);
-        HANDLE_KEY("ga", State::DescGa);
-        HANDLE_KEY("ga_desc", State::DescGaDesc);
-
-        LogError("Unknown authorization attribute '%1'", key);
-        return false;
-
-#undef HANDLE_KEY
-    }
-
-    bool String(const char *str, rapidjson::SizeType len, bool)
+    bool Value(const char *key, const JsonValue &value)
     {
         DebugAssert(out_alloc);
 
-        switch (state) {
-            case State::DescGhmRoot: {
-                desc.ghm_root = GhmRootCode::FromString(str);
-            } break;
-            case State::DescGhmRootDesc:
-                { desc.ghm_root_desc = DuplicateString(out_alloc, str).ptr; } break;
-            case State::DescDa: {
-                if (len == SIZE(desc.da) - 1) {
-                    strcpy(desc.da, str);
+        if (state == State::DescObject) {
+            if (TestStr(key, "root")) {
+                if (value.type == JsonValue::Type::String) {
+                    desc.ghm_root = GhmRootCode::FromString(value.u.str.ptr);
+                } else {
+                    UnexpectedType(value.type);
+                }
+            } else if (TestStr(key, "root_desc")) {
+                SetString(value, out_alloc, &desc.ghm_root_desc);
+            } else if (TestStr(key, "da")) {
+                if (value.type == JsonValue::Type::String && value.u.str.len == SIZE(desc.da) - 1) {
+                    strcpy(desc.da, value.u.str.ptr);
                 } else {
                     LogError("Malformed DA code (must be %1 characters)", SIZE(desc.da) - 1);
                 }
-            } break;
-            case State::DescDaDesc: { desc.da_desc = DuplicateString(out_alloc, str).ptr; } break;
-            case State::DescGa: {
-                if (len == SIZE(desc.ga) - 1) {
-                    strcpy(desc.ga, str);
+            } else if (TestStr(key, "da_desc")) {
+                SetString(value, out_alloc, &desc.da_desc);
+            } else if (TestStr(key, "ga")) {
+                if (value.type == JsonValue::Type::String && value.u.str.len == SIZE(desc.ga) - 1) {
+                    strcpy(desc.ga, value.u.str.ptr);
                 } else {
                     LogError("Malformed GA code (must be %1 characters)", SIZE(desc.ga) - 1);
                 }
-            } break;
-            case State::DescGaDesc: { desc.ga_desc = DuplicateString(out_alloc, str).ptr; } break;
-
-            default: {
-                LogError("Unexpected string value '%1'", str);
-                return false;
-            } break;
+            } else if (TestStr(key, "ga_desc")) {
+                SetString(value, out_alloc, &desc.ga_desc);
+            } else {
+                return UnknownAttribute(key);
+            }
+        } else {
+            return UnexpectedValue();
         }
 
         state = State::DescObject;
@@ -139,7 +82,8 @@ public:
 };
 
 bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
-                        HeapArray<GhmRootDesc> *out_catalog, HashSet<GhmRootCode, GhmRootDesc> *out_map)
+                        HeapArray<GhmRootDesc> *out_catalog,
+                        HashSet<GhmRootCode, GhmRootDesc> *out_map)
 {
     DEFER_NC(out_guard, len = out_catalog->len) { out_catalog->RemoveFrom(len); };
 

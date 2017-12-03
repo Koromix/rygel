@@ -27,59 +27,12 @@ StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 class JsonStayHandler: public BaseJsonHandler<JsonStayHandler> {
     enum class State {
         Default,
-
-        // Stay objects
         StayArray,
         StayObject,
-        StayBedAuthorization,
-        StayBillId,
-        StayBirthdate,
-        StayEntryDate,
-        StayEntryMode,
-        StayEntryOrigin,
-        StayExitDate,
-        StayExitMode,
-        StayExitDestination,
-        StayGestationalAge,
-        StayStayId,
-        StayIgs2,
-        StayLastMenstrualPeriod,
-        StayNewbornWeight,
-        StaySessionCount,
-        StaySex,
-        StayUnit,
-        StayMainDiagnosis,
-        StayLinkedDiagnosis,
-        StayAssociatedDiagnoses,
-        StayProcedures,
-        StayTest,
-
-        // Associated diagnosis objects
         AssociatedDiagnosisArray,
-
-        // Procedure realisation objects
         ProcedureArray,
         ProcedureObject,
-        ProcedureCode,
-        ProcedureDate,
-        ProcedurePhase,
-        ProcedureActivity,
-        ProcedureCount,
-
-        // Test values
-        TestObject,
-        TestClusterLen,
-        TestGhm,
-        TestError,
-        TestGhs,
-        TestRea,
-        TestReaSi,
-        TestSi,
-        TestSrc,
-        TestNn1,
-        TestNn2,
-        TestNn3,
-        TestRep
+        TestObject
     };
 
     State state = State::Default;
@@ -97,355 +50,281 @@ public:
         ResetProc();
     }
 
-    bool StartArray()
+    bool Branch(JsonBranchType type, const char *key)
     {
-        switch (state) {
-            case State::Default: { state = State::StayArray; } break;
-            case State::StayAssociatedDiagnoses:
-                { state = State::AssociatedDiagnosisArray; } break;
-            case State::StayProcedures: { state = State::ProcedureArray; } break;
+        if (state == State::Default && type == JsonBranchType::Array) {
+            state = State::StayArray;
+        } else if (state == State::StayArray && type == JsonBranchType::EndArray) {
+            state = State::Default;
+        } else if (state == State::StayArray && type == JsonBranchType::Object) {
+            state = State::StayObject;
+        } else if (state == State::StayObject && type == JsonBranchType::EndObject) {
+            if (LIKELY(stay.main_diagnosis.IsValid())) {
+                out_set->store.diagnoses.Append(stay.main_diagnosis);
+            }
+            if (stay.linked_diagnosis.IsValid()) {
+                out_set->store.diagnoses.Append(stay.linked_diagnosis);
+            }
+            stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
+            stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
+            out_set->stays.Append(stay);
+            ResetStay();
 
-            default: {
-                LogError("Unexpected array");
-                return false;
-            } break;
+            state = State::StayArray;
+        } else if (state == State::StayObject && TestStr(key, "test") &&
+                   type == JsonBranchType::Object) {
+            state = State::TestObject;
+        } else if (state == State::TestObject && type == JsonBranchType::EndObject) {
+            state = State::StayObject;
+        } else if (state == State::StayObject && TestStr(key, "das") &&
+                   type == JsonBranchType::Array) {
+            state = State::AssociatedDiagnosisArray;
+        } else if (state == State::AssociatedDiagnosisArray && type == JsonBranchType::EndArray) {
+            state = State::StayObject;
+        } else if (state == State::StayObject && TestStr(key, "procedures") &&
+                   type == JsonBranchType::Array) {
+            state = State::ProcedureArray;
+        } else if (state == State::ProcedureArray && type == JsonBranchType::EndArray) {
+            state = State::StayObject;
+        } else if (state == State::ProcedureArray && type == JsonBranchType::Object) {
+            state = State::ProcedureObject;
+        } else if (state == State::ProcedureObject && type == JsonBranchType::EndObject) {
+            out_set->store.procedures.Append(proc);
+            ResetProc();
+
+            state = State::ProcedureArray;
+        } else {
+            return UnexpectedBranch(type);
         }
 
         return true;
     }
-    bool EndArray(rapidjson::SizeType)
-    {
-        switch (state) {
-            case State::StayArray: { state = State::Default; } break;
-            case State::AssociatedDiagnosisArray: { state = State::StayObject; } break;
-            case State::ProcedureArray: { state = State::StayObject; } break;
 
-            default: {
-                LogError("Unexpected end of array");
-                return false;
-            } break;
-        }
-
-        return true;
-    }
-
-    bool StartObject()
-    {
-        switch (state) {
-            case State::StayArray: { state = State::StayObject; } break;
-            case State::ProcedureArray: { state = State::ProcedureObject; } break;
-            case State::StayTest: { state = State::TestObject; } break;
-
-            default: {
-                LogError("Unexpected object");
-                return false;
-            } break;
-        }
-
-        return true;
-    }
-    bool EndObject(rapidjson::SizeType)
+    bool Value(const char *key, const JsonValue &value)
     {
         switch (state) {
             case State::StayObject: {
-                state = State::StayArray;
+                if (TestStr(key, "bed_authorization")) {
+                    SetInt(value, &stay.bed_authorization);
+                } else if (TestStr(key, "bill_id")) {
+                    SetInt(value, &stay.bill_id);
+                } else if (TestStr(key, "birthdate")) {
+                    SetDate(value, &stay.birthdate);
+                } else if (TestStr(key, "entry_date")) {
+                    SetDate(value, &stay.entry.date);
+                } else if (TestStr(key, "entry_mode")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        if (value.u.i >= 0 && value.u.i <= 9) {
+                            stay.entry.mode = (int8_t)value.u.i;
+                        } else {
+                            LogError("Invalid entry mode value %1", value.u.i);
+                        }
+                    } else if (value.type == JsonValue::Type::String) {
+                        if (value.u.str.len == 1) {
+                            stay.entry.mode = (char)(value.u.str[0] - '0');
+                        } else {
+                            LogError("Invalid entry mode value '%1'", value.u.str);
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "entry_origin")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        if (value.u.i >= 0 && value.u.i <= 9) {
+                            stay.entry.origin = (int8_t)value.u.i;
+                        } else {
+                            LogError("Invalid entry origin value %1", value.u.i);
+                        }
+                    } else if (value.type == JsonValue::Type::String) {
+                        if (!value.u.str.len) {
+                            stay.entry.origin = 0;
+                        } else if (value.u.str.len == 1 &&
+                                   ((value.u.str[0] >= '0' && value.u.str[0] <= '9') ||
+                                    value.u.str[0] == 'R' || value.u.str[0] == 'r')) {
+                            // This is probably incorrect for either 'R' or 'r' but this is what
+                            // the machine code in FG2017 does, so keep it that way.
+                            stay.entry.origin = (char)(value.u.str[0] - '0');
+                        } else {
+                            LogError("Invalid entry origin value '%1'", value.u.str);
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "exit_date")) {
+                    SetDate(value, &stay.exit.date);
+                } else if (TestStr(key, "exit_mode")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        if (value.u.i >= 0 && value.u.i <= 9) {
+                            stay.exit.mode = (int8_t)value.u.i;
+                        } else {
+                            LogError("Invalid exit mode value %1", value.u.i);
+                        }
+                    } else if (value.type == JsonValue::Type::String) {
+                        if (value.u.str.len == 1) {
+                            stay.exit.mode = (char)(value.u.str[0] - '0');
+                        } else {
+                            LogError("Invalid exit mode value '%1'", value.u.str);
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "exit_destination")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        if (value.u.i >= 0 && value.u.i <= 9) {
+                            stay.exit.destination = (int8_t)value.u.i;
+                        } else {
+                            LogError("Invalid exit destination value %1", value.u.i);
+                        }
+                    } else if (value.type == JsonValue::Type::String) {
+                        if (!value.u.str.len) {
+                            stay.exit.destination = 0;
+                        } else if (value.u.str.len == 1 &&
+                                   (value.u.str[0] >= '0' && value.u.str[0] <= '9')) {
+                            stay.exit.destination = (char)(value.u.str[0] - '0');
+                        } else {
+                            LogError("Invalid exit destination value '%1'", value.u.str);
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "dp")) {
+                    if (value.type == JsonValue::Type::String) {
+                        stay.main_diagnosis = DiagnosisCode::FromString(value.u.str.ptr);
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "dr")) {
+                    if (value.type == JsonValue::Type::String) {
+                        stay.linked_diagnosis = DiagnosisCode::FromString(value.u.str.ptr);
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "gestational_age")) {
+                    SetInt(value, &stay.gestational_age);
+                } else if (TestStr(key, "igs2")) {
+                    SetInt(value, &stay.igs2);
+                } else if (TestStr(key, "last_menstrual_period")) {
+                    SetDate(value, &stay.last_menstrual_period);
+                } else if (TestStr(key, "newborn_weight")) {
+                    SetInt(value, &stay.newborn_weight);
+                } else if (TestStr(key, "session_count")) {
+                    SetInt(value, &stay.session_count);
+                } else if (TestStr(key, "sex")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        if (value.u.i == 1) {
+                            stay.sex = Sex::Male;
+                        } else if (value.u.i == 2) {
+                            stay.sex = Sex::Female;
+                        } else {
+                            LogError("Invalid sex value %1", value.u.i);
+                        }
+                    } else if (value.type == JsonValue::Type::String) {
+                        if (TestStr(value.u.str, "H") || TestStr(value.u.str, "h") ||
+                                TestStr(value.u.str, "M") || TestStr(value.u.str, "m")) {
+                            stay.sex = Sex::Male;
+                        } else if (TestStr(value.u.str, "F") || TestStr(value.u.str, "f")) {
+                            stay.sex = Sex::Female;
+                        } else {
+                            LogError("Invalid sex value '%1'", value.u.str);
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "stay_id")) {
+                    SetInt(value, &stay.stay_id);
+                } else if (TestStr(key, "unit")) {
+                    SetInt(value, &stay.unit.number);
+                } else {
+                    return UnknownAttribute(key);
+                }
+            } break;
 
-                stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
-                stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
-                out_set->stays.Append(stay);
-                ResetStay();
+            case State::AssociatedDiagnosisArray: {
+                if (value.type == JsonValue::Type::String) {
+                    DiagnosisCode diag = DiagnosisCode::FromString(value.u.str.ptr);
+                    out_set->store.diagnoses.Append(diag);
+                } else {
+                    UnexpectedType(value.type);
+                }
             } break;
 
             case State::ProcedureObject: {
-                state = State::ProcedureArray;
-
-                out_set->store.procedures.Append(proc);
-                ResetProc();
-            } break;
-
-            case State::TestObject: { state = State::StayObject; } break;
-
-            default: {
-                LogError("Unexpected end of object");
-                return false;
-            } break;
-        }
-
-        return true;
-    }
-
-    bool Key(const char *key, rapidjson::SizeType, bool) {
-#define HANDLE_KEY(Key, State) \
-            do { \
-                if (TestStr(key, (Key))) { \
-                    state = State; \
-                    return true; \
-                } \
-             } while (false)
-
-        switch (state) {
-            case State::StayObject: {
-                HANDLE_KEY("bed_authorization", State::StayBedAuthorization);
-                HANDLE_KEY("bill_id", State::StayBillId);
-                HANDLE_KEY("birthdate", State::StayBirthdate);
-                HANDLE_KEY("entry_date", State::StayEntryDate);
-                HANDLE_KEY("entry_mode", State::StayEntryMode);
-                HANDLE_KEY("entry_origin", State::StayEntryOrigin);
-                HANDLE_KEY("exit_date", State::StayExitDate);
-                HANDLE_KEY("exit_mode", State::StayExitMode);
-                HANDLE_KEY("exit_destination", State::StayExitDestination);
-                HANDLE_KEY("dp", State::StayMainDiagnosis);
-                HANDLE_KEY("dr", State::StayLinkedDiagnosis);
-                HANDLE_KEY("das", State::StayAssociatedDiagnoses);
-                HANDLE_KEY("gestational_age", State::StayGestationalAge);
-                HANDLE_KEY("igs2", State::StayIgs2);
-                HANDLE_KEY("last_menstrual_period", State::StayLastMenstrualPeriod);
-                HANDLE_KEY("newborn_weight", State::StayNewbornWeight);
-                HANDLE_KEY("procedures", State::StayProcedures);
-                HANDLE_KEY("session_count", State::StaySessionCount);
-                HANDLE_KEY("sex", State::StaySex);
-                HANDLE_KEY("stay_id", State::StayStayId);
-                HANDLE_KEY("unit", State::StayUnit);
-                HANDLE_KEY("test", State::StayTest);
-
-                LogError("Unknown stay attribute '%1'", key);
-                return false;
-            } break;
-
-            case State::ProcedureObject: {
-                HANDLE_KEY("code", State::ProcedureCode);
-                HANDLE_KEY("date", State::ProcedureDate);
-                HANDLE_KEY("phase", State::ProcedurePhase);
-                HANDLE_KEY("activity", State::ProcedureActivity);
-                HANDLE_KEY("count", State::ProcedureCount);
-
-                LogError("Unknown procedure attribute '%1'", key);
-                return false;
+                if (TestStr(key, "code")) {
+                    if (value.type == JsonValue::Type::String) {
+                        proc.proc = ProcedureCode::FromString(value.u.str.ptr);
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "date")) {
+                    SetDate(value, &proc.date);
+                } else if (TestStr(key, "phase")) {
+                    SetInt(value, &proc.phase);
+                } else if (TestStr(key, "activity")) {
+                    if (value.type == JsonValue::Type::Int) {
+                        int64_t activities_dec = value.u.i;
+                        if (UNLIKELY(activities_dec < 0)) {
+                            LogError("Procedure activity %1 cannot be a negative value", value.u.i);
+                            activities_dec = 0;
+                        }
+                        while (activities_dec) {
+                            int activity = (int)(activities_dec % 10);
+                            activities_dec /= 10;
+                            if (LIKELY(activity < 8)) {
+                                proc.activities |= (uint8_t)(1 << activity);
+                            } else {
+                                LogError("Procedure activity %1 outside of %2 - %3", activity, 0, 7);
+                            }
+                        }
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "count")) {
+                    SetInt(value, &proc.count);
+                } else {
+                    return UnknownAttribute(key);
+                }
             } break;
 
             case State::TestObject: {
-                HANDLE_KEY("cluster_len", State::TestClusterLen);
-                HANDLE_KEY("ghm", State::TestGhm);
-                HANDLE_KEY("error", State::TestError);
-                HANDLE_KEY("ghs", State::TestGhs);
-                HANDLE_KEY("rea", State::TestRea);
-                HANDLE_KEY("reasi", State::TestReaSi);
-                HANDLE_KEY("si", State::TestSi);
-                HANDLE_KEY("src", State::TestSrc);
-                HANDLE_KEY("nn1", State::TestNn1);
-                HANDLE_KEY("nn2", State::TestNn2);
-                HANDLE_KEY("nn3", State::TestNn3);
-                HANDLE_KEY("rep", State::TestRep);
-
-                LogError("Unknown test attribute '%1'", key);
-                return false;
-            } break;
-
-            default: {
-                LogError("Unexpected key token '%1'", key);
-                return false;
-            } break;
-        }
-
-#undef HANDLE_KEY
-    }
-
-    bool Int(int i)
-    {
-        switch (state) {
-            // Stay attributes
-            case State::StayStayId: { SetInt(&stay.stay_id, i); } break;
-            case State::StayBedAuthorization: { SetInt(&stay.bed_authorization, i); } break;
-            case State::StayBillId: { SetInt(&stay.bill_id, i); } break;
-            case State::StaySex: {
-                if (i == 1) {
-                    stay.sex = Sex::Male;
-                } else if (i == 2) {
-                    stay.sex = Sex::Female;
-                } else {
-                    LogError("Invalid sex value %1", i);
-                }
-            } break;
-            case State::StayEntryMode: {
-                if (i >= 0 && i <= 9) {
-                    stay.entry.mode = (int8_t)i;
-                } else {
-                    LogError("Invalid entry mode value %1", i);
-                }
-            } break;
-            case State::StayEntryOrigin: {
-                if (i >= 0 && i <= 9) {
-                    stay.entry.origin = (int8_t)i;
-                } else {
-                    LogError("Invalid entry origin value %1", i);
-                }
-            } break;
-            case State::StayExitMode: {
-                if (i >= 0 && i <= 9) {
-                    stay.exit.mode = (int8_t)i;
-                } else {
-                    LogError("Invalid exit mode value %1", i);
-                }
-            } break;
-            case State::StayExitDestination: {
-                if (i >= 0 && i <= 9) {
-                    stay.exit.destination = (int8_t)i;
-                } else {
-                    LogError("Invalid exit destination value %1", i);
-                }
-            } break;
-            case State::StayUnit: { SetInt(&stay.unit.number, i);} break;
-            case State::StaySessionCount: { SetInt(&stay.session_count, i); } break;
-            case State::StayIgs2: { SetInt(&stay.igs2, i); } break;
-            case State::StayGestationalAge: { SetInt(&stay.gestational_age, i); } break;
-            case State::StayNewbornWeight: { SetInt(&stay.newborn_weight, i); } break;
-
-            // Procedure attributes
-            case State::ProcedurePhase: { SetInt(&proc.phase, i); } break;
-            case State::ProcedureActivity: {
-                if (LIKELY(i >= 0)) {
-                    int activities_dec = i;
-                    while (activities_dec) {
-                        int activity = activities_dec % 10;
-                        activities_dec /= 10;
-                        if (LIKELY(activity < 8)) {
-                            proc.activities |= (uint8_t)(1 << activity);
-                        } else {
-                            LogError("Procedure activity %1 outside of %2 - %3", i, 0, 7);
-                        }
+#ifndef DISABLE_TESTS
+                if (TestStr(key, "cluster_len")) {
+                    SetInt(value, &stay.test.cluster_len);
+                } else if (TestStr(key, "ghm")) {
+                    if (value.type == JsonValue::Type::String) {
+                        stay.test.ghm = GhmCode::FromString(value.u.str.ptr);
+                    } else {
+                        UnexpectedType(value.type);
                     }
+                } else if (TestStr(key, "error")) {
+                    SetInt(value, &stay.test.error);
+                } else if (TestStr(key, "ghs")) {
+                    SetInt(value, &stay.test.ghs.number);
+                } else if (TestStr(key, "rea")) {
+                    SetInt(value, &stay.test.supplements.rea);
+                } else if (TestStr(key, "reasi")) {
+                    SetInt(value, &stay.test.supplements.reasi);
+                } else if (TestStr(key, "si")) {
+                    SetInt(value, &stay.test.supplements.si);
+                } else if (TestStr(key, "src")) {
+                    SetInt(value, &stay.test.supplements.src);
+                } else if (TestStr(key, "nn1")) {
+                    SetInt(value, &stay.test.supplements.nn1);
+                } else if (TestStr(key, "nn2")) {
+                    SetInt(value, &stay.test.supplements.nn2);
+                } else if (TestStr(key, "nn3")) {
+                    SetInt(value, &stay.test.supplements.nn3);
+                } else if (TestStr(key, "rep")) {
+                    SetInt(value, &stay.test.supplements.rep);
                 } else {
-                    LogError("Procedure activity %1 cannot be a negative value", i);
+                    return UnknownAttribute(key);
                 }
-            } break;
-            case State::ProcedureCount: { SetInt(&proc.count, i); } break;
-
-            // Test attributes
-#ifndef DISABLE_TESTS
-            case State::TestClusterLen: { SetInt(&stay.test.cluster_len, i); } break;
-            case State::TestError: { SetInt(&stay.test.error, i); } break;
-            case State::TestGhs: {
-                // TODO: Use GhsCode() constructor to validate number
-                SetInt(&stay.test.ghs.number, i);
-            } break;
-            case State::TestRea: { SetInt(&stay.test.supplements.rea, i); } break;
-            case State::TestReaSi: { SetInt(&stay.test.supplements.reasi, i); } break;
-            case State::TestSi: { SetInt(&stay.test.supplements.si, i); } break;
-            case State::TestSrc: { SetInt(&stay.test.supplements.src, i); } break;
-            case State::TestNn1: { SetInt(&stay.test.supplements.nn1, i); } break;
-            case State::TestNn2: { SetInt(&stay.test.supplements.nn2, i); } break;
-            case State::TestNn3: { SetInt(&stay.test.supplements.nn3, i); } break;
-            case State::TestRep: { SetInt(&stay.test.supplements.rep, i); } break;
-#else
-            case State::TestClusterLen: {} break;
-            case State::TestError: {} break;
-            case State::TestGhs: {} break;
-            case State::TestRea: {} break;
-            case State::TestReaSi: {} break;
-            case State::TestSi: {} break;
-            case State::TestSrc: {} break;
-            case State::TestNn1: {} break;
-            case State::TestNn2: {} break;
-            case State::TestNn3: {} break;
-            case State::TestRep: {} break;
 #endif
-
-            default: {
-                LogError("Unexpected integer value %1", i);
-                return false;
             } break;
+
+            default: { return UnexpectedValue(); } break;
         }
 
-        return HandleValueEnd();
-    }
-    bool String(const char *str, rapidjson::SizeType, bool)
-    {
-        switch (state) {
-            // Stay attributes
-            case State::StaySex: {
-                if (TestStr(str, "H") || TestStr(str, "h") ||
-                        TestStr(str, "M") || TestStr(str, "m")) {
-                    stay.sex = Sex::Male;
-                } else if (TestStr(str, "F") || TestStr(str, "f")) {
-                    stay.sex = Sex::Female;
-                } else {
-                    LogError("Invalid sex value '%1'", str);
-                }
-            } break;
-            case State::StayBirthdate:
-                { SetDateOrError(&stay.birthdate, str, Stay::Error::MalformedBirthdate); } break;
-            case State::StayEntryDate: { SetDate(&stay.entry.date, str); } break;
-            case State::StayEntryMode: {
-                if (str[0] && !str[1]) {
-                    stay.entry.mode = (char)(str[0] - '0');
-                } else {
-                    LogError("Invalid entry mode value '%1'", str);
-                }
-            } break;
-            case State::StayEntryOrigin: {
-                if (!str[0]) {
-                    stay.entry.origin = 0;
-                } else if (((str[0] >= '0' && str[0] <= '9')
-                            || str[0] == 'R' || str[0] == 'r') && !str[1]) {
-                    // This is probably incorrect for either 'R' or 'r' but this is what
-                    // the machine code in FG2017 does, so keep it that way.
-                    stay.entry.origin = (char)(str[0] - '0');
-                } else {
-                    LogError("Invalid entry origin value '%1'", str);
-                }
-            } break;
-            case State::StayExitDate: { SetDate(&stay.exit.date, str); } break;
-            case State::StayExitMode: {
-                if (str[0] && !str[1]) {
-                    stay.exit.mode = (char)(str[0] - '0');
-                } else {
-                    LogError("Invalid exit mode value '%1'", str);
-                }
-            } break;
-            case State::StayExitDestination: {
-                if (!str[0]) {
-                    stay.exit.destination = 0;
-                } else if ((str[0] >= '0' && str[0] <= '9') && !str[1]) {
-                    stay.exit.destination = (char)(str[0] - '0');
-                } else {
-                    LogError("Invalid exit destination value '%1'", str);
-                }
-            } break;
-            case State::StayLastMenstrualPeriod:
-                { SetDate(&stay.last_menstrual_period, str); } break;
-
-            // Diagnoses (part of Stay, separated for clarity)
-            case State::StayMainDiagnosis: {
-                stay.main_diagnosis = DiagnosisCode::FromString(str);
-                out_set->store.diagnoses.Append(stay.main_diagnosis);
-            } break;
-            case State::StayLinkedDiagnosis: {
-                stay.linked_diagnosis = DiagnosisCode::FromString(str);
-                out_set->store.diagnoses.Append(stay.linked_diagnosis);
-            } break;
-            case State::AssociatedDiagnosisArray: {
-                DiagnosisCode diag = DiagnosisCode::FromString(str);
-                out_set->store.diagnoses.Append(diag);
-            } break;
-
-            // Procedure attributes
-            case State::ProcedureCode: { proc.proc = ProcedureCode::FromString(str); } break;
-            case State::ProcedureDate: { SetDate(&proc.date, str); } break;
-
-            // Test attributes
-#ifndef DISABLE_TESTS
-            case State::TestGhm: { stay.test.ghm = GhmCode::FromString(str); } break;
-#else
-            case State::TestGhm: {} break;
-#endif
-
-            default: {
-                LogError("Unexpected string value '%1'", str);
-                return false;
-            } break;
-        }
-
-        return HandleValueEnd();
+        return true;
     }
 
 private:
@@ -460,40 +339,6 @@ private:
     {
         proc = {};
         proc.count = 1;
-    }
-
-    template <typename T>
-    void SetIntOrError(T *dest, int i, Stay::Error error_flag)
-    {
-        if (!SetInt(dest, i)) {
-            stay.error_mask |= (uint32_t)error_flag;
-        }
-    }
-
-    void SetDateOrError(Date *dest, const char *date_str, Stay::Error error_flag)
-    {
-        if (!SetDate(dest, date_str)) {
-            stay.error_mask |= (uint32_t)error_flag;
-        }
-    }
-
-    bool HandleValueEnd()
-    {
-        if ((int)state >= (int)State::TestObject) {
-            state = State::TestObject;
-            return true;
-        } else if ((int)state >= (int)State::ProcedureArray) {
-            state = State::ProcedureObject;
-            return true;
-        } else if ((int)state >= (int)State::AssociatedDiagnosisArray) {
-            return true;
-        } else if ((int)state >= (int)State::StayArray) {
-            state = State::StayObject;
-            return true;
-        } else {
-            LogError("Unexpected value");
-            return false;
-        }
     }
 };
 

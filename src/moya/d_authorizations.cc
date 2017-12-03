@@ -5,13 +5,8 @@
 class JsonAuthorizationHandler: public BaseJsonHandler<JsonAuthorizationHandler> {
     enum class State {
         Default,
-
         AuthArray,
-        AuthObject,
-        AuthAuthorization,
-        AuthBeginDate,
-        AuthEndDate,
-        AuthUnit
+        AuthObject
     };
 
     State state = State::Default;
@@ -24,139 +19,83 @@ public:
     JsonAuthorizationHandler(HeapArray<Authorization> *out_authorizations = nullptr)
         : out_authorizations(out_authorizations) {}
 
-    bool StartArray()
+    bool Branch(JsonBranchType type, const char *)
     {
-        if (state != State::Default) {
-            LogError("Unexpected array");
-            return false;
+        if (state == State::Default && type == JsonBranchType::Array) {
+            state = State::AuthArray;
+        } else if (state == State::AuthArray && type == JsonBranchType::EndArray) {
+            state = State::Default;
+        } else if (state == State::AuthArray && type == JsonBranchType::Object) {
+            state = State::AuthObject;
+        } else if (state == State::AuthObject && type == JsonBranchType::EndObject) {
+            if (!auth.dates[1].value) {
+                static const Date default_end_date = ConvertDate1980(UINT16_MAX);
+                auth.dates[1] = default_end_date;
+            }
+
+            out_authorizations->Append(auth);
+            auth = {};
+
+            state = State::AuthArray;
+        } else {
+            return UnexpectedBranch(type);
         }
 
-        state = State::AuthArray;
-        return true;
-    }
-    bool EndArray(rapidjson::SizeType)
-    {
-        if (state != State::AuthArray) {
-            LogError("Unexpected end of array");
-            return false;
-        }
-
-        state = State::Default;
-        return true;
-    }
-
-    bool StartObject()
-    {
-        if (state != State::AuthArray) {
-            LogError("Unexpected object");
-            return false;
-        }
-
-        state = State::AuthObject;
-        return true;
-    }
-    bool EndObject(rapidjson::SizeType)
-    {
-        if (state != State::AuthObject) {
-            LogError("Unexpected end of object");
-            return false;
-        }
-
-        if (!auth.dates[1].value) {
-            static const Date default_end_date = ConvertDate1980(UINT16_MAX);
-            auth.dates[1] = default_end_date;
-        }
-
-        out_authorizations->Append(auth);
-        auth = {};
-
-        state = State::AuthArray;
         return true;
     }
 
-    bool Key(const char *key, rapidjson::SizeType, bool) {
-#define HANDLE_KEY(Key, State) \
-            do { \
-                if (TestStr(key, (Key))) { \
-                    state = State; \
-                    return true; \
-                } \
-             } while (false)
-
-        if (state != State::AuthObject) {
-            LogError("Unexpected key token '%1'", key);
-            return false;
-        }
-
-        HANDLE_KEY("authorization", State::AuthAuthorization);
-        HANDLE_KEY("begin_date", State::AuthBeginDate);
-        HANDLE_KEY("end_date", State::AuthEndDate);
-        HANDLE_KEY("unit", State::AuthUnit);
-
-        LogError("Unknown authorization attribute '%1'", key);
-        return false;
-
-#undef HANDLE_KEY
-    }
-
-    bool Int(int i)
+    bool Value(const char *key, const JsonValue &value)
     {
-        switch (state) {
-            case State::AuthAuthorization: {
-                if (i >= 0 && i < 100) {
-                    auth.type = (int8_t)i;
+        if (state == State::AuthObject) {
+            if (TestStr(key, "authorization")) {
+                if (value.type == JsonValue::Type::Int) {
+                    if (value.u.i >= 0 && value.u.i < 100) {
+                        auth.type = (int8_t)value.u.i;
+                    } else {
+                        LogError("Invalid authorization type %1", value.u.i);
+                    }
+                } else if (value.type == JsonValue::Type::String) {
+                    int8_t type;
+                    if (sscanf(value.u.str.ptr, "%" SCNd8, &type) == 1 &&
+                            type >= 0 && type < 100) {
+                        auth.type = type;
+                    } else {
+                        LogError("Invalid authorization type '%1'", value.u.str);
+                    }
                 } else {
-                    LogError("Invalid authorization type %1", i);
+                    UnexpectedType(value.type);
                 }
-            } break;
-            case State::AuthUnit: {
-                if (i >= 0 && i < 10000) {
-                    auth.unit.number = (int16_t)i;
+            } else if (TestStr(key, "begin_date")) {
+                SetDate(value, &auth.dates[0]);
+            } else if (TestStr(key, "end_date")) {
+                SetDate(value, &auth.dates[1]);
+            } else if (TestStr(key, "unit")) {
+                if (value.type == JsonValue::Type::Int) {
+                    if (value.u.i >= 0 && value.u.i < 10000) {
+                        auth.unit.number = (int16_t)value.u.i;
+                    } else {
+                        LogError("Invalid unit code %1", value.u.i);
+                    }
+                } else if (value.type == JsonValue::Type::String) {
+                    int16_t unit;
+                    if (TestStr(value.u.str, "facility")) {
+                        auth.unit.number = INT16_MAX;
+                    } else if (sscanf(value.u.str.ptr, "%" SCNd16, &unit) == 1 &&
+                               unit >= 0 && unit < 10000) {
+                        auth.unit.number = unit;
+                    } else {
+                        LogError("Invalid unit code '%1'", value.u.str);
+                    }
                 } else {
-                    LogError("Invalid unit code %1", i);
+                    UnexpectedType(value.type);
                 }
-            } break;
-
-            default: {
-                LogError("Unexpected integer value %1", i);
-                return false;
-            } break;
+            } else {
+                return UnknownAttribute(key);
+            }
+        } else {
+            return UnexpectedValue();
         }
 
-        state = State::AuthObject;
-        return true;
-    }
-    bool String(const char *str, rapidjson::SizeType, bool)
-    {
-        switch (state) {
-            case State::AuthAuthorization: {
-                int8_t type;
-                if (sscanf(str, "%" SCNd8, &type) == 1 && type >= 0 && type < 100) {
-                    auth.type = type;
-                } else {
-                    LogError("Invalid authorization type '%1'", str);
-                }
-            } break;
-            case State::AuthBeginDate: { SetDate(&auth.dates[0], str); } break;
-            case State::AuthEndDate: { SetDate(&auth.dates[1], str); } break;
-            case State::AuthUnit: {
-                int16_t unit;
-                if (TestStr(str, "facility")) {
-                    auth.unit.number = INT16_MAX;
-                } else if (sscanf(str, "%" SCNd16, &unit) == 1 && unit >= 0 && unit < 10000) {
-                    auth.unit.number = unit;
-                } else {
-                    LogError("Invalid unit code '%1'", str);
-                }
-            } break;
-
-            default: {
-                LogError("Unexpected string value '%1'", str);
-                return false;
-            } break;
-        }
-
-        state = State::AuthObject;
         return true;
     }
 };

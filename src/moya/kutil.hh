@@ -2390,65 +2390,183 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
     return true;
 }
 
+struct JsonValue {
+    enum class Type {
+        Null,
+        Bool,
+        Int,
+        Double,
+        String
+    };
+
+    Type type;
+    union {
+        bool b;
+        int64_t i;
+        double d;
+        Span<const char> str;
+    } u;
+
+    JsonValue() = default;
+    JsonValue(std::nullptr_t) : type(Type::Null) {}
+    JsonValue(bool b) : type(Type::Bool) { u.b = b; }
+    JsonValue(int64_t i) : type(Type::Int) { u.i = i; }
+    JsonValue(double d) : type(Type::Double) { u.d = d; }
+    JsonValue(Span<const char> str) : type(Type::String) { u.str = str; }
+};
+
+enum class JsonBranchType {
+    Array,
+    EndArray,
+    Object,
+    EndObject
+};
+
 template <typename T>
 class BaseJsonHandler {
+    char current_key[60];
+    bool valid_key = false;
+
 public:
-    bool Default()
+    // bool Branch(JsonBranchType, const char *) { Assert(false); }
+    // bool Value(const char *, const JsonValue &)  { Assert(false); }
+
+    bool Key(const char *key, Size, bool)
     {
-        LogError("Unsupported value type");
-        return false;
+        strncpy(current_key, key, SIZE(current_key));
+        current_key[SIZE(current_key) - 1] = '\0';
+        valid_key = true;
+        return true;
     }
 
-    bool Uint(unsigned int u)
+    bool StartArray()
     {
-        if (u <= INT_MAX) {
-            return ((T *)this)->Int((int)u);
-        } else {
-            return ((T *)this)->Default();
-        }
+        DEFER { valid_key = false; };
+        return ((T *)this)->Branch(JsonBranchType::Array, valid_key ? current_key : nullptr);
     }
+    bool EndArray(Size)
+    {
+        return ((T *)this)->Branch(JsonBranchType::EndArray, valid_key ? current_key : nullptr);
+    }
+
+    bool StartObject()
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Branch(JsonBranchType::Object, valid_key ? current_key : nullptr);
+    }
+    bool EndObject(Size)
+    {
+        return ((T *)this)->Branch(JsonBranchType::EndObject, valid_key ? current_key : nullptr);
+    }
+
+    bool Null()
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Value(valid_key ? current_key : nullptr, nullptr);
+    }
+    bool Bool(bool b)
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Value(valid_key ? current_key : nullptr, b);
+    }
+    bool Int64(int64_t i)
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Value(valid_key ? current_key : nullptr, i);
+    }
+    bool Double(double d)
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Value(valid_key ? current_key : nullptr, d);
+    }
+    bool String(const char *str, Size len, bool)
+    {
+        DEFER { valid_key = false; };
+        return ((T *)this)->Value(valid_key ? current_key : nullptr, MakeSpan(str, len));
+    }
+
+    bool Int(int i) { return ((T *)this)->Int64(i); }
+    bool Uint(unsigned int u) { return ((T *)this)->Int64(u); }
     bool Uint64(uint64_t u)
     {
         if (u <= INT64_MAX) {
             return ((T *)this)->Int64((int64_t)u);
         } else {
-            return ((T *)this)->Default();
+            LogError("FUCK");
+            return false;
         }
     }
 
-    bool Null() { return ((T *)this)->Default(); }
-    bool Bool(bool) { return ((T *)this)->Default(); }
-    bool Int(int) { return ((T *)this)->Default(); }
-    bool Int64(int64_t) { return ((T *)this)->Default(); }
-    bool Double(double) { return ((T *)this)->Default();; }
-    bool RawNumber(const char *, Size, bool) { return ((T *)this)->Default(); }
-    bool String(const char *, Size, bool) { return ((T *)this)->Default(); }
-    bool StartObject() { return ((T *)this)->Default(); }
-    bool Key(const char *, Size, bool) { return ((T *)this)->Default(); }
-    bool EndObject(Size) { return ((T *)this)->Default(); }
-    bool StartArray() { return ((T *)this)->Default(); }
-    bool EndArray(Size) { return ((T *)this)->Default(); }
+    bool RawNumber(const char *, Size, bool) { Assert(false); }
 
     template <typename U>
-    bool SetInt(U *dest, int i)
+    bool SetInt(const JsonValue &value, U *dest)
     {
-        U value = (U)i;
-        if (value != i) {
-            LogError("Value %1 outside of range %2 - %3",
-                     i, (int)std::numeric_limits<U>::min(), (int)std::numeric_limits<U>::max());
+        if (value.type != JsonValue::Type::Int)
+            return UnexpectedType(value.type);
+
+        U i = (U)value.u.i;
+        if (i != value.u.i) {
+            LogError("Value %1 outside of range %2 - %3", value.u.i,
+                     (int)std::numeric_limits<U>::min(), (int)std::numeric_limits<U>::max());
             return false;
         }
-        *dest = value;
+        *dest = i;
         return true;
     }
 
-    bool SetDate(Date *dest, const char *date_str)
+    bool SetString(const JsonValue &value, Allocator *alloc, const char **str)
     {
-        Date date = Date::FromString(date_str, false);
+        if (value.type != JsonValue::Type::String)
+            return UnexpectedType(value.type);
+
+        *str = MakeString(alloc, value.u.str).ptr;
+        return true;
+    }
+
+    bool SetDate(const JsonValue &value, Date *dest)
+    {
+        if (value.type != JsonValue::Type::String)
+            return UnexpectedType(value.type);
+
+        Date date = Date::FromString(value.u.str.ptr, false);
         if (!date.value)
             return false;
         *dest = date;
         return true;
     }
+
+    bool UnexpectedBranch(JsonBranchType type)
+    {
+        switch (type) {
+            case JsonBranchType::Array: { LogError("Unexpected array"); } break;
+            case JsonBranchType::EndArray: { LogError("Unexpected end of array"); } break;
+            case JsonBranchType::Object: { LogError("Unexpected object"); } break;
+            case JsonBranchType::EndObject: { LogError("Unexpected end of object"); } break;
+        }
+        return false;
+    }
+    bool UnexpectedType(JsonValue::Type type)
+    {
+        switch (type) {
+            case JsonValue::Type::Null: { LogError("Unexpected null value"); } break;
+            case JsonValue::Type::Bool: { LogError("Unexpected boolean value"); } break;
+            case JsonValue::Type::Int: { LogError("Unexpected integer value"); } break;
+            case JsonValue::Type::Double: { LogError("Unexpected floating point value"); } break;
+            case JsonValue::Type::String: { LogError("Unexpected string value"); } break;
+        }
+        return false;
+    }
+    bool UnknownAttribute(const char *key)
+    {
+        LogError("Unknown attribute '%1'", key);
+        return false;
+    }
+    bool UnexpectedValue()
+    {
+        LogError("Unexpected value");
+        return false;
+    }
 };
+
 #endif
