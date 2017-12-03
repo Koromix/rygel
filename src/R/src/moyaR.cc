@@ -399,7 +399,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     Rcpp::DataFrame retval;
     {
-        Allocator temp_alloc;
+        char buf[32];
 
         Rcpp::IntegerVector bill_id(result_set.results.len);
         Rcpp::CharacterVector exit_date(result_set.results.len);
@@ -420,9 +420,9 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             const ClassifyResult &result = result_set.results[i];
 
             bill_id[i] = result.stays[0].bill_id;
-            exit_date[i] = Fmt(&temp_alloc, "%1", result.stays[result.stays.len - 1].exit.date).ptr;
+            exit_date[i] = Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date).ptr;
             duration[i] = result.duration;
-            ghm[i] = Fmt(&temp_alloc, "%1", result.ghm).ptr;
+            ghm[i] = Fmt(buf, "%1", result.ghm).ptr;
             ghs[i] = result.ghs.number;
             ghs_price[i] = (double)result.ghs_price_cents / 100.0;
             rea[i] = result.supplements.rea;
