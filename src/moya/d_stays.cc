@@ -374,7 +374,7 @@ public:
             } break;
             case State::StayBirthdate:
                 { SetDateOrError(&stay.birthdate, str, Stay::Error::MalformedBirthdate); } break;
-            case State::StayEntryDate: { SetDate(&stay.dates[0], str); } break;
+            case State::StayEntryDate: { SetDate(&stay.entry.date, str); } break;
             case State::StayEntryMode: {
                 if (str[0] && !str[1]) {
                     stay.entry.mode = (char)(str[0] - '0');
@@ -394,7 +394,7 @@ public:
                     LogError("Invalid entry origin value '%1'", str);
                 }
             } break;
-            case State::StayExitDate: { SetDate(&stay.dates[1], str); } break;
+            case State::StayExitDate: { SetDate(&stay.exit.date, str); } break;
             case State::StayExitMode: {
                 if (str[0] && !str[1]) {
                     stay.exit.mode = (char)(str[0] - '0');

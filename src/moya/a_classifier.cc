@@ -135,7 +135,7 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     int min_score = INT_MAX;
 
     for (const Stay &stay: stays) {
-        int stay_duration = stay.dates[1] - stay.dates[0];
+        int stay_duration = stay.exit.date - stay.entry.date;
         int stay_score = base_score;
 
         proc_priority = 0;
@@ -246,10 +246,10 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->stays = stays;
 
     {
-        Date date = stays[stays.len - 1].dates[1];
+        Date date = stays[stays.len - 1].exit.date;
         out_agg->index = table_set.FindIndex(date);
         if (!out_agg->index) {
-            LogError("No table available on '%1'", stays[stays.len - 1].dates[1]);
+            LogError("No table available on '%1'", stays[stays.len - 1].exit.date);
             return SetError(out_errors, 3, 502);
         }
     }
@@ -257,7 +257,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     bool valid = true;
 
     out_agg->stay = stays[0];
-    out_agg->age = ComputeAge(out_agg->stay.dates[0], out_agg->stay.birthdate);
+    out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
         if (!stay.main_diagnosis.IsValid()) {
@@ -272,9 +272,8 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         if (stay.igs2 > out_agg->stay.igs2) {
             out_agg->stay.igs2 = stay.igs2;
         }
-        out_agg->duration += stay.dates[1] - stay.dates[0];
+        out_agg->duration += stay.exit.date - stay.entry.date;
     }
-    out_agg->stay.dates[1] = stays[stays.len - 1].dates[1];
     out_agg->stay.exit = stays[stays.len - 1].exit;
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
@@ -292,7 +291,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
             SetError(out_errors, 0, 39);
             valid = false;
         }
-        if (UNLIKELY(stay.dates[1] < stay.dates[0])) {
+        if (UNLIKELY(stay.exit.date < stay.entry.date)) {
             SetError(out_errors, 0, 32);
             valid = false;
         }
@@ -302,9 +301,9 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     for (Size i = 1; i < stays.len; i++) {
         const Stay &stay = stays[i];
 
-        if (UNLIKELY(stay.dates[0] != stays[i - 1].dates[1])) {
+        if (UNLIKELY(stay.entry.date != stays[i - 1].exit.date)) {
             if (stay.entry.mode != 0 || stays[i - 1].exit.mode != 0 ||
-                    stay.dates[0] - stays[i - 1].dates[1] > 1) {
+                    stays[i - 1].exit.date - stay.entry.date > 1) {
                 SetError(out_errors, 0, 23);
                 valid = false;
             }
@@ -443,7 +442,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 3: {
             if (ghm_node.u.test.params[1] == 1) {
-                int age_days = ctx.agg->stay.dates[0] - ctx.agg->stay.birthdate;
+                int age_days = ctx.agg->stay.entry.date - ctx.agg->stay.birthdate;
                 return (age_days > ghm_node.u.test.params[0]);
             } else {
                 return (ctx.agg->age > ghm_node.u.test.params[0]);
@@ -851,10 +850,10 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
         duration = 0;
         bool authorized = false;
         for (const Stay &stay: agg.stays) {
-            if (TestAuthorization(authorization_set, stay.unit, stay.dates[1],
+            if (TestAuthorization(authorization_set, stay.unit, stay.exit.date,
                                   ghs_info.unit_authorization)) {
-                if (stay.dates[1] > stay.dates[0]) {
-                    duration += stay.dates[1] - stay.dates[0];
+                if (stay.exit.date != stay.entry.date) {
+                    duration += stay.exit.date - stay.entry.date;
                 } else {
                     duration++;
                 }
@@ -913,7 +912,7 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
             agg.stays[agg.stays.len - 1].exit.mode == 8) {
         bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const Stay &stay) {
-            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.dates[1]);
+            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
             return (auth_type == 7);
         });
         if (uhcd) {
@@ -1039,7 +1038,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     for (const Stay &stay: agg.stays) {
         const AuthorizationInfo *auth_info = nullptr;
         {
-            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.dates[1]);
+            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
 
             // TODO: Use HashSet on autorefs to avoid linear scan
             for (const AuthorizationInfo &it: agg.index->authorizations) {
@@ -1134,14 +1133,14 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
         prev_reanimation = reanimation;
 
-        if (stay.dates[1] > stay.dates[0]) {
+        if (stay.exit.date != stay.entry.date) {
             if (ambu_stay && ambu_priority >= priority) {
                 if (counter) {
-                    *counter += stay.dates[1] - stay.dates[0] + (stay.exit.mode == 9) - 1;
+                    *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == 9) - 1;
                 }
                 (*ambu_counter)++;
             } else if (counter) {
-                *counter += stay.dates[1] - stay.dates[0] + (stay.exit.mode == 9);
+                *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == 9);
             }
             ambu_stay = nullptr;
             ambu_priority = 0;
@@ -1221,7 +1220,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
         if (pricing_set.ghs_pricings.len) {
             result.ghs_price_cents = PriceGhs(pricing_set, result.ghs,
-                                              agg.stay.dates[1], agg.duration, agg.stay.exit.mode == 9);
+                                              agg.stay.exit.date, agg.duration, agg.stay.exit.mode == 9);
         }
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
 

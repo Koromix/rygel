@@ -308,11 +308,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     LogError("Unexpected sex '%1' on row %2", sex, i + 1);
                 }
             }
-            stay.dates[0] = stays.entry_date[i];
-            stay.dates[1] = stays.exit_date[i];
+            stay.entry.date = stays.entry_date[i];
             // TODO: Harmonize who deals with format errors (for example sex is dealt with here, not modes)
+            stay.entry.date = stays.entry_date[i];
             stay.entry.mode = ParseEntryExitCharacter(stays.entry_mode[i]);
             stay.entry.origin = ParseEntryExitCharacter(GetOptionalValue(stays.entry_origin, i, ""));
+            stay.exit.date = stays.exit_date[i];
             stay.exit.mode = ParseEntryExitCharacter(stays.exit_mode[i]);
             stay.exit.destination = ParseEntryExitCharacter(GetOptionalValue(stays.exit_destination, i, ""));
             stay.unit.number = GetOptionalValue(stays.unit, i, 0);
@@ -419,7 +420,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             const ClassifyResult &result = result_set.results[i];
 
             bill_id[i] = result.stays[0].bill_id;
-            exit_date[i] = Fmt(&temp_alloc, "%1", result.stays[result.stays.len - 1].dates[1]).ptr;
+            exit_date[i] = Fmt(&temp_alloc, "%1", result.stays[result.stays.len - 1].exit.date).ptr;
             duration[i] = result.duration;
             ghm[i] = Fmt(&temp_alloc, "%1", result.ghm).ptr;
             ghs[i] = result.ghs.number;

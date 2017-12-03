@@ -232,7 +232,7 @@ Classify options:
         PrintLn("Details:");
         for (const ClassifyResult &result: result_set.results) {
             PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
-                    result.stays[0].dates[0], result.stays[result.stays.len - 1].dates[1],
+                    result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                     result.stays.len, result.ghm, result.ghs);
 
             if (verbosity >= 2) {

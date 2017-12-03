@@ -25,12 +25,13 @@ struct Stay {
 
     Sex sex;
     Date birthdate;
-    Date dates[2];
     struct {
+        Date date;
         int8_t mode;
         int8_t origin;
     } entry;
     struct {
+        Date date;
         int8_t mode;
         int8_t destination;
     } exit;
