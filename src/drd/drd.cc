@@ -801,7 +801,7 @@ Commands:
     HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pack, RunPack);
-    HANDLE_COMMAND(pricing, RunPrices);
+    HANDLE_COMMAND(prices, RunPrices);
     HANDLE_COMMAND(tables, RunTables);
 
 #undef HANDLE_COMMAND
