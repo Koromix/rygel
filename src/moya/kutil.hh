@@ -2294,7 +2294,7 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
     class FileReadStreamEx {
         StreamReader *st;
 
-        LocalArray<char, 1024 * 1024> buffer;
+        LocalArray<char, 256 * 1024> buffer;
         Size buffer_offset = 0;
         Size file_offset = 0;
 
