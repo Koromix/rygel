@@ -459,59 +459,6 @@ R"(Usage: drd info [options] name ...
     return true;
 }
 
-static bool RunIndexes(Span<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
-R"(Usage: drd indexes [options]
-
-Indexes options:
-    -v, --verbose                Show more detailed information
-)");
-        PrintLn(fp, "%1", main_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    bool verbose = false;
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (TestOption(opt, "-v", "--verbose")) {
-                verbose = true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-    }
-
-    const TableSet *table_set = GetMainTableSet();
-    if (!table_set)
-        return false;
-
-    for (const TableIndex &index: table_set->indexes) {
-        PrintLn("%1 to %2:", index.limit_dates[0], index.limit_dates[1]);
-        for (const TableInfo *table: index.tables) {
-            if (!table)
-                continue;
-
-            PrintLn("  %1: %2.%3",
-                    TableTypeNames[(int)table->type], table->version[0], table->version[1]);
-            if (verbose) {
-                PrintLn("    Validity: %1 to %2",
-                        table->limit_dates[0], table->limit_dates[1]);
-                PrintLn("    Build: %1", table->build_date);
-            }
-        }
-        PrintLn();
-    }
-
-    return true;
-}
-
 static bool RunList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -702,14 +649,14 @@ static bool RunTables(Span<const char *> arguments)
 R"(Usage: drd tables [options] [filename] ...
 
 Dump options:
-    -h, --headers                Print only table headers
+    -d, --dump                   Dump content of (readable) tables
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
 
-    bool headers = false;
+    bool dump = false;
     HeapArray<const char *> filenames;
     {
         const char *opt;
@@ -717,8 +664,8 @@ Dump options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-h", "--headers")) {
-                headers = true;
+            } else if (TestOption(opt, "-d", "--dump")) {
+                dump = true;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
@@ -731,12 +678,18 @@ Dump options:
         TableSet table_set;
         if (!LoadTableFiles(filenames, &table_set) && !table_set.indexes.len)
             return false;
-        DumpTableSet(table_set, !headers);
+        DumpTableSetHeaders(table_set);
+        if (dump) {
+            DumpTableSetContent(table_set);
+        }
     } else {
         const TableSet *table_set = GetMainTableSet();
         if (!table_set)
             return false;
-        DumpTableSet(*table_set, !headers);
+        DumpTableSetHeaders(*table_set);
+        if (dump) {
+            DumpTableSetContent(*table_set);
+        }
     }
 
     return true;
@@ -753,7 +706,6 @@ Commands:
     constraints                  Compute GHM accessibility constraints
     info                         Print information about individual elements
                                  (diagnoses, procedures, GHM roots, etc.)
-    indexes                      Show table and price indexes
     list                         Export diagnosis and procedure lists
     pack                         Pack stays for quicker loads
     prices                       Dump GHS pricings
@@ -798,7 +750,6 @@ Commands:
     HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);
     HANDLE_COMMAND(info, RunInfo);
-    HANDLE_COMMAND(indexes, RunIndexes);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pack, RunPack);
     HANDLE_COMMAND(prices, RunPrices);

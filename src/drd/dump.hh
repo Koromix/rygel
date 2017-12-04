@@ -18,7 +18,8 @@ void DumpGhsTable(Span<const GhsInfo> ghs);
 void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations);
 void DumpSupplementPairTable(Span<const SrcPair> pairs);
 
-void DumpTableSet(const TableSet &table_set, bool detail = true);
+void DumpTableSetHeaders(const TableSet &table_set);
+void DumpTableSetContent(const TableSet &table_set);
 
 void DumpGhsPricings(Span<const GhsPricing> ghs_pricings);
 

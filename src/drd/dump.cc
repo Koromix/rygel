@@ -202,7 +202,7 @@ void DumpSupplementPairTable(Span<const SrcPair> pairs)
     }
 }
 
-void DumpTableSet(const TableSet &table_set, bool detail)
+void DumpTableSetHeaders(const TableSet &table_set)
 {
     PrintLn("Headers:");
     for (const TableInfo &table: table_set.tables) {
@@ -219,71 +219,86 @@ void DumpTableSet(const TableSet &table_set, bool detail)
         PrintLn();
     }
 
-    if (detail) {
-        PrintLn("Content:");
-        for (const TableIndex &index: table_set.indexes) {
-            PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
-            // We don't really need to loop here, but we want the switch to get
-            // warnings when we introduce new table types.
-            for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
-                if (!index.tables[i])
-                    continue;
+    PrintLn("Index:");
+    for (const TableIndex &index: table_set.indexes) {
+        PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+        for (const TableInfo *table: index.tables) {
+            if (!table)
+                continue;
 
-                switch ((TableType)i) {
-                    case TableType::GhmDecisionTree: {
-                        PrintLn("    GHM Decision Tree:");
-                        DumpGhmDecisionTree(index.ghm_nodes);
-                        PrintLn();
-                    } break;
-                    case TableType::DiagnosisTable: {
-                        PrintLn("    Diagnoses:");
-                        DumpDiagnosisTable(index.diagnoses, index.exclusions);
-                        PrintLn();
-                    } break;
-                    case TableType::ProcedureTable: {
-                        PrintLn("    Procedures:");
-                        DumpProcedureTable(index.procedures);
-                        PrintLn();
-                    } break;
-                    case TableType::GhmRootTable: {
-                        PrintLn("    GHM Roots:");
-                        DumpGhmRootTable(index.ghm_roots);
-                        PrintLn();
-                    } break;
-                    case TableType::SeverityTable: {
-                        PrintLn("    GNN Table:");
-                        DumpSeverityTable(index.gnn_cells);
-                        PrintLn();
-
-                        for (Size j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
-                            PrintLn("    CMA Table %1:", j + 1);
-                            DumpSeverityTable(index.cma_cells[j]);
-                            PrintLn();
-                        }
-                    } break;
-
-                    case TableType::GhsTable: {
-                        PrintLn("    GHS Table:");
-                        DumpGhsTable(index.ghs);
-                    } break;
-                    case TableType::AuthorizationTable: {
-                        PrintLn("    Authorization Types:");
-                        DumpAuthorizationTable(index.authorizations);
-                    } break;
-                    case TableType::SrcPairTable: {
-                        for (Size j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
-                            PrintLn("    Supplement Pairs List %1:", j + 1);
-                            DumpSupplementPairTable(index.src_pairs[j]);
-                            PrintLn();
-                        }
-                    } break;
-
-                    case TableType::UnknownTable:
-                        break;
-                }
-            }
-            PrintLn();
+            PrintLn("    %1: %2.%3 [%4 -- %5, build: %6]",
+                    TableTypeNames[(int)table->type], table->version[0], table->version[1],
+                    table->limit_dates[0], table->limit_dates[1], table->build_date);
         }
+        PrintLn();
+    }
+}
+
+void DumpTableSetContent(const TableSet &table_set)
+{
+    PrintLn("Content:");
+    for (const TableIndex &index: table_set.indexes) {
+        PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+        // We don't really need to loop here, but we want the switch to get
+        // warnings when we introduce new table types.
+        for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
+            if (!index.tables[i])
+                continue;
+
+            switch ((TableType)i) {
+                case TableType::GhmDecisionTree: {
+                    PrintLn("    GHM Decision Tree:");
+                    DumpGhmDecisionTree(index.ghm_nodes);
+                    PrintLn();
+                } break;
+                case TableType::DiagnosisTable: {
+                    PrintLn("    Diagnoses:");
+                    DumpDiagnosisTable(index.diagnoses, index.exclusions);
+                    PrintLn();
+                } break;
+                case TableType::ProcedureTable: {
+                    PrintLn("    Procedures:");
+                    DumpProcedureTable(index.procedures);
+                    PrintLn();
+                } break;
+                case TableType::GhmRootTable: {
+                    PrintLn("    GHM Roots:");
+                    DumpGhmRootTable(index.ghm_roots);
+                    PrintLn();
+                } break;
+                case TableType::SeverityTable: {
+                    PrintLn("    GNN Table:");
+                    DumpSeverityTable(index.gnn_cells);
+                    PrintLn();
+
+                    for (Size j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
+                        PrintLn("    CMA Table %1:", j + 1);
+                        DumpSeverityTable(index.cma_cells[j]);
+                        PrintLn();
+                    }
+                } break;
+
+                case TableType::GhsTable: {
+                    PrintLn("    GHS Table:");
+                    DumpGhsTable(index.ghs);
+                } break;
+                case TableType::AuthorizationTable: {
+                    PrintLn("    Authorization Types:");
+                    DumpAuthorizationTable(index.authorizations);
+                } break;
+                case TableType::SrcPairTable: {
+                    for (Size j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
+                        PrintLn("    Supplement Pairs List %1:", j + 1);
+                        DumpSupplementPairTable(index.src_pairs[j]);
+                        PrintLn();
+                    }
+                } break;
+
+                case TableType::UnknownTable:
+                    break;
+            }
+        }
+        PrintLn();
     }
 }
 
