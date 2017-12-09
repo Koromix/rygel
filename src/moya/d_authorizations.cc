@@ -21,24 +21,38 @@ public:
 
     bool Branch(JsonBranchType type, const char *)
     {
-        if (state == State::Default && type == JsonBranchType::Array) {
-            state = State::AuthArray;
-        } else if (state == State::AuthArray && type == JsonBranchType::EndArray) {
-            state = State::Default;
-        } else if (state == State::AuthArray && type == JsonBranchType::Object) {
-            state = State::AuthObject;
-        } else if (state == State::AuthObject && type == JsonBranchType::EndObject) {
-            if (!auth.dates[1].value) {
-                static const Date default_end_date = ConvertDate1980(UINT16_MAX);
-                auth.dates[1] = default_end_date;
-            }
+        switch (state) {
+            case State::Default: {
+                switch (type) {
+                    case JsonBranchType::Array: { state = State::AuthArray; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
 
-            out_authorizations->Append(auth);
-            auth = {};
+            case State::AuthArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::AuthObject; } break;
+                    case JsonBranchType::EndArray: { state = State::Default; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
 
-            state = State::AuthArray;
-        } else {
-            return UnexpectedBranch(type);
+            case State::AuthObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: {
+                        if (!auth.dates[1].value) {
+                            static const Date default_end_date = ConvertDate1980(UINT16_MAX);
+                            auth.dates[1] = default_end_date;
+                        }
+
+                        out_authorizations->Append(auth);
+                        auth = {};
+
+                        state = State::AuthArray;
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
         }
 
         return true;

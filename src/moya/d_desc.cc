@@ -22,19 +22,33 @@ public:
 
     bool Branch(JsonBranchType type, const char *)
     {
-        if (state == State::Default && type == JsonBranchType::Array) {
-            state = State::DescArray;
-        } else if (state == State::DescArray && type == JsonBranchType::EndArray) {
-            state = State::Default;
-        } else if (state == State::DescArray && type == JsonBranchType::Object) {
-            state = State::DescObject;
-        } else if (state == State::DescObject && type == JsonBranchType::EndObject) {
-            out_catalog->Append(desc);
-            desc = {};
+        switch (state) {
+            case State::Default: {
+                switch (type) {
+                    case JsonBranchType::Array: { state = State::DescArray; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
 
-            state = State::DescArray;
-        } else {
-            return UnexpectedBranch(type);
+            case State::DescArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::DescObject; } break;
+                    case JsonBranchType::EndArray: { state = State::Default; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::DescObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: {
+                        out_catalog->Append(desc);
+                        desc = {};
+
+                        state = State::DescArray;
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
         }
 
         return true;

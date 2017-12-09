@@ -52,49 +52,91 @@ public:
 
     bool Branch(JsonBranchType type, const char *key)
     {
-        if (state == State::Default && type == JsonBranchType::Array) {
-            state = State::StayArray;
-        } else if (state == State::StayArray && type == JsonBranchType::EndArray) {
-            state = State::Default;
-        } else if (state == State::StayArray && type == JsonBranchType::Object) {
-            state = State::StayObject;
-        } else if (state == State::StayObject && type == JsonBranchType::EndObject) {
-            if (LIKELY(stay.main_diagnosis.IsValid())) {
-                out_set->store.diagnoses.Append(stay.main_diagnosis);
-            }
-            if (stay.linked_diagnosis.IsValid()) {
-                out_set->store.diagnoses.Append(stay.linked_diagnosis);
-            }
-            stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
-            stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
-            out_set->stays.Append(stay);
-            ResetStay();
+        switch (state) {
+            case State::Default: {
+                switch (type) {
+                    case JsonBranchType::Array: { state = State::StayArray; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
 
-            state = State::StayArray;
-        } else if (state == State::StayObject && TestStr(key, "test") &&
-                   type == JsonBranchType::Object) {
-            state = State::TestObject;
-        } else if (state == State::TestObject && type == JsonBranchType::EndObject) {
-            state = State::StayObject;
-        } else if (state == State::StayObject && TestStr(key, "das") &&
-                   type == JsonBranchType::Array) {
-            state = State::AssociatedDiagnosisArray;
-        } else if (state == State::AssociatedDiagnosisArray && type == JsonBranchType::EndArray) {
-            state = State::StayObject;
-        } else if (state == State::StayObject && TestStr(key, "procedures") &&
-                   type == JsonBranchType::Array) {
-            state = State::ProcedureArray;
-        } else if (state == State::ProcedureArray && type == JsonBranchType::EndArray) {
-            state = State::StayObject;
-        } else if (state == State::ProcedureArray && type == JsonBranchType::Object) {
-            state = State::ProcedureObject;
-        } else if (state == State::ProcedureObject && type == JsonBranchType::EndObject) {
-            out_set->store.procedures.Append(proc);
-            ResetProc();
+            case State::StayArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::StayObject; } break;
+                    case JsonBranchType::EndArray: { state = State::Default; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
 
-            state = State::ProcedureArray;
-        } else {
-            return UnexpectedBranch(type);
+            case State::StayObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: {
+                        if (LIKELY(stay.main_diagnosis.IsValid())) {
+                            out_set->store.diagnoses.Append(stay.main_diagnosis);
+                        }
+                        if (stay.linked_diagnosis.IsValid()) {
+                            out_set->store.diagnoses.Append(stay.linked_diagnosis);
+                        }
+                        stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
+                        stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
+                        out_set->stays.Append(stay);
+                        ResetStay();
+
+                        state = State::StayArray;
+                    } break;
+                    case JsonBranchType::Object: {
+                        if (TestStr(key, "test")) {
+                            state = State::TestObject;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    case JsonBranchType::Array: {
+                        if (TestStr(key, "das")) {
+                            state = State::AssociatedDiagnosisArray;
+                        } else if (TestStr(key, "procedures")) {
+                            state = State::ProcedureArray;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::TestObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: { state = State::StayObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::AssociatedDiagnosisArray: {
+                switch (type) {
+                    case JsonBranchType::EndArray: { state = State::StayObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::ProcedureArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::ProcedureObject; } break;
+                    case JsonBranchType::EndArray: { state = State::StayObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::ProcedureObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: {
+                        out_set->store.procedures.Append(proc);
+                        ResetProc();
+
+                        state = State::ProcedureArray;
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
         }
 
         return true;
