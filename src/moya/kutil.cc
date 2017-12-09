@@ -1532,6 +1532,30 @@ struct MinizDeflateContext {
 };
 #endif
 
+bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
+                        CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    if (filename) {
+        this->filename = DuplicateString(&str_alloc, filename).ptr;
+    }
+
+    if (!InitCompressor(compression_type))
+        return false;
+    dest.type = DestinationType::Memory;
+    dest.u.mem = mem;
+
+    open = true;
+    error_guard.disable();
+    return true;
+}
+
 bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
     Close();
@@ -1628,6 +1652,8 @@ bool StreamWriter::Close()
                     success = false;
                 }
             } break;
+
+            case DestinationType::Memory: {} break;
         }
     }
 
@@ -1749,6 +1775,8 @@ void StreamWriter::ReleaseResources()
                     fclose(dest.u.fp);
                 }
             } break;
+
+            case DestinationType::Memory: {} break;
         }
         dest.owned = false;
     }
@@ -1763,6 +1791,15 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
                 error = true;
                 return false;
             }
+
+            return true;
+        } break;
+
+        case DestinationType::Memory: {
+            // dest.u.mem->Append(buf) would work but it's probably slower
+            dest.u.mem->Grow(buf.len);
+            memcpy(dest.u.mem->ptr + dest.u.mem->len, buf.ptr, (size_t)buf.len);
+            dest.u.mem->len += buf.len;
 
             return true;
         } break;

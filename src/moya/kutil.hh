@@ -2112,7 +2112,8 @@ private:
 class StreamWriter {
 public:
     enum class DestinationType {
-        File
+        File,
+        Memory
     };
 
     const char *filename;
@@ -2120,6 +2121,7 @@ public:
     struct {
         DestinationType type;
         union {
+            HeapArray<uint8_t> *mem;
             FILE *fp;
         } u;
         bool owned = false;
@@ -2138,6 +2140,9 @@ public:
     Allocator str_alloc;
 
     StreamWriter() { Close(); }
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(mem, filename, compression_type); }
     StreamWriter(FILE *fp, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(fp, filename, compression_type); }
@@ -2146,6 +2151,8 @@ public:
         { Open(filename, compression_type); }
     ~StreamWriter() { Close(); }
 
+    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
