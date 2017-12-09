@@ -846,9 +846,7 @@ public:
 
     T *Append()
     {
-        if (len == capacity) {
-            Grow();
-        }
+        Grow();
 
         T *first = ptr + len;
         new (ptr + len) T;
@@ -857,9 +855,7 @@ public:
     }
     T *Append(const T &value)
     {
-        if (len == capacity) {
-            Grow();
-        }
+        Grow();
 
         T *first = ptr + len;
         new (ptr + len) T;
@@ -868,9 +864,7 @@ public:
     }
     T *Append(Span<const T> values)
     {
-        if (values.len > capacity - len) {
-            Grow(values.len);
-        }
+        Grow(values.len);
 
         T *first = ptr + len;
         for (const T &value: values) {
