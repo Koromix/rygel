@@ -84,28 +84,75 @@ function downloadJson(method, url, arguments, func)
 
 var pricing = {};
 (function() {
+    var database_date = null;
     var ghm_roots = [];
     var ghm_roots_map = {};
     var chart = null;
+    var table_ready = false;
+    var chart_ready = false;
 
-    function updateDatabase()
+    function updateAndRefresh(force)
     {
+        if (force === undefined)
+            force = true;
+
         var date = document.querySelector('input#pricing_date').value;
 
+        if (force || date !== database_date) {
+            table_ready = false;
+            chart_ready = false;
+        }
+
+        if (date !== database_date) {
+            update(date, function() {
+                refreshGhmRoots();
+                refreshView();
+            });
+        } else {
+            refreshView();
+        }
+    }
+    this.updateAndRefresh = updateAndRefresh;
+
+    function refreshView()
+    {
+        var ghm_root_info = ghm_roots_map[document.querySelector('select#pricing_ghm_roots').value];
+        var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
+        var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
+
+        var h1 = document.querySelector('div#pricing > nav > h1');
+        h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
+
+        if (!document.querySelector('div#pricing > div.table').classList.contains('inactive') && !table_ready) {
+            var old_table = document.querySelector('div#pricing > div.table > table');
+            var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
+            old_table.parentNode.replaceChild(table, old_table);
+            table_ready = true;
+        }
+
+        if (!document.querySelector('div#pricing > div.chart').classList.contains('inactive') && !chart_ready) {
+            var chart_ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
+            chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
+            chart_ready = true;
+        }
+    }
+
+    function update(date, func)
+    {
         downloadJson('get', 'api/price_map.json?date=' + date, {}, function(json) {
             ghm_roots = [];
             ghm_roots_map = {};
-
             for (var i = 0; i < json.length; i++) {
                 ghm_roots.push(json[i].ghm_root);
                 ghm_roots_map[json[i].ghm_root] = json[i];
             }
 
-            refreshGhmRoots();
-            refreshPricing();
+            database_date = date;
+
+            if (func !== undefined)
+                func();
         });
     }
-    this.updateDatabase = updateDatabase;
 
     function refreshGhmRoots()
     {
@@ -121,24 +168,6 @@ var pricing = {};
         if (previous_value)
             el.value = previous_value;
     }
-
-    function refreshPricing()
-    {
-        var ghm_root_info = ghm_roots_map[document.querySelector('select#pricing_ghm_roots').value];
-        var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
-        var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
-
-        var h1 = document.querySelector('div#pricing > nav > h1');
-        h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
-
-        var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
-        var old_table = document.querySelector('div#pricing > div.table > table');
-        old_table.parentNode.replaceChild(table, old_table);
-
-        var chart_ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
-        chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
-    }
-    this.refreshPricing = refreshPricing;
 
     function refreshChart(chart, chart_ctx, ghs, max_duration)
     {
@@ -369,7 +398,6 @@ document.addEventListener('DOMContentLoaded', function(e) {
     if (!date_input.value) {
         date_input.valueAsDate = new Date();
     }
-    pricing.updateDatabase();
 });
 
 // ------------------------------------------------------------------------
@@ -438,12 +466,12 @@ function switchPage(page_url)
         document.querySelector('div#pricing').classList.add('active');
         document.querySelector('div#pricing > div.table').classList.remove('inactive');
         document.querySelector('div#pricing > div.chart').classList.add('inactive');
-        // pricing.refreshPricing();
+        pricing.updateAndRefresh(false);
     } else if (page_url == 'pricing/chart') {
         document.querySelector('div#pricing').classList.add('active');
         document.querySelector('div#pricing > div.table').classList.add('inactive');
         document.querySelector('div#pricing > div.chart').classList.remove('inactive');
-        // pricing.refreshPricing();
+        pricing.updateAndRefresh(false);
     }
 
     var menu_anchors = document.querySelectorAll('div#menu nav a');

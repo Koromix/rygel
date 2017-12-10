@@ -25,20 +25,20 @@
                 <nav>
                     <label>
                         Racine de GHM
-                        <select id="pricing_ghm_roots" onchange="pricing.refreshPricing();"
+                        <select id="pricing_ghm_roots" onchange="pricing.updateAndRefresh();"
                                 style="width: 7em;"></select>
                     </label>
                     <label>
                         Date
-                        <input id="pricing_date" type="date" onchange="pricing.updateDatabase();"/>
+                        <input id="pricing_date" type="date" onchange="pricing.updateAndRefresh();"/>
                     </label>
                     <label>
                         Durée maximale
-                        <input id="pricing_max_duration" type="number" onchange="pricing.refreshPricing();"
+                        <input id="pricing_max_duration" type="number" onchange="pricing.updateAndRefresh();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
                     <label>
-                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.refreshPricing();" checked/>
+                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.updateAndRefresh();" checked/>
                         Fusionner les cellules
                     </label>
 
