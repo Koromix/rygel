@@ -2313,106 +2313,102 @@ public:
 #endif
 
 #ifdef RAPIDJSON_VERSION_STRING
+class JsonStreamReader {
+    StreamReader *st;
+
+    LocalArray<char, 256 * 1024> buffer;
+    Size buffer_offset = 0;
+    Size file_offset = 0;
+
+public:
+    typedef char Ch MAYBE_UNUSED;
+
+    Size line_number = 1;
+    Size line_offset = 1;
+
+    JsonStreamReader(StreamReader *st)
+        : st(st)
+    {
+        Read();
+    }
+
+    char Peek() const { return buffer[buffer_offset]; }
+    char Take()
+    {
+        char c = buffer[buffer_offset];
+        if (c == '\n') {
+            line_number++;
+            line_offset = 1;
+        } else {
+            line_offset++;
+        }
+        Read();
+        return c;
+    }
+    Size Tell() const { return file_offset + buffer_offset; }
+
+    // Not implemented
+    void Put(char) {}
+    void Flush() {}
+    char *PutBegin() { return 0; }
+    Size PutEnd(char *) { return 0; }
+
+    // For encoding detection only
+    const char *Peek4() const
+    {
+        if (buffer.len - buffer_offset < 4)
+            return 0;
+        return buffer.data + buffer_offset;
+    }
+
+private:
+    void Read()
+    {
+        if (buffer_offset + 1 < buffer.len) {
+            buffer_offset++;
+        } else if (st) {
+            file_offset += buffer.len;
+            buffer.len = st->Read(SIZE(buffer.data), buffer.data);
+            buffer_offset = 0;
+
+            if (buffer.len < SIZE(buffer.data)) {
+                if (UNLIKELY(buffer.len < 0)) {
+                    buffer.len = 0;
+                }
+                buffer.Append('\0');
+                st = nullptr;
+            }
+        }
+    }
+};
+
 template <typename T>
 bool ParseJsonFile(StreamReader &st, T *json_handler)
 {
-    // This is mostly copied from RapidJSON's FileReadStream, but this
-    // version calculates current line number and offset.
-    class FileReadStreamEx {
-        StreamReader *st;
+    JsonStreamReader json_stream(&st);
+    PushLogHandler([&](LogLevel level, const char *ctx,
+                       const char *fmt, Span<const FmtArg> args) {
+        StartConsoleLog(level);
+        Print(stderr, ctx);
+        Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+        PrintFmt(stderr, fmt, args);
+        PrintLn(stderr);
+        EndConsoleLog();
+    });
+    DEFER { PopLogHandler(); };
 
-        LocalArray<char, 256 * 1024> buffer;
-        Size buffer_offset = 0;
-        Size file_offset = 0;
-
-    public:
-        typedef char Ch MAYBE_UNUSED;
-
-        Size line_number = 1;
-        Size line_offset = 1;
-
-        FileReadStreamEx(StreamReader *st)
-            : st(st)
-        {
-            Read();
+    rapidjson::Reader json_reader;
+    if (!json_reader.Parse(json_stream, *json_handler)) {
+        // Parse error is likely after I/O error (missing token, etc.) but
+        // it's irrelevant, the I/O error has already been issued.
+        if (!st.error) {
+            rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
+            LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
         }
-
-        char Peek() const { return buffer[buffer_offset]; }
-        char Take()
-        {
-            char c = buffer[buffer_offset];
-            if (c == '\n') {
-                line_number++;
-                line_offset = 1;
-            } else {
-                line_offset++;
-            }
-            Read();
-            return c;
-        }
-        Size Tell() const { return file_offset + buffer_offset; }
-
-        // Not implemented
-        void Put(char) {}
-        void Flush() {}
-        char *PutBegin() { return 0; }
-        Size PutEnd(char *) { return 0; }
-
-        // For encoding detection only
-        const char *Peek4() const
-        {
-            if (buffer.len - buffer_offset < 4)
-                return 0;
-            return buffer.data + buffer_offset;
-        }
-
-    private:
-        void Read()
-        {
-            if (buffer_offset + 1 < buffer.len) {
-                buffer_offset++;
-            } else if (st) {
-                file_offset += buffer.len;
-                buffer.len = st->Read(SIZE(buffer.data), buffer.data);
-                buffer_offset = 0;
-
-                if (buffer.len < SIZE(buffer.data)) {
-                    if (UNLIKELY(buffer.len < 0)) {
-                        buffer.len = 0;
-                    }
-                    buffer.Append('\0');
-                    st = nullptr;
-                }
-            }
-        }
-    };
-
-    {
-        FileReadStreamEx json_stream(&st);
-        PushLogHandler([&](LogLevel level, const char *ctx,
-                           const char *fmt, Span<const FmtArg> args) {
-            StartConsoleLog(level);
-            Print(stderr, ctx);
-            Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
-            PrintFmt(stderr, fmt, args);
-            PrintLn(stderr);
-            EndConsoleLog();
-        });
-        DEFER { PopLogHandler(); };
-
-        rapidjson::Reader json_reader;
-        if (!json_reader.Parse(json_stream, *json_handler)) {
-            // Parse error is likely after I/O error (missing token, etc.) but
-            // it's irrelevant, the I/O error has already been issued.
-            if (!st.error) {
-                rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
-                LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
-            }
-            return false;
-        }
-        if (st.error)
-            return false;
+        return false;
     }
+    if (st.error)
+        return false;
 
     return true;
 }
