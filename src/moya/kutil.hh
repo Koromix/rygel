@@ -586,6 +586,12 @@ struct Span<const char> {
         return ptr[idx];
     }
 
+    // The implementation comes later, after TestStr() is available
+    bool operator==(Span<const char> other) const;
+    bool operator==(const char *other) const;
+    bool operator!=(Span<const char> other) const { return !(*this == other); }
+    bool operator!=(const char *other) const { return !(*this == other); }
+
     Span Take(ArraySlice<const char> slice) const
     {
         DebugAssert(slice.len >= 0 && slice.len <= len);
@@ -1691,6 +1697,8 @@ static inline bool TestStr(Span<const char> str1, Span<const char> str2)
     }
     return true;
 }
+inline bool Span<const char>::operator==(Span<const char> other) const
+    { return TestStr(*this, other); }
 static inline bool TestStr(Span<const char> str1, const char *str2)
 {
     Size i;
@@ -1700,6 +1708,8 @@ static inline bool TestStr(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
+inline bool Span<const char>::operator==(const char *other) const
+    { return TestStr(*this, other); }
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
