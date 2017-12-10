@@ -117,6 +117,17 @@ static bool UpdateStaticResources()
 }
 #endif
 
+static void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
+{
+    switch (compression_type) {
+        case CompressionType::None: {} break;
+        case CompressionType::Zlib:
+            { MHD_add_response_header(response, "Content-Encoding", "deflate"); } break;
+        case CompressionType::Gzip:
+            { MHD_add_response_header(response, "Content-Encoding", "gzip"); } break;
+    }
+}
+
 static MHD_Response *BuildJson(CompressionType compression_type,
                                std::function<bool(rapidjson::PrettyWriter<JsonStreamWriter> &)> func)
 {
@@ -133,13 +144,7 @@ static MHD_Response *BuildJson(CompressionType compression_type,
     MHD_Response *response = MHD_create_response_from_buffer((size_t)buffer.len, buffer.ptr,
                                                              MHD_RESPMEM_MUST_COPY);
     MHD_add_response_header(response, "Content-Type", "application/json");
-    switch (compression_type) {
-        case CompressionType::None: {} break;
-        case CompressionType::Zlib:
-            { MHD_add_response_header(response, "Content-Encoding", "deflate"); } break;
-        case CompressionType::Gzip:
-            { MHD_add_response_header(response, "Content-Encoding", "gzip"); } break;
-    }
+    AddContentEncodingHeader(response, compression_type);
 
     return response;
 }
@@ -320,10 +325,9 @@ static MHD_Response *ProducePages(MHD_Connection *, const char *,
     return response;
 }
 
-static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url, CompressionType)
+static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
+                                           CompressionType compression_type)
 {
-    // TODO: Support compression for static resources
-
 #if !defined(NDEBUG) && defined(_WIN32)
     UpdateStaticResources();
 #endif
@@ -332,9 +336,23 @@ static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url, Co
     if (!resource_data.IsValid())
         return nullptr;
 
-    MHD_Response *response = MHD_create_response_from_buffer((size_t)resource_data.len,
-                                                             (void *)resource_data.ptr,
-                                                             MHD_RESPMEM_PERSISTENT);
+    MHD_Response *response;
+    if (compression_type != CompressionType::None) {
+        HeapArray<uint8_t> buffer;
+        StreamWriter st(&buffer, nullptr, compression_type);
+        st.Write(resource_data);
+        if (!st.Close())
+            return nullptr;
+
+        response = MHD_create_response_from_buffer((size_t)buffer.len,
+                                                   (void *)buffer.ptr,
+                                                   MHD_RESPMEM_MUST_COPY);
+        AddContentEncodingHeader(response, compression_type);
+    } else {
+        response = MHD_create_response_from_buffer((size_t)resource_data.len,
+                                                   (void *)resource_data.ptr,
+                                                   MHD_RESPMEM_PERSISTENT);
+    }
     return response;
 }
 
