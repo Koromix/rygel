@@ -895,6 +895,17 @@ public:
         { return Span<T>(ptr, this->len).Take(offset, len); }
     Span<T> Take(ArraySlice<T> slice) const
         { return Span<T>(ptr, this->len).Take(slice); }
+
+    Span<T> Leak()
+    {
+        Span<T> span = *this;
+
+        ptr = nullptr;
+        len = 0;
+        capacity = 0;
+
+        return span;
+    }
 };
 
 template <typename T, Size BucketSize = 1024>

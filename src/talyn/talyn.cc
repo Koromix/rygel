@@ -116,6 +116,13 @@ static bool UpdateStaticResources()
 }
 #endif
 
+static void ReleaseCallback(void *ptr)
+{
+    // FIXME: Even though Allocator::Release() does not yet care about the size
+    // argument, eventually it might. When it does, this will break.
+    Allocator::Release(nullptr, ptr, 0);
+}
+
 static void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
 {
     switch (compression_type) {
@@ -140,8 +147,10 @@ static MHD_Response *BuildJson(CompressionType compression_type,
             return nullptr;
     }
 
-    MHD_Response *response = MHD_create_response_from_buffer((size_t)buffer.len, buffer.ptr,
-                                                             MHD_RESPMEM_MUST_COPY);
+    MHD_Response *response = MHD_create_response_from_heap((size_t)buffer.len, buffer.ptr,
+                                                           ReleaseCallback);
+    buffer.Leak();
+
     MHD_add_response_header(response, "Content-Type", "application/json");
     AddContentEncodingHeader(response, compression_type);
 
@@ -343,9 +352,10 @@ static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
         if (!st.Close())
             return nullptr;
 
-        response = MHD_create_response_from_buffer((size_t)buffer.len,
-                                                   (void *)buffer.ptr,
-                                                   MHD_RESPMEM_MUST_COPY);
+        response = MHD_create_response_from_heap((size_t)buffer.len, (void *)buffer.ptr,
+                                                 ReleaseCallback);
+        buffer.Leak();
+
         AddContentEncodingHeader(response, compression_type);
     } else {
         response = MHD_create_response_from_buffer((size_t)resource_data.len,
