@@ -79,95 +79,6 @@ function downloadJson(method, url, arguments, func)
 }
 
 // ------------------------------------------------------------------------
-// Pages
-// ------------------------------------------------------------------------
-
-var url_base;
-var url_name;
-
-document.addEventListener('DOMContentLoaded', function(e) {
-    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
-               document.querySelector('base').getAttribute('href');
-    url_name = window.location.pathname.substr(url_base.length);
-
-    downloadJson('get', 'api/pages.json', {}, function(categories) {
-        if (url_name == '') {
-            url_name = categories[0].pages[0].url;
-            window.history.replaceState(null, null, url_base + url_name);
-        }
-
-        var ul = document.querySelector('div#menu nav ul');
-        function addMenuItem(name, url)
-        {
-            var li =
-                createElement('li', {},
-                    createElement('a', {href: url, class: url == url_name ? 'active' : null}, name)
-                );
-            ul.appendChild(li);
-        }
-
-        for (var i = 0; i < categories.length; i++) {
-            var pages = categories[i].pages;
-
-            var li =
-                createElement('li', {},
-                    createElement('a', {href: pages[0].url,
-                                        onclick: 'switchPage("' + pages[0].url + '"); return false;',
-                                        class: 'category'},
-                                  categories[i].category)
-                );
-            ul.appendChild(li);
-
-            for (var j = 0; j < pages.length; j++) {
-                var li =
-                    createElement('li', {},
-                        createElement('a', {href: pages[j].url,
-                                            onclick: 'switchPage("' + pages[j].url + '"); return false;'},
-                                      pages[j].name)
-                    );
-                ul.appendChild(li);
-            }
-        }
-
-        switchPage(url_name);
-    });
-});
-
-function switchPage(page_url)
-{
-    var page_divs = document.querySelectorAll('main > div');
-    for (var i = 0; i < page_divs.length; i++) {
-        page_divs[i].classList.remove('active');
-    }
-
-    if (page_url == 'pricing/table') {
-        document.querySelector('div#pricing').classList.add('active');
-        document.querySelector('div#pricing > div.table').classList.remove('inactive');
-        document.querySelector('div#pricing > div.chart').classList.add('inactive');
-        // pricing.refreshPricing();
-    } else if (page_url == 'pricing/chart') {
-        document.querySelector('div#pricing').classList.add('active');
-        document.querySelector('div#pricing > div.table').classList.add('inactive');
-        document.querySelector('div#pricing > div.chart').classList.remove('inactive');
-        // pricing.refreshPricing();
-    }
-
-    var menu_anchors = document.querySelectorAll('div#menu nav a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (menu_anchors[i].getAttribute('href') == page_url &&
-                      !menu_anchors[i].classList.contains('category'));
-        menu_anchors[i].classList.toggle('active', active);
-    }
-
-    if (page_url != url_name) {
-        url_name = page_url;
-        window.history.pushState(null, null, url_base + url_name);
-    }
-
-    toggleNav('menu', false);
-}
-
-// ------------------------------------------------------------------------
 // Pricing
 // ------------------------------------------------------------------------
 
@@ -460,3 +371,92 @@ document.addEventListener('DOMContentLoaded', function(e) {
     }
     pricing.updateDatabase();
 });
+
+// ------------------------------------------------------------------------
+// Pages
+// ------------------------------------------------------------------------
+
+var url_base;
+var url_name;
+
+document.addEventListener('DOMContentLoaded', function(e) {
+    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
+               document.querySelector('base').getAttribute('href');
+    url_name = window.location.pathname.substr(url_base.length);
+
+    downloadJson('get', 'api/pages.json', {}, function(categories) {
+        if (url_name == '') {
+            url_name = categories[0].pages[0].url;
+            window.history.replaceState(null, null, url_base + url_name);
+        }
+
+        var ul = document.querySelector('div#menu nav ul');
+        function addMenuItem(name, url)
+        {
+            var li =
+                createElement('li', {},
+                    createElement('a', {href: url, class: url == url_name ? 'active' : null}, name)
+                );
+            ul.appendChild(li);
+        }
+
+        for (var i = 0; i < categories.length; i++) {
+            var pages = categories[i].pages;
+
+            var li =
+                createElement('li', {},
+                    createElement('a', {href: pages[0].url,
+                                        onclick: 'switchPage("' + pages[0].url + '"); return false;',
+                                        class: 'category'},
+                                  categories[i].category)
+                );
+            ul.appendChild(li);
+
+            for (var j = 0; j < pages.length; j++) {
+                var li =
+                    createElement('li', {},
+                        createElement('a', {href: pages[j].url,
+                                            onclick: 'switchPage("' + pages[j].url + '"); return false;'},
+                                      pages[j].name)
+                    );
+                ul.appendChild(li);
+            }
+        }
+
+        switchPage(url_name);
+    });
+});
+
+function switchPage(page_url)
+{
+    var page_divs = document.querySelectorAll('main > div');
+    for (var i = 0; i < page_divs.length; i++) {
+        page_divs[i].classList.remove('active');
+    }
+
+    if (page_url == 'pricing/table') {
+        document.querySelector('div#pricing').classList.add('active');
+        document.querySelector('div#pricing > div.table').classList.remove('inactive');
+        document.querySelector('div#pricing > div.chart').classList.add('inactive');
+        // pricing.refreshPricing();
+    } else if (page_url == 'pricing/chart') {
+        document.querySelector('div#pricing').classList.add('active');
+        document.querySelector('div#pricing > div.table').classList.add('inactive');
+        document.querySelector('div#pricing > div.chart').classList.remove('inactive');
+        // pricing.refreshPricing();
+    }
+
+    var menu_anchors = document.querySelectorAll('div#menu nav a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        var active = (menu_anchors[i].getAttribute('href') == page_url &&
+                      !menu_anchors[i].classList.contains('category'));
+        menu_anchors[i].classList.toggle('active', active);
+    }
+
+    if (page_url != url_name) {
+        url_name = page_url;
+        window.history.pushState(null, null, url_base + url_name);
+    }
+
+    toggleNav('menu', false);
+}
