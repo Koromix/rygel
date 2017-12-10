@@ -635,7 +635,7 @@ Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args)
     if (real_len < buf.len) {
         buf.len = real_len;
     }
-    buf[buf.len] = 0;
+    buf.ptr[buf.len] = 0;
 
     return buf;
 }
