@@ -308,7 +308,6 @@ void DumpGhsPricings(Span<const GhsPricing> ghs_pricings)
         GhsCode ghs = ghs_pricings[i].ghs;
 
         PrintLn("GHS %1:", ghs);
-
         for (; i < ghs_pricings.len && ghs_pricings[i].ghs == ghs; i++) {
             const GhsPricing &pricing = ghs_pricings[i];
 
@@ -322,6 +321,7 @@ void DumpGhsPricings(Span<const GhsPricing> ghs_pricings)
                     FmtDouble(pricing.sectors[1].exh_cents / 100.0, 2),
                     FmtDouble(pricing.sectors[1].exb_cents / 100.0, 2));
         }
+        PrintLn();
     }
 }
 
