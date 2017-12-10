@@ -1820,6 +1820,19 @@ static inline Span<const char> SplitStrAny(const char *str, const char *split_ch
     return MakeSpan(str, part_len);
 }
 
+static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+{
+    while (str.len && strchr(trim_chars, str[0])) {
+        str.ptr++;
+        str.len--;
+    }
+    while (str.len && strchr(trim_chars, str[str.len - 1])) {
+        str.len--;
+    }
+
+    return str;
+}
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
