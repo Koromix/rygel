@@ -11,7 +11,7 @@
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
-#include "../../lib/rapidjson/prettywriter.h"
+#include "../../lib/rapidjson/writer.h"
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 
@@ -135,13 +135,13 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
 }
 
 static MHD_Response *BuildJson(CompressionType compression_type,
-                               std::function<bool(rapidjson::PrettyWriter<JsonStreamWriter> &)> func)
+                               std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func)
 {
     HeapArray<uint8_t> buffer;
     {
         StreamWriter st(&buffer, nullptr, compression_type);
         JsonStreamWriter json_stream(&st);
-        rapidjson::PrettyWriter<JsonStreamWriter> writer(json_stream);
+        rapidjson::Writer<JsonStreamWriter> writer(json_stream);
 
         if (!func(writer))
             return nullptr;
@@ -180,7 +180,7 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
     }
 
     MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::PrettyWriter<JsonStreamWriter> &writer) {
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -282,7 +282,7 @@ static MHD_Response *ProduceGhmRoots(MHD_Connection *, const char *,
                                      CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::PrettyWriter<JsonStreamWriter> &writer) {
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
 
         writer.StartArray();
@@ -308,7 +308,7 @@ static MHD_Response *ProducePages(MHD_Connection *, const char *,
                                   CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::PrettyWriter<JsonStreamWriter> &writer) {
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
        writer.StartArray();
        for (Size i = 0; i < ARRAY_SIZE(pages);) {
            writer.StartObject();
