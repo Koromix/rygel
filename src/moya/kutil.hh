@@ -2592,4 +2592,28 @@ public:
     }
 };
 
+class JsonStreamWriter {
+    StreamWriter *st;
+    LocalArray<uint8_t, 4096> buf;
+
+public:
+    typedef char Ch;
+
+    JsonStreamWriter(StreamWriter *st) : st(st) {}
+
+    void Put(char c)
+    {
+        // TODO: Move the buffering to StreamWriter (when compression is enabled)
+        buf.Append((uint8_t)c);
+        if (buf.len == SIZE(buf.data)) {
+            st->Write(buf);
+            buf.Clear();
+        }
+    }
+    void Flush()
+    {
+        st->Write(buf);
+        buf.Clear();
+    }
+};
 #endif
