@@ -1714,7 +1714,7 @@ static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
 static inline Span<const char> SplitStr(Span<const char> str, char split_char,
-                                            Span<const char> *out_remainder = nullptr)
+                                        Span<const char> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -1726,13 +1726,14 @@ static inline Span<const char> SplitStr(Span<const char> str, char split_char,
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str.Take(str.len, 0);
     }
     return str;
 }
 static inline Span<const char> SplitStr(const char *str, char split_char,
-                                            const char **out_remainder = nullptr)
+                                        const char **out_remainder = nullptr)
 {
     Size part_len = 0;
     while (str[part_len]) {
@@ -1744,6 +1745,7 @@ static inline Span<const char> SplitStr(const char *str, char split_char,
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
@@ -1751,7 +1753,7 @@ static inline Span<const char> SplitStr(const char *str, char split_char,
 }
 
 static inline Span<const char> SplitStrLine(Span<const char> str,
-                                                Span<const char> *out_remainder = nullptr)
+                                            Span<const char> *out_remainder = nullptr)
 {
     Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
@@ -1760,7 +1762,7 @@ static inline Span<const char> SplitStrLine(Span<const char> str,
     return part;
 }
 static inline Span<const char> SplitStrLine(const char *str,
-                                                const char **out_remainder = nullptr)
+                                            const char **out_remainder = nullptr)
 {
     Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
@@ -1770,7 +1772,7 @@ static inline Span<const char> SplitStrLine(const char *str,
 }
 
 static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
-                                               Span<const char> *out_remainder = nullptr)
+                                           Span<const char> *out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
@@ -1794,7 +1796,7 @@ static inline Span<const char> SplitStrAny(Span<const char> str, const char *spl
     return str.Take(0, str.len);
 }
 static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
-                                               const char **out_remainder = nullptr)
+                                           const char **out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
@@ -1811,6 +1813,7 @@ static inline Span<const char> SplitStrAny(const char *str, const char *split_ch
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
