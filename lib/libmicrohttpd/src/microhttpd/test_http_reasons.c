@@ -121,6 +121,8 @@ static int test_5xx(void)
 int main(int argc, char * argv[])
 {
   int errcount = 0;
+  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+
   errcount += test_absent_codes();
   errcount += test_1xx();
   errcount += test_2xx();

@@ -85,6 +85,7 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
+  (void)version;(void)upload_data;(void)upload_data_size;       /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -112,18 +113,36 @@ testMultithreadedGet ()
   int k;
   unsigned int success;
   unsigned int failure;
+  int port;
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    {
+      port = 1260;
+      if (oneone)
+        port += 5;
+    }
 
   /* Test only valid for HTTP/1.1 (uses persistent connections) */
   if (!oneone)
     return 0;
 
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-                        1081, NULL, NULL,
+                        port, NULL, NULL,
                         &ahc_echo, "GET",
                         MHD_OPTION_PER_IP_CONNECTION_LIMIT, 2,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
 
   for (k = 0; k < 3; ++k)
     {
@@ -143,7 +162,8 @@ testMultithreadedGet ()
           cbc[i].size = 2048;
           cbc[i].pos = 0;
 
-          curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:1081/hello_world");
+          curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+          curl_easy_setopt (c, CURLOPT_PORT, (long)port);
           curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
           curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc[i]);
           curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
@@ -151,9 +171,9 @@ testMultithreadedGet ()
           curl_easy_setopt (c, CURLOPT_FORBID_REUSE, 0L);
           curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
           curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-          // NOTE: use of CONNECTTIMEOUT without also
-          //   setting NOSIGNAL results in really weird
-          //   crashes on my system!
+          /* NOTE: use of CONNECTTIMEOUT without also
+           *   setting NOSIGNAL results in really weird
+           *   crashes on my system! */
           curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
 
           errornum = curl_easy_perform (c);
@@ -177,7 +197,7 @@ testMultithreadedGet ()
         return 32;
       }
 
-      sleep(2);
+      (void)sleep(2);
 
       for (i = 0; i < 2; ++i)
         {
@@ -203,18 +223,35 @@ testMultithreadedPoolGet ()
   struct MHD_Daemon *d;
   char buf[2048];
   int k;
+  int port;
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    {
+      port = 1261;
+      if (oneone)
+        port += 5;
+    }
 
   /* Test only valid for HTTP/1.1 (uses persistent connections) */
   if (!oneone)
     return 0;
 
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-                        1081, NULL, NULL, &ahc_echo, "GET",
+                        port, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_PER_IP_CONNECTION_LIMIT, 2,
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
                         MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
 
   for (k = 0; k < 3; ++k)
     {
@@ -232,7 +269,8 @@ testMultithreadedPoolGet ()
           cbc[i].size = 2048;
           cbc[i].pos = 0;
 
-          curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:1081/hello_world");
+          curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+          curl_easy_setopt (c, CURLOPT_PORT, (long)port);
           curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
           curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc[i]);
           curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
@@ -240,9 +278,9 @@ testMultithreadedPoolGet ()
           curl_easy_setopt (c, CURLOPT_FORBID_REUSE, 0L);
           curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
           curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 150L);
-          // NOTE: use of CONNECTTIMEOUT without also
-          //   setting NOSIGNAL results in really weird
-          //   crashes on my system!
+          /* NOTE: use of CONNECTTIMEOUT without also
+           *   setting NOSIGNAL results in really weird
+           *   crashes on my system! */
           curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
 
           errornum = curl_easy_perform (c);
@@ -273,7 +311,7 @@ testMultithreadedPoolGet ()
       for (i = 0; i < 3; ++i)
         curl_easy_cleanup (cenv[i]);
 
-      sleep(2);
+      (void)sleep(2);
 
       for (i = 0; i < 2; ++i)
         {
@@ -299,6 +337,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;

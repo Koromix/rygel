@@ -81,6 +81,6 @@
 #define GAUGER_ID(category, counter, value, unit, id) {}
 #define GAUGER(category, counter, value, unit) {}
 
-#endif // WINDOWS
+#endif /* WINDOWS */
 
 #endif

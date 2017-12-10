@@ -50,6 +50,7 @@ static int oneone;
 static int
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
+  (void)cls;(void)addr;(void)addrlen;   /* Unused. Silent compiler warning. */
   return MHD_YES;
 }
 
@@ -63,6 +64,7 @@ struct CBC
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
+  (void)ptr;(void)ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -78,6 +80,8 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
+  (void)version;(void)upload_data;      /* Unused. Silent compiler warning. */
+  (void)upload_data_size;(void)unused;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -135,9 +139,9 @@ testLongUrlGet ()
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
       else
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      // NOTE: use of CONNECTTIMEOUT without also
-      //   setting NOSIGNAL results in really weird
-      //   crashes on my system!
+      /* NOTE: use of CONNECTTIMEOUT without also
+       *   setting NOSIGNAL results in really weird
+       *   crashes on my system! */
       curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
       curl_easy_perform (c);
       curl_easy_cleanup (c);
@@ -198,9 +202,9 @@ testLongHeaderGet ()
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
       else
         curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-      // NOTE: use of CONNECTTIMEOUT without also
-      //   setting NOSIGNAL results in really weird
-      //   crashes on my system!
+      /* NOTE: use of CONNECTTIMEOUT without also
+       *   setting NOSIGNAL results in really weird
+       *   crashes on my system! */
       curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
       curl_easy_perform (c);
       curl_slist_free_all (header);
@@ -220,6 +224,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;

@@ -65,8 +65,12 @@ clean-local:
 po/Makefile: $(srcdir_po)/Makefile.in.in $(srcdir_po)/Makevars $(srcdir_po)/POTFILES.in po/config.status
 	@$(am__cd) po && @SHELL@ ./config.status ./Makefile.in po-directories
 
-# Regenerate po/config.status if this Makefile is changed as configure parameters may be updated
-po/config.status: $(srcdir_po)/configure Makefile
+po/configargs.stamp:
+	@$(MAKE) $(AM_MAKEFLAGS) $(top_builddir)/config.status && \
+	  @SHELL@ ./config.status po/configargs.stamp
+
+# Regenerate po/config.status if 'po/configure' was updated or 'configure' parameters was changed
+po/config.status: $(srcdir_po)/configure po/configargs.stamp
 	@$(MKDIR_P) po && $(am__cd) po && echo "cd po && @SHELL@ ./configure @ac_configure_args@" && \
 	  @SHELL@ $(abs_top_srcdir)/po/configure @ac_configure_args@ --srcdir=$(abs_top_srcdir)/po \
 	    --disable-option-checking --no-create --no-recursion

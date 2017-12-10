@@ -11,6 +11,8 @@ int check_post(void *cls, enum MHD_ValueKind kind, const char* key,
                  const char* content_encoding, const char* data,
                  uint64_t off, size_t size)
 {
+  (void)cls; (void)kind; (void)filename; (void)content_type;  /* Unused. Silent compiler warning. */
+  (void)content_encoding; (void)data; (void)off; (void)size;  /* Unused. Silent compiler warning. */
   if ((0 != strcmp(key, "a")) && (0 != strcmp(key, "b")))
     {
       printf("ERROR: got unexpected '%s'\n", key);
@@ -26,6 +28,7 @@ main (int argc, char *const *argv)
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
+  (void)argc; (void)argv;  /* Unused. Silent compiler warning. */
 
   memset (&connection, 0, sizeof (struct MHD_Connection));
   memset (&header, 0, sizeof (struct MHD_HTTP_Header));

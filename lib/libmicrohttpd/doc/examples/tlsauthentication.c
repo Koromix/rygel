@@ -29,7 +29,7 @@ string_to_base64 (const char *message)
   const char *lookup =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   unsigned long l;
-  int i;
+  size_t i;
   char *tmp;
   size_t length = strlen (message);
 
@@ -107,7 +107,7 @@ load_file (const char *filename)
     }
   buffer[size] = '\0';
 
-  if (size != fread (buffer, 1, size, fp))
+  if (size != (long)fread (buffer, 1, size, fp))
     {
       free (buffer);
       buffer = NULL;
@@ -218,6 +218,12 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
                       const char *version, const char *upload_data,
                       size_t *upload_data_size, void **con_cls)
 {
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+
   if (0 != strcmp (method, "GET"))
     return MHD_NO;
   if (NULL == *con_cls)

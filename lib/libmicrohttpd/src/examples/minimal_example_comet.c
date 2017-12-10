@@ -28,6 +28,8 @@
 static ssize_t
 data_generator (void *cls, uint64_t pos, char *buf, size_t max)
 {
+  (void)cls; /* Unused. Silent compiler warning. */
+  (void)pos; /* Unused. Silent compiler warning. */
   if (max < 80)
     return 0;
   memset (buf, 'A', max - 1);
@@ -46,6 +48,11 @@ ahc_echo (void *cls,
   static int aptr;
   struct MHD_Response *response;
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */

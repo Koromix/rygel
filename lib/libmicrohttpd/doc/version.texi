@@ -1,4 +1,4 @@
-@set UPDATED 15 May 2017
-@set UPDATED-MONTH May 2017
-@set EDITION 0.9.55
-@set VERSION 0.9.55
+@set UPDATED 7 December 2017
+@set UPDATED-MONTH December 2017
+@set EDITION 0.9.58
+@set VERSION 0.9.58

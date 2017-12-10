@@ -1,3 +1,144 @@
+Mon Dec 07 21:08:00 MSK 2017
+	Releasing GNU libmicrohttpd 0.9.58. -EG
+
+Mon Dec 07 16:01:00 MSK 2017
+	Fixed HTTPS tests on modern platforms. -EG
+
+Mon Dec 04 15:43:00 MSK 2017
+	Minor documentation installation fixes. -EG
+
+Mon Nov 27 22:58:38 CET 2017
+	Tolerate AF_UNIX when trying to determine our binding port
+	from socket.  Use `sockaddr_storage` instead of trying to
+	guess the sockaddr type before calling getsockname(). -CG
+
+Mon Nov 27 22:24:00 MSK 2017
+	Releasing GNU libmicrohttpd 0.9.57. -EG
+
+Mon Nov 27 21:36:00 MSK 2017
+	Updated README. -EG
+
+Mon Nov 27 18:37:00 MSK 2017
+	Corrected names in W32 DLL resources.
+	Reordered and clarified configure summary message.
+	Additional compiler warning mutes for builds with various configure
+	parameters.
+	Fixed tests on Cygwin.
+	Used larger SETSIZE for Cygwin (same value as for native W32).
+	Minor fixes for Cygwin.
+	Added configure parameter to force disable usage of sendfile().
+	Minor testsuite fixes.
+	Really fixed builds with optimisation for size. -EG
+
+Sat Nov 25 18:37:00 MSK 2017
+	Fixed build with optimisation for size. -EG
+
+Fri Nov 24 20:14:02 CET 2017
+	Releasing GNU libmicrohttpd 0.9.56. -CG
+
+Thu Nov 23 17:40:00 MSK 2017
+	Added MHD_FEATURE_SENDFILE enum value and report. -EG
+
+Thu Nov 23 08:56:00 MSK 2017
+	Fixed receiving large requests in TLS mode with epoll.
+	Improved GnuTLS and libgcrypt detection in configure, do not ignore
+	flags in GNUTLS_{CFLAGS,LIBS} variables.
+	Added special trick for Solaris/Openindiana to find GnuTLS-3 with
+	right bitness.
+	Added support for Solaris sendfile(3) function.
+	Fixed dataraces with thread ID on W32 and pthread. Now check for
+	correct thread in MHD_queue_response() works correctly.
+	Fixed and silenced compiler warnings in tests and examples.
+	Removed usage of TLS flags in examples where TLS is not required.
+	Added support for MultiSSL in https tests with libcurl >= 7.56.0.
+	Improved detection of OFF_T_MAX, SIZE_MAX. Added macros for
+	SSIZE_MAX in mhd_limits.h. There are some platforms that really
+	require those macros.
+	Added support for Darwin's sendfile() function.
+	Updated .gitignore files.
+	Reworked mhd_sys_extentions.m4 with better support of modern
+	platforms, more reliable detection of required macros, and
+	detection of disabling of system-specific features by
+	_XOPEN_SOURCE macro. -EG
+
+Wed Nov  1 20:43:00 MSK 2017
+	Mixed and muted many compiler warnings. Now GCC's flags
+	-Wall -Wextra could be used for building.
+	Fixed compilation of examples without libmagic.
+	Better detection of libgnutls in configure.
+	Reworked launch of nested configure in "po" directory to
+	prevent useless reconfiguration.
+	Fixed some wrong asserts.
+	Enabled "test_options" test.
+	Use "test_start_stop" without libcurl.
+	Use chunks with sendfile() to prevent locking thread for
+	single connection with large file.
+	Added support for FreeBSD's sendfile with additional
+	optimisations for FreeBSD 11.
+	Refactoring and improvements for MHD_start_daemon_va() and
+	MHD_stop_daemon().
+	Fixed testing with GnuTLS >= 3.6.0. -EG
+
+Mon Oct  9 22:38:07 CEST 2017
+	Add MHD_free() to allow proper free()-ing of username/password
+	data returned via MHD_digest_auth_get_username() or
+	MHD_basic_auth_get_username_password() on Windows. -CG
+
+Tue Sep 26 14:00:58 CEST 2017
+	Fixing race involving setting "at_limit" flag. -CG
+
+Tue Sep 08 21:39:00 MSK 2017
+	Fixed build of examples when MHD build with non-pthread lib.
+	MHD_queue_response(): added check for using in correct thread.
+	Fixed sending responses larger 16 KiB in TLS mode with epoll.
+	Improved doxy for MHD_get_timeout() and related functions.
+	Minor internal refactoring. -EG
+
+Tue Jul 23 11:32:00 MSK 2017
+	Updated chunked_example.c to provide real illustration of usage of
+	chunked encoding. -EG
+
+Thu Jul 13 21:41:00 MSK 2017
+	Restored SIGPIPE suppression in TLS mode.
+	Added new value MHD_FEATURE_AUTOSUPPRESS_SIGPIPE so application could
+	check whether SIGPIPE handling is required.
+	Used GNUTLS_NONBLOCK for TLS sessions. -EG
+
+Tue Jun 20 23:52:00 MSK 2017
+	Libgcrypt is now optional and required only for old GnuTLS versions. -EG
+
+Wed Jun 14 21:42:00 MSK 2017
+	Added support for debug assert() and new configure parameter
+	--enable-asserts for debug builds.
+	Removed non-functional Symbian support. -EG
+
+Mon Jun 05 23:34:00 MSK 2017
+	More internal refactoring:
+	merged MHD_tls_connection_handle_read/write() with non-TLS version,
+	reduced and unified number of layers for network processing (before
+	refactoring MHD_tls_connection_handle_read->MHD_connection_handle_read->
+	do_read->recv_tls_adapter->GnuTLS->recv_param_adapter - 5 MHD layers;
+	after refactoring MHD_connection_handle_read->recv_tls_adapter->GnuTLS -
+	2 MHD layers),
+	simplified and removed dead code from
+	MHD_connection_handle_read/write() without functional change. -EG
+
+Mon Jun 05 22:20:00 MSK 2017
+	Internal refactoring:
+	used TCP sockets directly with GnuTLS (performance improvement),
+	moved some connection-related code from daemon.c to
+	connection.c/connection_https.c,
+	removed hacks around sendfile() and implemented correct support of
+	sendfile(),
+	removed do_read() and do_write() to reduce number of layer around send()
+	and recv() and to improve readability and maintainability of code,
+	implemented separate tracking of TLS layer state, independent of HTTP
+	connection stage. -EG
+
+Sun Jun 04 15:02:00 MSK 2017
+	Improved thread-safety of MHD_add_connection() and
+	internal_add_connection(), minor optimisations. -EG
+
 Sun May 28 23:26:00 MSK 2017
 	Releasing GNU libmicrohttpd 0.9.55. -EG
 
@@ -30,7 +171,7 @@ Thu May 11 14:24:00 MSK 2017
 	Do not add any "Connection" headers for "upgrade" connections. -EG
 
 Wed May 10 23:09:00 MSK 2017
-	Resume resuming connection before other processing in external polling 
+	Resume resuming connection before other processing in external polling
 	mode. -EG
 
 Tue May  9 23:16:00 MSK 2017
@@ -51,7 +192,7 @@ Mon May  8 19:30:00 MSK 2017
 	MHD_get_response_header(), match only headers (not footers). -EG
 
 Fri May  5 20:57:00 MSK 2017
-	Fixed null dereference when connection has "Upgrade" request and 
+	Fixed null dereference when connection has "Upgrade" request and
 	connection is not upgraded.  -JB/EG
 	Better handle Keep-Alive/Close. -EG
 

@@ -54,6 +54,10 @@ ahc_echo (void *cls,
   int ret;
   int fd;
   struct stat buf;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if ( (0 != strcmp (method, MHD_HTTP_METHOD_GET)) &&
        (0 != strcmp (method, MHD_HTTP_METHOD_HEAD)) )

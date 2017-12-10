@@ -111,6 +111,7 @@ int check_not_match(void)
 int main(int argc, char * argv[])
 {
   int errcount = 0;
+  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
   errcount += check_match();
   errcount += check_not_match();
   return errcount == 0 ? 0 : 1;

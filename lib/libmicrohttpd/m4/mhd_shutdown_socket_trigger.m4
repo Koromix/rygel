@@ -25,9 +25,9 @@ AC_DEFUN([MHD_CHECK_SOCKET_SHUTDOWN_TRIGGER],[dnl
   AC_REQUIRE([AC_CANONICAL_HOST])dnl
   AC_REQUIRE([AC_PROG_CC])dnl
   AC_REQUIRE([AX_PTHREAD])dnl
-  AC_CHECK_HEADERS([sys/time.h],[AC_CHECK_FUNCS([[gettimeofday]])],[], [AC_INCLUDES_DEFAULT])
+  AC_CHECK_HEADERS([sys/time.h],[AC_CHECK_FUNCS([gettimeofday])],[], [AC_INCLUDES_DEFAULT])
   AC_CHECK_HEADERS([time.h],[AC_CHECK_FUNCS([[nanosleep]])],[], [AC_INCLUDES_DEFAULT])
-  AC_CHECK_HEADERS([unistd.h],[AC_CHECK_FUNCS([[usleep]])],[], [AC_INCLUDES_DEFAULT])
+  AC_CHECK_HEADERS([unistd.h],[AC_CHECK_FUNCS([usleep])],[], [AC_INCLUDES_DEFAULT])
   AC_CHECK_HEADERS([string.h sys/types.h sys/socket.h netinet/in.h time.h sys/select.h netinet/tcp.h],[],[], [AC_INCLUDES_DEFAULT])
   AC_CACHE_CHECK([[whether shutdown of listen socket trigger select()]],
     [[mhd_cv_host_shtdwn_trgr_select]], [dnl

@@ -73,7 +73,7 @@ zzuf_socat_start ()
     }
   if (zzuf_pid != 0)
     {
-      sleep (1);                /* allow zzuf and socat to start */
+      (void)sleep (1);                /* allow zzuf and socat to start */
       status = 0;
       if (0 < waitpid (zzuf_pid, &status, WNOHANG))
         {
@@ -106,7 +106,7 @@ zzuf_socat_stop ()
         fprintf (stderr, "Failed to killpg: %s\n", strerror (errno));
       kill (zzuf_pid, SIGINT);
       waitpid (zzuf_pid, &status, 0);
-      sleep (1);                /* allow socat to also die in peace */
+      (void)sleep (1);                /* allow socat to also die in peace */
     }
 }
 

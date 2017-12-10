@@ -192,7 +192,7 @@ three processes on the same machine).
 
 
 @float Figure,fig:performance
-@image{performance_data,400pt,300pt,Data,.png}
+@image{libmicrohttpd_performance_data,400pt,300pt,Data,.png}
 @caption{Performance measurements for select vs. epoll (with thread-pool).}
 @end float
 
@@ -448,8 +448,7 @@ have MHD processed network connections and data.
 Starting the daemon may also fail if a particular option is not
 implemented or not supported on the target platform (i.e. no support
 for @acronym{TLS}, threads or IPv6). TLS support generally depends on
-options given during MHD compilation. Threaded operations (including
-@code{MHD_USE_INTERNAL_POLLING_THREAD}) are not supported on Symbian.
+options given during MHD compilation.
 
 @table @code
 @item MHD_NO_FLAG
@@ -2343,13 +2342,17 @@ client certificates is presented in the MHD tutorial.
 @node microhttpd-dauth basic
 @section Using Basic Authentication
 
+@deftypefun {void} MHD_free (void *ptr)
+Free the memory given at @code{ptr}.  Used to free data structures allocated by MHD. Calls @code{free(ptr)}.
+@end deftypefun
+
 @deftypefun {char *} MHD_basic_auth_get_username_password (struct MHD_Connection *connection, char** password)
 Get the username and password from the basic authorization header sent by the client.
 Return @code{NULL} if no username could be found, a pointer to the username if found.
-If returned value is not @code{NULL}, the value must be @code{free()}'ed.
+If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 
 @var{password} reference a buffer to store the password. It can be @code{NULL}.
-If returned value is not @code{NULL}, the value must be @code{free()}'ed.
+If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 @end deftypefun
 
 @deftypefun {int} MHD_queue_basic_auth_fail_response (struct MHD_Connection *connection, const char *realm, struct MHD_Response *response)
@@ -2371,7 +2374,7 @@ client with a 401 HTTP status.
 @deftypefun {char *} MHD_digest_auth_get_username (struct MHD_Connection *connection)
 Find and return a pointer to the username value from the request header.
 Return @code{NULL} if the value is not found or header does not exist.
-If returned value is not @code{NULL}, the value must be @code{free()}'ed.
+If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 @end deftypefun
 
 @deftypefun int MHD_digest_auth_check (struct MHD_Connection *connection, const char *realm, const char *username, const char *password, unsigned int nonce_timeout)
@@ -2990,6 +2993,9 @@ Get whether postprocessor is supported. If supported then
 functions @code{MHD_create_post_processor()},
 @code{MHD_post_process()}, @code{MHD_destroy_post_processor()}
 can be used.
+
+@item MHD_FEATURE_SENDFILE
+Get whether @code{sendfile()} is supported.
 
 @end table
 @end deftp

@@ -31,9 +31,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #ifdef HAVE_GCRYPT_H
 #include <gcrypt.h>
 #endif
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 
 #ifndef WINDOWS
 #include <sys/socket.h>
@@ -82,6 +84,9 @@ ahc_echo (void *cls,
   const char *password = "testpass";
   const char *realm = "test@example.com";
   int ret;
+  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
+  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
+  (void)upload_data_size;(void)unused;         /* Unused. Silent compiler warning. */
 
   username = MHD_digest_auth_get_username (connection);
   if ( (username == NULL) ||
@@ -131,15 +136,24 @@ ahc_echo (void *cls,
 static int
 testDigestAuth ()
 {
-  int fd;
   CURL *c;
   CURLcode errornum;
   struct MHD_Daemon *d;
   struct CBC cbc;
-  size_t len;
-  size_t off = 0;
   char buf[2048];
   char rnd[8];
+  int port;
+  char url[128];
+#ifndef WINDOWS
+  int fd;
+  size_t len;
+  size_t off = 0;
+#endif /* ! WINDOWS */
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 1165;
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -156,7 +170,7 @@ testDigestAuth ()
   while (off < 8)
     {
       len = read(fd, rnd, 8);
-      if (len == -1)
+      if (len == (size_t)-1)
         {
           fprintf(stderr, "Failed to read `%s': %s\n",
                   "/dev/urandom",
@@ -178,7 +192,7 @@ testDigestAuth ()
           GetLastError ());
       return 1;
     }
-    b = CryptGenRandom (cc, 8, rnd);
+    b = CryptGenRandom (cc, 8, (BYTE*)rnd);
     if (b == 0)
     {
       fprintf (stderr, "Failed to generate 8 random bytes: %lu\n",
@@ -190,14 +204,23 @@ testDigestAuth ()
   }
 #endif
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-                        1337, NULL, NULL, &ahc_echo, PAGE,
+                        port, NULL, NULL, &ahc_echo, PAGE,
 			MHD_OPTION_DIGEST_AUTH_RANDOM, sizeof (rnd), rnd,
 			MHD_OPTION_NONCE_NC_SIZE, 300,
 			MHD_OPTION_END);
   if (d == NULL)
     return 1;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(url, "http://127.0.0.1:%d/bar%%20 foo?a=bü%%20", port);
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:1337/bar%20 foo?a=bü%20");
+  curl_easy_setopt (c, CURLOPT_URL, url);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_HTTPAUTH, CURLAUTH_DIGEST);
@@ -233,13 +256,16 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
 
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #ifdef HAVE_GCRYPT_H
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
 #endif
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   errorCount += testDigestAuth ();

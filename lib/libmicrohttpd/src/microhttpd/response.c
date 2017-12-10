@@ -30,9 +30,9 @@
 #ifdef HAVE_SYS_IOCTL_H
 #include <sys/ioctl.h>
 #endif /* HAVE_SYS_IOCTL_H */
-#ifdef _WIN32
+#if defined(_WIN32) && ! defined(__CYGWIN__)
 #include <windows.h>
-#endif /* _WIN32 */
+#endif /* _WIN32 && !__CYGWIN__ */
 
 #include "internal.h"
 #include "response.h"
@@ -45,12 +45,12 @@
 #include "mhd_compat.h"
 
 
-#if defined(_WIN32) && defined(MHD_W32_MUTEX_)
+#if defined(MHD_W32_MUTEX_)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN 1
 #endif /* !WIN32_LEAN_AND_MEAN */
 #include <windows.h>
-#endif /* _WIN32 && MHD_W32_MUTEX_ */
+#endif /* MHD_W32_MUTEX_ */
 #if defined(_WIN32)
 #include <io.h> /* for lseek(), read() */
 #endif /* _WIN32 */
@@ -169,7 +169,7 @@ MHD_del_response_header (struct MHD_Response *response,
     return MHD_NO;
   prev = NULL;
   pos = response->first_header;
-  while (pos != NULL)
+  while (NULL != pos)
     {
       if ((0 == strcmp (header,
                         pos->header)) &&
@@ -207,10 +207,12 @@ MHD_get_response_headers (struct MHD_Response *response,
                           MHD_KeyValueIterator iterator,
                           void *iterator_cls)
 {
-  struct MHD_HTTP_Header *pos;
   int numHeaders = 0;
+  struct MHD_HTTP_Header *pos;
 
-  for (pos = response->first_header; NULL != pos; pos = pos->next)
+  for (pos = response->first_header;
+       NULL != pos;
+       pos = pos->next)
     {
       numHeaders++;
       if ((NULL != iterator) &&
@@ -240,7 +242,9 @@ MHD_get_response_header (struct MHD_Response *response,
 
   if (NULL == key)
     return NULL;
-  for (pos = response->first_header; NULL != pos; pos = pos->next)
+  for (pos = response->first_header;
+       NULL != pos;
+       pos = pos->next)
     {
       if ( MHD_str_equal_caseless_ (pos->header, key) )
         return pos->value;
@@ -253,6 +257,7 @@ MHD_get_response_header (struct MHD_Response *response,
  *
  * Token could be surrounded by spaces and tabs and delimited by comma.
  * Case-insensitive match used for header names and tokens.
+ *
  * @param response  the response to query
  * @param key       header name
  * @param token     the token to find
@@ -269,14 +274,22 @@ MHD_check_response_header_token_ci (const struct MHD_Response *response,
 {
   struct MHD_HTTP_Header *pos;
 
-  if (NULL == key || 0 == key[0] || NULL == token || 0 == token[0])
+  if ( (NULL == key) ||
+       ('\0' == key[0]) ||
+       (NULL == token) ||
+       ('\0' == token[0]) )
     return false;
 
-  for (pos = response->first_header; NULL != pos; pos = pos->next)
+  for (pos = response->first_header;
+       NULL != pos;
+       pos = pos->next)
     {
       if ( (pos->kind == MHD_HEADER_KIND) &&
-           MHD_str_equal_caseless_ (pos->header, key) &&
-           MHD_str_has_token_caseless_ (pos->value, token, token_len) )
+           MHD_str_equal_caseless_ (pos->header,
+                                    key) &&
+           MHD_str_has_token_caseless_ (pos->value,
+                                        token,
+                                        token_len) )
         return true;
     }
   return false;
@@ -316,10 +329,10 @@ MHD_create_response_from_callback (uint64_t size,
   response->data = (void *) &response[1];
   response->data_buffer_size = block_size;
   if (! MHD_mutex_init_ (&response->mutex))
-    {
-      free (response);
-      return NULL;
-    }
+  {
+    free (response);
+    return NULL;
+  }
   response->crc = crc;
   response->crfc = crfc;
   response->crc_cls = crc_cls;
@@ -380,17 +393,17 @@ file_reader (void *cls,
              size_t max)
 {
   struct MHD_Response *response = cls;
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__CYGWIN__)
   ssize_t n;
-#else  /* _WIN32 */
+#else  /* _WIN32 && !__CYGWIN__ */
   const HANDLE fh = (HANDLE) _get_osfhandle (response->fd);
-#endif /* _WIN32 */
+#endif /* _WIN32 && !__CYGWIN__ */
   const int64_t offset64 = (int64_t)(pos + response->fd_off);
 
   if (offset64 < 0)
     return MHD_CONTENT_READER_END_WITH_ERROR; /* seek to required position is not possible */
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__CYGWIN__)
   if (max > SSIZE_MAX)
     max = SSIZE_MAX; /* Clamp to maximum return value. */
 
@@ -428,7 +441,7 @@ file_reader (void *cls,
   if (n < 0)
     return MHD_CONTENT_READER_END_WITH_ERROR;
   return n;
-#else /* _WIN32 */
+#else /* _WIN32 && !__CYGWIN__ */
   if (INVALID_HANDLE_VALUE == fh)
     return MHD_CONTENT_READER_END_WITH_ERROR; /* Value of 'response->fd' is not valid. */
   else
@@ -447,7 +460,7 @@ file_reader (void *cls,
         return MHD_CONTENT_READER_END_OF_STREAM;
       return (ssize_t) resRead;
     }
-#endif /* _WIN32 */
+#endif /* _WIN32 && !__CYGWIN__ */
 }
 
 
@@ -714,7 +727,7 @@ MHD_upgrade_action (struct MHD_UpgradeResponseHandle *urh,
                   SHUT_RDWR);
       }
 #endif /* HTTPS_SUPPORT */
-    EXTRA_CHECK (MHD_CONNECTION_UPGRADE == connection->state);
+    mhd_assert (MHD_CONNECTION_UPGRADE == connection->state);
     urh->was_closed = true;
     /* As soon as connection will be marked with BOTH
      * 'urh->was_closed' AND 'urh->clean_ready', it will
@@ -885,7 +898,7 @@ MHD_response_execute_upgrade_ (struct MHD_Response *response,
            to the event set of the daemon's `epoll_upgrade_fd` */
         struct epoll_event event;
 
-        EXTRA_CHECK (-1 != daemon->epoll_upgrade_fd);
+        mhd_assert (-1 != daemon->epoll_upgrade_fd);
         /* First, add network socket */
         event.events = EPOLLIN | EPOLLOUT | EPOLLPRI | EPOLLET;
         event.data.ptr = &urh->app;

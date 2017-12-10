@@ -28,6 +28,11 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   int fail;
   int ret;
   struct MHD_Response *response;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;
@@ -37,12 +42,13 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
       return MHD_YES;
     }
   pass = NULL;
-  user = MHD_basic_auth_get_username_password (connection, &pass);
-  fail = ( (user == NULL) ||
+  user = MHD_basic_auth_get_username_password (connection,
+                                               &pass);
+  fail = ( (NULL == user) ||
 	   (0 != strcmp (user, "root")) ||
-	   (0 != strcmp (pass, "pa$$w0rd") ) );  
-  if (user != NULL) free (user);
-  if (pass != NULL) free (pass);
+	   (0 != strcmp (pass, "pa$$w0rd") ) );
+  if (NULL != user) MHD_free (user);
+  if (NULL != pass) MHD_free (pass);
   if (fail)
     {
       const char *page = "<html><body>Go away.</body></html>";
@@ -67,7 +73,7 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
 
 
 int
-main ()
+main (void)
 {
   struct MHD_Daemon *daemon;
 

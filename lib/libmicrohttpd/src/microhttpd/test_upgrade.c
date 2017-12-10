@@ -201,7 +201,8 @@ typedef struct wr_socket_strc* wr_socket;
  * Create wr_socket with plain TCP underlying socket
  * @return created socket on success, WR_BAD otherwise
  */
-static wr_socket wr_create_plain_sckt(void)
+static wr_socket
+wr_create_plain_sckt(void)
 {
   wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
   if (WR_BAD == s)
@@ -219,7 +220,8 @@ static wr_socket wr_create_plain_sckt(void)
  * Create wr_socket with TLS TCP underlying socket
  * @return created socket on success, WR_BAD otherwise
  */
-static wr_socket wr_create_tls_sckt(void)
+static wr_socket
+wr_create_tls_sckt(void)
 {
 #ifdef HTTPS_SUPPORT
   wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
@@ -264,9 +266,11 @@ static wr_socket wr_create_tls_sckt(void)
  * @param plain_sk real TCP socket
  * @return created socket on success, WR_BAD otherwise
  */
-static wr_socket wr_create_from_plain_sckt(MHD_socket plain_sk)
+static wr_socket
+wr_create_from_plain_sckt(MHD_socket plain_sk)
 {
   wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
+
   if (WR_BAD == s)
     return WR_BAD;
   s->t = wr_plain;
@@ -282,32 +286,25 @@ static wr_socket wr_create_from_plain_sckt(MHD_socket plain_sk)
  * @param length of sturcture pointed by @a addr
  * @return zero on success, -1 otherwise.
  */
-static int wr_connect(wr_socket s, struct sockaddr * addr, int length)
+static int
+wr_connect(wr_socket s,
+           const struct sockaddr *addr,
+           int length)
 {
-  if (0 != connect(s->fd, addr, length))
+  if (0 != connect (s->fd, addr, length))
     return -1;
   if (wr_plain == s->t)
     return 0;
 #ifdef HTTPS_SUPPORT
   if (wr_tls == s->t)
     {
-      s->tls_connected = 0;
-      return 0;
       /* Do not try handshake here as
        * it require processing on MHD side and
        * when testing with "external" polling,
        * test will call MHD processing only
        * after return from wr_connect(). */
-      /*
-      int res = gnutls_handshake (s->tls_s);
-      if (GNUTLS_E_SUCCESS == res)
-        {
-          s->tls_connected = !0;
-          return 0;
-        }
-      if (GNUTLS_E_AGAIN == res)
-        return 0;
-       */
+      s->tls_connected = 0;
+      return 0;
     }
 #endif /* HTTPS_SUPPORT */
   return -1;
@@ -319,7 +316,7 @@ static bool wr_handshake(wr_socket s)
 {
   int res = gnutls_handshake (s->tls_s);
   if (GNUTLS_E_SUCCESS == res)
-    s->tls_connected = !0;
+    s->tls_connected = true;
   else if (GNUTLS_E_AGAIN == res)
     MHD_socket_set_error_ (MHD_SCKT_EAGAIN_);
   else
@@ -338,7 +335,10 @@ static bool wr_handshake(wr_socket s)
  *         -1 if failed. Use #MHD_socket_get_error_()
  *         to get socket error.
  */
-static ssize_t wr_send(wr_socket s, const void *buf, size_t len)
+static ssize_t
+wr_send (wr_socket s,
+         const void *buf,
+         size_t len)
 {
   if (wr_plain == s->t)
     return MHD_send_(s->fd, buf, len);
@@ -371,7 +371,10 @@ static ssize_t wr_send(wr_socket s, const void *buf, size_t len)
  *         -1 if failed. Use #MHD_socket_get_error_()
  *         to get socket error.
  */
-static ssize_t wr_recv(wr_socket s, void *buf, size_t len)
+static ssize_t
+wr_recv (wr_socket s,
+         void *buf,
+         size_t len)
 {
   if (wr_plain == s->t)
     return MHD_recv_ (s->fd, buf, len);
@@ -401,7 +404,7 @@ static ssize_t wr_recv(wr_socket s, void *buf, size_t len)
  * @return zero on succeed, -1 otherwise
  */
 static int
-wr_close(wr_socket s)
+wr_close (wr_socket s)
 {
   int ret = (MHD_socket_close_(s->fd)) ? 0 : -1;
 #ifdef HTTPS_SUPPORT
@@ -443,6 +446,7 @@ notify_completed_cb (void *cls,
                      void **con_cls,
                      enum MHD_RequestTerminationCode toe)
 {
+  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
   if ( (toe != MHD_REQUEST_TERMINATED_COMPLETED_OK) &&
        (toe != MHD_REQUEST_TERMINATED_CLIENT_ABORT) &&
        (toe != MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN) )
@@ -468,6 +472,8 @@ log_cb (void *cls,
         struct MHD_Connection *connection)
 {
   pthread_t* ppth;
+  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
+
   if (0 != strcmp (uri,
                    "/"))
     abort ();
@@ -505,6 +511,7 @@ notify_connection_cb (void *cls,
                       enum MHD_ConnectionNotificationCode toe)
 {
   static int started;
+  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
 
   switch (toe)
   {
@@ -559,9 +566,10 @@ send_all (wr_socket sock,
 {
   size_t len = strlen (text);
   ssize_t ret;
+  size_t off;
 
   make_blocking (wr_fd (sock));
-  for (size_t off = 0; off < len; off += ret)
+  for (off = 0; off < len; off += ret)
     {
       ret = wr_send (sock,
                        &text[off],
@@ -635,9 +643,10 @@ recv_all (wr_socket sock,
   size_t len = strlen (text);
   char buf[len];
   ssize_t ret;
+  size_t off;
 
   make_blocking (wr_fd (sock));
-  for (size_t off = 0; off < len; off += ret)
+  for (off = 0; off < len; off += ret)
     {
       ret = wr_recv (sock,
                        &buf[off],
@@ -759,6 +768,7 @@ upgrade_cb (void *cls,
             MHD_socket sock,
             struct MHD_UpgradeResponseHandle *urh)
 {
+  (void)cls; (void)connection; (void)con_cls; (void)extra_in; /* Unused. Silent compiler warning. */
   usock = wr_create_from_plain_sckt (sock);
   if (0 != extra_in_size)
     abort ();
@@ -821,6 +831,8 @@ ahc_upgrade (void *cls,
 {
   struct MHD_Response *resp;
   int ret;
+  (void)cls;(void)url;(void)method;                        /* Unused. Silent compiler warning. */
+  (void)version;(void)upload_data;(void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (NULL == *con_cls)
     abort ();
@@ -898,6 +910,7 @@ run_mhd_select_loop (struct MHD_Daemon *daemon)
 static void
 run_mhd_poll_loop (struct MHD_Daemon *daemon)
 {
+  (void)daemon; /* Unused. Silent compiler warning. */
   abort (); /* currently not implementable with existing MHD API */
 }
 #endif /* HAVE_POLL */
@@ -982,6 +995,7 @@ test_upgrade (int flags,
   wr_socket sock;
   struct sockaddr_in sa;
   const union MHD_DaemonInfo *real_flags;
+  const union MHD_DaemonInfo *dinfo;
 #if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
   pid_t pid = -1;
 #endif /* HTTPS_SUPPORT && HAVE_FORK && HAVE_WAITPID */
@@ -990,7 +1004,8 @@ test_upgrade (int flags,
 
   if (!test_tls)
     d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE,
-			  1080,
+			  MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT) ?
+			      0 : 1090,
 			  NULL, NULL,
 			  &ahc_upgrade, NULL,
 			  MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
@@ -1001,7 +1016,8 @@ test_upgrade (int flags,
 #ifdef HTTPS_SUPPORT
   else
     d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE | MHD_USE_TLS,
-                          1080,
+                          MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT) ?
+                              0 : 1090,
                           NULL, NULL,
                           &ahc_upgrade, NULL,
                           MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
@@ -1017,13 +1033,16 @@ test_upgrade (int flags,
   real_flags = MHD_get_daemon_info(d, MHD_DAEMON_INFO_FLAGS);
   if (NULL == real_flags)
     abort ();
+  dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+  if (NULL == dinfo || 0 == dinfo->port)
+    abort ();
   if (!test_tls || TLS_LIB_GNUTLS == use_tls_tool)
     {
       sock = test_tls ? wr_create_tls_sckt () : wr_create_plain_sckt ();
       if (WR_BAD == sock)
         abort ();
       sa.sin_family = AF_INET;
-      sa.sin_port = htons (1080);
+      sa.sin_port = htons (dinfo->port);
       sa.sin_addr.s_addr = htonl (INADDR_LOOPBACK);
       if (0 != wr_connect (sock,
                         (struct sockaddr *) &sa,
@@ -1034,7 +1053,7 @@ test_upgrade (int flags,
     {
 #if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
       MHD_socket tls_fork_sock;
-      if (-1 == (pid = gnutlscli_connect (&tls_fork_sock, 1080)))
+      if (-1 == (pid = gnutlscli_connect (&tls_fork_sock, dinfo->port)))
         {
           MHD_stop_daemon (d);
           return 4;

@@ -42,6 +42,13 @@ answer_to_connection(void *cls,
   const char *page = "<html><body>Hello timeout!</body></html>";
   struct MHD_Response *response;
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)method;            /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void)con_cls;           /* Unused. Silent compiler warning. */
 
   response = MHD_create_response_from_buffer (strlen(page),
                                               (void *) page,
@@ -58,8 +65,7 @@ answer_to_connection(void *cls,
 
 
 int
-main (int argc,
-      char **argv)
+main (void)
 {
   struct MHD_Daemon *daemon;
 

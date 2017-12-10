@@ -134,6 +134,7 @@ copyBuffer (void *ptr,
 	    size_t size, size_t nmemb,
 	    void *ctx)
 {
+  (void)ptr;(void)ctx;          /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -150,6 +151,8 @@ ahc_echo (void *cls,
   static int ptr;
   const char *me = cls;
   int ret;
+  (void)url;(void)version;                      /* Unused. Silent compiler warning. */
+  (void)upload_data;(void)upload_data_size;     /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -247,11 +250,22 @@ testInternalGet (int port, int poll_flag)
                                   (poll_flag & MHD_USE_EPOLL) ? "internal thread with epoll" : "internal thread with select()");
   const char * ret_val;
 
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+
   signal_done = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   start_timer ();
   ret_val = do_gets ((void*)(intptr_t)port);
   if (!ret_val)
@@ -277,11 +291,22 @@ testMultithreadedGet (int port, int poll_flag)
                                       : "internal thread with select() and thread per connection");
   const char * ret_val;
 
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+
   signal_done = 0;
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   start_timer ();
   ret_val = do_gets ((void*)(intptr_t)port);
   if (!ret_val)
@@ -306,12 +331,23 @@ testMultithreadedPoolGet (int port, int poll_flag)
                                   (poll_flag & MHD_USE_EPOLL) ? "internal thread poll with epoll" : "internal thread pool with select()");
   const char * ret_val;
 
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+
   signal_done = 0 ;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
                         port, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   start_timer ();
   ret_val = do_gets ((void*)(intptr_t)port);
   if (!ret_val)
@@ -342,11 +378,22 @@ testExternalGet (int port)
   char *ret_val;
   int ret = 0;
 
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+
   signal_done = 0;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 256;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   if (0 != pthread_create (&pid, NULL,
 			   &do_gets, (void*)(intptr_t)port))
     {
@@ -372,11 +419,19 @@ testExternalGet (int port)
       tv.tv_usec = 1000 * (tt % 1000);
       if (-1 == select (max + 1, &rs, &ws, &es, &tv))
 	{
-	  if (EINTR == errno)
-	    continue;
-	  fprintf (stderr,
-		   "select failed: %s\n",
-		   strerror (errno));
+#ifdef MHD_POSIX_SOCKETS
+          if (EINTR == errno)
+            continue;
+          fprintf (stderr,
+                   "select failed: %s\n",
+                   strerror (errno));
+#else
+          if (WSAEINVAL == WSAGetLastError() && 0 == rs.fd_count && 0 == ws.fd_count && 0 == es.fd_count)
+            {
+              Sleep (1000);
+              continue;
+            }
+#endif
 	  ret |= 1024;
 	  break;
 	}
@@ -402,10 +457,13 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  int port = 1081;
+  int port = 1100;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (oneone)
+    port += 15;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   response = MHD_create_response_from_buffer (strlen ("/hello_world"),

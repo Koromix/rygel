@@ -46,12 +46,10 @@ sockets.  This should work on OS X, Linux and recent BSD systems (at
 least).  On other systems that may trigger a SIGPIPE on send/recv, the
 main application should install a signal handler to handle SIGPIPE.
 
-libmicrohttpd should work well on GNU/Linux, BSD, OS X, W32 and z/OS.
+libmicrohttpd should work well on GNU/Linux, W32, FreeBSD, Darwin,
+NetBSD, OpenBSD, Solaris/OpenIndiana, and z/OS.
 Note that HTTPS is not supported on z/OS (yet).  We also have reports
-of users using it on vxWorks and Symbian.  Note that on platforms
-where the compiler does not support the "constructor" attribute, you
-must call "MHD_init" before using any MHD functions and "MHD_fini"
-after you are done using MHD.
+of users using it on vxWorks.
 
 
 Development Status

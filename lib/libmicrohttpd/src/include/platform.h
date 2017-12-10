@@ -118,11 +118,11 @@
 typedef intptr_t ssize_t;
 #endif /* !_SSIZE_T_DEFINED */
 
-#ifndef _WIN32
+#if !defined(_WIN32) || defined(__CYGWIN__)
 typedef time_t _MHD_TIMEVAL_TV_SEC_TYPE;
-#else  /* _WIN32 */
+#else  /* _WIN32 && ! __CYGWIN__ */
 typedef long _MHD_TIMEVAL_TV_SEC_TYPE;
-#endif /* _WIN32 */
+#endif /* _WIN32 && ! __CYGWIN__ */
 
 #if !defined(IPPROTO_IPV6) && defined(_MSC_FULL_VER) && _WIN32_WINNT >= 0x0501
 /* VC use IPPROTO_IPV6 as part of enum */

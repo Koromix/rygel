@@ -40,48 +40,400 @@
 #
 # LICENSE
 #
-#   Copyright (c) 2016 Karlson2k (Evgeny Grin) <k2k@narod.ru>
+#   Copyright (c) 2016, 2017 Karlson2k (Evgeny Grin) <k2k@narod.ru>
 #
 #   Copying and distribution of this file, with or without modification, are
 #   permitted in any medium without royalty provided the copyright notice
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
 
-#serial 1
+#serial 2
 
 AC_DEFUN([MHD_SYS_EXT],[dnl
-  AC_PREREQ([2.64])dnl for AS_VAR_IF, m4_ifnblank
+  AC_PREREQ([2.64])dnl for AS_VAR_IF, AS_VAR_SET_IF, m4_ifnblank
   AC_LANG_PUSH([C])dnl Use C language for simplicity
-  mhd_mse_added_exts_flags=""
-  mhd_mse_added_prolog=""
-  MHD_CHECK_DEFINED([[_XOPEN_SOURCE]], [], [dnl
-    AC_CACHE_CHECK([[whether predefined value of _XOPEN_SOURCE is more or equal 500]],
-      [[mhd_cv_macro__xopen_source_def_fiveh]], [dnl
+  mhd_mse_sys_ext_defines=""
+  mhd_mse_sys_ext_flags=""
+
+  dnl Check platform-specific extensions.
+  dnl Use compiler-based test for determinig target.
+
+  dnl Always add _GNU_SOURCE if headers allow.
+  MHD_CHECK_DEF_AND_ACCEPT([[_GNU_SOURCE]], [],
+    [[${mhd_mse_sys_ext_defines}]], [mhd_cv_macro_add__gnu_source="no"],
+    [mhd_cv_macro_add__gnu_source="yes"],
+    [mhd_cv_macro_add__gnu_source="no"]
+  )
+  AS_VAR_IF([mhd_cv_macro_add__gnu_source], ["yes"],
+    [
+      _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_GNU_SOURCE]])
+    ]
+  )
+
+  dnl __BSD_VISIBLE is actually a small hack for FreeBSD.
+  dnl Funny that it's used in some Android versions too.
+  AC_CACHE_CHECK([[whether to try __BSD_VISIBLE macro]],
+    [[mhd_cv_macro_try___bsd_visible]], [dnl
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+/* Warning: test with inverted logic! */
+#ifdef __FreeBSD__
+#error Target FreeBSD
+choke me now;
+#endif /* __FreeBSD__ */
+
+#ifdef __ANDROID__
+#include <android/api-level.h>
+#ifndef __ANDROID_API_O__
+#error Target is Android NDK before R14
+choke me now;
+#endif /* ! __ANDROID_API_O__ */
+#endif /* __ANDROID__ */
+        ]],[])],
+      [[mhd_cv_macro_try___bsd_visible="no"]],
+      [[mhd_cv_macro_try___bsd_visible="yes"]]
+    )
+  ])
+  AS_VAR_IF([[mhd_cv_macro_try___bsd_visible]], [["yes"]],
+  [dnl
+    AC_CACHE_CHECK([[whether __BSD_VISIBLE is already defined]],
+      [[mhd_cv_macro___bsd_visible_defined]], [dnl
       AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#if _XOPEN_SOURCE+0 < 500
-#error Value of _XOPEN_SOURCE is less than 500
+${mhd_mse_sys_ext_defines}
+/* Warning: test with inverted logic! */
+#ifdef __BSD_VISIBLE
+#error __BSD_VISIBLE is defined
 choke me now;
 #endif
-          ]],[[int i = 0; i++]])],dnl
-        [[mhd_cv_macro__xopen_source_def_fiveh="yes"]],
-        [[mhd_cv_macro__xopen_source_def_fiveh="no"]]
+          ]],[])
+      ],
+        [[mhd_cv_macro___bsd_visible_defined="no"]],
+        [[mhd_cv_macro___bsd_visible_defined="yes"]]
       )
     ])
-    AS_VAR_IF([mhd_cv_macro__xopen_source_def_fiveh], [["no"]], [dnl
-      _MHD_XOPEN_ADD([])
+    AS_VAR_IF([[mhd_cv_macro___bsd_visible_defined]], [["yes"]], [[:]],
+    [dnl
+      MHD_CHECK_ACCEPT_DEFINE(
+        [[__BSD_VISIBLE]], [], [[${mhd_mse_sys_ext_defines}]],
+        [
+          _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[__BSD_VISIBLE]])
+        ]
+      )dnl
     ])
-  ],
-  [
-    dnl Some platforms (namely: Solaris) use '==' checks instead of '>='
-    dnl for _XOPEN_SOURCE, resulting that unknown for platform values are
-    dnl interpreted as oldest and platform expose reduced number of
-    dnl interfaces. Next checks will ensure that platform recognise
-    dnl requested mode instead of blindly define high number that can
-    dnl be simply ignored by platform.
-    MHD_CHECK_ACCEPT_DEFINE([[_XOPEN_SOURCE]], [[700]], [], [dnl
-      AC_CACHE_CHECK([[whether _XOPEN_SOURCE with value 700 really enable POSIX.1-2008/SUSv4 features]],
-        [[mhd_cv_define__xopen_source_sevenh_works]], [dnl
-        _MHD_CHECK_XOPEN_ENABLE([[700]], [
+  ])
+
+
+  dnl _DARWIN_C_SOURCE enables additional functionality on Darwin.
+  MHD_CHECK_DEFINED_MSG([[__APPLE__]], [[${mhd_mse_sys_ext_defines}]],
+    [[whether to try _DARWIN_C_SOURCE macro]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[_DARWIN_C_SOURCE]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_DARWIN_C_SOURCE]])
+      ]
+    )dnl
+  ])
+
+  dnl __EXTENSIONS__ unlocks almost all interfaces on Solaris.
+  MHD_CHECK_DEFINED_MSG([[__sun]], [[${mhd_mse_sys_ext_defines}]],
+    [[whether to try __EXTENSIONS__ macro]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[__EXTENSIONS__]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[__EXTENSIONS__]])
+      ]
+    )dnl
+  ])
+
+  dnl _NETBSD_SOURCE switch on almost all headers definitions on NetBSD.
+  MHD_CHECK_DEFINED_MSG([[__NetBSD__]], [[${mhd_mse_sys_ext_defines}]],
+    [[whether to try _NETBSD_SOURCE macro]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[_NETBSD_SOURCE]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_NETBSD_SOURCE]])
+      ]
+    )dnl
+  ])
+
+  dnl _BSD_SOURCE currently used only on OpenBSD to unhide functions.
+  MHD_CHECK_DEFINED_MSG([[__OpenBSD__]], [[${mhd_mse_sys_ext_defines}]],
+    [[whether to try _BSD_SOURCE macro]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[_BSD_SOURCE]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_BSD_SOURCE]])
+      ]
+    )dnl
+  ])
+
+  dnl _TANDEM_SOURCE unhides most functions on NonStop OS
+  dnl (which comes from Tandem Computers decades ago).
+  MHD_CHECK_DEFINED_MSG([[__TANDEM]], [[${mhd_mse_sys_ext_defines}]],
+    [[whether to try _TANDEM_SOURCE macro]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[_TANDEM_SOURCE]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_TANDEM_SOURCE]])
+      ]
+    )dnl
+  ])
+
+  dnl _ALL_SOURCE makes visible POSIX and non-POSIX symbols
+  dnl on z/OS, AIX and Interix.
+  AC_CACHE_CHECK([[whether to try _ALL_SOURCE macro]],
+    [[mhd_cv_macro_try__all_source]], [dnl
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#if !defined(__TOS_MVS__) && !defined (__INTERIX)
+#error Target is not z/OS, AIX or Interix
+choke me now;
+#endif
+        ]],[])],
+      [[mhd_cv_macro_try__all_source="yes"]],
+      [[mhd_cv_macro_try__all_source="no"]]
+    )
+  ])
+  AS_VAR_IF([[mhd_cv_macro_try__all_source]], [["yes"]],
+  [dnl
+    MHD_CHECK_DEF_AND_ACCEPT(
+      [[_ALL_SOURCE]], [], [[${mhd_mse_sys_ext_defines}]], [],
+      [
+        _MHD_SYS_EXT_VAR_ADD_FLAG([[mhd_mse_sys_ext_defines]], [[mhd_mse_sys_ext_flags]], [[_ALL_SOURCE]])
+      ]
+    )dnl
+  ])
+
+  mhd_mse_xopen_features=""
+  mhd_mse_xopen_defines=""
+  mhd_mse_xopen_flags=""
+
+  AC_CACHE_CHECK([[whether _XOPEN_SOURCE is already defined]],
+    [[mhd_cv_macro__xopen_source_defined]], [
+      _MHD_CHECK_DEFINED([[_XOPEN_SOURCE]], [[${mhd_mse_sys_ext_defines}]],
+        [[mhd_cv_macro__xopen_source_defined="yes"]],
+        [[mhd_cv_macro__xopen_source_defined="no"]]
+      )
+    ]
+  )
+  AS_VAR_IF([[mhd_cv_macro__xopen_source_defined]], [["no"]],
+    [
+      dnl Some platforms (namely: Solaris) use '==' checks instead of '>='
+      dnl for _XOPEN_SOURCE, resulting that unknown for platform values are
+      dnl interpreted as oldest and platform expose reduced number of
+      dnl interfaces. Next checks will ensure that platform recognise
+      dnl requested mode instead of blindly define high number that can
+      dnl be simply ignored by platform.
+      _MHD_CHECK_POSIX2008([[mhd_mse_xopen_defines]],
+        [[mhd_mse_xopen_flags]],
+        [[${mhd_mse_sys_ext_defines}]],
+        [mhd_mse_xopen_features="${mhd_cv_headers_posix2008}"],
+        [
+          _MHD_CHECK_POSIX2001([[mhd_mse_xopen_defines]],
+            [[mhd_mse_xopen_flags]],
+             [[${mhd_mse_sys_ext_defines}]],
+            [mhd_mse_xopen_features="${mhd_cv_headers_posix2001}"],
+            [
+              _MHD_CHECK_SUSV2([[mhd_mse_xopen_defines]],
+                [[mhd_mse_xopen_flags]],
+                [[${mhd_mse_sys_ext_defines}]],
+                [mhd_mse_xopen_features="${mhd_cv_headers_susv2}"],
+                [mhd_mse_xopen_features="${mhd_cv_headers_susv2}"]
+              )
+            ]
+          )
+        ]
+      )
+    ]
+  )
+
+  AS_IF([[test "x${mhd_cv_macro__xopen_source_defined}" = "xno" && \
+          test "x${mhd_cv_macro__xopen_source_def_fiveh}" = "xno" || \
+          test "x${mhd_mse_xopen_features}" = "xnot available" ]],
+    [
+      _MHD_XOPEN_VAR_ADD([mhd_mse_xopen_defines], [mhd_mse_xopen_flags], [${mhd_mse_sys_ext_defines}])
+    ]
+  )
+
+  mhd_mse_sys_features_src="
+#ifdef __APPLE__
+#include <sys/socket.h>
+#else
+#error No useful system features.
+choke me now;
+#endif
+
+int main()
+{
+#ifdef __APPLE__
+#ifndef sendfile
+  (void) sendfile;
+#endif
+#endif
+  return 0;
+}
+"
+  AC_CACHE_CHECK([[for useful system-specific features]],
+    [[mhd_cv_headers_useful_features_present]], [dnl
+    AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+${mhd_mse_sys_ext_defines}
+${mhd_mse_sys_features_src}
+      ]])],
+      [[mhd_cv_headers_useful_features_present="yes"]],
+      [[mhd_cv_headers_useful_features_present="no"]]
+    )dnl
+  ])
+  AS_VAR_IF([[mhd_cv_headers_useful_features_present]], [["yes"]],
+    [
+      AS_IF([[test "x${mhd_mse_xopen_flags}" = "x"]], [[:]],
+        [
+          AC_CACHE_CHECK([[whether useful system-specific features works with ${mhd_mse_xopen_flags}]],
+            [[mhd_cv_headers_useful_features_works_xopen]], [dnl
+            AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+${mhd_mse_sys_ext_defines}
+${mhd_mse_xopen_defines}
+${mhd_mse_sys_features_src}
+              ]])],
+              [[mhd_cv_headers_useful_features_works_xopen="yes"]],
+              [[mhd_cv_headers_useful_features_works_xopen="no"]]
+            )dnl
+          ])dnl
+        ]
+      )dnl
+    ]
+  )
+
+
+  AS_IF([[test "x${mhd_cv_headers_useful_features_present}" = "xyes" && \
+          test "x${mhd_cv_headers_useful_features_works_xopen}" = "xno" && \
+          test "x${mhd_mse_xopen_flags}" != "x"]],
+    [
+      _MHD_VAR_CONTAIN([[mhd_mse_xopen_features]], [[, activated by _XOPEN_SOURCE]],
+        [
+          AC_MSG_WARN([[_XOPEN_SOURCE macro is required to activate all headers symbols, however some useful system-specific features does not work with _XOPEN_SOURCE. ]dnl
+          [_XOPEN_SOURCE macro will not be used.]])
+        ]
+      )
+      AS_UNSET([[mhd_mse_xopen_defines]])
+      AS_UNSET([[mhd_mse_xopen_flags]])
+      AS_UNSET([[mhd_mse_xopen_values]])
+    ]
+  )
+
+  dnl Discard temporal source variables
+  AS_UNSET([[mhd_mse_sys_features_src]])
+  AS_UNSET([[mhd_mse_xopen_defines]])
+  AS_UNSET([[mhd_mse_sys_ext_defines]])
+
+  dnl Determined all required defines.
+  AC_MSG_CHECKING([[for final set of defined symbols]])
+  m4_ifblank([$1], [dnl
+    AH_TEMPLATE([[_XOPEN_SOURCE]], [Define to maximum value supported by system headers])dnl
+    AH_TEMPLATE([[_XOPEN_SOURCE_EXTENDED]], [Define to 1 if _XOPEN_SOURCE is defined to value less than 500 ]dnl
+      [and system headers requre this symbol])dnl
+    AH_TEMPLATE([[_XOPEN_VERSION]], [Define to maximum value supported by system headers if _XOPEN_SOURCE ]dnl
+      [is defined to value less than 500 and headers do not support _XOPEN_SOURCE_EXTENDED])dnl
+    AH_TEMPLATE([[_GNU_SOURCE]], [Define to 1 to enable GNU-related header features])dnl
+    AH_TEMPLATE([[__BSD_VISIBLE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[_DARWIN_C_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[__EXTENSIONS__]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[_NETBSD_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[_BSD_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[_TANDEM_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+    AH_TEMPLATE([[_ALL_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
+  ])
+  for mhd_mse_Flag in ${mhd_mse_sys_ext_flags} ${mhd_mse_xopen_flags}
+  do
+    m4_ifnblank([$1], [dnl
+      AS_VAR_APPEND([$1],[[" -D$mhd_mse_Flag"]])
+    ], [dnl
+      AS_CASE([[$mhd_mse_Flag]], [[*=*]],
+      [dnl
+        AC_DEFINE_UNQUOTED([[`echo $mhd_mse_Flag | cut -f 1 -d =`]],
+          [[`echo $mhd_mse_Flag | cut -f 2 -d = -s`]])
+      ], [dnl
+        AC_DEFINE_UNQUOTED([[$mhd_mse_Flag]])
+      ])
+    ])
+  done
+  AS_UNSET([[mhd_mse_Flag]])
+  dnl Trim whitespaces
+  mhd_mse_result=`echo ${mhd_mse_sys_ext_flags} ${mhd_mse_xopen_flags}`
+  AC_MSG_RESULT([[${mhd_mse_result}]])
+  AS_UNSET([[mhd_mse_result]])
+  AS_UNSET([[mhd_mse_xopen_flags]])
+  AS_UNSET([[mhd_mse_sys_ext_flags]])
+  AC_LANG_POP([C])
+])
+
+
+#
+# _MHD_SYS_EXT_VAR_ADD_FLAG(DEFINES_VAR, FLAGS_VAR,
+#                           FLAG, [FLAG-VALUE = 1])
+#
+# Internal macro, only to be used from MHD_SYS_EXT, _MHD_XOPEN_VAR_ADD
+
+m4_define([_MHD_SYS_EXT_VAR_ADD_FLAG], [dnl
+  m4_ifnblank([$4],[dnl
+    ]m4_normalize([$1])[="[$]{]m4_normalize([$1])[}[#define ]m4_normalize($3) ]m4_normalize([$4])[
+"
+    AS_IF([test "x[$]{]m4_normalize([$2])[}" = "x"],
+      []m4_normalize([$2])[="]m4_normalize([$3])[=]m4_normalize([$4])["],
+      []m4_normalize([$2])[="[$]{]m4_normalize([$2])[} ]m4_normalize([$3])[=]m4_normalize([$4])["]
+    )dnl
+  ], [dnl
+    ]m4_normalize([$1])[="[$]{]m4_normalize([$1])[}[#define ]m4_normalize($3) 1
+"
+    AS_IF([test "x[$]{]m4_normalize([$2])[}" = "x"],
+      []m4_normalize([$2])[="]m4_normalize([$3])["],
+      []m4_normalize([$2])[="[$]{]m4_normalize([$2])[} ]m4_normalize([$3])["]
+    )dnl
+  ])dnl
+])
+
+#
+# _MHD_VAR_IF(VAR, VALUE, [IF-EQ], [IF-NOT-EQ])
+#
+# Same as AS_VAR_IF, except that it expands to nothing if
+# both IF-EQ and IF-NOT-EQ are empty.
+
+m4_define([_MHD_VAR_IF],[dnl
+m4_ifnblank([$3$4],[dnl
+AS_VAR_IF([$1],[$2],[$3],[$4])])])
+
+#
+# _MHD_STRING_CONTAIN(VAR, MATCH, [IF-MATCH], [IF-NOT-MATCH])
+#
+
+AC_DEFUN([_MHD_VAR_CONTAIN],[dnl
+AC_REQUIRE([AC_PROG_FGREP])dnl
+AS_IF([[`echo "${]$1[}" | $FGREP ']$2[' >/dev/null 2>&1`]], [$3], [$4])
+])
+
+#
+# _MHD_STRING_CONTAIN_BRE(VAR, BRE, [IF-MATCH], [IF-NOT-MATCH])
+#
+
+AC_DEFUN([_MHD_VAR_CONTAIN_BRE],[dnl
+AC_REQUIRE([AC_PROG_GREP])dnl
+AS_IF([[`echo "${]$1[}" | $GREP ']$2[' >/dev/null 2>&1`]], [$3], [$4])
+])
+
+# SYNOPSIS
+#
+# _MHD_CHECK_POSIX2008(DEFINES_VAR, FLAGS_VAR,
+#                      [EXT_DEFINES],
+#                      [ACTION-IF-AVAILABLE],
+#                      [ACTION-IF-NOT-AVAILABLE])
+#
+#
+AC_DEFUN([_MHD_CHECK_POSIX2008], [dnl
+  AC_CACHE_CHECK([headers for POSIX.1-2008/SUSv4 features],
+    [[mhd_cv_headers_posix2008]], [dnl
+      _MHD_CHECK_POSIX_FEATURES_SINGLE([
 _MHD_BASIC_INCLUDES
 [
 /* Check will be passed if ALL features are avalable 
@@ -134,20 +486,36 @@ int main()
 
   return 0;
 }
-          ]],
-          [[mhd_cv_define__xopen_source_sevenh_works="yes"]],
-          [[mhd_cv_define__xopen_source_sevenh_works="no"]]
-        )dnl
-      ])dnl
-    ])
-    AS_IF([[test "x$mhd_cv_define__xopen_source_accepted_700" = "xyes" &&
-      test "x$mhd_cv_define__xopen_source_sevenh_works" = "xyes"]], [dnl
-      _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_SOURCE]], [[700]])
-    ], [dnl
-      MHD_CHECK_ACCEPT_DEFINE([[_XOPEN_SOURCE]], [[600]], [], [dnl
-        AC_CACHE_CHECK([[whether _XOPEN_SOURCE with value 600 really enable POSIX.1-2001/SUSv3 features]],
-          [[mhd_cv_define__xopen_source_sixh_works]], [dnl
-          _MHD_CHECK_XOPEN_ENABLE([[600]], [
+        ]],
+        [$3], [[700]],
+        [[mhd_cv_headers_posix2008]]dnl
+      )
+    ]
+  )
+  _MHD_VAR_CONTAIN_BRE([[mhd_cv_headers_posix2008]], [[^available]],
+    [
+      _MHD_VAR_CONTAIN([[mhd_cv_headers_posix2008]], [[does not work with _XOPEN_SOURCE]], [[:]],
+        [_MHD_SYS_EXT_VAR_ADD_FLAG([$1],[$2],[[_XOPEN_SOURCE]],[[700]])]
+      )
+      $4
+    ],
+    [$5]
+  )
+])
+
+
+# SYNOPSIS
+#
+# _MHD_CHECK_POSIX2001(DEFINES_VAR, FLAGS_VAR,
+#                      [EXT_DEFINES],
+#                      [ACTION-IF-AVAILABLE],
+#                      [ACTION-IF-NOT-AVAILABLE])
+#
+#
+AC_DEFUN([_MHD_CHECK_POSIX2001], [dnl
+  AC_CACHE_CHECK([headers for POSIX.1-2001/SUSv3 features],
+    [[mhd_cv_headers_posix2001]], [
+      _MHD_CHECK_POSIX_FEATURES_SINGLE([
 _MHD_BASIC_INCLUDES
 [
 /* Check will be passed if ALL features are available
@@ -191,20 +559,35 @@ choke me now;
 #endif
   return 0;
 }
-            ]],
-            [[mhd_cv_define__xopen_source_sixh_works="yes"]],
-            [[mhd_cv_define__xopen_source_sixh_works="no"]]
-          )dnl
-        ])dnl
-      ])
-      AS_IF([[test "x$mhd_cv_define__xopen_source_accepted_600" = "xyes" &&
-        test "x$mhd_cv_define__xopen_source_sixh_works" = "xyes"]], [dnl
-        _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_SOURCE]], [[600]])
-      ], [dnl
-        MHD_CHECK_ACCEPT_DEFINE([[_XOPEN_SOURCE]], [[500]], [], [dnl
-          AC_CACHE_CHECK([[whether _XOPEN_SOURCE with value 500 really enable SUSv2/XPG5 features]],
-            [mhd_cv_define__xopen_source_fiveh_works], [dnl
-            _MHD_CHECK_XOPEN_ENABLE([[500]], [
+        ]],
+        [$3],[[600]],[[mhd_cv_headers_posix2001]]dnl
+      )
+    ]
+  )
+  _MHD_VAR_CONTAIN_BRE([[mhd_cv_headers_posix2001]], [[^available]],
+    [
+      _MHD_VAR_CONTAIN([[mhd_cv_headers_posix2001]], [[does not work with _XOPEN_SOURCE]], [[:]],
+        [_MHD_SYS_EXT_VAR_ADD_FLAG([$1],[$2],[[_XOPEN_SOURCE]],[[600]])]
+      )
+      $4
+    ],
+    [$5]
+  )
+])
+
+
+# SYNOPSIS
+#
+# _MHD_CHECK_SUSV2(DEFINES_VAR, FLAGS_VAR,
+#                  [EXT_DEFINES],
+#                  [ACTION-IF-AVAILABLE],
+#                  [ACTION-IF-NOT-AVAILABLE])
+#
+#
+AC_DEFUN([_MHD_CHECK_SUSV2], [dnl
+  AC_CACHE_CHECK([headers for SUSv2/XPG5 features],
+    [[mhd_cv_headers_susv2]], [
+      _MHD_CHECK_POSIX_FEATURES_SINGLE([
 _MHD_BASIC_INCLUDES
 [
 /* Check will be passed if ALL features are available
@@ -245,270 +628,133 @@ int main()
 #endif /* ! __APPLE__ */
   return 0;
 }
-              ]],
-              [[mhd_cv_define__xopen_source_fiveh_works="yes"]],
-              [[mhd_cv_define__xopen_source_fiveh_works="no"]]
-            )dnl
-          ])dnl
-        ])
-        AS_IF([[test "x$mhd_cv_define__xopen_source_accepted_500" = "xyes" && ]dnl
-          [test "x$mhd_cv_define__xopen_source_fiveh_works" = "xyes"]], [dnl
-          _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_SOURCE]], [[500]])
-        ],
-        [
-          [#] Earlier standards are widely supported, so just define macros to maximum value
-          [#] which do not break headers.
-          _MHD_XOPEN_ADD([[#define _XOPEN_SOURCE 1]])
-          AC_CACHE_CHECK([[whether headers accept _XOPEN_SOURCE with value 1]],
-            [mhd_cv_define__xopen_source_accepted_1], [dnl
-            AS_IF([[test "x$mhd_cv_define__xopen_source_extended_accepted" = "xyes" || ]dnl
-                   [test "x$mhd_cv_define__xopen_version_accepted" = "xyes"]],
-              [[mhd_cv_define__xopen_source_accepted_1="yes"]],
-            [
-              MHD_CHECK_BASIC_HEADERS([[#define _XOPEN_SOURCE 1]],
-                [[mhd_cv_define__xopen_source_accepted_1="yes"]],
-                [[mhd_cv_define__xopen_source_accepted_1="no"]])
-            ])
-          ])
-          AS_VAR_IF([[mhd_cv_define__xopen_source_accepted_1]], [["yes"]], [dnl
-            _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_SOURCE]], [[1]])
-          ])
-        ])
-      ])
-    ])
-  ])
-  dnl Add other extensions.
-  dnl Use compiler-based test for determinig target.
-
-  dnl Always add _GNU_SOURCE if headers allow.
-  MHD_CHECK_DEF_AND_ACCEPT([[_GNU_SOURCE]], [],
-    [[${mhd_mse_added_prolog}]], [],
-    [_MHD_SYS_EXT_ADD_FLAG([[_GNU_SOURCE]])])
-
-  dnl __BSD_VISIBLE is actually a small hack for FreeBSD.
-  dnl Funny that it's used in Android headers too.
-  AC_CACHE_CHECK([[whether to try __BSD_VISIBLE macro]],
-    [[mhd_cv_macro_try___bsd_visible]], [dnl
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#if !defined(__FreeBSD__) && !defined (__ANDROID__)
-#error Target is not FreeBSD or Android
-choke me now;
-#endif
-        ]],[])],
-      [[mhd_cv_macro_try___bsd_visible="yes"]],
-      [[mhd_cv_macro_try___bsd_visible="no"]]
-    )
-  ])
-  AS_VAR_IF([[mhd_cv_macro_try___bsd_visible]], [["yes"]],
-  [dnl
-    AC_CACHE_CHECK([[whether __BSD_VISIBLE is already defined]],
-      [[mhd_cv_macro___bsd_visible_defined]], [dnl
-      AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-${mhd_mse_added_prolog}
-/* Warning: test with inverted logic! */
-#ifdef __BSD_VISIBLE
-#error __BSD_VISIBLE is defined
-choke me now;
-#endif
-#ifdef __ANDROID__
-/* if __BSD_VISIBLE is not defined, Android usually defines it to 1 */
-#include <stdio.h>
-#if defined(__BSD_VISIBLE) && __BSD_VISIBLE == 1
-#error __BSD_VISIBLE is autodefined by headers to value 1
-choke me now;
-#endif
-#endif
-          ]],[])
-      ],
-        [[mhd_cv_macro___bsd_visible_defined="no"]],
-        [[mhd_cv_macro___bsd_visible_defined="yes"]]
+        ]],
+        [$3],[[500]],[[mhd_cv_headers_susv2]]dnl
       )
-    ])
-    AS_VAR_IF([[mhd_cv_macro___bsd_visible_defined]], [["yes"]], [[:]],
-    [dnl
-      MHD_CHECK_ACCEPT_DEFINE(
-        [[__BSD_VISIBLE]], [], [[${mhd_mse_added_prolog}]],
-        [_MHD_SYS_EXT_ADD_FLAG([[__BSD_VISIBLE]])]
-      )dnl
-    ])
-  ])
-
-
-  dnl _DARWIN_C_SOURCE enables additional functionality on Darwin.
-  MHD_CHECK_DEFINED_MSG([[__APPLE__]], [[${mhd_mse_added_prolog}]],
-    [[whether to try _DARWIN_C_SOURCE macro]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[_DARWIN_C_SOURCE]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[_DARWIN_C_SOURCE]])]
-    )dnl
-  ])
-
-  dnl __EXTENSIONS__ unlocks almost all interfaces on Solaris.
-  MHD_CHECK_DEFINED_MSG([[__sun]], [[${mhd_mse_added_prolog}]],
-    [[whether to try __EXTENSIONS__ macro]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[__EXTENSIONS__]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[__EXTENSIONS__]])]
-    )dnl
-  ])
-
-  dnl _NETBSD_SOURCE switch on almost all headers definitions on NetBSD.
-  MHD_CHECK_DEFINED_MSG([[__NetBSD__]], [[${mhd_mse_added_prolog}]],
-    [[whether to try _NETBSD_SOURCE macro]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[_NETBSD_SOURCE]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[_NETBSD_SOURCE]])]
-    )dnl
-  ])
-
-  dnl _BSD_SOURCE currently used only on OpenBSD to unhide functions.
-  MHD_CHECK_DEFINED_MSG([[__OpenBSD__]], [[${mhd_mse_added_prolog}]],
-    [[whether to try _BSD_SOURCE macro]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[_BSD_SOURCE]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[_BSD_SOURCE]])]
-    )dnl
-  ])
-
-  dnl _TANDEM_SOURCE unhides most functions on NonStop OS
-  dnl (which comes from Tandem Computers decades ago).
-  MHD_CHECK_DEFINED_MSG([[__TANDEM]], [[${mhd_mse_added_prolog}]],
-    [[whether to try _TANDEM_SOURCE macro]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[_TANDEM_SOURCE]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[_TANDEM_SOURCE]])]
-    )dnl
-  ])
-
-  dnl _ALL_SOURCE makes visible POSIX and non-POSIX symbols
-  dnl on z/OS, AIX and Interix.
-  AC_CACHE_CHECK([[whether to try _ALL_SOURCE macro]],
-    [[mhd_cv_macro_try__all_source]], [dnl
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#if !defined(__TOS_MVS__) && !defined (__INTERIX)
-#error Target is not z/OS, AIX or Interix
-choke me now;
-#endif
-        ]],[])],
-      [[mhd_cv_macro_try__all_source="yes"]],
-      [[mhd_cv_macro_try__all_source="no"]]
-    )
-  ])
-  AS_VAR_IF([[mhd_cv_macro_try__all_source]], [["yes"]],
-  [dnl
-    MHD_CHECK_DEF_AND_ACCEPT(
-      [[_ALL_SOURCE]], [], [[${mhd_mse_added_prolog}]], [],
-      [_MHD_SYS_EXT_ADD_FLAG([[_TANDEM_SOURCE]])]
-    )dnl
-  ])
-
-  dnl Discard temporal prolog with set of defines.
-  AS_UNSET([[mhd_mse_added_prolog]])
-  dnl Determined all required defines.
-  AC_MSG_CHECKING([[for final set of defined symbols]])
-  m4_ifblank([$1], [dnl
-    AH_TEMPLATE([[_XOPEN_SOURCE]], [Define to maximum value supported by system headers])dnl
-    AH_TEMPLATE([[_XOPEN_SOURCE_EXTENDED]], [Define to 1 if _XOPEN_SOURCE is defined to value less than 500 ]dnl
-      [and system headers requre this symbol])dnl
-    AH_TEMPLATE([[_XOPEN_VERSION]], [Define to maximum value supported by system headers if _XOPEN_SOURCE ]dnl
-      [is defined to value less than 500 and headers do not support _XOPEN_SOURCE_EXTENDED])dnl
-    AH_TEMPLATE([[_GNU_SOURCE]], [Define to 1 to enable GNU-related header features])dnl
-    AH_TEMPLATE([[__BSD_VISIBLE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[_DARWIN_C_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[__EXTENSIONS__]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[_NETBSD_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[_BSD_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[_TANDEM_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-    AH_TEMPLATE([[_ALL_SOURCE]], [Define to 1 if it is required by headers to expose additional symbols])dnl
-  ])
-  for mhd_mse_Flag in $mhd_mse_added_exts_flags
-  do
-    m4_ifnblank([$1], [dnl
-      AS_VAR_APPEND([$1],[[" -D$mhd_mse_Flag"]])
-    ], [dnl
-      AS_CASE([[$mhd_mse_Flag]], [[*=*]],
-      [dnl
-        AC_DEFINE_UNQUOTED([[`echo $mhd_mse_Flag | cut -f 1 -d =`]],
-          [[`echo $mhd_mse_Flag | cut -f 2 -d = -s`]])
-      ], [dnl
-        AC_DEFINE_UNQUOTED([[$mhd_mse_Flag]])
-      ])
-    ])
-  done
-  dnl Trim whitespaces
-  mhd_mse_result=`echo $mhd_mse_added_exts_flags`
-  AC_MSG_RESULT([[$mhd_mse_result]])
-  AS_UNSET([[mhd_mse_result]])
-
-  AS_UNSET([[mhd_mse_added_exts_flags]])
-  AC_LANG_POP([C])
+    ]
+  )
+  _MHD_VAR_CONTAIN_BRE([[mhd_cv_headers_susv2]], [[^available]],
+    [
+      _MHD_VAR_CONTAIN([[mhd_cv_headers_susv2]], [[does not work with _XOPEN_SOURCE]], [[:]],
+        [_MHD_SYS_EXT_VAR_ADD_FLAG([$1],[$2],[[_XOPEN_SOURCE]],[[500]])]
+      )
+      $4
+    ],
+    [$5]
+  )
 ])
 
-
-#
-# _MHD_SYS_EXT_ADD_FLAG(FLAG, [FLAG-VALUE = 1])
-#
-# Internal macro, only to be used from MHD_SYS_EXT, _MHD_XOPEN_ADD
-
-m4_define([_MHD_SYS_EXT_ADD_FLAG], [dnl
-  m4_ifnblank([$2],[dnl
-    mhd_mse_added_exts_flags="$mhd_mse_added_exts_flags m4_normalize($1)=m4_normalize($2)"
-    mhd_mse_added_prolog="${mhd_mse_added_prolog}[#define ]m4_normalize($1) m4_normalize($2)
-"
-  ], [dnl
-    mhd_mse_added_exts_flags="$mhd_mse_added_exts_flags m4_normalize($1)"
-    mhd_mse_added_prolog="${mhd_mse_added_prolog}[#define ]m4_normalize($1) 1
-"
-  ])dnl
-])
-
-#
-# _MHD_VAR_IF(VAR, VALUE, [IF-EQ], [IF-NOT-EQ])
-#
-# Same as AS_VAR_IF, except that it expands to nothing if
-# both IF-EQ and IF-NOT-EQ are empty.
-
-m4_define([_MHD_VAR_IF],[dnl
-m4_ifnblank([$3][$4],[dnl
-m4_ifblank([$4],[AS_VAR_IF([$1],[$2],[$3])],[dnl
-AS_VAR_IF([$1],[$2],[$3],[$4])])])])
 
 # SYNOPSIS
 #
-# _MHD_CHECK_XOPEN_ENABLE(_XOPEN_SOURCE-VALUE, FEATURES_TEST,
-#                         [ACTION-IF-ENABLED-BY-XOPEN_SOURCE],
-#                         [ACTION-IF-NOT],
-#                         [ACTION-IF-FEATURES-AVALABLE],
-#                         [ACTION-IF-FEATURES-NOT-AVALABLE],
-#                         [ACTION-IF-ONLY-WITH-EXTENSIONS]
-#                         [ACTION-IF-WITHOUT-ALL])
-#
-# DESCRIPTION
-#
-#   This macro determines whether the _XOPEN_SOURCE with
-#   _XOPEN_SOURCE-VALUE really enable some header features. FEATURES_TEST
-#   must contains required includes and main function.
-#   One of ACTION-IF-ENABLED-BY-XOPEN_SOURCE and ACTION-IF-NOT
-#   is always executed depending on test results.
-#   One of ACTION-IF-FEATURES-AVALABLE and is ACTION-IF-FEATURES-NOT-AVALABLE
-#   is executed if features can be enabled by _XOPEN_SOURCE, by currently
-#   defined (by compiler flags or by predefined macros) extensions or
-#   all checked combinations are failed to enable features.
-#   ACTION-IF-ONLY-WITH-EXTENSIONS is executed if features can be
-#   enabled with not undefined extension.
-#   ACTION-IF-WITHOUT-ALL is executed if features work with all
-#   disabled extensions (including _XOPEN_SOURCE).
+# _MHD_CHECK_POSIX_FEATURES_SINGLE(FEATURES_TEST,
+#                                  EXT_DEFINES,
+#                                  _XOPEN_SOURCE-VALUE,
+#                                  VAR-RESULT)
 
-AC_DEFUN([_MHD_CHECK_XOPEN_ENABLE], [dnl
-  AS_VAR_PUSHDEF([src_Var], [[mhd_cxoe_tmp_src_variable]])dnl
+AC_DEFUN([_MHD_CHECK_POSIX_FEATURES_SINGLE], [dnl
+  AS_VAR_PUSHDEF([avail_Var], [mhd_cpsxfs_tmp_features_available])dnl
+  AS_VAR_PUSHDEF([ext_Var], [mhd_cpsxfs_tmp_extentions_allowed])dnl
+  AS_VAR_PUSHDEF([xopen_Var], [mhd_cpsxfs_tmp_src_xopen_allowed])dnl
+  AS_VAR_PUSHDEF([dislb_Var], [mhd_cpsxfs_tmp_features_disableable])dnl
+  AS_UNSET([avail_Var])
+  AS_UNSET([ext_Var])
+  AS_UNSET([xopen_Var])
+  AS_UNSET([dislb_Var])
+  _MHD_CHECK_POSIX_FEATURES([$1], [$2], [$3], [avail_Var], [ext_Var], [xopen_Var], [dislb_Var])
+  AS_VAR_IF([avail_Var], ["yes"],
+    [
+      AS_VAR_IF([dislb_Var], ["yes"],
+        [
+          AS_VAR_IF([ext_Var], ["required"],
+            [
+              AS_VAR_IF([xopen_Var], ["allowed"],
+                [
+                  AS_VAR_SET(m4_normalize([$4]), ["available, activated by extension macro, works with _XOPEN_SOURCE=]m4_normalize([$3])["])
+                ],
+                [
+                  AS_VAR_SET(m4_normalize([$4]), ["available, activated by extension macro, does not work with _XOPEN_SOURCE=]m4_normalize([$3])["])
+                ]
+              )
+            ],
+            [
+              AS_VAR_IF([ext_Var], ["allowed"],
+                [
+                  AS_VAR_IF([xopen_Var], ["required"],
+                    [
+                      AS_VAR_SET(m4_normalize([$4]), ["available, activated by _XOPEN_SOURCE=]m4_normalize([$3])[, works with extension macro"])
+                    ],
+                    [
+                      AS_VAR_IF([xopen_Var], ["allowed"],
+                        [
+                          AS_VAR_SET(m4_normalize([$4]), ["available, works with _XOPEN_SOURCE=]m4_normalize([$3])[, works with extension macro"])
+                        ],
+                        [
+                          AS_VAR_SET(m4_normalize([$4]), ["available, works with extension macro, does not work with _XOPEN_SOURCE=]m4_normalize([$3])["])
+                        ]
+                      )
+                    ]
+                  )
+                ],
+                [
+                  AS_VAR_IF([xopen_Var], ["required"],
+                    [
+                      AS_VAR_SET(m4_normalize([$4]), ["available, activated by _XOPEN_SOURCE=]m4_normalize([$3])[, does not work with extension macro"])
+                    ],
+                    [
+                      AS_VAR_IF([xopen_Var], ["allowed"],
+                        [
+                          AS_VAR_SET(m4_normalize([$4]), ["available, works with _XOPEN_SOURCE=]m4_normalize([$3])[, does not work with extension macro"])
+                        ],
+                        [
+                          AS_VAR_SET(m4_normalize([$4]), ["available, does not work with _XOPEN_SOURCE=]m4_normalize([$3])[, does not work with extension macro"])
+                        ]
+                      )
+                    ]
+                  )
+                ]
+              )
+            ]
+          )
+        ],
+        [
+          AS_VAR_SET(m4_normalize([$4]), ["available, works always"])
+        ]
+      )
+    ],
+    [
+      AS_VAR_SET(m4_normalize([$4]), ["not available"])
+    ]
+  )
+  AS_UNSET([dislb_Var])
+  AS_UNSET([xopen_Var])
+  AS_UNSET([ext_Var])
+  AS_UNSET([avail_Var])
+  AS_VAR_POPDEF([dislb_Var])dnl
+  AS_VAR_POPDEF([xopen_Var])dnl
+  AS_VAR_POPDEF([ext_Var])dnl
+  AS_VAR_POPDEF([avail_Var])dnl
+])
+
+# SYNOPSIS
+#
+# _MHD_CHECK_POSIX_FEATURES(FEATURES_TEST, EXT_DEFINES, _XOPEN_SOURCE-VALUE,
+#                           [VAR-FEATURES-AVAILABLE-YES_NO],
+#                           [VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED],
+#                           [VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED],
+#                           [VAR-FEATURES-DISABLEABLE-YES_NO])
+
+AC_DEFUN([_MHD_CHECK_POSIX_FEATURES], [dnl
+  AS_VAR_PUSHDEF([src_Var], [mhd_cpsxf_tmp_src_variable])dnl
+  AS_VAR_PUSHDEF([defs_Var], [mhd_cpsxf_tmp_defs_variable])dnl
   AS_VAR_SET([src_Var],["
+$1
+"])
+  dnl To reduce 'configure' size
+  AS_VAR_SET([defs_Var],["
 $2
-"])dnl Reduce 'configure' size
+"])
+  dnl To reduce 'configure' size
 
   dnl Some platforms enable most features when no
   dnl specific mode is requested by macro.
@@ -519,171 +765,191 @@ $2
 _MHD_UNDEF_ALL_EXT
 $src_Var
     ])],
-  [dnl
-    _AS_ECHO_LOG([[Checked features work with undefined all extensions and without _XOPEN_SOURCE]])
-    dnl Checked features is enabled in platform's "default" mode.
-    dnl Try to disable features by requesting oldest X/Open mode.
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define _XOPEN_SOURCE 1]
-$src_Var
-      ])],
     [dnl
-      _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _XOPEN_SOURCE=1]])
-      dnl Features still work in oldest X/Open mode.
-      dnl Some platforms enable all XSI features for any _XOPEN_SOURCE value.
-      dnl Apply some fuzzy logic, try to use _POSIX_C_SOURCE with oldest number.
+      _AS_ECHO_LOG([[Checked features work with undefined all extensions and without _XOPEN_SOURCE]])
+      AS_VAR_SET(m4_normalize([$4]),["yes"]) # VAR-FEATURES-AVAILABLE-YES_NO
+
+      dnl Check whether features will work extensions
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define _POSIX_C_SOURCE 1]
+$defs_Var
 $src_Var
         ])],
-      [dnl
-        _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _POSIX_C_SOURCE=1]])
-        dnl Features still work in oldest _POSIX_C_SOURCE mode.
-        dnl Try to disable features by requesting strict ANSI C mode.
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define  _ANSI_SOURCE 1]
-$src_Var
-          ])],
         [dnl
-          _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _ANSI_SOURCE]])
-          dnl Features still work in strict _ANSI_SOURCE mode.
-          dnl Assume that _XOPEN_SOURCE, _POSIX_C_SOURCE and _ANSI_SOURCE has no influence on
-          dnl enabling of features as features are enabled always unconditionally.
-          m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-        ], [dnl
-          _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _ANSI_SOURCE]])
-          dnl Features do not work in strict _ANSI_SOURCE mode.
-          dnl Try to enable features by _XOPEN_SOURCE with specified value.
+          _AS_ECHO_LOG([[Checked features work with extensions]])
+          AS_VAR_SET(m4_normalize([$5]),["allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+          dnl Check whether features will work with _XOPEN_SOURCE
           AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define  _ANSI_SOURCE 1]
-[#define _XOPEN_SOURCE] $1
+$defs_Var
+[#define _XOPEN_SOURCE ]]m4_normalize([$3])[
 $src_Var
             ])],
-          [dnl
-            _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _ANSI_SOURCE and _XOPEN_SOURCE=]$1])
-            dnl Finally, features were  disabled by strict ANSI mode and enabled by adding _XOPEN_SOURCE.
-            dnl Assume that _XOPEN_SOURCE can enable features.
-            m4_n([$3])dnl ACTION-IF-ENABLED-BY-XOPEN_SOURCE
-          ], [dnl
-            _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _ANSI_SOURCE and _XOPEN_SOURCE=]$1])
-            dnl Features are not enabled in strict ANSI mode with _XOPEN_SOURCE.
-            dnl Actually this is not correct documented situation and _ANSI_SOURCE may have
-            dnl priority over _XOPEN_SOURCE or headers are not controlled by _XOPEN_SOURCE at all.
-            dnl As features work in all mode except strict ANSI regardless of _XOPEN_SOURCE,
-            dnl assume that _XOPEN_SOURCE do not control visibility of features.
-            m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-          ])
-        ])
-      ], [dnl
-        _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _POSIX_C_SOURCE=1]])
-        dnl Features do not work in oldest _POSIX_C_SOURCE mode.
-        dnl OK, features were disabled by _POSIX_C_SOURCE.
-        dnl Check whether headers controlled by _XOPEN_SOURCE too.
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+            [dnl
+              _AS_ECHO_LOG([Checked features work with extensions and with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$6]),["allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+              dnl Check whether features could be disabled
+              dnl Request oldest POSIX mode and strict ANSI mode
+              AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 _MHD_UNDEF_ALL_EXT
 [#define _POSIX_C_SOURCE 1]
-[#define _XOPEN_SOURCE] $1
+[#define  _ANSI_SOURCE 1]
 $src_Var
-          ])],
+                ])],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features work with disabled extensions, with _POSIX_C_SOURCE=1 and _ANSI_SOURCE=1]])
+                  AS_VAR_SET(m4_normalize([$7]),["no"]) # VAR-FEATURES-DISABLEABLE-YES_NO
+                ],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features DO NOT work with disabled extensions, with _POSIX_C_SOURCE=1 and _ANSI_SOURCE=1]])
+                  AS_VAR_SET(m4_normalize([$7]),["yes"]) # VAR-FEATURES-DISABLEABLE-YES_NO
+                ]
+              )
+            ],
+            [dnl
+              _AS_ECHO_LOG([Checked features DO NOT work with extensions and with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$6]),["not allowed"])  # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+              AS_VAR_SET(m4_normalize([$7]),["yes"]) # VAR-FEATURES-DISABLEABLE-YES_NO
+            ]
+          )
+        ],
         [dnl
-          _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _POSIX_C_SOURCE=1 and _XOPEN_SOURCE=]$1])
-          dnl Features were enabled again after adding _XOPEN_SOURCE with value.
-          dnl Assume that headers can be controlled by _XOPEN_SOURCE with specified value.
-          m4_n([$3])dnl ACTION-IF-ENABLED-BY-XOPEN_SOURCE
-        ], [dnl
-          _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _POSIX_C_SOURCE=1 and _XOPEN_SOURCE=]$1])
-          dnl Features still work after adding _XOPEN_SOURCE with value.
-          dnl It's unclear whether headers know only about _POSIX_C_SOURCE or
-          dnl _POSIX_C_SOURCE have priority over _XOPEN_SOURCE (standards are
-          dnl silent about priorities).
-          dnl Assume that it's unknown whether _XOPEN_SOURCE can turn on features.
-          m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-        ])
-      ])
-    ], [dnl
-      _AS_ECHO_LOG([[Checked features does not work with undefined all extensions and with _XOPEN_SOURCE=1]])
-      dnl Features disabled by oldest X/Open mode.
-      dnl Check whether requested _XOPEN_SOURCE value will turn on features.
-      AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define _XOPEN_SOURCE] $1
+          _AS_ECHO_LOG([[Checked features DO NOT work with extensions]])
+          AS_VAR_SET(m4_normalize([$7]),["yes"]) # VAR-FEATURES-DISABLEABLE-YES_NO
+          dnl Check whether features work with _XOPEN_SOURCE
+          AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+[#define _XOPEN_SOURCE ]m4_normalize($3)
 $src_Var
-        ])],
-      [dnl
-        _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _XOPEN_SOURCE=]$1])
-        dnl Features work with _XOPEN_SOURCE requested value and do not work
-        dnl with value 1.
-        dnl Assume that _XOPEN_SOURCE really turn on features.
-        m4_n([$3])dnl ACTION-IF-ENABLED-BY-XOPEN_SOURCE
-      ], [dnl
-        _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _XOPEN_SOURCE=]$1])
-        dnl Features do not work with _XOPEN_SOURCE, but work in "default" mode.
-        dnl Assume that features cannot be enabled by requested _XOPEN_SOURCE value.
-        m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-      ])
-    ])
-    m4_n([$5])dnl ACTION-IF-FEATURES-AVALABLE
-    m4_n([$8])dnl ACTION-IF-WITHOUT-ALL
-  ],
-  [dnl
-    _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and without _XOPEN_SOURCE]])
-    dnl Features do not work with turned off extensions.
-    dnl Check whether they can be enabled by _XOPEN_SOURCE.
-    AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-_MHD_UNDEF_ALL_EXT
-[#define _XOPEN_SOURCE] $1
+            ])],
+            [dnl
+              _AS_ECHO_LOG([Checked features work with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              dnl Check default state (without enabling/disabling)
+              AC_COMPILE_IFELSE([AC_LANG_SOURCE([
 $src_Var
-      ])],
-    [dnl
-      _AS_ECHO_LOG([[Checked features work with undefined all extensions and with _XOPEN_SOURCE=]$1])
-      dnl Features work with _XOPEN_SOURCE and do not work without _XOPEN_SOURCE.
-      dnl Assume that _XOPEN_SOURCE really turn on features.
-      m4_n([$3])dnl ACTION-IF-ENABLED-BY-XOPEN_SOURCE
-      m4_n([$5])dnl ACTION-IF-FEATURES-AVALABLE
+                ])],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features work by default]])
+                  AS_VAR_SET(m4_normalize([$6]),["allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+                ],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features DO NOT by default]])
+                  AS_VAR_SET(m4_normalize([$6]),["required"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+                ]
+              )
+              dnl Check whether features work with _XOPEN_SOURCE and extensions
+              AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+$defs_Var
+[#define _XOPEN_SOURCE] ]m4_normalize([$3])[
+$src_Var
+                ])],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features work with _XOPEN_SOURCE and extensions]])
+                  AS_VAR_SET(m4_normalize([$5]),["allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+                ],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features DO NOT work with _XOPEN_SOURCE and extensions]])
+                  AS_VAR_SET(m4_normalize([$5]),["not allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+                ]
+              )
+            ],
+            [dnl
+              _AS_ECHO_LOG([Checked features DO NOT work with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$5]),["not allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+              AS_VAR_SET(m4_normalize([$6]),["not allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+            ]
+          )
+        ]
+      )
     ],
     [dnl
-      _AS_ECHO_LOG([[Checked features do not work with undefined all extensions and with _XOPEN_SOURCE=]$1])
-      dnl Features do not work with _XOPEN_SOURCE and turned off extensions.
-      dnl Retry without turning off known extensions.
+      _AS_ECHO_LOG([[Checked features DO NOT work with undefined all extensions and without _XOPEN_SOURCE]])
+      dnl Let's find the way to enable POSIX features
       AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-[#define _XOPEN_SOURCE] $1
+$defs_Var
 $src_Var
         ])],
-      [dnl
-        _AS_ECHO_LOG([[Checked features work with current extensions and with _XOPEN_SOURCE=]$1])
-        dnl Features work with _XOPEN_SOURCE and without turning off extensions.
-        dnl Check whether features work with oldest _XOPEN_SOURCE or it was enabled only by extensions.
-        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
-[#define _XOPEN_SOURCE 1]
-$src_Var
-          ])],
         [dnl
-          _AS_ECHO_LOG([[Checked features work with current extensions and with _XOPEN_SOURCE=1]])
-          dnl Features still work with oldest _XOPEN_SOURCE.
-          dnl Assume that _XOPEN_SOURCE has no influence on enabling of features.
-          m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-        ], [dnl
-          _AS_ECHO_LOG([[Checked features do not work with current extensions and with _XOPEN_SOURCE=1]])
-          dnl Features do not work with oldest _XOPEN_SOURCE.
-          dnl Assume that _XOPEN_SOURCE really turn on features.
-          m4_n([$3])dnl ACTION-IF-ENABLED-BY-XOPEN_SOURCE
-        ])
-        m4_n([$5])dnl ACTION-IF-FEATURES-AVALABLE
-        m4_n([$7])dnl ACTION-IF-ONLY-WITH-EXTENSIONS
-      ], [dnl
-        _AS_ECHO_LOG([[Checked features do not work with current extensions and with _XOPEN_SOURCE=]$1])
-        dnl Features do not work in all checked conditions.
-        dnl Assume that _XOPEN_SOURCE cannot enable feature.
-        m4_n([$4])dnl ACTION-IF-NOT-ENABLED-BY-XOPEN_SOURCE
-        m4_n([$6])dnl ACTION-IF-FEATURE-NOT-AVALABLE
-      ])
-    ])
-  ])
+          _AS_ECHO_LOG([[Checked features work with extensions]])
+          AS_VAR_SET(m4_normalize([$4]),["yes"]) # VAR-FEATURES-AVAILABLE-YES_NO
+          AS_VAR_SET(m4_normalize([$7]),["yes"]) # VAR-FEATURES-DISABLEABLE-YES_NO
+          dnl Check default state (without enabling/disabling)
+          AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+$src_Var
+            ])],
+            [dnl
+              _AS_ECHO_LOG([[Checked features work by default]])
+              AS_VAR_SET(m4_normalize([$5]),["allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+            ],
+            [dnl
+              _AS_ECHO_LOG([[Checked features DO NOT by default]])
+              AS_VAR_SET(m4_normalize([$5]),["required"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+            ]
+          )
+          dnl Check whether features work with extensions and _XOPEN_SOURCE
+          AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+$defs_Var
+[#define _XOPEN_SOURCE] ]m4_normalize([$3])[
+$src_Var
+            ])],
+            [dnl
+              _AS_ECHO_LOG([Checked features work with extensions and _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$6]),["allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+            ],
+            [dnl
+              _AS_ECHO_LOG([Checked features DO NOT work with extensions and _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$6]),["not allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+            ]
+          )
+        ],
+        [dnl
+          _AS_ECHO_LOG([[Checked features DO NOT work with extensions]])
+          dnl Check whether features work with _XOPEN_SOURCE
+          AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+[#define _XOPEN_SOURCE] ]m4_normalize([$3])[
+$src_Var
+            ])],
+            [dnl
+              _AS_ECHO_LOG([Checked features work with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$4]),["yes"]) # VAR-FEATURES-AVAILABLE-YES_NO
+              dnl Check default state (without enabling/disabling)
+              AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+$src_Var
+                ])],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features work by default]])
+                  AS_VAR_SET(m4_normalize([$6]),["allowed"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+                ],
+                [dnl
+                  _AS_ECHO_LOG([[Checked features DO NOT by default]])
+                  AS_VAR_SET(m4_normalize([$6]),["required"]) # VAR-XOPEN-REQUIRED_NOT-ALLOWED_ALLOWED
+                ]
+              )
+              dnl Check whether features work with _XOPEN_SOURCE and extensions
+              AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+$defs_Var
+[#define _XOPEN_SOURCE] ]m4_normalize([$3])[
+$src_Var
+                ])],
+                [dnl
+                  _AS_ECHO_LOG([Checked features work with _XOPEN_SOURCE=]m4_normalize([$3])[ and extensions])
+                  AS_VAR_SET(m4_normalize([$5]),["allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+                ],
+                [dnl
+                  _AS_ECHO_LOG([Checked features DO NOT work with _XOPEN_SOURCE=]m4_normalize([$3])[ and extensions])
+                  AS_VAR_SET(m4_normalize([$5]),["not allowed"]) # VAR-EXTENSIONS-REQUIRED_NOT-ALLOWED_ALLOWED
+                ]
+              )
+            ],
+            [dnl
+              _AS_ECHO_LOG([Checked features DO NOT work with _XOPEN_SOURCE=]m4_normalize([$3])[])
+              AS_VAR_SET(m4_normalize([$4]),["no"]) # VAR-FEATURES-AVAILABLE-YES_NO
+            ]
+          )
+        ]
+      )
+    ]
+  )
+  AS_UNSET([defs_Var])
   AS_UNSET([src_Var])
+  AS_VAR_POPDEF([defs_Var])dnl
   AS_VAR_POPDEF([src_Var])dnl
 ])
 
@@ -828,7 +1094,7 @@ AC_DEFUN([MHD_CHECK_BASIC_HEADERS], [dnl
   AC_COMPILE_IFELSE([dnl
     AC_LANG_PROGRAM([m4_n([$1])dnl
 _MHD_BASIC_INCLUDES
-    ], [[int i = 1; i++]])
+    ], [[int i = 1; i++; if(i) return i]])
   ], [$2], [$3])
 ])
 
@@ -914,7 +1180,7 @@ m4_n([$2])dnl
 choke me now;
 #endif
         ]],[])
-    ], [$3], [$4]
+    ], [m4_default_nblank([$3])], [m4_default_nblank([$4])]
   )
 ])
 
@@ -927,13 +1193,11 @@ choke me now;
 # Cache-check for defined symbols with printing results.
 
 AC_DEFUN([MHD_CHECK_DEFINED], [dnl
-  AS_VAR_PUSHDEF([mhd_cache_Var],
-    [mhd_cv_macro_[]m4_tolower($1)_defined])dnl
+  AS_VAR_PUSHDEF([mhd_cache_Var],[mhd_cv_macro_[]m4_tolower(m4_normalize($1))_defined])dnl
   AC_CACHE_CHECK([dnl
-m4_ifnblank([$5], [$5], [whether $1 is already defined])],
-    [mhd_cache_Var],
-  [
-    _MHD_CHECK_DEFINED([$1], [$2],
+m4_ifnblank([$5], [$5], [whether ]m4_normalize([$1])[ is already defined])],
+    [mhd_cache_Var], [dnl
+    _MHD_CHECK_DEFINED(m4_normalize([$1]), [$2],
       [mhd_cache_Var="yes"],
       [mhd_cache_Var="no"]
     )
@@ -963,12 +1227,12 @@ MHD_CHECK_DEFINED([$1],[$2],[$4],[$5],[$3])])
 AC_DEFUN([MHD_CHECK_ACCEPT_DEFINE], [dnl
   AC_PREREQ([2.64])dnl for AS_VAR_PUSHDEF, AS_VAR_SET, m4_ifnblank
   AS_VAR_PUSHDEF([mhd_cache_Var],
-    [mhd_cv_define_[]m4_tolower($1)_accepted[]m4_ifnblank([$2],[_[]$2])])dnl
+    [mhd_cv_define_[]m4_tolower(m4_normalize($1))[]_accepted[]m4_ifnblank([$2],[_[]$2])])dnl
   AC_CACHE_CHECK([dnl
-m4_ifnblank([$6],[$6],[whether headers accept $1[]m4_ifnblank([$2],[ with value $2])])],
+m4_ifnblank([$6],[$6],[whether headers accept $1[]m4_ifnblank([$2],[[ with value ]$2])])],
     [mhd_cache_Var], [dnl
     MHD_CHECK_BASIC_HEADERS([
-m4_n([$3])[#define ]$1 m4_default_nblank([$2],[[1]])],
+m4_n([$3])[#define ]$1 m4_default_nblank($2,[[1]])],
       [mhd_cache_Var="yes"], [mhd_cache_Var="no"]
     )
   ])
@@ -992,44 +1256,69 @@ AC_DEFUN([MHD_CHECK_DEF_AND_ACCEPT], [dnl
   ])dnl
 ])
 
-
 #
-# _MHD_XOPEN_ADD([PROLOG])
+# _MHD_XOPEN_VAR_ADD(DEFINES_VAR, FLAGS_VAR, [PROLOG])
 #
 # Internal macro. Only to be used in MHD_SYS_EXT.
 
-AC_DEFUN([_MHD_XOPEN_ADD], [dnl
-  MHD_CHECK_DEF_AND_ACCEPT([[_XOPEN_SOURCE_EXTENDED]], [],
-    [[${mhd_mse_added_prolog}]m4_n([$1])], [],
-  [dnl
-    _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_SOURCE_EXTENDED]])dnl
-  ], [dnl
-    MHD_CHECK_DEFINED([[_XOPEN_VERSION]],
-      [[${mhd_mse_added_prolog}]m4_n([$1])], [],
-    [dnl
-      AC_CACHE_CHECK([[for value of _XOPEN_VERSION accepted by headers]],
-        [mhd_cv_define__xopen_version_accepted], [dnl
-        MHD_CHECK_BASIC_HEADERS([
-[${mhd_mse_added_prolog}]m4_n([$1])
-[#define _XOPEN_VERSION 4]],
-          [[mhd_cv_define__xopen_version_accepted="4"]],
+AC_DEFUN([_MHD_XOPEN_VAR_ADD], [dnl
+  MHD_CHECK_DEF_AND_ACCEPT([[_XOPEN_SOURCE]], [[1]], [$3],
+    [
+      AC_CACHE_CHECK([[whether predefined value of _XOPEN_SOURCE is more or equal 500]],
+        [[mhd_cv_macro__xopen_source_def_fiveh]], [dnl
+          AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+m4_n([$3])dnl
+[#if _XOPEN_SOURCE+0 < 500
+#error Value of _XOPEN_SOURCE is less than 500
+choke me now;
+#endif
+              ]],[[int i = 0; i++; if(i) return i]])],
+            [[mhd_cv_macro__xopen_source_def_fiveh="yes"]],
+            [[mhd_cv_macro__xopen_source_def_fiveh="no"]]
+          )dnl
+        ]
+      )dnl
+    ],
+    [_MHD_SYS_EXT_VAR_ADD_FLAG([$1], [$2], [[_XOPEN_SOURCE]], [[1]])]
+  )
+  AS_IF([[test "x${mhd_cv_define__xopen_source_accepted_1}" = "xyes" || \
+          test "x${mhd_cv_macro__xopen_source_def_fiveh}" = "xno"]],
+    [
+      MHD_CHECK_DEF_AND_ACCEPT([[_XOPEN_SOURCE_EXTENDED]], [],
         [
-          MHD_CHECK_BASIC_HEADERS([
-[${mhd_mse_added_prolog}]m4_n([$1])
+m4_n([$3])], [],
+      [dnl
+        _MHD_SYS_EXT_VAR_ADD_FLAG([$1],[$2],[[_XOPEN_SOURCE_EXTENDED]])
+      ], [dnl
+        MHD_CHECK_DEFINED([[_XOPEN_VERSION]],
+          [
+m4_n([$3])], [],
+        [dnl
+          AC_CACHE_CHECK([[for value of _XOPEN_VERSION accepted by headers]],
+            [mhd_cv_define__xopen_version_accepted], [dnl
+            MHD_CHECK_BASIC_HEADERS([
+m4_n([$3])
+[#define _XOPEN_VERSION 4]],
+              [[mhd_cv_define__xopen_version_accepted="4"]],
+            [
+              MHD_CHECK_BASIC_HEADERS([
+m4_n([$3])
 [#define _XOPEN_VERSION 3]],
-            [[mhd_cv_define__xopen_version_accepted="3"]],
-            [[mhd_cv_define__xopen_version_accepted="no"]]
-          )
+                [[mhd_cv_define__xopen_version_accepted="3"]],
+                [[mhd_cv_define__xopen_version_accepted="no"]]
+              )
+            ])
+          ])
+          AS_VAR_IF([mhd_cv_define__xopen_version_accepted], [["no"]],
+            [[:]],
+          [dnl
+            _MHD_SYS_EXT_VAR_ADD_FLAG([$1],[$2],[[_XOPEN_VERSION]],
+              [[${mhd_cv_define__xopen_version_accepted}]]dnl
+            )
+          ])
         ])
       ])
-      AS_VAR_IF([mhd_cv_define__xopen_version_accepted], [["no"]],
-        [[:]],
-      [dnl
-        _MHD_SYS_EXT_ADD_FLAG([[_XOPEN_VERSION]],
-          [[${mhd_cv_define__xopen_version_accepted}]]dnl
-        )
-      ])
-    ])
-  ])
+    ]
+  )dnl
 ])
 

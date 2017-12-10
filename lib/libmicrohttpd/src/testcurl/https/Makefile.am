@@ -34,7 +34,7 @@ check_PROGRAMS = \
   test_https_time_out \
   test_empty_response
 
-EXTRA_DIST = cert.pem key.pem tls_test_keys.h tls_test_common.h \
+EXTRA_DIST = cert.pem key.pem \
   host1.crt host1.key host2.crt host2.key
 
 TESTS = \
@@ -52,6 +52,8 @@ TESTS = \
 
 test_https_time_out_SOURCES = \
   test_https_time_out.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_time_out_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -60,6 +62,8 @@ test_https_time_out_LDADD  = \
 
 test_tls_options_SOURCES = \
   test_tls_options.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_tls_options_LDADD = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -68,6 +72,8 @@ test_tls_options_LDADD = \
 
 test_https_get_parallel_SOURCES = \
   test_https_get_parallel.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_get_parallel_CPPFLAGS = \
   $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
@@ -80,6 +86,8 @@ test_https_get_parallel_LDADD = \
 
 test_empty_response_SOURCES = \
   test_empty_response.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_empty_response_LDADD = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -88,6 +96,8 @@ test_empty_response_LDADD = \
 
 test_https_get_parallel_threads_SOURCES = \
   test_https_get_parallel_threads.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_get_parallel_threads_CPPFLAGS = \
   $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
@@ -100,6 +110,8 @@ test_https_get_parallel_threads_LDADD = \
 
 test_tls_authentication_SOURCES = \
   test_tls_authentication.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_tls_authentication_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -108,6 +120,8 @@ test_tls_authentication_LDADD  = \
 
 test_https_session_info_SOURCES = \
   test_https_session_info.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_session_info_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -116,6 +130,8 @@ test_https_session_info_LDADD  = \
 
 test_https_multi_daemon_SOURCES = \
   test_https_multi_daemon.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_multi_daemon_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -124,6 +140,8 @@ test_https_multi_daemon_LDADD  = \
 
 test_https_get_SOURCES = \
   test_https_get.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_get_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \
@@ -133,6 +151,8 @@ test_https_get_LDADD  = \
 if HAVE_GNUTLS_SNI
 test_https_sni_SOURCES = \
   test_https_sni.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_sni_CPPFLAGS = \
   $(AM_CPPFLAGS) \
@@ -145,6 +165,8 @@ endif
 
 test_https_get_select_SOURCES = \
   test_https_get_select.c \
+  tls_test_keys.h \
+  tls_test_common.h \
   tls_test_common.c
 test_https_get_select_LDADD  = \
   $(top_builddir)/src/testcurl/libcurl_version_check.a \

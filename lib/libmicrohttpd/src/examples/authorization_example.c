@@ -53,6 +53,10 @@ ahc_echo (void *cls,
   char *user;
   char *pass;
   int fail;
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
@@ -66,8 +70,11 @@ ahc_echo (void *cls,
 
   /* require: "Aladdin" with password "open sesame" */
   pass = NULL;
-  user = MHD_basic_auth_get_username_password (connection, &pass);
-  fail = ( (user == NULL) || (0 != strcmp (user, "Aladdin")) || (0 != strcmp (pass, "open sesame") ) );
+  user = MHD_basic_auth_get_username_password (connection,
+                                               &pass);
+  fail = ( (NULL == user) ||
+           (0 != strcmp (user, "Aladdin")) ||
+           (0 != strcmp (pass, "open sesame") ) );
   if (fail)
   {
       response = MHD_create_response_from_buffer (strlen (DENIED),
@@ -83,9 +90,9 @@ ahc_echo (void *cls,
       ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
     }
   if (NULL != user)
-    free (user);
+    MHD_free (user);
   if (NULL != pass)
-    free (pass);
+    MHD_free (pass);
   MHD_destroy_response (response);
   return ret;
 }

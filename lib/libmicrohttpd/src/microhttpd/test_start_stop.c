@@ -23,9 +23,8 @@
  * @brief  test for #1901 (start+stop)
  * @author Christian Grothoff
  */
-#include "MHD_config.h"
+#include "mhd_options.h"
 #include "platform.h"
-#include <curl/curl.h>
 #include <microhttpd.h>
 
 #if defined(CPU_COUNT) && (CPU_COUNT+0) < 2
@@ -45,6 +44,10 @@ ahc_echo (void *cls,
           const char *upload_data, size_t *upload_data_size,
           void **unused)
 {
+  (void)cls;(void)connection;(void)url;          /* Unused. Silent compiler warning. */
+  (void)method;(void)version;(void)upload_data;  /* Unused. Silent compiler warning. */
+  (void)upload_data_size;(void)unused;           /* Unused. Silent compiler warning. */
+
   return MHD_NO;
 }
 
@@ -55,7 +58,7 @@ testInternalGet (int poll_flag)
   struct MHD_Daemon *d;
 
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
-                        11080, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        0, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
   MHD_stop_daemon (d);
@@ -68,7 +71,7 @@ testMultithreadedGet (int poll_flag)
   struct MHD_Daemon *d;
 
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
-                        1081, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        0, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 2;
   MHD_stop_daemon (d);
@@ -81,7 +84,7 @@ testMultithreadedPoolGet (int poll_flag)
   struct MHD_Daemon *d;
 
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
-                        1081, NULL, NULL, &ahc_echo, "GET",
+                        0, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
   if (d == NULL)
     return 4;
@@ -95,7 +98,7 @@ testExternalGet ()
   struct MHD_Daemon *d;
 
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
-                        1082, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        0, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 8;
   MHD_stop_daemon (d);
@@ -107,6 +110,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
 
   errorCount += testInternalGet (0);
   errorCount += testMultithreadedGet (0);

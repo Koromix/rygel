@@ -48,6 +48,7 @@ static int oneone;
 static int
 apc_all (void *cls, const struct sockaddr *addr, socklen_t addrlen)
 {
+  (void)cls;(void)addr;(void)addrlen;   /* Unused. Silent compiler warning. */
   return MHD_YES;
 }
 
@@ -61,6 +62,7 @@ struct CBC
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
+  (void)ptr;(void)ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -76,6 +78,8 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
+  (void)version;(void)upload_data;      /* Unused. Silent compiler warning. */
+  (void)upload_data_size;(void)unused;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -97,12 +101,21 @@ testLongUrlGet ()
   struct CBC cbc;
   char *url;
   long code;
+  int port;
 
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    {
+      port = 1330;
+      if (oneone)
+        port += 5;
+    }
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        1080,
+                        port,
                         &apc_all,
                         NULL,
                         &ahc_echo,
@@ -111,6 +124,14 @@ testLongUrlGet ()
                         (size_t) (VERY_LONG / 2), MHD_OPTION_END);
   if (d == NULL)
     return 1;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   c = curl_easy_init ();
   url = malloc (VERY_LONG);
   if (url == NULL)
@@ -120,8 +141,9 @@ testLongUrlGet ()
     }
   memset (url, 'a', VERY_LONG);
   url[VERY_LONG - 1] = '\0';
-  memcpy (url, "http://127.0.0.1:1080/", strlen ("http://127.0.0.1:1080/"));
+  memcpy (url, "http://127.0.0.1/", strlen ("http://127.0.0.1/"));
   curl_easy_setopt (c, CURLOPT_URL, url);
+  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
@@ -168,12 +190,22 @@ testLongHeaderGet ()
   char *url;
   long code;
   struct curl_slist *header = NULL;
+  int port;
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    {
+      port = 1331;
+      if (oneone)
+        port += 5;
+    }
 
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        1080,
+                        port,
                         &apc_all,
                         NULL,
                         &ahc_echo,
@@ -182,6 +214,14 @@ testLongHeaderGet ()
                         (size_t) (VERY_LONG / 2), MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   c = curl_easy_init ();
   url = malloc (VERY_LONG);
   if (url == NULL)
@@ -196,7 +236,8 @@ testLongHeaderGet ()
   header = curl_slist_append (header, url);
 
   curl_easy_setopt (c, CURLOPT_HTTPHEADER, header);
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:1080/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
@@ -239,6 +280,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;

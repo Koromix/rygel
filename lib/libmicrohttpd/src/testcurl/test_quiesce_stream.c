@@ -22,6 +22,7 @@
  * @brief  Testcase for libmicrohttpd quiescing
  * @author Markus Doppelbauer
  * @author Christian Grothoff
+ * @author Karlson2k (Evgeny Grin)
  */
 #include "mhd_options.h"
 #include <stdlib.h>
@@ -47,6 +48,7 @@ http_PanicCallback (void *cls,
                     unsigned int line,
                     const char *reason)
 {
+  (void)cls;    /* Unused. Silent compiler warning. */
   fprintf( stderr,
            "PANIC: exit process: %s at %s:%u\n",
            reason,
@@ -103,6 +105,7 @@ http_ContentReaderCallback (void *cls,
 {
   static const char alphabet[] = "\nABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   struct ContentReaderUserdata *userdata = cls;
+  (void)pos;(void)max;  /* Unused. Silent compiler warning. */
 
   if( userdata->bytes_written >= 1024)
     {
@@ -130,6 +133,9 @@ http_AccessHandlerCallback (void *cls,
                             void **con_cls )
 {
   int ret;
+  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
+  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
+  (void)upload_data_size;                       /* Unused. Silent compiler warning. */
 
   /* Never respond on first call */
   if (NULL == *con_cls)
@@ -166,8 +172,16 @@ http_AccessHandlerCallback (void *cls,
 
 
 int
-main()
+main(void)
 {
+  int port;
+  char command_line[1024];
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 1470;
+
   /* Panic callback */
   MHD_set_panic_func (&http_PanicCallback,
                       NULL);
@@ -181,7 +195,7 @@ main()
 
   /* Create daemon */
   struct MHD_Daemon *daemon = MHD_start_daemon (daemon_flags,
-                                                8000,
+                                                port,
                                                 NULL,
                                                 NULL,
                                                 &http_AccessHandlerCallback,
@@ -189,21 +203,31 @@ main()
                                                 MHD_OPTION_END);
   if (NULL == daemon)
     return 1;
-  if (0 != system ("curl -s http://127.0.0.1:8000"))
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (daemon, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (daemon); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(command_line, "curl -s http://127.0.0.1:%d", port);
+
+  if (0 != system (command_line))
     {
       MHD_stop_daemon (daemon);
       return 1;
     }
   /* wait for a request */
   while (0 == request_counter)
-    sleep (1);
+    (void)sleep (1);
 
   fprintf (stderr,
            "quiesce\n");
   MHD_quiesce_daemon (daemon);
 
   /* wait a second */
-  sleep (1);
+  (void)sleep (1);
 
   fprintf (stderr,
            "stopping daemon\n");

@@ -86,6 +86,15 @@
 #endif
 
 #if defined(MHD_PTHREAD_MUTEX_)
+#  if defined(PTHREAD_MUTEX_INITIALIZER)
+/**
+ *  Define static mutex and statically initialise it.
+ */
+#    define MHD_MUTEX_STATIC_DEFN_INIT_(m) static MHD_mutex_ m = PTHREAD_MUTEX_INITIALIZER
+#  endif /* PTHREAD_MUTEX_INITIALIZER */
+#endif
+
+#if defined(MHD_PTHREAD_MUTEX_)
 /**
  * Destroy previously initialised mutex.
  * @param pmutex pointer to mutex

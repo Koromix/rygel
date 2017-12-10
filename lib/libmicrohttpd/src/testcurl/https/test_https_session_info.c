@@ -27,10 +27,11 @@
 #include "platform.h"
 #include "microhttpd.h"
 #include <curl/curl.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #include <gcrypt.h>
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 
-extern int curl_check_version (const char *req_version, ...);
 extern const char srv_key_pem[];
 extern const char srv_self_signed_cert_pem[];
 
@@ -43,15 +44,17 @@ struct MHD_Daemon *d;
 static int
 query_session_ahc (void *cls, struct MHD_Connection *connection,
                    const char *url, const char *method,
-                   const char *upload_data, const char *version,
+                   const char *version, const char *upload_data,
                    size_t *upload_data_size, void **ptr)
 {
   struct MHD_Response *response;
   int ret;
+  (void)cls;(void)url;(void)method;(void)version;       /* Unused. Silent compiler warning. */
+  (void)upload_data;(void)upload_data_size;             /* Unused. Silent compiler warning. */
 
   if (NULL == *ptr)
     {
-      *ptr = &query_session_ahc;
+      *ptr = (void*)&query_session_ahc;
       return MHD_YES;
     }
 
@@ -98,17 +101,21 @@ test_query_session ()
   struct CBC cbc;
   CURLcode errornum;
   char url[256];
+  int port;
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 3060;
 
   if (NULL == (cbc.buf = malloc (sizeof (char) * 255)))
     return 16;
   cbc.size = 255;
   cbc.pos = 0;
 
-  gen_test_file_url (url, DEAMON_TEST_PORT);
-
   /* setup test */
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                        MHD_USE_ERROR_LOG, DEAMON_TEST_PORT,
+                        MHD_USE_ERROR_LOG, port,
                         NULL, NULL, &query_session_ahc, NULL,
 			MHD_OPTION_HTTPS_PRIORITIES, "NORMAL:+ARCFOUR-128",
                         MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
@@ -120,6 +127,14 @@ test_query_session ()
       free (cbc.buf);
       return 2;
     }
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
 
   const char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl() == 0)
@@ -127,6 +142,9 @@ test_query_session ()
       aes256_sha = "rsa_aes_256_sha";
     }
 
+  gen_test_file_url (url,
+                     sizeof (url),
+                     port);
   c = curl_easy_init ();
 #if DEBUG_HTTPS_TEST
   curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
@@ -145,9 +163,9 @@ test_query_session ()
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 0);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
 
-  // NOTE: use of CONNECTTIMEOUT without also
-  //   setting NOSIGNAL results in really weird
-  //   crashes on my system!
+  /* NOTE: use of CONNECTTIMEOUT without also
+   * setting NOSIGNAL results in really weird
+   * crashes on my system! */
   curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
   if (CURLE_OK != (errornum = curl_easy_perform (c)))
     {
@@ -170,18 +188,19 @@ test_query_session ()
 int
 main (int argc, char *const *argv)
 {
+#if LIBCURL_VERSION_NUM >= 0x072200
   unsigned int errorCount = 0;
   const char *ssl_version;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
-  if (0 != curl_global_init (CURL_GLOBAL_ALL))
-    {
-      fprintf (stderr, "Error (code: %u)\n", errorCount);
-      return 99;
-    }
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
+  if (!testsuite_curl_global_init ())
+    return 99;
 
   ssl_version = curl_version_info (CURLVERSION_NOW)->ssl_version;
   if (NULL == ssl_version)
@@ -196,10 +215,11 @@ main (int argc, char *const *argv)
     curl_global_cleanup ();
     return 77;
   }
-#if LIBCURL_VERSION_NUM >= 0x072200
   errorCount += test_query_session ();
-#endif
   print_test_result (errorCount, argv[0]);
   curl_global_cleanup ();
   return errorCount != 0 ? 1 : 0;
+#else  /* LIBCURL_VERSION_NUM < 0x072200 */
+  return 77;
+#endif /* LIBCURL_VERSION_NUM < 0x072200 */
 }

@@ -63,7 +63,7 @@ libmicrohttpd_la_SOURCES = \
   sysfdsetsize.c sysfdsetsize.h \
   mhd_str.c mhd_str.h \
   mhd_threads.c mhd_threads.h \
-  mhd_locks.h \
+  mhd_locks.h mhd_assert.h \
   mhd_sockets.c mhd_sockets.h \
   mhd_itc.c mhd_itc.h mhd_itc_types.h \
   mhd_compat.c mhd_compat.h \
@@ -144,9 +144,9 @@ check_PROGRAMS = \
   test_str_to_value \
   test_str_token \
   test_http_reasons \
-  test_shutdown_select \
-  test_shutdown_poll \
-  test_daemon
+  test_start_stop \
+  test_daemon \
+  test_options
 
 if HAVE_POSIX_THREADS
 if ENABLE_UPGRADE
@@ -166,11 +166,25 @@ endif
 
 TESTS = $(check_PROGRAMS)
 
-if !HAVE_LISTEN_SHUTDOWN
-XFAIL_TESTS = \
+# Do not test trigger of select by shutdown of listen socket
+# on Cygwin as this ability is deliberately ignored on Cygwin
+# to improve compatibility with core OS.
+if !CYGWIN_TARGET
+if HAVE_LISTEN_SHUTDOWN
+check_PROGRAMS += \
   test_shutdown_select \
   test_shutdown_poll
+else
+check_PROGRAMS += \
+  test_shutdown_select_ignore \
+  test_shutdown_poll_ignore
 endif
+endif
+
+test_start_stop_SOURCES = \
+  test_start_stop.c
+test_start_stop_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 test_daemon_SOURCES = \
   test_daemon.c
@@ -246,6 +260,24 @@ test_shutdown_poll_LDADD = \
   $(PTHREAD_LIBS)
 endif
 
+test_shutdown_select_ignore_SOURCES = \
+  test_shutdown_select.c
+if USE_POSIX_THREADS
+test_shutdown_select_ignore_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
+test_shutdown_select_ignore_LDADD = \
+  $(PTHREAD_LIBS)
+endif
+
+test_shutdown_poll_ignore_SOURCES = \
+  test_shutdown_select.c mhd_threads.h
+if USE_POSIX_THREADS
+test_shutdown_poll_ignore_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
+test_shutdown_poll_ignore_LDADD = \
+  $(PTHREAD_LIBS)
+endif
+
 test_str_compare_SOURCES = \
   test_str.c test_helpers.h mhd_str.c
 
@@ -258,3 +290,8 @@ test_str_token_SOURCES = \
 test_http_reasons_SOURCES = \
   test_http_reasons.c \
   reason_phrase.c mhd_str.c mhd_str.h
+
+test_options_SOURCES = \
+  test_options.c
+test_options_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la

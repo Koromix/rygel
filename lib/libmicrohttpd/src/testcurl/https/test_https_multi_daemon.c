@@ -29,10 +29,11 @@
 #include <curl/curl.h>
 #include <limits.h>
 #include <sys/stat.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #include <gcrypt.h>
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 
-extern int curl_check_version (const char *req_version, ...);
 extern const char srv_key_pem[];
 extern const char srv_self_signed_cert_pem[];
 
@@ -41,17 +42,27 @@ extern const char srv_self_signed_cert_pem[];
  * doesn't affect the other
  */
 static int
-test_concurent_daemon_pair (void *cls, 
+test_concurent_daemon_pair (void *cls,
 			    const char *cipher_suite,
                             int proto_version)
 {
-
   int ret;
   struct MHD_Daemon *d1;
   struct MHD_Daemon *d2;
+  int port1, port2;
+  (void)cls;    /* Unused. Silent compiler warning. */
+
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port1 = port2 = 0;
+  else
+    {
+      port1 = 3050;
+      port2 = 3051;
+    }
 
   d1 = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                         MHD_USE_ERROR_LOG, DEAMON_TEST_PORT,
+                         MHD_USE_ERROR_LOG, port1,
                          NULL, NULL, &http_ahc, NULL,
                          MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                          MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
@@ -62,9 +73,17 @@ test_concurent_daemon_pair (void *cls,
       fprintf (stderr, MHD_E_SERVER_INIT);
       return -1;
     }
+  if (0 == port1)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d1, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d1); return -1; }
+      port1 = (int)dinfo->port;
+    }
 
   d2 = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                         MHD_USE_ERROR_LOG, DEAMON_TEST_PORT + 1,
+                         MHD_USE_ERROR_LOG, port2,
                          NULL, NULL, &http_ahc, NULL,
                          MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                          MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
@@ -76,16 +95,28 @@ test_concurent_daemon_pair (void *cls,
       fprintf (stderr, MHD_E_SERVER_INIT);
       return -1;
     }
+  if (0 == port2)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d2, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        {
+          MHD_stop_daemon (d1);
+          MHD_stop_daemon (d2);
+          return -1;
+        }
+      port2 = (int)dinfo->port;
+    }
 
   ret =
-    test_daemon_get (NULL, cipher_suite, proto_version, DEAMON_TEST_PORT, 0);
+    test_daemon_get (NULL, cipher_suite, proto_version, port1, 0);
   ret +=
     test_daemon_get (NULL, cipher_suite, proto_version,
-                     DEAMON_TEST_PORT + 1, 0);
+                     port2, 0);
 
   MHD_stop_daemon (d2);
   ret +=
-    test_daemon_get (NULL, cipher_suite, proto_version, DEAMON_TEST_PORT, 0);
+    test_daemon_get (NULL, cipher_suite, proto_version, port1, 0);
   MHD_stop_daemon (d1);
   return ret;
 }
@@ -97,17 +128,16 @@ main (int argc, char *const *argv)
   unsigned int errorCount = 0;
   FILE *cert;
   const char *aes256_sha = "AES256-SHA";
+  (void)argc; (void)argv;       /* Unused. Silent compiler warning. */
 
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
-  if (0 != curl_global_init (CURL_GLOBAL_ALL))
-    {
-      fprintf (stderr, "Error (code: %u). l:%d f:%s\n", errorCount, __LINE__,
-               __FUNCTION__);
-      return 99;
-    }
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
+  if (!testsuite_curl_global_init ())
+    return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
     {
       fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");

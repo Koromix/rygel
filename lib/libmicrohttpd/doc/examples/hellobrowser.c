@@ -23,7 +23,14 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   const char *page = "<html><body>Hello, browser!</body></html>";
   struct MHD_Response *response;
   int ret;
-  
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)method;            /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void)con_cls;           /* Unused. Silent compiler warning. */
+
   response =
     MHD_create_response_from_buffer (strlen (page), (void *) page, 
 				     MHD_RESPMEM_PERSISTENT);
@@ -35,7 +42,7 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
 
 
 int
-main ()
+main (void)
 {
   struct MHD_Daemon *daemon;
 

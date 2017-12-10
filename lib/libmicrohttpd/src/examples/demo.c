@@ -35,7 +35,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#ifdef MHD_HAVE_LIBMAGIC
 #include <magic.h>
+#endif /* MHD_HAVE_LIBMAGIC */
 #include <limits.h>
 #include <ctype.h>
 
@@ -52,12 +54,14 @@
  */
 #define NUMBER_OF_THREADS CPU_COUNT
 
+#ifdef MHD_HAVE_LIBMAGIC
 /**
  * How many bytes of a file do we give to libmagic to determine the mime type?
  * 16k might be a bit excessive, but ought not hurt performance much anyway,
  * and should definitively be on the safe side.
  */
 #define MAGIC_HEADER_SIZE (16 * 1024)
+#endif /* MHD_HAVE_LIBMAGIC */
 
 
 /**
@@ -183,10 +187,12 @@ static struct MHD_Response *request_refused_response;
  */
 static pthread_mutex_t mutex;
 
+#ifdef MHD_HAVE_LIBMAGIC
 /**
  * Global handle to MAGIC data.
  */
 static magic_t magic;
+#endif /* MHD_HAVE_LIBMAGIC */
 
 
 /**
@@ -248,7 +254,7 @@ struct ResponseDataContext
  *
  * @param rdc where to store the list of files
  * @param dirname name of the directory to list
- * @return MHD_YES on success, MHD_NO on error
+ * @return #MHD_YES on success, #MHD_NO on error
  */
 static int
 list_directory (struct ResponseDataContext *rdc,
@@ -265,7 +271,7 @@ list_directory (struct ResponseDataContext *rdc,
     {
       if ('.' == de->d_name[0])
 	continue;
-      if (sizeof (fullname) <= (size_t)
+      if (sizeof (fullname) <= (unsigned int)
 	  snprintf (fullname, sizeof (fullname),
 		    "%s/%s",
 		    dirname, de->d_name))
@@ -486,6 +492,10 @@ process_upload_data (void *cls,
 {
   struct UploadContext *uc = cls;
   int i;
+  (void)kind;              /* Unused. Silent compiler warning. */
+  (void)content_type;      /* Unused. Silent compiler warning. */
+  (void)transfer_encoding; /* Unused. Silent compiler warning. */
+  (void)off;               /* Unused. Silent compiler warning. */
 
   if (0 == strcmp (key, "category"))
     return do_append (&uc->category, data, size);
@@ -545,7 +555,7 @@ process_upload_data (void *cls,
 		uc->category,
 		filename);
       for (i=strlen (fn)-1;i>=0;i--)
-	if (! isprint ((int) fn[i]))
+	if (! isprint ((unsigned char) fn[i]))
 	  fn[i] = '_';
       uc->fd = open (fn,
 		     O_CREAT | O_EXCL
@@ -606,6 +616,9 @@ response_completed_callback (void *cls,
 			     enum MHD_RequestTerminationCode toe)
 {
   struct UploadContext *uc = *con_cls;
+  (void)cls;         /* Unused. Silent compiler warning. */
+  (void)connection;  /* Unused. Silent compiler warning. */
+  (void)toe;         /* Unused. Silent compiler warning. */
 
   if (NULL == uc)
     return; /* this request wasn't an upload request */
@@ -682,12 +695,16 @@ generate_page (void *cls,
   int ret;
   int fd;
   struct stat buf;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (url, "/"))
     {
       /* should be file download */
+#ifdef MHD_HAVE_LIBMAGIC
       char file_data[MAGIC_HEADER_SIZE];
       ssize_t got;
+#endif /* MHD_HAVE_LIBMAGIC */
       const char *mime;
 
       if ( (0 != strcmp (method, MHD_HTTP_METHOD_GET)) &&
@@ -710,13 +727,15 @@ generate_page (void *cls,
 	return MHD_queue_response (connection,
 				   MHD_HTTP_NOT_FOUND,
 				   file_not_found_response);
+#ifdef MHD_HAVE_LIBMAGIC
       /* read beginning of the file to determine mime type  */
       got = read (fd, file_data, sizeof (file_data));
+      (void) lseek (fd, 0, SEEK_SET);
       if (-1 != got)
 	mime = magic_buffer (magic, file_data, got);
       else
+#endif /* MHD_HAVE_LIBMAGIC */
 	mime = NULL;
-      (void) lseek (fd, 0, SEEK_SET);
 
       if (NULL == (response = MHD_create_response_from_fd (buf.st_size,
 							   fd)))
@@ -804,6 +823,7 @@ generate_page (void *cls,
 }
 
 
+#ifndef MINGW
 /**
  * Function called if we get a SIGPIPE. Does nothing.
  *
@@ -812,6 +832,7 @@ generate_page (void *cls,
 static void
 catcher (int sig)
 {
+  (void)sig;	/* Unused. Silent compiler warning. */
   /* do nothing */
 }
 
@@ -819,7 +840,6 @@ catcher (int sig)
 /**
  * setup handlers to ignore SIGPIPE.
  */
-#ifndef MINGW
 static void
 ignore_sigpipe ()
 {
@@ -866,8 +886,10 @@ main (int argc, char *const *argv)
 #ifndef MINGW
   ignore_sigpipe ();
 #endif
+#ifdef MHD_HAVE_LIBMAGIC
   magic = magic_open (MAGIC_MIME_TYPE);
   (void) magic_load (magic, NULL);
+#endif /* MHD_HAVE_LIBMAGIC */
 
   (void) pthread_mutex_init (&mutex, NULL);
   file_not_found_response = MHD_create_response_from_buffer (strlen (FILE_NOT_FOUND_PAGE),
@@ -905,7 +927,9 @@ main (int argc, char *const *argv)
   MHD_destroy_response (internal_error_response);
   update_cached_response (NULL);
   (void) pthread_mutex_destroy (&mutex);
+#ifdef MHD_HAVE_LIBMAGIC
   magic_close (magic);
+#endif /* MHD_HAVE_LIBMAGIC */
   return 0;
 }
 

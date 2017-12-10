@@ -69,6 +69,9 @@ completed_callback (void *cls,
   struct timeval *tv = *con_cls;
   struct timeval tve;
   uint64_t delta;
+  (void)cls;         /* Unused. Silent compiler warning. */
+  (void)connection;  /* Unused. Silent compiler warning. */
+  (void)toe;         /* Unused. Silent compiler warning. */
 
   if (NULL == tv)
     return;
@@ -94,6 +97,8 @@ uri_logger_cb (void *cls,
 	       const char *uri)
 {
   struct timeval *tv = malloc (sizeof (struct timeval));
+  (void)cls; /* Unused. Silent compiler warning. */
+  (void)uri; /* Unused. Silent compiler warning. */
 
   if (NULL != tv)
     gettimeofday (tv, NULL);
@@ -109,6 +114,13 @@ ahc_echo (void *cls,
           const char *version,
           const char *upload_data, size_t *upload_data_size, void **ptr)
 {
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void)ptr;               /* Unused. Silent compiler warning. */
+
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
   return MHD_queue_response (connection, MHD_HTTP_OK, response);

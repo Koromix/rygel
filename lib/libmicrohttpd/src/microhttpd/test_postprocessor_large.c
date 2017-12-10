@@ -43,6 +43,8 @@ value_checker (void *cls,
                const char *data, uint64_t off, size_t size)
 {
   unsigned int *pos = cls;
+  (void)kind; (void)key; (void)filename; (void)content_type;  /* Unused. Silent compiler warning. */
+  (void)transfer_encoding; (void)data; (void)off;             /* Unused. Silent compiler warning. */
 #if 0
   fprintf (stderr,
            "VC: %llu %u `%s' `%s' `%s' `%s' `%.*s'\n",
@@ -63,8 +65,8 @@ test_simple_large ()
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
-  int i;
-  int delta;
+  size_t i;
+  size_t delta;
   size_t size;
   char data[102400];
   unsigned int pos;
@@ -98,6 +100,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc; (void)argv;  /* Unused. Silent compiler warning. */
 
   errorCount += test_simple_large ();
   if (errorCount != 0)

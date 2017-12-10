@@ -783,12 +783,12 @@ process_value_to_boundary (struct MHD_PostProcessor *pp,
             break;
           newline++;
         }
-      if (newline + pp->blen + 4 <= pp->buffer_pos)
+      if (newline + blen + 4 <= pp->buffer_pos)
         {
           /* can check boundary */
           if (0 != memcmp (&buf[newline + 4],
                            boundary,
-                           pp->blen))
+                           blen))
             {
               /* no boundary, "\r\n--" is part of content, skip */
               newline += 4;
@@ -801,7 +801,7 @@ process_value_to_boundary (struct MHD_PostProcessor *pp,
               pp->skip_rn = RN_Dash;
               pp->state = next_state;
               pp->dash_state = next_dash_state;
-              (*ioffptr) += pp->blen + 4;       /* skip boundary as well */
+              (*ioffptr) += blen + 4;       /* skip boundary as well */
               buf[newline] = '\0';
               break;
             }

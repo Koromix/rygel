@@ -38,6 +38,7 @@ static ssize_t
 called_twice(void *cls, uint64_t pos, char *buf, size_t max)
 {
   struct callback_closure *cls2 = cls;
+  (void)pos;    /* Unused. Silent compiler warning. */
 
   if (cls2->called == 0)
     {
@@ -69,15 +70,24 @@ callback(void *cls,
 {
   struct callback_closure *cbc = calloc(1, sizeof(struct callback_closure));
   struct MHD_Response *r;
+  int ret;
+  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
+  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
+  (void)upload_data_size;(void)con_cls;         /* Unused. Silent compiler warning. */
 
   r = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN, 1024,
 					 &called_twice, cbc,
 					 &free);
-  MHD_queue_response (connection,
-                      MHD_HTTP_OK,
-                      r);
+  if (NULL == r)
+  {
+    free (cbc);
+    return MHD_NO;
+  }
+  ret = MHD_queue_response (connection,
+                            MHD_HTTP_OK,
+                            r);
   MHD_destroy_response (r);
-  return MHD_YES;
+  return ret;
 }
 
 
@@ -87,6 +97,7 @@ discard_buffer (void *ptr,
                 size_t nmemb,
                 void *ctx)
 {
+  (void)ptr;(void)ctx;  /* Unused. Silent compiler warning. */
   return size * nmemb;
 }
 
@@ -111,16 +122,34 @@ main(int argc, char **argv)
   int running;
   struct timeval tv;
   int extra;
+  int port;
+  (void)argc; (void)argv; /* Unused. Silent compiler warning. */
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 1140;
 
   d = MHD_start_daemon(0,
-		       8000,
+		       port,
 		       NULL,
 		       NULL,
 		       &callback,
 		       NULL,
 		       MHD_OPTION_END);
+  if (d == NULL)
+    return 32;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 48; }
+      port = (int)dinfo->port;
+    }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1:8000/");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/");
+  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &discard_buffer);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
@@ -176,8 +205,14 @@ main(int argc, char **argv)
       tv.tv_usec = 1000;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
         {
-          if (EINTR != errno)
-            abort ();
+#ifdef MHD_POSIX_SOCKETS
+              if (EINTR != errno)
+                abort ();
+#else
+              if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
+                abort ();
+              Sleep (1000);
+#endif
         }
       if (NULL != multi)
 	{

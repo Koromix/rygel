@@ -1,11 +1,11 @@
 #define PACKAGE "libmicrohttpd"
 #define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
 #define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.55"
+#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.58"
 #define PACKAGE_TARNAME "libmicrohttpd"
 #define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.55"
-#define VERSION "0.9.55"
+#define PACKAGE_VERSION "0.9.58"
+#define VERSION "0.9.58"
 
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
@@ -63,14 +63,14 @@
     #define _GNU_SOURCE 1
     #define _MHD_EXTERN __attribute__((visibility("default"))) __declspec(dllexport) extern
     #define _MHD_ITC_SOCKETPAIR 1
-    #define _MHD_inline static inline __attribute__((always_inline))
+    #define _MHD_static_inline static inline __attribute__((always_inline))
     #define _XOPEN_SOURCE 1
     #define _XOPEN_SOURCE_EXTENDED 1
 #elif defined(_MSC_VER)
     #define WINDOWS 1
     #define MSVC 1
     #define INLINE_FUNC 1
-    #define _MHD_inline static __forceinline
+    #define _MHD_static_inline static __forceinline
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
     #define HAVE_POSTPROCESSOR 1
@@ -191,7 +191,7 @@
     #define _GNU_SOURCE 1
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_EVENTFD 1
-    #define _MHD_inline static inline __attribute__((always_inline))
+    #define _MHD_static_inline static inline __attribute__((always_inline))
     #define _XOPEN_SOURCE 700
 #else
     #error "Custom MHD_config.h not suited for this platform"

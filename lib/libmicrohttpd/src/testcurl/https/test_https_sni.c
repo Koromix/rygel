@@ -28,7 +28,9 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <curl/curl.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #include <gcrypt.h>
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 #include <gnutls/gnutls.h>
 
@@ -143,6 +145,7 @@ sni_callback (gnutls_session_t session,
   size_t name_len;
   struct Hosts *host;
   unsigned int type;
+  (void)req_ca_dn;(void)nreqs;(void)pk_algos;(void)pk_algos_length;   /* Unused. Silent compiler warning. */
 
   name_len = sizeof (name);
   if (GNUTLS_E_SUCCESS !=
@@ -178,13 +181,14 @@ sni_callback (gnutls_session_t session,
 
 /* perform a HTTP GET request via SSL/TLS */
 static int
-do_get (const char *url)
+do_get (const char *url, int port)
 {
   CURL *c;
   struct CBC cbc;
   CURLcode errornum;
   size_t len;
   struct curl_slist *dns_info;
+  char buf[256];
 
   len = strlen (test_data);
   if (NULL == (cbc.buf = malloc (sizeof (char) * len)))
@@ -200,6 +204,7 @@ do_get (const char *url)
   curl_easy_setopt (c, CURLOPT_VERBOSE, 1);
 #endif
   curl_easy_setopt (c, CURLOPT_URL, url);
+  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
   curl_easy_setopt (c, CURLOPT_TIMEOUT, 10L);
   curl_easy_setopt (c, CURLOPT_CONNECTTIMEOUT, 10L);
@@ -210,8 +215,10 @@ do_get (const char *url)
   /* TODO merge into send_curl_req */
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYPEER, 0);
   curl_easy_setopt (c, CURLOPT_SSL_VERIFYHOST, 2);
-  dns_info = curl_slist_append (NULL, "host1:4233:127.0.0.1");
-  dns_info = curl_slist_append (dns_info, "host2:4233:127.0.0.1");
+  sprintf(buf, "host1:%d:127.0.0.1", port);
+  dns_info = curl_slist_append (NULL, buf);
+  sprintf(buf, "host2:%d:127.0.0.1", port);
+  dns_info = curl_slist_append (dns_info, buf);
   curl_easy_setopt (c, CURLOPT_RESOLVE, dns_info);
   curl_easy_setopt (c, CURLOPT_FAILONERROR, 1);
 
@@ -248,16 +255,22 @@ main (int argc, char *const *argv)
 {
   unsigned int error_count = 0;
   struct MHD_Daemon *d;
+  int port;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 3060;
+
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
-  if (0 != curl_global_init (CURL_GLOBAL_ALL))
-    {
-      fprintf (stderr, "Error: %s\n", strerror (errno));
-      return 99;
-    }
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
+  if (!testsuite_curl_global_init ())
+    return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
     {
       fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");
@@ -268,7 +281,7 @@ main (int argc, char *const *argv)
   load_keys ("host1", ABS_SRCDIR "/host1.crt", ABS_SRCDIR "/host1.key");
   load_keys ("host2", ABS_SRCDIR "/host2.crt", ABS_SRCDIR "/host2.key");
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS | MHD_USE_ERROR_LOG,
-                        4233,
+                        port,
                         NULL, NULL,
                         &http_ahc, NULL,
                         MHD_OPTION_HTTPS_CERT_CALLBACK, &sni_callback,
@@ -278,9 +291,17 @@ main (int argc, char *const *argv)
       fprintf (stderr, MHD_E_SERVER_INIT);
       return -1;
     }
-  if (0 != do_get ("https://host1:4233/"))
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return -1; }
+      port = (int)dinfo->port;
+    }
+  if (0 != do_get ("https://host1/", port))
     error_count++;
-  if (0 != do_get ("https://host2:4233/"))
+  if (0 != do_get ("https://host2/", port))
     error_count++;
 
   MHD_stop_daemon (d);
@@ -293,7 +314,7 @@ main (int argc, char *const *argv)
 
 #else
 
-int main ()
+int main (void)
 {
   fprintf (stderr,
            "SNI not supported by GnuTLS < 3.0\n");

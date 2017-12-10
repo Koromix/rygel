@@ -66,6 +66,7 @@ dir_reader (void *cls, uint64_t pos, char *buf, size_t max)
 
   if (max < 512)
     return 0;
+  (void)pos; /* 'pos' is ignored as function return next one single entry per call. */
   do
     {
       e = readdir (dir);
@@ -96,6 +97,10 @@ ahc_echo (void *cls,
   DIR *dir;
   struct stat buf;
   char emsg[1024];
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, MHD_HTTP_METHOD_GET))
     return MHD_NO;              /* unexpected method */

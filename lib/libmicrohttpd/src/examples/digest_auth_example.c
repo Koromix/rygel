@@ -45,9 +45,16 @@ ahc_echo (void *cls,
   const char *password = "testpass";
   const char *realm = "test@example.com";
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)method;            /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void)ptr;               /* Unused. Silent compiler warning. */
 
   username = MHD_digest_auth_get_username(connection);
-  if (username == NULL)
+  if (NULL == username)
     {
       response = MHD_create_response_from_buffer(strlen (DENIED),
 						 DENIED,
@@ -63,7 +70,7 @@ ahc_echo (void *cls,
 			      username,
 			      password,
 			      300);
-  free(username);
+  MHD_free (username);
   if ( (ret == MHD_INVALID_NONCE) ||
        (ret == MHD_NO) )
     {
@@ -85,6 +92,7 @@ ahc_echo (void *cls,
   MHD_destroy_response(response);
   return ret;
 }
+
 
 int
 main (int argc, char *const *argv)

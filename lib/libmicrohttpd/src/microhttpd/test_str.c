@@ -1951,7 +1951,7 @@ int check_strx_to_uint32_n_no_val(void)
         {
           size_t rs;
           const struct str_with_len * const t = str_no_num + i;
-          static const uint32_t rnd_val = 3214314212L;
+          static const uint32_t rnd_val = 3214314212UL;
           size_t len;
 
           for (len = 0; len <= t->len + 1; len++)
@@ -2397,7 +2397,7 @@ int check_strx_to_uint64_n_no_val(void)
         {
           size_t rs;
           const struct str_with_len * const t = str_no_num + i;
-          static const uint64_t rnd_val = 3214314212L;
+          static const uint64_t rnd_val = 3214314212UL;
           size_t len;
 
           for (len = 0; len <= t->len + 1; len++)

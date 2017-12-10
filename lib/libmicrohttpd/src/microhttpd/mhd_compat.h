@@ -47,13 +47,13 @@
 #if defined(HAVE_SNPRINTF)
 #define MHD_snprintf_ snprintf
 #else  /* ! HAVE_SNPRINTF */
-#if defined(_WIN32)
+#if defined(_WIN32) && ! defined(__CYGWIN__)
 /* Emulate snprintf function on W32 */
 int W32_snprintf(char *__restrict s, size_t n, const char *__restrict format, ...);
 #define MHD_snprintf_ W32_snprintf
-#else  /* ! _WIN32*/
+#else  /* ! _WIN32 || __CYGWIN__ */
 #error Your platform does not support snprintf() and MHD does not know how to emulate it on your platform.
-#endif /* ! _WIN32*/
+#endif /* ! _WIN32 || __CYGWIN__ */
 #endif /* ! HAVE_SNPRINTF */
 
 #ifdef HAVE_RANDOM

@@ -358,7 +358,7 @@
 
 /* MHD_POLL_EVENTS_ERR_DISC is 'events' mask for errors and disconnect.
  * Note: Out-of-band data is treated as error. */
-#  if defined(_WIN32)
+#  if defined(_WIN32) && ! defined(__CYGWIN__)
 #    define MHD_POLL_EVENTS_ERR_DISC POLLRDBAND
 #  elif defined(__linux__)
 #    define MHD_POLL_EVENTS_ERR_DISC POLLPRI

@@ -161,6 +161,8 @@ ahc_echo (void *cls,
   static int ptr;
   const char *me = cls;
   int ret;
+  (void)url;(void)version;                      /* Unused. Silent compiler warning. */
+  (void)upload_data;(void)upload_data_size;     /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -188,7 +190,8 @@ testInternalGet (int port, int poll_flag)
   unsigned int i;
   char url[64];
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -196,6 +199,15 @@ testInternalGet (int port, int poll_flag)
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 1;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -249,7 +261,8 @@ testMultithreadedGet (int port, int poll_flag)
   unsigned int i;
   char url[64];
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -257,6 +270,15 @@ testMultithreadedGet (int port, int poll_flag)
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -310,7 +332,8 @@ testMultithreadedPoolGet (int port, int poll_flag)
   unsigned int i;
   char url[64];
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
 
   cbc.buf = buf;
   cbc.size = 2048;
@@ -319,6 +342,15 @@ testMultithreadedPoolGet (int port, int poll_flag)
                         MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
   if (d == NULL)
     return 16;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -385,7 +417,8 @@ testExternalGet (int port)
   unsigned int i;
   char url[64];
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  if (MHD_NO != MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
 
   multi = NULL;
   cbc.buf = buf;
@@ -394,6 +427,15 @@ testExternalGet (int port)
                         port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
   if (d == NULL)
     return 256;
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
+  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
   start_timer ();
   multi = curl_multi_init ();
   if (multi == NULL)
@@ -457,8 +499,14 @@ testExternalGet (int port)
 	  tv.tv_usec = 1000;
 	  if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
             {
+#ifdef MHD_POSIX_SOCKETS
               if (EINTR != errno)
                 abort ();
+#else
+              if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
+                abort ();
+              Sleep (1000);
+#endif
             }
 	  curl_multi_perform (multi, &running);
 	  if (running == 0)
@@ -514,10 +562,13 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  int port = 1081;
+  int port = 1130;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+  if (oneone)
+    port += 15;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   response = MHD_create_response_from_buffer (strlen ("/hello_world"),

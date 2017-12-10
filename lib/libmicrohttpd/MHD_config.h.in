@@ -18,11 +18,17 @@
 /* This is a FreeBSD system */
 #undef FREEBSD
 
+/* Define to `1' if host machine runs on GNU Hurd. */
+#undef GNU_HURD
+
 /* Define to 1 if you have the `accept4' function. */
 #undef HAVE_ACCEPT4
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
+
+/* Define if you have usable assert() and assert.h */
+#undef HAVE_ASSERT
 
 /* Define to 1 if you have the `gmtime_s' function in C11 form. */
 #undef HAVE_C11_GMTIME_S
@@ -36,6 +42,13 @@
 /* Define to 1 if you have `clock_get_time', `host_get_clock_service' and
    `mach_port_deallocate' functions. */
 #undef HAVE_CLOCK_GET_TIME
+
+/* Define to 1 if you have Darwin-style sendfile(2). */
+#undef HAVE_DARWIN_SENDFILE
+
+/* Define to 1 if you have the declaration of `getsockname', and to 0 if you
+   don't. */
+#undef HAVE_DECL_GETSOCKNAME
 
 /* Define to 1 if you have the declaration of `SOCK_NONBLOCK', and to 0 if you
    don't. */
@@ -59,6 +72,9 @@
 /* Define to 1 if you have the usable `fork' function. */
 #undef HAVE_FORK
 
+/* Define to 1 if you have FreeBSD-style sendfile(2). */
+#undef HAVE_FREEBSD_SENDFILE
+
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #undef HAVE_FSEEKO
 
@@ -68,7 +84,10 @@
 /* Define to 1 if you have `gethrtime' function. */
 #undef HAVE_GETHRTIME
 
-/* Define to 1 if you have the `[gettimeofday]' function. */
+/* Define to 1 if you have the `getsockname' function. */
+#undef HAVE_GETSOCKNAME
+
+/* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
 /* Define to 1 if you have the `gmtime_r' function. */
@@ -89,8 +108,14 @@
 /* Define to 1 if you have a functional curl library. */
 #undef HAVE_LIBCURL
 
+/* Define to 1 if you have suitable libmagic. */
+#undef HAVE_LIBMAGIC
+
 /* Define to 1 if you have the <limits.h> header file. */
 #undef HAVE_LIMITS_H
+
+/* Define to 1 if you have linux-style sendfile(2). */
+#undef HAVE_LINUX_SENDFILE
 
 /* can use shutdown on listen sockets */
 #undef HAVE_LISTEN_SHUTDOWN
@@ -106,9 +131,6 @@
 
 /* Define to 1 if you have the <machine/param.h> header file. */
 #undef HAVE_MACHINE_PARAM_H
-
-/* Define to 1 if you have the <[magic.h]> header file. */
-#undef HAVE_MAGIC_H
 
 /* Define to 1 if you have the <math.h> header file. */
 #undef HAVE_MATH_H
@@ -215,6 +237,9 @@
 /* SOCK_NONBLOCK is defined in a socket header */
 #undef HAVE_SOCK_NONBLOCK
 
+/* Define to 1 if you have Solaris-style sendfile(3). */
+#undef HAVE_SOLARIS_SENDFILE
+
 /* Define to 1 if you have the <stdbool.h> header file and <stdbool.h> defines
    'bool' type. */
 #undef HAVE_STDBOOL_H
@@ -243,7 +268,7 @@
 /* Define to 1 if you have the <sys/endian.h> header file. */
 #undef HAVE_SYS_ENDIAN_H
 
-/* Define to 1 if you have the <[sys/eventfd.h]> header file. */
+/* Define to 1 if you have the <sys/eventfd.h> header file. */
 #undef HAVE_SYS_EVENTFD_H
 
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
@@ -288,7 +313,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 if you have the `[usleep]' function. */
+/* Define to 1 if you have the `usleep' function. */
 #undef HAVE_USLEEP
 
 /* Define to 1 if you have the `gmtime_s' function in W32 form. */
@@ -378,6 +403,9 @@
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #undef LT_OBJDIR
 
+/* Define to `1' if HTTPS require initialisation of libgcrypt */
+#undef MHD_HTTPS_REQUIRE_GRYPT
+
 /* Define to 1 to disable setting name on generated threads */
 #undef MHD_NO_THREAD_NAMES
 
@@ -393,6 +421,9 @@
 /* required cURL version to run tests */
 #undef MHD_REQ_CURL_VERSION
 
+/* Define if you have usable `getsockname' function. */
+#undef MHD_USE_GETSOCKNAME
+
 /* define to use pthreads */
 #undef MHD_USE_POSIX_THREADS
 
@@ -401,6 +432,9 @@
 
 /* This is a MinGW system */
 #undef MINGW
+
+/* Define to disable usage of debug asserts. */
+#undef NDEBUG
 
 /* This is a NetBSD system */
 #undef NETBSD
@@ -486,6 +520,9 @@
 # define _DARWIN_USE_64_BIT_INODE 1
 #endif
 
+/* Define to use debug asserts. */
+#undef _DEBUG
+
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
@@ -510,8 +547,8 @@
 /* Define to use socketpair for inter-thread communication */
 #undef _MHD_ITC_SOCKETPAIR
 
-/* Define to prefix which will be used with MHD inline functions. */
-#undef _MHD_inline
+/* Define to prefix which will be used with MHD static inline functions. */
+#undef _MHD_static_inline
 
 /* Define to 1 if it is required by headers to expose additional symbols */
 #undef _NETBSD_SOURCE

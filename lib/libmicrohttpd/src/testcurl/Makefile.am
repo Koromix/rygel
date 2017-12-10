@@ -18,7 +18,6 @@ $(LIBCURL_CPPFLAGS)
 
 if HAVE_CURL
 check_PROGRAMS = \
-  test_start_stop \
   test_get \
   test_get_sendfile \
   test_urlparse \
@@ -70,9 +69,6 @@ if HAVE_POSTPROCESSOR
   test_post_loop11
 endif
 
-noinst_PROGRAMS = \
-  test_options
-
 if ENABLE_DAUTH
   check_PROGRAMS += \
 	test_digestauth test_digestauth_with_arguments
@@ -86,11 +82,6 @@ endif
 libcurl_version_check_a_SOURCES = \
   curl_version_check.c
 
-test_start_stop_SOURCES = \
-  test_start_stop.c
-test_start_stop_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la
-
 test_concurrent_stop_SOURCES = \
   test_concurrent_stop.c
 test_concurrent_stop_CFLAGS = \
@@ -98,11 +89,6 @@ test_concurrent_stop_CFLAGS = \
 test_concurrent_stop_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS) @LIBCURL@
-
-test_options_SOURCES = \
-  test_options.c
-test_options_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 test_get_SOURCES = \
   test_get.c

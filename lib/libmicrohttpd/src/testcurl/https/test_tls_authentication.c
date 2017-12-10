@@ -29,14 +29,11 @@
 #include <curl/curl.h>
 #include <limits.h>
 #include <sys/stat.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #include <gcrypt.h>
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 
-extern int curl_check_version (const char *req_version, ...);
-extern const char test_file_data[];
-
-extern const char ca_key_pem[];
-extern const char ca_cert_pem[];
 extern const char srv_signed_cert_pem[];
 extern const char srv_signed_key_pem[];
 
@@ -48,9 +45,16 @@ test_secure_get (void * cls, char *cipher_suite, int proto_version)
 {
   int ret;
   struct MHD_Daemon *d;
+  int port;
+  (void)cls;    /* Unused. Silent compiler warning. */
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 3070;
 
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS |
-                        MHD_USE_ERROR_LOG, DEAMON_TEST_PORT,
+                        MHD_USE_ERROR_LOG, port,
                         NULL, NULL, &http_ahc, NULL,
                         MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
                         MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
@@ -61,8 +65,16 @@ test_secure_get (void * cls, char *cipher_suite, int proto_version)
       fprintf (stderr, MHD_E_SERVER_INIT);
       return -1;
     }
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return -1; }
+      port = (int)dinfo->port;
+    }
 
-  ret = test_daemon_get (NULL, cipher_suite, proto_version, DEAMON_TEST_PORT, 0);
+  ret = test_daemon_get (NULL, cipher_suite, proto_version, port, 0);
 
   MHD_stop_daemon (d);
   return ret;
@@ -74,16 +86,16 @@ main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   char *aes256_sha = "AES256-SHA";
+  (void)argc; (void)argv;       /* Unused. Silent compiler warning. */
 
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
 #ifdef GCRYCTL_INITIALIZATION_FINISHED
   gcry_control (GCRYCTL_INITIALIZATION_FINISHED, 0);
 #endif
-  if (0 != curl_global_init (CURL_GLOBAL_ALL))
-    {
-      fprintf (stderr, "Error (code: %u)\n", errorCount);
-      return 99;
-    }
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
+  if (!testsuite_curl_global_init ())
+    return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
     {
       fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");

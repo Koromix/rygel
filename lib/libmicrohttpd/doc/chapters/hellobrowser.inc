@@ -29,7 +29,7 @@ The function we are going to write now will be called by @emph{GNU libmicrohttpd
 appropriate request comes in. While the name of this callback function is arbitrary, its parameter
 list has to follow a certain layout. So please, ignore the lot of parameters for now, they will be
 explained at the point they are needed. We have to use only one of them,
-@code{struct MHD_Connection *connection}, for the minimalistic functionality we want to archive at the moment.
+@code{struct MHD_Connection *connection}, for the minimalistic functionality we want to achieve at the moment.
 
 This parameter is set by the @emph{libmicrohttpd} daemon and holds the necessary information to
 relate the call with a certain connection. Keep in mind that a server might have to satisfy hundreds

@@ -53,10 +53,10 @@ has_in_name(const char *prog_name, const char *marker)
     {
       if ('/' == prog_name[pos])
         name_pos = pos + 1;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
       else if ('\\' == prog_name[pos])
         name_pos = pos + 1;
-#endif /* _WIN32 */
+#endif /* _WIN32 || __CYGWIN__ */
       pos++;
     }
   if (name_pos == pos)

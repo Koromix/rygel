@@ -105,16 +105,17 @@ has_in_name(const char *prog_name, const char *marker)
     {
       if ('/' == prog_name[pos])
         name_pos = pos + 1;
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
       else if ('\\' == prog_name[pos])
         name_pos = pos + 1;
-#endif /* _WIN32 */
+#endif /* _WIN32 || __CYGWIN__ */
       pos++;
     }
   if (name_pos == pos)
-    return !0;
+    return true;
   return strstr(prog_name + name_pos, marker) != NULL;
 }
+
 
 static MHD_socket
 start_socket_listen(int domain)
@@ -285,9 +286,12 @@ main (int argc, char *const *argv)
   int err;
 #endif /* MHD_WINSOCK_SOCKETS */
   bool test_poll;
+  bool must_ignore;
+  (void)argc; /* Unused. Silent compiler warning. */
 
   test_poll = has_in_name(argv[0], "_poll");
-  if (!test_poll)
+  must_ignore = has_in_name(argv[0], "_ignore");
+  if (! test_poll)
     test_func = &select_thread;
   else
     {
@@ -321,7 +325,7 @@ main (int argc, char *const *argv)
       if (MHD_INVALID_SOCKET == listen_socket)
         return 99;
 
-      check_err = !0;
+      check_err = true;
       /* fprintf (stdout, "Starting select() thread...\n"); */
 #if defined(MHD_USE_POSIX_THREADS)
       if (0 != pthread_create (&sel_thrd, NULL, test_func, &listen_socket))
@@ -379,5 +383,5 @@ main (int argc, char *const *argv)
   WSACleanup();
 #endif /* MHD_WINSOCK_SOCKETS */
 
-  return result;
+  return must_ignore ? (!result) : (result);
 }

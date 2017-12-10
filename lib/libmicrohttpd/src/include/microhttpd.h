@@ -126,7 +126,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00095500
+#define MHD_VERSION 0x00095800
 
 /**
  * MHD-internal return code for "YES".
@@ -1477,13 +1477,6 @@ enum MHD_OPTION
    * the "be as liberal as possible in what you accept" norm.  It is
    * recommended to set this to 1 if you are testing clients against
    * MHD, and 0 in production.
-   * if set to -1 - be opposite to strict and be permissive about the
-   * protocol, allowing slight deviations that are technically not
-   * allowed by the RFC. Specifically, at the moment, this flag
-   * causes MHD to allow spaces in header field names. This is
-   * disallowed by the standard.
-   * It is not recommended to set it to -1 on publicly available
-   * servers as it may potentially lower level of protection.
    * This option should be followed by an `int` argument.
    */
   MHD_OPTION_STRICT_FOR_CLIENT = 29
@@ -1826,6 +1819,8 @@ enum MHD_DaemonInfoType
   /**
    * Request the file descriptor for the external epoll.
    * No extra arguments should be passed.
+   * Waiting on epoll FD must not block longer than value
+   * returned by #MHD_get_timeout().
    */
   MHD_DAEMON_INFO_EPOLL_FD_LINUX_ONLY,
   MHD_DAEMON_INFO_EPOLL_FD = MHD_DAEMON_INFO_EPOLL_FD_LINUX_ONLY,
@@ -1845,7 +1840,15 @@ enum MHD_DaemonInfoType
    * Note: flags may differ from original 'flags' specified for
    * daemon, especially if #MHD_USE_AUTO was set.
    */
-  MHD_DAEMON_INFO_FLAGS
+  MHD_DAEMON_INFO_FLAGS,
+
+  /**
+   * Request the port number of daemon's listen socket.
+   * No extra arguments should be passed.
+   * Note: if port '0' was specified for #MHD_start_daemon(), returned
+   * value will be real port number.
+   */
+  MHD_DAEMON_INFO_BIND_PORT
 };
 
 
@@ -1901,10 +1904,10 @@ typedef int
  *        part of #MHD_get_connection_values; very large POST
  *        data *will* be made available incrementally in
  *        @a upload_data)
- * @param upload_data_size set initially to the size of the
+ * @param[in,out] upload_data_size set initially to the size of the
  *        @a upload_data provided; the method must update this
  *        value to the number of bytes NOT processed;
- * @param con_cls pointer that the callback can set to some
+ * @param[in,out] con_cls pointer that the callback can set to some
  *        address and that will be preserved by MHD for future
  *        calls for this request; since the access handler may
  *        be called many times (i.e., for a PUT/POST operation
@@ -1946,6 +1949,7 @@ typedef void
                                  struct MHD_Connection *connection,
                                  void **con_cls,
                                  enum MHD_RequestTerminationCode toe);
+
 
 /**
  * Signature of the callback used by MHD to notify the
@@ -2095,7 +2099,11 @@ typedef int
  * Start a webserver on the given port.
  *
  * @param flags combination of `enum MHD_FLAG` values
- * @param port port to bind to (in host byte order)
+ * @param port port to bind to (in host byte order),
+ *        use '0' to bind to random free port,
+ *        ignored if MHD_OPTION_SOCK_ADDR or
+ *        MHD_OPTION_LISTEN_SOCKET is provided
+ *        or MHD_USE_NO_LISTEN_SOCKET is specified
  * @param apc callback to call to check which clients
  *        will be allowed to connect; you can pass NULL
  *        in which case connections from any IP will be
@@ -2121,7 +2129,11 @@ MHD_start_daemon_va (unsigned int flags,
  * #MHD_start_daemon_va.
  *
  * @param flags combination of `enum MHD_FLAG` values
- * @param port port to bind to
+ * @param port port to bind to (in host byte order),
+ *        use '0' to bind to random free port,
+ *        ignored if MHD_OPTION_SOCK_ADDR or
+ *        MHD_OPTION_LISTEN_SOCKET is provided
+ *        or MHD_USE_NO_LISTEN_SOCKET is specified
  * @param apc callback to call to check which clients
  *        will be allowed to connect; you can pass NULL
  *        in which case connections from any IP will be
@@ -2189,8 +2201,6 @@ MHD_stop_daemon (struct MHD_Daemon *daemon);
  * this call and must no longer be used directly by the application
  * afterwards.
  *
- * Per-IP connection limits are ignored when using this API.
- *
  * @param daemon daemon that manages the connection
  * @param client_socket socket to manage (MHD will expect
  *        to receive an HTTP request from this socket next).
@@ -2220,6 +2230,8 @@ MHD_add_connection (struct MHD_Daemon *daemon,
  * use external select with @code{select()} or with @code{epoll()}.
  * In the latter case, it will only add the single @code{epoll()} file
  * descriptor used by MHD to the sets.
+ * It's necessary to use #MHD_get_timeout() in combination with
+ * this function.
  *
  * This function must be called only for daemon started
  * without #MHD_USE_INTERNAL_POLLING_THREAD flag.
@@ -2257,6 +2269,8 @@ MHD_get_fdset (struct MHD_Daemon *daemon,
  * use external select with @code{select()} or with @code{epoll()}.
  * In the latter case, it will only add the single @code{epoll()} file
  * descriptor used by MHD to the sets.
+ * It's necessary to use #MHD_get_timeout() in combination with
+ * this function.
  *
  * This function must be called only for daemon started
  * without #MHD_USE_INTERNAL_POLLING_THREAD flag.
@@ -2289,6 +2303,8 @@ MHD_get_fdset2 (struct MHD_Daemon *daemon,
  * daemon FDs in fd_sets, call FD_ZERO for each fd_set
  * before calling this function. Size of fd_set is
  * determined by current value of FD_SETSIZE.
+ * It's necessary to use #MHD_get_timeout() in combination with
+ * this function.
  *
  * This function could be called only for daemon started
  * without #MHD_USE_INTERNAL_POLLING_THREAD flag.
@@ -2310,17 +2326,21 @@ MHD_get_fdset2 (struct MHD_Daemon *daemon,
 
 
 /**
- * Obtain timeout value for `select()` for this daemon (only needed if
- * connection timeout is used).  The returned value is how many milliseconds
- * `select()` or `poll()` should at most block, not the timeout value set for
- * connections.  This function MUST NOT be called if MHD is running with
- * #MHD_USE_THREAD_PER_CONNECTION.
+ * Obtain timeout value for polling function for this daemon.
+ * This function set value to amount of milliseconds for which polling
+ * function (`select()` or `poll()`) should at most block, not the
+ * timeout value set for connections.
+ * It is important to always use this function, even if connection
+ * timeout is not set, as in some cases MHD may already have more
+ * data to process on next turn (data pending in TLS buffers,
+ * connections are already ready with epoll etc.) and returned timeout
+ * will be zero.
  *
  * @param daemon daemon to query for timeout
  * @param timeout set to the timeout (in milliseconds)
  * @return #MHD_YES on success, #MHD_NO if timeouts are
  *        not used (or no connections exist that would
- *        necessiate the use of a timeout right now).
+ *        necessitate the use of a timeout right now).
  * @ingroup event
  */
 _MHD_EXTERN int
@@ -2331,7 +2351,8 @@ MHD_get_timeout (struct MHD_Daemon *daemon,
 /**
  * Run webserver operations (without blocking unless in client
  * callbacks).  This method should be called by clients in combination
- * with #MHD_get_fdset if the client-controlled select method is used.
+ * with #MHD_get_fdset if the client-controlled select method is used and
+ * #MHD_get_timeout().
  *
  * This function is a convenience method, which is useful if the
  * fd_sets from #MHD_get_fdset were not directly passed to `select()`;
@@ -2353,8 +2374,8 @@ MHD_run (struct MHD_Daemon *daemon);
 
 /**
  * Run webserver operations. This method should be called by clients
- * in combination with #MHD_get_fdset if the client-controlled select
- * method is used.
+ * in combination with #MHD_get_fdset and #MHD_get_timeout() if the
+ * client-controlled select method is used.
  *
  * You can use this function instead of #MHD_run if you called
  * `select()` on the result from #MHD_get_fdset.  File descriptors in
@@ -3085,11 +3106,23 @@ MHD_destroy_post_processor (struct MHD_PostProcessor *pp);
  *
  * @param connection The MHD connection structure
  * @return NULL if no username could be found, a pointer
- * 			to the username if found
+ * 			to the username if found, free using #MHD_free().
  * @ingroup authentication
  */
 _MHD_EXTERN char *
 MHD_digest_auth_get_username (struct MHD_Connection *connection);
+
+
+/**
+ * Free the memory given by @a ptr. Calls "free(ptr)".  This function
+ * should be used to free the username returned by
+ * #MHD_digest_auth_get_username().
+ * @note Since v0.9.56
+ *
+ * @param ptr pointer to free.
+ */
+_MHD_EXTERN void
+MHD_free (void *ptr);
 
 
 /**
@@ -3139,9 +3172,9 @@ MHD_queue_auth_fail_response (struct MHD_Connection *connection,
  * Get the username and password from the basic authorization header sent by the client
  *
  * @param connection The MHD connection structure
- * @param password a pointer for the password
+ * @param[out] password a pointer for the password, free using #MHD_free().
  * @return NULL if no username could be found, a pointer
- * 			to the username if found
+ * 			to the username if found, free using #MHD_free().
  * @ingroup authentication
  */
 _MHD_EXTERN char *
@@ -3240,6 +3273,11 @@ union MHD_DaemonInfo
    * Socket, returned for #MHD_DAEMON_INFO_LISTEN_FD.
    */
   MHD_socket listen_fd;
+
+  /**
+   * Bind port number, returned for #MHD_DAEMON_INFO_BIND_PORT.
+   */
+  uint16_t port;
 
   /**
    * epoll FD, returned for #MHD_DAEMON_INFO_EPOLL_FD.
@@ -3427,7 +3465,27 @@ enum MHD_FEATURE
    * It's always safe to use same file FD in multiple responses if MHD
    * is run in any single thread mode.
    */
-  MHD_FEATURE_RESPONSES_SHARED_FD = 18
+  MHD_FEATURE_RESPONSES_SHARED_FD = 18,
+
+  /**
+   * Get whether MHD support automatic detection of bind port number.
+   * @sa #MHD_DAEMON_INFO_BIND_PORT
+   */
+  MHD_FEATURE_AUTODETECT_BIND_PORT = 19,
+
+  /**
+   * Get whether MHD support SIGPIPE suppression.
+   * If SIGPIPE suppression is not supported, application must handle
+   * SIGPIPE signal by itself.
+   */
+  MHD_FEATURE_AUTOSUPPRESS_SIGPIPE = 20,
+
+  /**
+   * Get whether MHD use system's sendfile() function to send
+   * file-FD based responses over non-TLS connections.
+   * @note Since v0.9.56
+   */
+  MHD_FEATURE_SENDFILE = 21
 };
 
 

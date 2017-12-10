@@ -28,13 +28,13 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <curl/curl.h>
+#ifdef MHD_HTTPS_REQUIRE_GRYPT
 #include <gcrypt.h>
+#endif /* MHD_HTTPS_REQUIRE_GRYPT */
 #include "tls_test_common.h"
 
 extern const char srv_key_pem[];
 extern const char srv_self_signed_cert_pem[];
-extern const char srv_signed_cert_pem[];
-extern const char srv_signed_key_pem[];
 
 static int oneone;
 
@@ -49,6 +49,8 @@ ahc_echo (void *cls,
 {
   struct MHD_Response *response;
   int ret;
+  (void)cls;(void)url;(void)method;(void)version;               /* Unused. Silent compiler warning. */
+  (void)upload_data;(void)upload_data_size;(void)unused;        /* Unused. Silent compiler warning. */
 
   response = MHD_create_response_from_buffer (0, NULL,
 					      MHD_RESPMEM_PERSISTENT);
@@ -75,19 +77,33 @@ testInternalSelectGet ()
   struct CURLMsg *msg;
   time_t start;
   struct timeval tv;
+  int port;
+
+  if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
+    port = 0;
+  else
+    port = 3000;
 
   multi = NULL;
   cbc.buf = buf;
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG | MHD_USE_TLS | MHD_USE_INTERNAL_POLLING_THREAD,
-                        1082, NULL, NULL, &ahc_echo, "GET",
+                        port, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_HTTPS_MEM_KEY, srv_key_pem,
                         MHD_OPTION_HTTPS_MEM_CERT, srv_self_signed_cert_pem,
 			MHD_OPTION_END);
   if (d == NULL)
     return 256;
 
+  if (0 == port)
+    {
+      const union MHD_DaemonInfo *dinfo;
+      dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
+      if (NULL == dinfo || 0 == dinfo->port)
+        { MHD_stop_daemon (d); return 32; }
+      port = (int)dinfo->port;
+    }
   char *aes256_sha = "AES256-SHA";
   if (curl_uses_nss_ssl() == 0)
     {
@@ -95,7 +111,8 @@ testInternalSelectGet ()
     }
 
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "https://127.0.0.1:1082/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "https://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_PORT, (long)port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
   /* TLS options */
@@ -155,10 +172,16 @@ testInternalSelectGet ()
             {
 #ifdef MHD_POSIX_SOCKETS
               if (EINTR != errno)
-#endif /* MHD_POSIX_SOCKETS */
                 abort ();
+#else
+              if (WSAEINVAL != WSAGetLastError() || 0 != rs.fd_count || 0 != ws.fd_count || 0 != es.fd_count)
+                abort ();
+              Sleep (1000);
+#endif
             }
         }
+      else
+        (void)sleep (1);
       curl_multi_perform (multi, &running);
       if (running == 0)
         {
@@ -197,12 +220,10 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc;   /* Unused. Silent compiler warning. */
 
-  if (0 != curl_global_init (CURL_GLOBAL_ALL))
-    {
-      fprintf (stderr, "Error: %s\n", strerror (errno));
-      return 99;
-    }
+  if (!testsuite_curl_global_init ())
+    return 99;
   if (NULL == curl_version_info (CURLVERSION_NOW)->ssl_version)
     {
       fprintf (stderr, "Curl does not support SSL.  Cannot run the test.\n");

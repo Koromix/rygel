@@ -91,6 +91,8 @@ value_checker (void *cls,
 {
   int *want_off = cls;
   int idx = *want_off;
+  (void)kind;  /* Unused. Silent compiler warning. */
+
 
 #if 0
   fprintf (stderr,
@@ -120,14 +122,14 @@ value_checker (void *cls,
 
 
 static int
-test_urlencoding ()
+test_urlencoding (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
   unsigned int want_off = URL_START;
-  int i;
-  int delta;
+  size_t i;
+  size_t delta;
   size_t size;
 
   memset (&connection, 0, sizeof (struct MHD_Connection));
@@ -154,7 +156,7 @@ test_urlencoding ()
 
 
 static int
-test_multipart_garbage ()
+test_multipart_garbage (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
@@ -195,7 +197,7 @@ test_multipart_garbage ()
 
 
 static int
-test_multipart_splits ()
+test_multipart_splits (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
@@ -228,14 +230,14 @@ test_multipart_splits ()
 
 
 static int
-test_multipart ()
+test_multipart (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
   unsigned int want_off = FORM_START;
-  int i;
-  int delta;
+  size_t i;
+  size_t delta;
   size_t size;
 
   memset (&connection, 0, sizeof (struct MHD_Connection));
@@ -263,14 +265,14 @@ test_multipart ()
 
 
 static int
-test_nested_multipart ()
+test_nested_multipart (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
   unsigned int want_off = FORM_NESTED_START;
-  int i;
-  int delta;
+  size_t i;
+  size_t delta;
   size_t size;
 
   memset (&connection, 0, sizeof (struct MHD_Connection));
@@ -298,14 +300,14 @@ test_nested_multipart ()
 
 
 static int
-test_empty_value ()
+test_empty_value (void)
 {
   struct MHD_Connection connection;
   struct MHD_HTTP_Header header;
   struct MHD_PostProcessor *pp;
   unsigned int want_off = URL_EMPTY_VALUE_START;
-  int i;
-  int delta;
+  size_t i;
+  size_t delta;
   size_t size;
 
   memset (&connection, 0, sizeof (struct MHD_Connection));
@@ -337,6 +339,7 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
+  (void)argc; (void)argv;  /* Unused. Silent compiler warning. */
 
   errorCount += test_multipart_splits ();
   errorCount += test_multipart_garbage ();

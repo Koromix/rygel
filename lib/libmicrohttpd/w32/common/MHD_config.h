@@ -13,7 +13,7 @@
 #define INLINE_FUNC 1
 
 /* Define to prefix which will be used with MHD inline functions. */
-#define _MHD_inline static __forceinline
+#define _MHD_static_inline static __forceinline
 
 
 /* *** MHD configuration *** */

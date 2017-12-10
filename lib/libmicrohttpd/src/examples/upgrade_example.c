@@ -202,6 +202,9 @@ uh_cb (void *cls,
 {
   struct MyData *md;
   pthread_t pt;
+  (void)cls;         /* Unused. Silent compiler warning. */
+  (void)connection;  /* Unused. Silent compiler warning. */
+  (void)con_cls;     /* Unused. Silent compiler warning. */
 
   md = malloc (sizeof (struct MyData));
   if (NULL == md)
@@ -249,6 +252,11 @@ ahc_echo (void *cls,
   static int aptr;
   struct MHD_Response *response;
   int ret;
+  (void)cls;               /* Unused. Silent compiler warning. */
+  (void)url;               /* Unused. Silent compiler warning. */
+  (void)version;           /* Unused. Silent compiler warning. */
+  (void)upload_data;       /* Unused. Silent compiler warning. */
+  (void)upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (method, "GET"))
     return MHD_NO;              /* unexpected method */
