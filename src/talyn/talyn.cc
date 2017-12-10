@@ -11,7 +11,6 @@
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
-#include "../../lib/rapidjson/memorybuffer.h"
 #include "../../lib/rapidjson/prettywriter.h"
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
