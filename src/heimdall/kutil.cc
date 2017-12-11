@@ -631,7 +631,7 @@ Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args)
     if (real_len < buf.len) {
         buf.len = real_len;
     }
-    buf[buf.len] = 0;
+    buf.ptr[buf.len] = 0;
 
     return buf;
 }
@@ -689,13 +689,13 @@ static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
 };
 
 bool enable_debug = []() {
-    const char *debug = getenv("MOYA_DEBUG");
+    const char *debug = getenv("HEIMDALL_DEBUG");
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("MOYA_DEBUG should contain value '0' or '1'");
+        LogError("HEIMDALL_DEBUG should contain value '0' or '1'");
         return true;
     }
 }();
@@ -1528,6 +1528,30 @@ struct MinizDeflateContext {
 };
 #endif
 
+bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
+                        CompressionType compression_type)
+{
+    Close();
+
+    DEFER_N(error_guard) {
+        ReleaseResources();
+        error = true;
+    };
+
+    if (filename) {
+        this->filename = DuplicateString(&str_alloc, filename).ptr;
+    }
+
+    if (!InitCompressor(compression_type))
+        return false;
+    dest.type = DestinationType::Memory;
+    dest.u.mem = mem;
+
+    open = true;
+    error_guard.disable();
+    return true;
+}
+
 bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
     Close();
@@ -1624,6 +1648,8 @@ bool StreamWriter::Close()
                     success = false;
                 }
             } break;
+
+            case DestinationType::Memory: {} break;
         }
     }
 
@@ -1745,6 +1771,8 @@ void StreamWriter::ReleaseResources()
                     fclose(dest.u.fp);
                 }
             } break;
+
+            case DestinationType::Memory: {} break;
         }
         dest.owned = false;
     }
@@ -1759,6 +1787,15 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
                 error = true;
                 return false;
             }
+
+            return true;
+        } break;
+
+        case DestinationType::Memory: {
+            // dest.u.mem->Append(buf) would work but it's probably slower
+            dest.u.mem->Grow(buf.len);
+            memcpy(dest.u.mem->ptr + dest.u.mem->len, buf.ptr, (size_t)buf.len);
+            dest.u.mem->len += buf.len;
 
             return true;
         } break;

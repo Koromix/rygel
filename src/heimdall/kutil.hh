@@ -558,11 +558,11 @@ struct Span<const char> {
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
 #if defined(__clang__)
-    constexpr Span(const char *const &str) : ptr(str), len((Size)__builtin_strlen(str)) {}
+    constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)__builtin_strlen(str) : 0) {}
 #elif defined(__GNUC__)
-    constexpr Span(const char *const &str) : ptr(str), len((Size)strlen(str)) {}
+    constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
 #else
-    Span(const char *const &str) : ptr(str), len((Size)strlen(str)) {}
+    Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
 #endif
 
     void Reset()
@@ -581,6 +581,12 @@ struct Span<const char> {
         DebugAssert(idx >= 0 && idx < len);
         return ptr[idx];
     }
+
+    // The implementation comes later, after TestStr() is available
+    bool operator==(Span<const char> other) const;
+    bool operator==(const char *other) const;
+    bool operator!=(Span<const char> other) const { return !(*this == other); }
+    bool operator!=(const char *other) const { return !(*this == other); }
 
     Span Take(ArraySlice<const char> slice) const
     {
@@ -842,9 +848,7 @@ public:
 
     T *Append()
     {
-        if (len == capacity) {
-            Grow();
-        }
+        Grow();
 
         T *first = ptr + len;
         new (ptr + len) T;
@@ -853,9 +857,7 @@ public:
     }
     T *Append(const T &value)
     {
-        if (len == capacity) {
-            Grow();
-        }
+        Grow();
 
         T *first = ptr + len;
         new (ptr + len) T;
@@ -864,9 +866,7 @@ public:
     }
     T *Append(Span<const T> values)
     {
-        if (values.len > capacity - len) {
-            Grow(values.len);
-        }
+        Grow(values.len);
 
         T *first = ptr + len;
         for (const T &value: values) {
@@ -891,6 +891,17 @@ public:
         { return Span<T>(ptr, this->len).Take(offset, len); }
     Span<T> Take(ArraySlice<T> slice) const
         { return Span<T>(ptr, this->len).Take(slice); }
+
+    Span<T> Leak()
+    {
+        Span<T> span = *this;
+
+        ptr = nullptr;
+        len = 0;
+        capacity = 0;
+
+        return span;
+    }
 };
 
 template <typename T, Size BucketSize = 1024>
@@ -1693,6 +1704,8 @@ static inline bool TestStr(Span<const char> str1, Span<const char> str2)
     }
     return true;
 }
+inline bool Span<const char>::operator==(Span<const char> other) const
+    { return TestStr(*this, other); }
 static inline bool TestStr(Span<const char> str1, const char *str2)
 {
     Size i;
@@ -1702,11 +1715,13 @@ static inline bool TestStr(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
+inline bool Span<const char>::operator==(const char *other) const
+    { return TestStr(*this, other); }
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
 static inline Span<const char> SplitStr(Span<const char> str, char split_char,
-                                            Span<const char> *out_remainder = nullptr)
+                                        Span<const char> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -1718,13 +1733,14 @@ static inline Span<const char> SplitStr(Span<const char> str, char split_char,
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str.Take(str.len, 0);
     }
     return str;
 }
 static inline Span<const char> SplitStr(const char *str, char split_char,
-                                            const char **out_remainder = nullptr)
+                                        const char **out_remainder = nullptr)
 {
     Size part_len = 0;
     while (str[part_len]) {
@@ -1736,6 +1752,7 @@ static inline Span<const char> SplitStr(const char *str, char split_char,
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
@@ -1743,7 +1760,7 @@ static inline Span<const char> SplitStr(const char *str, char split_char,
 }
 
 static inline Span<const char> SplitStrLine(Span<const char> str,
-                                                Span<const char> *out_remainder = nullptr)
+                                            Span<const char> *out_remainder = nullptr)
 {
     Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
@@ -1752,7 +1769,7 @@ static inline Span<const char> SplitStrLine(Span<const char> str,
     return part;
 }
 static inline Span<const char> SplitStrLine(const char *str,
-                                                const char **out_remainder = nullptr)
+                                            const char **out_remainder = nullptr)
 {
     Span<const char> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
@@ -1762,7 +1779,7 @@ static inline Span<const char> SplitStrLine(const char *str,
 }
 
 static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
-                                               Span<const char> *out_remainder = nullptr)
+                                           Span<const char> *out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
@@ -1786,7 +1803,7 @@ static inline Span<const char> SplitStrAny(Span<const char> str, const char *spl
     return str.Take(0, str.len);
 }
 static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
-                                               const char **out_remainder = nullptr)
+                                           const char **out_remainder = nullptr)
 {
     char split_mask[256 / 8] = {};
     for (Size i = 0; split_chars[i]; i++) {
@@ -1803,10 +1820,24 @@ static inline Span<const char> SplitStrAny(const char *str, const char *split_ch
         }
         part_len++;
     }
+
     if (out_remainder) {
         *out_remainder = str + part_len;
     }
     return MakeSpan(str, part_len);
+}
+
+static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+{
+    while (str.len && strchr(trim_chars, str[0])) {
+        str.ptr++;
+        str.len--;
+    }
+    while (str.len && strchr(trim_chars, str[str.len - 1])) {
+        str.len--;
+    }
+
+    return str;
 }
 
 // ------------------------------------------------------------------------
@@ -2114,7 +2145,8 @@ private:
 class StreamWriter {
 public:
     enum class DestinationType {
-        File
+        File,
+        Memory
     };
 
     const char *filename;
@@ -2122,6 +2154,7 @@ public:
     struct {
         DestinationType type;
         union {
+            HeapArray<uint8_t> *mem;
             FILE *fp;
         } u;
         bool owned = false;
@@ -2140,6 +2173,9 @@ public:
     Allocator str_alloc;
 
     StreamWriter() { Close(); }
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(mem, filename, compression_type); }
     StreamWriter(FILE *fp, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(fp, filename, compression_type); }
@@ -2148,6 +2184,8 @@ public:
         { Open(filename, compression_type); }
     ~StreamWriter() { Close(); }
 
+    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
@@ -2282,106 +2320,102 @@ public:
 #endif
 
 #ifdef RAPIDJSON_VERSION_STRING
+class JsonStreamReader {
+    StreamReader *st;
+
+    LocalArray<char, 256 * 1024> buffer;
+    Size buffer_offset = 0;
+    Size file_offset = 0;
+
+public:
+    typedef char Ch MAYBE_UNUSED;
+
+    Size line_number = 1;
+    Size line_offset = 1;
+
+    JsonStreamReader(StreamReader *st)
+        : st(st)
+    {
+        Read();
+    }
+
+    char Peek() const { return buffer[buffer_offset]; }
+    char Take()
+    {
+        char c = buffer[buffer_offset];
+        if (c == '\n') {
+            line_number++;
+            line_offset = 1;
+        } else {
+            line_offset++;
+        }
+        Read();
+        return c;
+    }
+    Size Tell() const { return file_offset + buffer_offset; }
+
+    // Not implemented
+    void Put(char) {}
+    void Flush() {}
+    char *PutBegin() { return 0; }
+    Size PutEnd(char *) { return 0; }
+
+    // For encoding detection only
+    const char *Peek4() const
+    {
+        if (buffer.len - buffer_offset < 4)
+            return 0;
+        return buffer.data + buffer_offset;
+    }
+
+private:
+    void Read()
+    {
+        if (buffer_offset + 1 < buffer.len) {
+            buffer_offset++;
+        } else if (st) {
+            file_offset += buffer.len;
+            buffer.len = st->Read(SIZE(buffer.data), buffer.data);
+            buffer_offset = 0;
+
+            if (buffer.len < SIZE(buffer.data)) {
+                if (UNLIKELY(buffer.len < 0)) {
+                    buffer.len = 0;
+                }
+                buffer.Append('\0');
+                st = nullptr;
+            }
+        }
+    }
+};
+
 template <typename T>
 bool ParseJsonFile(StreamReader &st, T *json_handler)
 {
-    // This is mostly copied from RapidJSON's FileReadStream, but this
-    // version calculates current line number and offset.
-    class FileReadStreamEx {
-        StreamReader *st;
+    JsonStreamReader json_stream(&st);
+    PushLogHandler([&](LogLevel level, const char *ctx,
+                       const char *fmt, Span<const FmtArg> args) {
+        StartConsoleLog(level);
+        Print(stderr, ctx);
+        Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+        PrintFmt(stderr, fmt, args);
+        PrintLn(stderr);
+        EndConsoleLog();
+    });
+    DEFER { PopLogHandler(); };
 
-        LocalArray<char, 256 * 1024> buffer;
-        Size buffer_offset = 0;
-        Size file_offset = 0;
-
-    public:
-        typedef char Ch MAYBE_UNUSED;
-
-        Size line_number = 1;
-        Size line_offset = 1;
-
-        FileReadStreamEx(StreamReader *st)
-            : st(st)
-        {
-            Read();
+    rapidjson::Reader json_reader;
+    if (!json_reader.Parse(json_stream, *json_handler)) {
+        // Parse error is likely after I/O error (missing token, etc.) but
+        // it's irrelevant, the I/O error has already been issued.
+        if (!st.error) {
+            rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
+            LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
         }
-
-        char Peek() const { return buffer[buffer_offset]; }
-        char Take()
-        {
-            char c = buffer[buffer_offset];
-            if (c == '\n') {
-                line_number++;
-                line_offset = 1;
-            } else {
-                line_offset++;
-            }
-            Read();
-            return c;
-        }
-        Size Tell() const { return file_offset + buffer_offset; }
-
-        // Not implemented
-        void Put(char) {}
-        void Flush() {}
-        char *PutBegin() { return 0; }
-        Size PutEnd(char *) { return 0; }
-
-        // For encoding detection only
-        const char *Peek4() const
-        {
-            if (buffer.len - buffer_offset < 4)
-                return 0;
-            return buffer.data + buffer_offset;
-        }
-
-    private:
-        void Read()
-        {
-            if (buffer_offset + 1 < buffer.len) {
-                buffer_offset++;
-            } else if (st) {
-                file_offset += buffer.len;
-                buffer.len = st->Read(SIZE(buffer.data), buffer.data);
-                buffer_offset = 0;
-
-                if (buffer.len < SIZE(buffer.data)) {
-                    if (UNLIKELY(buffer.len < 0)) {
-                        buffer.len = 0;
-                    }
-                    buffer.Append('\0');
-                    st = nullptr;
-                }
-            }
-        }
-    };
-
-    {
-        FileReadStreamEx json_stream(&st);
-        PushLogHandler([&](LogLevel level, const char *ctx,
-                           const char *fmt, Span<const FmtArg> args) {
-            StartConsoleLog(level);
-            Print(stderr, ctx);
-            Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
-            PrintFmt(stderr, fmt, args);
-            PrintLn(stderr);
-            EndConsoleLog();
-        });
-        DEFER { PopLogHandler(); };
-
-        rapidjson::Reader json_reader;
-        if (!json_reader.Parse(json_stream, *json_handler)) {
-            // Parse error is likely after I/O error (missing token, etc.) but
-            // it's irrelevant, the I/O error has already been issued.
-            if (!st.error) {
-                rapidjson::ParseErrorCode err_code = json_reader.GetParseErrorCode();
-                LogError("%1 (%2)", GetParseError_En(err_code), json_reader.GetErrorOffset());
-            }
-            return false;
-        }
-        if (st.error)
-            return false;
+        return false;
     }
+    if (st.error)
+        return false;
 
     return true;
 }
@@ -2565,4 +2599,28 @@ public:
     }
 };
 
+class JsonStreamWriter {
+    StreamWriter *st;
+    LocalArray<uint8_t, 4096> buf;
+
+public:
+    typedef char Ch;
+
+    JsonStreamWriter(StreamWriter *st) : st(st) {}
+
+    void Put(char c)
+    {
+        // TODO: Move the buffering to StreamWriter (when compression is enabled)
+        buf.Append((uint8_t)c);
+        if (buf.len == SIZE(buf.data)) {
+            st->Write(buf);
+            buf.Clear();
+        }
+    }
+    void Flush()
+    {
+        st->Write(buf);
+        buf.Clear();
+    }
+};
 #endif
