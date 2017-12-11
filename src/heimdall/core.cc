@@ -1,5 +1,5 @@
 #include "kutil.hh"
-#include "main.hh"
+#include "core.hh"
 #include "opengl.hh"
 #include "../runner/runner.hh"
 #include "render.hh"

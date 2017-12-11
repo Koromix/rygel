@@ -4,7 +4,7 @@
 #include <windows.h>
 
 #include "../heimdall/kutil.hh"
-#include "../heimdall/main.hh"
+#include "../heimdall/core.hh"
 #include "../heimdall/opengl.hh"
 #include "runner.hh"
 

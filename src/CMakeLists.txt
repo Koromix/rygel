@@ -3,10 +3,10 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
                                             -Wno-missing-field-initializers -Wno-old-style-cast -Wno-stringop-overflow")
 endif()
 
-set(HEIMDALL_SRC heimdall/kutil.cc
+set(HEIMDALL_SRC heimdall/core.cc
+                 heimdall/core.hh
+                 heimdall/kutil.cc
                  heimdall/kutil.hh
-                 heimdall/main.cc
-                 heimdall/main.hh
                  heimdall/opengl.cc
                  heimdall/opengl.hh
                  heimdall/opengl_func.inc
