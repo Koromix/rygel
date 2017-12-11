@@ -52,8 +52,8 @@ static void LogShaderError(GLuint id, void (GL_API *msg_func)(GLuint, GLsizei, G
     }
 
     char buf[512];
-    msg_func(id, sizeof(buf), nullptr, buf);
-    size_t len = strlen(buf);
+    msg_func(id, SIZE(buf), nullptr, buf);
+    Size len = (Size)strlen(buf);
     while (len && strchr(" \t\r\n", buf[len - 1])) {
         len--;
     }

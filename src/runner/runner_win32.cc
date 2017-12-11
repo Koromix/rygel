@@ -46,7 +46,7 @@ static const char *GetWin32ErrorMessage(DWORD err)
     static char msg_buf[2048];
 
     if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err,
-                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg_buf, sizeof(msg_buf), NULL)) {
+                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg_buf, SIZE(msg_buf), NULL)) {
         // FormatMessage adds newlines, remove them
         char *msg_end = msg_buf + strlen(msg_buf);
         while (msg_end > msg_buf && strchr("\r\n", msg_end[-1]))
@@ -85,7 +85,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             sys_mouse_priv.y = (int16_t)(lparam >> 16);
 
             if (!main_window.mouse_tracked) {
-                TRACKMOUSEEVENT tme = { sizeof(tme) };
+                TRACKMOUSEEVENT tme = { SIZE(tme) };
                 tme.hwndTrack = main_window.hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
@@ -141,7 +141,7 @@ static HWND CreateMainWindow()
     static const char *const main_cls_name = APPLICATION_NAME "_main";
     static ATOM main_cls_atom;
     if (!main_cls_atom) {
-        WNDCLASSEX gl_cls = { sizeof(gl_cls) };
+        WNDCLASSEX gl_cls = { SIZE(gl_cls) };
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = main_cls_name;
         gl_cls.lpfnWndProc = MainWindowProc;
@@ -199,7 +199,7 @@ static bool InitWGL()
 
     static const char *const dummy_cls_name = APPLICATION_NAME "_init_gl";
     {
-        WNDCLASSEX dummy_cls = { sizeof(dummy_cls) };
+        WNDCLASSEX dummy_cls = { SIZE(dummy_cls) };
         dummy_cls.hInstance = GetModuleHandle(nullptr);
         dummy_cls.lpszClassName = dummy_cls_name;
         dummy_cls.lpfnWndProc = DefWindowProc;
@@ -226,7 +226,7 @@ static bool InitWGL()
     DEFER { DestroyWindow(dummy_wnd); };
 
     {
-        PIXELFORMATDESCRIPTOR pfd = { sizeof(PIXELFORMATDESCRIPTOR) };
+        PIXELFORMATDESCRIPTOR pfd = { SIZE(PIXELFORMATDESCRIPTOR) };
         pfd.nVersion = 1;
         pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
         pfd.iPixelType = PFD_TYPE_RGBA;
@@ -303,7 +303,7 @@ static HGLRC CreateGLContext(HDC dc)
     // Set GL-compatible pixel format
     {
         PIXELFORMATDESCRIPTOR pixel_fmt_desc;
-        DescribePixelFormat(dc, pixel_fmt_index, sizeof(pixel_fmt_desc), &pixel_fmt_desc);
+        DescribePixelFormat(dc, pixel_fmt_index, SIZE(pixel_fmt_desc), &pixel_fmt_desc);
         if (!SetPixelFormat(dc, pixel_fmt_index, &pixel_fmt_desc)) {
             LogError("Cannot set pixel format on GL window: %1", GetWin32ErrorMessage());
             return nullptr;

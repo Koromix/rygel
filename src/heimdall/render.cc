@@ -220,7 +220,7 @@ void Render()
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
                     glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
-                                   sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
+                                   SIZE(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
                                    idx_buffer_offset);
                 }
                 idx_buffer_offset += cmd.ElemCount;

@@ -5,7 +5,7 @@
 struct MainInfo {
     bool run;
     int instance_count;
-    uint64_t iteration_count;
+    int64_t iteration_count;
 
     double monotonic_time;
     double monotonic_delta;
