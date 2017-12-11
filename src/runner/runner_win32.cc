@@ -8,11 +8,12 @@
 #include "../heimdall/opengl.hh"
 #include "runner.hh"
 
-GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
-                const int *attribList);
-GL_FUNCTION_PTR(BOOL, wglChoosePixelFormatARB, HDC hdc, const int *piAttribIList,
-                const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats, UINT *nNumFormats);
-GL_FUNCTION_PTR(BOOL, wglSwapIntervalEXT, int interval);
+static GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
+                       const int *attribList);
+static GL_FUNCTION_PTR(BOOL, wglChoosePixelFormatARB, HDC hdc, const int *piAttribIList,
+                       const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats,
+                       UINT *nNumFormats);
+static GL_FUNCTION_PTR(BOOL, wglSwapIntervalEXT, int interval);
 
 #define WGL_DRAW_TO_WINDOW_ARB                    0x2001
 #define WGL_ACCELERATION_ARB                      0x2003
@@ -35,11 +36,11 @@ struct Win32Window {
 
 static Win32Window main_window;
 
-MainInfo sys_main_priv;
+static MainInfo sys_main_priv;
 const MainInfo *const sys_main = &sys_main_priv;
-DisplayInfo sys_display_priv;
+static DisplayInfo sys_display_priv;
 const DisplayInfo *const sys_display = &sys_display_priv;
-MouseInfo sys_mouse_priv;
+static MouseInfo sys_mouse_priv;
 const MouseInfo *const sys_mouse = &sys_mouse_priv;
 
 static const char *GetWin32ErrorMessage(DWORD err)
