@@ -16,10 +16,11 @@ struct DisplayInfo {
 };
 
 struct MouseInfo {
+    // Follows ImGui ordering
     enum Button: unsigned int {
         Left = 0,
-        Middle,
-        Right
+        Right,
+        Middle
     };
 
     int x, y;
