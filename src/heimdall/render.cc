@@ -15,7 +15,6 @@ static GLuint elements_buffer = 0;
 static GLuint vao = 0;
 
 static GLuint font_texture = 0;
-static ImFontAtlas font_atlas = {};
 
 static const char *imgui_vertex_src = R"!(
     #version 330 core
@@ -56,7 +55,6 @@ static bool InitImGui()
     ImGuiIO *io = &ImGui::GetIO();
 
     io->IniFilename = nullptr;
-    io->Fonts = &font_atlas;
 
     {
         GLuint new_shader = BuildGLShader("imgui", imgui_vertex_src, imgui_fragment_src);
@@ -118,18 +116,23 @@ static void ReleaseImGui()
 
     if (font_texture) {
         glDeleteTextures(1, &font_texture);
+        font_texture = 0;
     }
     if (vao) {
         glDeleteVertexArrays(1, &vao);
+        vao = 0;
     }
     if (elements_buffer) {
         glDeleteBuffers(1, &elements_buffer);
+        elements_buffer = 0;
     }
     if (array_buffer) {
         glDeleteBuffers(1, &array_buffer);
+        array_buffer = 0;
     }
     if(shader_program) {
         glDeleteProgram(shader_program);
+        shader_program = 0;
     }
 }
 

@@ -388,6 +388,8 @@ bool Run()
         return false;
 
     sys_main_priv.run = true;
+    sys_main_priv.iteration_count = 0;
+
     while (sys_main_priv.run) {
         // Reset relative inputs
         sys_mouse_priv.wheel_x = 0;
