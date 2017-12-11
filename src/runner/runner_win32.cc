@@ -1,5 +1,3 @@
-#ifdef _WIN32
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
@@ -374,24 +372,20 @@ void SwapGLBuffers()
     SwapBuffers(main_window.hdc);
 }
 
-void StopMainLoop() {
-    sys_main_priv.run = false;
-}
-
-int main(int, char **)
+bool Run()
 {
     main_window.hwnd = CreateMainWindow();
     if (!main_window.hwnd)
-        return 1;
+        return false;
     DEFER { DeleteMainWindow(main_window.hwnd); };
 
     main_window.hdc = GetDC(main_window.hwnd);
     main_window.hgl = CreateGLContext(main_window.hdc);
     if (!main_window.hgl)
-        return 1;
+        return false;
     DEFER { DeleteGLContext(main_window.hgl); };
     if (!SetGLContext(main_window.hdc, main_window.hgl))
-        return 1;
+        return false;
 
     sys_main_priv.run = true;
     while (sys_main_priv.run) {
@@ -425,13 +419,11 @@ int main(int, char **)
         }
 
         // Run the real code
-        if (!Run())
-            return 1;
+        if (!Step())
+            return false;
 
         sys_main_priv.iteration_count++;
     }
 
-    return 0;
+    return true;
 }
-
-#endif

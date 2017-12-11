@@ -6,7 +6,7 @@
 
 #include "../../lib/imgui/imgui.h"
 
-bool Run()
+bool Step()
 {
     if (!StartRender())
         return false;

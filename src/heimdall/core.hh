@@ -5,4 +5,4 @@
 #define APPLICATION_NAME "heimdall"
 #define APPLICATION_TITLE "Heimdall"
 
-bool Run();
+bool Step();

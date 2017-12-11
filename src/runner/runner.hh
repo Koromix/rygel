@@ -31,4 +31,4 @@ extern const MainInfo *const sys_main;
 extern const DisplayInfo *const sys_display;
 extern const MouseInfo *const sys_mouse;
 
-void StopMainLoop();
+bool Run();
