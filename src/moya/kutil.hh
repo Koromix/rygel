@@ -35,16 +35,38 @@
 // Config
 // ------------------------------------------------------------------------
 
-#define DYNAMICARRAY_BASE_CAPACITY 8
-#define DYNAMICARRAY_GROWTH_FACTOR 2
+#if __has_include("kutil_config.hh")
+    #include "kutil_config.hh"
+#endif
 
-// Must be a power-of-two
-#define HASHSET_BASE_CAPACITY 32
-#define HASHSET_MAX_LOAD_FACTOR 0.4f
+#ifndef DEBUG_ENV_NAME
+    #define DEBUG_ENV_NAME "KUTIL_DEBUG"
+#endif
 
-#define FMT_STRING_BASE_CAPACITY 128
-#define FMT_STRING_GROWTH_FACTOR 1.5f
-#define FMT_STRING_PRINT_BUFFER_SIZE 1024
+#ifndef DYNAMICARRAY_BASE_CAPACITY
+    #define DYNAMICARRAY_BASE_CAPACITY 8
+#endif
+#ifndef DYNAMICARRAY_GROWTH_FACTOR
+    #define DYNAMICARRAY_GROWTH_FACTOR 2
+#endif
+
+#ifndef HASHSET_BASE_CAPACITY
+    // Must be a power-of-two
+    #define HASHSET_BASE_CAPACITY 32
+#endif
+#ifndef HASHSET_MAX_LOAD_FACTOR
+    #define HASHSET_MAX_LOAD_FACTOR 0.4f
+#endif
+
+#ifndef FMT_STRING_BASE_CAPACITY
+    #define FMT_STRING_BASE_CAPACITY 128
+#endif
+#ifndef FMT_STRING_GROWTH_FACTOR
+    #define FMT_STRING_GROWTH_FACTOR 1.5f
+#endif
+#ifndef FMT_STRING_PRINT_BUFFER_SIZE
+    #define FMT_STRING_PRINT_BUFFER_SIZE 1024
+#endif
 
 // ------------------------------------------------------------------------
 // Utilities

@@ -693,13 +693,13 @@ static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
 };
 
 bool enable_debug = []() {
-    const char *debug = getenv("MOYA_DEBUG");
+    const char *debug = getenv(DEBUG_ENV_NAME);
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("MOYA_DEBUG should contain value '0' or '1'");
+        LogError("%1 should contain value '0' or '1'", DEBUG_ENV_NAME);
         return true;
     }
 }();

@@ -19,6 +19,7 @@ set(MOYA_SRC moya/a_classifier.cc
              moya/d_tables.hh
              moya/kutil.cc
              moya/kutil.hh
+             moya/kutil_config.hh
              moya/main.cc
              moya/main.hh)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
