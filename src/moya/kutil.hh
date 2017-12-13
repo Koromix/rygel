@@ -1494,6 +1494,15 @@ static inline uint64_t DefaultHash(const char *key)
     }
     return hash;
 }
+static inline uint64_t DefaultHash(Span<const char> key)
+{
+    uint64_t hash = 0xCBF29CE484222325ull;
+    for (char c: key) {
+        hash ^= (uint64_t)c;
+        hash *= 0x100000001B3ull;
+    }
+    return hash;
+}
 
 static inline bool DefaultCompare(char key1, char key2)
     { return key1 == key2; }
@@ -1518,6 +1527,10 @@ static inline bool DefaultCompare(unsigned long long key1, unsigned long long ke
 
 static inline bool DefaultCompare(const char *key1, const char *key2)
     { return !strcmp(key1, key2); }
+static inline bool DefaultCompare(Span<const char> key1, const char *key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
+    { return key1 == key2; }
 
 #define HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
     class Name { \
