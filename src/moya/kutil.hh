@@ -6,6 +6,7 @@
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
+#include <float.h>
 #include <functional>
 #include <inttypes.h>
 #include <limits.h>
