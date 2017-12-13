@@ -28,7 +28,7 @@ static thread_local bool log_missing_messages = false;
     DEFER { \
         DumpWarnings(); \
         PopLogHandler(); \
-    };
+    }
 
 static void DumpWarnings()
 {
@@ -69,6 +69,8 @@ T GetOptionalValue(Rcpp::Vector<RTYPE> &vec, R_xlen_t i, T default_value)
 // [[Rcpp::export(name = 'heimdall.options')]]
 SEXP R_Options(SEXP debug = R_NilValue)
 {
+    SETUP_LOG_HANDLER();
+
     if (!Rf_isNull(debug)) {
         enable_debug = Rcpp::as<bool>(debug);
     }
@@ -81,6 +83,8 @@ SEXP R_Options(SEXP debug = R_NilValue)
 // [[Rcpp::export(name = 'heimdall.run')]]
 void R_Run()
 {
+    SETUP_LOG_HANDLER();
+
     if (!Run()) {
         StopWithLastMessage();
     }
