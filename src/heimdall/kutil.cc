@@ -1,3 +1,7 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 #include <inttypes.h>
 #include <string.h>
 #ifdef _WIN32
@@ -689,13 +693,13 @@ static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
 };
 
 bool enable_debug = []() {
-    const char *debug = getenv("HEIMDALL_DEBUG");
+    const char *debug = getenv(DEBUG_ENV_NAME);
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("HEIMDALL_DEBUG should contain value '0' or '1'");
+        LogError("%1 should contain value '0' or '1'", DEBUG_ENV_NAME);
         return true;
     }
 }();

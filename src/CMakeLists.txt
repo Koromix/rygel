@@ -7,6 +7,7 @@ set(HEIMDALL_SRC heimdall/core.cc
                  heimdall/core.hh
                  heimdall/kutil.cc
                  heimdall/kutil.hh
+                 heimdall/kutil_config.hh
                  heimdall/opengl.cc
                  heimdall/opengl.hh
                  heimdall/opengl_func.inc

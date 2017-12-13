@@ -1,7 +1,13 @@
-#pragma once
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#ifndef KUTIL_HH
+#define KUTIL_HH
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
+#include <float.h>
 #include <functional>
 #include <inttypes.h>
 #include <limits.h>
@@ -31,16 +37,36 @@
 // Config
 // ------------------------------------------------------------------------
 
-#define DYNAMICARRAY_BASE_CAPACITY 8
-#define DYNAMICARRAY_GROWTH_FACTOR 2
+#if __has_include("kutil_config.hh")
+    #include "kutil_config.hh"
+#else
+    #define DEBUG_ENV_NAME "KUTIL_DEBUG"
+#endif
 
-// Must be a power-of-two
-#define HASHSET_BASE_CAPACITY 32
-#define HASHSET_MAX_LOAD_FACTOR 0.4f
+#ifndef DYNAMICARRAY_BASE_CAPACITY
+    #define DYNAMICARRAY_BASE_CAPACITY 8
+#endif
+#ifndef DYNAMICARRAY_GROWTH_FACTOR
+    #define DYNAMICARRAY_GROWTH_FACTOR 2
+#endif
 
-#define FMT_STRING_BASE_CAPACITY 128
-#define FMT_STRING_GROWTH_FACTOR 1.5f
-#define FMT_STRING_PRINT_BUFFER_SIZE 1024
+#ifndef HASHSET_BASE_CAPACITY
+    // Must be a power-of-two
+    #define HASHSET_BASE_CAPACITY 32
+#endif
+#ifndef HASHSET_MAX_LOAD_FACTOR
+    #define HASHSET_MAX_LOAD_FACTOR 0.4f
+#endif
+
+#ifndef FMT_STRING_BASE_CAPACITY
+    #define FMT_STRING_BASE_CAPACITY 128
+#endif
+#ifndef FMT_STRING_GROWTH_FACTOR
+    #define FMT_STRING_GROWTH_FACTOR 1.5f
+#endif
+#ifndef FMT_STRING_PRINT_BUFFER_SIZE
+    #define FMT_STRING_PRINT_BUFFER_SIZE 1024
+#endif
 
 // ------------------------------------------------------------------------
 // Utilities
@@ -1467,6 +1493,15 @@ static inline uint64_t DefaultHash(const char *key)
     }
     return hash;
 }
+static inline uint64_t DefaultHash(Span<const char> key)
+{
+    uint64_t hash = 0xCBF29CE484222325ull;
+    for (char c: key) {
+        hash ^= (uint64_t)c;
+        hash *= 0x100000001B3ull;
+    }
+    return hash;
+}
 
 static inline bool DefaultCompare(char key1, char key2)
     { return key1 == key2; }
@@ -1491,6 +1526,10 @@ static inline bool DefaultCompare(unsigned long long key1, unsigned long long ke
 
 static inline bool DefaultCompare(const char *key1, const char *key2)
     { return !strcmp(key1, key2); }
+static inline bool DefaultCompare(Span<const char> key1, const char *key2)
+    { return key1 == key2; }
+static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
+    { return key1 == key2; }
 
 #define HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
     class Name { \
@@ -2623,4 +2662,6 @@ public:
         buf.Clear();
     }
 };
+#endif
+
 #endif
