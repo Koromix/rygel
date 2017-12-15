@@ -1,0 +1,4 @@
+useDynLib(heimdallR, .registration = TRUE)
+export(heimdall.options,
+       heimdall.run)
+importFrom(Rcpp, evalCpp)
