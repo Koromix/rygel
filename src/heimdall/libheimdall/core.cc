@@ -8,8 +8,6 @@
 #include "../runner/runner.hh"
 #include "render.hh"
 
-#include "../../../lib/imgui/imgui.h"
-
 bool Step()
 {
     if (!StartRender())

@@ -4,8 +4,7 @@
 
 #include "../runner/runner.hh"
 #include "opengl.hh"
-
-#include "../../../lib/imgui/imgui.h"
+#include "render.hh"
 
 static GLuint shader_program = 0;
 static GLint attrib_proj_mtx;

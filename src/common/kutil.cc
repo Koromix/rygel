@@ -1429,7 +1429,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                                                        &out_arg, flags);
 
                 if (compression.type == CompressionType::Gzip) {
-                    ctx->crc32 = mz_crc32(ctx->crc32, ctx->out + ctx->out_len, out_arg);
+                    ctx->crc32 = (uint32_t)mz_crc32(ctx->crc32, ctx->out + ctx->out_len, out_arg);
                     ctx->uncompressed_size += (Size)out_arg;
                 }
 
@@ -1697,8 +1697,8 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
                         return false;
                 }
 
-                compression.u.miniz->crc32 = mz_crc32(compression.u.miniz->crc32,
-                                                      buf.ptr, (size_t)buf.len);
+                compression.u.miniz->crc32 = (uint32_t)mz_crc32(compression.u.miniz->crc32,
+                                                                buf.ptr, (size_t)buf.len);
                 compression.u.miniz->uncompressed_size += buf.len;
             }
 
