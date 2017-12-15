@@ -50,7 +50,7 @@ index d677cf6..9fae306 100644
 +{
 +  struct MHD_Response *response = MHD_create_response_from_data (size, buffer, 1, 0);
 +  if (response)
-+    response->crfc = free_callback;
++    response->crfc = crfc;
 +  return response;
 +}
 +

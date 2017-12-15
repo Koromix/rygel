@@ -696,7 +696,7 @@ MHD_create_response_from_heap (size_t size,
 {
   struct MHD_Response *response = MHD_create_response_from_data (size, buffer, 1, 0);
   if (response)
-    response->crfc = free_callback;
+    response->crfc = crfc;
   return response;
 }
 
