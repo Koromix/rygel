@@ -35,6 +35,12 @@ endif()
 
 set(MINIZ_SRC miniz/miniz.c)
 add_library(miniz STATIC EXCLUDE_FROM_ALL ${MINIZ_SRC})
+target_compile_definitions(miniz PRIVATE -DMINIZ_NO_STDIO
+                                         -DMINIZ_NO_TIME
+                                         -DMINIZ_NO_ARCHIVE_APIS
+                                         -DMINIZ_NO_ARCHIVE_WRITING_APIS
+                                         -DMINIZ_NO_ZLIB_APIS
+                                         -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 
 set(IMGUI_SRC imgui/imgui.cpp
               imgui/imgui_draw.cpp
