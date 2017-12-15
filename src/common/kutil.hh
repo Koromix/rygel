@@ -36,38 +36,18 @@
 // Config
 // ------------------------------------------------------------------------
 
-#if __has_include("kutil_config.hh")
-    #include "kutil_config.hh"
-#endif
+#define DEBUG_ENV_NAME "RYGEL_DEBUG"
 
-#ifndef DEBUG_ENV_NAME
-    #define DEBUG_ENV_NAME "KUTIL_DEBUG"
-#endif
+#define DYNAMICARRAY_BASE_CAPACITY 8
+#define DYNAMICARRAY_GROWTH_FACTOR 2
 
-#ifndef DYNAMICARRAY_BASE_CAPACITY
-    #define DYNAMICARRAY_BASE_CAPACITY 8
-#endif
-#ifndef DYNAMICARRAY_GROWTH_FACTOR
-    #define DYNAMICARRAY_GROWTH_FACTOR 2
-#endif
+// Must be a power-of-two
+#define HASHSET_BASE_CAPACITY 32
+#define HASHSET_MAX_LOAD_FACTOR 0.4f
 
-#ifndef HASHSET_BASE_CAPACITY
-    // Must be a power-of-two
-    #define HASHSET_BASE_CAPACITY 32
-#endif
-#ifndef HASHSET_MAX_LOAD_FACTOR
-    #define HASHSET_MAX_LOAD_FACTOR 0.4f
-#endif
-
-#ifndef FMT_STRING_BASE_CAPACITY
-    #define FMT_STRING_BASE_CAPACITY 128
-#endif
-#ifndef FMT_STRING_GROWTH_FACTOR
-    #define FMT_STRING_GROWTH_FACTOR 1.5f
-#endif
-#ifndef FMT_STRING_PRINT_BUFFER_SIZE
-    #define FMT_STRING_PRINT_BUFFER_SIZE 1024
-#endif
+#define FMT_STRING_BASE_CAPACITY 128
+#define FMT_STRING_GROWTH_FACTOR 1.5f
+#define FMT_STRING_PRINT_BUFFER_SIZE 1024
 
 // ------------------------------------------------------------------------
 // Utilities
