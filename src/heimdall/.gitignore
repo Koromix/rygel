@@ -1,9 +1,0 @@
-/bin/
-*.o
-*.exe
-*.dll
-*.so
-/.vs/
-CMakeLists.txt.user*
-.Rproj.user
-RcppExports.*
