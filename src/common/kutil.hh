@@ -919,12 +919,13 @@ public:
         Allocator allocator;
     };
 
+    template <typename U>
     class Iterator {
     public:
-        class DynamicQueue<T, BucketSize> *queue;
+        U *queue;
         Size idx;
 
-        Iterator(DynamicQueue<T, BucketSize> *queue, Size idx)
+        Iterator(U *queue, Size idx)
             : queue(queue), idx(idx) {}
 
         T *operator->() { return &(*queue)[idx]; }
@@ -932,15 +933,15 @@ public:
         T &operator*() { return (*queue)[idx]; }
         const T &operator*() const { return (*queue)[idx]; }
 
-        const Iterator &operator++()
+        Iterator &operator++()
         {
             idx++;
             return *this;
         }
-        Iterator operator++(int)
+        Iterator operator++(int) const
         {
             Iterator ret = *this;
-            idx++;
+            ++ret;
             return ret;
         }
 
@@ -955,7 +956,7 @@ public:
     Allocator *bucket_allocator;
 
     typedef T value_type;
-    typedef Iterator iterator_type;
+    typedef Iterator<DynamicQueue> iterator_type;
 
     DynamicQueue()
     {
@@ -986,10 +987,10 @@ public:
         bucket_allocator = &first_bucket->allocator;
     }
 
-    Iterator begin() { return Iterator(this, 0); }
-    const Iterator begin() const { return Iterator(this, 0); }
-    Iterator end() { return Iterator(this, len); }
-    const Iterator end() const { return Iterator(this, len); }
+    iterator_type begin() { return iterator_type(this, 0); }
+    Iterator<const DynamicQueue<T, BucketSize>> begin() const { return iterator_type(this, 0); }
+    iterator_type end() { return iterator_type(this, len); }
+    Iterator<const DynamicQueue<T, BucketSize>> end() const { return iterator_type(this, len); }
 
     const T &operator[](Size idx) const
     {
@@ -1038,8 +1039,8 @@ public:
         Size end_bucket_idx = end_idx / BucketSize;
 
         {
-            Iterator end_it = end();
-            for (Iterator it(this, from); it != end_it; it++) {
+            iterator_type end_it = end();
+            for (iterator_type it(this, from); it != end_it; it++) {
                 it->~T();
             }
         }
@@ -1071,8 +1072,8 @@ public:
         Size end_bucket_idx = end_idx / BucketSize;
 
         {
-            Iterator end_it(this, count);
-            for (Iterator it = begin(); it != end_it; it++) {
+            iterator_type end_it(this, count);
+            for (iterator_type it = begin(); it != end_it; it++) {
                 it->~T();
             }
         }
@@ -1109,20 +1110,22 @@ private:
 template <Size N>
 class Bitset {
 public:
+    template <typename T>
     class Iterator {
     public:
-        Bitset<N> *bitset;
+        T *bitset;
         Size offset;
         size_t bits = 0;
         int ctz;
 
-        Iterator(Bitset<N> *bitset, Size offset)
+        Iterator(T *bitset, Size offset)
             : bitset(bitset), offset(offset - 1)
         {
             operator++();
         }
 
-        Size operator*() {
+        Size operator*() const
+        {
             DebugAssert(offset <= ARRAY_SIZE(bitset->data));
 
             if (offset == ARRAY_SIZE(bitset->data))
@@ -1130,7 +1133,7 @@ public:
             return offset * SIZE(size_t) * 8 + ctz;
         }
 
-        const Iterator &operator++()
+        Iterator &operator++()
         {
             DebugAssert(offset <= ARRAY_SIZE(bitset->data));
 
@@ -1146,7 +1149,7 @@ public:
             return *this;
         }
 
-        Iterator operator++(int)
+        Iterator operator++(int) const
         {
             Iterator ret = *this;
             ++ret;
@@ -1161,17 +1164,18 @@ public:
     size_t data[(N + SIZE(size_t) - 1) / SIZE(size_t)] = {};
 
     typedef Size value_type;
-    typedef Iterator iterator_type;
+    typedef Iterator<Bitset<N>> iterator_type;
 
     void Clear()
     {
         memset(data, 0, SIZE(data));
     }
 
-    Iterator begin() { return Iterator(this, 0); }
-    const Iterator begin() const { return Iterator(this, 0); }
-    Iterator end() { return Iterator(this, ARRAY_SIZE(data)); }
-    const Iterator end() const { return Iterator(this, ARRAY_SIZE(data)); }
+    iterator_type begin() { return iterator_type(this, 0); }
+    Iterator<const Bitset<N>> begin() const { return Iterator<const Bitset<N>>(this, 0); }
+    iterator_type end() { return iterator_type(this, ARRAY_SIZE(data)); }
+    Iterator<const Bitset<N>> end() const
+        { return Iterator<const Bitset<N>>(this, ARRAY_SIZE(data)); }
 
     Size PopCount() const
     {
