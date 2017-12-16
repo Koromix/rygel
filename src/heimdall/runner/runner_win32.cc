@@ -97,24 +97,12 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 main_window.mouse_tracked = true;
             }
         } break;
-        case WM_LBUTTONDOWN: {
-            sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Left);
-        } break;
-        case WM_LBUTTONUP: {
-            sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Left);
-        } break;
-        case WM_MBUTTONDOWN: {
-            sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Middle);
-        } break;
-        case WM_MBUTTONUP: {
-            sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Middle);
-        } break;
-        case WM_RBUTTONDOWN: {
-            sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Right);
-        } break;
-        case WM_RBUTTONUP: {
-            sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Right);
-        } break;
+        case WM_LBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Left); } break;
+        case WM_LBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Left); } break;
+        case WM_MBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Middle); } break;
+        case WM_MBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Middle); } break;
+        case WM_RBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Right); } break;
+        case WM_RBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Right); } break;
         case WM_XBUTTONDOWN: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
             sys_mouse_priv.buttons |= (unsigned int)(1 << button);
