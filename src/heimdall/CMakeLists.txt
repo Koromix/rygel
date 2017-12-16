@@ -22,6 +22,6 @@ target_link_libraries(heimdall PUBLIC miniz imgui gdi32 opengl32 imm32)
 set(RUNNER_SRC runner/main.cc
                runner/runner_win32.cc
                runner/runner.hh)
-add_executable(runner ${RUNNER_SRC})
+add_executable(runner WIN32 ${RUNNER_SRC})
 set_target_properties(runner PROPERTIES OUTPUT_NAME heimdall)
 target_link_libraries(runner PUBLIC heimdall)
