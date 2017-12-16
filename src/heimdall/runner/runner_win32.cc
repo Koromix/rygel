@@ -42,6 +42,8 @@ static MainInfo sys_main_priv;
 const MainInfo *const sys_main = &sys_main_priv;
 static DisplayInfo sys_display_priv;
 const DisplayInfo *const sys_display = &sys_display_priv;
+static KeyboardInfo sys_keyboard_priv;
+const KeyboardInfo *const sys_keyboard = &sys_keyboard_priv;
 static MouseInfo sys_mouse_priv;
 const MouseInfo *const sys_mouse = &sys_mouse_priv;
 
@@ -77,11 +79,63 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             sys_display_priv.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: {
-            main_window.mouse_tracked = false;
-        } // fallthrough
+        case WM_MOUSELEAVE: { main_window.mouse_tracked = false; } // fallthrough
         case WM_KILLFOCUS: {
+            sys_keyboard_priv.keys.Clear();
             sys_mouse_priv.buttons = 0;
+        } break;
+
+        case WM_SYSKEYDOWN:
+        case WM_SYSKEYUP:
+        case WM_KEYDOWN:
+        case WM_KEYUP: {
+#define HANDLE_KEY(VkCode, Code) \
+                case (VkCode): { sys_keyboard_priv.keys.Set((Size)(Code), state); } break
+
+            bool state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            switch (wparam) {
+                HANDLE_KEY(VK_CONTROL, KeyboardInfo::Key::Control);
+                HANDLE_KEY(VK_MENU, KeyboardInfo::Key::Alt);
+                HANDLE_KEY(VK_SHIFT, KeyboardInfo::Key::Shift);
+                HANDLE_KEY(VK_TAB, KeyboardInfo::Key::Tab);
+                HANDLE_KEY(VK_DELETE, KeyboardInfo::Key::Delete);
+                HANDLE_KEY(VK_BACK, KeyboardInfo::Key::Backspace);
+                HANDLE_KEY(VK_RETURN, KeyboardInfo::Key::Enter);
+                HANDLE_KEY(VK_ESCAPE, KeyboardInfo::Key::Escape);
+                HANDLE_KEY(VK_HOME, KeyboardInfo::Key::Home);
+                HANDLE_KEY(VK_END, KeyboardInfo::Key::End);
+                HANDLE_KEY(VK_PRIOR, KeyboardInfo::Key::PageUp);
+                HANDLE_KEY(VK_NEXT, KeyboardInfo::Key::PageDown);
+                HANDLE_KEY(VK_LEFT, KeyboardInfo::Key::Left);
+                HANDLE_KEY(VK_RIGHT, KeyboardInfo::Key::Right);
+                HANDLE_KEY(VK_UP, KeyboardInfo::Key::Up);
+                HANDLE_KEY(VK_DOWN, KeyboardInfo::Key::Down);
+                HANDLE_KEY('A', KeyboardInfo::Key::A);
+                HANDLE_KEY('C', KeyboardInfo::Key::C);
+                HANDLE_KEY('V', KeyboardInfo::Key::V);
+                HANDLE_KEY('X', KeyboardInfo::Key::X);
+                HANDLE_KEY('Y', KeyboardInfo::Key::Y);
+                HANDLE_KEY('Z', KeyboardInfo::Key::Z);
+            }
+
+#undef HANDLE_KEY
+        } break;
+        case WM_CHAR: {
+            uint16_t c = (uint16_t)wparam;
+
+            // TODO: Deal with supplementary planes
+            if (c < 0x80 && LIKELY(sys_keyboard_priv.text.Available() >= 1)) {
+                sys_keyboard_priv.text.Append((char)c);
+            } else if (c < 0x800 && LIKELY(sys_keyboard_priv.text.Available() >= 2)) {
+                sys_keyboard_priv.text.Append((char)(0xC0 | (c >> 6)));
+                sys_keyboard_priv.text.Append((char)(0x80 | (c & 0x3F)));
+            } else if (LIKELY(sys_keyboard_priv.text.Available() >= 3)) {
+                sys_keyboard_priv.text.Append((char)(0xE0 | (c >> 12)));
+                sys_keyboard_priv.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
+                sys_keyboard_priv.text.Append((char)(0x80 | (c & 0x3F)));
+            } else {
+                LogError("Dropping text events (buffer full)");
+            }
         } break;
 
         case WM_MOUSEMOVE: {
@@ -384,6 +438,7 @@ bool Run()
 
     while (sys_main_priv.run) {
         // Reset relative inputs
+        sys_keyboard_priv.text.Clear();
         sys_mouse_priv.wheel_x = 0;
         sys_mouse_priv.wheel_y = 0;
 
@@ -400,6 +455,12 @@ bool Run()
                 DispatchMessage(&msg);
             }
         }
+
+        // Append NUL byte to keyboard text
+        if (sys_keyboard_priv.text.len == SIZE(sys_keyboard_priv.text.data)) {
+            sys_keyboard_priv.text.len--;
+        }
+        sys_keyboard_priv.text.Append('\0');
 
         // Update monotonic clock
         {

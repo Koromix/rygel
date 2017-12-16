@@ -109,6 +109,26 @@ static bool InitImGui()
         io->Fonts->TexID = (void *)(intptr_t)font_texture;
     }
 
+    io->KeyMap[ImGuiKey_Tab] = (int)KeyboardInfo::Key::Tab;
+    io->KeyMap[ImGuiKey_Delete] = (int)KeyboardInfo::Key::Delete;
+    io->KeyMap[ImGuiKey_Backspace] = (int)KeyboardInfo::Key::Backspace;
+    io->KeyMap[ImGuiKey_Enter] = (int)KeyboardInfo::Key::Enter;
+    io->KeyMap[ImGuiKey_Escape] = (int)KeyboardInfo::Key::Escape;
+    io->KeyMap[ImGuiKey_Home] = (int)KeyboardInfo::Key::Home;
+    io->KeyMap[ImGuiKey_End] = (int)KeyboardInfo::Key::End;
+    io->KeyMap[ImGuiKey_PageUp] = (int)KeyboardInfo::Key::PageUp;
+    io->KeyMap[ImGuiKey_PageDown] = (int)KeyboardInfo::Key::PageDown;
+    io->KeyMap[ImGuiKey_LeftArrow] = (int)KeyboardInfo::Key::Left;
+    io->KeyMap[ImGuiKey_RightArrow] = (int)KeyboardInfo::Key::Right;
+    io->KeyMap[ImGuiKey_UpArrow] = (int)KeyboardInfo::Key::Up;
+    io->KeyMap[ImGuiKey_DownArrow] = (int)KeyboardInfo::Key::Down;
+    io->KeyMap[ImGuiKey_A] = (int)KeyboardInfo::Key::A;
+    io->KeyMap[ImGuiKey_C] = (int)KeyboardInfo::Key::C;
+    io->KeyMap[ImGuiKey_V] = (int)KeyboardInfo::Key::V;
+    io->KeyMap[ImGuiKey_X] = (int)KeyboardInfo::Key::X;
+    io->KeyMap[ImGuiKey_Y] = (int)KeyboardInfo::Key::Y;
+    io->KeyMap[ImGuiKey_Z] = (int)KeyboardInfo::Key::Z;
+
     imgui_guard.disable();
     return true;
 }
@@ -149,8 +169,19 @@ bool StartRender()
     }
 
     ImGuiIO *io = &ImGui::GetIO();
+
     io->DisplaySize = ImVec2((float)sys_display->width, (float)sys_display->height);
     io->DeltaTime = (float)sys_main->monotonic_delta;
+
+    memset(io->KeysDown, 0, SIZE(io->KeysDown));
+    for (Size idx: sys_keyboard->keys) {
+        io->KeysDown[idx] = true;
+    }
+    io->KeyCtrl = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Control);
+    io->KeyAlt = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Alt);
+    io->KeyShift = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Shift);
+    io->AddInputCharactersUTF8(sys_keyboard->text.data);
+
     io->MousePos = ImVec2((float)sys_mouse->x, (float)sys_mouse->y);
     for (Size i = 0; i < ARRAY_SIZE(io->MouseDown); i++) {
         io->MouseDown[i] = sys_mouse->buttons & (unsigned int)(1 << i);

@@ -19,6 +19,36 @@ struct DisplayInfo {
     int width, height;
 };
 
+struct KeyboardInfo {
+    enum class Key {
+        Control,
+        Alt,
+        Shift,
+        Tab,
+        Delete,
+        Backspace,
+        Enter,
+        Escape,
+        Home,
+        End,
+        PageUp,
+        PageDown,
+        Left,
+        Right,
+        Up,
+        Down,
+        A,
+        C,
+        V,
+        X,
+        Y,
+        Z
+    };
+
+    Bitset<256> keys;
+    LocalArray<char, 256> text;
+};
+
 struct MouseInfo {
     // Follows ImGui ordering
     enum class Button: unsigned int {
@@ -34,6 +64,7 @@ struct MouseInfo {
 
 extern const MainInfo *const sys_main;
 extern const DisplayInfo *const sys_display;
+extern const KeyboardInfo *const sys_keyboard;
 extern const MouseInfo *const sys_mouse;
 
 bool Run();
