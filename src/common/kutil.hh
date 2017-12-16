@@ -1191,15 +1191,15 @@ public:
     inline bool Test(Size idx) const
     {
         DebugAssert(idx >= 0 && idx < N);
-        return data[idx / (SIZE(size_t) * 8)] & (1 << idx % (SIZE(size_t) * 8));
+        return data[idx / (SIZE(size_t) * 8)] & ((size_t)1 << (idx % (SIZE(size_t) * 8)));
     }
     inline void Set(Size idx, bool value = true)
     {
         DebugAssert(idx >= 0 && idx < N);
         if (value) {
-            data[idx / (SIZE(size_t) * 8)] |= (size_t)1 << idx % (SIZE(size_t) * 8);
+            data[idx / (SIZE(size_t) * 8)] |= (size_t)1 << (idx % (SIZE(size_t) * 8));
         } else {
-            data[idx / (SIZE(size_t) * 8)] &= ~((size_t)1 << idx % (SIZE(size_t) * 8));
+            data[idx / (SIZE(size_t) * 8)] &= ~((size_t)1 << (idx % (SIZE(size_t) * 8)));
         }
     }
 
