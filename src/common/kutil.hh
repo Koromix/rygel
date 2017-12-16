@@ -696,6 +696,8 @@ public:
     T *end() { return data + len; }
     const T *end() const { return data + len; }
 
+    Size Available() const { return SIZE(data) - len; }
+
     T &operator[](Size idx)
     {
         DebugAssert(idx >= 0 && idx < len);
