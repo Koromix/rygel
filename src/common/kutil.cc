@@ -798,9 +798,6 @@ void PopLogHandler()
 // System
 // ------------------------------------------------------------------------
 
-static char executable_path[4096];
-static char executable_dir[4096];
-
 bool ReadFile(const char *filename, Size max_size,
               Allocator *alloc, Span<uint8_t> *out_data)
 {
@@ -1045,47 +1042,53 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
     return true;
 }
 
-static void InitExecutablePaths()
+const char *GetApplicationExecutable()
 {
-    if (executable_path[0])
-        return;
-
-    Size path_len;
 #if defined(_WIN32)
-    path_len = GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
-    Assert(path_len);
-    Assert(path_len < SIZE(executable_path));
+    static char executable_path[4096];
+
+    if (!executable_path[0]) {
+        Size path_len = GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
+        Assert(path_len);
+        Assert(path_len < SIZE(executable_path));
+    }
+
+    return executable_path;
 #elif defined(__linux__)
-    {
+    static char executable_path[4096];
+
+    if (!executable_path[0]) {
         char *path_buf = realpath("/proc/self/exe", nullptr);
         Assert(path_buf);
-        path_len = (Size)strlen(path_buf);
+        Size path_len = (Size)strlen(path_buf);
         Assert(path_len < SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
-#else
-    #error InitExecutablePaths() not implemented for this platform
-#endif
 
-    {
-        Size dir_len = path_len;
+    return executable_path;
+#else
+    #error GetApplicationExecutable() not implemented for this platform
+#endif
+}
+
+const char *GetApplicationDirectory()
+{
+#if defined(_WIN32) || defined(__linux__)
+    static char executable_dir[4096];
+
+    if (!executable_dir[0]) {
+        const char *executable_path = GetApplicationExecutable();
+        Size dir_len = (Size)strlen(executable_path);
         while (dir_len && !strchr(PATH_SEPARATORS, executable_path[--dir_len]));
         memcpy(executable_dir, executable_path, (size_t)dir_len);
         executable_dir[dir_len] = 0;
     }
-}
 
-const char *GetExecutablePath()
-{
-    InitExecutablePaths();
-    return executable_path;
-}
-
-const char *GetExecutableDirectory()
-{
-    InitExecutablePaths();
     return executable_dir;
+#else
+    #error GetApplicationDirectory() not implemented for this platform
+#endif
 }
 
 Size GetPathExtension(const char *filename, Span<char> out_buf,

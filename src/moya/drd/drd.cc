@@ -732,8 +732,11 @@ Commands:
 
     // Add default data directory
     {
-        const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", GetExecutableDirectory()).ptr;
-        main_data_directories.Append(default_data_dir);
+        const char *app_dir = GetApplicationDirectory();
+        if (app_dir) {
+            const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", app_dir).ptr;
+            main_data_directories.Append(default_data_dir);
+        }
     }
 
 #define HANDLE_COMMAND(Cmd, Func) \

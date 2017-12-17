@@ -2273,8 +2273,8 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
                              HeapArray<const char *> *out_files, Size max_files);
 
-const char *GetExecutablePath();
-const char *GetExecutableDirectory();
+const char *GetApplicationExecutable(); // Can be NULL
+const char *GetApplicationDirectory(); // Can be NULL
 
 Size GetPathExtension(const char *filename, Span<char> out_buf,
                       CompressionType *out_compression_type = nullptr);

@@ -66,7 +66,8 @@ static bool UpdateStaticResources()
 {
     Allocator temp_alloc;
 
-    const char *filename = Fmt(&temp_alloc, "%1%/talyn_res.dll", GetExecutableDirectory()).ptr;
+    Assert(GetApplicationDirectory());
+    const char *filename = Fmt(&temp_alloc, "%1%/talyn_res.dll", GetApplicationDirectory()).ptr;
     {
         static FILETIME last_time;
 
@@ -430,8 +431,11 @@ Talyn options:
 
     // Add default data directory
     {
-        const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", GetExecutableDirectory()).ptr;
-        main_data_directories.Append(default_data_dir);
+        const char *app_dir = GetApplicationDirectory();
+        if (app_dir) {
+            const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", app_dir).ptr;
+            main_data_directories.Append(default_data_dir);
+        }
     }
 
     uint16_t port = 8888;
