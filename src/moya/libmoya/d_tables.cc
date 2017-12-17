@@ -201,9 +201,9 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
             FAIL_PARSE_IF(raw_table_sections[j].raw_len !=
                             (uint32_t)raw_table_sections[j].values_count *
                             raw_table_sections[j].value_len);
-            table.sections[j].raw_offset = raw_table_ptr.raw_offset +
-                                           raw_table_sections[j].raw_offset;
-            table.sections[j].raw_len = raw_table_sections[j].raw_len;
+            table.sections[j].raw_offset = (Size)(raw_table_ptr.raw_offset +
+                                                  raw_table_sections[j].raw_offset);
+            table.sections[j].raw_len = (Size)raw_table_sections[j].raw_len;
             table.sections[j].values_count = raw_table_sections[j].values_count;
             table.sections[j].value_len = raw_table_sections[j].value_len;
         }

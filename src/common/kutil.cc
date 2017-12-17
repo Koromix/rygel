@@ -565,7 +565,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args,
             unsigned int digit = (unsigned int)marker_ptr[idx_end] - '0';
             if (digit > 9)
                 break;
-            idx = (idx * 10) + digit;
+            idx = (Size)(idx * 10) + (Size)digit;
             idx_end++;
         }
 
@@ -1463,7 +1463,8 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                         ReverseBytes(&footer[1]);
 #endif
 
-                        if (ctx->crc32 != footer[0] || ctx->uncompressed_size != footer[1]) {
+                        if (ctx->crc32 != footer[0] ||
+                                (uint32_t)ctx->uncompressed_size != footer[1]) {
                             LogError("Failed CRC32 or size check in GZip stream '%1'", filename);
                             error = true;
                             return -1;
