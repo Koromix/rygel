@@ -203,17 +203,15 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
     {
-        if (!u) {
+        if (!u)
             return 32;
-        }
 
         return __builtin_clz(u);
     }
     static inline int CountLeadingZeros(uint64_t u)
     {
-        if (!u) {
+        if (!u)
             return 64;
-        }
 
     #if UINT64_MAX == ULONG_MAX
         return __builtin_clzl(u);
@@ -226,17 +224,15 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
 
     static inline int CountTrailingZeros(uint32_t u)
     {
-        if (!u) {
+        if (!u)
             return 32;
-        }
 
         return __builtin_ctz(u);
     }
     static inline int CountTrailingZeros(uint64_t u)
     {
-        if (!u) {
+        if (!u)
             return 64;
-        }
 
     #if UINT64_MAX == ULONG_MAX
         return __builtin_ctzl(u);
@@ -826,9 +822,8 @@ public:
 
     void Grow(Size reserve_capacity = 1)
     {
-        if (reserve_capacity <= capacity - len) {
+        if (reserve_capacity <= capacity - len)
             return;
-        }
 
         Size needed_capacity;
 #if !defined(NDEBUG)
