@@ -186,9 +186,6 @@ static inline constexpr int32_t ReverseBytes(int32_t i)
 static inline constexpr int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-template <typename T>
-void ReverseBytes(T *v) { *v = ReverseBytes(*v); }
-
 #ifdef ARCH_LITTLE_ENDIAN
     template <typename T>
     constexpr T LittleEndian(T v) { return v; }

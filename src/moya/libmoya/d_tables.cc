@@ -89,12 +89,10 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
         FAIL_PARSE_IF(raw_main_header.sections_count != 1);
 
         memcpy(&raw_main_section, file_data.ptr + SIZE(PackedHeader1111), SIZE(PackedSection1111));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_main_section.values_count);
-        ReverseBytes(&raw_main_section.value_len);
-        ReverseBytes(&raw_main_section.raw_len);
-        ReverseBytes(&raw_main_section.raw_offset);
-#endif
+        raw_main_section.values_count = BigEndian(raw_main_section.values_count);
+        raw_main_section.value_len = BigEndian(raw_main_section.value_len);
+        raw_main_section.raw_len = BigEndian(raw_main_section.raw_len);
+        raw_main_section.raw_offset = BigEndian(raw_main_section.raw_offset);
 
         int version = 0, revision = 0;
         sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
@@ -112,11 +110,10 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
             memcpy(&raw_table_ptr, file_data.ptr + SIZE(PackedHeader1111) +
                                    SIZE(PackedSection1111) + i * SIZE(PackedTablePtr1111),
                    SIZE(PackedTablePtr1111));
-#ifdef ARCH_LITTLE_ENDIAN
-            ReverseBytes(&raw_table_ptr.date_range[0]);
-            ReverseBytes(&raw_table_ptr.date_range[1]);
-            ReverseBytes(&raw_table_ptr.raw_offset);
-#endif
+            raw_table_ptr.date_range[0] = BigEndian(raw_table_ptr.date_range[0]);
+            raw_table_ptr.date_range[1] = BigEndian(raw_table_ptr.date_range[1]);
+            raw_table_ptr.raw_offset = BigEndian(raw_table_ptr.raw_offset);
+
             FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset + SIZE(PackedHeader1111)));
         }
 
@@ -147,12 +144,11 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
                     memmove((uint8_t *)&raw_table_sections[j] + 8, &raw_table_sections[j],
                             SIZE(PackedSection1111) - 8);
                 }
-#ifdef ARCH_LITTLE_ENDIAN
-                ReverseBytes(&raw_table_sections[j].values_count);
-                ReverseBytes(&raw_table_sections[j].value_len);
-                ReverseBytes(&raw_table_sections[j].raw_len);
-                ReverseBytes(&raw_table_sections[j].raw_offset);
-#endif
+                raw_table_sections[j].values_count = BigEndian(raw_table_sections[j].values_count);
+                raw_table_sections[j].value_len = BigEndian(raw_table_sections[j].value_len);
+                raw_table_sections[j].raw_len = BigEndian(raw_table_sections[j].raw_len);
+                raw_table_sections[j].raw_offset = BigEndian(raw_table_sections[j].raw_offset);
+
                 FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset +
                                                      raw_table_sections[j].raw_offset +
                                                      raw_table_sections[j].raw_len));
@@ -238,9 +234,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
         PackedTreeNode raw_node;
         memcpy(&raw_node, file_data + table.sections[0].raw_offset +
                           (size_t)(i * SIZE(PackedTreeNode)), SIZE(PackedTreeNode));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_node.children_idx);
-#endif
+        raw_node.children_idx = BigEndian(raw_node.children_idx);
 
         if (raw_node.function != 12) {
             ghm_node.type = GhmDecisionNode::Type::Test;
@@ -308,9 +302,9 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
         Size block_end;
         {
-            uint16_t end_idx = *(uint16_t *)(file_data + table.sections[0].raw_offset +
-                                             root_idx * 2);
-            ReverseBytes(&end_idx);
+            const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
+                                         root_idx * 2;
+            uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
             FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedDiagnosisPtr);
         }
@@ -322,12 +316,10 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             PackedDiagnosisPtr raw_diag_ptr;
             {
                 memcpy(&raw_diag_ptr, file_data + block_offset, SIZE(PackedDiagnosisPtr));
-#ifdef ARCH_LITTLE_ENDIAN
-                ReverseBytes(&raw_diag_ptr.code456);
-                ReverseBytes(&raw_diag_ptr.section2_idx);
-                ReverseBytes(&raw_diag_ptr.section4_bit);
-                ReverseBytes(&raw_diag_ptr.section4_idx);
-#endif
+                raw_diag_ptr.code456 = BigEndian(raw_diag_ptr.code456);
+                raw_diag_ptr.section2_idx = BigEndian(raw_diag_ptr.section2_idx);
+                raw_diag_ptr.section4_bit = BigEndian(raw_diag_ptr.section4_bit);
+                raw_diag_ptr.section4_idx = BigEndian(raw_diag_ptr.section4_idx);
 
                 FAIL_PARSE_IF(raw_diag_ptr.section2_idx >= table.sections[2].values_count);
                 FAIL_PARSE_IF(raw_diag_ptr.section3_idx >= table.sections[3].values_count);
@@ -435,9 +427,9 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
         Size block_end;
         {
-            uint16_t end_idx = *(uint16_t *)(file_data + table.sections[0].raw_offset +
-                                             root_idx * 2);
-            ReverseBytes(&end_idx);
+            const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
+                                         root_idx * 2;
+            uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
             FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedProcedurePtr);
         }
@@ -458,12 +450,10 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
             PackedProcedurePtr raw_proc_ptr;
             {
                 memcpy(&raw_proc_ptr, file_data + block_offset, SIZE(PackedProcedurePtr));
-#ifdef ARCH_LITTLE_ENDIAN
-                ReverseBytes(&raw_proc_ptr.seq_phase);
-                ReverseBytes(&raw_proc_ptr.section2_idx);
-                ReverseBytes(&raw_proc_ptr.date_min);
-                ReverseBytes(&raw_proc_ptr.date_max);
-#endif
+                raw_proc_ptr.seq_phase = BigEndian(raw_proc_ptr.seq_phase);
+                raw_proc_ptr.section2_idx = BigEndian(raw_proc_ptr.section2_idx);
+                raw_proc_ptr.date_min = BigEndian(raw_proc_ptr.date_min);
+                raw_proc_ptr.date_max = BigEndian(raw_proc_ptr.date_max);
 
                 FAIL_PARSE_IF(raw_proc_ptr.section2_idx >= table.sections[2].values_count);
             }
@@ -534,9 +524,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         memcpy(&raw_ghm_root, file_data + table.sections[0].raw_offset +
                               i * table.sections[0].value_len,
                (size_t)table.sections[0].value_len);
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_ghm_root.type_seq);
-#endif
+        raw_ghm_root.type_seq = BigEndian(raw_ghm_root.type_seq);
 
         // GHM root code
         {
@@ -635,13 +623,11 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
         PackedCell raw_cell;
         memcpy(&raw_cell, file_data + table.sections[section_idx].raw_offset +
                           i * SIZE(PackedCell), SIZE(PackedCell));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_cell.var1_min);
-        ReverseBytes(&raw_cell.var1_max);
-        ReverseBytes(&raw_cell.var2_min);
-        ReverseBytes(&raw_cell.var2_max);
-        ReverseBytes(&raw_cell.value);
-#endif
+        raw_cell.var1_min = BigEndian(raw_cell.var1_min);
+        raw_cell.var1_max = BigEndian(raw_cell.var1_max);
+        raw_cell.var2_min = BigEndian(raw_cell.var2_min);
+        raw_cell.var2_max = BigEndian(raw_cell.var2_max);
+        raw_cell.value = BigEndian(raw_cell.value);
 
         cell.limits[0].min = raw_cell.var1_min;
         cell.limits[0].max = raw_cell.var1_max + 1;
@@ -689,14 +675,14 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
         PackedGhsNode raw_ghs_node;
         memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
                          i * SIZE(PackedGhsNode), SIZE(PackedGhsNode));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_ghs_node.type_seq);
+        raw_ghs_node.type_seq = BigEndian(raw_ghs_node.type_seq);
         for (int j = 0; j < 2; j++) {
-            ReverseBytes(&raw_ghs_node.sectors[j].ghs_code);
-            ReverseBytes(&raw_ghs_node.sectors[j].high_duration_treshold);
-            ReverseBytes(&raw_ghs_node.sectors[j].low_duration_treshold);
+            raw_ghs_node.sectors[j].ghs_code = BigEndian(raw_ghs_node.sectors[j].ghs_code);
+            raw_ghs_node.sectors[j].high_duration_treshold =
+                BigEndian(raw_ghs_node.sectors[j].high_duration_treshold);
+            raw_ghs_node.sectors[j].low_duration_treshold =
+                BigEndian(raw_ghs_node.sectors[j].low_duration_treshold);
         }
-#endif
 
         if (!current_ghs.ghm.IsValid()) {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z'};
@@ -853,12 +839,10 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
         PackedPair raw_pair;
         memcpy(&raw_pair, file_data + table.sections[section_idx].raw_offset +
                           i * SIZE(PackedPair), SIZE(PackedPair));
-#ifdef ARCH_LITTLE_ENDIAN
-        ReverseBytes(&raw_pair.diag_code123);
-        ReverseBytes(&raw_pair.diag_code456);
-        ReverseBytes(&raw_pair.proc_code123);
-        ReverseBytes(&raw_pair.proc_code456);
-#endif
+        raw_pair.diag_code123 = BigEndian(raw_pair.diag_code123);
+        raw_pair.diag_code456 = BigEndian(raw_pair.diag_code456);
+        raw_pair.proc_code123 = BigEndian(raw_pair.proc_code123);
+        raw_pair.proc_code456 = BigEndian(raw_pair.proc_code456);
 
         pair.diag = ConvertDiagnosisCode((int16_t)raw_pair.diag_code123, raw_pair.diag_code456);
         {

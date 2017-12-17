@@ -1458,10 +1458,8 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                         } else {
                             memcpy(footer, ctx->in_ptr, SIZE(footer));
                         }
-#ifndef ARCH_LITTLE_ENDIAN
-                        ReverseBytes(&footer[0]);
-                        ReverseBytes(&footer[1]);
-#endif
+                        footer[0] = LittleEndian(footer[0]);
+                        footer[1] = LittleEndian(footer[1]);
 
                         if (ctx->crc32 != footer[0] ||
                                 (uint32_t)ctx->uncompressed_size != footer[1]) {
