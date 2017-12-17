@@ -346,7 +346,7 @@ Constraints options:
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set)
+        if (!table_set || !table_set->indexes.len)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -416,7 +416,7 @@ R"(Usage: drd info [options] name ...
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set)
+        if (!table_set || !table_set->indexes.len)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -505,7 +505,7 @@ List options:
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set)
+        if (!table_set || !table_set->indexes.len)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -676,7 +676,7 @@ Dump options:
 
     if (filenames.len) {
         TableSet table_set;
-        if (!LoadTableFiles(filenames, &table_set) && !table_set.indexes.len)
+        if (!LoadTableFiles(filenames, &table_set) || !table_set.indexes.len)
             return false;
         DumpTableSetHeaders(table_set);
         if (dump) {
@@ -684,7 +684,7 @@ Dump options:
         }
     } else {
         const TableSet *table_set = GetMainTableSet();
-        if (!table_set)
+        if (!table_set || !table_set->indexes.len)
             return false;
         DumpTableSetHeaders(*table_set);
         if (dump) {
