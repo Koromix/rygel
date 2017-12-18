@@ -378,6 +378,8 @@ ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
     auto UNIQUE_ID(defer) = ScopeGuardDeferHelper() + [&]()
 #define DEFER_N(Name) \
     auto Name = ScopeGuardDeferHelper() + [&]()
+#define DEFER_C(...) \
+    auto UNIQUE_ID(defer) = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 #define DEFER_NC(Name, ...) \
     auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 
@@ -2166,6 +2168,8 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     void Close();
 
+    Size Len() const;
+
     Size Read(Size max_len, void *out_buf);
 
 private:
@@ -2240,6 +2244,10 @@ private:
 // System
 // ------------------------------------------------------------------------
 
+CompressionType GetPathCompression(const char *filename);
+Size GetPathExtension(const char *filename, Span<char> out_buf,
+                      CompressionType *out_compression_type = nullptr);
+
 #ifdef _WIN32
     #define PATH_SEPARATORS "\\/"
     #define FOPEN_COMMON_FLAGS
@@ -2248,24 +2256,41 @@ private:
     #define FOPEN_COMMON_FLAGS "e"
 #endif
 
-bool ReadFile(const char *filename, Size max_size,
-              Allocator *alloc, Span<uint8_t> *out_data);
-static inline bool ReadFile(const char *filename, Size max_size,
-                            Allocator *alloc, uint8_t **out_data, Size *out_len)
+bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+              CompressionType compression_type, Span<uint8_t> *out_buf);
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            CompressionType compression_type, uint8_t **out_data, Size *out_len)
 {
-    Span<uint8_t> data;
-    if (!ReadFile(filename, max_size, alloc, &data))
+    Span<uint8_t> buf;
+    if (!ReadFile(filename, max_size, alloc, compression_type, &buf))
         return false;
-    *out_data = data.ptr;
-    *out_len = data.len;
+    *out_data = buf.ptr;
+    *out_len = buf.len;
     return true;
 }
-static inline bool ReadFile(const char *filename, Size max_size,
-                            Allocator *alloc, Span<char> *out_data)
-    { return ReadFile(filename, max_size, alloc, (uint8_t **)&out_data->ptr, &out_data->len); }
-static inline bool ReadFile(const char *filename, Size max_size,
-                            Allocator *alloc, char **out_data, Size *out_len)
-    { return ReadFile(filename, max_size, alloc, (uint8_t **)out_data, out_len); }
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            Span<uint8_t> *out_buf)
+    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename), out_buf); }
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            uint8_t **out_data, Size *out_len)
+    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename), out_data, out_len); }
+
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            CompressionType compression_type, Span<char> *out_buf)
+    { return ReadFile(filename, max_size, alloc, compression_type,
+                      (uint8_t **)&out_buf->ptr, &out_buf->len); }
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            CompressionType compression_type, char **out_data, Size *out_len)
+    { return ReadFile(filename, max_size, alloc, compression_type,
+                      (uint8_t **)out_data, out_len); }
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            Span<char> *out_buf)
+    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename),
+                      (uint8_t **)&out_buf->ptr, &out_buf->len); }
+static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+                            char **out_data, Size *out_len)
+    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename),
+                      (uint8_t **)out_data, out_len); }
 
 enum class FileType {
     Directory,
@@ -2292,9 +2317,6 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
-
-Size GetPathExtension(const char *filename, Span<char> out_buf,
-                      CompressionType *out_compression_type = nullptr);
 
 // ------------------------------------------------------------------------
 // Option Parser

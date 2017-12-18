@@ -807,35 +807,50 @@ void PopLogHandler()
 // System
 // ------------------------------------------------------------------------
 
-bool ReadFile(const char *filename, Size max_size,
-              Allocator *alloc, Span<uint8_t> *out_data)
+bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
+              CompressionType compression_type, Span<uint8_t> *out_buf)
 {
-    FILE *fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
-    if (!fp) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
+    StreamReader st(filename, compression_type);
+    if (st.error)
         return false;
-    }
-    DEFER { fclose(fp); };
 
-    Span<uint8_t> data;
-    fseek(fp, 0, SEEK_END);
-    data.len = ftell(fp);
-    if (data.len > max_size) {
-        LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
-        return false;
-    }
-    fseek(fp, 0, SEEK_SET);
+    Size st_len = st.Len();
+    if (st_len >= 0) {
+        if (st_len > max_size) {
+            LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
+            return false;
+        }
 
-    data.ptr = (uint8_t *)Allocator::Allocate(alloc, data.len);
-    DEFER_N(data_guard) { Allocator::Release(alloc, data.ptr, data.len); };
-    if (fread(data.ptr, 1, (size_t)data.len, fp) != (size_t)data.len || ferror(fp)) {
-        LogError("Error while reading file '%1'", filename);
-        return false;
-    }
+        Span<uint8_t> buf;
+        buf.ptr = (uint8_t *)Allocator::Allocate(alloc, st_len);
+        DEFER_N(buf_guard) { Allocator::Release(alloc, buf.ptr, st_len); };
+        buf.len = st.Read(st_len, buf.ptr);
+        if (buf.len < 0)
+            return false;
 
-    data_guard.disable();
-    *out_data = data;
-    return true;
+        buf_guard.disable();
+        *out_buf = buf;
+        return true;
+    } else {
+        HeapArray<uint8_t> buf;
+        buf.Grow(Megabytes(1));
+
+        Size read_len;
+        while ((read_len = st.Read(buf.capacity - buf.len, buf.end())) > 0) {
+            buf.len += read_len;
+            if (buf.len > max_size) {
+                LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
+                return false;
+            }
+            buf.Grow(Megabytes(1));
+        }
+        if (st.error)
+            return false;
+
+        buf.Trim();
+        *out_buf = buf.Leak();
+        return true;
+    }
 }
 
 #ifdef _WIN32
@@ -1153,6 +1168,13 @@ const char *GetApplicationDirectory()
 #endif
 }
 
+CompressionType GetPathCompression(const char *filename)
+{
+    CompressionType compression_type;
+    GetPathExtension(filename, Span<char>(nullptr, 0), &compression_type);
+    return compression_type;
+}
+
 Size GetPathExtension(const char *filename, Span<char> out_buf,
                       CompressionType *out_compression_type)
 {
@@ -1302,6 +1324,28 @@ void StreamReader::Close()
     error = false;
     eof = false;
     Allocator::ReleaseAll(&str_alloc);
+}
+
+Size StreamReader::Len() const
+{
+    if (compression.type == CompressionType::None) {
+        switch (source.type) {
+            case SourceType::File: {
+                DEFER_C(pos = ftell(source.u.fp)) { fseek(source.u.fp, pos, SEEK_SET); };
+                if (fseek(source.u.fp, 0, SEEK_END) < 0)
+                    return -1;
+                Size len = ftell(source.u.fp);
+                return len;
+            } break;
+
+            case SourceType::Memory: {
+                return source.u.memory.buf.len;
+            } break;
+        }
+        Assert(false);
+    } else {
+        return -1;
+    }
 }
 
 Size StreamReader::Read(Size max_len, void *out_buf)
