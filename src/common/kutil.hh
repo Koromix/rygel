@@ -380,6 +380,22 @@ ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
 #define DEFER_NC(Name, ...) \
     auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
 
+#define INIT(Name) \
+    class UNIQUE_ID(InitHelper) { \
+    public: \
+        UNIQUE_ID(InitHelper)(); \
+    }; \
+    static UNIQUE_ID(InitHelper) UNIQUE_ID(init); \
+    UNIQUE_ID(InitHelper)::UNIQUE_ID(InitHelper)()
+
+#define EXIT(Name) \
+    class UNIQUE_ID(ExitHelper) { \
+    public: \
+        ~UNIQUE_ID(ExitHelper)(); \
+    }; \
+    static UNIQUE_ID(ExitHelper) UNIQUE_ID(exit); \
+    UNIQUE_ID(ExitHelper)::~UNIQUE_ID(ExitHelper)()
+
 template <typename T>
 T MultiCmp()
 {
