@@ -12,7 +12,10 @@ set(HEIMDALL_SRC libheimdall/core.cc
                  libheimdall/render.cc
                  libheimdall/render.hh)
 add_library(heimdall STATIC ${HEIMDALL_SRC})
-target_link_libraries(heimdall PUBLIC miniz imgui gdi32 opengl32 imm32)
+target_link_libraries(heimdall PUBLIC miniz imgui)
+if(WIN32)
+    target_link_libraries(heimdall PUBLIC gdi32 opengl32 imm32)
+endif()
 
 set(RUNNER_SRC runner/main.cc
                runner/runner_win32.cc
