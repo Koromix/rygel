@@ -19,6 +19,9 @@
     #include <sys/types.h>
     #include <unistd.h>
 #endif
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#endif
 
 #include "kutil.hh"
 
@@ -280,17 +283,13 @@ Date &Date::operator--()
 
 uint64_t start_time = GetMonotonicTime();
 
-#ifdef _WIN32
-
 uint64_t GetMonotonicTime()
 {
+#if defined(_WIN32)
     return GetTickCount64();
-}
-
+#elif defined(__EMSCRIPTEN__)
+    return (uint64_t)emscripten_get_now();
 #else
-
-uint64_t GetMonotonicTime()
-{
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
         LogError("clock_gettime() failed: %1", strerror(errno));
@@ -298,9 +297,8 @@ uint64_t GetMonotonicTime()
     }
 
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 10000000;
-}
-
 #endif
+}
 
 // ------------------------------------------------------------------------
 // Strings
@@ -693,6 +691,16 @@ static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
 };
 
 bool enable_debug = []() {
+#ifdef __EMSCRIPTEN__
+    return EM_ASM_INT({
+        try {
+            var debug_env_name = UTF8ToString($0);
+            return (process.env[debug_env_name] !== undefined && process.env[debug_env_name] != 0);
+        } catch (error) {
+            return 0;
+        }
+    }, DEBUG_ENV_NAME);
+#else
     const char *debug = getenv(DEBUG_ENV_NAME);
     if (!debug || TestStr(debug, "0")) {
         return false;
@@ -702,6 +710,7 @@ bool enable_debug = []() {
         LogError("%1 should contain value '0' or '1'", DEBUG_ENV_NAME);
         return true;
     }
+#endif
 }();
 
 static bool ConfigLogTerminalOutput()
@@ -1042,6 +1051,55 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
     return true;
 }
 
+#ifdef __EMSCRIPTEN__
+static bool running_in_node;
+
+INIT(MountHostFilesystem)
+{
+    running_in_node = EM_ASM_INT({
+        try {
+            if (process.platform == 'win32') {
+                var path = require('path');
+
+                FS.mkdir('/host');
+                for (var c = 'a'.charCodeAt(0); c <= 'z'.charCodeAt(0); c++) {
+                    var disk_path = String.fromCharCode(c) + ':';
+                    var mount_point = '/host/' + String.fromCharCode(c);
+                    FS.mkdir(mount_point);
+                    try {
+                        FS.mount(NODEFS, { root: disk_path }, mount_point);
+                    } catch(error) {
+                        FS.rmdir(mount_point);
+                    }
+                }
+
+                var real_app_dir = path.dirname(process.mainModule.filename);
+                var app_dir = '/host/' + real_app_dir[0].toLowerCase() +
+                              real_app_dir.substr(2).replace(/\\\\\\\\/g, '/');
+            } else {
+                FS.mkdir('/host');
+                FS.mount(NODEFS, { root: '/' }, '/host');
+
+                var app_dir = '/host' + path.dirname(process.mainModule.filename);
+            }
+        } catch (error) {
+            // Running in browser (maybe)
+            return 0;
+        }
+
+        FS.mkdir('/work');
+        FS.mount(NODEFS, { root: '.' }, '/work');
+        FS.symlink(app_dir, '/app');
+
+        return 1;
+    });
+
+    if (running_in_node) {
+        chdir("/work");
+    }
+}
+#endif
+
 const char *GetApplicationExecutable()
 {
 #if defined(_WIN32)
@@ -1067,6 +1125,8 @@ const char *GetApplicationExecutable()
     }
 
     return executable_path;
+#elif defined(__EMSCRIPTEN__)
+    return nullptr;
 #else
     #error GetApplicationExecutable() not implemented for this platform
 #endif
@@ -1086,6 +1146,8 @@ const char *GetApplicationDirectory()
     }
 
     return executable_dir;
+#elif defined(__EMSCRIPTEN__)
+    return running_in_node ? "/app" : nullptr;
 #else
     #error GetApplicationDirectory() not implemented for this platform
 #endif

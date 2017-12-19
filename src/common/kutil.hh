@@ -6,6 +6,7 @@
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
+#include <errno.h>
 #include <float.h>
 #include <functional>
 #include <inttypes.h>
@@ -62,7 +63,7 @@ enum class Endianness {
     typedef int64_t Size;
     #define ARCH_LITTLE_ENDIAN
     #define ARCH_ENDIANNESS (Endianness::LittleEndian)
-#elif defined(__i386__) || defined(_M_IX86)
+#elif defined(__i386__) || defined(_M_IX86) || defined(__EMSCRIPTEN__)
     typedef int32_t Size;
     #define ARCH_LITTLE_ENDIAN
     #define ARCH_ENDIANNESS (Endianness::LittleEndian)
