@@ -39,8 +39,8 @@
 
 #define DEBUG_ENV_NAME "RYGEL_DEBUG"
 
-#define DYNAMICARRAY_BASE_CAPACITY 8
-#define DYNAMICARRAY_GROWTH_FACTOR 2
+#define HEAPARRAY_BASE_CAPACITY 8
+#define HEAPARRAY_GROWTH_FACTOR 1.5f
 
 // Must be a power-of-two
 #define HASHSET_BASE_CAPACITY 32
@@ -853,12 +853,12 @@ public:
 
         Size new_capacity;
         if (!capacity) {
-            new_capacity = DYNAMICARRAY_BASE_CAPACITY;
+            new_capacity = HEAPARRAY_BASE_CAPACITY;
         } else {
             new_capacity = capacity;
         }
         do {
-            new_capacity = (Size)(new_capacity * DYNAMICARRAY_GROWTH_FACTOR);
+            new_capacity = (Size)((float)new_capacity * HEAPARRAY_GROWTH_FACTOR);
         } while (new_capacity < needed_capacity);
 
         SetCapacity(new_capacity);
