@@ -30,12 +30,12 @@ bool InitTableSet(Span<const char *const> data_directories,
         for (const char *data_dir: data_directories) {
             const char *dir = Fmt(&temp_alloc, "%1%/tables", data_dir).ptr;
             if (TestPath(dir, FileType::Directory)) {
-                success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
+                success &= EnumerateDirectoryFiles(dir, "*.tab*", &temp_alloc,
                                                    &filenames, 1024);
             }
         }
         for (const char *dir: table_directories) {
-            success &= EnumerateDirectoryFiles(dir, "*.tab", &temp_alloc,
+            success &= EnumerateDirectoryFiles(dir, "*.tab*", &temp_alloc,
                                                &filenames, 1024);
         }
         if (!success)
