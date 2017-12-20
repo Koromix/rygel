@@ -7,6 +7,6 @@
     #define _WIN32_WINNT 0x0602
 #endif
 
-#define DISABLE_TESTS
+#define MOYA_IMPLEMENTATION
 #define KUTIL_NO_MINIZ
 #include "../../libmoya/libmoya.hh"
