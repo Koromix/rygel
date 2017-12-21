@@ -40,62 +40,6 @@ static thread_local bool log_missing_messages = false;
         PopLogHandler(); \
     };
 
-class FlexibleDateVector {
-    enum class Type {
-        Character,
-        Date
-    };
-
-    Type type;
-    struct { // FIXME: I want union
-        Rcpp::CharacterVector chr;
-        Rcpp::NumericVector num;
-    } u;
-
-public:
-    FlexibleDateVector() = default;
-    FlexibleDateVector(SEXP xp)
-    {
-        if (Rcpp::is<Rcpp::CharacterVector>(xp)) {
-            type = Type::Character;
-            u.chr = xp;
-        } else if ((Rcpp::is<Rcpp::NumericVector>(xp) || Rcpp::is<Rcpp::IntegerVector>(xp)) &&
-                   Rf_inherits(xp, "Date")) {
-            type = Type::Date;
-            u.num = xp;
-        } else {
-            Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
-        }
-    }
-
-    Date operator[](int idx) const
-    {
-        switch (type) {
-            case Type::Character: {
-                SEXP str = u.chr[idx].get();
-                if (str != NA_STRING) {
-                    return Date::FromString(CHAR(str));
-                } else {
-                    return {};
-                }
-            } break;
-
-            case Type::Date: {
-                double value = u.num[idx];
-                if (value != NA_REAL) {
-                    Rcpp::Datetime dt = value * 86400;
-                    Date date(dt.getYear(), dt.getMonth(), dt.getDay());
-                    DebugAssert(date.IsValid());
-                    return date;
-                } else {
-                    return {};
-                }
-            } break;
-        }
-        Assert(false);
-    }
-};
-
 static void DumpWarnings()
 {
     for (const char *msg: log_messages) {
@@ -120,6 +64,76 @@ static void StopWithLastMessage()
         Rcpp::stop("Unknown error");
     }
 }
+
+class FlexibleDateVector {
+    enum class Type {
+        Character,
+        Date
+    };
+
+    Type type;
+    struct { // FIXME: I want union
+        Rcpp::CharacterVector chr;
+        Rcpp::NumericVector num;
+    } u;
+
+public:
+    Size len = 0;
+
+    FlexibleDateVector() = default;
+    FlexibleDateVector(SEXP xp)
+    {
+        if (Rcpp::is<Rcpp::CharacterVector>(xp)) {
+            type = Type::Character;
+            u.chr = xp;
+            len = (Size)u.chr.size();
+        } else if ((Rcpp::is<Rcpp::NumericVector>(xp) || Rcpp::is<Rcpp::IntegerVector>(xp)) &&
+                   Rf_inherits(xp, "Date")) {
+            type = Type::Date;
+            u.num = xp;
+            len = (Size)u.num.size();
+        } else {
+            Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
+        }
+    }
+
+    Date operator[](int idx) const
+    {
+        switch (type) {
+            case Type::Character: {
+                SEXP str = u.chr[idx].get();
+                if (str != NA_STRING) {
+                    Date date = Date::FromString(CHAR(str));
+                    if (!date.value)
+                        StopWithLastMessage();
+                    return date;
+                }
+            } break;
+
+            case Type::Date: {
+                double value = u.num[idx];
+                if (value != NA_REAL) {
+                    Rcpp::Datetime dt = value * 86400;
+                    Date date(dt.getYear(), dt.getMonth(), dt.getDay());
+                    DebugAssert(date.IsValid());
+                    return date;
+                }
+            } break;
+        }
+
+        return {};
+    }
+
+    Date Value() const
+    {
+        if (UNLIKELY(len != 1)) {
+            LogError("Date or date-like vector must have one value (no more, no less)");
+            StopWithLastMessage();
+        }
+
+        return (*this)[0];
+    }
+};
 
 template <int RTYPE, typename T>
 T GetOptionalValue(Rcpp::Vector<RTYPE> &vec, R_xlen_t i, T default_value)
@@ -458,6 +472,91 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     LogDebug("Done");
 
 #undef LOAD_OPTIONAL_COLUMN
+
+    return retval;
+}
+
+// [[Rcpp::export(name = 'diagnoses')]]
+Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
+{
+    SETUP_LOG_HANDLER();
+
+    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
+    Date date = FlexibleDateVector(date_xp).Value();
+    if (!date.value)
+        StopWithLastMessage();
+
+    const TableIndex *index = classifier_set->table_set.FindIndex(date);
+    if (!index) {
+        LogError("No table index available on '%1'", date);
+        StopWithLastMessage();
+    }
+
+    Rcpp::DataFrame retval;
+    {
+        Rcpp::CharacterVector diag(index->diagnoses.len);
+        Rcpp::IntegerVector cmd_m(index->diagnoses.len);
+        Rcpp::IntegerVector cmd_f(index->diagnoses.len);
+
+        for (Size i = 0; i < index->diagnoses.len; i++) {
+            const DiagnosisInfo &info = index->diagnoses[i];
+            char buf[32];
+
+            diag[i] = Fmt(buf, "%1", info.diag).ptr;
+            cmd_m[i] = info.Attributes(Sex::Male).cmd;
+            cmd_f[i] = info.Attributes(Sex::Female).cmd;
+        }
+
+        retval = Rcpp::DataFrame::create(
+            Rcpp::Named("diag") = diag,
+            Rcpp::Named("cmd_m") = cmd_m,
+            Rcpp::Named("cmd_f") = cmd_f,
+            Rcpp::Named("stringsAsFactors") = false
+        );
+    }
+
+    return retval;
+}
+
+// [[Rcpp::export(name = 'procedures')]]
+Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
+{
+    SETUP_LOG_HANDLER();
+
+    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
+    Date date = FlexibleDateVector(date_xp).Value();
+    if (!date.value)
+        StopWithLastMessage();
+
+    const TableIndex *index = classifier_set->table_set.FindIndex(date);
+    if (!index) {
+        LogError("No table index available on '%1'", date);
+        StopWithLastMessage();
+    }
+
+    Rcpp::DataFrame retval;
+    {
+        Rcpp::CharacterVector proc(index->procedures.len);
+        Rcpp::IntegerVector phase(index->procedures.len);
+        Rcpp::IntegerVector activities(index->procedures.len);
+
+        for (Size i = 0; i < index->procedures.len; i++) {
+            const ProcedureInfo &info = index->procedures[i];
+            char buf[32];
+
+            proc[i] = Fmt(buf, "%1", info.proc).ptr;
+            phase[i] = info.phase;
+            // FIXME: Fill activities correctly
+            activities[i] = 1;
+        }
+
+        retval = Rcpp::DataFrame::create(
+            Rcpp::Named("proc") = proc,
+            Rcpp::Named("phase") = phase,
+            Rcpp::Named("activities") = activities,
+            Rcpp::Named("stringsAsFactors") = false
+        );
+    }
 
     return retval;
 }
