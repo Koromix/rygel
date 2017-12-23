@@ -8,7 +8,7 @@
 #include "core.hh"
 #include "opengl.hh"
 #include "render.hh"
-#include "../runner/runner.hh"
+#include "runner.hh"
 
 #ifdef HEIMDALL_IMPLEMENTATION
     #include "../../common/kutil.cc"
@@ -17,6 +17,6 @@
     #include "render.cc"
 
     #ifdef _WIN32
-        #include "../runner/runner_win32.cc"
+        #include "runner_win32.cc"
     #endif
 #endif

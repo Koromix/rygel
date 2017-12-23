@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../runner/runner.hh"
 #include "opengl.hh"
 #include "render.hh"
+#include "runner.hh"
 
 static GLuint shader_program = 0;
 static GLint attrib_proj_mtx;

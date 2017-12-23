@@ -5,7 +5,7 @@
 #include "../../common/kutil.hh"
 #include "core.hh"
 #include "opengl.hh"
-#include "../runner/runner.hh"
+#include "runner.hh"
 #include "render.hh"
 
 bool Step()
