@@ -1,0 +1,30 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+set(LIBDRD_SRC ../common/kutil.cc
+               ../common/kutil.hh
+               a_classifier.cc
+               a_classifier.hh
+               a_constraints.cc
+               a_constraints.hh
+               d_authorizations.cc
+               d_authorizations.hh
+               d_codes.hh
+               d_desc.cc
+               d_desc.hh
+               d_prices.cc
+               d_prices.hh
+               d_stays.cc
+               d_stays.hh
+               d_tables.cc
+               d_tables.hh
+               main.cc
+               main.hh)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_library(libdrd SHARED ${LIBDRD_SRC})
+else()
+    add_library(libdrd STATIC ${LIBDRD_SRC})
+endif()
+target_link_libraries(libdrd PUBLIC miniz)
+add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)
