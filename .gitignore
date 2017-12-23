@@ -7,3 +7,4 @@ bin/
 CMakeLists.txt.user*
 .Rproj.user
 RcppExports.*
+.Rhistory
