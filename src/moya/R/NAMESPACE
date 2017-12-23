@@ -1,9 +1,0 @@
-useDynLib(moyaR, .registration=TRUE)
-export(moya.options,
-       moya,
-       classify,
-       diagnoses,
-       procedures,
-       compare,
-       summary.moya.result_set)
-importFrom(Rcpp, evalCpp)

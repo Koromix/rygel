@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../libmoya/libmoya.hh"
+#include "../libdrd/libdrd.hh"
 #include "dump.hh"
 
 struct ListSpecifier {
@@ -97,7 +97,7 @@ static bool RunCatalogs(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd catalogs [options]
+R"(Usage: drdc catalogs [options]
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -128,7 +128,7 @@ static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd classify [options] stay_file ...
+R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
         --cluster_mode <mode>    Change stay cluster mode
@@ -312,7 +312,7 @@ static bool RunConstraints(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd constraints [options]
+R"(Usage: drdc constraints [options]
 
 Constraints options:
     -d, --date <date>            Use tables valid on specified date
@@ -378,7 +378,7 @@ static bool RunInfo(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd info [options] name ...
+R"(Usage: drdc info [options] name ...
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -463,7 +463,7 @@ static bool RunList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd list [options] list_name ...
+R"(Usage: drdc list [options] list_name ...
 
 List options:
     -d, --date <date>            Use tables valid on specified date
@@ -556,7 +556,7 @@ static bool RunPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd pack [options] stay_file ... -O output_file
+R"(Usage: drdc pack [options] stay_file ... -O output_file
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -615,7 +615,7 @@ static bool RunPrices(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd pricing [options]
+R"(Usage: drdc pricing [options]
 )");
         PrintLn(fp, "%1", main_options_usage);
     };
@@ -646,7 +646,7 @@ static bool RunTables(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd tables [options] [filename] ...
+R"(Usage: drdc tables [options] [filename] ...
 
 Dump options:
     -d, --dump                   Dump content of (readable) tables
@@ -699,7 +699,7 @@ int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: drd <command> [<args>]
+R"(Usage: drdc <command> [<args>]
 
 Commands:
     classify                     Classify stays

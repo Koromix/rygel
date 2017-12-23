@@ -1,0 +1,9 @@
+useDynLib(drdR, .registration=TRUE)
+export(drd.options,
+       drd,
+       classify,
+       diagnoses,
+       procedures,
+       compare,
+       summary.drd.result_set)
+importFrom(Rcpp, evalCpp)

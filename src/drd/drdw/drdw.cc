@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../libmoya/libmoya.hh"
+#include "../libdrd/libdrd.hh"
 #ifndef _WIN32
     #include <signal.h>
 #endif
@@ -67,7 +67,7 @@ static bool UpdateStaticResources()
     Allocator temp_alloc;
 
     Assert(GetApplicationDirectory());
-    const char *filename = Fmt(&temp_alloc, "%1%/talyn_res.dll", GetApplicationDirectory()).ptr;
+    const char *filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
     {
         static FILETIME last_time;
 
@@ -417,9 +417,9 @@ int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, "%1",
-R"(Usage: talyn [options]
+R"(Usage: drdw [options]
 
-Talyn options:
+Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
 

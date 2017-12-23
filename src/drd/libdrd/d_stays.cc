@@ -20,7 +20,7 @@ struct PackHeader {
 };
 #pragma pack(pop)
 #define PACK_VERSION 1
-#define PACK_SIGNATURE "MOYASTAYPACK"
+#define PACK_SIGNATURE "DRD_STAY_PAK"
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 
 // TODO: Flag errors and translate to FG errors

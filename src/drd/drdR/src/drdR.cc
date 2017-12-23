@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../libmoya/libmoya.hh"
+#include "../../libdrd/libdrd.hh"
 #include <Rcpp.h>
 
 struct ClassifierSet {
@@ -153,7 +153,7 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
     return str[0] - '0';
 }
 
-// [[Rcpp::export(name = 'moya.options')]]
+// [[Rcpp::export(name = 'drd.options')]]
 SEXP R_Options(SEXP debug = R_NilValue)
 {
     if (!Rf_isNull(debug)) {
@@ -165,8 +165,8 @@ SEXP R_Options(SEXP debug = R_NilValue)
     );
 }
 
-// [[Rcpp::export(name = 'moya')]]
-SEXP R_Moya(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
+// [[Rcpp::export(name = 'drd')]]
+SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
             Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
             Rcpp::Nullable<Rcpp::String> pricing_filename = R_NilValue,
             Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)

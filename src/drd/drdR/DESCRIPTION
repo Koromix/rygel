@@ -1,4 +1,4 @@
-Package: moyaR
+Package: drdR
 Type: Package
 Title: Alternative French PMSI Classifier
 Version: 0.9

@@ -15,7 +15,7 @@
 #include "a_constraints.hh"
 #include "main.hh"
 
-#ifdef MOYA_IMPLEMENTATION
+#ifdef DRD_IMPLEMENTATION
     #include "../../common/kutil.cc"
     #include "d_authorizations.cc"
     #include "d_desc.cc"

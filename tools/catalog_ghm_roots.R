@@ -1,14 +1,10 @@
-# This Source Code Form is subject to the terms of the Mozilla Public
-# License, v. 2.0. If a copy of the MPL was not distributed with this
-# file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
 library(data.table)
 library(readxl)
 library(stringr)
 library(jsonlite)
 
 ghm_roots <- local({
-    files <- list.files('../data/desc/xlsx', pattern = '*.xlsx', full.names = TRUE)
+    files <- list.files('../data/catalogs/xlsx', pattern = 'regroup*.xlsx', full.names = TRUE)
 
     ghm_roots <- rbindlist(lapply(files, function(filename) {
         dt <- as.data.table(read_xlsx(filename, sheet = 1))
@@ -28,4 +24,4 @@ ghm_roots <- local({
 unique_ghm_roots <- unique(ghm_roots, by = 'root')
 unique_ghm_roots$version <- NULL
 
-writeLines(toJSON(unique_ghm_roots, pretty = 4), '../data/ghm_roots.json')
+writeLines(toJSON(unique_ghm_roots, pretty = 4))

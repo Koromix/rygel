@@ -12,15 +12,15 @@ classify <- function(classifier_set, stays, diagnoses, procedures) {
 
     result_set <- .classify(classifier_set, stays, diagnoses, procedures)
 
-    class(result_set) <- c('moya.result_set', class(result_set))
+    class(result_set) <- c('drd.result_set', class(result_set))
     return(result_set)
 }
 
 compare <- function(summary1, summary2, ...) {
-    if (!('moya.result_summary' %in% class(summary1))) {
+    if (!('drd.result_summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
     }
-    if (!('moya.result_summary' %in% class(summary2))) {
+    if (!('drd.result_summary' %in% class(summary2))) {
         summary2 <- summary(summary2, ...)
     }
 
@@ -40,11 +40,11 @@ compare <- function(summary1, summary2, ...) {
     diff <- diff[rowSums(diff[, summary_columns]) != 0,]
     diff <- diff[do.call('order', diff[, groups, drop = FALSE]),]
 
-    class(diff) <- c('moya.result_set', class(diff))
+    class(diff) <- c('drd.result_set', class(diff))
     return(diff)
 }
 
-summary.moya.result_set <- function(result_set, by = list(group = 1)) {
+summary.drd.result_set <- function(result_set, by = list(group = 1)) {
     by_val <- eval(substitute(by), result_set, parent.frame())
     if (!is.list(by_val)) {
         by_val <- list(by_val)
@@ -73,6 +73,6 @@ summary.moya.result_set <- function(result_set, by = list(group = 1)) {
         agg <- data.frame()
     }
 
-    class(agg) <- c('moya.result_summary', class(agg))
+    class(agg) <- c('drd.result_summary', class(agg))
     return(agg)
 }

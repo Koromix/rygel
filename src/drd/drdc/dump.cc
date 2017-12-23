@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../libmoya/libmoya.hh"
+#include "../libdrd/libdrd.hh"
 #include "dump.hh"
 
 void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
