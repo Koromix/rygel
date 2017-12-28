@@ -13,7 +13,7 @@ bool Step()
     if (!StartRender())
         return false;
 
-    ImGui::ShowTestWindow();
+    ImGui::ShowDemoWindow();
 
     Render();
     SwapGLBuffers();

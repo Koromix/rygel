@@ -55,15 +55,17 @@ Integrating Dear ImGui within your custom engine is a matter of wiring mouse/key
 _NB: those third-party bindings may be more or less maintained, more or less close to the spirit of original API and therefore I cannot give much guarantee about them. People who create language bindings sometimes haven't used the C++ API themselves (for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
 Languages:
-- C (cimgui): thin c-api wrapper for ImGui https://github.com/Extrawurst/cimgui
-- C#/.Net (ImGui.NET): An ImGui wrapper for .NET Core https://github.com/mellinoe/ImGui.NET
-- D (DerelictImgui): Dynamic bindings for the D programming language: https://github.com/Extrawurst/DerelictImgui
+- C (cimgui): https://github.com/Extrawurst/cimgui
+- C#/.Net (ImGui.NET): https://github.com/mellinoe/ImGui.NET
+- ChaiScript: https://github.com/JuJuBoSc/imgui-chaiscript
+- D (DerelictImgui): https://github.com/Extrawurst/DerelictImgui
 - Go (go-imgui): https://github.com/Armored-Dragon/go-imgui
 - Lua: https://github.com/patrickriordan/imgui_lua_bindings
-- Pascal (imgui-pas) https://github.com/dpethes/imgui-pas
-- Python (CyImGui): Python bindings for dear imgui using Cython: https://github.com/chromy/cyimgui
-- Python (pyimgui): Another Python bindings for dear imgui: https://github.com/swistakm/pyimgui
-- Rust (imgui-rs): Rust bindings for dear imgui https://github.com/Gekkio/imgui-rs
+- Odin: https://github.com/ThisDrunkDane/odin-dear_imgui
+- Pascal (imgui-pas): https://github.com/dpethes/imgui-pas
+- Python (CyImGui): https://github.com/chromy/cyimgui
+- Python (pyimgui): https://github.com/swistakm/pyimgui
+- Rust (imgui-rs): https://github.com/Gekkio/imgui-rs
 
 Frameworks:
 - Main ImGui repository include examples for DirectX9, DirectX10, DirectX11, OpenGL2/3, Vulkan, Allegro 5, SDL+GL2/3, iOS and Marmalade: https://github.com/ocornut/imgui/tree/master/examples
@@ -75,9 +77,11 @@ Frameworks:
 - Cinder: https://github.com/simongeilfus/Cinder-ImGui
 - cocos2d-x: https://github.com/c0i/imguix https://github.com/ocornut/imgui/issues/551
 - Flexium/SFML (FlexGUI): https://github.com/DXsmiley/FlexGUI
+- GML/GameMakerStudio2 (ImGuiGML): https://marketplace.yoyogames.com/assets/6221/imguigml
 - Irrlicht (IrrIMGUI): https://github.com/ZahlGraf/IrrIMGUI
 - Ogre: https://bitbucket.org/LMCrashy/ogreimgui/src
 - openFrameworks (ofxImGui): https://github.com/jvcleave/ofxImGui
+- OpenSceneGraph/OSG: https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c
 - LÖVE: https://github.com/slages/love-imgui
 - NanoRT (software raytraced) https://github.com/syoyo/imgui/tree/nanort/examples/raytrace_example
 - Qt3d https://github.com/alpqr/imgui-qt3d
@@ -126,6 +130,8 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Nicolas Guillemot's CppCon'16 flashtalk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 - [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
+See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an incomplete list of software which are publicly known to use dear migui.
+
 See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
 
 Frequently Asked Question (FAQ)
@@ -134,7 +140,7 @@ Frequently Asked Question (FAQ)
 <b>Where is the documentation?</b>
 
 - The documentation is at the top of imgui.cpp + effectively imgui.h. 
-- Example code is in imgui_demo.cpp and particularly the ImGui::ShowTestWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
+- Example code is in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
