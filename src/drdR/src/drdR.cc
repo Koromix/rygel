@@ -539,6 +539,8 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
         Rcpp::CharacterVector proc(index->procedures.len);
         Rcpp::IntegerVector phase(index->procedures.len);
         Rcpp::IntegerVector activities(index->procedures.len);
+        Rcpp::newDateVector start_date(index->procedures.len);
+        Rcpp::newDateVector end_date(index->procedures.len);
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const ProcedureInfo &info = index->procedures[i];
@@ -548,12 +550,18 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
             phase[i] = info.phase;
             // FIXME: Fill activities correctly
             activities[i] = 1;
+            start_date[i] = Rcpp::Date(info.limit_dates[0].st.month, info.limit_dates[0].st.day,
+                                       info.limit_dates[0].st.year);
+            end_date[i] = Rcpp::Date(info.limit_dates[1].st.month, info.limit_dates[1].st.day,
+                                     info.limit_dates[1].st.year);
         }
 
         retval = Rcpp::DataFrame::create(
             Rcpp::Named("proc") = proc,
             Rcpp::Named("phase") = phase,
             Rcpp::Named("activities") = activities,
+            Rcpp::Named("start_date") = start_date,
+            Rcpp::Named("end_date") = end_date,
             Rcpp::Named("stringsAsFactors") = false
         );
     }
