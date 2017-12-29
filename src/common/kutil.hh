@@ -2109,7 +2109,7 @@ void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
 
 // ------------------------------------------------------------------------
-// Streams
+// System
 // ------------------------------------------------------------------------
 
 enum class CompressionType {
@@ -2118,6 +2118,48 @@ enum class CompressionType {
     Gzip
 };
 
+#ifdef _WIN32
+    #define PATH_SEPARATORS "\\/"
+    #define FOPEN_COMMON_FLAGS
+#else
+    #define PATH_SEPARATORS "/"
+    #define FOPEN_COMMON_FLAGS "e"
+#endif
+
+CompressionType GetPathCompression(const char *filename);
+Size GetPathExtension(const char *filename, Span<char> out_buf,
+                      CompressionType *out_compression_type = nullptr);
+
+enum class FileType {
+    Directory,
+    File,
+    Unknown
+};
+
+struct FileInfo {
+    FileType type;
+};
+
+enum class EnumStatus {
+    Error,
+    Partial,
+    Done
+};
+
+bool TestPath(const char *path, FileType type = FileType::Unknown);
+
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+                              std::function<bool(const char *, const FileInfo &)> func);
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
+                             HeapArray<const char *> *out_files, Size max_files);
+
+const char *GetApplicationExecutable(); // Can be NULL
+const char *GetApplicationDirectory(); // Can be NULL
+
+// ------------------------------------------------------------------------
+// Streams
+// ------------------------------------------------------------------------
+
 class StreamReader {
 public:
     enum class SourceType {
@@ -2125,6 +2167,7 @@ public:
         Memory
     };
 
+    // NOTE: Should we use DuplicateString() for this? Same question in StreamWriter.
     const char *filename;
 
     struct {
@@ -2152,8 +2195,6 @@ public:
     bool eof;
     bool error;
 
-    Allocator str_alloc;
-
     StreamReader() { Close(); }
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
@@ -2173,9 +2214,10 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     void Close();
 
-    Size Len() const;
+    Size RemainingLen() const;
 
     Size Read(Size max_len, void *out_buf);
+    Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
 
 private:
     bool InitDecompressor(CompressionType type);
@@ -2185,6 +2227,18 @@ private:
 
     Size ReadRaw(Size max_len, void *out_buf);
 };
+
+static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
+                            HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename);
+    return st.ReadAll(max_len, out_buf);
+}
 
 class StreamWriter {
 public:
@@ -2214,8 +2268,6 @@ public:
     bool open = false;
     bool error;
 
-    Allocator str_alloc;
-
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
@@ -2244,84 +2296,6 @@ private:
 
     bool WriteRaw(Span<const uint8_t> buf);
 };
-
-// ------------------------------------------------------------------------
-// System
-// ------------------------------------------------------------------------
-
-CompressionType GetPathCompression(const char *filename);
-Size GetPathExtension(const char *filename, Span<char> out_buf,
-                      CompressionType *out_compression_type = nullptr);
-
-#ifdef _WIN32
-    #define PATH_SEPARATORS "\\/"
-    #define FOPEN_COMMON_FLAGS
-#else
-    #define PATH_SEPARATORS "/"
-    #define FOPEN_COMMON_FLAGS "e"
-#endif
-
-bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-              CompressionType compression_type, Span<uint8_t> *out_buf);
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            CompressionType compression_type, uint8_t **out_data, Size *out_len)
-{
-    Span<uint8_t> buf;
-    if (!ReadFile(filename, max_size, alloc, compression_type, &buf))
-        return false;
-    *out_data = buf.ptr;
-    *out_len = buf.len;
-    return true;
-}
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            Span<uint8_t> *out_buf)
-    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename), out_buf); }
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            uint8_t **out_data, Size *out_len)
-    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename), out_data, out_len); }
-
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            CompressionType compression_type, Span<char> *out_buf)
-    { return ReadFile(filename, max_size, alloc, compression_type,
-                      (uint8_t **)&out_buf->ptr, &out_buf->len); }
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            CompressionType compression_type, char **out_data, Size *out_len)
-    { return ReadFile(filename, max_size, alloc, compression_type,
-                      (uint8_t **)out_data, out_len); }
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            Span<char> *out_buf)
-    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename),
-                      (uint8_t **)&out_buf->ptr, &out_buf->len); }
-static inline bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-                            char **out_data, Size *out_len)
-    { return ReadFile(filename, max_size, alloc, GetPathCompression(filename),
-                      (uint8_t **)out_data, out_len); }
-
-enum class FileType {
-    Directory,
-    File,
-    Unknown
-};
-
-struct FileInfo {
-    FileType type;
-};
-
-enum class EnumStatus {
-    Error,
-    Partial,
-    Done
-};
-
-bool TestPath(const char *path, FileType type = FileType::Unknown);
-
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
-                              std::function<bool(const char *, const FileInfo &)> func);
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
-                             HeapArray<const char *> *out_files, Size max_files);
-
-const char *GetApplicationExecutable(); // Can be NULL
-const char *GetApplicationDirectory(); // Can be NULL
 
 // ------------------------------------------------------------------------
 // Option Parser

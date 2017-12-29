@@ -807,52 +807,6 @@ void PopLogHandler()
 // System
 // ------------------------------------------------------------------------
 
-bool ReadFile(const char *filename, Size max_size, Allocator *alloc,
-              CompressionType compression_type, Span<uint8_t> *out_buf)
-{
-    StreamReader st(filename, compression_type);
-    if (st.error)
-        return false;
-
-    Size st_len = st.Len();
-    if (st_len >= 0) {
-        if (st_len > max_size) {
-            LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
-            return false;
-        }
-
-        Span<uint8_t> buf;
-        buf.ptr = (uint8_t *)Allocator::Allocate(alloc, st_len);
-        DEFER_N(buf_guard) { Allocator::Release(alloc, buf.ptr, st_len); };
-        buf.len = st.Read(st_len, buf.ptr);
-        if (buf.len < 0)
-            return false;
-
-        buf_guard.disable();
-        *out_buf = buf;
-        return true;
-    } else {
-        HeapArray<uint8_t> buf;
-        buf.Grow(Megabytes(1));
-
-        Size read_len;
-        while ((read_len = st.Read(buf.capacity - buf.len, buf.end())) > 0) {
-            buf.len += read_len;
-            if (buf.len > max_size) {
-                LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_size));
-                return false;
-            }
-            buf.Grow(Megabytes(1));
-        }
-        if (st.error)
-            return false;
-
-        buf.Trim();
-        *out_buf = buf.Leak();
-        return true;
-    }
-}
-
 #ifdef _WIN32
 
 static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
@@ -1253,7 +1207,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename).ptr;
+        this->filename = filename;
     }
 
     if (!InitDecompressor(compression_type))
@@ -1276,7 +1230,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename).ptr;
+        this->filename = filename;
     }
 
     if (!InitDecompressor(compression_type))
@@ -1297,7 +1251,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    this->filename = DuplicateString(&str_alloc, filename).ptr;
+    this->filename = filename;
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -1323,23 +1277,30 @@ void StreamReader::Close()
     source.eof = false;
     error = false;
     eof = false;
-    Allocator::ReleaseAll(&str_alloc);
 }
 
-Size StreamReader::Len() const
+Size StreamReader::RemainingLen() const
 {
     if (compression.type == CompressionType::None) {
         switch (source.type) {
             case SourceType::File: {
-                DEFER_C(pos = ftell(source.u.fp)) { fseek(source.u.fp, pos, SEEK_SET); };
-                if (fseek(source.u.fp, 0, SEEK_END) < 0)
-                    return -1;
-                Size len = ftell(source.u.fp);
-                return len;
+                Size remaining_len;
+                {
+                    long pos = (Size)ftell(source.u.fp);
+                    DEFER { fseek(source.u.fp, (size_t)pos, SEEK_SET); };
+                    if (fseek(source.u.fp, 0, SEEK_END) < 0)
+                        return -1;
+                    remaining_len = ftell(source.u.fp) - pos;
+                    if (UNLIKELY(remaining_len < 0)) {
+                        remaining_len = 0;
+                    }
+                }
+
+                return remaining_len;
             } break;
 
             case SourceType::Memory: {
-                return source.u.memory.buf.len;
+                return source.u.memory.buf.len - source.u.memory.pos;
             } break;
         }
         Assert(false);
@@ -1368,6 +1329,47 @@ Size StreamReader::Read(Size max_len, void *out_buf)
         } break;
     }
     Assert(false);
+}
+
+Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
+{
+    if (error)
+        return -1;
+
+    Size st_len = RemainingLen();
+    if (st_len >= 0) {
+        if (st_len > max_len) {
+            LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
+            return -1;
+        }
+
+        out_buf->Grow(st_len);
+        Size read_len = Read(st_len, out_buf->ptr);
+        if (read_len < 0)
+            return -1;
+        out_buf->len += read_len;
+
+        return st_len;
+    } else {
+        DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
+
+        Size read_len, total_len = 0;
+        out_buf->Grow(Megabytes(1));
+        while ((read_len = Read(out_buf->Available(), out_buf->end())) > 0) {
+            total_len += read_len;
+            if (total_len > max_len) {
+                LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
+                return -1;
+            }
+            out_buf->len += read_len;
+            out_buf->Grow(Megabytes(1));
+        }
+        if (error)
+            return -1;
+
+        buf_guard.disable();
+        return total_len;
+    }
 }
 
 bool StreamReader::InitDecompressor(CompressionType type)
@@ -1651,7 +1653,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename).ptr;
+        this->filename = filename;
     }
 
     if (!InitCompressor(compression_type))
@@ -1674,7 +1676,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     };
 
     if (filename) {
-        this->filename = DuplicateString(&str_alloc, filename).ptr;
+        this->filename = filename;
     }
 
     if (!InitCompressor(compression_type))
@@ -1696,7 +1698,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
-    this->filename = DuplicateString(&str_alloc, filename).ptr;
+    this->filename = filename;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -1770,7 +1772,6 @@ bool StreamWriter::Close()
     filename = "?";
     open = false;
     error = false;
-    Allocator::ReleaseAll(&str_alloc);
 
     return success;
 }

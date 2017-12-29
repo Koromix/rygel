@@ -124,8 +124,14 @@ bool LoadPricingFile(const char *filename, PricingSet *out_set)
     Allocator temp_alloc;
 
     Span<char> file_data;
-    if (!ReadFile(filename, Megabytes(30), &temp_alloc, &file_data))
-        return false;
+    {
+        HeapArray<uint8_t> file_buf(&temp_alloc);
+        if (ReadFile(filename, Megabytes(30), &file_buf) < 0)
+            return false;
+        file_data.ptr = (char *)file_buf.ptr;
+        file_data.len = file_buf.len;
+        file_buf.Leak();
+    }
 
     if (!ParseGhsPricings(file_data, filename, &out_set->ghs_pricings))
         return false;

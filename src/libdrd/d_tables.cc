@@ -970,9 +970,13 @@ bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
     HeapArray<LoadTableData> tables;
     for (const char *filename: filenames) {
         Span<uint8_t> raw_data;
-        if (!ReadFile(filename, Megabytes(8), &file_alloc, &raw_data)) {
-            success = false;
-            continue;
+        {
+            HeapArray<uint8_t> raw_buf(&file_alloc);
+            if (ReadFile(filename, Megabytes(8), &raw_buf) < 0) {
+                success = false;
+                continue;
+            }
+            raw_data = raw_buf.Leak();
         }
 
         Size start_len = out_set->tables.len;
