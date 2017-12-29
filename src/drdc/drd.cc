@@ -676,8 +676,14 @@ Dump options:
 
     if (filenames.len) {
         TableSet table_set;
-        if (!LoadTableFiles(filenames, &table_set) || !table_set.indexes.len)
-            return false;
+        {
+            TableSetBuilder table_set_builder;
+            if (!table_set_builder.LoadFiles(filenames))
+                return false;
+            if (!table_set_builder.Finish(&table_set))
+                return false;
+        }
+
         DumpTableSetHeaders(table_set);
         if (dump) {
             DumpTableSetContent(table_set);

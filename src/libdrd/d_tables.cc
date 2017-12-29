@@ -5,13 +5,6 @@
 #include "../common/kutil.hh"
 #include "d_tables.hh"
 
-struct LoadTableData {
-    Size table_idx;
-    const char *filename;
-    Span<uint8_t> raw_data;
-    bool loaded;
-};
-
 #define FAIL_PARSE_IF(Cond) \
     do { \
         if (Cond) { \
@@ -877,8 +870,163 @@ const TableIndex *TableSet::FindIndex(Date date) const
     return nullptr;
 }
 
-static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
-                             LoadTableData *current_tables[])
+bool TableSetBuilder::LoadTab(StreamReader &st)
+{
+    Span<uint8_t> raw_data;
+    {
+        HeapArray<uint8_t> raw_buf(&file_alloc);
+        if (st.ReadAll(Megabytes(8), &raw_buf) < 0)
+            return false;
+        raw_data = raw_buf.Leak();
+    }
+
+    Size start_len = set.tables.len;
+    if (!ParseTableHeaders(raw_data, st.filename, &set.tables))
+        return false;
+
+    for (Size i = start_len; i < set.tables.len; i++) {
+        if (set.tables[i].type == TableType::UnknownTable)
+            return true;
+
+        LoadTableData table = {};
+        table.table_idx = i;
+        table.filename = st.filename;
+        table.raw_data = raw_data;
+        tables.Append(table);
+    }
+
+    return true;
+}
+
+bool TableSetBuilder::LoadFiles(Span<const char *const> filenames)
+{
+    bool success = true;
+    for (const char *filename: filenames) {
+        StreamReader st(filename);
+        success &= LoadTab(st);
+    }
+
+    return success;
+}
+
+bool TableSetBuilder::Finish(TableSet *out_set)
+{
+    bool success = true;
+
+    std::sort(tables.begin(), tables.end(),
+              [&](const LoadTableData &table1, const LoadTableData &table2) {
+        const TableInfo &table_info1 = set.tables[table1.table_idx];
+        const TableInfo &table_info2 = set.tables[table2.table_idx];
+
+        return MultiCmp(table_info1.limit_dates[0] - table_info2.limit_dates[0],
+                        table_info1.version[0] - table_info2.version[0],
+                        table_info1.version[1] - table_info2.version[1],
+                        table_info1.build_date - table_info2.build_date) < 0;
+    });
+
+    LoadTableData *active_tables[ARRAY_SIZE(TableTypeNames)] = {};
+    Date start_date = {}, end_date = {};
+    for (LoadTableData &table: tables) {
+        const TableInfo &table_info = set.tables[table.table_idx];
+
+        while (end_date.value && table_info.limit_dates[0] >= end_date) {
+            success &= CommitIndex(start_date, end_date, active_tables);
+
+            start_date = {};
+            Date next_end_date = {};
+            for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
+                if (!active_tables[i])
+                    continue;
+
+                const TableInfo &active_info = set.tables[active_tables[i]->table_idx];
+
+                if (active_info.limit_dates[1] == end_date) {
+                    active_tables[i] = nullptr;
+                } else {
+                    if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
+                        next_end_date = active_info.limit_dates[1];
+                    }
+                }
+            }
+
+            start_date = table_info.limit_dates[0];
+            end_date = next_end_date;
+        }
+
+        if (start_date.value) {
+            if (table_info.limit_dates[0] > start_date) {
+                success &= CommitIndex(start_date, table_info.limit_dates[0], active_tables);
+                start_date = table_info.limit_dates[0];
+            }
+        } else {
+            start_date = table_info.limit_dates[0];
+        }
+        if (!end_date.value || table_info.limit_dates[1] < end_date) {
+            end_date = table_info.limit_dates[1];
+        }
+
+        active_tables[(int)table_info.type] = &table;
+    }
+    success &= CommitIndex(start_date, end_date, active_tables);
+
+    {
+        HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
+        HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
+        HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
+
+        HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
+        HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
+
+        for (TableIndex &index: set.indexes) {
+#define FIX_SPAN(SpanName) \
+                index.SpanName.ptr = set.store.SpanName.ptr + (Size)index.SpanName.ptr
+#define BUILD_MAP(IndexName, MapName, TableType) \
+                do { \
+                    if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
+                        CONCAT(MapName, _map) = set.maps.MapName.Append(); \
+                        for (auto &value: index.IndexName) { \
+                            CONCAT(MapName, _map)->Append(&value); \
+                        } \
+                    } \
+                    index.CONCAT(MapName, _map) = CONCAT(MapName, _map); \
+                } while (false)
+
+            FIX_SPAN(ghm_nodes);
+            FIX_SPAN(diagnoses);
+            FIX_SPAN(exclusions);
+            FIX_SPAN(procedures);
+            FIX_SPAN(ghm_roots);
+            FIX_SPAN(gnn_cells);
+            FIX_SPAN(cma_cells[0]);
+            FIX_SPAN(cma_cells[1]);
+            FIX_SPAN(cma_cells[2]);
+            FIX_SPAN(ghs);
+            FIX_SPAN(authorizations);
+            FIX_SPAN(src_pairs[0]);
+            FIX_SPAN(src_pairs[1]);
+
+            BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
+            BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
+            BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
+            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
+            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
+
+#undef BUILD_MAP
+#undef FIX_SPAN
+        }
+    }
+
+    if (!success)
+        return false;
+
+    memcpy(out_set, &set, SIZE(set));
+    memset(&set, 0, SIZE(set));
+
+    return true;
+}
+
+bool TableSetBuilder::CommitIndex(Date start_date, Date end_sate,
+                                  TableSetBuilder::LoadTableData *current_tables[])
 {
     bool success = true;
 
@@ -890,13 +1038,13 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
             if (!table->loaded) { \
-                index.MemberName.ptr = (decltype(index.MemberName.ptr))set->store.MemberName.len; \
+                index.MemberName.ptr = (decltype(index.MemberName.ptr))set.store.MemberName.len; \
                 success &= LoadFunc(table->raw_data.ptr, table->filename, \
-                                    table_info, ##__VA_ARGS__, &set->store.MemberName); \
-                index.MemberName.len = set->store.MemberName.len - (Size)index.MemberName.ptr; \
+                                    table_info, ##__VA_ARGS__, &set.store.MemberName); \
+                index.MemberName.len = set.store.MemberName.len - (Size)index.MemberName.ptr; \
                 index.changed_tables |= (uint32_t)(1 << i); \
             } else { \
-                index.MemberName = set->indexes[set->indexes.len - 1].MemberName; \
+                index.MemberName = set.indexes[set.indexes.len - 1].MemberName; \
             } \
         } while (false)
 
@@ -906,7 +1054,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
             continue;
 
         LoadTableData *table = current_tables[i];
-        const TableInfo &table_info = set->tables[table->table_idx];
+        const TableInfo &table_info = set.tables[table->table_idx];
 
         switch ((TableType)i) {
             case TableType::GhmDecisionTree: {
@@ -950,155 +1098,10 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
     }
 
     if (active_count) {
-        set->indexes.Append(index);
+        set.indexes.Append(index);
     }
 
 #undef LOAD_TABLE
-
-    return success;
-}
-
-bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
-{
-    Assert(!out_set->tables.len);
-    Assert(!out_set->indexes.len);
-
-    bool success = true;
-
-    Allocator file_alloc;
-
-    HeapArray<LoadTableData> tables;
-    for (const char *filename: filenames) {
-        Span<uint8_t> raw_data;
-        {
-            HeapArray<uint8_t> raw_buf(&file_alloc);
-            if (ReadFile(filename, Megabytes(8), &raw_buf) < 0) {
-                success = false;
-                continue;
-            }
-            raw_data = raw_buf.Leak();
-        }
-
-        Size start_len = out_set->tables.len;
-        if (!ParseTableHeaders(raw_data, filename, &out_set->tables)) {
-            success = false;
-            continue;
-        }
-        for (Size i = start_len; i < out_set->tables.len; i++) {
-            if (out_set->tables[i].type == TableType::UnknownTable)
-                continue;
-
-            LoadTableData table = {};
-            table.table_idx = i;
-            table.filename = filename;
-            table.raw_data = raw_data;
-            tables.Append(table);
-        }
-    }
-
-    std::sort(tables.begin(), tables.end(),
-              [&](const LoadTableData &table1, const LoadTableData &table2) {
-        const TableInfo &table_info1 = out_set->tables[table1.table_idx];
-        const TableInfo &table_info2 = out_set->tables[table2.table_idx];
-
-        return MultiCmp(table_info1.limit_dates[0] - table_info2.limit_dates[0],
-                        table_info1.version[0] - table_info2.version[0],
-                        table_info1.version[1] - table_info2.version[1],
-                        table_info1.build_date - table_info2.build_date) < 0;
-    });
-
-    LoadTableData *active_tables[ARRAY_SIZE(TableTypeNames)] = {};
-    Date start_date = {}, end_date = {};
-    for (LoadTableData &table: tables) {
-        const TableInfo &table_info = out_set->tables[table.table_idx];
-
-        while (end_date.value && table_info.limit_dates[0] >= end_date) {
-            success &= CommitTableIndex(out_set, start_date, end_date, active_tables);
-
-            start_date = {};
-            Date next_end_date = {};
-            for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
-                if (!active_tables[i])
-                    continue;
-
-                const TableInfo &active_info = out_set->tables[active_tables[i]->table_idx];
-
-                if (active_info.limit_dates[1] == end_date) {
-                    active_tables[i] = nullptr;
-                } else {
-                    if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
-                        next_end_date = active_info.limit_dates[1];
-                    }
-                }
-            }
-
-            start_date = table_info.limit_dates[0];
-            end_date = next_end_date;
-        }
-
-        if (start_date.value) {
-            if (table_info.limit_dates[0] > start_date) {
-                success &= CommitTableIndex(out_set, start_date, table_info.limit_dates[0],
-                                               active_tables);
-                start_date = table_info.limit_dates[0];
-            }
-        } else {
-            start_date = table_info.limit_dates[0];
-        }
-        if (!end_date.value || table_info.limit_dates[1] < end_date) {
-            end_date = table_info.limit_dates[1];
-        }
-
-        active_tables[(int)table_info.type] = &table;
-    }
-    success &= CommitTableIndex(out_set, start_date, end_date, active_tables);
-
-    {
-        HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
-        HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
-        HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
-
-        HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
-        HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
-
-        for (TableIndex &index: out_set->indexes) {
-#define FIX_SPAN(SpanName) \
-                index.SpanName.ptr = out_set->store.SpanName.ptr + (Size)index.SpanName.ptr
-#define BUILD_MAP(IndexName, MapName, TableType) \
-                do { \
-                    if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
-                        CONCAT(MapName, _map) = out_set->maps.MapName.Append(); \
-                        for (auto &value: index.IndexName) { \
-                            CONCAT(MapName, _map)->Append(&value); \
-                        } \
-                    } \
-                    index.CONCAT(MapName, _map) = CONCAT(MapName, _map); \
-                } while (false)
-
-            FIX_SPAN(ghm_nodes);
-            FIX_SPAN(diagnoses);
-            FIX_SPAN(exclusions);
-            FIX_SPAN(procedures);
-            FIX_SPAN(ghm_roots);
-            FIX_SPAN(gnn_cells);
-            FIX_SPAN(cma_cells[0]);
-            FIX_SPAN(cma_cells[1]);
-            FIX_SPAN(cma_cells[2]);
-            FIX_SPAN(ghs);
-            FIX_SPAN(authorizations);
-            FIX_SPAN(src_pairs[0]);
-            FIX_SPAN(src_pairs[1]);
-
-            BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
-            BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
-            BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
-            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
-            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
-
-#undef BUILD_MAP
-#undef FIX_SPAN
-        }
-    }
 
     return success;
 }

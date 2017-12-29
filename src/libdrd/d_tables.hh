@@ -290,4 +290,25 @@ public:
         { return (TableIndex *)((const TableSet *)this)->FindIndex(date); }
 };
 
-bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set);
+class TableSetBuilder {
+    struct LoadTableData {
+        Size table_idx;
+        const char *filename;
+        Span<uint8_t> raw_data;
+        bool loaded;
+    };
+
+    Allocator file_alloc;
+    HeapArray<LoadTableData> tables;
+
+    TableSet set;
+
+public:
+    bool LoadTab(StreamReader &st);
+    bool LoadFiles(Span<const char *const> filenames);
+
+    bool Finish(TableSet *out_set);
+
+private:
+    bool CommitIndex(Date start_date, Date end_sate, LoadTableData *current_tables[]);
+};
