@@ -196,18 +196,18 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
             }
             writer.Key("ghs"); writer.StartArray();
 
-            Span<const GhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
-            for (const GhsInfo &ghs_info: compatible_ghs) {
-                const GhmConstraint *constraint = constraints ? constraints->Find(ghs_info.ghm) : nullptr;
+            Span<const GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+            for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
+                const GhmConstraint *constraint = constraints ? constraints->Find(ghs_access_info.ghm) : nullptr;
 //              if (!constraint)
 //                  continue;
-                const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_info.ghs[0], date);
+                const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_access_info.ghs[0], date);
                 if (!ghs_pricing)
                     continue;
 
                 writer.StartObject();
-                writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghs_info.ghm).ptr);
-                writer.Key("ghm_mode"); writer.String(&ghs_info.ghm.parts.mode, 1);
+                writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghs_access_info.ghm).ptr);
+                writer.Key("ghm_mode"); writer.String(&ghs_access_info.ghm.parts.mode, 1);
                 if (constraint) {
                     writer.Key("duration_mask"); writer.Uint(constraint->duration_mask);
                 } else {
@@ -224,30 +224,30 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                 writer.Key("ghs"); writer.Int(ghs_pricing->ghs.number);
 
                 writer.Key("conditions"); writer.StartArray();
-                if (ghs_info.bed_authorization) {
-                    writer.String(Fmt(buf, "Autorisation Lit %1", ghs_info.bed_authorization).ptr);
+                if (ghs_access_info.bed_authorization) {
+                    writer.String(Fmt(buf, "Autorisation Lit %1", ghs_access_info.bed_authorization).ptr);
                 }
-                if (ghs_info.unit_authorization) {
-                    writer.String(Fmt(buf, "Autorisation Unité %1", ghs_info.unit_authorization).ptr);
-                    if (ghs_info.minimal_duration) {
-                        writer.String(Fmt(buf, "Durée Unitée Autorisée ≥ %1", ghs_info.minimal_duration).ptr);
+                if (ghs_access_info.unit_authorization) {
+                    writer.String(Fmt(buf, "Autorisation Unité %1", ghs_access_info.unit_authorization).ptr);
+                    if (ghs_access_info.minimal_duration) {
+                        writer.String(Fmt(buf, "Durée Unitée Autorisée ≥ %1", ghs_access_info.minimal_duration).ptr);
                     }
-                } else if (ghs_info.minimal_duration) {
+                } else if (ghs_access_info.minimal_duration) {
                     // TODO: Take into account in addition to constraints (when we plug them in)
-                    writer.String(Fmt(buf, "Durée ≥ %1", ghs_info.minimal_duration).ptr);
+                    writer.String(Fmt(buf, "Durée ≥ %1", ghs_access_info.minimal_duration).ptr);
                 }
-                if (ghs_info.minimal_age) {
-                    writer.String(Fmt(buf, "Age ≥ %1", ghs_info.minimal_age).ptr);
+                if (ghs_access_info.minimal_age) {
+                    writer.String(Fmt(buf, "Age ≥ %1", ghs_access_info.minimal_age).ptr);
                 }
-                if (ghs_info.main_diagnosis_mask.value) {
+                if (ghs_access_info.main_diagnosis_mask.value) {
                     writer.String(Fmt(buf, "DP de la liste D$%1.%2",
-                                      ghs_info.main_diagnosis_mask.offset, ghs_info.main_diagnosis_mask.value).ptr);
+                                      ghs_access_info.main_diagnosis_mask.offset, ghs_access_info.main_diagnosis_mask.value).ptr);
                 }
-                if (ghs_info.diagnosis_mask.value) {
+                if (ghs_access_info.diagnosis_mask.value) {
                     writer.String(Fmt(buf, "Diagnostic de la liste D$%1.%2",
-                                      ghs_info.diagnosis_mask.offset, ghs_info.diagnosis_mask.value).ptr);
+                                      ghs_access_info.diagnosis_mask.offset, ghs_access_info.diagnosis_mask.value).ptr);
                 }
-                for (const ListMask &mask: ghs_info.procedure_masks) {
+                for (const ListMask &mask: ghs_access_info.procedure_masks) {
                     writer.String(Fmt(buf, "Acte de la liste A$%1.%2",
                                       mask.offset, mask.value).ptr);
                 }

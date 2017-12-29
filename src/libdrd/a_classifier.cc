@@ -840,18 +840,18 @@ static bool TestAuthorization(const AuthorizationSet &authorization_set,
 }
 
 static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                    const GhsInfo &ghs_info)
+                    const GhsAccessInfo &ghs_access_info)
 {
-    if (ghs_info.minimal_age && agg.age < ghs_info.minimal_age)
+    if (ghs_access_info.minimal_age && agg.age < ghs_access_info.minimal_age)
         return false;
 
     int duration;
-    if (ghs_info.unit_authorization) {
+    if (ghs_access_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
         for (const Stay &stay: agg.stays) {
             if (TestAuthorization(authorization_set, stay.unit, stay.exit.date,
-                                  ghs_info.unit_authorization)) {
+                                  ghs_access_info.unit_authorization)) {
                 if (stay.exit.date != stay.entry.date) {
                     duration += stay.exit.date - stay.entry.date;
                 } else {
@@ -865,31 +865,31 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     } else {
         duration = agg.duration;
     }
-    if (ghs_info.bed_authorization) {
+    if (ghs_access_info.bed_authorization) {
         bool test = std::any_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const Stay &stay) {
-            return stay.bed_authorization == ghs_info.bed_authorization;
+            return stay.bed_authorization == ghs_access_info.bed_authorization;
         });
         if (!test)
             return false;
     }
-    if (ghs_info.minimal_duration && duration < ghs_info.minimal_duration)
+    if (ghs_access_info.minimal_duration && duration < ghs_access_info.minimal_duration)
         return false;
 
-    if (ghs_info.main_diagnosis_mask.value) {
+    if (ghs_access_info.main_diagnosis_mask.value) {
         if (!TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis,
-                           ghs_info.main_diagnosis_mask))
+                           ghs_access_info.main_diagnosis_mask))
             return false;
     }
-    if (ghs_info.diagnosis_mask.value) {
+    if (ghs_access_info.diagnosis_mask.value) {
         bool test = std::any_of(agg.diagnoses.begin(), agg.diagnoses.end(),
                                 [&](DiagnosisCode diag) {
-            return TestDiagnosis(*agg.index, agg.stay.sex, diag, ghs_info.diagnosis_mask);
+            return TestDiagnosis(*agg.index, agg.stay.sex, diag, ghs_access_info.diagnosis_mask);
         });
         if (!test)
             return false;
     }
-    for (const ListMask &mask: ghs_info.procedure_masks) {
+    for (const ListMask &mask: ghs_access_info.procedure_masks) {
         bool test = std::any_of(agg.procedures.begin(), agg.procedures.end(),
                                 [&](const ProcedureRealisation &proc) {
             return TestProcedure(*agg.index, proc, mask);
@@ -922,11 +922,11 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
         }
     }
 
-    Span<const GhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+    Span<const GhsAccessInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
 
-    for (const GhsInfo &ghs_info: compatible_ghs) {
-        if (TestGhs(agg, authorization_set, ghs_info))
-            return ghs_info.ghs[0];
+    for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
+        if (TestGhs(agg, authorization_set, ghs_access_info))
+            return ghs_access_info.ghs[0];
     }
     return GhsCode(9999);
 }
@@ -1042,7 +1042,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
             // TODO: Use HashSet on autorefs to avoid linear scan
             for (const AuthorizationInfo &it: agg.index->authorizations) {
-                if (it.type == AuthorizationType::Unit && it.code == auth_type) {
+                if (it.scope == AuthorizationScope::Unit && it.code == auth_type) {
                     auth_info = &it;
                     break;
                 }

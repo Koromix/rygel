@@ -16,7 +16,7 @@ enum class TableType: uint32_t {
     GhmRootTable,
     SeverityTable,
 
-    GhsTable,
+    GhsAccessTable,
     AuthorizationTable,
     SrcPairTable
 };
@@ -29,7 +29,7 @@ static const char *const TableTypeNames[] = {
     "GHM Root Table",
     "Severity Table",
 
-    "GHS Table",
+    "GHS Access Table",
     "Authorization Table",
     "SRC Pair Table"
 };
@@ -157,7 +157,7 @@ struct GhmRootInfo {
     HASH_SET_HANDLER(GhmRootInfo, ghm_root);
 };
 
-struct GhsInfo {
+struct GhsAccessInfo {
     GhmCode ghm;
     GhsCode ghs[2]; // 0 for public, 1 for private
 
@@ -171,22 +171,22 @@ struct GhsInfo {
     ListMask diagnosis_mask;
     LocalArray<ListMask, 4> procedure_masks;
 
-    HASH_SET_HANDLER_N(GhmHandler, GhsInfo, ghm);
-    HASH_SET_HANDLER_N(GhmRootHandler, GhsInfo, ghm.Root());
+    HASH_SET_HANDLER_N(GhmHandler, GhsAccessInfo, ghm);
+    HASH_SET_HANDLER_N(GhmRootHandler, GhsAccessInfo, ghm.Root());
 };
 
-enum class AuthorizationType: uint8_t {
+enum class AuthorizationScope: uint8_t {
     Facility,
     Unit,
     Bed
 };
-static const char *const AuthorizationTypeNames[] = {
+static const char *const AuthorizationScopeNames[] = {
     "Facility",
     "Unit",
     "Bed"
 };
 struct AuthorizationInfo {
-    AuthorizationType type;
+    AuthorizationScope scope;
     int8_t code;
     int8_t function;
 };
@@ -216,7 +216,7 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
                         HeapArray<ValueRangeCell<2>> *out_cells);
 
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
-                   const TableInfo &table, HeapArray<GhsInfo> *out_nodes);
+                   const TableInfo &table, HeapArray<GhsAccessInfo> *out_nodes);
 bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
                              const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths);
 bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
@@ -237,7 +237,7 @@ struct TableIndex {
     Span<ValueRangeCell<2>> gnn_cells;
     Span<ValueRangeCell<2>> cma_cells[3];
 
-    Span<GhsInfo> ghs;
+    Span<GhsAccessInfo> ghs;
     Span<AuthorizationInfo> authorizations;
     Span<SrcPair> src_pairs[2];
 
@@ -245,16 +245,16 @@ struct TableIndex {
     HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
     HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
-    HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map;
-    HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+    HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
+    HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     Span<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
     const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
     const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
 
-    Span<const GhsInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
-    Span<const GhsInfo> FindCompatibleGhs(GhmCode ghm) const;
+    Span<const GhsAccessInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
+    Span<const GhsAccessInfo> FindCompatibleGhs(GhmCode ghm) const;
 };
 
 class TableSet {
@@ -271,7 +271,7 @@ public:
         HeapArray<ValueRangeCell<2>> gnn_cells;
         HeapArray<ValueRangeCell<2>> cma_cells[3];
 
-        HeapArray<GhsInfo> ghs;
+        HeapArray<GhsAccessInfo> ghs;
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<SrcPair> src_pairs[2];
     } store;
@@ -281,8 +281,8 @@ public:
         HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
         HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
 
-        HeapArray<HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler>> ghm_to_ghs;
-        HeapArray<HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler>> ghm_root_to_ghs;
+        HeapArray<HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler>> ghm_to_ghs;
+        HeapArray<HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
     } maps;
 
     const TableIndex *FindIndex(Date date) const;

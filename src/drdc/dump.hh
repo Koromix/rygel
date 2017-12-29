@@ -14,7 +14,7 @@ void DumpProcedureTable(Span<const ProcedureInfo> procedures);
 void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots);
 void DumpSeverityTable(Span<const ValueRangeCell<2>> cells);
 
-void DumpGhsTable(Span<const GhsInfo> ghs);
+void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs);
 void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations);
 void DumpSupplementPairTable(Span<const SrcPair> pairs);
 

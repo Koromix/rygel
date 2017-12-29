@@ -180,7 +180,7 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
         } else if (TestStr(table.raw_type, "RGHMINFO")) {
             table.type = TableType::GhmRootTable;
         } else if (TestStr(table.raw_type, "GHSINFO")) {
-            table.type = TableType::GhsTable;
+            table.type = TableType::GhsAccessTable;
         } else if (TestStr(table.raw_type, "TABCOMBI")) {
             table.type = TableType::SeverityTable;
         } else if (TestStr(table.raw_type, "AUTOREFS")) {
@@ -643,7 +643,7 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 }
 
 bool ParseGhsTable(const uint8_t *file_data, const char *filename,
-                   const TableInfo &table, HeapArray<GhsInfo> *out_ghs)
+                   const TableInfo &table, HeapArray<GhsAccessInfo> *out_ghs)
 {
     Size start_ghs_len = out_ghs->len;
     DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
@@ -664,13 +664,13 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             uint16_t low_duration_treshold;
         } sectors[2];
 	};
-    StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(GhsInfo().ghs));
+    StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(GhsAccessInfo().ghs));
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.sections.len != 1);
     FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhsNode));
 
-    GhsInfo current_ghs = {};
+    GhsAccessInfo current_ghs = {};
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         PackedGhsNode raw_ghs_node;
         memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
@@ -753,7 +753,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
     }
 
     std::stable_sort(out_ghs->begin() + start_ghs_len, out_ghs->end(),
-                     [](const GhsInfo &ghs_info1, const GhsInfo &ghs_info2) {
+                     [](const GhsAccessInfo &ghs_info1, const GhsAccessInfo &ghs_info2) {
         int root_cmp = MultiCmp(ghs_info1.ghm.parts.cmd - ghs_info2.ghm.parts.cmd,
                                 ghs_info1.ghm.parts.type - ghs_info2.ghm.parts.type,
                                 ghs_info1.ghm.parts.seq - ghs_info2.ghm.parts.seq);
@@ -798,11 +798,11 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
                    SIZE(PackedAuthorization));
 
             if (i == 0) {
-                auth.type = AuthorizationType::Bed;
+                auth.scope = AuthorizationScope::Bed;
             } else if (!raw_auth.global) {
-                auth.type = AuthorizationType::Unit;
+                auth.scope = AuthorizationScope::Unit;
             } else {
-                auth.type = AuthorizationType::Facility;
+                auth.scope = AuthorizationScope::Facility;
             }
             auth.code = (int8_t)raw_auth.code;
             auth.function = (int8_t)raw_auth.function;
@@ -929,7 +929,7 @@ static bool CommitTableIndex(TableSet *set, Date start_date, Date end_sate,
                 LOAD_TABLE(cma_cells[2], ParseSeverityTable, 3);
             } break;
 
-            case TableType::GhsTable: {
+            case TableType::GhsAccessTable: {
                 LOAD_TABLE(ghs, ParseGhsTable);
             } break;
             case TableType::AuthorizationTable: {
@@ -1054,8 +1054,8 @@ bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
         HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
         HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
-        HashSet<GhmCode, const GhsInfo *, GhsInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
-        HashSet<GhmRootCode, const GhsInfo *, GhsInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
+        HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
+        HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
 
         for (TableIndex &index: out_set->indexes) {
 #define FIX_SPAN(SpanName) \
@@ -1088,8 +1088,8 @@ bool LoadTableFiles(Span<const char *const> filenames, TableSet *out_set)
             BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
             BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
             BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
-            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsTable);
-            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsTable);
+            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
+            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
 
 #undef BUILD_MAP
 #undef FIX_SPAN
@@ -1157,18 +1157,18 @@ const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
     return ghm_roots_map->FindValue(code, nullptr);
 }
 
-Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
+Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
 {
     if (!ghm_root_to_ghs_map)
         return {};
 
-    Span<const GhsInfo> compatible_ghs;
+    Span<const GhsAccessInfo> compatible_ghs;
     compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root, nullptr);
     if (!compatible_ghs.ptr)
         return {};
 
     {
-        const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
+        const GhsAccessInfo *end_ghs = compatible_ghs.ptr + 1;
         while (end_ghs < ghs.end() && end_ghs->ghm.Root() == ghm_root) {
             end_ghs++;
         }
@@ -1178,12 +1178,12 @@ Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
     return compatible_ghs;
 }
 
-Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
+Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 {
     if (!ghm_to_ghs_map)
         return {};
 
-    Span<const GhsInfo> compatible_ghs;
+    Span<const GhsAccessInfo> compatible_ghs;
     compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm, nullptr);
     if (!compatible_ghs.ptr)
         return {};
@@ -1191,7 +1191,7 @@ Span<const GhsInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
     // TODO: Make some kind of FindContiguous() abstraction for this and
     // the previous functions that do the same.
     {
-        const GhsInfo *end_ghs = compatible_ghs.ptr + 1;
+        const GhsAccessInfo *end_ghs = compatible_ghs.ptr + 1;
         while (end_ghs < ghs.end() && end_ghs->ghm == ghm) {
             end_ghs++;
         }

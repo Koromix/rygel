@@ -141,38 +141,39 @@ void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots)
     }
 }
 
-void DumpGhsTable(Span<const GhsInfo> ghs)
+void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
 {
     GhmCode previous_ghm = {};
-    for (const GhsInfo &ghs_info: ghs) {
-        if (ghs_info.ghm != previous_ghm) {
-            PrintLn("      GHM %1:", ghs_info.ghm);
-            previous_ghm = ghs_info.ghm;
+    for (const GhsAccessInfo &ghs_access_info: ghs) {
+        if (ghs_access_info.ghm != previous_ghm) {
+            PrintLn("      GHM %1:", ghs_access_info.ghm);
+            previous_ghm = ghs_access_info.ghm;
         }
         PrintLn("        GHS %1 (public) / GHS %2 (private)",
-                ghs_info.ghs[0], ghs_info.ghs[1]);
+                ghs_access_info.ghs[0], ghs_access_info.ghs[1]);
 
-        if (ghs_info.unit_authorization) {
-            PrintLn("          Requires unit authorization %1", ghs_info.unit_authorization);
+        if (ghs_access_info.unit_authorization) {
+            PrintLn("          Requires unit authorization %1", ghs_access_info.unit_authorization);
         }
-        if (ghs_info.bed_authorization) {
-            PrintLn("          Requires bed authorization %1", ghs_info.bed_authorization);
+        if (ghs_access_info.bed_authorization) {
+            PrintLn("          Requires bed authorization %1", ghs_access_info.bed_authorization);
         }
-        if (ghs_info.minimal_duration) {
-            PrintLn("          Requires duration >= %1 days", ghs_info.minimal_duration);
+        if (ghs_access_info.minimal_duration) {
+            PrintLn("          Requires duration >= %1 days", ghs_access_info.minimal_duration);
         }
-        if (ghs_info.minimal_age) {
-            PrintLn("          Requires age >= %1 years", ghs_info.minimal_age);
+        if (ghs_access_info.minimal_age) {
+            PrintLn("          Requires age >= %1 years", ghs_access_info.minimal_age);
         }
-        if (ghs_info.main_diagnosis_mask.value) {
+        if (ghs_access_info.main_diagnosis_mask.value) {
             PrintLn("          Main Diagnosis List D$%1.%2",
-                    ghs_info.main_diagnosis_mask.offset, ghs_info.main_diagnosis_mask.value);
+                    ghs_access_info.main_diagnosis_mask.offset,
+                    ghs_access_info.main_diagnosis_mask.value);
         }
-        if (ghs_info.diagnosis_mask.value) {
+        if (ghs_access_info.diagnosis_mask.value) {
             PrintLn("          Diagnosis List D$%1.%2",
-                    ghs_info.diagnosis_mask.offset, ghs_info.diagnosis_mask.value);
+                    ghs_access_info.diagnosis_mask.offset, ghs_access_info.diagnosis_mask.value);
         }
-        for (const ListMask &mask: ghs_info.procedure_masks) {
+        for (const ListMask &mask: ghs_access_info.procedure_masks) {
             PrintLn("          Procedure List A$%1.%2", mask.offset, mask.value);
         }
     }
@@ -191,7 +192,7 @@ void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations)
 {
     for (const AuthorizationInfo &auth: authorizations) {
         PrintLn("      %1 [%2] => Function %3",
-                auth.code, AuthorizationTypeNames[(int)auth.type], auth.function);
+                auth.code, AuthorizationScopeNames[(int)auth.scope], auth.function);
     }
 }
 
@@ -278,9 +279,9 @@ void DumpTableSetContent(const TableSet &table_set)
                     }
                 } break;
 
-                case TableType::GhsTable: {
-                    PrintLn("    GHS Table:");
-                    DumpGhsTable(index.ghs);
+                case TableType::GhsAccessTable: {
+                    PrintLn("    GHS Access Table:");
+                    DumpGhsAccessTable(index.ghs);
                 } break;
                 case TableType::AuthorizationTable: {
                     PrintLn("    Authorization Types:");
