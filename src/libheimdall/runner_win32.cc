@@ -433,8 +433,8 @@ bool Run()
     if (!SetGLContext(main_window.hdc, main_window.hgl))
         return false;
 
+    sys_main_priv = {};
     sys_main_priv.run = true;
-    sys_main_priv.iteration_count = 0;
 
     while (sys_main_priv.run) {
         // Reset relative inputs
@@ -457,7 +457,7 @@ bool Run()
         }
 
         // Append NUL byte to keyboard text
-        if (sys_keyboard_priv.text.len == SIZE(sys_keyboard_priv.text.data)) {
+        if (!sys_keyboard_priv.text.Available()) {
             sys_keyboard_priv.text.len--;
         }
         sys_keyboard_priv.text.Append('\0');
