@@ -14,10 +14,6 @@ const char *main_pricing_filename;
 const char *main_authorization_filename;
 HeapArray<const char *> main_catalog_directories;
 
-static TableSet main_table_set;
-static PricingSet main_pricing_set;
-static AuthorizationSet main_authorization_set;
-
 bool InitTableSet(Span<const char *const> data_directories,
                   Span<const char *const> table_directories,
                   TableSet *out_set)
@@ -160,34 +156,46 @@ bool InitCatalogSet(Span<const char *const> data_directories,
 
 const TableSet *GetMainTableSet()
 {
-    if (!main_table_set.indexes.len) {
-        if (!InitTableSet(main_data_directories, main_table_directories, &main_table_set))
+    static TableSet table_set;
+    static bool loaded = false;
+
+    if (!loaded) {
+        if (!InitTableSet(main_data_directories, main_table_directories, &table_set))
             return nullptr;
+        loaded = true;
     }
 
-    return &main_table_set;
+    return &table_set;
 }
 
 const PricingSet *GetMainPricingSet()
 {
-    if (!main_pricing_set.ghs_pricings.len) {
+    static PricingSet pricing_set;
+    static bool loaded = false;
+
+    if (!loaded) {
         if (!InitPricingSet(main_data_directories, main_pricing_filename,
-                            &main_pricing_set))
+                            &pricing_set))
             return nullptr;
+        loaded = true;
     }
 
-    return &main_pricing_set;
+    return &pricing_set;
 }
 
 const AuthorizationSet *GetMainAuthorizationSet()
 {
-    if (!main_authorization_set.authorizations.len) {
+    static AuthorizationSet authorization_set;
+    static bool loaded = false;
+
+    if (!loaded) {
         if (!InitAuthorizationSet(main_data_directories, main_authorization_filename,
-                                  &main_authorization_set))
+                                  &authorization_set))
             return nullptr;
+        loaded = true;
     }
 
-    return &main_authorization_set;
+    return &authorization_set;
 }
 
 const CatalogSet *GetMainCatalogSet()
