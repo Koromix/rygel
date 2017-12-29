@@ -426,8 +426,40 @@ bool StaySet::SavePack(const char *filename) const
     return SavePack(st);
 }
 
-static bool LoadStayPack(StreamReader &st, StaySet *out_set)
+bool StaySetBuilder::LoadJson(StreamReader &st)
 {
+    Size stays_len = set.stays.len;
+    DEFER_NC(set_guard, diagnoses_len = set.store.diagnoses.len,
+                        procedures_len = set.store.procedures.len) {
+        set.stays.RemoveFrom(stays_len);
+        set.store.diagnoses.RemoveFrom(diagnoses_len);
+        set.store.procedures.RemoveFrom(procedures_len);
+    };
+
+    JsonStayHandler json_handler(&set);
+    if (!ParseJsonFile(st, &json_handler))
+        return false;
+
+    std::stable_sort(set.stays.begin() + stays_len, set.stays.end(),
+                     [](const Stay &stay1, const Stay &stay2) {
+        return MultiCmp(stay1.stay_id - stay2.stay_id,
+                        stay1.bill_id - stay2.bill_id) < 0;
+    });
+
+    set_guard.disable();
+    return true;
+}
+
+bool StaySetBuilder::LoadPack(StreamReader &st)
+{
+    DEFER_NC(set_guard, stays_len = set.stays.len,
+                        diagnoses_len = set.store.diagnoses.len,
+                        procedures_len = set.store.procedures.len) {
+        set.stays.RemoveFrom(stays_len);
+        set.store.diagnoses.RemoveFrom(diagnoses_len);
+        set.store.procedures.RemoveFrom(procedures_len);
+    };
+
     PackHeader bh;
     if (st.Read(SIZE(bh), &bh) != SIZE(bh))
         goto error;
@@ -440,81 +472,47 @@ static bool LoadStayPack(StreamReader &st, StaySet *out_set)
 
     if (bh.stay_size != SIZE(Stay))
         goto error;
-    out_set->stays.Grow(bh.stays_len);
-    if (st.Read(SIZE(*out_set->stays.ptr) * bh.stays_len,
-                out_set->stays.end()) != SIZE(*out_set->stays.ptr) * bh.stays_len)
+    set.stays.Grow(bh.stays_len);
+    if (st.Read(SIZE(*set.stays.ptr) * bh.stays_len,
+                set.stays.end()) != SIZE(*set.stays.ptr) * bh.stays_len)
         goto error;
-    out_set->stays.len += bh.stays_len;
+    set.stays.len += bh.stays_len;
 
-    out_set->store.diagnoses.Grow(bh.diagnoses_len);
-    if (st.Read(SIZE(*out_set->store.diagnoses.ptr) * bh.diagnoses_len,
-                out_set->store.diagnoses.end()) != SIZE(*out_set->store.diagnoses.ptr) * bh.diagnoses_len)
+    set.store.diagnoses.Grow(bh.diagnoses_len);
+    if (st.Read(SIZE(*set.store.diagnoses.ptr) * bh.diagnoses_len,
+                set.store.diagnoses.end()) != SIZE(*set.store.diagnoses.ptr) * bh.diagnoses_len)
         goto error;
-    out_set->store.procedures.Grow(bh.procedures_len);
-    if (st.Read(SIZE(*out_set->store.procedures.ptr) * bh.procedures_len,
-                out_set->store.procedures.end()) != SIZE(*out_set->store.procedures.ptr) * bh.procedures_len)
+    set.store.procedures.Grow(bh.procedures_len);
+    if (st.Read(SIZE(*set.store.procedures.ptr) * bh.procedures_len,
+                set.store.procedures.end()) != SIZE(*set.store.procedures.ptr) * bh.procedures_len)
         goto error;
 
     {
-        Size diagnoses_offset = out_set->store.diagnoses.len;
-        Size procedures_offset = out_set->store.procedures.len;
+        Size diagnoses_offset = set.store.diagnoses.len;
+        Size procedures_offset = set.store.procedures.len;
 
-        for (Size i = out_set->stays.len - bh.stays_len; i < out_set->stays.len; i++) {
-            Stay *stay = &out_set->stays[i];
+        for (Size i = set.stays.len - bh.stays_len; i < set.stays.len; i++) {
+            Stay *stay = &set.stays[i];
 
             if (stay->diagnoses.len) {
-                stay->diagnoses.ptr = (DiagnosisCode *)(out_set->store.diagnoses.len - diagnoses_offset);
-                out_set->store.diagnoses.len += stay->diagnoses.len;
+                stay->diagnoses.ptr = (DiagnosisCode *)(set.store.diagnoses.len - diagnoses_offset);
+                set.store.diagnoses.len += stay->diagnoses.len;
             }
             if (stay->procedures.len) {
-                stay->procedures.ptr = (ProcedureRealisation *)(out_set->store.procedures.len - procedures_offset);
-                out_set->store.procedures.len += stay->procedures.len;
+                stay->procedures.ptr = (ProcedureRealisation *)(set.store.procedures.len - procedures_offset);
+                set.store.procedures.len += stay->procedures.len;
             }
         }
     }
 
+    // We assume stays are already sorted in pak files
+
+    set_guard.disable();
     return true;
 
 error:
     LogError("Error while reading stay pack file '%1'", st.filename);
     return false;
-}
-
-bool StaySetBuilder::Load(StreamReader &st, StaySetDataType type)
-{
-    DEFER_NC(set_guard, stays_len = set.store.diagnoses.len,
-                        diagnoses_len = set.store.diagnoses.len,
-                        procedures_len = set.store.procedures.len) {
-        set.stays.RemoveFrom(stays_len);
-        set.store.diagnoses.RemoveFrom(diagnoses_len);
-        set.store.procedures.RemoveFrom(procedures_len);
-    };
-
-    switch (type) {
-        case StaySetDataType::Json: {
-            Size start_len = set.stays.len;
-
-            JsonStayHandler json_handler(&set);
-            if (!ParseJsonFile(st, &json_handler))
-                return false;
-
-            std::stable_sort(set.stays.begin() + start_len, set.stays.end(),
-                             [](const Stay &stay1, const Stay &stay2) {
-                return MultiCmp(stay1.stay_id - stay2.stay_id,
-                                stay1.bill_id - stay2.bill_id) < 0;
-            });
-        } break;
-
-        case StaySetDataType::Pack: {
-            if (!LoadStayPack(st, &set))
-                return false;
-
-            // Assume stays are already sorted in pak files
-        } break;
-    }
-
-    set_guard.disable();
-    return true;
 }
 
 bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
@@ -524,11 +522,11 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
         CompressionType compression_type;
         extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
-        StaySetDataType data_type;
+        bool (StaySetBuilder::*load_func)(StreamReader &st);
         if (TestStr(extension, ".mjson")) {
-            data_type = StaySetDataType::Json;
+            load_func = &StaySetBuilder::LoadJson;
         } else if (TestStr(extension, ".mpak")) {
-            data_type = StaySetDataType::Pack;
+            load_func = &StaySetBuilder::LoadPack;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
@@ -538,7 +536,7 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
         StreamReader st(filename, compression_type);
         if (st.error)
             return false;
-        if (!Load(st, data_type))
+        if (!(this->*load_func)(st))
             return false;
     }
 

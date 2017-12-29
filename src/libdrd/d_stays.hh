@@ -85,16 +85,12 @@ struct StaySet {
     bool SavePack(const char *filename) const;
 };
 
-enum class StaySetDataType {
-    Json,
-    Pack
-};
-
 class StaySetBuilder {
     StaySet set;
 
 public:
-    bool Load(StreamReader &st, StaySetDataType type);
+    bool LoadJson(StreamReader &st);
+    bool LoadPack(StreamReader &st);
     bool LoadFiles(Span<const char *const> filenames);
 
     bool Finish(StaySet *out_set);
