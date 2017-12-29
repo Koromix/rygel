@@ -1121,7 +1121,7 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        Size path_len = GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
+        Size path_len = (Size)GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
         Assert(path_len);
         Assert(path_len < SIZE(executable_path));
     }

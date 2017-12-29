@@ -312,7 +312,7 @@ public:
                             int activity = (int)(activities_dec % 10);
                             activities_dec /= 10;
                             if (LIKELY(activity < 8)) {
-                                proc.activities |= (uint8_t)(1 << activity);
+                                proc.activities = (uint8_t)(proc.activities | (1 << activity));
                             } else {
                                 LogError("Procedure activity %1 outside of %2 - %3", activity, 0, 7);
                             }

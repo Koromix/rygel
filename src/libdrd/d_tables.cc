@@ -132,7 +132,7 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
                 memcpy(&raw_table_header.name, raw_table_header.signature, SIZE(raw_table_header.name));
             }
             FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                 raw_table_header.sections_count * SIZE(PackedSection1111)));
+                                                 (uint32_t)raw_table_header.sections_count * SIZE(PackedSection1111)));
             FAIL_PARSE_IF(raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
