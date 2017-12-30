@@ -494,7 +494,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::Date: {
-                DebugAssert(arg.value.date.IsValid());
+                DebugAssert(!arg.value.date.value || arg.value.date.IsValid());
                 int year = arg.value.date.st.year;
                 if (year < 0) {
                     append("-");
