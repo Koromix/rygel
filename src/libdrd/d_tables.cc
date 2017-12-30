@@ -697,7 +697,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
                 ListMask mask;
                 mask.offset = raw_ghs_node.params[0];
                 mask.value = raw_ghs_node.params[1];
-                // FIXME: Warn and avoid Append() if full
+                FAIL_PARSE_IF(!current_ghs.procedure_masks.Available());
                 current_ghs.procedure_masks.Append(mask);
             } break;
 
