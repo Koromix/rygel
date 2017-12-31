@@ -198,7 +198,7 @@ Classify options:
     if (!authorization_set)
         return false;
 
-    LogDebug("Load");
+    LogInfo("Load");
     StaySet stay_set;
     {
         StaySetBuilder stay_set_builder;
@@ -209,11 +209,11 @@ Classify options:
             return false;
     }
 
-    LogDebug("Classify");
+    LogInfo("Classify");
     ClassifyResultSet result_set = {};
     Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
 
-    LogDebug("Summary");
+    LogInfo("Summary");
     PrintLn("Summary:");
     PrintLn("  N: %1", result_set.results.len);
     PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
@@ -224,7 +224,7 @@ Classify options:
     PrintLn();
 
     if (verbosity >= 1 || test) {
-        LogDebug("Export");
+        LogInfo("Export");
         PrintLn("Details:");
         for (const ClassifyResult &result: result_set.results) {
             PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
@@ -351,12 +351,12 @@ Constraints options:
         }
     }
 
-    LogDebug("Computing");
+    LogInfo("Computing");
     HashTable<GhmCode, GhmConstraint> ghm_constraints;
     if (!ComputeGhmConstraints(*index, &ghm_constraints))
         return false;
 
-    LogDebug("Export");
+    LogInfo("Export");
     for (const GhsAccessInfo &ghs_access_info: index->ghs)  {
         const GhmConstraint *constraint = ghm_constraints.Find(ghs_access_info.ghm);
         if (constraint) {
@@ -589,7 +589,7 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
         }
     }
 
-    LogDebug("Load");
+    LogInfo("Load");
     StaySet stay_set;
     {
         StaySetBuilder stay_set_builder;
@@ -600,7 +600,7 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
             return false;
     }
 
-    LogDebug("Pack");
+    LogInfo("Pack");
     if (!stay_set.SavePack(dest_filename))
         return false;
 

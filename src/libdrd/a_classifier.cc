@@ -815,7 +815,7 @@ static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
     } else if (unit.number) {
         const Authorization *auth = authorization_set.FindUnit(unit, date);
         if (UNLIKELY(!auth)) {
-            // TODO: LogDebug("Unit %1 is missing from authorization set", unit);
+            LogDebug("Unit %1 is missing from authorization set", unit);
             return 0;
         }
         return auth->type;
@@ -1179,8 +1179,8 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
 
     const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs);
     if (!price_info) {
-        // LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
-        //          agg.index->limit_dates[0], agg.index->limit_dates[1]);
+        LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
+                 agg.index->limit_dates[0], agg.index->limit_dates[1]);
         return 0;
     }
 

@@ -475,7 +475,7 @@ Options:
 
 #ifdef NDEBUG
     for (Size i = 0; i < table_set->indexes.len; i++) {
-        LogDebug("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
+        LogInfo("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
 
         // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
         if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
