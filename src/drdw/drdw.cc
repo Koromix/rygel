@@ -207,7 +207,9 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                 writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghs_access_info.ghm).ptr);
                 writer.Key("ghm_mode"); writer.String(&ghs_access_info.ghm.parts.mode, 1);
                 if (constraint) {
-                    writer.Key("duration_mask"); writer.Uint(constraint->duration_mask);
+                    uint32_t combined_duration_mask = constraint->duration_mask;
+                    combined_duration_mask &= ~((1u << ghs_access_info.minimal_duration) - 1);
+                    writer.Key("duration_mask"); writer.Uint(combined_duration_mask);
                 } else {
                     writer.Key("duration_mask"); writer.Uint(UINT_MAX);
                 }
@@ -231,7 +233,6 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                         writer.String(Fmt(buf, "Durée Unitée Autorisée ≥ %1", ghs_access_info.minimal_duration).ptr);
                     }
                 } else if (ghs_access_info.minimal_duration) {
-                    // TODO: Take into account in addition to constraints (when we plug them in)
                     writer.String(Fmt(buf, "Durée ≥ %1", ghs_access_info.minimal_duration).ptr);
                 }
                 if (ghs_access_info.minimal_age) {
