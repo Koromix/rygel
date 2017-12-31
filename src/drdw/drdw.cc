@@ -133,6 +133,19 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
     }
 }
 
+struct Response {
+    int code;
+    MHD_Response *response;
+};
+
+static Response CreateErrorPage(int code)
+{
+    Span<char> page = Fmt(nullptr, "Error %1", code);
+    MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
+                                                           ReleaseCallback);
+    return {code, response};
+}
+
 static MHD_Response *BuildJson(CompressionType compression_type,
                                std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func)
 {
@@ -156,21 +169,21 @@ static MHD_Response *BuildJson(CompressionType compression_type,
     return response;
 }
 
-static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
-                                     CompressionType compression_type)
+static Response ProducePriceMap(MHD_Connection *conn, const char *,
+                                CompressionType compression_type)
 {
     Date date = {};
     {
         const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "date");
         date = Date::FromString(date_str);
         if (!date.value)
-            return nullptr;
+            return CreateErrorPage(404);
     }
 
     const TableIndex *index = table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        return nullptr;
+        return CreateErrorPage(404);
     }
 
     const HashTable<GhmCode, GhmConstraint> *constraints = nullptr;
@@ -196,9 +209,8 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
 
             Span<const GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
-                const GhmConstraint *constraint = constraints ? constraints->Find(ghs_access_info.ghm) : nullptr;
-//              if (!constraint)
-//                  continue;
+                const GhmConstraint *constraint = constraints ? constraints->Find(ghs_access_info.ghm)
+                                                              : nullptr;
                 const GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_access_info.ghs[0]);
                 if (!ghs_price_info)
                     continue;
@@ -275,11 +287,11 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
         return true;
     });
 
-    return response;
+    return {200, response};
 }
 
-static MHD_Response *ProduceGhmRoots(MHD_Connection *, const char *,
-                                     CompressionType compression_type)
+static Response ProduceGhmRoots(MHD_Connection *, const char *,
+                                CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -301,11 +313,11 @@ static MHD_Response *ProduceGhmRoots(MHD_Connection *, const char *,
         return true;
     });
 
-    return response;
+    return {200, response};
 }
 
-static MHD_Response *ProducePages(MHD_Connection *, const char *,
-                                  CompressionType compression_type)
+static Response ProducePages(MHD_Connection *, const char *,
+                             CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -330,11 +342,11 @@ static MHD_Response *ProducePages(MHD_Connection *, const char *,
        return true;
     });
 
-    return response;
+    return {200, response};
 }
 
-static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
-                                           CompressionType compression_type)
+static Response ProduceStaticResource(MHD_Connection *, const char *url,
+                                      CompressionType compression_type)
 {
 #if !defined(NDEBUG) && defined(_WIN32)
     UpdateStaticResources();
@@ -342,7 +354,7 @@ static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
 
     Span<const uint8_t> resource_data = routes.FindValue(url, {});
     if (!resource_data.IsValid())
-        return nullptr;
+        return CreateErrorPage(404);
 
     MHD_Response *response;
     if (compression_type != CompressionType::None) {
@@ -350,7 +362,7 @@ static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
         StreamWriter st(&buffer, nullptr, compression_type);
         st.Write(resource_data);
         if (!st.Close())
-            return nullptr;
+            return CreateErrorPage(500);
 
         response = MHD_create_response_from_heap((size_t)buffer.len, (void *)buffer.ptr,
                                                  ReleaseCallback);
@@ -362,7 +374,8 @@ static MHD_Response *ProduceStaticResource(MHD_Connection *, const char *url,
                                                    (void *)resource_data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
-    return response;
+
+    return {200, response};
 }
 
 // TODO: Deny if URL too long (MHD option?)
@@ -371,8 +384,6 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
                                 const char *, const char *,
                                 size_t *, void **)
 {
-    const char *const error_page = "<html><body>Internal Server Error</body></html>";
-
     CompressionType compression_type = CompressionType::None;
     {
         Span<const char> encodings = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
@@ -388,7 +399,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         }
     }
 
-    MHD_Response *response = nullptr;
+    Response response;
     if (TestStr(url, "/api/price_map.json")) {
         response = ProducePriceMap(conn, url, compression_type);
     } else if (TestStr(url, "/api/ghm_roots.json")) {
@@ -398,18 +409,9 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
     } else {
         response = ProduceStaticResource(conn, url, compression_type);
     }
+    DEFER { MHD_destroy_response(response.response); };
 
-    unsigned int code;
-    if (response) {
-        code = MHD_HTTP_OK;
-    } else {
-        response = MHD_create_response_from_buffer(strlen(error_page), (void *)error_page,
-                                                   MHD_RESPMEM_PERSISTENT);
-        code = MHD_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    DEFER { MHD_destroy_response(response); };
-
-    return MHD_queue_response(conn, code, response);
+    return MHD_queue_response(conn, (unsigned int)response.code, response.response);
 }
 
 int main(int argc, char **argv)
