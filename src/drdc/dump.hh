@@ -15,15 +15,12 @@ void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots);
 void DumpSeverityTable(Span<const ValueRangeCell<2>> cells);
 
 void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs);
+void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices);
 void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations);
 void DumpSupplementPairTable(Span<const SrcPair> pairs);
 
 void DumpTableSetHeaders(const TableSet &table_set);
 void DumpTableSetContent(const TableSet &table_set);
-
-void DumpGhsPricings(Span<const GhsPricing> ghs_pricings);
-
-void DumpPricingSet(const PricingSet &pricing_set);
 
 void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots);
 void DumpCatalogSet(const CatalogSet &catalog_set);

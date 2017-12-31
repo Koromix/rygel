@@ -18,7 +18,9 @@ enum class TableType: uint32_t {
 
     GhsAccessTable,
     AuthorizationTable,
-    SrcPairTable
+    SrcPairTable,
+
+    PriceTable
 };
 static const char *const TableTypeNames[] = {
     "Unknown Table",
@@ -31,7 +33,9 @@ static const char *const TableTypeNames[] = {
 
     "GHS Access Table",
     "Authorization Table",
-    "SRC Pair Table"
+    "SRC Pair Table",
+
+    "Price Table"
 };
 
 struct ListMask {
@@ -47,6 +51,7 @@ struct TableInfo {
         Size value_len;
     };
 
+    const char *filename;
     Date build_date;
     uint16_t version[2];
     Date limit_dates[2];
@@ -175,6 +180,25 @@ struct GhsAccessInfo {
     HASH_TABLE_HANDLER_N(GhmRootHandler, GhsAccessInfo, ghm.Root());
 };
 
+struct GhsPriceInfo {
+    enum class Flag {
+        ExbOnce = 1
+    };
+
+    GhsCode ghs;
+
+    struct {
+        int32_t price_cents;
+        int16_t exh_treshold;
+        int16_t exb_treshold;
+        int32_t exh_cents;
+        int32_t exb_cents;
+        uint16_t flags;
+    } sectors[2]; // 0 for public, 1 for private
+
+    HASH_TABLE_HANDLER(GhsPriceInfo, ghs);
+};
+
 enum class AuthorizationScope: uint8_t {
     Facility,
     Unit,
@@ -196,32 +220,38 @@ struct SrcPair {
     ProcedureCode proc;
 };
 
+struct PriceTable {
+    Date date;
+    Date build_date;
+    HeapArray<GhsPriceInfo> ghs_prices;
+};
+
 Date ConvertDate1980(uint16_t days);
 
-bool ParseTableHeaders(const Span<const uint8_t> file_data,
-                       const char *filename, HeapArray<TableInfo> *out_tables);
+bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
+                       Allocator *str_alloc, HeapArray<TableInfo> *out_tables);
 
-bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
-                          const TableInfo &table, HeapArray<GhmDecisionNode> *out_nodes);
-bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, HeapArray<DiagnosisInfo> *out_diags);
-bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, HeapArray<ExclusionInfo> *out_exclusions);
-bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
-                         const TableInfo &table, HeapArray<ProcedureInfo> *out_procs);
-bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, HeapArray<GhmRootInfo> *out_ghm_roots);
-bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
-                        const TableInfo &table, int section_idx,
+bool ParseGhmDecisionTree(const uint8_t *file_data, const TableInfo &table,
+                          HeapArray<GhmDecisionNode> *out_nodes);
+bool ParseDiagnosisTable(const uint8_t *file_data, const TableInfo &table,
+                         HeapArray<DiagnosisInfo> *out_diags);
+bool ParseExclusionTable(const uint8_t *file_data, const TableInfo &table,
+                         HeapArray<ExclusionInfo> *out_exclusions);
+bool ParseProcedureTable(const uint8_t *file_data, const TableInfo &table,
+                         HeapArray<ProcedureInfo> *out_procs);
+bool ParseGhmRootTable(const uint8_t *file_data, const TableInfo &table,
+                       HeapArray<GhmRootInfo> *out_ghm_roots);
+bool ParseSeverityTable(const uint8_t *file_data, const TableInfo &table, int section_idx,
                         HeapArray<ValueRangeCell<2>> *out_cells);
 
-bool ParseGhsTable(const uint8_t *file_data, const char *filename,
-                   const TableInfo &table, HeapArray<GhsAccessInfo> *out_nodes);
-bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
-                             const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths);
-bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
-                       const TableInfo &table, int section_idx,
+bool ParseGhsAccessTable(const uint8_t *file_data, const TableInfo &table,
+                         HeapArray<GhsAccessInfo> *out_nodes);
+bool ParseAuthorizationTable(const uint8_t *file_data, const TableInfo &table,
+                             HeapArray<AuthorizationInfo> *out_auths);
+bool ParseSrcPairTable(const uint8_t *file_data, const TableInfo &table, int section_idx,
                        HeapArray<SrcPair> *out_pairs);
+
+bool ParsePricesJson(StreamReader &st, HeapArray<PriceTable> *out_tables);
 
 struct TableIndex {
     Date limit_dates[2];
@@ -241,12 +271,16 @@ struct TableIndex {
     Span<AuthorizationInfo> authorizations;
     Span<SrcPair> src_pairs[2];
 
+    Span<GhsPriceInfo> ghs_prices;
+
     HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
     HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
     HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
     HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+
+    HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     Span<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
@@ -255,6 +289,8 @@ struct TableIndex {
 
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmCode ghm) const;
+
+    const GhsPriceInfo *FindGhsPrice(GhsCode ghs) const;
 };
 
 class TableSet {
@@ -272,6 +308,7 @@ public:
         HeapArray<ValueRangeCell<2>> cma_cells[3];
 
         HeapArray<GhsAccessInfo> ghs;
+        HeapArray<GhsPriceInfo> ghs_prices;
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<SrcPair> src_pairs[2];
     } store;
@@ -283,32 +320,40 @@ public:
 
         HeapArray<HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler>> ghm_to_ghs;
         HeapArray<HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
+        HeapArray<HashTable<GhsCode, const GhsPriceInfo *>> ghs_prices;
     } maps;
 
-    const TableIndex *FindIndex(Date date) const;
-    TableIndex *FindIndex(Date date)
+    Allocator str_alloc;
+
+    const TableIndex *FindIndex(Date date = {}) const;
+    TableIndex *FindIndex(Date date = {})
         { return (TableIndex *)((const TableSet *)this)->FindIndex(date); }
 };
 
 class TableSetBuilder {
-    struct LoadTableData {
+    struct TableLoadInfo {
         Size table_idx;
-        const char *filename;
-        Span<uint8_t> raw_data;
+        union {
+            Size price_table_idx;
+            Span<uint8_t> raw_data;
+        } u;
         bool loaded;
     };
 
     Allocator file_alloc;
-    HeapArray<LoadTableData> tables;
+
+    HeapArray<TableLoadInfo> table_loads;
+    HeapArray<PriceTable> price_tables;
 
     TableSet set;
 
 public:
-    bool LoadTab(StreamReader &st);
-    bool LoadFiles(Span<const char *const> filenames);
+    bool LoadAtihTab(StreamReader &st);
+    bool LoadPriceJson(StreamReader &st);
+    bool LoadFiles(Span<const char *const> tab_filenames, Span<const char *const> price_filenames);
 
     bool Finish(TableSet *out_set);
 
 private:
-    bool CommitIndex(Date start_date, Date end_sate, LoadTableData *current_tables[]);
+    bool CommitIndex(Date start_date, Date end_date, TableLoadInfo *current_tables[]);
 };

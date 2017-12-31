@@ -7,7 +7,6 @@
 #include "../common/kutil.hh"
 #include "d_authorizations.hh"
 #include "d_stays.hh"
-#include "d_prices.hh"
 #include "d_tables.hh"
 
 enum class ClusterMode {
@@ -85,10 +84,9 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
                     GhmCode ghm);
 void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
                       SupplementCounters *out_counters);
-
-int PriceGhs(const GhsPricing &pricing, int duration, bool death);
-int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration, bool death);
+int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death);
+int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs);
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet &pricing_set, Span<const Stay> stays, ClusterMode cluster_mode,
+              Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set);

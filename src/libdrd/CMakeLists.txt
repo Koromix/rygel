@@ -13,8 +13,6 @@ set(LIBDRD_SRC ../common/kutil.cc
                d_codes.hh
                d_desc.cc
                d_desc.hh
-               d_prices.cc
-               d_prices.hh
                d_stays.cc
                d_stays.hh
                d_tables.cc

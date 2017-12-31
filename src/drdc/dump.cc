@@ -179,6 +179,28 @@ void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
     }
 }
 
+void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices)
+{
+    for (Size i = 0; i < ghs_prices.len;) {
+        GhsCode ghs = ghs_prices[i].ghs;
+
+        PrintLn("      GHS %1:", ghs);
+        for (; i < ghs_prices.len && ghs_prices[i].ghs == ghs; i++) {
+            const GhsPriceInfo &price_info = ghs_prices[i];
+
+            PrintLn("        Public: %1 [exh = %2, exb = %3]",
+                    FmtDouble(price_info.sectors[0].price_cents / 100.0, 2),
+                    FmtDouble(price_info.sectors[0].exh_cents / 100.0, 2),
+                    FmtDouble(price_info.sectors[0].exb_cents / 100.0, 2));
+            PrintLn("        Private: %1 [exh = %2, exb = %3]",
+                    FmtDouble(price_info.sectors[1].price_cents / 100.0, 2),
+                    FmtDouble(price_info.sectors[1].exh_cents / 100.0, 2),
+                    FmtDouble(price_info.sectors[1].exb_cents / 100.0, 2));
+        }
+        PrintLn();
+    }
+}
+
 void DumpSeverityTable(Span<const ValueRangeCell<2>> cells)
 {
     for (const ValueRangeCell<2> &cell: cells) {
@@ -208,6 +230,7 @@ void DumpTableSetHeaders(const TableSet &table_set)
     PrintLn("Headers:");
     for (const TableInfo &table: table_set.tables) {
         PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table.type], table.build_date);
+        PrintLn("    Source: %1", table.filename);
         PrintLn("    Raw Type: %1", table.raw_type);
         PrintLn("    Version: %1.%2", table.version[0], table.version[1]);
         PrintLn("    Validity: %1 to %2", table.limit_dates[0], table.limit_dates[1]);
@@ -283,6 +306,10 @@ void DumpTableSetContent(const TableSet &table_set)
                     PrintLn("    GHS Access Table:");
                     DumpGhsAccessTable(index.ghs);
                 } break;
+                case TableType::PriceTable: {
+                    PrintLn("    Price Table:");
+                    DumpGhsPriceTable(index.ghs_prices);
+                } break;
                 case TableType::AuthorizationTable: {
                     PrintLn("    Authorization Types:");
                     DumpAuthorizationTable(index.authorizations);
@@ -301,34 +328,6 @@ void DumpTableSetContent(const TableSet &table_set)
         }
         PrintLn();
     }
-}
-
-void DumpGhsPricings(Span<const GhsPricing> ghs_pricings)
-{
-    for (Size i = 0; i < ghs_pricings.len;) {
-        GhsCode ghs = ghs_pricings[i].ghs;
-
-        PrintLn("GHS %1:", ghs);
-        for (; i < ghs_pricings.len && ghs_pricings[i].ghs == ghs; i++) {
-            const GhsPricing &pricing = ghs_pricings[i];
-
-            PrintLn("  %1 to %2:", pricing.limit_dates[0], pricing.limit_dates[1]);
-            PrintLn("    Public: %1 [exh = %2, exb = %3]",
-                    FmtDouble(pricing.sectors[0].price_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[0].exh_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[0].exb_cents / 100.0, 2));
-            PrintLn("    Private: %1 [exh = %2, exb = %3]",
-                    FmtDouble(pricing.sectors[1].price_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[1].exh_cents / 100.0, 2),
-                    FmtDouble(pricing.sectors[1].exb_cents / 100.0, 2));
-        }
-        PrintLn();
-    }
-}
-
-void DumpPricingSet(const PricingSet &pricing_set)
-{
-    DumpGhsPricings(pricing_set.ghs_pricings);
 }
 
 void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots)

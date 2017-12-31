@@ -35,7 +35,6 @@ static const Page pages[] = {
 static const TableSet *table_set;
 static HeapArray<HashTable<GhmCode, GhmConstraint>> constraints_set;
 static HeapArray<HashTable<GhmCode, GhmConstraint> *> index_to_constraints;
-static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
 static const CatalogSet *catalog_set;
 
@@ -201,8 +200,8 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                 const GhmConstraint *constraint = constraints ? constraints->Find(ghs_access_info.ghm) : nullptr;
 //              if (!constraint)
 //                  continue;
-                const GhsPricing *ghs_pricing = pricing_set->FindGhsPricing(ghs_access_info.ghs[0], date);
-                if (!ghs_pricing)
+                const GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_access_info.ghs[0]);
+                if (!ghs_price_info)
                     continue;
 
                 writer.StartObject();
@@ -221,7 +220,7 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                     writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
                     writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
                 }
-                writer.Key("ghs"); writer.Int(ghs_pricing->ghs.number);
+                writer.Key("ghs"); writer.Int(ghs_price_info->ghs.number);
 
                 writer.Key("conditions"); writer.StartArray();
                 if (ghs_access_info.bed_authorization) {
@@ -253,15 +252,15 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
                 }
                 writer.EndArray();
 
-                writer.Key("price_cents"); writer.Int(ghs_pricing->sectors[0].price_cents);
-                if (ghs_pricing->sectors[0].exh_treshold) {
-                    writer.Key("exh_treshold"); writer.Int(ghs_pricing->sectors[0].exh_treshold);
-                    writer.Key("exh_cents"); writer.Int(ghs_pricing->sectors[0].exh_cents);
+                writer.Key("price_cents"); writer.Int(ghs_price_info->sectors[0].price_cents);
+                if (ghs_price_info->sectors[0].exh_treshold) {
+                    writer.Key("exh_treshold"); writer.Int(ghs_price_info->sectors[0].exh_treshold);
+                    writer.Key("exh_cents"); writer.Int(ghs_price_info->sectors[0].exh_cents);
                 }
-                if (ghs_pricing->sectors[0].exb_treshold) {
-                    writer.Key("exb_treshold"); writer.Int(ghs_pricing->sectors[0].exb_treshold);
-                    writer.Key("exb_cents"); writer.Int(ghs_pricing->sectors[0].exb_cents);
-                    if (ghs_pricing->sectors[0].flags & (int)GhsPricing::Flag::ExbOnce) {
+                if (ghs_price_info->sectors[0].exb_treshold) {
+                    writer.Key("exb_treshold"); writer.Int(ghs_price_info->sectors[0].exb_treshold);
+                    writer.Key("exb_cents"); writer.Int(ghs_price_info->sectors[0].exb_cents);
+                    if (ghs_price_info->sectors[0].flags & (int)GhsPriceInfo::Flag::ExbOnce) {
                         writer.Key("exb_once"); writer.Bool(true);
                     }
                 }
@@ -467,14 +466,11 @@ Options:
     table_set = GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return 1;
-    pricing_set = GetMainPricingSet();
-    if (!pricing_set || !pricing_set->ghs_pricings.len)
-        return 1;
     authorization_set = GetMainAuthorizationSet();
     if (!authorization_set)
         return 1;
     catalog_set = GetMainCatalogSet();
-    if (!catalog_set)
+    if (!catalog_set || !catalog_set->ghm_roots.len)
         return 1;
 
 #ifdef NDEBUG

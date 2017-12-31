@@ -5,11 +5,11 @@
 #include "../common/kutil.hh"
 #include "d_tables.hh"
 
-#define FAIL_PARSE_IF(Cond) \
+#define FAIL_PARSE_IF(Filename, Cond) \
     do { \
         if (Cond) { \
             LogError("Malformed binary table file '%1': %2", \
-                     filename ? filename : "?", STRINGIFY(Cond)); \
+                     (Filename) ? (Filename) : "?", STRINGIFY(Cond)); \
             return false; \
         } \
     } while (false)
@@ -39,8 +39,8 @@ static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
 }
 
 // TODO: Be careful with overflow in offset and length checks
-bool ParseTableHeaders(const Span<const uint8_t> file_data,
-                       const char *filename, HeapArray<TableInfo> *out_tables)
+bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
+                       Allocator *str_alloc, HeapArray<TableInfo> *out_tables)
 {
     DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
 
@@ -76,10 +76,10 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
     PackedHeader1111 raw_main_header;
     PackedSection1111 raw_main_section;
     {
-        FAIL_PARSE_IF(file_data.len < SIZE(PackedHeader1111) + SIZE(PackedSection1111));
+        FAIL_PARSE_IF(filename, file_data.len < SIZE(PackedHeader1111) + SIZE(PackedSection1111));
 
         memcpy(&raw_main_header, file_data.ptr, SIZE(PackedHeader1111));
-        FAIL_PARSE_IF(raw_main_header.sections_count != 1);
+        FAIL_PARSE_IF(filename, raw_main_header.sections_count != 1);
 
         memcpy(&raw_main_section, file_data.ptr + SIZE(PackedHeader1111), SIZE(PackedSection1111));
         raw_main_section.values_count = BigEndian(raw_main_section.values_count);
@@ -89,10 +89,10 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
 
         int version = 0, revision = 0;
         sscanf(raw_main_header.version, "%2u%2u", &version, &revision);
-        FAIL_PARSE_IF(version < 11 || (version == 11 && revision < 10));
-        FAIL_PARSE_IF(raw_main_section.value_len != SIZE(PackedTablePtr1111));
-        FAIL_PARSE_IF(file_data.len < SIZE(PackedHeader1111) +
-                                      raw_main_section.values_count * SIZE(PackedTablePtr1111));
+        FAIL_PARSE_IF(filename, version < 11 || (version == 11 && revision < 10));
+        FAIL_PARSE_IF(filename, raw_main_section.value_len != SIZE(PackedTablePtr1111));
+        FAIL_PARSE_IF(filename, file_data.len < SIZE(PackedHeader1111) +
+                                raw_main_section.values_count * SIZE(PackedTablePtr1111));
     }
 
     for (int i = 0; i < raw_main_section.values_count; i++) {
@@ -107,7 +107,8 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
             raw_table_ptr.date_range[1] = BigEndian(raw_table_ptr.date_range[1]);
             raw_table_ptr.raw_offset = BigEndian(raw_table_ptr.raw_offset);
 
-            FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset + SIZE(PackedHeader1111)));
+            FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
+                                                           SIZE(PackedHeader1111)));
         }
 
         PackedHeader1111 raw_table_header;
@@ -124,9 +125,9 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
                         SIZE(PackedHeader1111) - OFFSET_OF(PackedHeader1111, pad1));
                 memcpy(&raw_table_header.name, raw_table_header.signature, SIZE(raw_table_header.name));
             }
-            FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                 (uint32_t)raw_table_header.sections_count * SIZE(PackedSection1111)));
-            FAIL_PARSE_IF(raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
+            FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
+                                                           (uint32_t)raw_table_header.sections_count * SIZE(PackedSection1111)));
+            FAIL_PARSE_IF(filename, raw_table_header.sections_count > ARRAY_SIZE(raw_table_sections));
 
             for (int j = 0; j < raw_table_header.sections_count; j++) {
                 memcpy(&raw_table_sections[j], file_data.ptr + raw_table_ptr.raw_offset +
@@ -142,10 +143,14 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
                 raw_table_sections[j].raw_len = BigEndian(raw_table_sections[j].raw_len);
                 raw_table_sections[j].raw_offset = BigEndian(raw_table_sections[j].raw_offset);
 
-                FAIL_PARSE_IF(file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                     raw_table_sections[j].raw_offset +
-                                                     raw_table_sections[j].raw_len));
+                FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
+                                                               raw_table_sections[j].raw_offset +
+                                                               raw_table_sections[j].raw_len));
             }
+        }
+
+        if (str_alloc) {
+            table.filename = DuplicateString(str_alloc, filename).ptr;
         }
 
         // Parse header information
@@ -153,12 +158,12 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
                &table.build_date.st.day, &table.build_date.st.month,
                &table.build_date.st.year);
         table.build_date.st.year = (int16_t)(table.build_date.st.year + 2000);
-        FAIL_PARSE_IF(!table.build_date.IsValid());
+        FAIL_PARSE_IF(filename, !table.build_date.IsValid());
         sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
                &table.version[0], &table.version[1]);
         table.limit_dates[0] = ConvertDate1980(raw_table_ptr.date_range[0]);
         table.limit_dates[1] = ConvertDate1980(raw_table_ptr.date_range[1]);
-        FAIL_PARSE_IF(table.limit_dates[1] <= table.limit_dates[0]);
+        FAIL_PARSE_IF(filename, table.limit_dates[1] <= table.limit_dates[0]);
 
         // Table type
         strncpy(table.raw_type, raw_table_header.name, SIZE(raw_table_header.name));
@@ -187,9 +192,9 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
         // Parse table sections
         table.sections.len = raw_table_header.sections_count;
         for (int j = 0; j < raw_table_header.sections_count; j++) {
-            FAIL_PARSE_IF(raw_table_sections[j].raw_len !=
-                            (uint32_t)raw_table_sections[j].values_count *
-                            raw_table_sections[j].value_len);
+            FAIL_PARSE_IF(filename, raw_table_sections[j].raw_len !=
+                                        (uint32_t)raw_table_sections[j].values_count *
+                                        raw_table_sections[j].value_len);
             table.sections[j].raw_offset = (Size)(raw_table_ptr.raw_offset +
                                                   raw_table_sections[j].raw_offset);
             table.sections[j].raw_len = (Size)raw_table_sections[j].raw_len;
@@ -204,7 +209,7 @@ bool ParseTableHeaders(const Span<const uint8_t> file_data,
     return true;
 }
 
-bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
+bool ParseGhmDecisionTree(const uint8_t *file_data,
                           const TableInfo &table, HeapArray<GhmDecisionNode> *out_nodes)
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
@@ -218,8 +223,8 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 1);
-    FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedTreeNode));
+    FAIL_PARSE_IF(table.filename, table.sections.len != 1);
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(PackedTreeNode));
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         GhmDecisionNode ghm_node = {};
@@ -243,10 +248,10 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
                 ghm_node.u.test.children_count = raw_node.children_count;
             }
 
-            FAIL_PARSE_IF(!ghm_node.u.test.children_count);
-            FAIL_PARSE_IF(ghm_node.u.test.children_idx > table.sections[0].values_count);
-            FAIL_PARSE_IF(ghm_node.u.test.children_count > table.sections[0].values_count -
-                                                           ghm_node.u.test.children_idx);
+            FAIL_PARSE_IF(table.filename, !ghm_node.u.test.children_count);
+            FAIL_PARSE_IF(table.filename, ghm_node.u.test.children_idx > table.sections[0].values_count);
+            FAIL_PARSE_IF(table.filename, ghm_node.u.test.children_count > table.sections[0].values_count -
+                                                                           ghm_node.u.test.children_idx);
         } else {
             static char chars1[] = {0, 'C', 'H', 'K', 'M', 'Z', ' ', ' ', ' ', ' '};
             static char chars4[] = {0, 'A', 'B', 'C', 'D', 'E', 'J', 'Z', ' ', ' '};
@@ -266,7 +271,7 @@ bool ParseGhmDecisionTree(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
+bool ParseDiagnosisTable(const uint8_t *file_data,
                           const TableInfo &table, HeapArray<DiagnosisInfo> *out_diags)
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
@@ -282,14 +287,15 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 5);
-    FAIL_PARSE_IF(table.sections[0].values_count != 26 * 100 || table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != SIZE(PackedDiagnosisPtr));
-    FAIL_PARSE_IF(!table.sections[2].value_len || table.sections[2].value_len % 2 ||
-                  table.sections[2].value_len / 2 > SIZE(DiagnosisInfo::attributes[0].raw));
-    FAIL_PARSE_IF(!table.sections[3].value_len ||
-                  table.sections[3].value_len > SIZE(DiagnosisInfo::warnings) * 8);
-    FAIL_PARSE_IF(!table.sections[4].value_len);
+    FAIL_PARSE_IF(table.filename, table.sections.len != 5);
+    FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 100 ||
+                                  table.sections[0].value_len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != SIZE(PackedDiagnosisPtr));
+    FAIL_PARSE_IF(table.filename, !table.sections[2].value_len || table.sections[2].value_len % 2 ||
+                                  table.sections[2].value_len / 2 > SIZE(DiagnosisInfo::attributes[0].raw));
+    FAIL_PARSE_IF(table.filename, !table.sections[3].value_len ||
+                                  table.sections[3].value_len > SIZE(DiagnosisInfo::warnings) * 8);
+    FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
 
     Size block_start = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
@@ -298,7 +304,7 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
             const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
                                          root_idx * 2;
             uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
-            FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
+            FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedDiagnosisPtr);
         }
 
@@ -314,9 +320,12 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
                 raw_diag_ptr.section4_bit = BigEndian(raw_diag_ptr.section4_bit);
                 raw_diag_ptr.section4_idx = BigEndian(raw_diag_ptr.section4_idx);
 
-                FAIL_PARSE_IF(raw_diag_ptr.section2_idx >= table.sections[2].values_count);
-                FAIL_PARSE_IF(raw_diag_ptr.section3_idx >= table.sections[3].values_count);
-                FAIL_PARSE_IF(raw_diag_ptr.section4_idx >= table.sections[4].values_count);
+                FAIL_PARSE_IF(table.filename,
+                              raw_diag_ptr.section2_idx >= table.sections[2].values_count);
+                FAIL_PARSE_IF(table.filename,
+                              raw_diag_ptr.section3_idx >= table.sections[3].values_count);
+                FAIL_PARSE_IF(table.filename,
+                              raw_diag_ptr.section4_idx >= table.sections[4].values_count);
             }
 
             diag.diag = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
@@ -371,15 +380,15 @@ bool ParseDiagnosisTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
+bool ParseExclusionTable(const uint8_t *file_data,
                          const TableInfo &table,
                          HeapArray<ExclusionInfo> *out_exclusions)
 {
     DEFER_NC(out_exclusions_guard, len = out_exclusions->len) { out_exclusions->RemoveFrom(len); };
 
-    FAIL_PARSE_IF(table.sections.len != 5);
-    FAIL_PARSE_IF(!table.sections[4].value_len);
-    FAIL_PARSE_IF(table.sections[4].value_len > SIZE(ExclusionInfo::raw));
+    FAIL_PARSE_IF(table.filename, table.sections.len != 5);
+    FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
+    FAIL_PARSE_IF(table.filename, table.sections[4].value_len > SIZE(ExclusionInfo::raw));
 
     for (Size i = 0; i < table.sections[4].values_count; i++) {
         ExclusionInfo *excl = out_exclusions->Append();
@@ -393,7 +402,7 @@ bool ParseExclusionTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
+bool ParseProcedureTable(const uint8_t *file_data,
                          const TableInfo &table, HeapArray<ProcedureInfo> *out_procs)
 {
     DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
@@ -409,12 +418,12 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 3);
-    FAIL_PARSE_IF(table.sections[0].values_count != 26 * 26 * 26 ||
-                  table.sections[0].value_len != 2);
-    FAIL_PARSE_IF(table.sections[1].value_len != SIZE(PackedProcedurePtr));
-    FAIL_PARSE_IF(!table.sections[2].value_len ||
-                  table.sections[2].value_len > SIZE(ProcedureInfo::bytes));
+    FAIL_PARSE_IF(table.filename, table.sections.len != 3);
+    FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
+                                  table.sections[0].value_len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != SIZE(PackedProcedurePtr));
+    FAIL_PARSE_IF(table.filename, !table.sections[2].value_len ||
+                                  table.sections[2].value_len > SIZE(ProcedureInfo::bytes));
 
     Size block_start = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
@@ -423,7 +432,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
             const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
                                          root_idx * 2;
             uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
-            FAIL_PARSE_IF(end_idx > table.sections[1].values_count);
+            FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedProcedurePtr);
         }
 
@@ -448,7 +457,8 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
                 raw_proc_ptr.date_min = BigEndian(raw_proc_ptr.date_min);
                 raw_proc_ptr.date_max = BigEndian(raw_proc_ptr.date_max);
 
-                FAIL_PARSE_IF(raw_proc_ptr.section2_idx >= table.sections[2].values_count);
+                FAIL_PARSE_IF(table.filename,
+                              raw_proc_ptr.section2_idx >= table.sections[2].values_count);
             }
 
             // CCAM code and phase
@@ -483,7 +493,7 @@ bool ParseProcedureTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
+bool ParseGhmRootTable(const uint8_t *file_data,
                        const TableInfo &table, HeapArray<GhmRootInfo> *out_ghm_roots)
 {
     DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
@@ -503,11 +513,11 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 1);
+    FAIL_PARSE_IF(table.filename, table.sections.len != 1);
     if (table.version[0] > 11 || (table.version[0] == 11 && table.version[1] > 14)) {
-        FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhmRoot));
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(PackedGhmRoot));
     } else {
-        FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhmRoot) - 1);
+        FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(PackedGhmRoot) - 1);
     }
 
     for (Size i = 0; i < table.sections[0].values_count; i++) {
@@ -576,8 +586,8 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
         }
 
         if (table.sections[0].value_len >= 12 && raw_ghm_root.childbirth_severity_mode) {
-            FAIL_PARSE_IF(raw_ghm_root.childbirth_severity_mode < 2 ||
-                          raw_ghm_root.childbirth_severity_mode > 4);
+            FAIL_PARSE_IF(table.filename, raw_ghm_root.childbirth_severity_mode < 2 ||
+                                          raw_ghm_root.childbirth_severity_mode > 4);
             ghm_root.childbirth_severity_list = (int8_t)(raw_ghm_root.childbirth_severity_mode - 1);
         }
 
@@ -591,7 +601,7 @@ bool ParseGhmRootTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
+bool ParseSeverityTable(const uint8_t *file_data,
                         const TableInfo &table, int section_idx,
                         HeapArray<ValueRangeCell<2>> *out_cells)
 {
@@ -607,8 +617,8 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.sections[section_idx].value_len != SIZE(PackedCell));
+    FAIL_PARSE_IF(table.filename, section_idx >= table.sections.len);
+    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != SIZE(PackedCell));
 
     for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         ValueRangeCell<2> cell = {};
@@ -635,8 +645,8 @@ bool ParseSeverityTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseGhsTable(const uint8_t *file_data, const char *filename,
-                   const TableInfo &table, HeapArray<GhsAccessInfo> *out_ghs)
+bool ParseGhsAccessTable(const uint8_t *file_data,
+                         const TableInfo &table, HeapArray<GhsAccessInfo> *out_ghs)
 {
     Size start_ghs_len = out_ghs->len;
     DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
@@ -660,8 +670,8 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
     StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(GhsAccessInfo().ghs));
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 1);
-    FAIL_PARSE_IF(table.sections[0].value_len != SIZE(PackedGhsNode));
+    FAIL_PARSE_IF(table.filename, table.sections.len != 1);
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(PackedGhsNode));
 
     GhsAccessInfo current_ghs = {};
     for (Size i = 0; i < table.sections[0].values_count; i++) {
@@ -690,24 +700,24 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
 
         switch (raw_ghs_node.function) {
             case 0: {
-                FAIL_PARSE_IF(!raw_ghs_node.valid_ghs);
+                FAIL_PARSE_IF(table.filename, !raw_ghs_node.valid_ghs);
             } break;
 
             case 1: {
                 ListMask mask;
                 mask.offset = raw_ghs_node.params[0];
                 mask.value = raw_ghs_node.params[1];
-                FAIL_PARSE_IF(!current_ghs.procedure_masks.Available());
+                FAIL_PARSE_IF(table.filename, !current_ghs.procedure_masks.Available());
                 current_ghs.procedure_masks.Append(mask);
             } break;
 
             case 2: {
-                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 current_ghs.unit_authorization = (int8_t)raw_ghs_node.params[1];
             } break;
 
             case 3: {
-                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 current_ghs.bed_authorization = (int8_t)raw_ghs_node.params[1];
             } break;
 
@@ -717,7 +727,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             } break;
 
             case 6: {
-                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 current_ghs.minimal_duration = (int8_t)(raw_ghs_node.params[1] + 1);
             } break;
 
@@ -727,12 +737,12 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
             } break;
 
             case 8: {
-                FAIL_PARSE_IF(raw_ghs_node.params[0]);
+                FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 current_ghs.minimal_age = (int8_t)raw_ghs_node.params[1];
             } break;
 
             default: {
-                FAIL_PARSE_IF(true);
+                FAIL_PARSE_IF(table.filename, true);
             } break;
         }
 
@@ -765,7 +775,7 @@ bool ParseGhsTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
+bool ParseAuthorizationTable(const uint8_t *file_data,
                              const TableInfo &table, HeapArray<AuthorizationInfo> *out_auths)
 {
     DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
@@ -778,8 +788,9 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(table.sections.len != 2);
-    FAIL_PARSE_IF(table.sections[0].value_len != 3 || table.sections[0].value_len != 3);
+    FAIL_PARSE_IF(table.filename, table.sections.len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != 3 ||
+                                  table.sections[0].value_len != 3);
 
     for (Size i = 0; i < 2; i++) {
         for (Size j = 0; j < table.sections[i].values_count; j++) {
@@ -808,9 +819,9 @@ bool ParseAuthorizationTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
-bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
-                              const TableInfo &table, int section_idx,
-                              HeapArray<SrcPair> *out_pairs)
+bool ParseSrcPairTable(const uint8_t *file_data,
+                       const TableInfo &table, int section_idx,
+                       HeapArray<SrcPair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
 
@@ -823,8 +834,8 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
 	};
 #pragma pack(pop)
 
-    FAIL_PARSE_IF(section_idx >= table.sections.len);
-    FAIL_PARSE_IF(table.sections[section_idx].value_len != SIZE(PackedPair));
+    FAIL_PARSE_IF(table.filename, section_idx >= table.sections.len);
+    FAIL_PARSE_IF(table.filename, table.sections[section_idx].value_len != SIZE(PackedPair));
 
     for (Size i = 0; i < table.sections[section_idx].values_count; i++) {
         SrcPair pair = {};
@@ -856,6 +867,171 @@ bool ParseSrcPairTable(const uint8_t *file_data, const char *filename,
     return true;
 }
 
+class JsonPricesHandler: public BaseJsonHandler<JsonPricesHandler> {
+    enum class State {
+        Default,
+        TableArray,
+        TableObject,
+        GhsPriceArray,
+        GhsPriceObject,
+        GhsPriceSectorObject
+    };
+
+    State state = State::Default;
+
+    PriceTable price_table;
+    int sector;
+    GhsPriceInfo price_info = {};
+
+public:
+    HeapArray<PriceTable> *out_price_tables;
+
+    JsonPricesHandler(HeapArray<PriceTable> *out_price_tables = nullptr)
+        : out_price_tables(out_price_tables) {}
+
+    bool Branch(JsonBranchType type, const char *key)
+    {
+        switch (state) {
+            case State::Default: {
+                switch (type) {
+                    case JsonBranchType::Array: { state = State::TableArray; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::TableArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::TableObject; } break;
+                    case JsonBranchType::EndArray: { state = State::Default; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::TableObject: {
+                switch (type) {
+                    case JsonBranchType::Array: {
+                        if (TestStr(key, "ghs")) {
+                            state = State::GhsPriceArray;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    case JsonBranchType::EndObject: {
+                        if (price_table.date.value) {
+                            PriceTable *table_it = out_price_tables->Append();
+                            memmove(table_it, &price_table, SIZE(price_table));
+                            memset(&price_table, 0, SIZE(price_table));
+                        } else {
+                            LogError("Missing date attribute");
+                        }
+                        state = State::TableArray;
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::GhsPriceArray: {
+                switch (type) {
+                    case JsonBranchType::Object: { state = State::GhsPriceObject; } break;
+                    case JsonBranchType::EndArray: { state = State::TableObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::GhsPriceObject: {
+                switch (type) {
+                    case JsonBranchType::Object: {
+                        if (TestStr(key, "public")) {
+                            state = State::GhsPriceSectorObject;
+                            sector = 0;
+                        } else if (TestStr(key, "private")) {
+                            state = State::GhsPriceSectorObject;
+                            sector = 1;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    case JsonBranchType::EndObject: {
+                        price_table.ghs_prices.Append(price_info);
+                        price_info = {};
+
+                        state = State::GhsPriceArray;
+                    } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::GhsPriceSectorObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: { state = State::GhsPriceObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+        }
+
+        return true;
+    }
+
+    bool Value(const char *key, const JsonValue &value)
+    {
+        switch (state) {
+            case State::TableObject: {
+                if (TestStr(key, "build_date")) {
+                    SetDate(value, &price_table.build_date);
+                } else if (TestStr(key, "date")) {
+                    SetDate(value, &price_table.date);
+                } else {
+                    return UnknownAttribute(key);
+                }
+            } break;
+
+            case State::GhsPriceObject: {
+                if (TestStr(key, "ghs")) {
+                    SetInt(value, &price_info.ghs.number);
+                } else {
+                    return UnknownAttribute(key);
+                }
+            } break;
+
+            case State::GhsPriceSectorObject: {
+                if (TestStr(key, "price_cents")) {
+                    SetInt(value, &price_info.sectors[sector].price_cents);
+                } else if (TestStr(key, "exh_treshold")) {
+                    SetInt(value, &price_info.sectors[sector].exh_treshold);
+                } else if (TestStr(key, "exh_cents")) {
+                    SetInt(value, &price_info.sectors[sector].exh_cents);
+                } else if (TestStr(key, "exb_treshold")) {
+                    SetInt(value, &price_info.sectors[sector].exb_treshold);
+                } else if (TestStr(key, "exb_cents")) {
+                    SetInt(value, &price_info.sectors[sector].exb_cents);
+                } else if (TestStr(key, "exb_once")) {
+                    SetFlag(value, &price_info.sectors[sector].flags, (int)GhsPriceInfo::Flag::ExbOnce);
+                } else {
+                    return UnknownAttribute(key);
+                }
+            } break;
+
+            default: { return UnexpectedValue(); } break;
+        }
+
+        return true;
+    }
+};
+
+bool ParsePricesJson(StreamReader &st, HeapArray<PriceTable> *out_tables)
+{
+    DEFER_NC(out_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
+
+    {
+        JsonPricesHandler json_handler(out_tables);
+        if (!ParseJsonFile(st, &json_handler))
+            return false;
+    }
+
+    out_guard.disable();
+    return true;
+}
+
 // TODO: Validate that index has everything we need
 const TableIndex *TableSet::FindIndex(Date date) const
 {
@@ -870,7 +1046,7 @@ const TableIndex *TableSet::FindIndex(Date date) const
     return nullptr;
 }
 
-bool TableSetBuilder::LoadTab(StreamReader &st)
+bool TableSetBuilder::LoadAtihTab(StreamReader &st)
 {
     Span<uint8_t> raw_data;
     {
@@ -881,29 +1057,93 @@ bool TableSetBuilder::LoadTab(StreamReader &st)
     }
 
     Size start_len = set.tables.len;
-    if (!ParseTableHeaders(raw_data, st.filename, &set.tables))
+    if (!ParseTableHeaders(raw_data, st.filename, &set.str_alloc, &set.tables))
         return false;
 
     for (Size i = start_len; i < set.tables.len; i++) {
         if (set.tables[i].type == TableType::UnknownTable)
             return true;
 
-        LoadTableData table = {};
-        table.table_idx = i;
-        table.filename = st.filename;
-        table.raw_data = raw_data;
-        tables.Append(table);
+        TableLoadInfo load_info = {};
+        load_info.table_idx = i;
+        load_info.u.raw_data = raw_data;
+        table_loads.Append(load_info);
     }
 
     return true;
 }
 
-bool TableSetBuilder::LoadFiles(Span<const char *const> filenames)
+bool TableSetBuilder::LoadPriceJson(StreamReader &st)
+{
+    Size start_len = price_tables.len;
+
+    if (!ParsePricesJson(st, &price_tables))
+        return false;
+
+    for (Size i = start_len; i < price_tables.len; i++) {
+        const PriceTable &price_table = price_tables[i];
+
+        TableLoadInfo load_info = {};
+        load_info.table_idx = set.tables.len;
+        load_info.u.price_table_idx = i;
+        table_loads.Append(load_info);
+
+        TableInfo table_info = {};
+        table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
+        table_info.build_date = price_table.build_date;
+        table_info.limit_dates[0] = price_table.date;
+        table_info.limit_dates[1] = ConvertDate1980(UINT16_MAX);
+        strcpy(table_info.raw_type, "PRICESJS");
+        table_info.type = TableType::PriceTable;
+        set.tables.Append(table_info);
+    }
+
+    return true;
+}
+
+bool TableSetBuilder::LoadFiles(Span<const char *const> tab_filenames,
+                                Span<const char *const> price_filenames)
 {
     bool success = true;
-    for (const char *filename: filenames) {
-        StreamReader st(filename);
-        success &= LoadTab(st);
+
+    for (const char *filename: tab_filenames) {
+        LocalArray<char, 16> extension;
+        CompressionType compression_type;
+        extension.len = GetPathExtension(filename, extension.data, &compression_type);
+
+        if (!TestStr(extension, ".tab")) {
+            LogError("Cannot load table file '%1' with unknown extension '%2'",
+                     filename, extension);
+            success = false;
+            continue;
+        }
+
+        StreamReader st(filename, compression_type);
+        if (st.error) {
+            success = false;
+            continue;
+        }
+        success &= LoadAtihTab(st);
+    }
+
+    for (const char *filename: price_filenames) {
+        LocalArray<char, 16> extension;
+        CompressionType compression_type;
+        extension.len = GetPathExtension(filename, extension.data, &compression_type);
+
+        if (!TestStr(extension, ".json")) {
+            LogError("Cannot load price file '%1' with unknown extension '%2'",
+                     filename, extension);
+            success = false;
+            continue;
+        }
+
+        StreamReader st(filename, compression_type);
+        if (st.error) {
+            success = false;
+            continue;
+        }
+        success &= LoadPriceJson(st);
     }
 
     return success;
@@ -913,10 +1153,10 @@ bool TableSetBuilder::Finish(TableSet *out_set)
 {
     bool success = true;
 
-    std::sort(tables.begin(), tables.end(),
-              [&](const LoadTableData &table1, const LoadTableData &table2) {
-        const TableInfo &table_info1 = set.tables[table1.table_idx];
-        const TableInfo &table_info2 = set.tables[table2.table_idx];
+    std::sort(table_loads.begin(), table_loads.end(),
+              [&](const TableLoadInfo &tab_load_info1, const TableLoadInfo &tab_load_info2) {
+        const TableInfo &table_info1 = set.tables[tab_load_info1.table_idx];
+        const TableInfo &table_info2 = set.tables[tab_load_info2.table_idx];
 
         return MultiCmp(table_info1.limit_dates[0] - table_info2.limit_dates[0],
                         table_info1.version[0] - table_info2.version[0],
@@ -924,10 +1164,10 @@ bool TableSetBuilder::Finish(TableSet *out_set)
                         table_info1.build_date - table_info2.build_date) < 0;
     });
 
-    LoadTableData *active_tables[ARRAY_SIZE(TableTypeNames)] = {};
+    TableLoadInfo *active_tables[ARRAY_SIZE(TableTypeNames)] = {};
     Date start_date = {}, end_date = {};
-    for (LoadTableData &table: tables) {
-        const TableInfo &table_info = set.tables[table.table_idx];
+    for (TableLoadInfo &load_info: table_loads) {
+        const TableInfo &table_info = set.tables[load_info.table_idx];
 
         while (end_date.value && table_info.limit_dates[0] >= end_date) {
             success &= CommitIndex(start_date, end_date, active_tables);
@@ -942,10 +1182,8 @@ bool TableSetBuilder::Finish(TableSet *out_set)
 
                 if (active_info.limit_dates[1] == end_date) {
                     active_tables[i] = nullptr;
-                } else {
-                    if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
-                        next_end_date = active_info.limit_dates[1];
-                    }
+                } else if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
+                    next_end_date = active_info.limit_dates[1];
                 }
             }
 
@@ -965,55 +1203,51 @@ bool TableSetBuilder::Finish(TableSet *out_set)
             end_date = table_info.limit_dates[1];
         }
 
-        active_tables[(int)table_info.type] = &table;
+        active_tables[(int)table_info.type] = &load_info;
     }
     success &= CommitIndex(start_date, end_date, active_tables);
 
-    {
-        HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
-        HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
-        HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
+    for (Size i = 0 ; i < set.indexes.len; i++) {
+        TableIndex &index = set.indexes[i];
 
-        HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
-        HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
-
-        for (TableIndex &index: set.indexes) {
 #define FIX_SPAN(SpanName) \
-                index.SpanName.ptr = set.store.SpanName.ptr + (Size)index.SpanName.ptr
+            index.SpanName.ptr = set.store.SpanName.ptr + (Size)index.SpanName.ptr
 #define BUILD_MAP(IndexName, MapName, TableType) \
-                do { \
-                    if (!CONCAT(MapName, _map) || index.changed_tables & MaskEnum(TableType)) { \
-                        CONCAT(MapName, _map) = set.maps.MapName.Append(); \
-                        for (auto &value: index.IndexName) { \
-                            CONCAT(MapName, _map)->Append(&value); \
-                        } \
+            do { \
+                if (!i || index.changed_tables & MaskEnum(TableType)) { \
+                    index.CONCAT(MapName, _map) = set.maps.MapName.Append(); \
+                    for (auto &value: index.IndexName) { \
+                        index.CONCAT(MapName, _map)->Append(&value); \
                     } \
-                    index.CONCAT(MapName, _map) = CONCAT(MapName, _map); \
-                } while (false)
+                } else { \
+                    index.CONCAT(MapName, _map) = &set.maps.MapName[set.maps.MapName.len - 1]; \
+                } \
+            } while (false)
 
-            FIX_SPAN(ghm_nodes);
-            FIX_SPAN(diagnoses);
-            FIX_SPAN(exclusions);
-            FIX_SPAN(procedures);
-            FIX_SPAN(ghm_roots);
-            FIX_SPAN(gnn_cells);
-            FIX_SPAN(cma_cells[0]);
-            FIX_SPAN(cma_cells[1]);
-            FIX_SPAN(cma_cells[2]);
-            FIX_SPAN(ghs);
-            FIX_SPAN(authorizations);
-            FIX_SPAN(src_pairs[0]);
-            FIX_SPAN(src_pairs[1]);
+        FIX_SPAN(ghm_nodes);
+        FIX_SPAN(diagnoses);
+        FIX_SPAN(exclusions);
+        FIX_SPAN(procedures);
+        FIX_SPAN(ghm_roots);
+        FIX_SPAN(gnn_cells);
+        FIX_SPAN(cma_cells[0]);
+        FIX_SPAN(cma_cells[1]);
+        FIX_SPAN(cma_cells[2]);
+        FIX_SPAN(ghs);
+        FIX_SPAN(ghs_prices);
+        FIX_SPAN(authorizations);
+        FIX_SPAN(src_pairs[0]);
+        FIX_SPAN(src_pairs[1]);
 
-            BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
-            BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
-            BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
-            BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
-            BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
+        BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
+        BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
+        BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(ghs_prices, ghs_prices, TableType::PriceTable);
 
 #undef BUILD_MAP
 #undef FIX_SPAN
-        }
     }
 
     if (!success)
@@ -1025,22 +1259,27 @@ bool TableSetBuilder::Finish(TableSet *out_set)
     return true;
 }
 
-bool TableSetBuilder::CommitIndex(Date start_date, Date end_sate,
-                                  TableSetBuilder::LoadTableData *current_tables[])
+bool TableSetBuilder::CommitIndex(Date start_date, Date end_date,
+                                  TableSetBuilder::TableLoadInfo *current_tables[])
 {
     bool success = true;
 
     TableIndex index = {};
 
     index.limit_dates[0] = start_date;
-    index.limit_dates[1] = end_sate;
+    index.limit_dates[1] = end_date;
 
+#define CHECK_PIECE(TableType) \
+            do { \
+                if (!current_tables[(int)(TableType)]) { \
+                    pieces.Append(TableTypeNames[(int)(TableType)]); \
+                } \
+            } while (false)
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
-            if (!table->loaded) { \
+            if (!load_info->loaded) { \
                 index.MemberName.ptr = (decltype(index.MemberName.ptr))set.store.MemberName.len; \
-                success &= LoadFunc(table->raw_data.ptr, table->filename, \
-                                    table_info, ##__VA_ARGS__, &set.store.MemberName); \
+                success &= LoadFunc(__VA_ARGS__, &set.store.MemberName); \
                 index.MemberName.len = set.store.MemberName.len - (Size)index.MemberName.ptr; \
                 index.changed_tables |= (uint32_t)(1 << i); \
             } else { \
@@ -1048,50 +1287,87 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_sate,
             } \
         } while (false)
 
+    // FIXME: Validate all tables (some were not always needed)
+    {
+        LocalArray<FmtArg, ARRAY_SIZE(TableTypeNames)> pieces;
+
+        CHECK_PIECE(TableType::GhmDecisionTree);
+        CHECK_PIECE(TableType::DiagnosisTable);
+        CHECK_PIECE(TableType::ProcedureTable);
+        CHECK_PIECE(TableType::GhmRootTable);
+        CHECK_PIECE(TableType::GhsAccessTable);
+
+        if (pieces.len) {
+            LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
+                     pieces);
+            return true;
+        }
+    }
+
     Size active_count = 0;
     for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
         if (!current_tables[i])
             continue;
 
-        LoadTableData *table = current_tables[i];
-        const TableInfo &table_info = set.tables[table->table_idx];
+        TableLoadInfo *load_info = current_tables[i];
+        const TableInfo &table_info = set.tables[load_info->table_idx];
 
         switch ((TableType)i) {
             case TableType::GhmDecisionTree: {
-                LOAD_TABLE(ghm_nodes, ParseGhmDecisionTree);
+                LOAD_TABLE(ghm_nodes, ParseGhmDecisionTree, load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::DiagnosisTable: {
-                LOAD_TABLE(diagnoses, ParseDiagnosisTable);
-                LOAD_TABLE(exclusions, ParseExclusionTable);
+                LOAD_TABLE(diagnoses, ParseDiagnosisTable, load_info->u.raw_data.ptr, table_info);
+                LOAD_TABLE(exclusions, ParseExclusionTable, load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::ProcedureTable: {
-                LOAD_TABLE(procedures, ParseProcedureTable);
+                LOAD_TABLE(procedures, ParseProcedureTable, load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::GhmRootTable: {
-                LOAD_TABLE(ghm_roots, ParseGhmRootTable);
+                LOAD_TABLE(ghm_roots, ParseGhmRootTable, load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::SeverityTable: {
-                LOAD_TABLE(gnn_cells, ParseSeverityTable, 0);
-                LOAD_TABLE(cma_cells[0], ParseSeverityTable, 1);
-                LOAD_TABLE(cma_cells[1], ParseSeverityTable, 2);
-                LOAD_TABLE(cma_cells[2], ParseSeverityTable, 3);
+                LOAD_TABLE(gnn_cells, ParseSeverityTable,
+                           load_info->u.raw_data.ptr, table_info, 0);
+                LOAD_TABLE(cma_cells[0], ParseSeverityTable,
+                           load_info->u.raw_data.ptr, table_info, 1);
+                LOAD_TABLE(cma_cells[1], ParseSeverityTable,
+                           load_info->u.raw_data.ptr, table_info, 2);
+                LOAD_TABLE(cma_cells[2], ParseSeverityTable,
+                           load_info->u.raw_data.ptr, table_info, 3);
             } break;
 
             case TableType::GhsAccessTable: {
-                LOAD_TABLE(ghs, ParseGhsTable);
+                LOAD_TABLE(ghs, ParseGhsAccessTable, load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::AuthorizationTable: {
-                LOAD_TABLE(authorizations, ParseAuthorizationTable);
+                LOAD_TABLE(authorizations, ParseAuthorizationTable,
+                           load_info->u.raw_data.ptr, table_info);
             } break;
             case TableType::SrcPairTable: {
-                LOAD_TABLE(src_pairs[0], ParseSrcPairTable, 0);
-                LOAD_TABLE(src_pairs[1], ParseSrcPairTable, 1);
+                LOAD_TABLE(src_pairs[0], ParseSrcPairTable,
+                           load_info->u.raw_data.ptr, table_info, 0);
+                LOAD_TABLE(src_pairs[1], ParseSrcPairTable,
+                           load_info->u.raw_data.ptr, table_info, 1);
+            } break;
+
+            case TableType::PriceTable: {
+                if (!load_info->loaded) {
+                    const PriceTable &price_table = price_tables[load_info->u.price_table_idx];
+
+                    index.ghs_prices.ptr = (GhsPriceInfo *)set.store.ghs_prices.len;
+                    set.store.ghs_prices.Append(price_table.ghs_prices);
+                    index.ghs_prices.len = set.store.ghs_prices.len - (Size)index.ghs_prices.ptr;
+                    index.changed_tables |= (uint32_t)(1 << i);
+                } else {
+                    index.ghs_prices = set.indexes[set.indexes.len - 1].ghs_prices;
+                }
             } break;
 
             case TableType::UnknownTable:
                 break;
         }
-        table->loaded = true;
+        load_info->loaded = true;
         index.tables[i] = &table_info;
 
         active_count++;
@@ -1102,6 +1378,7 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_sate,
     }
 
 #undef LOAD_TABLE
+#undef CHECK_PIECE
 
     return success;
 }
@@ -1206,6 +1483,14 @@ Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
     }
 
     return compatible_ghs;
+}
+
+const GhsPriceInfo *TableIndex::FindGhsPrice(GhsCode ghs) const
+{
+    if (!ghs_prices_map)
+        return nullptr;
+
+    return ghs_prices_map->FindValue(ghs, nullptr);
 }
 
 #undef FAIL_PARSE_IF

@@ -194,11 +194,8 @@ Classify options:
     const TableSet *table_set = GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return false;
-    const PricingSet *pricing_set = GetMainPricingSet();
-    if (!pricing_set) // Tolerate empty pricing sets
-        return false;
     const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set) // Tolerate missing authorizations
+    if (!authorization_set)
         return false;
 
     LogDebug("Load");
@@ -214,8 +211,7 @@ Classify options:
 
     LogDebug("Classify");
     ClassifyResultSet result_set = {};
-    Classify(*table_set, *authorization_set, *pricing_set, stay_set.stays, cluster_mode,
-             &result_set);
+    Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
 
     LogDebug("Summary");
     PrintLn("Summary:");
@@ -346,7 +342,7 @@ Constraints options:
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set || !table_set->indexes.len)
+        if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -416,7 +412,7 @@ R"(Usage: drdc info [options] name ...
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set || !table_set->indexes.len)
+        if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -505,7 +501,7 @@ List options:
     const TableIndex *index;
     {
         table_set = GetMainTableSet();
-        if (!table_set || !table_set->indexes.len)
+        if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
         if (!index) {
@@ -611,37 +607,6 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
     return true;
 }
 
-static bool RunPrices(Span<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
-R"(Usage: drdc pricing [options]
-)");
-        PrintLn(fp, "%1", main_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-    }
-
-    const PricingSet *pricing_set = GetMainPricingSet();
-    if (!pricing_set)
-        return false;
-
-    DumpPricingSet(*pricing_set);
-    return true;
-}
-
 static bool RunTables(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -674,28 +639,12 @@ Dump options:
         opt_parser.ConsumeNonOptions(&filenames);
     }
 
-    if (filenames.len) {
-        TableSet table_set;
-        {
-            TableSetBuilder table_set_builder;
-            if (!table_set_builder.LoadFiles(filenames))
-                return false;
-            if (!table_set_builder.Finish(&table_set))
-                return false;
-        }
-
-        DumpTableSetHeaders(table_set);
-        if (dump) {
-            DumpTableSetContent(table_set);
-        }
-    } else {
-        const TableSet *table_set = GetMainTableSet();
-        if (!table_set || !table_set->indexes.len)
-            return false;
-        DumpTableSetHeaders(*table_set);
-        if (dump) {
-            DumpTableSetContent(*table_set);
-        }
+    const TableSet *table_set = GetMainTableSet();
+    if (!table_set || !table_set->indexes.len)
+        return false;
+    DumpTableSetHeaders(*table_set);
+    if (dump) {
+        DumpTableSetContent(*table_set);
     }
 
     return true;
@@ -714,7 +663,6 @@ Commands:
                                  (diagnoses, procedures, GHM roots, etc.)
     list                         Export diagnosis and procedure lists
     pack                         Pack stays for quicker loads
-    prices                       Dump GHS pricings
     tables                       Dump available tables and lists
 )");
         PrintLn(fp, "%1", main_options_usage);
@@ -761,7 +709,6 @@ Commands:
     HANDLE_COMMAND(info, RunInfo);
     HANDLE_COMMAND(list, RunList);
     HANDLE_COMMAND(pack, RunPack);
-    HANDLE_COMMAND(prices, RunPrices);
     HANDLE_COMMAND(tables, RunTables);
 
 #undef HANDLE_COMMAND

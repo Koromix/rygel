@@ -7,7 +7,6 @@
 
 struct ClassifierSet {
     TableSet table_set;
-    PricingSet pricing_set;
     AuthorizationSet authorization_set;
 };
 
@@ -167,9 +166,9 @@ SEXP R_Options(SEXP debug = R_NilValue)
 
 // [[Rcpp::export(name = 'drd')]]
 SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
-            Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
-            Rcpp::Nullable<Rcpp::String> pricing_filename = R_NilValue,
-            Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
+           Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
+           Rcpp::CharacterVector price_filenames = Rcpp::CharacterVector::create(),
+           Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
 {
     SETUP_LOG_HANDLER();
 
@@ -178,7 +177,7 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 
     HeapArray<const char *> data_dirs2;
     HeapArray<const char *> table_dirs2;
-    const char *pricing_filename2 = nullptr;
+    HeapArray<const char *> table_filenames2;
     const char *authorization_filename2 = nullptr;
     for (const char *str: data_dirs) {
         data_dirs2.Append(str);
@@ -186,21 +185,18 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
     for (const char *str: table_dirs) {
         table_dirs2.Append(str);
     }
-    if (pricing_filename.isNotNull()) {
-        pricing_filename2 = pricing_filename.as().get_cstring();
+    for (const char *str: table_filenames2) {
+        table_filenames2.Append(str);
     }
     if (authorization_filename.isNotNull()) {
         authorization_filename2 = authorization_filename.as().get_cstring();
     }
 
-    if (!InitTableSet(data_dirs2, table_dirs2, &set->table_set) ||
+    if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
             !set->table_set.indexes.len)
         StopWithLastMessage();
-    if (!InitPricingSet(data_dirs2, pricing_filename2,
-                        &set->pricing_set)) // Tolerate empty pricing sets
-        StopWithLastMessage();
     if (!InitAuthorizationSet(data_dirs2, authorization_filename2,
-                              &set->authorization_set)) // Tolerate missing authorizations
+                              &set->authorization_set))
         StopWithLastMessage();
 
     set_guard.disable();
@@ -410,8 +406,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     ClassifyResultSet result_set = {};
     Classify(classifier_set->table_set, classifier_set->authorization_set,
-             classifier_set->pricing_set,stay_set.stays, ClusterMode::BillId,
-             &result_set);
+             stay_set.stays, ClusterMode::BillId, &result_set);
 
     LogDebug("Export");
 

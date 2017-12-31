@@ -1155,39 +1155,40 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
 }
 
-int PriceGhs(const GhsPricing &pricing, int duration, bool death)
+int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death)
 {
-    int price_cents = pricing.sectors[0].price_cents;
+    int price_cents = price_info.sectors[0].price_cents;
 
-    if (duration < pricing.sectors[0].exb_treshold && !death) {
-        if (pricing.sectors[0].flags & (int)GhsPricing::Flag::ExbOnce) {
-            price_cents -= pricing.sectors[0].exb_cents;
+    if (duration < price_info.sectors[0].exb_treshold && !death) {
+        if (price_info.sectors[0].flags & (int)GhsPriceInfo::Flag::ExbOnce) {
+            price_cents -= price_info.sectors[0].exb_cents;
         } else {
-            price_cents -= pricing.sectors[0].exb_cents * (pricing.sectors[0].exb_treshold - duration);
+            price_cents -= price_info.sectors[0].exb_cents * (price_info.sectors[0].exb_treshold - duration);
         }
-    } else if (duration + death > pricing.sectors[0].exh_treshold) {
-        price_cents += pricing.sectors[0].exh_cents * (duration + death - pricing.sectors[0].exh_treshold);
+    } else if (duration + death > price_info.sectors[0].exh_treshold) {
+        price_cents += price_info.sectors[0].exh_cents * (duration + death - price_info.sectors[0].exh_treshold);
     }
 
     return price_cents;
 }
 
-int PriceGhs(const PricingSet &pricing_set, GhsCode ghs, Date date, int duration, bool death)
+int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
 {
     if (ghs == GhsCode(9999))
         return 0;
 
-    const GhsPricing *pricing = pricing_set.FindGhsPricing(ghs, date);
-    if (!pricing) {
-        // LogDebug("Cannot find price for GHS %1 on %2", ghs, date);
+    const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs);
+    if (!price_info) {
+        // LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
+        //          agg.index->limit_dates[0], agg.index->limit_dates[1]);
         return 0;
     }
 
-    return PriceGhs(*pricing, duration, death);
+    return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == 9);
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              const PricingSet &pricing_set, Span<const Stay> stays, ClusterMode cluster_mode,
+              Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
 {
     // Reuse data structures to reduce heap allocations
@@ -1218,10 +1219,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         } while (false);
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
-        if (pricing_set.ghs_pricings.len) {
-            result.ghs_price_cents = PriceGhs(pricing_set, result.ghs,
-                                              agg.stay.exit.date, agg.duration, agg.stay.exit.mode == 9);
-        }
+        result.ghs_price_cents = PriceGhs(agg, result.ghs);
         CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
 
         result.main_error = errors.main_error;
