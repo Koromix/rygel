@@ -186,6 +186,19 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
         return CreateErrorPage(404);
     }
 
+    // Redirect to the canonical URL for this version, to improve client-side caching
+    if (date != index->limit_dates[0]) {
+        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+
+        {
+            char url_buf[64];
+            Fmt(url_buf, "price_map.json?date=%1", index->limit_dates[0]);
+            MHD_add_response_header(response, "Location", url_buf);
+        }
+
+        return {303, response};
+    }
+
     const HashTable<GhmCode, GhmConstraint> *constraints = nullptr;
     if (index_to_constraints.len) {
         constraints = index_to_constraints[index - table_set->indexes.ptr];
