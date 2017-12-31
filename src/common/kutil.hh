@@ -1706,6 +1706,8 @@ union Date {
     Date &operator--();
     Date operator--(int) { Date date = *this; --(*this); return date; }
 };
+static inline uint64_t DefaultHash(Date date) { return DefaultHash(date.value); }
+static inline bool DefaultCompare(Date date1, Date date2) { return date1 == date2; }
 
 // ------------------------------------------------------------------------
 // Time
