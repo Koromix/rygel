@@ -2595,6 +2595,28 @@ public:
         return true;
     }
 
+    bool SetBool(const JsonValue &value, bool *dest)
+    {
+        if (value.type != JsonValue::Type::Bool)
+            return UnexpectedType(value.type);
+
+        *dest = value.u.b;
+        return true;
+    }
+    template <typename U, typename V>
+    bool SetFlag(const JsonValue &value, U *dest, V flag)
+    {
+        if (value.type != JsonValue::Type::Bool)
+            return UnexpectedType(value.type);
+
+        if (value.u.b) {
+            *dest = (U)(*dest | flag);
+        } else {
+            *dest = (U)(*dest & ~flag);
+        }
+        return true;
+    }
+
     bool SetString(const JsonValue &value, Allocator *alloc, const char **str)
     {
         if (value.type != JsonValue::Type::String)
