@@ -478,7 +478,9 @@ struct AllocatorBucket {
 };
 
 class Allocator {
-    AllocatorList list = { &list, &list };
+    // We want Allocator to be memmovable, which means we can't use a circular linked list.
+    // Even though it makes the code less nice.
+    AllocatorList list = {};
 
 public:
     enum class Flag {

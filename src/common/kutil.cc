@@ -90,10 +90,17 @@ void *Allocator::Allocate(Size size, unsigned int flags)
         LogError("Failed to allocate %1 of memory", FmtMemSize(size));
         abort();
     }
-    list.prev->next = &bucket->head;
-    bucket->head.prev = list.prev;
-    list.prev = &bucket->head;
-    bucket->head.next = &list;
+    if (list.prev) {
+        list.prev->next = &bucket->head;
+        bucket->head.prev = list.prev;
+        bucket->head.next = nullptr;
+        list.prev = &bucket->head;
+    } else {
+        list.prev = &bucket->head;
+        list.next = &bucket->head;
+        bucket->head.prev = nullptr;
+        bucket->head.next = nullptr;
+    }
 
     if (flags & (int)Flag::Zero) {
         memset(bucket->data, 0, (size_t)size);
@@ -125,8 +132,16 @@ void Allocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int fl
                  FmtMemSize(old_size), FmtMemSize(new_size));
         abort();
     }
-    new_bucket->head.prev->next = &new_bucket->head;
-    new_bucket->head.next->prev = &new_bucket->head;
+    if (new_bucket->head.next) {
+        new_bucket->head.next->prev = &new_bucket->head;
+    } else {
+        list.prev = &new_bucket->head;
+    }
+    if (new_bucket->head.prev) {
+        new_bucket->head.prev->next = &new_bucket->head;
+    } else {
+        list.next = &new_bucket->head;
+    }
     *ptr = new_bucket->data;
 
     if (flags & (int)Flag::Zero && new_size > old_size) {
@@ -142,20 +157,28 @@ void Allocator::Release(void *ptr, Size size)
         return;
 
     AllocatorBucket *bucket = PTR_TO_BUCKET(ptr);
-    bucket->head.next->prev = bucket->head.prev;
-    bucket->head.prev->next = bucket->head.next;
+    if (bucket->head.next) {
+        bucket->head.next->prev = bucket->head.prev;
+    } else {
+        list.prev = bucket->head.prev;
+    }
+    if (bucket->head.prev) {
+        bucket->head.prev->next = bucket->head.next;
+    } else {
+        list.next = bucket->head.next;
+    }
     free(bucket);
 }
 
 void Allocator::ReleaseAll()
 {
     AllocatorList *head = list.next;
-    while (head != &list) {
+    while (head) {
         AllocatorList *next = head->next;
         free(head);
         head = next;
     }
-    list = { &list, &list };
+    list = {};
 }
 
 // ------------------------------------------------------------------------
