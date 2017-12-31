@@ -35,7 +35,6 @@ static const Page pages[] = {
 static const TableSet *table_set;
 static HeapArray<HashTable<GhmCode, GhmConstraint>> constraints_set;
 static HeapArray<HashTable<GhmCode, GhmConstraint> *> index_to_constraints;
-static const AuthorizationSet *authorization_set;
 static const CatalogSet *catalog_set;
 
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -465,9 +464,6 @@ Options:
 
     table_set = GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
-        return 1;
-    authorization_set = GetMainAuthorizationSet();
-    if (!authorization_set)
         return 1;
     catalog_set = GetMainCatalogSet();
     if (!catalog_set || !catalog_set->ghm_roots.len)
