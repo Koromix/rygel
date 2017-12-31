@@ -1964,6 +1964,11 @@ public:
     FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
     FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
+    FmtArg(Span<FmtArg> args) : type(Type::List)
+    {
+        value.list.args = args;
+        value.list.separator = ", ";
+    }
 
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
 };
