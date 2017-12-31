@@ -96,10 +96,10 @@ error:
 static bool RunCatalogs(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc catalogs [options]
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -127,7 +127,7 @@ R"(Usage: drdc catalogs [options]
 static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
@@ -137,7 +137,7 @@ Classify options:
 
         --test                   Enable testing against GenRSA values
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -307,14 +307,14 @@ Classify options:
 static bool RunConstraints(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc constraints [options]
 
 Constraints options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables)
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -373,10 +373,10 @@ Constraints options:
 static bool RunInfo(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc info [options] name ...
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -458,14 +458,14 @@ R"(Usage: drdc info [options] name ...
 static bool RunList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc list [options] list_name ...
 
 List options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables)
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -551,10 +551,10 @@ List options:
 static bool RunPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc pack [options] stay_file ... -O output_file
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -610,13 +610,13 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
 static bool RunTables(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc tables [options] [filename] ...
 
 Dump options:
     -d, --dump                   Dump content of (readable) tables
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -653,7 +653,7 @@ Dump options:
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdc <command> [<args>]
 
 Commands:
@@ -665,7 +665,7 @@ Commands:
     pack                         Pack stays for quicker loads
     tables                       Dump available tables and lists
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     Allocator temp_alloc;

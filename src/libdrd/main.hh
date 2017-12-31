@@ -12,15 +12,15 @@
 static const char *const main_options_usage =
 R"(Common options:
     -D, --data-dir <dir>         Add data directory
-                                 (default: <executable_dir>/data)
+                                 (default: <executable_dir>%/data)
         --table-dir <dir>        Add table directory
-                                 (default: <data_dir>/tables)
+                                 (default: <data_dir>%/tables)
         --price-file <path>      Set price file
-                                 (default: <data_dir>/tables/prices.json)
+                                 (default: <data_dir>%/tables%/prices.json)
         --auth-file <path>       Set authorization file
-                                 (default: <data_dir>/authorizations.json)
+                                 (default: <data_dir>%/authorizations.json)
         --catalog-dir <path>     Add catalog directory
-                                 (default: <data_dir>/catalogs)
+                                 (default: <data_dir>%/catalogs)
 
     -O, --output <path>          Dump information to file
                                  (default: stdout))";

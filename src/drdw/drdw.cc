@@ -461,7 +461,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, "%1",
+        PrintLn(fp,
 R"(Usage: drdw [options]
 
 Options:
@@ -469,7 +469,7 @@ Options:
                                  (default: 8888)
 
 )");
-        PrintLn(fp, "%1", main_options_usage);
+        PrintLn(fp, main_options_usage);
     };
 
     Allocator temp_alloc;
