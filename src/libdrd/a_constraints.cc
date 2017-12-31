@@ -8,7 +8,7 @@
 
 static bool MergeConstraint(const TableIndex &index,
                             const GhmCode ghm, GhmConstraint constraint,
-                            HashSet<GhmCode, GhmConstraint> *out_constraints)
+                            HashTable<GhmCode, GhmConstraint> *out_constraints)
 {
     // TODO: Simplify with AppendOrGet() in HashSet
 #define MERGE_CONSTRAINT(ModeChar, DurationMask) \
@@ -67,7 +67,7 @@ static bool MergeConstraint(const TableIndex &index,
 // TODO: Convert to non-recursive code
 static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_idx,
                            GhmConstraint constraint,
-                           HashSet<GhmCode, GhmConstraint> *out_constraints)
+                           HashTable<GhmCode, GhmConstraint> *out_constraints)
 {
     if (UNLIKELY(depth >= index.ghm_nodes.len)) {
         LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
@@ -152,7 +152,7 @@ static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_id
 }
 
 bool ComputeGhmConstraints(const TableIndex &index,
-                           HashSet<GhmCode, GhmConstraint> *out_constraints)
+                           HashTable<GhmCode, GhmConstraint> *out_constraints)
 {
     Assert(!out_constraints->count);
 

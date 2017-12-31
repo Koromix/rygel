@@ -33,8 +33,8 @@ static const Page pages[] = {
 };
 
 static const TableSet *table_set;
-static HeapArray<HashSet<GhmCode, GhmConstraint>> constraints_set;
-static HeapArray<HashSet<GhmCode, GhmConstraint> *> index_to_constraints;
+static HeapArray<HashTable<GhmCode, GhmConstraint>> constraints_set;
+static HeapArray<HashTable<GhmCode, GhmConstraint> *> index_to_constraints;
 static const PricingSet *pricing_set;
 static const AuthorizationSet *authorization_set;
 static const CatalogSet *catalog_set;
@@ -175,7 +175,7 @@ static MHD_Response *ProducePriceMap(MHD_Connection *conn, const char *,
         return nullptr;
     }
 
-    const HashSet<GhmCode, GhmConstraint> *constraints = nullptr;
+    const HashTable<GhmCode, GhmConstraint> *constraints = nullptr;
     if (index_to_constraints.len) {
         constraints = index_to_constraints[index - table_set->indexes.ptr];
     }
@@ -483,7 +483,7 @@ Options:
 
         // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
         if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
-            HashSet<GhmCode, GhmConstraint> *constraints = constraints_set.Append();
+            HashTable<GhmCode, GhmConstraint> *constraints = constraints_set.Append();
             if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
                 return 1;
         }

@@ -12,12 +12,12 @@ struct Authorization {
     Date dates[2];
     int8_t type;
 
-    HASH_SET_HANDLER(Authorization, unit);
+    HASH_TABLE_HANDLER(Authorization, unit);
 };
 
 struct AuthorizationSet {
     HeapArray<Authorization> authorizations;
-    HashSet<UnitCode, const Authorization *> authorizations_map;
+    HashTable<UnitCode, const Authorization *> authorizations_map;
 
     Span<const Authorization> FindUnit(UnitCode unit) const;
     const Authorization *FindUnit(UnitCode unit, Date date) const;

@@ -970,12 +970,12 @@ bool TableSetBuilder::Finish(TableSet *out_set)
     success &= CommitIndex(start_date, end_date, active_tables);
 
     {
-        HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
-        HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
-        HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
+        HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map = nullptr;
+        HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map = nullptr;
+        HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map = nullptr;
 
-        HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
-        HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
+        HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map = nullptr;
+        HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map = nullptr;
 
         for (TableIndex &index: set.indexes) {
 #define FIX_SPAN(SpanName) \

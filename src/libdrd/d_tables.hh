@@ -105,7 +105,7 @@ struct DiagnosisInfo {
         return attributes[(int)sex - 1];
     }
 
-    HASH_SET_HANDLER(DiagnosisInfo, diag);
+    HASH_TABLE_HANDLER(DiagnosisInfo, diag);
 };
 
 struct ExclusionInfo {
@@ -119,7 +119,7 @@ struct ProcedureInfo {
     Date limit_dates[2];
     uint8_t bytes[55];
 
-    HASH_SET_HANDLER(ProcedureInfo, proc);
+    HASH_TABLE_HANDLER(ProcedureInfo, proc);
 };
 
 template <Size N>
@@ -154,7 +154,7 @@ struct GhmRootInfo {
 
     ListMask cma_exclusion_mask;
 
-    HASH_SET_HANDLER(GhmRootInfo, ghm_root);
+    HASH_TABLE_HANDLER(GhmRootInfo, ghm_root);
 };
 
 struct GhsAccessInfo {
@@ -171,8 +171,8 @@ struct GhsAccessInfo {
     ListMask diagnosis_mask;
     LocalArray<ListMask, 4> procedure_masks;
 
-    HASH_SET_HANDLER_N(GhmHandler, GhsAccessInfo, ghm);
-    HASH_SET_HANDLER_N(GhmRootHandler, GhsAccessInfo, ghm.Root());
+    HASH_TABLE_HANDLER_N(GhmHandler, GhsAccessInfo, ghm);
+    HASH_TABLE_HANDLER_N(GhmRootHandler, GhsAccessInfo, ghm.Root());
 };
 
 enum class AuthorizationScope: uint8_t {
@@ -241,12 +241,12 @@ struct TableIndex {
     Span<AuthorizationInfo> authorizations;
     Span<SrcPair> src_pairs[2];
 
-    HashSet<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
-    HashSet<ProcedureCode, const ProcedureInfo *> *procedures_map;
-    HashSet<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
+    HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
+    HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
+    HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
-    HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
-    HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+    HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
+    HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
     Span<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
@@ -277,12 +277,12 @@ public:
     } store;
 
     struct {
-        HeapArray<HashSet<DiagnosisCode, const DiagnosisInfo *>> diagnoses;
-        HeapArray<HashSet<ProcedureCode, const ProcedureInfo *>> procedures;
-        HeapArray<HashSet<GhmRootCode, const GhmRootInfo *>> ghm_roots;
+        HeapArray<HashTable<DiagnosisCode, const DiagnosisInfo *>> diagnoses;
+        HeapArray<HashTable<ProcedureCode, const ProcedureInfo *>> procedures;
+        HeapArray<HashTable<GhmRootCode, const GhmRootInfo *>> ghm_roots;
 
-        HeapArray<HashSet<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler>> ghm_to_ghs;
-        HeapArray<HashSet<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
+        HeapArray<HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler>> ghm_to_ghs;
+        HeapArray<HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
     } maps;
 
     const TableIndex *FindIndex(Date date) const;

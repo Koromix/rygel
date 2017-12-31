@@ -13,8 +13,8 @@ struct GhmConstraint {
 
     uint32_t duration_mask;
 
-    HASH_SET_HANDLER(GhmConstraint, ghm);
+    HASH_TABLE_HANDLER(GhmConstraint, ghm);
 };
 
 bool ComputeGhmConstraints(const TableIndex &index,
-                           HashSet<GhmCode, GhmConstraint> *out_constraints);
+                           HashTable<GhmCode, GhmConstraint> *out_constraints);

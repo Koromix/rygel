@@ -24,12 +24,12 @@ struct GhsPricing {
         uint16_t flags;
     } sectors[2]; // 0 for public, 1 for private
 
-    HASH_SET_HANDLER(GhsPricing, ghs);
+    HASH_TABLE_HANDLER(GhsPricing, ghs);
 };
 
 struct PricingSet {
     HeapArray<GhsPricing> ghs_pricings;
-    HashSet<GhsCode, const GhsPricing *> ghs_pricings_map;
+    HashTable<GhsCode, const GhsPricing *> ghs_pricings_map;
 
     Allocator str_alloc;
 

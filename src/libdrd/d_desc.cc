@@ -101,7 +101,7 @@ public:
 
 bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
                         HeapArray<GhmRootDesc> *out_catalog,
-                        HashSet<GhmRootCode, GhmRootDesc> *out_map)
+                        HashTable<GhmRootCode, GhmRootDesc> *out_map)
 {
     DEFER_NC(out_guard, len = out_catalog->len) { out_catalog->RemoveFrom(len); };
 

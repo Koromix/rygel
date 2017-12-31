@@ -356,7 +356,7 @@ Constraints options:
     }
 
     LogDebug("Computing");
-    HashSet<GhmCode, GhmConstraint> ghm_constraints;
+    HashTable<GhmCode, GhmConstraint> ghm_constraints;
     if (!ComputeGhmConstraints(*index, &ghm_constraints))
         return false;
 

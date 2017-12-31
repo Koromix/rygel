@@ -1288,17 +1288,17 @@ public:
 
 template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
-class HashSet {
+class HashTable {
 public:
     ValueType *data = nullptr;
     Size count = 0;
     Size capacity = 0;
     Allocator *allocator = nullptr;
 
-    HashSet() = default;
-    HashSet(HashSet &) = delete;
-    HashSet &operator=(const HashSet &) = delete;
-    ~HashSet() { Clear(); }
+    HashTable() = default;
+    HashTable(HashTable &) = delete;
+    HashTable &operator=(const HashTable &) = delete;
+    ~HashTable() { Clear(); }
 
     void Clear()
     {
@@ -1307,7 +1307,7 @@ public:
     }
 
     ValueType *Find(const KeyType &key)
-        { return (ValueType *)((const HashSet *)this)->Find(key); }
+        { return (ValueType *)((const HashTable *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
         if (!capacity)
@@ -1318,61 +1318,36 @@ public:
         return Find(idx, key);
     }
     ValueType FindValue(const KeyType &key, const ValueType &default_value)
-        { return (ValueType)((const HashSet *)this)->FindValue(key, default_value); }
+        { return (ValueType)((const HashTable *)this)->FindValue(key, default_value); }
     const ValueType FindValue(const KeyType &key, const ValueType &default_value) const
     {
         const ValueType *it = Find(key);
         return it ? *it : default_value;
     }
 
+    ValueType *Append(const KeyType &key)
+    {
+        return Insert(key, false);
+    }
     ValueType *Append(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
-        uint64_t hash = Handler::HashKey(key);
-
-        if (capacity) {
-            Size idx = HashToIndex(hash);
-            if (!Find(idx, key)) {
-                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
-                    Rehash(capacity << 1);
-                    idx = HashToIndex(hash);
-                }
-                return Insert(idx, value);
-            } else {
-                return nullptr;
-            }
-        } else {
-            Rehash(HASHSET_BASE_CAPACITY);
-
-            Size idx = HashToIndex(hash);
-            return Insert(idx, value);
+        ValueType *it = Insert(key, false);
+        if (it) {
+            *it = value;
         }
+        return it;
     }
-
+    ValueType *Set(const KeyType &key)
+    {
+        return Insert(key, true);
+    }
     ValueType *Set(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
-        uint64_t hash = Handler::HashKey(key);
-
-        if (capacity) {
-            Size idx = HashToIndex(hash);
-            ValueType *it = Find(idx, key);
-            if (!it) {
-                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
-                    Rehash(capacity << 1);
-                    idx = HashToIndex(hash);
-                }
-                return Insert(idx, value);
-            } else {
-                *it = value;
-                return it;
-            }
-        } else {
-            Rehash(HASHSET_BASE_CAPACITY);
-
-            Size idx = HashToIndex(hash);
-            return Insert(idx, value);
-        }
+        ValueType *it = Insert(key, true);
+        *it = value;
+        return it;
     }
 
     void Remove(ValueType *it)
@@ -1397,7 +1372,7 @@ public:
 
 private:
     ValueType *Find(Size idx, const KeyType &key)
-        { return (ValueType *)((const HashSet *)this)->Find(idx, key); }
+        { return (ValueType *)((const HashTable *)this)->Find(idx, key); }
     const ValueType *Find(Size idx, const KeyType &key) const
     {
         while (!Handler::IsEmpty(data[idx])) {
@@ -1409,14 +1384,37 @@ private:
         return nullptr;
     }
 
-    ValueType *Insert(Size idx, const ValueType &value)
+    ValueType *Insert(const KeyType &key, bool overwrite)
     {
-        DebugAssert(!Handler::IsEmpty(value));
+        uint64_t hash = Handler::HashKey(key);
 
+        if (capacity) {
+            Size idx = HashToIndex(hash);
+            ValueType *it = Find(idx, key);
+            if (!it) {
+                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                    Rehash(capacity << 1);
+                    idx = HashToIndex(hash);
+                }
+                return FindEmptyIterator(idx);
+            } else if (overwrite) {
+                return it;
+            } else {
+                return nullptr;
+            }
+        } else {
+            Rehash(HASHSET_BASE_CAPACITY);
+
+            Size idx = HashToIndex(hash);
+            return FindEmptyIterator(idx);
+        }
+    }
+
+    ValueType *FindEmptyIterator(Size idx)
+    {
         while (!Handler::IsEmpty(data[idx])) {
             idx = (idx + 1) & (capacity - 1);
         }
-        data[idx] = value;
         count++;
 
         return &data[idx];
@@ -1445,8 +1443,8 @@ private:
             for (Size i = 0; i < old_capacity; i++) {
                 if (!Handler::IsEmpty(old_data[i])) {
                     Size new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
-                    Insert(new_idx, old_data[i]);
-                    old_data[i].~ValueType();
+                    ValueType *new_it = FindEmptyIterator(new_idx);
+                    memmove(new_it, &old_data[i], SIZE(*data));
                 }
             }
         } else {
@@ -1534,7 +1532,7 @@ static inline bool DefaultCompare(Span<const char> key1, const char *key2)
 static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
     { return key1 == key2; }
 
-#define HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
     class Name { \
     public: \
         static bool IsEmpty(const ValueType &value) \
@@ -1550,44 +1548,62 @@ static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
                                 decltype(ValueType::KeyMember) key2) \
             { return CompareFunc((key1), (key2)); } \
     }
-#define HASH_SET_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
-    HASH_SET_HANDLER_EX_N(HashHandler, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc)
-#define HASH_SET_HANDLER(ValueType, KeyMember) \
-    HASH_SET_HANDLER_EX(ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
-#define HASH_SET_HANDLER_N(Name, ValueType, KeyMember) \
-    HASH_SET_HANDLER_EX_N(Name, ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
+#define HASH_TABLE_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc)
+#define HASH_TABLE_HANDLER(ValueType, KeyMember) \
+    HASH_TABLE_HANDLER_EX(ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
+#define HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
+public:
     struct Bucket {
         KeyType key;
         ValueType value;
 
-        HASH_SET_HANDLER(Bucket, key);
+        HASH_TABLE_HANDLER(Bucket, key);
     };
 
-    HashSet<KeyType, Bucket> set;
+    HashTable<KeyType, Bucket> table;
 
-public:
-    Size &count = set.count;
-    Size &capacity = set.capacity;
-    Allocator *&allocator = set.allocator;
+    Size &count = table.count;
+    Size &capacity = table.capacity;
+    Allocator *&allocator = table.allocator;
 
-    void Clear() { set.Clear(); }
+    void Clear() { table.Clear(); }
 
+    ValueType *Append(const KeyType &key, const ValueType &value)
+        { return &table.Append({key, value})->value; }
+    ValueType *Append(const KeyType &key)
+    {
+        Bucket *table_it = table.Append(key);
+        table_it->key = key;
+        return &table_it->value;
+    }
     ValueType *Set(const KeyType &key, const ValueType &value)
-        { return &set.Set({key, value})->value; }
+        { return &table.Set({key, value})->value; }
+    ValueType *Set(const KeyType &key)
+    {
+        Bucket *table_it = table.Set(key);
+        table_it->key = key;
+        return &table_it->value;
+    }
 
     void Remove(ValueType *it)
-        { set.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value))); }
+    {
+        if (!it)
+            return;
+        table.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value)));
+    }
     void Remove(KeyType key) { Remove(Find(key)); }
 
     ValueType *Find(const KeyType &key)
         { return (ValueType *)((const HashMap *)this)->Find(key); }
     const ValueType *Find(const KeyType &key) const
     {
-        const Bucket *set_it = set.Find(key);
-        return set_it ? &set_it->value : nullptr;
+        const Bucket *table_it = table.Find(key);
+        return table_it ? &table_it->value : nullptr;
     }
     ValueType FindValue(const KeyType key, const ValueType &default_value)
         { return (ValueType)((const HashMap *)this)->FindValue(key, default_value); }
