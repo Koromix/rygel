@@ -202,7 +202,9 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
     Date date = {};
     {
         const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "date");
-        date = Date::FromString(date_str);
+        if (date_str) {
+            date = Date::FromString(date_str);
+        }
         if (!date.value)
             return CreateErrorPage(404);
     }
