@@ -169,6 +169,33 @@ static MHD_Response *BuildJson(CompressionType compression_type,
     return response;
 }
 
+static Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compression_type)
+{
+    MHD_Response *response = BuildJson(compression_type,
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        writer.StartArray();
+        for (const TableIndex &index: table_set->indexes) {
+            char buf[32];
+
+            writer.StartObject();
+            writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
+            writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
+            if (index.changed_tables & ~MaskEnum(TableType::PriceTable)) {
+                writer.Key("changed_tables"); writer.Bool(true);
+            }
+            if (index.changed_tables & MaskEnum(TableType::PriceTable)) {
+                writer.Key("changed_prices"); writer.Bool(true);
+            }
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        return true;
+    });
+
+    return {200, response};
+}
+
 static Response ProducePriceMap(MHD_Connection *conn, const char *,
                                 CompressionType compression_type)
 {
@@ -413,7 +440,9 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
     }
 
     Response response;
-    if (TestStr(url, "/api/price_map.json")) {
+    if (TestStr(url, "/api/indexes.json")) {
+        response = ProduceIndexes(conn, url, compression_type);
+    } else if (TestStr(url, "/api/price_map.json")) {
         response = ProducePriceMap(conn, url, compression_type);
     } else if (TestStr(url, "/api/ghm_roots.json")) {
         response = ProduceGhmRoots(conn, url, compression_type);
