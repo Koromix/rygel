@@ -7,6 +7,8 @@
     #define _WIN32_WINNT 0x0602
 #endif
 
+#include "../../common/rcpp.cc"
+
 #include "../../../lib/imgui/imgui.cpp"
 #include "../../../lib/imgui/imgui_draw.cpp"
 #include "../../../lib/imgui/imgui_demo.cpp"

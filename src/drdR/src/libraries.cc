@@ -7,6 +7,8 @@
     #define _WIN32_WINNT 0x0602
 #endif
 
+#include "../../common/rcpp.cc"
+
 #define DRD_IMPLEMENTATION
 #define KUTIL_NO_MINIZ
 #include "../../libdrd/libdrd.hh"

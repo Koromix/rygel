@@ -3,147 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libdrd/libdrd.hh"
-#include <Rcpp.h>
+#include "../../common/rcpp.hh"
 
 struct ClassifierSet {
     TableSet table_set;
     AuthorizationSet authorization_set;
 };
-
-static thread_local DynamicQueue<const char *> log_messages;
-static thread_local bool log_missing_messages = false;
-
-#define SETUP_LOG_HANDLER() \
-    PushLogHandler([](LogLevel level, const char *ctx, \
-                      const char *fmt, Span<const FmtArg> args) { \
-        switch (level) { \
-            case LogLevel::Error: { \
-                const char *msg = FmtFmt(log_messages.bucket_allocator, fmt, args).ptr; \
-                log_messages.Append(msg); \
-                if (log_messages.len > 100) { \
-                    log_messages.RemoveFirst(); \
-                    log_missing_messages = true; \
-                } \
-            } break; \
- \
-            case LogLevel::Info: \
-            case LogLevel::Debug: { \
-                Print("%1", ctx); \
-                PrintFmt(stdout, fmt, args); \
-                PrintLn(); \
-            } break; \
-        } \
-    }); \
-    DEFER { \
-        DumpWarnings(); \
-        PopLogHandler(); \
-    };
-
-static void DumpWarnings()
-{
-    for (const char *msg: log_messages) {
-        Rcpp::warning(msg);
-    }
-    log_messages.Clear();
-
-    if (log_missing_messages) {
-        Rcpp::warning("There were too many warnings, some have been lost");
-        log_missing_messages = false;
-    }
-}
-
-static void StopWithLastMessage()
-{
-    if (log_messages.len) {
-        std::string error_msg = log_messages[log_messages.len - 1];
-        log_messages.RemoveLast();
-        DumpWarnings();
-        Rcpp::stop(error_msg);
-    } else {
-        Rcpp::stop("Unknown error");
-    }
-}
-
-class FlexibleDateVector {
-    enum class Type {
-        Character,
-        Date
-    };
-
-    Type type;
-    struct { // FIXME: I want union
-        Rcpp::CharacterVector chr;
-        Rcpp::NumericVector num;
-    } u;
-
-public:
-    Size len = 0;
-
-    FlexibleDateVector() = default;
-    FlexibleDateVector(SEXP xp)
-    {
-        if (Rcpp::is<Rcpp::CharacterVector>(xp)) {
-            type = Type::Character;
-            u.chr = xp;
-            len = (Size)u.chr.size();
-        } else if ((Rcpp::is<Rcpp::NumericVector>(xp) || Rcpp::is<Rcpp::IntegerVector>(xp)) &&
-                   Rf_inherits(xp, "Date")) {
-            type = Type::Date;
-            u.num = xp;
-            len = (Size)u.num.size();
-        } else {
-            Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
-        }
-    }
-
-    Date operator[](int idx) const
-    {
-        switch (type) {
-            case Type::Character: {
-                SEXP str = u.chr[idx].get();
-                if (str != NA_STRING) {
-                    Date date = Date::FromString(CHAR(str));
-                    if (!date.value)
-                        StopWithLastMessage();
-                    return date;
-                }
-            } break;
-
-            case Type::Date: {
-                double value = u.num[idx];
-                if (value != NA_REAL) {
-                    Rcpp::Datetime dt = value * 86400;
-                    Date date(dt.getYear(), dt.getMonth(), dt.getDay());
-                    DebugAssert(date.IsValid());
-                    return date;
-                }
-            } break;
-        }
-
-        return {};
-    }
-
-    Date Value() const
-    {
-        if (UNLIKELY(len != 1)) {
-            LogError("Date or date-like vector must have one value (no more, no less)");
-            StopWithLastMessage();
-        }
-
-        return (*this)[0];
-    }
-};
-
-template <int RTYPE, typename T>
-T GetOptionalValue(Rcpp::Vector<RTYPE> &vec, R_xlen_t i, T default_value)
-{
-    if (UNLIKELY(i >= vec.size()))
-        return default_value;
-    auto value = vec[i % vec.size()];
-    if (vec.is_na(value))
-        return default_value;
-    return value;
-}
 
 static inline int8_t ParseEntryExitCharacter(const char *str)
 {
@@ -170,7 +35,7 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
            Rcpp::CharacterVector price_filenames = Rcpp::CharacterVector::create(),
            Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
 {
-    SETUP_LOG_HANDLER();
+    SETUP_RCPP_LOG_HANDLER();
 
     ClassifierSet *set = new ClassifierSet;
     DEFER_N(set_guard) { delete set; };
@@ -194,10 +59,10 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 
     if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
             !set->table_set.indexes.len)
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
     if (!InitAuthorizationSet(data_dirs2, authorization_filename2,
                               &set->authorization_set))
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
 
     set_guard.disable();
     return Rcpp::XPtr<ClassifierSet>(set, true);
@@ -208,7 +73,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                            Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
                            Rcpp::DataFrame procedures_df)
 {
-    SETUP_LOG_HANDLER();
+    SETUP_RCPP_LOG_HANDLER();
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
@@ -224,12 +89,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
         Rcpp::IntegerVector bill_id;
         Rcpp::IntegerVector stay_id;
-        FlexibleDateVector birthdate;
+        RcppDateVector birthdate;
         Rcpp::CharacterVector sex;
-        FlexibleDateVector entry_date;
+        RcppDateVector entry_date;
         Rcpp::CharacterVector entry_mode;
         Rcpp::CharacterVector entry_origin;
-        FlexibleDateVector exit_date;
+        RcppDateVector exit_date;
         Rcpp::CharacterVector exit_mode;
         Rcpp::CharacterVector exit_destination;
         Rcpp::IntegerVector unit;
@@ -238,7 +103,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector igs2;
         Rcpp::IntegerVector gestational_age;
         Rcpp::IntegerVector newborn_weight;
-        FlexibleDateVector last_menstrual_period;
+        RcppDateVector last_menstrual_period;
 
         Rcpp::CharacterVector main_diagnosis;
         Rcpp::CharacterVector linked_diagnosis;
@@ -258,7 +123,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector phase;
         Rcpp::IntegerVector activity;
         Rcpp::IntegerVector count;
-        FlexibleDateVector date;
+        RcppDateVector date;
     } procedures;
 
     LogDebug("Start");
@@ -308,8 +173,8 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         for (int i = 0; i < stays_df.nrow(); i++) {
             Stay stay = {};
 
-            stay.bill_id = GetOptionalValue(stays.bill_id, i, 0);
-            stay.stay_id = GetOptionalValue(stays.stay_id, i, 0);
+            stay.bill_id = GetRcppOptionalValue(stays.bill_id, i, 0);
+            stay.stay_id = GetRcppOptionalValue(stays.stay_id, i, 0);
             stay.birthdate = stays.birthdate[i];
             {
                 const char *sex = stays.sex[i];
@@ -326,21 +191,23 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             // TODO: Harmonize who deals with format errors (for example sex is dealt with here, not modes)
             stay.entry.date = stays.entry_date[i];
             stay.entry.mode = ParseEntryExitCharacter(stays.entry_mode[i]);
-            stay.entry.origin = ParseEntryExitCharacter(GetOptionalValue(stays.entry_origin, i, ""));
+            stay.entry.origin =
+                ParseEntryExitCharacter(GetRcppOptionalValue(stays.entry_origin, i, ""));
             stay.exit.date = stays.exit_date[i];
             stay.exit.mode = ParseEntryExitCharacter(stays.exit_mode[i]);
-            stay.exit.destination = ParseEntryExitCharacter(GetOptionalValue(stays.exit_destination, i, ""));
-            stay.unit.number = GetOptionalValue(stays.unit, i, 0);
-            stay.bed_authorization = GetOptionalValue(stays.bed_authorization, i, 0);
-            stay.session_count = GetOptionalValue(stays.session_count, i, 0);
-            stay.igs2 = GetOptionalValue(stays.igs2, i, 0);
+            stay.exit.destination =
+                ParseEntryExitCharacter(GetRcppOptionalValue(stays.exit_destination, i, ""));
+            stay.unit.number = GetRcppOptionalValue(stays.unit, i, 0);
+            stay.bed_authorization = GetRcppOptionalValue(stays.bed_authorization, i, 0);
+            stay.session_count = GetRcppOptionalValue(stays.session_count, i, 0);
+            stay.igs2 = GetRcppOptionalValue(stays.igs2, i, 0);
             stay.gestational_age = stays.gestational_age[i];
             stay.newborn_weight = stays.newborn_weight[i];
             stay.last_menstrual_period = stays.last_menstrual_period[i];
             stay.main_diagnosis =
-                DiagnosisCode::FromString(GetOptionalValue(stays.main_diagnosis, i, ""));
+                DiagnosisCode::FromString(GetRcppOptionalValue(stays.main_diagnosis, i, ""));
             stay.linked_diagnosis =
-                DiagnosisCode::FromString(GetOptionalValue(stays.linked_diagnosis, i, ""));
+                DiagnosisCode::FromString(GetRcppOptionalValue(stays.linked_diagnosis, i, ""));
 
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
             while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
@@ -377,7 +244,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 ProcedureRealisation proc = {};
 
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
-                proc.phase = GetOptionalValue(procedures.phase, k, 0);
+                proc.phase = GetRcppOptionalValue(procedures.phase, k, 0);
                 {
                     unsigned int activities_dec = (unsigned int)procedures.activity[k];
                     while (activities_dec) {
@@ -386,7 +253,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                         proc.activities |= (1 << activity);
                     }
                 }
-                proc.count = GetOptionalValue(procedures.count, k, 1);
+                proc.count = GetRcppOptionalValue(procedures.count, k, 1);
                 proc.date = procedures.date[k];
 
                 stay_set.store.procedures.Append(proc);
@@ -474,17 +341,17 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 // [[Rcpp::export(name = 'diagnoses')]]
 Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 {
-    SETUP_LOG_HANDLER();
+    SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = FlexibleDateVector(date_xp).Value();
+    Date date = RcppDateVector(date_xp).Value();
     if (!date.value)
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
 
     const TableIndex *index = classifier_set->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
     }
 
     Rcpp::DataFrame retval;
@@ -516,17 +383,17 @@ Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 // [[Rcpp::export(name = 'procedures')]]
 Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 {
-    SETUP_LOG_HANDLER();
+    SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = FlexibleDateVector(date_xp).Value();
+    Date date = RcppDateVector(date_xp).Value();
     if (!date.value)
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
 
     const TableIndex *index = classifier_set->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        StopWithLastMessage();
+        StopRcppWithLastMessage();
     }
 
     Rcpp::DataFrame retval;
@@ -563,5 +430,3 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 
     return retval;
 }
-
-#undef SETUP_LOG_HANDLER
