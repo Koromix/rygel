@@ -1103,7 +1103,7 @@ public:
                 DeleteBucket(buckets[i]);
             }
             memmove(&buckets[0], &buckets[end_bucket_idx],
-                    (buckets.len - end_bucket_idx) * SIZE(Bucket *));
+                    (size_t)((buckets.len - end_bucket_idx) * SIZE(Bucket *)));
             buckets.RemoveLast(end_bucket_idx);
         }
 

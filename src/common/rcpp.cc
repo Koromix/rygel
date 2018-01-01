@@ -66,7 +66,7 @@ Date RcppDateVector::operator[](int idx) const
             double value = u.num[idx];
             if (value != NA_REAL) {
                 Rcpp::Datetime dt = value * 86400;
-                Date date(dt.getYear(), dt.getMonth(), dt.getDay());
+                Date date((int16_t)dt.getYear(), (int8_t)dt.getMonth(), (int8_t)dt.getDay());
                 DebugAssert(date.IsValid());
                 return date;
             }

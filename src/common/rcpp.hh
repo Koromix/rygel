@@ -37,7 +37,7 @@ extern bool rcpp_log_missing_messages;
     };
 
 void DumpRcppWarnings();
-void StopRcppWithLastMessage();
+void StopRcppWithLastMessage() __attribute__((noreturn));
 
 class RcppDateVector {
     enum class Type {

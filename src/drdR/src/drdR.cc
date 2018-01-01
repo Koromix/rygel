@@ -14,7 +14,7 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
 {
     if (str[0] < '0' || str[1])
         return 0;
-    return str[0] - '0';
+    return (int8_t)(str[0] - '0');
 }
 
 // [[Rcpp::export(name = 'drd.options')]]
@@ -197,12 +197,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.exit.mode = ParseEntryExitCharacter(stays.exit_mode[i]);
             stay.exit.destination =
                 ParseEntryExitCharacter(GetRcppOptionalValue(stays.exit_destination, i, ""));
-            stay.unit.number = GetRcppOptionalValue(stays.unit, i, 0);
-            stay.bed_authorization = GetRcppOptionalValue(stays.bed_authorization, i, 0);
-            stay.session_count = GetRcppOptionalValue(stays.session_count, i, 0);
-            stay.igs2 = GetRcppOptionalValue(stays.igs2, i, 0);
-            stay.gestational_age = stays.gestational_age[i];
-            stay.newborn_weight = stays.newborn_weight[i];
+            stay.unit.number = (int16_t)GetRcppOptionalValue(stays.unit, i, 0);
+            stay.bed_authorization = (int8_t)GetRcppOptionalValue(stays.bed_authorization, i, 0);
+            stay.session_count = (int16_t)GetRcppOptionalValue(stays.session_count, i, 0);
+            stay.igs2 = (int16_t)GetRcppOptionalValue(stays.igs2, i, 0);
+            stay.gestational_age = (int16_t)stays.gestational_age[i];
+            stay.newborn_weight = (int16_t)stays.newborn_weight[i];
             stay.last_menstrual_period = stays.last_menstrual_period[i];
             stay.main_diagnosis =
                 DiagnosisCode::FromString(GetRcppOptionalValue(stays.main_diagnosis, i, ""));
@@ -244,16 +244,16 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 ProcedureRealisation proc = {};
 
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
-                proc.phase = GetRcppOptionalValue(procedures.phase, k, 0);
+                proc.phase = (int8_t)GetRcppOptionalValue(procedures.phase, k, 0);
                 {
-                    unsigned int activities_dec = (unsigned int)procedures.activity[k];
+                    int activities_dec = procedures.activity[k];
                     while (activities_dec) {
                         int activity = activities_dec % 10;
                         activities_dec /= 10;
-                        proc.activities |= (1 << activity);
+                        proc.activities |= (uint8_t)(1 << activity);
                     }
                 }
-                proc.count = GetRcppOptionalValue(procedures.count, k, 1);
+                proc.count = (int16_t)GetRcppOptionalValue(procedures.count, k, 1);
                 proc.date = procedures.date[k];
 
                 stay_set.store.procedures.Append(proc);
@@ -401,8 +401,8 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
         Rcpp::CharacterVector proc(index->procedures.len);
         Rcpp::IntegerVector phase(index->procedures.len);
         Rcpp::IntegerVector activities(index->procedures.len);
-        Rcpp::newDateVector start_date(index->procedures.len);
-        Rcpp::newDateVector end_date(index->procedures.len);
+        Rcpp::newDateVector start_date((int)index->procedures.len);
+        Rcpp::newDateVector end_date((int)index->procedures.len);
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const ProcedureInfo &info = index->procedures[i];
@@ -412,10 +412,12 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
             phase[i] = info.phase;
             // FIXME: Fill activities correctly
             activities[i] = 1;
-            start_date[i] = Rcpp::Date(info.limit_dates[0].st.month, info.limit_dates[0].st.day,
-                                       info.limit_dates[0].st.year);
-            end_date[i] = Rcpp::Date(info.limit_dates[1].st.month, info.limit_dates[1].st.day,
-                                     info.limit_dates[1].st.year);
+            start_date[i] = Rcpp::Date((unsigned int)info.limit_dates[0].st.month,
+                                       (unsigned int)info.limit_dates[0].st.day,
+                                       (unsigned int)info.limit_dates[0].st.year);
+            end_date[i] = Rcpp::Date((unsigned int)info.limit_dates[1].st.month,
+                                     (unsigned int)info.limit_dates[1].st.day,
+                                     (unsigned int)info.limit_dates[1].st.year);
         }
 
         retval = Rcpp::DataFrame::create(
