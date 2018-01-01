@@ -50,7 +50,7 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
     for (const char *str: table_dirs) {
         table_dirs2.Append(str);
     }
-    for (const char *str: table_filenames2) {
+    for (const char *str: price_filenames) {
         table_filenames2.Append(str);
     }
     if (authorization_filename.isNotNull()) {
