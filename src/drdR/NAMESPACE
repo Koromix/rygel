@@ -1,9 +1,3 @@
-useDynLib(drdR, .registration=TRUE)
-export(drd.options,
-       drd,
-       classify,
-       diagnoses,
-       procedures,
-       compare,
-       summary.drd.result_set)
-importFrom(Rcpp, evalCpp)
+useDynLib(drdR, .registration = TRUE)
+exportPattern('^[[:alpha:]\\._]+')
+import(Rcpp)
