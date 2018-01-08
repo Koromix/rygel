@@ -1618,6 +1618,56 @@ public:
     }
 };
 
+template <typename ValueType>
+class HashSet {
+public:
+    struct Bucket {
+        ValueType value;
+
+        HASH_TABLE_HANDLER(Bucket, value);
+    };
+
+    HashTable<ValueType, Bucket> table;
+
+    Size &count = table.count;
+    Size &capacity = table.capacity;
+    Allocator *&allocator = table.allocator;
+
+    void Clear() { table.Clear(); }
+
+    std::pair<ValueType *, bool> Append(const ValueType &value)
+    {
+        std::pair<Bucket *, bool> ret = table.Append({value});
+        return { &ret.first->value, ret.second };
+    }
+
+    ValueType *Set(const ValueType &value)
+        { return &table.Set({value})->value; }
+
+    void Remove(ValueType *it)
+    {
+        if (!it)
+            return;
+        table.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value)));
+    }
+    void Remove(const ValueType &value) { Remove(Find(value)); }
+
+    ValueType *Find(const ValueType &value)
+        { return (ValueType *)((const HashSet *)this)->Find(value); }
+    const ValueType *Find(const ValueType &value) const
+    {
+        const Bucket *table_it = table.Find(value);
+        return table_it ? &table_it->value : nullptr;
+    }
+    ValueType FindValue(const ValueType &value, const ValueType &default_value)
+        { return (ValueType)((const HashSet *)this)->FindValue(value, default_value); }
+    const ValueType FindValue(const ValueType &value, const ValueType &default_value) const
+    {
+        const ValueType *it = Find(value);
+        return it ? *it : default_value;
+    }
+};
+
 // ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
