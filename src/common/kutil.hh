@@ -1834,6 +1834,36 @@ inline bool Span<const char>::operator==(const char *other) const
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
 
+static inline int CmpStr(Span<const char> str1, Span<const char> str2)
+{
+    for (Size i = 0; i < str1.len && i < str2.len; i++) {
+        if (str1[i] != str2[i])
+            return str1[i] - str2[i];
+    }
+    if (str1.len < str2.len) {
+        return -str2[str1.len];
+    } else if (str1.len > str2.len) {
+        return str1[str2.len];
+    } else {
+        return 0;
+    }
+}
+static inline int CmpStr(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (str1[i] != str2[i])
+            return str1[i] - str2[i];
+    }
+    if (str1.len == i) {
+        return -str2[i];
+    } else {
+        return str1[i];
+    }
+}
+static inline int CmpStr(const char *str1, const char *str2)
+    { return strcmp(str1, str2); }
+
 static inline Span<const char> SplitStr(Span<const char> str, char split_char,
                                         Span<const char> *out_remainder = nullptr)
 {
