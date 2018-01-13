@@ -88,6 +88,8 @@ enum class Endianness {
     #define GCC_POP_IGNORE() \
         GCC_PRAGMA(GCC diagnostic pop)
 
+    // thread_local does not work for R packages on Windows (crash)
+    #define EXPORT_THREAD_LOCAL __thread
     #define MAYBE_UNUSED __attribute__((unused))
     #define FORCE_INLINE __attribute__((always_inline)) inline
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
@@ -107,6 +109,7 @@ enum class Endianness {
     #define GCC_PUSH_IGNORE(Option)
     #define GCC_POP_IGNORE()
 
+    #define EXPORT_THREAD_LOCAL thread_local
     #define MAYBE_UNUSED
     #define FORCE_INLINE __forceinline
     #define LIKELY(Cond) (Cond)

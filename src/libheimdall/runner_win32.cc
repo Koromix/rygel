@@ -37,7 +37,7 @@ struct Win32Window {
 };
 
 static thread_local Win32Window *g_window;
-thread_local RunIO *g_io;
+EXPORT_THREAD_LOCAL RunIO *g_io;
 
 static const char *GetWin32ErrorMessage(DWORD err)
 {
