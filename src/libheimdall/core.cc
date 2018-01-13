@@ -570,13 +570,16 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     ImGui::SetNextWindowSize(desktop_size);
     ImGui::Begin("View", nullptr, ImVec2(), 0.0f, desktop_flags);
 
-    if (ImGui::IsMouseHoveringWindow() && g_io->input.keys.Test((int)RunIO::Key::Control)) {
-        if (g_io->input.keys.Test((int)RunIO::Key::Shift)) {
-            state.time_zoom += (float)g_io->input.wheel_y * 5.0f;
+    if (ImGui::IsMouseHoveringWindow() &&
+            g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
+        float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 1.5f : 1.1f);
+        if (g_io->input.wheel_y > 0) {
+            float new_zoom = state.time_zoom * (float)g_io->input.wheel_y * multiplier;
+            state.time_zoom = std::min(new_zoom, 100000.0f);
         } else {
-            state.time_zoom += (float)g_io->input.wheel_y;
+            float new_zoom = state.time_zoom / -(float)g_io->input.wheel_y / multiplier;
+            state.time_zoom = std::max(new_zoom, 0.00001f);
         }
-        state.time_zoom = ImClamp(state.time_zoom, 0.001f, 1000.0f);
     }
 
     RenderEntities(state, entity_set);
