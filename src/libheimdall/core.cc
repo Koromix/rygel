@@ -153,6 +153,7 @@ static void DrawPeriod(float start_x, float end_x, float y, const Element &elmt)
 {
     DebugAssert(elmt.type == Element::Type::Period);
 
+    end_x = std::max(end_x, start_x + 1.0f);
     ImRect bb(ImVec2(start_x, y), ImVec2(end_x, y + 20.0f));
     if (!ImGui::ItemAdd(bb, 0))
         return;
