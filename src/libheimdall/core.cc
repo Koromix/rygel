@@ -205,9 +205,9 @@ static bool RenderLine(const InterfaceState &state, const LineData &line)
     }
 
     HeapArray<const Element *> events_acc;
-    float events_start_x, events_end_x;
+    float events_start_x = 0.0f, events_end_x = 0.0f;
     HeapArray<const Element *> measures_acc;
-    float first_measure_x;
+    float first_measure_x = 0.0f;
 
     float elmt_pos;
     for (const Element *elmt: line.elements) {
