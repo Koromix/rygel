@@ -56,22 +56,12 @@ static void DrawEvents(float start_x, float end_x, float y, Span<const Element *
     ImDrawList *draw = ImGui::GetWindowDrawList();
     draw->ChannelsSetCurrent(1);
 
-    // FIXME: Kinda duplicates GetElementColor()
     Size anomalies = 0;
-    ImU32 color = GetVisColor(VisColor::Event);
+    ImU32 color;
     for (const Element *elmt: events) {
-        switch (elmt->type) {
-            case Element::Type::Event: {} break;
-            case Element::Type::Measure: {
-                anomalies += ((!std::isnan(elmt->u.measure.min) && elmt->u.measure.value < elmt->u.measure.min) ||
-                              (!std::isnan(elmt->u.measure.max) && elmt->u.measure.value > elmt->u.measure.max));
-            } break;
-            case Element::Type::Period: {} break;
-        }
+        anomalies += DetectAnomaly(*elmt);
     }
-    if (anomalies) {
-        color = GetVisColor(VisColor::Alert);
-    }
+    color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event);
 
     if (end_x - start_x > 0.1f) {
         ImVec2 points[] = {
