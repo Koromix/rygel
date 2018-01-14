@@ -974,7 +974,7 @@ public:
         Iterator operator++(int) const
         {
             Iterator ret = *this;
-            ++ret;
+            ++(*this);
             return ret;
         }
 
@@ -1080,7 +1080,7 @@ public:
 
         {
             iterator_type end_it = end();
-            for (iterator_type it(this, from); it != end_it; it++) {
+            for (iterator_type it(this, from); it != end_it; ++it) {
                 it->~T();
             }
         }
@@ -1113,7 +1113,7 @@ public:
 
         {
             iterator_type end_it(this, count);
-            for (iterator_type it = begin(); it != end_it; it++) {
+            for (iterator_type it = begin(); it != end_it; ++it) {
                 it->~T();
             }
         }
@@ -1192,7 +1192,7 @@ public:
         Iterator operator++(int) const
         {
             Iterator ret = *this;
-            ++ret;
+            ++(*this);
             return ret;
         }
 
