@@ -709,7 +709,7 @@ void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args)
 // Debug and errors
 // ------------------------------------------------------------------------
 
-static LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
+static thread_local LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
     DefaultLogHandler
 };
 
