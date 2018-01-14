@@ -25,7 +25,9 @@ function(add_amalgamated_file TARGET DEST SRC)
     add_custom_command(
         TARGET "${TARGET}" POST_BUILD
         COMMAND ${CMAKE_COMMAND}
-            -DEXCLUDE="${opt_exclude_escaped}" -P "${utility_list_dir}/AmalgamateSourceFiles.cmake" "${SRC}" "${DEST}")
+            -DEXCLUDE="${opt_exclude_escaped}"
+            -P "${utility_list_dir}/AmalgamateSourceFiles.cmake" "${SRC}" "${DEST}"
+        VERBATIM)
 
     target_sources(${TARGET} PRIVATE "${SRC}")
     set_source_files_properties("${SRC}" PROPERTIES HEADER_FILE_ONLY 1)
