@@ -184,8 +184,6 @@ struct LineData {
 
 static bool RenderLine(const InterfaceState &state, const LineData &line)
 {
-    DebugAssert(line.elements.len);
-
     ImDrawList *draw = ImGui::GetWindowDrawList();
     ImVec2 base_pos = ImGui::GetCursorScreenPos();
 
@@ -423,7 +421,9 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                         }
                         fully_deployed = line->deployed;
                     }
-                    line->elements.Append(&elmt);
+                    if (!line->deployed || state.keep_deployed) {
+                        line->elements.Append(&elmt);
+                    }
 
                     if (!fully_deployed || partial_path.len == path.len)
                         break;
@@ -552,6 +552,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
 
         ImGui::Checkbox("Plots", &state.plot_measures);
+        ImGui::Checkbox("Keep deployed", &state.keep_deployed);
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         menu_height = ImGui::GetWindowSize().y;

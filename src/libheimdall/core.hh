@@ -15,6 +15,7 @@ struct InterfaceState {
 
     float time_zoom = 1.0f;
     bool plot_measures = true;
+    bool keep_deployed = false;
 
     bool size_cache_valid = false;
     HeapArray<float> lines_top;
