@@ -20,5 +20,6 @@ set(LIBDRD_SRC ../common/kutil.cc
                main.cc
                main.hh)
 add_library(libdrd STATIC ${LIBDRD_SRC})
+set_target_properties(libdrd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(libdrd PUBLIC miniz)
 add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)

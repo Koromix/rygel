@@ -16,6 +16,7 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
                     runner_win32.cc
                     runner.hh)
 add_library(libheimdall STATIC ${LIBHEIMDALL_SRC})
+set_target_properties(libheimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(libheimdall PUBLIC miniz imgui)
 if(WIN32)
     target_link_libraries(libheimdall PUBLIC gdi32 opengl32 imm32)
