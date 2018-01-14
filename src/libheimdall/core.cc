@@ -133,16 +133,19 @@ static void DrawMeasures(float start_x, float y, float time_zoom,
         const Element *elmt = measures[i];
         DebugAssert(elmt->type == Element::Type::Measure);
 
-        ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert)
-                                           : GetVisColor(VisColor::Plot);
         ImVec2 p(start_x + ((float)(elmt->time - start_time) * time_zoom),
                  y + 16.0f - scaler * (float)(elmt->u.measure.value - min_value));
         if (i) {
             draw->AddLine(p_prev, p, GetVisColor(VisColor::Plot));
         }
-        draw->AddCircleFilled(p, 3.0f, color);
-
         p_prev = p;
+    }
+    for (const Element *elmt: measures) {
+        ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert)
+                                           : GetVisColor(VisColor::Plot);
+        ImVec2 p(start_x + ((float)(elmt->time - start_time) * time_zoom),
+                 y + 16.0f - scaler * (float)(elmt->u.measure.value - min_value));
+        draw->AddCircleFilled(p, 3.0f, color);
     }
 }
 
