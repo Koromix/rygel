@@ -186,14 +186,17 @@ static bool RenderLine(const InterfaceState &state, const LineData &line)
 {
     DebugAssert(line.elements.len);
 
+    ImDrawList *draw = ImGui::GetWindowDrawList();
     ImVec2 base_pos = ImGui::GetCursorScreenPos();
 
     bool ret;
+    draw->AddText(ImVec2(base_pos.x + (float)line.depth * 12.0f + 20.0f, base_pos.y),
+                  ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end());
     if (!line.leaf) {
-        ImRect bb(base_pos.x + (float)line.depth * 5.0f, base_pos.y + 5.0f,
-                  base_pos.x + (float)line.depth * 5.0f + 10.0f, base_pos.y + 15.0f);
+        ImRect bb(base_pos.x + (float)line.depth * 12.0f - 3.0f, base_pos.y + 2.0f,
+                  base_pos.x + (float)line.depth * 12.0f + 13.0f, base_pos.y + 18.0f);
         if (ImGui::ItemAdd(bb, 0)) {
-            ImGui::RenderTriangle(ImVec2(base_pos.x + (float)line.depth * 5.0f, base_pos.y),
+            ImGui::RenderTriangle(ImVec2(base_pos.x + (float)line.depth * 12.0f, base_pos.y),
                                   line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
         ret = ImGui::IsItemClicked();
@@ -255,9 +258,6 @@ static bool RenderLine(const InterfaceState &state, const LineData &line)
     ImGui::ItemSize(ImVec2(events_end_x - base_pos.x, 20.0f));
     if (ImGui::ItemAdd(ImRect(base_pos.x, base_pos.y,
                               ImGui::GetWindowWidth(), base_pos.y + 20.0f), 0)) {
-        ImDrawList *draw = ImGui::GetWindowDrawList();
-        draw->AddText(ImVec2(base_pos.x + (float)line.depth * 5.0f + 20.0f, base_pos.y),
-                      ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end());
         if (line.path == "/") {
             draw->AddLine(ImVec2(base_pos.x, base_pos.y - 3.0f),
                           ImVec2(ImGui::GetWindowWidth(), base_pos.y - 3.0f),
