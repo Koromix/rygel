@@ -294,18 +294,18 @@ static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
                 }
             }
         }
+        DebugAssert(path.len > 0);
 
         bool fully_deployed = false;
         {
-            Span<const char> partial_path = {path.ptr, 0};
-            while (partial_path.len < path.len) {
-                while (partial_path.len < path.len && partial_path.ptr[partial_path.len++] != '/');
-
+            Span<const char> partial_path = {path.ptr, 1};
+            for (;;) {
                 lines_set.Append(partial_path);
                 fully_deployed = deployed_paths.Find(partial_path);
 
-                if (!fully_deployed)
+                if (!fully_deployed || partial_path.len == path.len)
                     break;
+                while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
             }
         }
 
@@ -375,10 +375,15 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
         float entity_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y - 4.0f;
         for (const Element &elmt: ent.elements) {
             Span<const char> path;
+            Span<const char> title;
             {
+                title = elmt.concept;
                 if (elmt.concept[0] == '/') {
-                    path = elmt.concept;
+                    path = title;
+                    // FIXME: Check name does not end with '/'
                     while (path.len > 1 && path.ptr[--path.len] != '/');
+                    title.ptr += path.len + 1;
+                    title.len -= path.len + 1;
                 } else {
                     const Concept *concept = entity_set.concepts_map.Find(elmt.concept);
                     if (concept) {
@@ -388,14 +393,14 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                     }
                 }
             }
+            DebugAssert(path.len > 0);
 
             bool fully_deployed = false;
             int tree_depth = 0;
             {
-                Span<const char> partial_path = {path.ptr, 0};
-                while (partial_path.len < path.len) {
-                    while (partial_path.len < path.len && partial_path.ptr[partial_path.len++] != '/');
-
+                Size name_offset = 1;
+                Span<const char> partial_path = {path.ptr, 1};
+                for (;;) {
                     LineData *line;
                     {
                         std::pair<Size *, bool> ret = lines_map.Append(partial_path, lines.len);
@@ -406,7 +411,9 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                             line = lines.Append();
                             line->path = partial_path;
                             if (partial_path.len > 1) {
-                                line->title = partial_path;
+                                line->title = MakeSpan(partial_path.ptr + name_offset,
+                                                       partial_path.len - name_offset);
+                                name_offset = partial_path.len + 1;
                             } else {
                                 line->title = ent.id;
                             }
@@ -418,8 +425,10 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                     }
                     line->elements.Append(&elmt);
 
-                    if (!line->deployed)
+                    if (!fully_deployed || partial_path.len == path.len)
                         break;
+                    name_offset = partial_path.len + (partial_path.len > 1);
+                    while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
                 }
             }
 
@@ -432,7 +441,7 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                     } else {
                         line = lines.Append();
                         line->path = path;
-                        line->title = elmt.concept;
+                        line->title = title;
                         line->leaf = true;
                         line->depth = tree_depth;
                     }
