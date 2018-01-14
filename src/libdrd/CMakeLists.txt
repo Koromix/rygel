@@ -19,10 +19,6 @@ set(LIBDRD_SRC ../common/kutil.cc
                d_tables.hh
                main.cc
                main.hh)
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_library(libdrd SHARED ${LIBDRD_SRC})
-else()
-    add_library(libdrd STATIC ${LIBDRD_SRC})
-endif()
+add_library(libdrd STATIC ${LIBDRD_SRC})
 target_link_libraries(libdrd PUBLIC miniz)
 add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)
