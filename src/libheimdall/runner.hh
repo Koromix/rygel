@@ -5,21 +5,9 @@
 #pragma once
 
 #include "../common/kutil.hh"
+#include "data.hh"
 
-struct MainInfo {
-    bool run;
-    int instance_count;
-    int64_t iteration_count;
-
-    double monotonic_time;
-    double monotonic_delta;
-};
-
-struct DisplayInfo {
-    int width, height;
-};
-
-struct KeyboardInfo {
+struct RunIO {
     enum class Key {
         Control,
         Alt,
@@ -45,26 +33,37 @@ struct KeyboardInfo {
         Z
     };
 
-    Bitset<256> keys;
-    LocalArray<char, 256> text;
-};
-
-struct MouseInfo {
-    // Follows ImGui ordering
     enum class Button: unsigned int {
         Left,
         Right,
         Middle
     };
 
-    int x, y;
-    unsigned int buttons;
-    int wheel_x, wheel_y;
+    struct {
+        bool run;
+        int instance_count;
+        int64_t iteration_count;
+    } main;
+
+    struct {
+        double monotonic;
+        double monotonic_delta;
+    } time;
+
+    struct {
+        int width, height;
+    } display;
+
+    struct {
+        Bitset<256> keys;
+        LocalArray<char, 256> text;
+
+        int x, y;
+        unsigned int buttons;
+        int wheel_x, wheel_y;
+    } input;
 };
 
-extern const MainInfo *const sys_main;
-extern const DisplayInfo *const sys_display;
-extern const KeyboardInfo *const sys_keyboard;
-extern const MouseInfo *const sys_mouse;
+extern thread_local RunIO *g_io;
 
-bool Run();
+bool Run(const EntitySet &entity_set, bool *run_flag = nullptr, std::mutex *lock = nullptr);

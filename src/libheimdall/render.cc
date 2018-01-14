@@ -109,25 +109,25 @@ static bool InitImGui()
         io->Fonts->TexID = (void *)(intptr_t)font_texture;
     }
 
-    io->KeyMap[ImGuiKey_Tab] = (int)KeyboardInfo::Key::Tab;
-    io->KeyMap[ImGuiKey_Delete] = (int)KeyboardInfo::Key::Delete;
-    io->KeyMap[ImGuiKey_Backspace] = (int)KeyboardInfo::Key::Backspace;
-    io->KeyMap[ImGuiKey_Enter] = (int)KeyboardInfo::Key::Enter;
-    io->KeyMap[ImGuiKey_Escape] = (int)KeyboardInfo::Key::Escape;
-    io->KeyMap[ImGuiKey_Home] = (int)KeyboardInfo::Key::Home;
-    io->KeyMap[ImGuiKey_End] = (int)KeyboardInfo::Key::End;
-    io->KeyMap[ImGuiKey_PageUp] = (int)KeyboardInfo::Key::PageUp;
-    io->KeyMap[ImGuiKey_PageDown] = (int)KeyboardInfo::Key::PageDown;
-    io->KeyMap[ImGuiKey_LeftArrow] = (int)KeyboardInfo::Key::Left;
-    io->KeyMap[ImGuiKey_RightArrow] = (int)KeyboardInfo::Key::Right;
-    io->KeyMap[ImGuiKey_UpArrow] = (int)KeyboardInfo::Key::Up;
-    io->KeyMap[ImGuiKey_DownArrow] = (int)KeyboardInfo::Key::Down;
-    io->KeyMap[ImGuiKey_A] = (int)KeyboardInfo::Key::A;
-    io->KeyMap[ImGuiKey_C] = (int)KeyboardInfo::Key::C;
-    io->KeyMap[ImGuiKey_V] = (int)KeyboardInfo::Key::V;
-    io->KeyMap[ImGuiKey_X] = (int)KeyboardInfo::Key::X;
-    io->KeyMap[ImGuiKey_Y] = (int)KeyboardInfo::Key::Y;
-    io->KeyMap[ImGuiKey_Z] = (int)KeyboardInfo::Key::Z;
+    io->KeyMap[ImGuiKey_Tab] = (int)RunIO::Key::Tab;
+    io->KeyMap[ImGuiKey_Delete] = (int)RunIO::Key::Delete;
+    io->KeyMap[ImGuiKey_Backspace] = (int)RunIO::Key::Backspace;
+    io->KeyMap[ImGuiKey_Enter] = (int)RunIO::Key::Enter;
+    io->KeyMap[ImGuiKey_Escape] = (int)RunIO::Key::Escape;
+    io->KeyMap[ImGuiKey_Home] = (int)RunIO::Key::Home;
+    io->KeyMap[ImGuiKey_End] = (int)RunIO::Key::End;
+    io->KeyMap[ImGuiKey_PageUp] = (int)RunIO::Key::PageUp;
+    io->KeyMap[ImGuiKey_PageDown] = (int)RunIO::Key::PageDown;
+    io->KeyMap[ImGuiKey_LeftArrow] = (int)RunIO::Key::Left;
+    io->KeyMap[ImGuiKey_RightArrow] = (int)RunIO::Key::Right;
+    io->KeyMap[ImGuiKey_UpArrow] = (int)RunIO::Key::Up;
+    io->KeyMap[ImGuiKey_DownArrow] = (int)RunIO::Key::Down;
+    io->KeyMap[ImGuiKey_A] = (int)RunIO::Key::A;
+    io->KeyMap[ImGuiKey_C] = (int)RunIO::Key::C;
+    io->KeyMap[ImGuiKey_V] = (int)RunIO::Key::V;
+    io->KeyMap[ImGuiKey_X] = (int)RunIO::Key::X;
+    io->KeyMap[ImGuiKey_Y] = (int)RunIO::Key::Y;
+    io->KeyMap[ImGuiKey_Z] = (int)RunIO::Key::Z;
 
     imgui_guard.disable();
     return true;
@@ -161,7 +161,7 @@ static void ReleaseImGui()
 
 bool StartRender()
 {
-    if (!sys_main->iteration_count) {
+    if (!g_io->main.iteration_count) {
         if (!InitGLFunctions())
             return false;
         if (!InitImGui())
@@ -170,23 +170,23 @@ bool StartRender()
 
     ImGuiIO *io = &ImGui::GetIO();
 
-    io->DisplaySize = ImVec2((float)sys_display->width, (float)sys_display->height);
-    io->DeltaTime = (float)sys_main->monotonic_delta;
+    io->DisplaySize = ImVec2((float)g_io->display.width, (float)g_io->display.height);
+    io->DeltaTime = (float)g_io->time.monotonic_delta;
 
     memset(io->KeysDown, 0, SIZE(io->KeysDown));
-    for (Size idx: sys_keyboard->keys) {
+    for (Size idx: g_io->input.keys) {
         io->KeysDown[idx] = true;
     }
-    io->KeyCtrl = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Control);
-    io->KeyAlt = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Alt);
-    io->KeyShift = sys_keyboard->keys.Test((Size)KeyboardInfo::Key::Shift);
-    io->AddInputCharactersUTF8(sys_keyboard->text.data);
+    io->KeyCtrl = g_io->input.keys.Test((Size)RunIO::Key::Control);
+    io->KeyAlt = g_io->input.keys.Test((Size)RunIO::Key::Alt);
+    io->KeyShift = g_io->input.keys.Test((Size)RunIO::Key::Shift);
+    io->AddInputCharactersUTF8(g_io->input.text.data);
 
-    io->MousePos = ImVec2((float)sys_mouse->x, (float)sys_mouse->y);
+    io->MousePos = ImVec2((float)g_io->input.x, (float)g_io->input.y);
     for (Size i = 0; i < ARRAY_SIZE(io->MouseDown); i++) {
-        io->MouseDown[i] = sys_mouse->buttons & (unsigned int)(1 << i);
+        io->MouseDown[i] = g_io->input.buttons & (unsigned int)(1 << i);
     }
-    io->MouseWheel = (float)sys_mouse->wheel_y;
+    io->MouseWheel = (float)g_io->input.wheel_y;
 
     ImGui::NewFrame();
 
@@ -196,7 +196,7 @@ bool StartRender()
 void Render()
 {
     // Clear screen
-    glViewport(0, 0, sys_display->width, sys_display->height);
+    glViewport(0, 0, g_io->display.width, g_io->display.height);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0.14f, 0.14f, 0.14f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -250,7 +250,7 @@ void Render()
                     cmd.UserCallback(cmds, &cmd);
                 } else {
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.TextureId);
-                    glScissor((int)cmd.ClipRect.x, sys_display->height - (int)cmd.ClipRect.w,
+                    glScissor((int)cmd.ClipRect.x, g_io->display.height - (int)cmd.ClipRect.w,
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
                     glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,

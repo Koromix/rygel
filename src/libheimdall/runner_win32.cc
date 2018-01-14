@@ -29,23 +29,15 @@ static GL_FUNCTION_PTR(BOOL, wglSwapIntervalEXT, int interval);
 #define WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB 0x00000002
 
 struct Win32Window {
-    HWND hwnd = nullptr;
-    HDC hdc = nullptr;
-    HGLRC hgl = nullptr;
+    HWND hwnd;
+    HDC hdc;
+    HGLRC hgl;
 
     bool mouse_tracked = false;
 };
 
-static Win32Window main_window;
-
-static MainInfo sys_main_priv;
-const MainInfo *const sys_main = &sys_main_priv;
-static DisplayInfo sys_display_priv;
-const DisplayInfo *const sys_display = &sys_display_priv;
-static KeyboardInfo sys_keyboard_priv;
-const KeyboardInfo *const sys_keyboard = &sys_keyboard_priv;
-static MouseInfo sys_mouse_priv;
-const MouseInfo *const sys_mouse = &sys_mouse_priv;
+static thread_local Win32Window *g_window;
+thread_local RunIO *g_io;
 
 static const char *GetWin32ErrorMessage(DWORD err)
 {
@@ -75,14 +67,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 {
     switch (msg) {
         case WM_SIZE: {
-            sys_display_priv.width = (int)(lparam & 0xFFFF);
-            sys_display_priv.height = (int)(lparam >> 16);
+            g_io->display.width = (int)(lparam & 0xFFFF);
+            g_io->display.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: { main_window.mouse_tracked = false; } // fallthrough
+        case WM_MOUSELEAVE: { g_window->mouse_tracked = false; } // fallthrough
         case WM_KILLFOCUS: {
-            sys_keyboard_priv.keys.Clear();
-            sys_mouse_priv.buttons = 0;
+            g_io->input.keys.Clear();
+            g_io->input.buttons = 0;
         } break;
 
         case WM_SYSKEYDOWN:
@@ -90,32 +82,32 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_KEYDOWN:
         case WM_KEYUP: {
 #define HANDLE_KEY(VkCode, Code) \
-                case (VkCode): { sys_keyboard_priv.keys.Set((Size)(Code), state); } break
+                case (VkCode): { g_io->input.keys.Set((Size)(Code), state); } break
 
             bool state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             switch (wparam) {
-                HANDLE_KEY(VK_CONTROL, KeyboardInfo::Key::Control);
-                HANDLE_KEY(VK_MENU, KeyboardInfo::Key::Alt);
-                HANDLE_KEY(VK_SHIFT, KeyboardInfo::Key::Shift);
-                HANDLE_KEY(VK_TAB, KeyboardInfo::Key::Tab);
-                HANDLE_KEY(VK_DELETE, KeyboardInfo::Key::Delete);
-                HANDLE_KEY(VK_BACK, KeyboardInfo::Key::Backspace);
-                HANDLE_KEY(VK_RETURN, KeyboardInfo::Key::Enter);
-                HANDLE_KEY(VK_ESCAPE, KeyboardInfo::Key::Escape);
-                HANDLE_KEY(VK_HOME, KeyboardInfo::Key::Home);
-                HANDLE_KEY(VK_END, KeyboardInfo::Key::End);
-                HANDLE_KEY(VK_PRIOR, KeyboardInfo::Key::PageUp);
-                HANDLE_KEY(VK_NEXT, KeyboardInfo::Key::PageDown);
-                HANDLE_KEY(VK_LEFT, KeyboardInfo::Key::Left);
-                HANDLE_KEY(VK_RIGHT, KeyboardInfo::Key::Right);
-                HANDLE_KEY(VK_UP, KeyboardInfo::Key::Up);
-                HANDLE_KEY(VK_DOWN, KeyboardInfo::Key::Down);
-                HANDLE_KEY('A', KeyboardInfo::Key::A);
-                HANDLE_KEY('C', KeyboardInfo::Key::C);
-                HANDLE_KEY('V', KeyboardInfo::Key::V);
-                HANDLE_KEY('X', KeyboardInfo::Key::X);
-                HANDLE_KEY('Y', KeyboardInfo::Key::Y);
-                HANDLE_KEY('Z', KeyboardInfo::Key::Z);
+                HANDLE_KEY(VK_CONTROL, RunIO::Key::Control);
+                HANDLE_KEY(VK_MENU, RunIO::Key::Alt);
+                HANDLE_KEY(VK_SHIFT, RunIO::Key::Shift);
+                HANDLE_KEY(VK_TAB, RunIO::Key::Tab);
+                HANDLE_KEY(VK_DELETE, RunIO::Key::Delete);
+                HANDLE_KEY(VK_BACK, RunIO::Key::Backspace);
+                HANDLE_KEY(VK_RETURN, RunIO::Key::Enter);
+                HANDLE_KEY(VK_ESCAPE, RunIO::Key::Escape);
+                HANDLE_KEY(VK_HOME, RunIO::Key::Home);
+                HANDLE_KEY(VK_END, RunIO::Key::End);
+                HANDLE_KEY(VK_PRIOR, RunIO::Key::PageUp);
+                HANDLE_KEY(VK_NEXT, RunIO::Key::PageDown);
+                HANDLE_KEY(VK_LEFT, RunIO::Key::Left);
+                HANDLE_KEY(VK_RIGHT, RunIO::Key::Right);
+                HANDLE_KEY(VK_UP, RunIO::Key::Up);
+                HANDLE_KEY(VK_DOWN, RunIO::Key::Down);
+                HANDLE_KEY('A', RunIO::Key::A);
+                HANDLE_KEY('C', RunIO::Key::C);
+                HANDLE_KEY('V', RunIO::Key::V);
+                HANDLE_KEY('X', RunIO::Key::X);
+                HANDLE_KEY('Y', RunIO::Key::Y);
+                HANDLE_KEY('Z', RunIO::Key::Z);
             }
 
 #undef HANDLE_KEY
@@ -124,56 +116,56 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             uint16_t c = (uint16_t)wparam;
 
             // TODO: Deal with supplementary planes
-            if (c < 0x80 && LIKELY(sys_keyboard_priv.text.Available() >= 1)) {
-                sys_keyboard_priv.text.Append((char)c);
-            } else if (c < 0x800 && LIKELY(sys_keyboard_priv.text.Available() >= 2)) {
-                sys_keyboard_priv.text.Append((char)(0xC0 | (c >> 6)));
-                sys_keyboard_priv.text.Append((char)(0x80 | (c & 0x3F)));
-            } else if (LIKELY(sys_keyboard_priv.text.Available() >= 3)) {
-                sys_keyboard_priv.text.Append((char)(0xE0 | (c >> 12)));
-                sys_keyboard_priv.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
-                sys_keyboard_priv.text.Append((char)(0x80 | (c & 0x3F)));
+            if (c < 0x80 && LIKELY(g_io->input.text.Available() >= 1)) {
+                g_io->input.text.Append((char)c);
+            } else if (c < 0x800 && LIKELY(g_io->input.text.Available() >= 2)) {
+                g_io->input.text.Append((char)(0xC0 | (c >> 6)));
+                g_io->input.text.Append((char)(0x80 | (c & 0x3F)));
+            } else if (LIKELY(g_io->input.text.Available() >= 3)) {
+                g_io->input.text.Append((char)(0xE0 | (c >> 12)));
+                g_io->input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
+                g_io->input.text.Append((char)(0x80 | (c & 0x3F)));
             } else {
                 LogError("Dropping text events (buffer full)");
             }
         } break;
 
         case WM_MOUSEMOVE: {
-            sys_mouse_priv.x = (int16_t)(lparam & 0xFFFF);
-            sys_mouse_priv.y = (int16_t)(lparam >> 16);
+            g_io->input.x = (int16_t)(lparam & 0xFFFF);
+            g_io->input.y = (int16_t)(lparam >> 16);
 
-            if (!main_window.mouse_tracked) {
+            if (!g_window->mouse_tracked) {
                 TRACKMOUSEEVENT tme = { SIZE(tme) };
-                tme.hwndTrack = main_window.hwnd;
+                tme.hwndTrack = g_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
 
-                main_window.mouse_tracked = true;
+                g_window->mouse_tracked = true;
             }
         } break;
-        case WM_LBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Left); } break;
-        case WM_LBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Left); } break;
-        case WM_MBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Middle); } break;
-        case WM_MBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Middle); } break;
-        case WM_RBUTTONDOWN: { sys_mouse_priv.buttons |= MaskEnum(MouseInfo::Button::Right); } break;
-        case WM_RBUTTONUP: { sys_mouse_priv.buttons &= ~MaskEnum(MouseInfo::Button::Right); } break;
+        case WM_LBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Left); } break;
+        case WM_LBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Left); } break;
+        case WM_MBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Middle); } break;
+        case WM_MBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Middle); } break;
+        case WM_RBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Right); } break;
+        case WM_RBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Right); } break;
         case WM_XBUTTONDOWN: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
-            sys_mouse_priv.buttons |= (unsigned int)(1 << button);
+            g_io->input.buttons |= (unsigned int)(1 << button);
         } break;
         case WM_XBUTTONUP: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
-            sys_mouse_priv.buttons &= ~(unsigned int)(1 << button);
+            g_io->input.buttons &= ~(unsigned int)(1 << button);
         } break;
         case WM_MOUSEWHEEL: {
-            sys_mouse_priv.wheel_y += (int16_t)(wparam >> 16) / WHEEL_DELTA;
+            g_io->input.wheel_y += (int16_t)(wparam >> 16) / WHEEL_DELTA;
         } break;
         case WM_MOUSEHWHEEL: {
-            sys_mouse_priv.wheel_x += (int16_t)(wparam >> 16) / WHEEL_DELTA;
+            g_io->input.wheel_x += (int16_t)(wparam >> 16) / WHEEL_DELTA;
         } break;
 
         case WM_CLOSE: {
-            sys_main_priv.run = false;
+            g_io->main.run = false;
             return 0;
         } break;
     }
@@ -401,7 +393,8 @@ static bool SetGLContext(HDC dc, HGLRC gl)
         return false;
 
     if (gl) {
-        if (!wglSwapIntervalEXT(1)) {
+        // FIXME: Transiently disable V-sync for demo
+        if (!wglSwapIntervalEXT(0)) {
             static bool vsync_error_warned;
             if (!vsync_error_warned) {
                 LogError("Failed to enable V-sync, ignoring");
@@ -415,39 +408,51 @@ static bool SetGLContext(HDC dc, HGLRC gl)
 
 void SwapGLBuffers()
 {
-    SwapBuffers(main_window.hdc);
+    SwapBuffers(g_window->hdc);
 }
 
-bool Run()
+bool Run(const EntitySet &entity_set, bool *run_flag, std::mutex *lock)
 {
-    main_window.hwnd = CreateMainWindow();
-    if (!main_window.hwnd)
-        return false;
-    DEFER { DeleteMainWindow(main_window.hwnd); };
+    Win32Window window = {};
+    RunIO io = {};
+    DEFER_C(prev_window = g_window, prev_io = g_io) {
+        g_window = prev_window;
+        g_io = prev_io;
+    };
+    g_window = &window;
+    g_io = &io;
 
-    main_window.hdc = GetDC(main_window.hwnd);
-    main_window.hgl = CreateGLContext(main_window.hdc);
-    if (!main_window.hgl)
+    window.hwnd = CreateMainWindow();
+    if (!window.hwnd)
         return false;
-    DEFER { DeleteGLContext(main_window.hgl); };
-    if (!SetGLContext(main_window.hdc, main_window.hgl))
+    DEFER { DeleteMainWindow(window.hwnd); };
+    window.hdc = GetDC(window.hwnd);
+    window.hgl = CreateGLContext(window.hdc);
+    if (!window.hgl)
+        return false;
+    DEFER { DeleteGLContext(window.hgl); };
+    if (!SetGLContext(window.hdc, window.hgl))
         return false;
 
-    sys_main_priv = {};
-    sys_main_priv.run = true;
+    InterfaceState render_state = {};
 
-    while (sys_main_priv.run) {
+    io.main.run = true;
+    while (io.main.run) {
+        if (run_flag) {
+            io.main.run = *run_flag;
+        }
+
         // Reset relative inputs
-        sys_keyboard_priv.text.Clear();
-        sys_mouse_priv.wheel_x = 0;
-        sys_mouse_priv.wheel_y = 0;
+        io.input.text.Clear();
+        io.input.wheel_x = 0;
+        io.input.wheel_y = 0;
 
         // Pump Win32 messages
         {
             MSG msg;
             while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
                 if (msg.message == WM_QUIT) {
-                    sys_main_priv.run = false;
+                    io.main.run = false;
                     break;
                 }
 
@@ -457,10 +462,10 @@ bool Run()
         }
 
         // Append NUL byte to keyboard text
-        if (!sys_keyboard_priv.text.Available()) {
-            sys_keyboard_priv.text.len--;
+        if (!io.input.text.Available()) {
+            io.input.text.len--;
         }
-        sys_keyboard_priv.text.Append('\0');
+        io.input.text.Append('\0');
 
         // Update monotonic clock
         {
@@ -469,15 +474,21 @@ bool Run()
             QueryPerformanceCounter(&perf_counter);
 
             double monotonic_time = (double)perf_counter.QuadPart / (double)perf_freq.QuadPart;
-            sys_main_priv.monotonic_delta = monotonic_time - sys_main_priv.monotonic_time;
-            sys_main_priv.monotonic_time = monotonic_time;
+            io.time.monotonic_delta = monotonic_time - io.time.monotonic;
+            io.time.monotonic = monotonic_time;
         }
 
         // Run the real code
-        if (!Step())
-            return false;
+        if (lock) {
+            std::lock_guard<std::mutex> locker(*lock);
+            if (!Step(render_state, entity_set))
+                return false;
+        } else {
+            if (!Step(render_state, entity_set))
+                return false;
+        }
 
-        sys_main_priv.iteration_count++;
+        io.main.iteration_count++;
     }
 
     return true;

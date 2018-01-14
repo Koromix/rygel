@@ -6,6 +6,8 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
                     ../common/kutil.hh
                     core.cc
                     core.hh
+                    data.cc
+                    data.hh
                     opengl.cc
                     opengl.hh
                     opengl_func.inc

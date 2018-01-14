@@ -6,6 +6,7 @@
 
 #include "../common/kutil.hh"
 #include "core.hh"
+#include "data.hh"
 #include "opengl.hh"
 #include "render.hh"
 #include "runner.hh"
@@ -13,6 +14,7 @@
 #ifdef HEIMDALL_IMPLEMENTATION
     #include "../common/kutil.cc"
     #include "core.cc"
+    #include "data.cc"
     #include "opengl.cc"
     #include "render.cc"
 

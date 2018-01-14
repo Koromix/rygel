@@ -5,8 +5,24 @@
 #pragma once
 
 #include "../common/kutil.hh"
+#include "data.hh"
 
 #define APPLICATION_NAME "heimdall"
 #define APPLICATION_TITLE "Heimdall"
 
-bool Step();
+struct InterfaceState {
+    HashSet<Span<const char>> deploy_paths;
+
+    float time_zoom = 1.0f;
+    bool plot_measures = true;
+
+    bool size_cache_valid = false;
+    HeapArray<float> lines_top;
+    float total_width_unscaled;
+    float total_height;
+
+    Size scroll_to_idx = 0;
+    float scroll_offset_y;
+};
+
+bool Step(InterfaceState &state, const EntitySet &entity_set);
