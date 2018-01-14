@@ -136,6 +136,8 @@ execute_process(
                 DEPENDS ${rcpp_depends}
                 VERBATIM)
             target_sources(${TARGET} PRIVATE "${pkg_directory}/src/RcppExports.cpp")
+            set_source_files_properties("${pkg_directory}/src/RcppExports.cpp"
+                                        PROPERTIES COMPILE_FLAGS "-Wno-conversion")
         endif()
     endfunction()
 
