@@ -46,4 +46,4 @@ endif()
 
 add_executable(drdw ${DRDW_SRC} ${DRDW_RESOURCES})
 target_include_directories(drdw PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(drdw PUBLIC libdrd libmicrohttpd)
+target_link_libraries(drdw PUBLIC drd microhttpd)

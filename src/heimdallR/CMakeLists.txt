@@ -10,5 +10,5 @@ if(R_FOUND)
                       heimdallR.R)
 
     R_add_package(heimdallR DESCRIPTION RCPP ${HEIMDALLR_SRC})
-    target_link_libraries(heimdallR PRIVATE libheimdall miniz)
+    target_link_libraries(heimdallR PRIVATE heimdall miniz)
 endif()

@@ -22,13 +22,13 @@ set(LIBMICROHTTPD_SRC libmicrohttpd/src/microhttpd/base64.c
                       libmicrohttpd/src/microhttpd/response.c
                       libmicrohttpd/src/microhttpd/sysfdsetsize.c
                       libmicrohttpd/src/microhttpd/tsearch.c)
-add_library(libmicrohttpd STATIC EXCLUDE_FROM_ALL ${LIBMICROHTTPD_SRC})
-target_include_directories(libmicrohttpd PRIVATE libmicrohttpd libmicrohttpd/src/include)
+add_library(microhttpd STATIC EXCLUDE_FROM_ALL ${LIBMICROHTTPD_SRC})
+target_include_directories(microhttpd PRIVATE libmicrohttpd libmicrohttpd/src/include)
 if(WIN32)
-    target_link_libraries(libmicrohttpd PUBLIC ws2_32)
+    target_link_libraries(microhttpd PUBLIC ws2_32)
 endif()
 if(LINUX)
-    target_link_libraries(libmicrohttpd PUBLIC pthread)
+    target_link_libraries(microhttpd PUBLIC pthread)
 endif()
 
 set(MINIZ_SRC miniz/miniz.c)

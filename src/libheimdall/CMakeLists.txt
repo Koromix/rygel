@@ -15,10 +15,10 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
                     render.hh
                     runner_win32.cc
                     runner.hh)
-add_library(libheimdall STATIC ${LIBHEIMDALL_SRC})
-set_target_properties(libheimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(libheimdall PUBLIC miniz imgui)
+add_library(heimdall STATIC ${LIBHEIMDALL_SRC})
+set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(heimdall PUBLIC miniz imgui)
 if(WIN32)
-    target_link_libraries(libheimdall PUBLIC gdi32 opengl32 imm32)
+    target_link_libraries(heimdall PUBLIC gdi32 opengl32 imm32)
 endif()
-add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall.hh)
+add_amalgamated_file(heimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall.hh)

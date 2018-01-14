@@ -7,4 +7,4 @@ set(DRDC_SRC drdc.cc
              dump.hh)
 
 add_executable(drdc ${DRDC_SRC})
-target_link_libraries(drdc PUBLIC libdrd)
+target_link_libraries(drdc PUBLIC drd)
