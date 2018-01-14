@@ -44,11 +44,11 @@ bool InitTableSet(Span<const char *const> data_directories,
             return false;
     }
 
-    if (!tab_filenames2.len) {
-        LogError("No table specified or found");
-    }
     if (!price_filenames2.len) {
         LogError("No price file specified or found");
+    }
+    if (!tab_filenames2.len) {
+        LogError("No table specified or found");
     }
 
     {
