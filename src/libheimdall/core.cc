@@ -63,7 +63,7 @@ static void DrawEvents(float start_x, float end_x, float y, Span<const Element *
     }
     color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event);
 
-    if (end_x - start_x > 0.1f) {
+    if (end_x - start_x >= 1.0f) {
         ImVec2 points[] = {
             { start_x, y },
             { end_x, y },
@@ -206,7 +206,7 @@ static bool RenderLine(const InterfaceState &state, const LineData &line)
     for (const Element *elmt: line.elements) {
         elmt_pos = base_pos.x + 200.0f + (float)elmt->time * state.time_zoom;
 
-        if (events_acc.len && elmt_pos - events_end_x >= 10.0f) {
+        if (events_acc.len && elmt_pos - events_end_x >= 16.0f) {
             DrawEvents(events_start_x, events_end_x, base_pos.y, events_acc);
             events_acc.Clear(256);
         }
