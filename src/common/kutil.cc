@@ -1310,7 +1310,11 @@ Size StreamReader::RemainingLen() const
                 Size remaining_len;
                 {
                     long pos = (Size)ftell(source.u.fp);
-                    DEFER { fseek(source.u.fp, (size_t)pos, SEEK_SET); };
+#ifdef _WIN32
+                    DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
+#else
+                    DEFER { fseeko(source.u.fp, (off_t)pos, SEEK_SET); };
+#endif
                     if (fseek(source.u.fp, 0, SEEK_END) < 0)
                         return -1;
                     remaining_len = ftell(source.u.fp) - pos;
