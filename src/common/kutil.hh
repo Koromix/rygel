@@ -787,9 +787,18 @@ public:
             Append(val);
         }
     }
+    ~HeapArray() { Clear(); }
+
+    HeapArray(HeapArray &&other) { *this = std::move(other); }
+    HeapArray &operator=(HeapArray &&other)
+    {
+        Clear();
+        memmove(this, &other, SIZE(other));
+        memset(&other, 0, SIZE(other));
+        return *this;
+    }
     HeapArray(HeapArray &) = delete;
     HeapArray &operator=(const HeapArray &) = delete;
-    ~HeapArray() { Clear(); }
 
     void Clear(Size reserve_capacity = 0)
     {
@@ -852,7 +861,7 @@ public:
             return;
 
         Size needed_capacity;
-#if !defined(NDEBUG)
+#ifndef NDEBUG
         DebugAssert(!AddOverflow(capacity, reserve_capacity, &needed_capacity));
 #else
         needed_capacity = capacity + reserve_capacity;
@@ -983,16 +992,23 @@ public:
         Bucket *first_bucket = *buckets.Append(CreateBucket());
         bucket_allocator = &first_bucket->allocator;
     }
-
-    DynamicQueue(DynamicQueue &) = delete;
-    DynamicQueue &operator=(const DynamicQueue &) = delete;
-
     ~DynamicQueue()
     {
         for (Bucket *bucket: buckets) {
             DeleteBucket(bucket);
         }
     }
+
+    DynamicQueue(DynamicQueue &&other) { *this = std::move(other); }
+    DynamicQueue &operator=(DynamicQueue &&other)
+    {
+        Clear();
+        memmove(this, &other, SIZE(other));
+        memset(&other, 0, SIZE(other));
+        return *this;
+    }
+    DynamicQueue(DynamicQueue &) = delete;
+    DynamicQueue &operator=(const DynamicQueue &) = delete;
 
     void Clear()
     {
@@ -1298,9 +1314,18 @@ public:
     Allocator *allocator = nullptr;
 
     HashTable() = default;
+    ~HashTable() { Clear(); }
+
+    HashTable(HashTable &&other) { *this = std::move(other); }
+    HashTable &operator=(HashTable &&other)
+    {
+        Clear();
+        memmove(this, &other, SIZE(other));
+        memset(&other, 0, SIZE(other));
+        return *this;
+    }
     HashTable(HashTable &) = delete;
     HashTable &operator=(const HashTable &) = delete;
-    ~HashTable() { Clear(); }
 
     void Clear()
     {
