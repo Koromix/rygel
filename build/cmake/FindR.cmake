@@ -117,7 +117,7 @@ else()\n\
     set(ENV{PATH} \"\${MAKE_PATH}:\$ENV{PATH}\")\n\
 endif()\n\
 execute_process(
-    COMMAND \"${R_BINARY}\" CMD INSTALL -l \"\${LIB_PATH}\" .\n\
+    COMMAND \"${R_BINARY}\" CMD INSTALL -l \"\${LIB_PATH}\" --no-multiarch .\n\
     WORKING_DIRECTORY \"\${PKG}\"\n\
     OUTPUT_QUIET)\n")
         add_custom_command(
