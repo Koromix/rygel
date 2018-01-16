@@ -4,6 +4,7 @@
 
 set(LIBHEIMDALL_SRC ../common/kutil.cc
                     ../common/kutil.hh
+                    animation.hh
                     core.cc
                     core.hh
                     data.hh
