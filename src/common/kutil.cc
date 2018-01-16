@@ -304,7 +304,7 @@ Date &Date::operator--()
 // Time
 // ------------------------------------------------------------------------
 
-uint64_t start_time = GetMonotonicTime();
+uint64_t g_start_time = GetMonotonicTime();
 
 uint64_t GetMonotonicTime()
 {
@@ -774,7 +774,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
 
     char ctx_buf[128];
     {
-        double time = (double)(GetMonotonicTime() - start_time) / 1000;
+        double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
             snprintf(ctx_buf, SIZE(ctx_buf), " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);

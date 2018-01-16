@@ -1796,7 +1796,7 @@ static inline bool DefaultCompare(Date date1, Date date2) { return date1 == date
 // Time
 // ------------------------------------------------------------------------
 
-extern uint64_t start_time;
+extern uint64_t g_start_time;
 
 uint64_t GetMonotonicTime();
 
