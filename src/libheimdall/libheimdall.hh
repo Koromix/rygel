@@ -14,7 +14,6 @@
 #ifdef HEIMDALL_IMPLEMENTATION
     #include "../common/kutil.cc"
     #include "core.cc"
-    #include "data.cc"
     #include "opengl.cc"
     #include "render.cc"
 
