@@ -473,7 +473,7 @@ bool Run(const EntitySet &entity_set, bool *run_flag, std::mutex *lock)
             QueryPerformanceFrequency(&perf_freq);
             QueryPerformanceCounter(&perf_counter);
 
-            double monotonic_time = (double)perf_counter.QuadPart / (double)perf_freq.QuadPart;
+            float monotonic_time = (float)perf_counter.QuadPart / (float)perf_freq.QuadPart;
             io.time.monotonic_delta = monotonic_time - io.time.monotonic;
             io.time.monotonic = monotonic_time;
         }

@@ -171,7 +171,7 @@ bool StartRender()
     ImGuiIO *io = &ImGui::GetIO();
 
     io->DisplaySize = ImVec2((float)g_io->display.width, (float)g_io->display.height);
-    io->DeltaTime = (float)g_io->time.monotonic_delta;
+    io->DeltaTime = g_io->time.monotonic_delta;
 
     memset(io->KeysDown, 0, SIZE(io->KeysDown));
     for (Size idx: g_io->input.keys) {
