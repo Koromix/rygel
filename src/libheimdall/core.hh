@@ -6,6 +6,7 @@
 
 #include "../common/kutil.hh"
 #include "data.hh"
+#include "animation.hh"
 
 #define APPLICATION_NAME "heimdall"
 #define APPLICATION_TITLE "Heimdall"
@@ -14,6 +15,8 @@ struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
     float time_zoom = 1.0f;
+    AnimationData<float> time_zoom_animation;
+
     bool plot_measures = true;
     bool keep_deployed = false;
 
