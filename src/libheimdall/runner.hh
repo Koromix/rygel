@@ -46,8 +46,8 @@ struct RunIO {
     } main;
 
     struct {
-        float monotonic;
-        float monotonic_delta;
+        double monotonic;
+        double monotonic_delta;
     } time;
 
     struct {

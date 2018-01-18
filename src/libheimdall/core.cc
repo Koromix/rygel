@@ -589,8 +589,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             new_zoom = ImClamp(new_zoom, 0.00001f, 100000.0f);
         }
 
-        state.time_zoom_animation = MakeAnimationData(g_io->time.monotonic, 0.09f,
-                                                      state.time_zoom, new_zoom);
+        state.time_zoom_animation = MakeAnimationData(state.time_zoom, new_zoom,
+                                                      g_io->time.monotonic, 0.09);
     }
 
     // Run animations
