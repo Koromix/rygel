@@ -586,7 +586,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             } else {
                 new_zoom = state.time_zoom / -(float)g_io->input.wheel_y / multiplier;
             }
-            new_zoom = ImClamp(new_zoom, 0.00001f, 100000.0f);
+            new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
         }
 
         state.time_zoom_animation = MakeAnimationData(state.time_zoom, new_zoom,
