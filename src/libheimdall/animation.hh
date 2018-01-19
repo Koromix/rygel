@@ -62,7 +62,7 @@ void TweenInOutQuad(T *value, AnimationData<T, U> *animation, U time)
         if (relative_time < 0.5) {
             relative_time *= 2.0;
             return animation->start_value +
-                   relative_time * relative_time * (animation->value_change / (T)2);
+                   (T)(relative_time * relative_time * (animation->value_change / (T)2));
         } else {
             relative_time = (relative_time - 0.5) * 2.0;
             return animation->start_value + (animation->value_change / (T)2) +
