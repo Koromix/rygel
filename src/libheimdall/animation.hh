@@ -17,6 +17,9 @@ struct AnimationData {
     AnimationData(T start_value, T end_value, U start_time, U duration)
         : start_value(start_value), value_change(end_value - start_value),
           start_time(start_time), duration(duration) {}
+
+    bool Running() const { return duration != (U)0; }
+    T EndValue() const { return start_value + value_change; }
 };
 template <typename T, typename U>
 AnimationData<T, U> MakeAnimationData(T start_value, T end_value, U start_time, U duration)

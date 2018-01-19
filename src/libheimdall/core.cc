@@ -589,12 +589,15 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
         }
 
+        if (state.time_zoom_animation.Running()) {
+            state.time_zoom = state.time_zoom_animation.EndValue();
+        }
         state.time_zoom_animation = MakeAnimationData(state.time_zoom, new_zoom,
                                                       g_io->time.monotonic, 0.09);
     }
 
     // Run animations
-    TweenOutQuad(&state.time_zoom, &state.time_zoom_animation, g_io->time.monotonic);
+    TweenInOutQuad(&state.time_zoom, &state.time_zoom_animation, g_io->time.monotonic);
 
     RenderEntities(state, entity_set);
 
