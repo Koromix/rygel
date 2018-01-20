@@ -578,6 +578,14 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     // Deal with time zoom
     if (ImGui::IsMouseHoveringWindow() &&
             g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
+        double (*animator)(double relative_time) = nullptr;
+        if (state.time_zoom.animation.Running(g_io->time.monotonic)) {
+            state.time_zoom = state.time_zoom.end_value;
+            animator = TweenOutQuad;
+        } else {
+            animator = TweenInOutQuad;
+        }
+
         float new_zoom;
         {
             float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 3.375f : 1.5f);
@@ -589,15 +597,12 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
         }
 
-        if (state.time_zoom_animation.Running()) {
-            state.time_zoom = state.time_zoom_animation.EndValue();
-        }
-        state.time_zoom_animation = MakeAnimationData(state.time_zoom, new_zoom,
-                                                      g_io->time.monotonic, 0.09);
+        state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, g_io->time.monotonic,
+                                            g_io->time.monotonic + 0.05, animator);
     }
 
     // Run animations
-    TweenInOutQuad(&state.time_zoom, &state.time_zoom_animation, g_io->time.monotonic);
+    state.time_zoom.Update(g_io->time.monotonic);
 
     RenderEntities(state, entity_set);
 

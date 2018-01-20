@@ -14,8 +14,7 @@
 struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
-    float time_zoom = 1.0f;
-    AnimationData<float, double> time_zoom_animation;
+    AnimatedValue<float, double> time_zoom = 1.0f;
 
     bool plot_measures = true;
     bool keep_deployed = false;
