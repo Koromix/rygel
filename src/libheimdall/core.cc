@@ -588,7 +588,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
 
         float new_zoom;
         {
-            float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 3.375f : 1.5f);
+            float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 2.0736f : 1.2f);
             if (g_io->input.wheel_y > 0) {
                 new_zoom = state.time_zoom * (float)g_io->input.wheel_y * multiplier;
             } else {
