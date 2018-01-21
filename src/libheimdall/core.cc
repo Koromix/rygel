@@ -47,129 +47,166 @@ static bool DetectAnomaly(const Element &elmt)
     Assert(false);
 }
 
-static void DrawEvents(float start_x, float end_x, float y, Span<const Element *const> events)
+static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom,
+                        Span<const Element *const> periods)
 {
-    ImRect bb(start_x - 10.0f, y, end_x + 10.0f, y + 20.0f);
-    if (!ImGui::ItemAdd(bb, 0))
-        return;
-
+    const ImGuiStyle &style = ImGui::GetStyle();
     ImDrawList *draw = ImGui::GetWindowDrawList();
-    draw->ChannelsSetCurrent(1);
 
-    Size anomalies = 0;
-    ImU32 color;
-    for (const Element *elmt: events) {
-        anomalies += DetectAnomaly(*elmt);
-    }
-    color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event);
+    for (const Element *elmt: periods) {
+        DebugAssert(elmt->type == Element::Type::Period);
 
-    if (end_x - start_x >= 1.0f) {
-        ImVec2 points[] = {
-            { start_x, y },
-            { end_x, y },
-            { end_x + 10.0f, y + 20.0f },
-            { start_x - 10.0f, y + 20.0f }
+        ImRect rect {
+            x_offset + (float)elmt->time * time_zoom, y_min,
+            x_offset + (float)(elmt->time + elmt->u.period.duration) * time_zoom, y_max
         };
-        draw->AddConvexPolyFilled(points, ARRAY_SIZE(points), color);
-    } else {
-        draw->AddTriangleFilled(ImVec2(start_x, y),
-                                ImVec2(start_x + 10.0f, y + 20.0f),
-                                ImVec2(start_x - 10.0f, y + 20.0f),
-                                color);
-    }
+        // Make sure it's at least one pixel wide
+        rect.Max.x = std::max(rect.Min.x + 1.0f, rect.Max.x);
 
-    if (events.len > 1) {
-        char len_str[32];
-        Fmt(len_str, "%1", events.len);
-        ImVec2 text_size = ImGui::CalcTextSize(len_str);
-        ImVec2 text_bb = bb.GetCenter();
-        text_bb.x -= text_size.x / 2.0f + 1.0f;
-        text_bb.y -= text_size.y / 2.0f - 2.0f;
-        draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text), len_str, nullptr);
-    }
+        if (ImGui::ItemAdd(rect, 0)) {
+            ImVec4 color = style.Colors[ImGuiCol_Border];
+            color.w *= style.Alpha;
 
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        for (const Element *elmt: events) {
-            if (elmt->type == Element::Type::Measure) {
-                ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value,
-                            elmt->time);
-            } else {
+            draw->AddRectFilled(rect.Min, rect.Max, ImGui::ColorConvertFloat4ToU32(color));
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
                 ImGui::Text("%s [%f]", elmt->concept, elmt->time);
+                ImGui::EndTooltip();
             }
         }
-        ImGui::EndTooltip();
     }
 }
 
-static void DrawMeasures(float start_x, float y, float time_zoom,
-                         Span<const Element *const> measures)
+static void DrawEventsBlock(ImRect rect, Span<const Element *const> events)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
-    draw->ChannelsSetCurrent(2);
 
-    // TODO: Check min / max homogeneity across measures
-    double min_value = FLT_MAX, max_value = -FLT_MAX;
-    if (false && !std::isnan(measures[0]->u.measure.min) &&
-                 !std::isnan(measures[0]->u.measure.max)) {
-        double normal_range = measures[0]->u.measure.max - measures[0]->u.measure.min;
-        min_value = measures[0]->u.measure.min - (0.05 * normal_range);
-        max_value = measures[0]->u.measure.max + (0.05 * normal_range);
-    } else {
-        for (const Element *elmt: measures) {
-            min_value = std::min(min_value, elmt->u.measure.value);
-            max_value = std::max(max_value, elmt->u.measure.value);
+    ImRect bb {
+        rect.Min.x - 10.0f, rect.Min.y,
+        rect.Max.x + 10.0f, rect.Max.y
+    };
+
+    if (ImGui::ItemAdd(bb, 0)) {
+        Size anomalies = 0;
+        ImU32 color;
+        for (const Element *elmt: events) {
+            anomalies += DetectAnomaly(*elmt);
+        }
+        color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event);
+
+        if (rect.GetWidth() >= 1.0f) {
+            ImVec2 points[] = {
+                { rect.Min.x, rect.Min.y },
+                { rect.Max.x, rect.Min.y },
+                { rect.Max.x + 10.0f, rect.Max.y },
+                { rect.Min.x - 10.0f, rect.Max.y }
+            };
+            draw->AddConvexPolyFilled(points, ARRAY_SIZE(points), color);
+        } else {
+            ImVec2 points[] = {
+                { rect.Min.x, rect.Min.y },
+                { rect.Min.x + 10.0f, rect.Max.y },
+                { rect.Min.x - 10.0f, rect.Max.y }
+            };
+            draw->AddTriangleFilled(points[0], points[1], points[2], color);
+        }
+
+        if (events.len > 1) {
+            char len_str[32];
+            Fmt(len_str, "%1", events.len);
+
+            ImVec2 text_bb;
+            {
+                text_bb = bb.GetCenter();
+                ImVec2 text_size = ImGui::CalcTextSize(len_str);
+                text_bb.x -= text_size.x / 2.0f + 1.0f;
+                text_bb.y -= text_size.y / 2.0f - 2.0f;
+            }
+
+            draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text), len_str, nullptr);
+        }
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::BeginTooltip();
+            for (const Element *elmt: events) {
+                if (elmt->type == Element::Type::Measure) {
+                    ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
+                } else {
+                    ImGui::Text("%s [%f]", elmt->concept, elmt->time);
+                }
+            }
+            ImGui::EndTooltip();
+        }
+    }
+}
+
+static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom,
+                       Span<const Element *const> events)
+{
+    if (!events.len)
+        return;
+
+    ImRect rect {
+        x_offset + ((float)events[0]->time * time_zoom), y_min,
+        x_offset + ((float)events[0]->time * time_zoom), y_max
+    };
+    Size first_block_event = 0;
+    for (Size i = 0; i < events.len; i++) {
+        const Element *elmt = events[i];
+
+        float event_pos = x_offset + ((float)elmt->time * time_zoom);
+        if (event_pos - rect.Max.x >= 16.0f) {
+            DrawEventsBlock(rect, events.Take(first_block_event, i - first_block_event));
+
+            rect.Min.x = event_pos;
+            first_block_event = i;
+        }
+        rect.Max.x = event_pos;
+    }
+    if (first_block_event < events.len) {
+        DrawEventsBlock(rect, events.Take(first_block_event, events.len - first_block_event));
+    }
+}
+
+static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom,
+                         Span<const Element *const> measures, double min, double max)
+{
+    if (!measures.len)
+        return;
+
+    ImDrawList *draw = ImGui::GetWindowDrawList();
+
+    float y_scaler = (y_max - y_min - 4.0f) / (float)(max - min);
+    if (std::isinf(y_scaler)) {
+        y_scaler = 0.5f;
+    }
+    const auto compute_coordinates = [&](const Element *elmt) {
+        return ImVec2 {
+            x_offset + ((float)elmt->time * time_zoom),
+            y_max - 4.0f - y_scaler * (float)(elmt->u.measure.value - min)
+        };
+    };
+
+    // Draw line
+    {
+        ImVec2 prev_point = compute_coordinates(measures[0]);
+        for (Size i = 1; i < measures.len; i++) {
+            const Element *elmt = measures[i];
+            DebugAssert(elmt->type == Element::Type::Measure);
+
+            ImVec2 point = compute_coordinates(elmt);
+            draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot));
+            prev_point = point;
         }
     }
 
-    float scaler = 16.0f / (float)(max_value - min_value);
-    if (std::isinf(scaler)) {
-        scaler = 0.5f;
-    }
-
-    double start_time = measures[0]->time;
-    ImVec2 p_prev;
-    for (Size i = 0; i < measures.len; i++) {
-        const Element *elmt = measures[i];
-        DebugAssert(elmt->type == Element::Type::Measure);
-
-        ImVec2 p(start_x + ((float)(elmt->time - start_time) * time_zoom),
-                 y + 16.0f - scaler * (float)(elmt->u.measure.value - min_value));
-        if (i) {
-            draw->AddLine(p_prev, p, GetVisColor(VisColor::Plot));
-        }
-        p_prev = p;
-    }
+    // Draw points
     for (const Element *elmt: measures) {
         ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert)
                                            : GetVisColor(VisColor::Plot);
-        ImVec2 p(start_x + ((float)(elmt->time - start_time) * time_zoom),
-                 y + 16.0f - scaler * (float)(elmt->u.measure.value - min_value));
-        draw->AddCircleFilled(p, 3.0f, color);
-    }
-}
-
-static void DrawPeriod(float start_x, float end_x, float y, const Element &elmt)
-{
-    DebugAssert(elmt.type == Element::Type::Period);
-
-    end_x = std::max(end_x, start_x + 1.0f);
-    ImRect bb(ImVec2(start_x, y), ImVec2(end_x, y + 20.0f));
-    if (!ImGui::ItemAdd(bb, 0))
-        return;
-
-    ImDrawList *draw = ImGui::GetWindowDrawList();
-    draw->ChannelsSetCurrent(0);
-
-    const ImGuiStyle *style = &ImGui::GetStyle();
-    ImVec4 color = style->Colors[ImGuiCol_Border];
-    color.w *= style->Alpha;
-    draw->AddRectFilled(bb.Min, bb.Max, ImGui::ColorConvertFloat4ToU32(color));
-
-    if (ImGui::IsItemHovered()) {
-        ImGui::BeginTooltip();
-        ImGui::Text("%s [%f]", elmt.concept, elmt.time);
-        ImGui::EndTooltip();
+        ImVec2 point = compute_coordinates(elmt);
+        draw->AddCircleFilled(point, 3.0f, color);
     }
 }
 
@@ -182,96 +219,89 @@ struct LineData {
     HeapArray<const Element *> elements;
 };
 
-static bool RenderLine(const InterfaceState &state, const LineData &line)
+static bool DrawEntityLine(ImRect bb, float tree_width,
+                           const InterfaceState &state, double time_offset, const LineData &line)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
-    ImVec2 base_pos = ImGui::GetCursorScreenPos();
 
-    bool ret;
-    draw->AddText(ImVec2(base_pos.x + (float)line.depth * 12.0f + 20.0f, base_pos.y),
-                  ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end());
-    if (!line.leaf) {
-        ImRect bb(base_pos.x + (float)line.depth * 12.0f - 3.0f, base_pos.y + 2.0f,
-                  base_pos.x + (float)line.depth * 12.0f + 13.0f, base_pos.y + 18.0f);
-        if (ImGui::ItemAdd(bb, 0)) {
-            ImGui::RenderTriangle(ImVec2(base_pos.x + (float)line.depth * 12.0f, base_pos.y),
-                                  line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
+    // Line header
+    bool deploy_click;
+    {
+        if (!line.leaf) {
+            ImRect triangle_bb(bb.Min.x + (float)line.depth * 12.0f - 3.0f, bb.Min.y + 2.0f,
+                               bb.Min.x + (float)line.depth * 12.0f + 13.0f, bb.Min.y + 18.0f);
+            if (ImGui::ItemAdd(triangle_bb, 0)) {
+                ImGui::RenderTriangle(ImVec2(bb.Min.x + (float)line.depth * 12.0f, bb.Min.y),
+                                      line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
+            }
+            deploy_click = ImGui::IsItemClicked();
+        } else {
+            deploy_click = false;
         }
-        ret = ImGui::IsItemClicked();
-    } else {
-        ret = false;
+
+        ImVec4 text_rect {
+            bb.Min.x + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
+            bb.Min.x + tree_width, bb.Max.y
+        };
+        draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, text_rect.y),
+                      ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end(),
+                      0.0f, &text_rect);
     }
 
-    HeapArray<const Element *> events_acc;
-    float events_start_x = 0.0f, events_end_x = 0.0f;
-    HeapArray<const Element *> measures_acc;
-    float first_measure_x = 0.0f;
-
-    float elmt_pos;
+    // Split elements
+    HeapArray<const Element *> events;
+    HeapArray<const Element *> periods;
+    HeapArray<const Element *> measures;
+    double measures_min = FLT_MAX, measures_max = -FLT_MAX;
     for (const Element *elmt: line.elements) {
-        elmt_pos = base_pos.x + 200.0f + (float)elmt->time * state.time_zoom;
-
-        if (events_acc.len && elmt_pos - events_end_x >= 16.0f) {
-            DrawEvents(events_start_x, events_end_x, base_pos.y, events_acc);
-            events_acc.Clear(256);
-        }
-
         switch (elmt->type) {
-            case Element::Type::Event: {
-                if (!events_acc.len) {
-                    events_start_x = elmt_pos;
-                }
-                events_end_x = elmt_pos;
-                events_acc.Append(elmt);
-            } break;
-
+            case Element::Type::Event: { events.Append(elmt); } break;
             case Element::Type::Measure: {
-                if (state.plot_measures && line.leaf) {
-                    if (!measures_acc.len) {
-                        first_measure_x = elmt_pos;
-                    }
-                    measures_acc.Append(elmt);
+                if (line.leaf && state.plot_measures) {
+                    measures_min = std::min(measures_min, elmt->u.measure.value);
+                    measures_max = std::max(measures_max, elmt->u.measure.value);
+                    measures.Append(elmt);
                 } else {
-                    if (!events_acc.len) {
-                        events_start_x = elmt_pos;
-                    }
-                    events_end_x = elmt_pos;
-                    events_acc.Append(elmt);
+                    events.Append(elmt);
                 }
             } break;
-
-            case Element::Type::Period: {
-                float end_pos = elmt_pos + ((float)elmt->u.period.duration * state.time_zoom);
-                DrawPeriod(elmt_pos, end_pos, base_pos.y, *elmt);
-            } break;
+            case Element::Type::Period: { periods.Append(elmt); } break;
         }
     }
-    if (events_acc.len) {
-        DrawEvents(events_start_x, events_end_x, base_pos.y, events_acc);
-    }
-    if (measures_acc.len) {
-        DrawMeasures(first_measure_x, base_pos.y, state.time_zoom, measures_acc);
+
+    // Draw elements
+    {
+        float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
+
+        DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, periods);
+        DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, events);
+        DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom,
+                     measures, measures_min, measures_max);
     }
 
-    ImGui::ItemSize(ImVec2(events_end_x - base_pos.x, 20.0f));
-    if (ImGui::ItemAdd(ImRect(base_pos.x, base_pos.y,
-                              ImGui::GetWindowWidth(), base_pos.y + 20.0f), 0)) {
+    // Support line
+    if (ImGui::ItemAdd(bb, 0)) {
+        const ImGuiStyle &style = ImGui::GetStyle();
+
         if (line.path == "/") {
-            draw->AddLine(ImVec2(base_pos.x, base_pos.y - 3.0f),
-                          ImVec2(ImGui::GetWindowWidth(), base_pos.y - 3.0f),
+            draw->AddLine(ImVec2(bb.Min.x, bb.Min.y - style.ItemSpacing.y + 1.0f),
+                          ImVec2(bb.Max.x, bb.Min.y - style.ItemSpacing.y + 1.0f),
                           ImGui::GetColorU32(ImGuiCol_Separator));
         }
-        draw->AddLine(ImVec2(base_pos.x, base_pos.y + 20.0f),
-                      ImVec2(ImGui::GetWindowWidth(), base_pos.y + 20.0f),
+
+        draw->AddLine(ImVec2(bb.Min.x, bb.Max.y),
+                      ImVec2(bb.Max.x, bb.Max.y),
                       ImGui::GetColorU32(ImGuiCol_Separator));
     }
 
-    return ret;
+    return deploy_click;
 }
 
 static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
                                 const HashSet<Span<const char>> &deployed_paths)
 {
+    ImGuiStyle &style = ImGui::GetStyle();
+
     HashSet<Span<const char>> lines_set;
     float max_x = 0.0f;
 
@@ -312,15 +342,22 @@ static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
         }
     }
 
-    return ImVec2(max_x, (float)lines_set.count * 24.0f);
+    // TODO: Move spacing calculation to parents
+    return ImVec2(max_x, (float)lines_set.count * (20.0f + style.ItemSpacing.y));
 }
 
-static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
+static void DrawEntities(ImRect bb, float tree_width, double time_offset,
+                         InterfaceState &state, const EntitySet &entity_set)
 {
     if (!entity_set.entities.len)
         return;
 
-    ImGui::GetWindowDrawList()->ChannelsSplit(3);
+    const ImGuiStyle &style = ImGui::GetStyle();
+    ImGuiWindow *win = ImGui::GetCurrentWindow();
+
+    ImDrawList *draw = ImGui::GetWindowDrawList();
+    draw->PushClipRect(bb.Min, bb.Max);
+    DEFER { draw->PopClipRect(); };
 
     if (!state.size_cache_valid || state.lines_top.len != entity_set.entities.len) {
         state.total_width_unscaled = 0.0f;
@@ -351,7 +388,7 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= ImGui::GetScrollY()) {
             start_render_idx = i - 1;
-            ImGui::SetCursorPosY(4.0f + state.lines_top[i - 1]);
+            ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
             break;
         }
     }
@@ -360,17 +397,16 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
     state.scroll_to_idx = start_render_idx;
     state.scroll_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y;
 
-    // TODO: Use real screen height to stop rendering
     Span<const char> deploy_path =  {};
-    float max_render_y = 1500.0f;
     for (Size i = start_render_idx; i < entity_set.entities.len &&
-                                    ImGui::GetCursorScreenPos().y < max_render_y; i++) {
+                                    ImGui::GetCursorScreenPos().y <= win->ClipRect.Max.y; i++) {
         const Entity &ent = entity_set.entities[i];
 
         HeapArray<LineData> lines;
         HashMap<Span<const char>, Size> lines_map;
 
-        float entity_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y - 4.0f;
+        float entity_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y -
+                                style.ItemSpacing.y;
         for (const Element &elmt: ent.elements) {
             Span<const char> path;
             Span<const char> title;
@@ -464,11 +500,14 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
                 return elmt1->time < elmt2->time;
             });
 
-            if (RenderLine(state, line)) {
+            ImRect bb(win->ClipRect.Min.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y,
+                      win->ClipRect.Max.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y + 20.0f);
+            if (DrawEntityLine(bb, tree_width, state, time_offset, line)) {
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = entity_offset_y;
                 deploy_path = line.path;
             }
+            ImGui::SetCursorScreenPos(bb.Max);
         }
     }
 
@@ -480,100 +519,54 @@ static void RenderEntities(InterfaceState &state, const EntitySet &entity_set)
 
         state.size_cache_valid = false;
     }
-
-    ImGui::GetWindowDrawList()->ChannelsMerge();
-
-    {
-        float cursor_x = ImGui::GetCursorPosX();
-        ImGui::SetCursorPos(ImVec2(200.0f + state.total_width_unscaled * (float)state.time_zoom + 10.0f,
-                                   state.total_height));
-        ImGui::SetCursorPos(ImVec2(cursor_x, state.total_height));
-    }
 }
 
-void RenderTimeScale(const InterfaceState &state)
+static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    ImVec2 base_pos = ImGui::GetCursorScreenPos();
+    // draw->PushClipRect(bb.Min, bb.Max, true);
+    // DEFER { draw->PopClipRect(); };
 
-    // FIXME: Should not need to erase the background, this is beyond ugly
-    {
-        ImVec2 p0(base_pos.x, base_pos.y);
-        ImVec2 p1(base_pos.x + ImGui::GetWindowWidth() + ImGui::GetScrollMaxX(), base_pos.y + 28.0f);
-        //ImU32 bg = ImGui::ColorConvertFloat4ToU32(ImVec4(0.329f, 0.329f, 0.447f, 1.0f));
-        ImU32 bg = ImGui::ColorConvertFloat4ToU32(ImVec4(0.137f, 0.137f, 0.137f, 1.0f));
-        draw->AddRectFilled(p0, p1, bg);
-    }
-
-    float time_step = 10.0f / powf(10.0f, floorf(log10f(state.time_zoom)));
+    // float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
+    float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     int precision = (int)log10f(1.0f / time_step);
-    float min_text_delta = 20.0f + 10.0f * std::abs(log10f(1.0f / time_step));
+    float min_text_delta = 20.0f + 10.0f * fabsf(log10f(1.0f / time_step));
 
-    // TODO: Limit to visible area (left and right) to avoid overdraw
-    float x = base_pos.x + 200.0f, time = 0.0f;
-    float prev_text_x = -min_text_delta - 1.0f;
-    while (x < 3000.0f) {
+    // TODO: Avoid overdraw (left of screen)
+    float x = bb.Min.x - (float)time_offset * time_zoom, time = 0.0f;
+    float prev_text_x = x - min_text_delta - 1.0f;
+    while (x < bb.Max.x + 30.0f) {
         if (x - prev_text_x >= min_text_delta) {
-            draw->AddLine(ImVec2(x, base_pos.y + 2.0f), ImVec2(x, base_pos.y + 10.0f),
+            draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                           ImGui::GetColorU32(ImGuiCol_Text));
 
             char time_str[32];
+            ImVec2 text_size;
             Fmt(time_str, "%1", FmtDouble(time, precision));
-            ImVec2 text_size = ImGui::CalcTextSize(time_str);
+            text_size = ImGui::CalcTextSize(time_str);
 
-            draw->AddText(ImVec2(x - text_size.x / 2.0f, base_pos.y + 12.0f),
+            draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
                           ImGui::GetColorU32(ImGuiCol_Text), time_str);
             prev_text_x = x;
         } else {
-            draw->AddLine(ImVec2(x, base_pos.y + 6.0f), ImVec2(x, base_pos.y + 10.0f),
+            draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                           ImGui::GetColorU32(ImGuiCol_Text));
         }
 
-        x += time_step * state.time_zoom;
+        x += time_step * time_zoom;
         time += time_step;
     }
-
-    // TODO: ItemSize(), ItemAdd()
 }
 
-bool Step(InterfaceState &state, const EntitySet &entity_set)
+static void DrawView(InterfaceState &state, const EntitySet &entity_set)
 {
-    if (!StartRender())
-        return false;
+    ImGuiWindow *win = ImGui::GetCurrentWindow();
 
-    if (!g_io->main.iteration_count) {
-        ImGui::StyleColorsDark();
-    }
-
-    float menu_height = 0.0f;
-    if (ImGui::BeginMainMenuBar()) {
-        //LogInfo("Framerate: %1 (%2 ms/frame)",
-        //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
-
-        ImGui::Checkbox("Plots", &state.plot_measures);
-        ImGui::Checkbox("Keep deployed", &state.keep_deployed);
-        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
-                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-        menu_height = ImGui::GetWindowSize().y;
-        ImGui::EndMainMenuBar();
-    }
-
-    // Init main / render window
-    ImVec2 desktop_pos = ImVec2(0, menu_height);
-    ImVec2 desktop_size = ImGui::GetIO().DisplaySize;
-    desktop_size.y -= menu_height;
-    ImGuiWindowFlags desktop_flags = ImGuiWindowFlags_NoBringToFrontOnFocus |
-                                     ImGuiWindowFlags_NoTitleBar |
-                                     ImGuiWindowFlags_NoResize |
-                                     ImGuiWindowFlags_NoMove |
-                                     ImGuiWindowFlags_NoSavedSettings |
-                                     ImGuiWindowFlags_NoFocusOnAppearing |
-                                     ImGuiWindowFlags_HorizontalScrollbar |
-                                     ImGuiWindowFlags_AlwaysHorizontalScrollbar;
-    ImGui::SetNextWindowPos(desktop_pos);
-    ImGui::SetNextWindowSize(desktop_size);
-    ImGui::Begin("View", nullptr, ImVec2(), 0.0f, desktop_flags);
+    // Layout settings
+    float tree_width = 200.0f;
+    float scale_height = 16.0f + ImGui::GetFontSize();
+    double time_offset = ImGui::GetScrollX() / state.time_zoom;
 
     // Deal with time zoom
     if (ImGui::IsMouseHoveringWindow() &&
@@ -604,19 +597,72 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     // Run animations
     state.time_zoom.Update(g_io->time.monotonic);
 
-    RenderEntities(state, entity_set);
+    // Render entities
+    ImRect entity_rect = win->ClipRect;
+    entity_rect.Max.y -= scale_height;
+    DrawEntities(entity_rect, tree_width, time_offset, state, entity_set);
 
-    {
-        ImVec2 cursor_pos = ImGui::GetCursorPos();
-        cursor_pos.y = ImGui::GetWindowPos().y + ImGui::GetWindowHeight() + ImGui::GetScrollY() - 62.0f;
-        ImGui::SetCursorPos(cursor_pos);
+    // Render time scale
+    ImRect scale_rect = win->ClipRect;
+    scale_rect.Min.x = ImMin(scale_rect.Min.x + tree_width + 15.0f, scale_rect.Max.x);
+    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
+    DrawTimeScale(scale_rect, time_offset, state.time_zoom);
+
+    // Help ImGui compute scrollbar and layout
+    ImGui::SetCursorPos(ImVec2(tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom,
+                               state.total_height + scale_height));
+    ImGui::ItemSize(ImVec2(0.0f, 0.0f));
+}
+
+bool Step(InterfaceState &state, const EntitySet &entity_set)
+{
+    if (!StartRender())
+        return false;
+
+    if (!g_io->main.iteration_count) {
+        ImGui::StyleColorsDark();
     }
-    RenderTimeScale(state);
 
-    ImGui::End();
+    // Menu
+    float menu_height = 0.0f;
+    if (ImGui::BeginMainMenuBar()) {
+        //LogInfo("Framerate: %1 (%2 ms/frame)",
+        //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
+
+        ImGui::Checkbox("Plots", &state.plot_measures);
+        ImGui::Checkbox("Keep deployed", &state.keep_deployed);
+        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
+                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+        menu_height = ImGui::GetWindowSize().y;
+        ImGui::EndMainMenuBar();
+    }
+
+    // Main view
+    {
+        ImVec2 view_pos = ImVec2(0, menu_height);
+        ImVec2 view_size = ImGui::GetIO().DisplaySize;
+        view_size.y -= menu_height;
+        ImGuiWindowFlags view_flags = ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                      ImGuiWindowFlags_NoTitleBar |
+                                      ImGuiWindowFlags_NoResize |
+                                      ImGuiWindowFlags_NoMove |
+                                      ImGuiWindowFlags_NoSavedSettings |
+                                      ImGuiWindowFlags_NoFocusOnAppearing |
+                                      ImGuiWindowFlags_HorizontalScrollbar |
+                                      ImGuiWindowFlags_AlwaysHorizontalScrollbar;
+        ImGui::SetNextWindowPos(view_pos);
+        ImGui::SetNextWindowSize(view_size);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        DEFER { ImGui::PopStyleVar(1); };
+
+        ImGui::Begin("View", nullptr, view_flags);
+        DrawView(state, entity_set);
+        ImGui::End();
+    }
 
     Render();
     SwapGLBuffers();
+
     if (!g_io->main.run) {
         ReleaseRender();
     }
