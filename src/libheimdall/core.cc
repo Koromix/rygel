@@ -206,7 +206,20 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
         ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert)
                                            : GetVisColor(VisColor::Plot);
         ImVec2 point = compute_coordinates(elmt);
-        draw->AddCircleFilled(point, 3.0f, color);
+        ImRect point_bb = {
+            point.x - 3.0f, point.y - 3.0f,
+            point.x + 3.0f, point.y + 3.0f
+        };
+
+        if (ImGui::ItemAdd(point_bb, 0)) {
+            draw->AddCircleFilled(point, 3.0f, color);
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::BeginTooltip();
+                ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
+                ImGui::EndTooltip();
+            }
+        }
     }
 }
 
