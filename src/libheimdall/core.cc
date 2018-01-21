@@ -24,12 +24,12 @@ enum class VisColor {
     Plot
 };
 
-static ImU32 GetVisColor(VisColor color)
+static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
     switch (color) {
-        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.100f, 0.400f, 0.750f, 1.0f)); } break;
-        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.724f, 0.107f, 0.076f, 1.0f)); } break;
-        case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines); } break;
+        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.100f, 0.400f, 0.750f, alpha)); } break;
+        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.724f, 0.107f, 0.076f, alpha)); } break;
+        case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
     }
     Assert(false);
 }
@@ -47,7 +47,7 @@ static bool DetectAnomaly(const Element &elmt)
     Assert(false);
 }
 
-static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom,
+static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
                         Span<const Element *const> periods)
 {
     const ImGuiStyle &style = ImGui::GetStyle();
@@ -65,7 +65,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
         if (ImGui::ItemAdd(rect, 0)) {
             ImVec4 color = style.Colors[ImGuiCol_Border];
-            color.w *= style.Alpha;
+            color.w *= style.Alpha * alpha;
 
             draw->AddRectFilled(rect.Min, rect.Max, ImGui::ColorConvertFloat4ToU32(color));
 
@@ -78,7 +78,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
     }
 }
 
-static void DrawEventsBlock(ImRect rect, Span<const Element *const> events)
+static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const> events)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -93,7 +93,7 @@ static void DrawEventsBlock(ImRect rect, Span<const Element *const> events)
         for (const Element *elmt: events) {
             anomalies += DetectAnomaly(*elmt);
         }
-        color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event);
+        color = GetVisColor(anomalies ? VisColor::Alert : VisColor::Event, alpha);
 
         if (rect.GetWidth() >= 1.0f) {
             ImVec2 points[] = {
@@ -124,7 +124,7 @@ static void DrawEventsBlock(ImRect rect, Span<const Element *const> events)
                 text_bb.y -= text_size.y / 2.0f - 2.0f;
             }
 
-            draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text), len_str, nullptr);
+            draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text, alpha), len_str, nullptr);
         }
 
         if (ImGui::IsItemHovered()) {
@@ -141,7 +141,7 @@ static void DrawEventsBlock(ImRect rect, Span<const Element *const> events)
     }
 }
 
-static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom,
+static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
                        Span<const Element *const> events)
 {
     if (!events.len)
@@ -157,7 +157,7 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
 
         float event_pos = x_offset + ((float)elmt->time * time_zoom);
         if (event_pos - rect.Max.x >= 16.0f) {
-            DrawEventsBlock(rect, events.Take(first_block_event, i - first_block_event));
+            DrawEventsBlock(rect, alpha, events.Take(first_block_event, i - first_block_event));
 
             rect.Min.x = event_pos;
             first_block_event = i;
@@ -165,11 +165,11 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
         rect.Max.x = event_pos;
     }
     if (first_block_event < events.len) {
-        DrawEventsBlock(rect, events.Take(first_block_event, events.len - first_block_event));
+        DrawEventsBlock(rect, alpha, events.Take(first_block_event, events.len - first_block_event));
     }
 }
 
-static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom,
+static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
                          Span<const Element *const> measures, double min, double max)
 {
     if (!measures.len)
@@ -196,15 +196,15 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
             DebugAssert(elmt->type == Element::Type::Measure);
 
             ImVec2 point = compute_coordinates(elmt);
-            draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot));
+            draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot, alpha));
             prev_point = point;
         }
     }
 
     // Draw points
     for (const Element *elmt: measures) {
-        ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert)
-                                           : GetVisColor(VisColor::Plot);
+        ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
+                                           : GetVisColor(VisColor::Plot, alpha);
         ImVec2 point = compute_coordinates(elmt);
         ImRect point_bb = {
             point.x - 3.0f, point.y - 3.0f,
@@ -229,6 +229,7 @@ struct LineData {
     bool leaf;
     bool deployed;
     int depth;
+    float alpha;
     HeapArray<const Element *> elements;
 };
 
@@ -261,34 +262,33 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
                       0.0f, &text_rect);
     }
 
-    // Split elements
-    HeapArray<const Element *> events;
-    HeapArray<const Element *> periods;
-    HeapArray<const Element *> measures;
-    double measures_min = FLT_MAX, measures_max = -FLT_MAX;
-    for (const Element *elmt: line.elements) {
-        switch (elmt->type) {
-            case Element::Type::Event: { events.Append(elmt); } break;
-            case Element::Type::Measure: {
-                if (line.leaf && state.plot_measures) {
-                    measures_min = std::min(measures_min, elmt->u.measure.value);
-                    measures_max = std::max(measures_max, elmt->u.measure.value);
-                    measures.Append(elmt);
-                } else {
-                    events.Append(elmt);
-                }
-            } break;
-            case Element::Type::Period: { periods.Append(elmt); } break;
+    if (line.alpha > 0.0f) {
+        // Split elements
+        HeapArray<const Element *> events;
+        HeapArray<const Element *> periods;
+        HeapArray<const Element *> measures;
+        double measures_min = FLT_MAX, measures_max = -FLT_MAX;
+        for (const Element *elmt: line.elements) {
+            switch (elmt->type) {
+                case Element::Type::Event: { events.Append(elmt); } break;
+                case Element::Type::Measure: {
+                    if (line.leaf && state.plot_measures) {
+                        measures_min = std::min(measures_min, elmt->u.measure.value);
+                        measures_max = std::max(measures_max, elmt->u.measure.value);
+                        measures.Append(elmt);
+                    } else {
+                        events.Append(elmt);
+                    }
+                } break;
+                case Element::Type::Period: { periods.Append(elmt); } break;
+            }
         }
-    }
 
-    // Draw elements
-    {
+        // Draw elements
         float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
-
-        DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, periods);
-        DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, events);
-        DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom,
+        DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
+        DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
+        DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
                      measures, measures_min, measures_max);
     }
 
@@ -467,12 +467,11 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->leaf = false;
                             line->deployed = state.deploy_paths.Find(partial_path);
                             line->depth = tree_depth++;
+                            line->alpha = line->deployed ? state.deployed_alpha : 1.0f;
                         }
                         fully_deployed = line->deployed;
                     }
-                    if (!line->deployed || state.keep_deployed) {
-                        line->elements.Append(&elmt);
-                    }
+                    line->elements.Append(&elmt);
 
                     if (!fully_deployed || partial_path.len == path.len)
                         break;
@@ -493,6 +492,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                         line->title = title;
                         line->leaf = true;
                         line->depth = tree_depth;
+                        line->alpha = 1.0f;
                     }
                 }
                 line->elements.Append(&elmt);
@@ -642,8 +642,9 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         //LogInfo("Framerate: %1 (%2 ms/frame)",
         //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
 
-        ImGui::Checkbox("Plots", &state.plot_measures);
-        ImGui::Checkbox("Keep deployed", &state.keep_deployed);
+        ImGui::Checkbox("Show plots", &state.plot_measures);
+        ImGui::PushItemWidth(100.0f);
+        ImGui::SliderFloat("Deployed opacity", &state.deployed_alpha, 0.0f, 1.0f);
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
         menu_height = ImGui::GetWindowSize().y;

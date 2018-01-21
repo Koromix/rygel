@@ -17,7 +17,7 @@ struct InterfaceState {
     AnimatedValue<float, double> time_zoom = 1.0f;
 
     bool plot_measures = true;
-    bool keep_deployed = false;
+    float deployed_alpha = 0.05f;
 
     bool size_cache_valid = false;
     HeapArray<float> lines_top;
