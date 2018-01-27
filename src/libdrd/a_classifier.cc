@@ -221,7 +221,7 @@ static GhmCode SetError(ClassifyErrorSet *error_set, int8_t category, int16_t er
 {
     static GhmCode base_error_ghm = GhmCode::FromString("90Z00Z");
 
-    DebugAssert(error >= 0 && error < 512); // FIXME: Ugly
+    DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
         if (!error_set->main_error || error < error_set->main_error) {
             error_set->main_error = error;
