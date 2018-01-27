@@ -10,18 +10,15 @@ static bool MergeConstraint(const TableIndex &index,
                             const GhmCode ghm, GhmConstraint constraint,
                             HashTable<GhmCode, GhmConstraint> *out_constraints)
 {
-    // TODO: Simplify with AppendOrGet() in HashSet
 #define MERGE_CONSTRAINT(ModeChar, DurationMask) \
         do { \
             GhmConstraint new_constraint = constraint; \
             new_constraint.ghm.parts.mode = (char)(ModeChar); \
             new_constraint.duration_mask &= (DurationMask); \
             if (new_constraint.duration_mask) { \
-                GhmConstraint *prev_constraint = out_constraints->Find(new_constraint.ghm); \
-                if (prev_constraint) { \
-                    prev_constraint->duration_mask |= new_constraint.duration_mask; \
-                } else { \
-                    out_constraints->Append(new_constraint); \
+                std::pair<GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
+                if (!ret.second) { \
+                    ret.first->duration_mask |= new_constraint.duration_mask; \
                 } \
             } \
         } while (false)
