@@ -502,6 +502,7 @@ Options:
                     LogError("Option '--port' requires a value between 0 and 65535");
                     return 1;
                 }
+                port = (uint16_t)new_port;
             } else if (!HandleMainOption(opt_parser, PrintUsage)) {
                 return 1;
             }
