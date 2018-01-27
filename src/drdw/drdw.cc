@@ -242,7 +242,6 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
             const GhmRootDesc *ghm_root_desc = catalog_set->ghm_roots_map.Find(ghm_root_info.ghm_root);
 
             writer.StartObject();
-            // TODO: Use buffer-based Fmt API
             writer.Key("ghm_root"); writer.String(Fmt(buf, "%1", ghm_root_info.ghm_root).ptr);
             if (ghm_root_desc) {
                 writer.Key("ghm_root_desc"); writer.String(ghm_root_desc->ghm_root_desc);
