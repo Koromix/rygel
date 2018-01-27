@@ -5,8 +5,8 @@
 if (TARGET heimdall)
     find_package(R)
     if(R_FOUND)
-        set(HEIMDALLR_SRC ../common/kutil.cc
-                          ../common/rcpp.cc
+        set(HEIMDALLR_SRC ../common/rcpp.cc
+                          ../common/rcpp.hh
                           heimdallR.cc
                           heimdallR.R)
 
