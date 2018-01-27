@@ -1036,18 +1036,8 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     int32_t *ambu_counter = nullptr;
 
     for (const Stay &stay: agg.stays) {
-        const AuthorizationInfo *auth_info = nullptr;
-        {
-            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
-
-            // TODO: Use HashSet on autorefs to avoid linear scan
-            for (const AuthorizationInfo &it: agg.index->authorizations) {
-                if (it.scope == AuthorizationScope::Unit && it.code == auth_type) {
-                    auth_info = &it;
-                    break;
-                }
-            }
-        }
+        int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
+        const AuthorizationInfo *auth_info = agg.index->FindAuthorization(AuthorizationScope::Unit, auth_type);
         if (!auth_info)
             continue;
 

@@ -214,7 +214,7 @@ void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations)
 {
     for (const AuthorizationInfo &auth: authorizations) {
         PrintLn("      %1 [%2] => Function %3",
-                auth.code, AuthorizationScopeNames[(int)auth.scope], auth.function);
+                auth.type.st.code, AuthorizationScopeNames[(int)auth.type.st.scope], auth.function);
     }
 }
 

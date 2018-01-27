@@ -810,13 +810,13 @@ bool ParseAuthorizationTable(const uint8_t *file_data,
                    SIZE(PackedAuthorization));
 
             if (i == 0) {
-                auth.scope = AuthorizationScope::Bed;
+                auth.type.st.scope = AuthorizationScope::Bed;
             } else if (!raw_auth.global) {
-                auth.scope = AuthorizationScope::Unit;
+                auth.type.st.scope = AuthorizationScope::Unit;
             } else {
-                auth.scope = AuthorizationScope::Facility;
+                auth.type.st.scope = AuthorizationScope::Facility;
             }
-            auth.code = (int8_t)raw_auth.code;
+            auth.type.st.code = (int8_t)raw_auth.code;
             auth.function = (int8_t)raw_auth.function;
 
             out_auths->Append(auth);
@@ -1252,6 +1252,7 @@ bool TableSetBuilder::Finish(TableSet *out_set)
         BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
         BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
         BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(authorizations, authorizations, TableType::GhsAccessTable);
         BUILD_MAP(ghs_prices, ghs_prices, TableType::PriceTable);
 
 #undef BUILD_MAP
@@ -1491,6 +1492,19 @@ Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
     }
 
     return compatible_ghs;
+}
+
+const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope,
+                                                       int8_t type) const
+{
+    if (!authorizations_map)
+        return nullptr;
+
+    decltype(AuthorizationInfo::type) key;
+    key.st.scope = scope;
+    key.st.code = type;
+
+    return authorizations_map->FindValue(key.value, nullptr);
 }
 
 const GhsPriceInfo *TableIndex::FindGhsPrice(GhsCode ghs) const

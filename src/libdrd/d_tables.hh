@@ -199,7 +199,7 @@ struct GhsPriceInfo {
     HASH_TABLE_HANDLER(GhsPriceInfo, ghs);
 };
 
-enum class AuthorizationScope: uint8_t {
+enum class AuthorizationScope: int8_t {
     Facility,
     Unit,
     Bed
@@ -210,9 +210,16 @@ static const char *const AuthorizationScopeNames[] = {
     "Bed"
 };
 struct AuthorizationInfo {
-    AuthorizationScope scope;
-    int8_t code;
+    union {
+        int16_t value;
+        struct {
+            AuthorizationScope scope;
+            int8_t code;
+        } st;
+    } type;
     int8_t function;
+
+    HASH_TABLE_HANDLER(AuthorizationInfo, type.value);
 };
 
 struct SrcPair {
@@ -279,6 +286,7 @@ struct TableIndex {
 
     HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
     HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+    HashTable<int16_t, const AuthorizationInfo *> *authorizations_map;
 
     HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
 
@@ -289,6 +297,7 @@ struct TableIndex {
 
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmCode ghm) const;
+    const AuthorizationInfo *FindAuthorization(AuthorizationScope scope, int8_t type) const;
 
     const GhsPriceInfo *FindGhsPrice(GhsCode ghs) const;
 };
@@ -320,6 +329,8 @@ public:
 
         HeapArray<HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler>> ghm_to_ghs;
         HeapArray<HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
+        HeapArray<HashTable<int16_t, const AuthorizationInfo *>> authorizations;
+
         HeapArray<HashTable<GhsCode, const GhsPriceInfo *>> ghs_prices;
     } maps;
 
