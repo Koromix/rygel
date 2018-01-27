@@ -1201,6 +1201,7 @@ public:
         bool operator!=(const Iterator &other) const { return !(*this == other); }
     };
 
+    static constexpr Size Bits = N;
     size_t data[(N + SIZE(size_t) - 1) / SIZE(size_t)] = {};
 
     typedef Size value_type;
