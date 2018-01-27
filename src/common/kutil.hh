@@ -1500,16 +1500,22 @@ private:
     }
 };
 
-static inline uint64_t DefaultHash(char key) { return (uint64_t)key; }
-static inline uint64_t DefaultHash(unsigned char key) { return key; }
-static inline uint64_t DefaultHash(short key) { return (uint64_t)key; }
-static inline uint64_t DefaultHash(unsigned short key) { return key; }
-static inline uint64_t DefaultHash(int key) { return (uint64_t)key; }
-static inline uint64_t DefaultHash(unsigned int key) { return key; }
-static inline uint64_t DefaultHash(long key) { return (uint64_t)key; }
-static inline uint64_t DefaultHash(unsigned long key) { return key; }
-static inline uint64_t DefaultHash(long long key) { return (uint64_t)key; }
-static inline uint64_t DefaultHash(unsigned long long key) { return key; }
+// Stole this from Java's HashMap
+static inline uint64_t DefaultHash(unsigned long long key)
+{
+    key ^= (key >> 20) ^ (key >> 12);
+    key = key ^ (key >> 7) ^ (key >> 4);
+    return key;
+}
+static inline uint64_t DefaultHash(char key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(unsigned char key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(short key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(unsigned short key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(int key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(unsigned int key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(long key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(unsigned long key) { return DefaultHash((unsigned long long)key); }
+static inline uint64_t DefaultHash(long long key) { return DefaultHash((unsigned long long)key); }
 
 // FNV-1a
 static inline uint64_t DefaultHash(const char *key)
