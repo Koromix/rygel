@@ -520,7 +520,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                 state.scroll_offset_y = entity_offset_y;
                 deploy_path = line.path;
             }
-            ImGui::SetCursorScreenPos(bb.Max);
+            ImGui::SetCursorScreenPos(ImVec2(bb.Min.x, bb.Max.y));
         }
     }
 
