@@ -356,7 +356,7 @@ static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
     }
 
     // TODO: Move spacing calculation to parents
-    return ImVec2(max_x, (float)lines_set.count * (20.0f + style.ItemSpacing.y));
+    return ImVec2(max_x, (float)lines_set.table.count * (20.0f + style.ItemSpacing.y));
 }
 
 static void DrawEntities(ImRect bb, float tree_width, double time_offset,

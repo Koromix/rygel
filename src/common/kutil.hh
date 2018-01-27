@@ -1601,10 +1601,6 @@ public:
 
     HashTable<KeyType, Bucket> table;
 
-    Size &count = table.count;
-    Size &capacity = table.capacity;
-    Allocator *&allocator = table.allocator;
-
     void Clear() { table.Clear(); }
 
     std::pair<ValueType *, bool> Append(const KeyType &key, const ValueType &value)
@@ -1664,10 +1660,6 @@ public:
     };
 
     HashTable<ValueType, Bucket> table;
-
-    Size &count = table.count;
-    Size &capacity = table.capacity;
-    Allocator *&allocator = table.allocator;
 
     void Clear() { table.Clear(); }
 
