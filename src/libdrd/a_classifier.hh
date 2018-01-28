@@ -29,18 +29,18 @@ struct ClassifyAggregate {
 };
 
 struct SupplementCounters {
-    int32_t rea;
-    int32_t reasi;
-    int32_t si;
-    int32_t src;
-    int32_t nn1;
-    int32_t nn2;
-    int32_t nn3;
-    int32_t rep;
+    int32_t rea = 0;
+    int32_t reasi = 0;
+    int32_t si = 0;
+    int32_t src = 0;
+    int32_t nn1 = 0;
+    int32_t nn2 = 0;
+    int32_t nn3 = 0;
+    int32_t rep = 0;
 };
 
 struct ClassifyErrorSet {
-    int16_t main_error;
+    int16_t main_error = 0;
     Bitset<512> errors;
 };
 
@@ -60,7 +60,7 @@ struct ClassifyResultSet {
     HeapArray<ClassifyResult> results;
 
     SupplementCounters supplements;
-    int64_t ghs_total_cents;
+    int64_t ghs_total_cents = 0;
 };
 
 Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
