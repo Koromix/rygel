@@ -36,8 +36,8 @@ struct Win32Window {
     bool mouse_tracked = false;
 };
 
-static thread_local Win32Window *g_window;
-EXPORT_THREAD_LOCAL RunIO *g_io;
+static THREAD_LOCAL Win32Window *g_window;
+THREAD_LOCAL RunIO *g_io;
 
 static const char *GetWin32ErrorMessage(DWORD err)
 {

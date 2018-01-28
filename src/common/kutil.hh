@@ -6,6 +6,7 @@
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
+#include <condition_variable>
 #include <errno.h>
 #include <float.h>
 #include <functional>
@@ -19,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #include <type_traits>
 #include <utility>
 #ifdef _WIN32
@@ -50,6 +52,8 @@
 #define FMT_STRING_BASE_CAPACITY 128
 #define FMT_STRING_GROWTH_FACTOR 1.5f
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
+
+#define THREAD_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
 // Utilities
@@ -88,8 +92,10 @@ enum class Endianness {
     #define GCC_POP_IGNORE() \
         GCC_PRAGMA(GCC diagnostic pop)
 
-    // thread_local does not work for R packages on Windows (crash)
-    #define EXPORT_THREAD_LOCAL __thread
+    // thread_local has many bugs with MinGW (Windows):
+    // - Destructors are run after the memory is freed
+    // - It crashes when used in R packages
+    #define THREAD_LOCAL __thread
     #define MAYBE_UNUSED __attribute__((unused))
     #define FORCE_INLINE __attribute__((always_inline)) inline
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
@@ -109,7 +115,7 @@ enum class Endianness {
     #define GCC_PUSH_IGNORE(Option)
     #define GCC_POP_IGNORE()
 
-    #define EXPORT_THREAD_LOCAL thread_local
+    #define THREAD_LOCAL thread_local
     #define MAYBE_UNUSED
     #define FORCE_INLINE __forceinline
     #define LIKELY(Cond) (Cond)
@@ -481,7 +487,7 @@ struct AllocatorBucket {
     alignas(8) uint8_t data[];
 };
 
-class Allocator {
+class BaseAllocator {
     // We want Allocator to be memmovable, which means we can't use a circular linked list.
     // Even though it makes the code less nice.
     AllocatorList list = {};
@@ -492,24 +498,28 @@ public:
         Resizable = 2
     };
 
-    Allocator() = default;
-    Allocator(Allocator &) = delete;
-    Allocator &operator=(const Allocator &) = delete;
-    ~Allocator();
+    BaseAllocator() = default;
+    BaseAllocator(BaseAllocator &) = delete;
+    BaseAllocator &operator=(const BaseAllocator &) = delete;
 
-    static void ReleaseAll(Allocator *alloc);
+    static void ReleaseAll(BaseAllocator *alloc);
 
-    static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0);
-    static void Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
+    static void *Allocate(BaseAllocator *alloc, Size size, unsigned int flags = 0);
+    static void Resize(BaseAllocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags = 0);
-    static void Release(Allocator *alloc, void *ptr, Size size);
+    static void Release(BaseAllocator *alloc, void *ptr, Size size);
 
-private:
+protected:
     void ReleaseAll();
 
     void *Allocate(Size size, unsigned int flags = 0);
     void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0);
     void Release(void *ptr, Size size);
+};
+
+class Allocator: public BaseAllocator {
+public:
+    ~Allocator() { ReleaseAll(); }
 };
 
 // ------------------------------------------------------------------------
@@ -727,6 +737,15 @@ public:
         return data[idx];
     }
 
+    T *Append()
+    {
+        DebugAssert(len < N);
+
+        T *it = data + len;
+        len++;
+
+        return it;
+    }
     T *Append(const T &value)
     {
         DebugAssert(len < N);
@@ -2247,6 +2266,8 @@ void PopLogHandler();
 // System
 // ------------------------------------------------------------------------
 
+static inline int GetCpuCount() { return (int)std::thread::hardware_concurrency(); };
+
 enum class CompressionType {
     None,
     Zlib,
@@ -2431,6 +2452,14 @@ private:
 
     bool WriteRaw(Span<const uint8_t> buf);
 };
+
+// ------------------------------------------------------------------------
+// Tasks
+// ------------------------------------------------------------------------
+
+void BeginAsync(int max_threads = 0);
+void StartAsync(std::function<bool()> func);
+bool Sync();
 
 // ------------------------------------------------------------------------
 // Option Parser

@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <inttypes.h>
-#include <string.h>
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
@@ -33,19 +31,12 @@
 // arenas and simple pointer-bumping allocator. This will be implemented later, for
 // now it's just a doubly linked list of malloc() memory blocks.
 
-static Allocator default_allocator;
+static THREAD_LOCAL BaseAllocator default_allocator;
 
 #define PTR_TO_BUCKET(Ptr) \
     ((AllocatorBucket *)((uint8_t *)(Ptr) - OFFSET_OF(AllocatorBucket, data)))
 
-Allocator::~Allocator()
-{
-    if (LIKELY(this != &default_allocator)) {
-        ReleaseAll();
-    }
-}
-
-void Allocator::ReleaseAll(Allocator *alloc)
+void BaseAllocator::ReleaseAll(BaseAllocator *alloc)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -53,7 +44,7 @@ void Allocator::ReleaseAll(Allocator *alloc)
     alloc->ReleaseAll();
 }
 
-void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
+void *BaseAllocator::Allocate(BaseAllocator *alloc, Size size, unsigned int flags)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -61,8 +52,8 @@ void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
     return alloc->Allocate(size, flags);
 }
 
-void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
-                       unsigned int flags)
+void BaseAllocator::Resize(BaseAllocator *alloc, void **ptr, Size old_size, Size new_size,
+                           unsigned int flags)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -70,7 +61,7 @@ void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_siz
     alloc->Resize(ptr, old_size, new_size, flags);
 }
 
-void Allocator::Release(Allocator *alloc, void *ptr, Size size)
+void BaseAllocator::Release(BaseAllocator *alloc, void *ptr, Size size)
 {
     if (!alloc) {
         alloc = &default_allocator;
@@ -78,7 +69,7 @@ void Allocator::Release(Allocator *alloc, void *ptr, Size size)
     alloc->Release(ptr, size);
 }
 
-void *Allocator::Allocate(Size size, unsigned int flags)
+void *BaseAllocator::Allocate(Size size, unsigned int flags)
 {
     DebugAssert(size >= 0);
 
@@ -109,7 +100,7 @@ void *Allocator::Allocate(Size size, unsigned int flags)
     return bucket->data;
 }
 
-void Allocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+void BaseAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
     DebugAssert(old_size >= 0);
     DebugAssert(new_size >= 0);
@@ -149,7 +140,7 @@ void Allocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int fl
     }
 }
 
-void Allocator::Release(void *ptr, Size size)
+void BaseAllocator::Release(void *ptr, Size size)
 {
     DebugAssert(size >= 0);
 
@@ -170,7 +161,7 @@ void Allocator::Release(void *ptr, Size size)
     free(bucket);
 }
 
-void Allocator::ReleaseAll()
+void BaseAllocator::ReleaseAll()
 {
     AllocatorList *head = list.next;
     while (head) {
@@ -709,9 +700,10 @@ void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args)
 // Debug and errors
 // ------------------------------------------------------------------------
 
-static thread_local LocalArray<std::function<LogHandlerFunc>, 16> log_handlers = {
-    DefaultLogHandler
-};
+// NOTE: LocalArray does not work with __thread, and thread_local is broken on MinGW
+// when destructors are involved. So heap allocation it is, at least for now.
+static THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
+static THREAD_LOCAL Size log_handlers_len;
 
 bool enable_debug = []() {
 #ifdef __EMSCRIPTEN__
@@ -767,8 +759,6 @@ static bool ConfigLogTerminalOutput()
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
-    if (!log_handlers.len)
-        return;
     if (level == LogLevel::Debug && !enable_debug)
         return;
 
@@ -783,7 +773,11 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         }
     }
 
-    log_handlers[log_handlers.len - 1](level, ctx_buf, fmt, args);
+    if (log_handlers_len) {
+        (*log_handlers[log_handlers_len - 1])(level, ctx_buf, fmt, args);
+    } else {
+        DefaultLogHandler(level, ctx_buf, fmt, args);
+    }
 }
 
 void DefaultLogHandler(LogLevel level, const char *ctx,
@@ -818,12 +812,14 @@ void EndConsoleLog()
 
 void PushLogHandler(std::function<LogHandlerFunc> handler)
 {
-    log_handlers.Append(handler);
+    DebugAssert(log_handlers_len < ARRAY_SIZE(log_handlers));
+    log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(handler);
 }
 
 void PopLogHandler()
 {
-    log_handlers.RemoveLast();
+    DebugAssert(log_handlers_len > 0);
+    delete log_handlers[--log_handlers_len];
 }
 
 // ------------------------------------------------------------------------
@@ -838,7 +834,7 @@ static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
         error_code = GetLastError();
     }
 
-    static thread_local char str_buf[256];
+    static THREAD_LOCAL char str_buf[256];
     DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                                   nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                                   str_buf, SIZE(str_buf), nullptr);
@@ -1943,6 +1939,104 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
         } break;
     }
     Assert(false);
+}
+
+// ------------------------------------------------------------------------
+// Tasks
+// ------------------------------------------------------------------------
+
+struct ThreadPool {
+    std::mutex mutex;
+    std::condition_variable cv;
+
+    int max = 0;
+    int started = 0;
+    int idle = 0;
+    // Apparently it was too much to ask for a trivial 'std::thread' type,
+    // the C++ guys had to fuck this up.
+    HeapArray<std::thread *> threads;
+
+    DynamicQueue<std::function<bool()>> tasks;
+    bool success = true;
+};
+
+// thread_local breaks down on MinGW when destructors are involved, work
+// around this with heap allocation.
+static THREAD_LOCAL ThreadPool *thread_pool;
+
+void BeginAsync(int max_threads)
+{
+    Assert(!thread_pool);
+
+    thread_pool = new ThreadPool;
+    if (max_threads != 0) {
+        thread_pool->max = max_threads;
+    } else {
+        thread_pool->max = GetCpuCount();
+        DebugAssert(thread_pool->max);
+    }
+
+    thread_pool->success = true;
+}
+
+static void RunWorker(ThreadPool *thread_pool)
+{
+    std::unique_lock<std::mutex> lock(thread_pool->mutex);
+
+    thread_pool->idle++;
+    while (thread_pool->started <= thread_pool->max || thread_pool->tasks.len) {
+        if (thread_pool->tasks.len) {
+            std::function<bool()> func = std::move(thread_pool->tasks[0]);
+            thread_pool->tasks.RemoveFirst();
+
+            thread_pool->idle--;
+            lock.unlock();
+            bool ret = func();
+            lock.lock();
+            thread_pool->idle++;
+
+            thread_pool->success &= ret;
+        } else {
+            thread_pool->cv.wait(lock);
+        }
+    }
+    thread_pool->started--;
+}
+
+void StartAsync(std::function<bool()> func)
+{
+    thread_pool->mutex.lock();
+    DEFER { thread_pool->mutex.unlock(); };
+
+    thread_pool->tasks.Append(func);
+    thread_pool->cv.notify_all();
+
+    if (!thread_pool->idle && (thread_pool->started < thread_pool->max ||
+                               thread_pool->max < 0)) {
+        std::thread *thread = new std::thread(RunWorker, thread_pool);
+        thread_pool->threads.Append(thread);
+        thread_pool->started++;
+    }
+}
+
+bool Sync()
+{
+    thread_pool->mutex.lock();
+    thread_pool->max = 0;
+    thread_pool->cv.notify_all();
+    thread_pool->mutex.unlock();
+
+    bool success;
+    for (std::thread *thread: thread_pool->threads) {
+        thread->join();
+        delete thread;
+    }
+    success = thread_pool->success;
+
+    delete thread_pool;
+    thread_pool = nullptr;
+
+    return success;
 }
 
 // ------------------------------------------------------------------------

@@ -198,106 +198,122 @@ Classify options:
     if (!authorization_set)
         return false;
 
-    LogInfo("Load");
-    StaySet stay_set;
-    {
-        StaySetBuilder stay_set_builder;
-
-        if (!stay_set_builder.LoadFiles(filenames))
-            return false;
-        if (!stay_set_builder.Finish(&stay_set))
-            return false;
+    // TODO: Simple to use multi-append
+    HeapArray<ClassifyResultSet> result_sets;
+    for (const char *filename: filenames) {
+        result_sets.Append();
     }
 
-    LogInfo("Classify");
-    ClassifyResultSet result_set = {};
-    Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_set);
+    BeginAsync();
+    for (Size i = 0; i < filenames.len; i++) {
+        StartAsync([&, i]() {
+            StaySet stay_set;
+            {
+                StaySetBuilder stay_set_builder;
 
-    LogInfo("Summary");
-    PrintLn("Summary:");
-    PrintLn("  N: %1", result_set.results.len);
-    PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
-    PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-            result_set.supplements.rea, result_set.supplements.reasi, result_set.supplements.si,
-            result_set.supplements.src, result_set.supplements.nn1, result_set.supplements.nn2,
-            result_set.supplements.nn3, result_set.supplements.rep);
-    PrintLn();
-
-    if (verbosity >= 1 || test) {
-        LogInfo("Export");
-        PrintLn("Details:");
-        for (const ClassifyResult &result: result_set.results) {
-            PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
-                    result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
-                    result.stays.len, result.ghm, result.ghs);
-
-            if (verbosity >= 2) {
-                if (result.main_error) {
-                    PrintLn("    Error: %1", result.main_error);
-                }
-
-                PrintLn("    GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
-                if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
-                        result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
-                        result.supplements.nn3 || result.supplements.rep) {
-                    PrintLn("    Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                            result.supplements.rea, result.supplements.reasi, result.supplements.si,
-                            result.supplements.src, result.supplements.nn1, result.supplements.nn2,
-                            result.supplements.nn3, result.supplements.rep);
-                }
+                LogDebug("Load '%1'", filenames[i]);
+                if (!stay_set_builder.LoadFiles(filenames[i]))
+                    return false;
+                if (!stay_set_builder.Finish(&stay_set))
+                    return false;
             }
+
+            LogDebug("Classify '%1'", filenames[i]);
+            Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_sets[i]);
+
+            return true;
+        });
+    }
+    if (!Sync())
+        return false;
+
+    for (Size i = 0; i < filenames.len; i++) {
+        const ClassifyResultSet &result_set = result_sets[i];
+
+        PrintLn("%1:", filenames[i]);
+        PrintLn("  N: %1", result_set.results.len);
+        PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
+        PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                result_set.supplements.rea, result_set.supplements.reasi, result_set.supplements.si,
+                result_set.supplements.src, result_set.supplements.nn1, result_set.supplements.nn2,
+                result_set.supplements.nn3, result_set.supplements.rep);
+        PrintLn();
+
+        if (verbosity >= 1 || test) {
+            PrintLn("Details:");
+            for (const ClassifyResult &result: result_set.results) {
+                PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
+                        result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
+                        result.stays.len, result.ghm, result.ghs);
+
+                if (verbosity >= 2) {
+                    if (result.main_error) {
+                        PrintLn("    Error: %1", result.main_error);
+                    }
+
+                    PrintLn("    GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
+                    if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
+                            result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
+                            result.supplements.nn3 || result.supplements.rep) {
+                        PrintLn("    Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                                result.supplements.rea, result.supplements.reasi, result.supplements.si,
+                                result.supplements.src, result.supplements.nn1, result.supplements.nn2,
+                                result.supplements.nn3, result.supplements.rep);
+                    }
+                }
 
 #ifndef DISABLE_TESTS
-            if (test) {
-                if (result.stays.len != result.stays[0].test.cluster_len) {
-                    PrintLn("    Test_Error / Inadequate Cluster (%1, expected %2)",
-                            result.stays.len, result.stays[0].test.cluster_len);
+                if (test) {
+                    if (result.stays.len != result.stays[0].test.cluster_len) {
+                        PrintLn("    Test_Error / Inadequate Cluster (%1, expected %2)",
+                                result.stays.len, result.stays[0].test.cluster_len);
+                    }
+                    if (result.stays[0].test.ghm.IsValid()
+                            && result.ghm != result.stays[0].test.ghm) {
+                        PrintLn("    Test_Error / Wrong GHM (%1, expected %2)",
+                                result.ghm, result.stays[0].test.ghm);
+                    }
+                    if (result.stays[0].test.ghs.IsValid()) {
+                        if (result.ghs != result.stays[0].test.ghs) {
+                            PrintLn("    Test_Error / Wrong GHS (%1, expected %2)",
+                                    result.ghs, result.stays[0].test.ghs);
+                        }
+                        if (result.stays[0].test.supplements.rea != result.supplements.rea) {
+                            PrintLn("    Test_Error / Wrong Supplement REA (%1, expected %2)",
+                                    result.supplements.rea, result.stays[0].test.supplements.rea);
+                        }
+                        if (result.stays[0].test.supplements.reasi != result.supplements.reasi) {
+                            PrintLn("    Test_Error / Wrong Supplement REASI (%1, expected %2)",
+                                    result.supplements.reasi, result.stays[0].test.supplements.reasi);
+                        }
+                        if (result.stays[0].test.supplements.si != result.supplements.si) {
+                            PrintLn("    Test_Error / Wrong Supplement SI (%1, expected %2)",
+                                    result.supplements.si, result.stays[0].test.supplements.si);
+                        }
+                        if (result.stays[0].test.supplements.src != result.supplements.src) {
+                            PrintLn("    Test_Error / Wrong Supplement SRC (%1, expected %2)",
+                                    result.supplements.src, result.stays[0].test.supplements.src);
+                        }
+                        if (result.stays[0].test.supplements.nn1 != result.supplements.nn1) {
+                            PrintLn("    Test_Error / Wrong Supplement NN1 (%1, expected %2)",
+                                    result.supplements.nn1, result.stays[0].test.supplements.nn1);
+                        }
+                        if (result.stays[0].test.supplements.nn2 != result.supplements.nn2) {
+                            PrintLn("    Test_Error / Wrong Supplement NN2 (%1, expected %2)",
+                                    result.supplements.nn2, result.stays[0].test.supplements.nn2);
+                        }
+                        if (result.stays[0].test.supplements.nn3 != result.supplements.nn3) {
+                            PrintLn("    Test_Error / Wrong Supplement NN3 (%1, expected %2)",
+                                    result.supplements.nn3, result.stays[0].test.supplements.nn3);
+                        }
+                        if (result.stays[0].test.supplements.rep != result.supplements.rep) {
+                            PrintLn("    Test_Error / Wrong Supplement REP (%1, expected %2)",
+                                    result.supplements.rep, result.stays[0].test.supplements.rep);
+                        }
+                    }
                 }
-                if (result.stays[0].test.ghm.IsValid()
-                        && result.ghm != result.stays[0].test.ghm) {
-                    PrintLn("    Test_Error / Wrong GHM (%1, expected %2)",
-                            result.ghm, result.stays[0].test.ghm);
-                }
-                if (result.stays[0].test.ghs.IsValid()) {
-                    if (result.ghs != result.stays[0].test.ghs) {
-                        PrintLn("    Test_Error / Wrong GHS (%1, expected %2)",
-                                result.ghs, result.stays[0].test.ghs);
-                    }
-                    if (result.stays[0].test.supplements.rea != result.supplements.rea) {
-                        PrintLn("    Test_Error / Wrong Supplement REA (%1, expected %2)",
-                                result.supplements.rea, result.stays[0].test.supplements.rea);
-                    }
-                    if (result.stays[0].test.supplements.reasi != result.supplements.reasi) {
-                        PrintLn("    Test_Error / Wrong Supplement REASI (%1, expected %2)",
-                                result.supplements.reasi, result.stays[0].test.supplements.reasi);
-                    }
-                    if (result.stays[0].test.supplements.si != result.supplements.si) {
-                        PrintLn("    Test_Error / Wrong Supplement SI (%1, expected %2)",
-                                result.supplements.si, result.stays[0].test.supplements.si);
-                    }
-                    if (result.stays[0].test.supplements.src != result.supplements.src) {
-                        PrintLn("    Test_Error / Wrong Supplement SRC (%1, expected %2)",
-                                result.supplements.src, result.stays[0].test.supplements.src);
-                    }
-                    if (result.stays[0].test.supplements.nn1 != result.supplements.nn1) {
-                        PrintLn("    Test_Error / Wrong Supplement NN1 (%1, expected %2)",
-                                result.supplements.nn1, result.stays[0].test.supplements.nn1);
-                    }
-                    if (result.stays[0].test.supplements.nn2 != result.supplements.nn2) {
-                        PrintLn("    Test_Error / Wrong Supplement NN2 (%1, expected %2)",
-                                result.supplements.nn2, result.stays[0].test.supplements.nn2);
-                    }
-                    if (result.stays[0].test.supplements.nn3 != result.supplements.nn3) {
-                        PrintLn("    Test_Error / Wrong Supplement NN3 (%1, expected %2)",
-                                result.supplements.nn3, result.stays[0].test.supplements.nn3);
-                    }
-                    if (result.stays[0].test.supplements.rep != result.supplements.rep) {
-                        PrintLn("    Test_Error / Wrong Supplement REP (%1, expected %2)",
-                                result.supplements.rep, result.stays[0].test.supplements.rep);
-                    }
-                }
-            }
 #endif
+            }
         }
     }
 

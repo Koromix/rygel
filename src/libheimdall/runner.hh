@@ -64,6 +64,6 @@ struct RunIO {
     } input;
 };
 
-extern EXPORT_THREAD_LOCAL RunIO *g_io;
+extern THREAD_LOCAL RunIO *g_io;
 
 bool Run(const EntitySet &entity_set, bool *run_flag = nullptr, std::mutex *lock = nullptr);
