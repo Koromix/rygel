@@ -227,11 +227,8 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
 
         return {303, response};
     }
-
-    const HashTable<GhmCode, GhmConstraint> *constraints = nullptr;
-    if (index_to_constraints.len) {
-        constraints = index_to_constraints[index - table_set->indexes.ptr];
-    }
+    const HashTable<GhmCode, GhmConstraint> &constraints =
+        *index_to_constraints[index - table_set->indexes.ptr];
 
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -250,21 +247,21 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
 
             Span<const GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
-                const GhmConstraint *constraint = constraints ? constraints->Find(ghs_access_info.ghm)
-                                                              : nullptr;
                 const GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_access_info.ghs[0]);
                 if (!ghs_price_info)
+                    continue;
+
+                const GhmConstraint *constraint = constraints.Find(ghs_access_info.ghm);
+                if (!constraint)
                     continue;
 
                 writer.StartObject();
                 writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghs_access_info.ghm).ptr);
                 writer.Key("ghm_mode"); writer.String(&ghs_access_info.ghm.parts.mode, 1);
-                if (constraint) {
+                {
                     uint32_t combined_duration_mask = constraint->duration_mask;
                     combined_duration_mask &= ~((1u << ghs_access_info.minimal_duration) - 1);
                     writer.Key("duration_mask"); writer.Uint(combined_duration_mask);
-                } else {
-                    writer.Key("duration_mask"); writer.Uint(UINT_MAX);
                 }
                 if (ghm_root_info.young_severity_limit) {
                     writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
@@ -516,7 +513,6 @@ Options:
     if (!catalog_set || !catalog_set->ghm_roots.len)
         return 1;
 
-#ifdef NDEBUG
     for (Size i = 0; i < table_set->indexes.len; i++) {
         LogInfo("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
 
@@ -529,7 +525,6 @@ Options:
 
         index_to_constraints.Append(&constraints_set[constraints_set.len - 1]);
     }
-#endif
 
 #if !defined(NDEBUG) && defined(_WIN32)
     if (!UpdateStaticResources())
