@@ -2687,7 +2687,6 @@ public:
         if (u <= INT64_MAX) {
             return ((T *)this)->Int64((int64_t)u);
         } else {
-            LogError("FUCK");
             return false;
         }
     }
