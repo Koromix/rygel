@@ -1283,7 +1283,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     source.type = SourceType::File;
     source.u.fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
     if (!source.u.fp) {
-        LogError("Cannot open file '%1'", filename);
+        LogError("Cannot open file '%1': %2", filename, strerror(errno));
         source.error = true;
         return false;
     }
@@ -1340,10 +1340,8 @@ Size StreamReader::RemainingLen() const
 
 Size StreamReader::Read(Size max_len, void *out_buf)
 {
-    if (UNLIKELY(error)) {
-        LogError("Cannot read from '%1' after error", filename);
+    if (UNLIKELY(error))
         return -1;
-    }
 
     switch (compression.type) {
         case CompressionType::None: {
@@ -1638,7 +1636,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         case SourceType::File: {
             size_t read_len = fread(out_buf, 1, (size_t)max_len, source.u.fp);
             if (ferror(source.u.fp)) {
-                LogError("Error while reading file '%1'", filename);
+                LogError("Error while reading file '%1': %2", filename, strerror(errno));
                 source.error = true;
                 return -1;
             }
@@ -1734,7 +1732,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     dest.type = DestinationType::File;
     dest.u.fp = fopen(filename, "wb" FOPEN_COMMON_FLAGS);
     if (!dest.u.fp) {
-        LogError("Cannot open file '%1'", filename);
+        LogError("Cannot open file '%1': %2", filename, strerror(errno));
         return false;
     }
     dest.owned = true;
@@ -1787,7 +1785,7 @@ bool StreamWriter::Close()
                 if (fflush(dest.u.fp) != 0 ||
                         fsync(fileno(dest.u.fp)) < 0) {
 #endif
-                    LogError("Failed to finalize writing to '%1'", filename);
+                    LogError("Failed to finalize writing to '%1': %2", filename, strerror(errno));
                     success = false;
                 }
             } break;
@@ -1807,10 +1805,8 @@ bool StreamWriter::Close()
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
-    if (UNLIKELY(error)) {
-        LogError("Cannot write to '%1' after error", filename);
+    if (UNLIKELY(error))
         return false;
-    }
 
     switch (compression.type) {
         case CompressionType::None: {
@@ -1927,7 +1923,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
     switch (dest.type) {
         case DestinationType::File: {
             if (fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.fp) != (size_t)buf.len) {
-                LogError("Failed to write to '%1'", filename);
+                LogError("Failed to write to '%1': %2", filename, strerror(errno));
                 error = true;
                 return false;
             }
