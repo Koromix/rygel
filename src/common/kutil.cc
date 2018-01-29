@@ -773,6 +773,10 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         }
     }
 
+    static std::mutex log_mutex;
+    log_mutex.lock();
+    DEFER { log_mutex.unlock(); };
+
     if (log_handlers_len) {
         (*log_handlers[log_handlers_len - 1])(level, ctx_buf, fmt, args);
     } else {
