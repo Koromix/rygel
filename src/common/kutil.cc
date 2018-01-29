@@ -1284,7 +1284,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     source.u.fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
     if (!source.u.fp) {
         LogError("Cannot open file '%1': %2", filename, strerror(errno));
-        source.error = true;
+        error = true;
         return false;
     }
     source.owned = true;
@@ -1298,7 +1298,6 @@ void StreamReader::Close()
     ReleaseResources();
 
     filename = "?";
-    source.error = false;
     source.eof = false;
     error = false;
     eof = false;
@@ -1346,7 +1345,7 @@ Size StreamReader::Read(Size max_len, void *out_buf)
     switch (compression.type) {
         case CompressionType::None: {
             Size read_len = ReadRaw(max_len, out_buf);
-            error |= source.error;
+            eof = source.eof;
             return read_len;
         } break;
 
@@ -1466,7 +1465,6 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
 
         header_len = ReadRaw(SIZE(header), header);
         if (header_len < 0) {
-            error = source.error;
             return -1;
         } else if (header_len < 10 || header[0] != 0x1F || header[1] != 0x8B) {
             LogError("File '%1' does not look like a gzip stream", filename);
@@ -1546,14 +1544,8 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                 if (!ctx->in_len) {
                     ctx->in_ptr = ctx->in;
                     ctx->in_len = ReadRaw(SIZE(ctx->in), ctx->in);
-                    if (ctx->in_len < 0) {
-                        if (read_len) {
-                            return read_len;
-                        } else {
-                            error |= source.error;
-                            return ctx->in_len;
-                        }
-                    }
+                    if (ctx->in_len < 0)
+                        return read_len ? read_len : ctx->in_len;
                 }
 
                 size_t in_arg = (size_t)ctx->in_len;
@@ -1586,8 +1578,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
 
                             Size missing_len = SIZE(footer) - ctx->in_len;
                             if (ReadRaw(missing_len, footer + ctx->in_len) < missing_len) {
-                                if (source.error) {
-                                    error = true;
+                                if (error) {
                                     return -1;
                                 } else {
                                     goto truncated_error;
@@ -1629,15 +1620,12 @@ truncated_error:
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 {
-    if (UNLIKELY(source.error))
-        return -1;
-
     switch (source.type) {
         case SourceType::File: {
             size_t read_len = fread(out_buf, 1, (size_t)max_len, source.u.fp);
             if (ferror(source.u.fp)) {
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
-                source.error = true;
+                error = true;
                 return -1;
             }
             if (feof(source.u.fp)) {

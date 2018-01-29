@@ -2355,7 +2355,6 @@ public:
         bool owned = false;
 
         bool eof;
-        bool error;
     } source;
 
     struct {
