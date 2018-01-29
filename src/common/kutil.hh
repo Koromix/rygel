@@ -975,6 +975,7 @@ public:
         Allocator allocator;
     };
 
+    // TODO: Make the iterator faster (right now it's naive and goes through operator[])
     template <typename U>
     class Iterator {
     public:
@@ -998,6 +999,18 @@ public:
         {
             Iterator ret = *this;
             ++(*this);
+            return ret;
+        }
+
+        Iterator &operator--()
+        {
+            idx--;
+            return *this;
+        }
+        Iterator operator--(int) const
+        {
+            Iterator ret = *this;
+            --(*this);
             return ret;
         }
 
