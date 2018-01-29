@@ -737,15 +737,16 @@ public:
         return data[idx];
     }
 
-    T *Append()
+    T *AppendDefault(Size count = 1)
     {
         DebugAssert(len < N);
 
         T *it = data + len;
-        len++;
+        len += count;
 
         return it;
     }
+
     T *Append(const T &value)
     {
         DebugAssert(len < N);
@@ -905,15 +906,18 @@ public:
 
     void Trim() { SetCapacity(len); }
 
-    T *Append()
+    T *AppendDefault(Size count = 1)
     {
         Grow();
 
         T *first = ptr + len;
-        new (ptr + len) T;
-        len++;
+        for (Size i = 0; i < count; i++) {
+            new (ptr + len) T;
+            len++;
+        }
         return first;
     }
+
     T *Append(const T &value)
     {
         Grow();

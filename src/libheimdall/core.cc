@@ -455,7 +455,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line = &lines[*ret.first];
                             tree_depth = line->depth + 1;
                         } else {
-                            line = lines.Append();
+                            line = lines.AppendDefault();
                             line->path = partial_path;
                             if (partial_path.len > 1) {
                                 line->title = MakeSpan(partial_path.ptr + name_offset,
@@ -487,7 +487,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                     if (!ret.second) {
                         line = &lines[*ret.first];
                     } else {
-                        line = lines.Append();
+                        line = lines.AppendDefault();
                         line->path = path;
                         line->title = title;
                         line->leaf = true;

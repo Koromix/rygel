@@ -74,7 +74,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
         {
             Size idx = inst->entities_map.FindValue(values.entity[i], -1);
             if (idx == -1) {
-                entity = inst->entity_set.entities.Append();
+                entity = inst->entity_set.entities.AppendDefault();
                 entity->id = DuplicateString(&inst->entity_set.str_alloc, values.entity[i]).ptr;
 
                 inst->entities_map.Append(entity->id, inst->entity_set.entities.len - 1);

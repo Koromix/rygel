@@ -200,9 +200,7 @@ Classify options:
 
     // TODO: Simple to use multi-append
     HeapArray<ClassifyResultSet> result_sets;
-    for (const char *filename: filenames) {
-        result_sets.Append();
-    }
+    result_sets.AppendDefault(filenames.len);
 
     BeginAsync();
     for (Size i = 0; i < filenames.len; i++) {

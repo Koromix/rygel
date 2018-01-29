@@ -518,7 +518,7 @@ Options:
 
         // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
         if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
-            HashTable<GhmCode, GhmConstraint> *constraints = constraints_set.Append();
+            HashTable<GhmCode, GhmConstraint> *constraints = constraints_set.AppendDefault();
             if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
                 return 1;
         }

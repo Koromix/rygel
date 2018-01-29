@@ -391,7 +391,7 @@ bool ParseExclusionTable(const uint8_t *file_data,
     FAIL_PARSE_IF(table.filename, table.sections[4].value_len > SIZE(ExclusionInfo::raw));
 
     for (Size i = 0; i < table.sections[4].values_count; i++) {
-        ExclusionInfo *excl = out_exclusions->Append();
+        ExclusionInfo *excl = out_exclusions->AppendDefault();
         memcpy(excl->raw, file_data + table.sections[4].raw_offset +
                           i * table.sections[4].value_len, (size_t)table.sections[4].value_len);
         memset(excl->raw + table.sections[4].value_len, 0,
@@ -926,7 +926,7 @@ public:
                     } break;
                     case JsonBranchType::EndObject: {
                         if (price_table.date.value) {
-                            PriceTable *table_it = out_price_tables->Append();
+                            PriceTable *table_it = out_price_tables->AppendDefault();
                             memmove(table_it, &price_table, SIZE(price_table));
                             memset(&price_table, 0, SIZE(price_table));
                         } else {
@@ -1223,7 +1223,7 @@ bool TableSetBuilder::Finish(TableSet *out_set)
 #define BUILD_MAP(IndexName, MapName, TableType) \
             do { \
                 if (!i || index.changed_tables & MaskEnum(TableType)) { \
-                    index.CONCAT(MapName, _map) = set.maps.MapName.Append(); \
+                    index.CONCAT(MapName, _map) = set.maps.MapName.AppendDefault(); \
                     for (auto &value: index.IndexName) { \
                         index.CONCAT(MapName, _map)->Append(&value); \
                     } \
