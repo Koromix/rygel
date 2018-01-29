@@ -467,9 +467,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size >= 0) {
                     size_unsigned = (size_t)arg.value.size;
-                    append("-");
                 } else {
                     size_unsigned = (size_t)-arg.value.size;
+                    append("-");
                 }
                 if (size_unsigned > 1024 * 1024) {
                     double size_mib = (double)size_unsigned / (1024.0 * 1024.0);
@@ -489,9 +489,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size >= 0) {
                     size_unsigned = (size_t)arg.value.size;
-                    append("-");
                 } else {
                     size_unsigned = (size_t)-arg.value.size;
+                    append("-");
                 }
                 if (size_unsigned > 1000 * 1000) {
                     double size_mib = (double)size_unsigned / (1000.0 * 1000.0);
