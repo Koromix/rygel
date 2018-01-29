@@ -511,7 +511,7 @@ bool StaySetBuilder::LoadPack(StreamReader &st)
     return true;
 
 error:
-    LogError("Error while reading stay pack file '%1'", st.filename);
+    LogError("Stay pack file '%1' is malformed", st.filename);
     return false;
 }
 
