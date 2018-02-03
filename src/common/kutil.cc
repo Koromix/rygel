@@ -330,7 +330,7 @@ uint64_t GetMonotonicTime()
         return 0;
     }
 
-    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 10000000;
+    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 #endif
 }
 
