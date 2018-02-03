@@ -487,21 +487,16 @@ bool StaySetBuilder::LoadPack(StreamReader &st)
                 set.store.procedures.end()) != SIZE(*set.store.procedures.ptr) * bh.procedures_len)
         goto error;
 
-    {
-        Size diagnoses_offset = set.store.diagnoses.len;
-        Size procedures_offset = set.store.procedures.len;
+    for (Size i = set.stays.len - bh.stays_len; i < set.stays.len; i++) {
+        Stay *stay = &set.stays[i];
 
-        for (Size i = set.stays.len - bh.stays_len; i < set.stays.len; i++) {
-            Stay *stay = &set.stays[i];
-
-            if (stay->diagnoses.len) {
-                stay->diagnoses.ptr = (DiagnosisCode *)(set.store.diagnoses.len - diagnoses_offset);
-                set.store.diagnoses.len += stay->diagnoses.len;
-            }
-            if (stay->procedures.len) {
-                stay->procedures.ptr = (ProcedureRealisation *)(set.store.procedures.len - procedures_offset);
-                set.store.procedures.len += stay->procedures.len;
-            }
+        if (stay->diagnoses.len) {
+            stay->diagnoses.ptr = (DiagnosisCode *)set.store.diagnoses.len;
+            set.store.diagnoses.len += stay->diagnoses.len;
+        }
+        if (stay->procedures.len) {
+            stay->procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
+            set.store.procedures.len += stay->procedures.len;
         }
     }
 
