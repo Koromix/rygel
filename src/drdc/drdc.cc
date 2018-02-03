@@ -202,9 +202,9 @@ Classify options:
     HeapArray<ClassifyResultSet> result_sets;
     result_sets.AppendDefault(filenames.len);
 
-    BeginAsync();
+    Async async;
     for (Size i = 0; i < filenames.len; i++) {
-        StartAsync([&, i]() {
+        async.AddTask([&, i]() {
             StaySet stay_set;
             {
                 StaySetBuilder stay_set_builder;
@@ -222,7 +222,7 @@ Classify options:
             return true;
         });
     }
-    if (!Sync())
+    if (!async.Sync())
         return false;
 
     for (Size i = 0; i < filenames.len; i++) {

@@ -6,7 +6,7 @@
 
 #define __STDC_FORMAT_MACROS
 #include <algorithm>
-#include <condition_variable>
+#include <atomic>
 #include <errno.h>
 #include <float.h>
 #include <functional>
@@ -2481,9 +2481,24 @@ private:
 // Tasks
 // ------------------------------------------------------------------------
 
-void BeginAsync(int max_threads = 0);
-void StartAsync(std::function<bool()> func);
-bool Sync();
+// TODO: Add 'max_per_core' per-task parameter to better accomodate I/O-bound tasks
+class Async {
+    std::atomic_int success {1};
+    std::atomic_int pending_tasks {0};
+
+public:
+    Async(int max_threads = 0);
+    ~Async();
+
+    void AddTask(const std::function<bool()> &f);
+    bool Sync();
+
+private:
+    void RunTask(struct Task *task);
+
+    static void RunWorker(struct ThreadPool *thread_pool, struct WorkerThread *worker);
+    static void StealAndRunTasks();
+};
 
 // ------------------------------------------------------------------------
 // Option Parser

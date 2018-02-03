@@ -20,6 +20,8 @@
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
 #endif
+#include <chrono>
+#include <condition_variable>
 
 #include "kutil.hh"
 
@@ -1952,98 +1954,152 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 // Tasks
 // ------------------------------------------------------------------------
 
+struct Task {
+    std::function<bool()> func;
+    Async *async;
+};
+
+struct WorkerThread {
+    std::mutex mutex;
+    bool running = false;
+    DynamicQueue<Task> tasks;
+};
+
 struct ThreadPool {
+    HeapArray<WorkerThread> workers;
+
     std::mutex mutex;
     std::condition_variable cv;
-
-    int max = 0;
-    int started = 0;
-    int idle = 0;
-    // Apparently it was too much to ask for a trivial 'std::thread' type,
-    // the C++ guys had to fuck this up.
-    HeapArray<std::thread *> threads;
-
-    DynamicQueue<std::function<bool()>> tasks;
-    bool success = true;
+    std::atomic_int asyncs {0};
 };
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static THREAD_LOCAL ThreadPool *thread_pool;
+static THREAD_LOCAL ThreadPool *g_thread_pool;
+static THREAD_LOCAL WorkerThread *g_worker_thread;
 
-void BeginAsync(int max_threads)
+Async::Async(int max_threads)
 {
-    Assert(!thread_pool);
+    Assert(max_threads >= 0);
 
-    thread_pool = new ThreadPool;
-    if (max_threads != 0) {
-        thread_pool->max = max_threads;
-    } else {
-        thread_pool->max = GetCpuCount();
-        DebugAssert(thread_pool->max);
+    if (!g_thread_pool) {
+        if (!max_threads) {
+            max_threads = GetCpuCount();
+            DebugAssert(max_threads > 0);
+        }
+
+        // NOTE: We're leaking one ThreadPool each time a non-worker thread uses Async for
+        // the first time. That's only one leak in most cases, when the main thread is the
+        // only non-worker thread using Async, but still. Something to keep in mind.
+        g_thread_pool = new ThreadPool;
+        g_thread_pool->workers.AppendDefault(max_threads);
+        g_worker_thread = &g_thread_pool->workers[0];
     }
 
-    thread_pool->success = true;
-}
-
-static void RunWorker(ThreadPool *thread_pool)
-{
-    std::unique_lock<std::mutex> lock(thread_pool->mutex);
-
-    thread_pool->idle++;
-    while (thread_pool->started <= thread_pool->max || thread_pool->tasks.len) {
-        if (thread_pool->tasks.len) {
-            std::function<bool()> func = std::move(thread_pool->tasks[0]);
-            thread_pool->tasks.RemoveFirst();
-
-            thread_pool->idle--;
-            lock.unlock();
-            bool ret = func();
-            lock.lock();
-            thread_pool->idle++;
-
-            thread_pool->success &= ret;
-        } else {
-            thread_pool->cv.wait(lock);
+    if (!g_thread_pool->asyncs++) {
+        std::lock_guard<std::mutex> pool_lock(g_thread_pool->mutex);
+        for (Size i = 1; i < g_thread_pool->workers.len; i++) {
+            WorkerThread *worker = &g_thread_pool->workers[i];
+            if (!worker->running) {
+                std::thread(RunWorker, g_thread_pool, &g_thread_pool->workers[i]).detach();
+                worker->running = true;
+            }
         }
     }
-    thread_pool->started--;
 }
 
-void StartAsync(std::function<bool()> func)
+Async::~Async()
 {
-    thread_pool->mutex.lock();
-    DEFER { thread_pool->mutex.unlock(); };
+    Assert(!pending_tasks);
 
-    thread_pool->tasks.Append(func);
-    thread_pool->cv.notify_all();
-
-    if (!thread_pool->idle && (thread_pool->started < thread_pool->max ||
-                               thread_pool->max < 0)) {
-        std::thread *thread = new std::thread(RunWorker, thread_pool);
-        thread_pool->threads.Append(thread);
-        thread_pool->started++;
+    if (!--g_thread_pool->asyncs) {
+        g_thread_pool->mutex.lock();
+        g_thread_pool->cv.notify_all();
+        g_thread_pool->mutex.unlock();
     }
 }
 
-bool Sync()
+void Async::AddTask(const std::function<bool()> &func)
 {
-    thread_pool->mutex.lock();
-    thread_pool->max = 0;
-    thread_pool->cv.notify_all();
-    thread_pool->mutex.unlock();
+    g_worker_thread->mutex.lock();
+    g_worker_thread->tasks.Append({func, this});
+    ++pending_tasks;
+    g_worker_thread->mutex.unlock();
 
-    bool success;
-    for (std::thread *thread: thread_pool->threads) {
-        thread->join();
-        delete thread;
+    g_thread_pool->mutex.lock();
+    g_thread_pool->cv.notify_one();
+    g_thread_pool->mutex.unlock();
+}
+
+bool Async::Sync()
+{
+    std::unique_lock<std::mutex> queue_lock(g_worker_thread->mutex);
+    while (g_worker_thread->tasks.len) {
+        Task task = std::move(g_worker_thread->tasks[g_worker_thread->tasks.len - 1]);
+        g_worker_thread->tasks.RemoveLast();
+        queue_lock.unlock();
+        task.async->RunTask(&task);
+        queue_lock.lock();
     }
-    success = thread_pool->success;
+    queue_lock.unlock();
 
-    delete thread_pool;
-    thread_pool = nullptr;
+    // TODO: This will spin too much if queues are empty but one or a few workers are
+    // still processing long running tasks.
+    while (pending_tasks) {
+        StealAndRunTasks();
+        std::this_thread::yield();
+    }
 
     return success;
+}
+
+void Async::RunTask(Task *task)
+{
+    bool ret = task->func();
+    success &= ret;
+    --pending_tasks;
+}
+
+void Async::RunWorker(ThreadPool *thread_pool, WorkerThread *worker)
+{
+    g_thread_pool = thread_pool;
+    g_worker_thread = worker;
+
+    for (;;) {
+        StealAndRunTasks();
+
+        std::unique_lock<std::mutex> pool_lock(g_thread_pool->mutex);
+        if (THREAD_MAX_IDLE_TIME < 0 || g_thread_pool->asyncs) {
+            g_thread_pool->cv.wait(pool_lock);
+        } else {
+            g_thread_pool->cv.wait_for(pool_lock,
+                                       std::chrono::duration<int, std::milli>(THREAD_MAX_IDLE_TIME));
+            if (!g_thread_pool->asyncs) {
+                worker->running = false;
+                break;
+            }
+        }
+    }
+}
+
+void Async::StealAndRunTasks()
+{
+    for (int i = 0; i < 48; i++) {
+        Size queue_idx = rand() / (RAND_MAX / g_thread_pool->workers.len + 1);
+        WorkerThread *worker = &g_thread_pool->workers[queue_idx];
+
+        if (worker->mutex.try_lock()) {
+            if (worker->tasks.len) {
+                Task task = std::move(worker->tasks[0]);
+                worker->tasks.RemoveFirst();
+                worker->mutex.unlock();
+                task.async->RunTask(&task);
+                i = -1;
+            } else {
+                worker->mutex.unlock();
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------------------------
