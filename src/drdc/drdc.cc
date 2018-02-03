@@ -209,14 +209,14 @@ Classify options:
             {
                 StaySetBuilder stay_set_builder;
 
-                LogDebug("Load '%1'", filenames[i]);
+                LogInfo("Load '%1'", filenames[i]);
                 if (!stay_set_builder.LoadFiles(filenames[i]))
                     return false;
                 if (!stay_set_builder.Finish(&stay_set))
                     return false;
             }
 
-            LogDebug("Classify '%1'", filenames[i]);
+            LogInfo("Classify '%1'", filenames[i]);
             Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_sets[i]);
 
             return true;
