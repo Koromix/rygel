@@ -1082,14 +1082,13 @@ public:
     }
     T &operator[](Size idx) { return (T &)(*(const DynamicQueue *)this)[idx]; }
 
-    T *Append(const T &value)
+    T *AppendDefault()
     {
         Size bucket_idx = (offset + len) / BucketSize;
         Size bucket_offset = (offset + len) % BucketSize;
 
         T *first = buckets[bucket_idx]->values + bucket_offset;
         new (first) T;
-        *first = value;
 
         len++;
         if (bucket_offset == BucketSize - 1) {
@@ -1098,6 +1097,13 @@ public:
         }
 
         return first;
+    }
+
+    T *Append(const T &value)
+    {
+        T *it = AppendDefault();
+        *it = value;
+        return it;
     }
 
     void RemoveFrom(Size from)
