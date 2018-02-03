@@ -63,8 +63,8 @@ struct ClassifyResultSet {
     int64_t ghs_total_cents = 0;
 };
 
-Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
-                             Span<const Stay> *out_remainder);
+Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
+                         Span<const Stay> *out_remainder = nullptr);
 
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,

@@ -73,44 +73,32 @@ static inline bool TestProcedure(const TableIndex &index,
     return GetProcedureByte(index, proc, offset) & value;
 }
 
-static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2)
+static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
+                                      ClusterMode cluster_mode)
 {
-    return stay2.stay_id == stay1.stay_id &&
-           !stay2.session_count &&
-           (stay2.entry.mode == 6 || stay2.entry.mode == 0);
+    switch (cluster_mode) {
+        case ClusterMode::StayModes: {
+            return !stay1.session_count &&
+                   stay2.stay_id == stay1.stay_id &&
+                   !stay2.session_count &&
+                   (stay2.entry.mode == 6 || stay2.entry.mode == 0);
+        } break;
+        case ClusterMode::BillId: { return stay2.bill_id == stay1.bill_id; } break;
+        case ClusterMode::Disable: { return false; } break;
+    }
+    Assert(false);
 }
 
-Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode mode,
-                             Span<const Stay> *out_remainder)
+Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
+                         Span<const Stay> *out_remainder)
 {
-    if (!stays.len)
-        return {};
+    DebugAssert(stays.len > 0);
 
-    Size agg_len = 0;
-    switch (mode) {
-        case ClusterMode::StayModes: {
-            agg_len = 1;
-            if (!stays[0].session_count) {
-                while (agg_len < stays.len &&
-                       AreStaysCompatible(stays[agg_len - 1], stays[agg_len])) {
-                    agg_len++;
-                }
-            }
-        } break;
-
-        case ClusterMode::BillId: {
-            agg_len = 1;
-            while (agg_len < stays.len &&
-                   stays[agg_len - 1].bill_id == stays[agg_len].bill_id) {
-                agg_len++;
-            }
-        } break;
-
-        case ClusterMode::Disable: {
-            agg_len = 1;
-        } break;
+    Size agg_len = 1;
+    while (agg_len < stays.len &&
+           AreStaysCompatible(stays[agg_len - 1], stays[agg_len], cluster_mode)) {
+        agg_len++;
     }
-    DebugAssert(agg_len);
 
     if (out_remainder) {
         *out_remainder = stays.Take(agg_len, stays.len - agg_len);
@@ -241,7 +229,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   HeapArray<ProcedureRealisation> *out_procedures,
                   ClassifyErrorSet *out_errors)
 {
-    Assert(stays.len > 0);
+    DebugAssert(stays.len > 0);
 
     out_agg->stays = stays;
 
@@ -1181,48 +1169,84 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
               Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
 {
-    // Reuse data structures to reduce heap allocations
-    // (around 5% faster on typical sets on my old MacBook)
-    ClassifyErrorSet errors;
-    HeapArray<DiagnosisCode> diagnoses;
-    HeapArray<ProcedureRealisation> procedures;
+    if (!stays.len)
+        return;
 
-    while (stays.len) {
-        ClassifyResult result = {};
-        ClassifyAggregate agg;
+    HeapArray<Span<const Stay>> stays_sets;
+    Size results_count = 0;
+    {
+        Span<const Stay> task_stays = stays[0];
+        for (Size i = 1; i < stays.len; i++) {
+            if (!AreStaysCompatible(stays[i - 1], stays[i], cluster_mode)) {
+                results_count++;
+                if (results_count % 8192 == 0) {
+                    stays_sets.Append(task_stays);
+                    task_stays = MakeSpan(&stays[i], 0);
+                }
+            }
+            task_stays.len++;
+        }
+        results_count++;
+        task_stays.len++;
+        stays_sets.Append(task_stays);
+    }
 
-        errors.main_error = 0;
-        diagnoses.Clear(256);
-        procedures.Clear(512);
+    out_result_set->results.Grow(results_count);
 
-        do {
-            result.stays = Cluster(stays, cluster_mode, &stays);
+    Async async;
+    for (Size i = 0; i < stays_sets.len; i++) {
+        async.AddTask([&, i]() {
+            Span<const Stay> task_stays = stays_sets[i];
 
-            result.ghm = Aggregate(table_set, result.stays,
-                                   &agg, &diagnoses, &procedures, &errors);
-            result.duration = agg.duration;
-            if (UNLIKELY(result.ghm.IsError()))
-                break;
-            result.ghm = ClassifyGhm(agg, &errors);
-            if (UNLIKELY(result.ghm.IsError()))
-                break;
-        } while (false);
+            // Reuse data structures to reduce heap allocations
+            // (around 5% faster on typical sets on my old MacBook)
+            ClassifyErrorSet errors;
+            HeapArray<DiagnosisCode> diagnoses;
+            HeapArray<ProcedureRealisation> procedures;
 
-        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
-        result.ghs_price_cents = PriceGhs(agg, result.ghs);
-        CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+            for (int j = 0; task_stays.len; j++) {
+                ClassifyResult result = {};
+                ClassifyAggregate agg;
 
-        result.main_error = errors.main_error;
-        out_result_set->results.Append(result);
+                errors.main_error = 0;
+                diagnoses.Clear(256);
+                procedures.Clear(512);
 
+                do {
+                    result.stays = Cluster(task_stays, cluster_mode, &task_stays);
+
+                    result.ghm = Aggregate(table_set, result.stays,
+                                           &agg, &diagnoses, &procedures, &errors);
+                    result.duration = agg.duration;
+                    if (UNLIKELY(result.ghm.IsError()))
+                        break;
+                    result.ghm = ClassifyGhm(agg, &errors);
+                    if (UNLIKELY(result.ghm.IsError()))
+                        break;
+                } while (false);
+                result.main_error = errors.main_error;
+
+                result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
+                result.ghs_price_cents = PriceGhs(agg, result.ghs);
+                CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+
+                out_result_set->results.ptr[out_result_set->results.len + i * 8192 + j] = result;
+            }
+            return true;
+        });
+    }
+    async.Sync();
+
+    out_result_set->results.len += results_count;
+    for (const ClassifyResult &result: out_result_set->results) {
         out_result_set->ghs_total_cents += result.ghs_price_cents;
         out_result_set->supplements.rea += result.supplements.rea;
         out_result_set->supplements.reasi += result.supplements.reasi;
         out_result_set->supplements.si += result.supplements.si;
         out_result_set->supplements.src += result.supplements.src;
+        out_result_set->supplements.rep += result.supplements.rep;
         out_result_set->supplements.nn1 += result.supplements.nn1;
         out_result_set->supplements.nn2 += result.supplements.nn2;
         out_result_set->supplements.nn3 += result.supplements.nn3;
-        out_result_set->supplements.rep += result.supplements.rep;
     }
 }

@@ -198,26 +198,26 @@ Classify options:
     if (!authorization_set)
         return false;
 
-    // TODO: Simple to use multi-append
-    HeapArray<ClassifyResultSet> result_sets;
-    result_sets.AppendDefault(filenames.len);
+    struct ClassifySet {
+        StaySet stay_set;
+        ClassifyResultSet result_set;
+    };
+    HeapArray<ClassifySet> classify_sets;
+    classify_sets.AppendDefault(filenames.len);
 
     Async async;
     for (Size i = 0; i < filenames.len; i++) {
         async.AddTask([&, i]() {
-            StaySet stay_set;
-            {
-                StaySetBuilder stay_set_builder;
-
-                LogInfo("Load '%1'", filenames[i]);
-                if (!stay_set_builder.LoadFiles(filenames[i]))
-                    return false;
-                if (!stay_set_builder.Finish(&stay_set))
-                    return false;
-            }
+            LogInfo("Load '%1'", filenames[i]);
+            StaySetBuilder stay_set_builder;
+            if (!stay_set_builder.LoadFiles(filenames[i]))
+                return false;
+            if (!stay_set_builder.Finish(&classify_sets[i].stay_set))
+                return false;
 
             LogInfo("Classify '%1'", filenames[i]);
-            Classify(*table_set, *authorization_set, stay_set.stays, cluster_mode, &result_sets[i]);
+            Classify(*table_set, *authorization_set, classify_sets[i].stay_set.stays, cluster_mode,
+                     &classify_sets[i].result_set);
 
             return true;
         });
@@ -225,21 +225,24 @@ Classify options:
     if (!async.Sync())
         return false;
 
+    LogInfo("Export");
     for (Size i = 0; i < filenames.len; i++) {
-        const ClassifyResultSet &result_set = result_sets[i];
+        const ClassifySet &classify_set = classify_sets[i];
 
         PrintLn("%1:", filenames[i]);
-        PrintLn("  N: %1", result_set.results.len);
-        PrintLn("  Total GHS: %1 €", FmtDouble((double)result_set.ghs_total_cents / 100.0, 2));
+        PrintLn("  N: %1", classify_set.result_set.results.len);
+        PrintLn("  Total GHS: %1 €",
+                FmtDouble((double)classify_set.result_set.ghs_total_cents / 100.0, 2));
         PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                result_set.supplements.rea, result_set.supplements.reasi, result_set.supplements.si,
-                result_set.supplements.src, result_set.supplements.nn1, result_set.supplements.nn2,
-                result_set.supplements.nn3, result_set.supplements.rep);
+                classify_set.result_set.supplements.rea, classify_set.result_set.supplements.reasi,
+                classify_set.result_set.supplements.si, classify_set.result_set.supplements.src,
+                classify_set.result_set.supplements.nn1, classify_set.result_set.supplements.nn2,
+                classify_set.result_set.supplements.nn3, classify_set.result_set.supplements.rep);
         PrintLn();
 
         if (verbosity >= 1 || test) {
             PrintLn("Details:");
-            for (const ClassifyResult &result: result_set.results) {
+            for (const ClassifyResult &result: classify_set.result_set.results) {
                 PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                         result.stays.len, result.ghm, result.ghs);
