@@ -13,11 +13,11 @@ struct Element {
         Period
     };
 
-    const char *concept;
-    double time;
-    int source_id;
+    const char *concept = nullptr;
+    double time = 0.0;
+    int source_id = 0;
 
-    Type type;
+    Type type = Type::Event;
     union {
         struct { double value; double min; double max; } measure;
         struct { double duration; } period;
@@ -25,19 +25,19 @@ struct Element {
 };
 
 struct Entity {
-    const char *id;
+    const char *id = nullptr;
     HeapArray<Element> elements;
 };
 
 struct SourceInfo {
-    const char *name;
-    const char *default_path;
+    const char *name = nullptr;
+    const char *default_path = nullptr;
 };
 
 struct Concept {
-    const char *name;
-    const char *title;
-    const char *path;
+    const char *name = nullptr;
+    const char *title = nullptr;
+    const char *path = nullptr;
 
     HASH_TABLE_HANDLER(Concept, name);
 };
