@@ -51,5 +51,5 @@ struct EntitySet {
     HashTable<const char *, Concept> concepts_map;
 
     // TODO: Use a string pool to use less memory and for faster string tests
-    Allocator str_alloc;
+    LinkedAllocator str_alloc;
 };

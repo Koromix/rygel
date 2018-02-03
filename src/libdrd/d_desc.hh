@@ -25,7 +25,7 @@ struct CatalogSet {
 
     HashTable<GhmRootCode, GhmRootDesc> ghm_roots_map;
 
-    Allocator str_alloc;
+    LinkedAllocator str_alloc;
 };
 
 bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,

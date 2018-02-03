@@ -31,52 +31,81 @@
 // arenas and simple pointer-bumping allocator. This will be implemented later, for
 // now it's just a doubly linked list of malloc() memory blocks.
 
-static THREAD_LOCAL BaseAllocator default_allocator;
-
-#define PTR_TO_BUCKET(Ptr) \
-    ((AllocatorBucket *)((uint8_t *)(Ptr) - OFFSET_OF(AllocatorBucket, data)))
-
-void BaseAllocator::ReleaseAll(BaseAllocator *alloc)
-{
-    if (!alloc) {
-        alloc = &default_allocator;
+class MallocAllocator: public Allocator {
+protected:
+    void *Allocate(Size size, unsigned int flags = 0) override
+    {
+        void *ptr = malloc((size_t)size);
+        Assert(ptr);
+        if (flags & (int)Allocator::Flag::Zero) {
+            memset(ptr, 0, (size_t)size);
+        }
+        return ptr;
     }
-    alloc->ReleaseAll();
-}
 
-void *BaseAllocator::Allocate(BaseAllocator *alloc, Size size, unsigned int flags)
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override
+    {
+        void *new_ptr = realloc(*ptr, (size_t)new_size);
+        Assert(new_ptr || !new_size);
+        if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+            memset((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
+        }
+        *ptr = new_ptr;
+    }
+
+    void Release(void *ptr, Size) override { free(ptr); }
+};
+
+static MallocAllocator g_malloc_allocator;
+Allocator *g_default_allocator = &g_malloc_allocator;
+
+void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
     if (!alloc) {
-        alloc = &default_allocator;
+        alloc = g_default_allocator;
     }
     return alloc->Allocate(size, flags);
 }
 
-void BaseAllocator::Resize(BaseAllocator *alloc, void **ptr, Size old_size, Size new_size,
-                           unsigned int flags)
+void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
+                       unsigned int flags)
 {
     if (!alloc) {
-        alloc = &default_allocator;
+        alloc = g_default_allocator;
     }
     alloc->Resize(ptr, old_size, new_size, flags);
 }
 
-void BaseAllocator::Release(BaseAllocator *alloc, void *ptr, Size size)
+void Allocator::Release(Allocator *alloc, void *ptr, Size size)
 {
     if (!alloc) {
-        alloc = &default_allocator;
+        alloc = g_default_allocator;
     }
     alloc->Release(ptr, size);
 }
 
-void *BaseAllocator::Allocate(Size size, unsigned int flags)
+#define PTR_TO_BUCKET(Ptr) \
+    ((Bucket *)((uint8_t *)(Ptr) - OFFSET_OF(Bucket, data)))
+
+void LinkedAllocator::ReleaseAll()
+{
+    Node *head = list.next;
+    while (head) {
+        Node *next = head->next;
+        free(head);
+        head = next;
+    }
+    list = {};
+}
+
+void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
     DebugAssert(size >= 0);
 
     if (!size)
         return nullptr;
 
-    AllocatorBucket *bucket = (AllocatorBucket *)malloc((size_t)(SIZE(*bucket) + size));
+    Bucket *bucket = (Bucket *)malloc((size_t)(SIZE(*bucket) + size));
     if (!bucket) {
         LogError("Failed to allocate %1 of memory", FmtMemSize(size));
         abort();
@@ -100,7 +129,7 @@ void *BaseAllocator::Allocate(Size size, unsigned int flags)
     return bucket->data;
 }
 
-void BaseAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
     DebugAssert(old_size >= 0);
     DebugAssert(new_size >= 0);
@@ -115,9 +144,9 @@ void BaseAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned in
         return;
     }
 
-    AllocatorBucket *bucket = PTR_TO_BUCKET(*ptr);
-    AllocatorBucket *new_bucket =
-        (AllocatorBucket *)realloc(bucket, (size_t)(SIZE(*new_bucket) + new_size));
+    Bucket *bucket = PTR_TO_BUCKET(*ptr);
+    Bucket *new_bucket =
+        (Bucket *)realloc(bucket, (size_t)(SIZE(*new_bucket) + new_size));
     if (!new_bucket) {
         LogError("Failed to resize %1 memory block to %2",
                  FmtMemSize(old_size), FmtMemSize(new_size));
@@ -140,14 +169,14 @@ void BaseAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned in
     }
 }
 
-void BaseAllocator::Release(void *ptr, Size size)
+void LinkedAllocator::Release(void *ptr, Size size)
 {
     DebugAssert(size >= 0);
 
     if (!ptr)
         return;
 
-    AllocatorBucket *bucket = PTR_TO_BUCKET(ptr);
+    Bucket *bucket = PTR_TO_BUCKET(ptr);
     if (bucket->head.next) {
         bucket->head.next->prev = bucket->head.prev;
     } else {
@@ -159,17 +188,6 @@ void BaseAllocator::Release(void *ptr, Size size)
         list.next = bucket->head.next;
     }
     free(bucket);
-}
-
-void BaseAllocator::ReleaseAll()
-{
-    AllocatorList *head = list.next;
-    while (head) {
-        AllocatorList *next = head->next;
-        free(head);
-        head = next;
-    }
-    list = {};
 }
 
 #undef PTR_TO_BUCKET

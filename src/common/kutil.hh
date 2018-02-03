@@ -477,49 +477,51 @@ T MultiCmp(T cmp_value, Args... other_args)
 // Memory / Allocator
 // ------------------------------------------------------------------------
 
-struct AllocatorList {
-    AllocatorList *prev;
-    AllocatorList *next;
-};
-
-struct AllocatorBucket {
-    AllocatorList head;
-    alignas(8) uint8_t data[];
-};
-
-class BaseAllocator {
-    // We want Allocator to be memmovable, which means we can't use a circular linked list.
-    // Even though it makes the code less nice.
-    AllocatorList list = {};
-
+class Allocator {
 public:
     enum class Flag {
         Zero = 1,
         Resizable = 2
     };
 
-    BaseAllocator() = default;
-    BaseAllocator(BaseAllocator &) = delete;
-    BaseAllocator &operator=(const BaseAllocator &) = delete;
+    Allocator() = default;
+    virtual ~Allocator() = default;
+    Allocator(Allocator &) = delete;
+    Allocator &operator=(const Allocator &) = delete;
 
-    static void ReleaseAll(BaseAllocator *alloc);
-
-    static void *Allocate(BaseAllocator *alloc, Size size, unsigned int flags = 0);
-    static void Resize(BaseAllocator *alloc, void **ptr, Size old_size, Size new_size,
+    static void *Allocate(Allocator *alloc, Size size, unsigned int flags = 0);
+    static void Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags = 0);
-    static void Release(BaseAllocator *alloc, void *ptr, Size size);
+    static void Release(Allocator *alloc, void *ptr, Size size);
 
 protected:
-    void ReleaseAll();
-
-    void *Allocate(Size size, unsigned int flags = 0);
-    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0);
-    void Release(void *ptr, Size size);
+    virtual void *Allocate(Size size, unsigned int flags = 0) = 0;
+    virtual void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) = 0;
+    virtual void Release(void *ptr, Size size) = 0;
 };
 
-class Allocator: public BaseAllocator {
+class LinkedAllocator: public Allocator {
+    struct Node {
+        Node *prev;
+        Node *next;
+    };
+    struct Bucket {
+        Node head;
+        alignas(8) uint8_t data[];
+    };
+
+    // We want allocators to be memmovable, which means we can't use a circular linked list.
+    // Even though it makes the code less nice.
+    Node list = {};
+
 public:
-    ~Allocator() { ReleaseAll(); }
+    ~LinkedAllocator() override { ReleaseAll(); }
+    void ReleaseAll();
+
+protected:
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(void *ptr, Size size) override;
 };
 
 // ------------------------------------------------------------------------
@@ -972,7 +974,7 @@ class DynamicQueue {
 public:
     struct Bucket {
         T *values;
-        Allocator allocator;
+        LinkedAllocator allocator;
     };
 
     // TODO: Make the iterator faster (right now it's naive and goes through operator[])
@@ -1171,7 +1173,7 @@ private:
     Bucket *CreateBucket()
     {
         Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, SIZE(Bucket));
-        new (&new_bucket->allocator) Allocator;
+        new (&new_bucket->allocator) LinkedAllocator;
         new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * SIZE(T));
         return new_bucket;
     }

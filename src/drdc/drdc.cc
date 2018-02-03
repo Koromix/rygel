@@ -682,7 +682,7 @@ Commands:
         PrintLn(fp, main_options_usage);
     };
 
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     if (argc < 2) {
         PrintUsage(stderr);

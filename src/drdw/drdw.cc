@@ -39,7 +39,7 @@ static const CatalogSet *catalog_set;
 
 #if !defined(NDEBUG) && defined(_WIN32)
 static HeapArray<Resource> static_resources;
-static Allocator static_alloc;
+static LinkedAllocator static_alloc;
 #else
 extern const Span<const Resource> static_resources;
 #endif
@@ -62,7 +62,7 @@ static void InitRoutes()
 #if !defined(NDEBUG) && defined(_WIN32)
 static bool UpdateStaticResources()
 {
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     Assert(GetApplicationDirectory());
     const char *filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
@@ -97,7 +97,7 @@ static bool UpdateStaticResources()
     }
 
     static_resources.Clear();
-    Allocator::ReleaseAll(&static_alloc);
+    static_alloc.ReleaseAll();
     for (const Resource &res: *dll_resources) {
         Resource new_res;
         new_res.url = DuplicateString(&static_alloc, res.url).ptr;
@@ -468,7 +468,7 @@ Options:
         PrintLn(fp, main_options_usage);
     };
 
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     // Add default data directory
     {

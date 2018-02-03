@@ -18,7 +18,7 @@ bool InitTableSet(Span<const char *const> data_directories,
                   Span<const char *const> price_filenames,
                   TableSet *out_set)
 {
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     HeapArray<const char *> tab_filenames2;
     HeapArray<const char *> price_filenames2;
@@ -66,7 +66,7 @@ bool InitAuthorizationSet(Span<const char *const> data_directories,
                           const char *authorization_filename,
                           AuthorizationSet *out_set)
 {
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     const char *filename = nullptr;
     {
@@ -99,7 +99,7 @@ bool InitCatalogSet(Span<const char *const> data_directories,
                     Span<const char *const> catalog_directories,
                     CatalogSet *out_set)
 {
-    Allocator temp_alloc;
+    LinkedAllocator temp_alloc;
 
     HeapArray<const char *> directories;
     {

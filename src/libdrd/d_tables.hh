@@ -334,7 +334,7 @@ public:
         HeapArray<HashTable<GhsCode, const GhsPriceInfo *>> ghs_prices;
     } maps;
 
-    Allocator str_alloc;
+    LinkedAllocator str_alloc;
 
     const TableIndex *FindIndex(Date date = {}) const;
     TableIndex *FindIndex(Date date = {})
@@ -351,7 +351,7 @@ class TableSetBuilder {
         bool loaded;
     };
 
-    Allocator file_alloc;
+    LinkedAllocator file_alloc;
 
     HeapArray<TableLoadInfo> table_loads;
     HeapArray<PriceTable> price_tables;
