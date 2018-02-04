@@ -1186,7 +1186,7 @@ private:
 
     void DeleteBucket(Bucket *bucket)
     {
-        bucket->allocator.~Allocator();
+        bucket->allocator.~LinkedAllocator();
         Allocator::Release(buckets.allocator, bucket, SIZE(Bucket));
     }
 };
