@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libdrd/libdrd.hh"
+#include "../common/json.hh"
 #ifndef _WIN32
     #include <signal.h>
 #endif
@@ -11,7 +12,6 @@
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
-#include "../../lib/rapidjson/writer.h"
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 

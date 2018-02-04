@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
+#include "../common/json.hh"
 #include "d_desc.hh"
 
 class JsonGhmRootDescHandler: public BaseJsonHandler<JsonGhmRootDescHandler> {
