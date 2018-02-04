@@ -3,27 +3,29 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 # The platform layer is only available for Win32, for now
-if (WIN32)
-    set(LIBHEIMDALL_SRC ../common/kutil.cc
-                        ../common/kutil.hh
-                        animation.hh
-                        core.cc
-                        core.hh
-                        data.hh
-                        opengl.cc
-                        opengl.hh
-                        opengl_func.inc
-                        render.cc
-                        render.hh
-                        runner_win32.cc
-                        runner.hh)
-    add_library(heimdall STATIC ${LIBHEIMDALL_SRC})
-    set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    find_package(Threads)
-    target_link_libraries(heimdall PUBLIC miniz imgui Threads::Threads)
-    if(WIN32)
-        target_link_libraries(heimdall PUBLIC gdi32 opengl32 imm32)
-    endif()
-    add_amalgamated_file(heimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall.hh)
-    enable_unity_build(heimdall)
+if (NOT WIN32)
+    return()
 endif()
+
+set(LIBHEIMDALL_SRC ../common/kutil.cc
+                    ../common/kutil.hh
+                    animation.hh
+                    core.cc
+                    core.hh
+                    data.hh
+                    opengl.cc
+                    opengl.hh
+                    opengl_func.inc
+                    render.cc
+                    render.hh
+                    runner_win32.cc
+                    runner.hh)
+add_library(heimdall STATIC ${LIBHEIMDALL_SRC})
+set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
+find_package(Threads)
+target_link_libraries(heimdall PUBLIC miniz imgui Threads::Threads)
+if(WIN32)
+    target_link_libraries(heimdall PUBLIC gdi32 opengl32 imm32)
+endif()
+add_amalgamated_file(heimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall.hh)
+enable_unity_build(heimdall)
