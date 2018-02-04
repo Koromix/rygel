@@ -1172,6 +1172,8 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
     if (!stays.len)
         return;
 
+    static const int set_size = 2048;
+
     HeapArray<Span<const Stay>> stays_sets;
     Size results_count = 0;
     {
@@ -1179,7 +1181,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         for (Size i = 1; i < stays.len; i++) {
             if (!AreStaysCompatible(stays[i - 1], stays[i], cluster_mode)) {
                 results_count++;
-                if (results_count % 8192 == 0) {
+                if (results_count % set_size == 0) {
                     stays_sets.Append(task_stays);
                     task_stays = MakeSpan(&stays[i], 0);
                 }
@@ -1204,7 +1206,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
             HeapArray<DiagnosisCode> diagnoses;
             HeapArray<ProcedureRealisation> procedures;
 
-            for (int j = 0; task_stays.len; j++) {
+            for (Size j = out_result_set->results.len; task_stays.len; j++) {
                 ClassifyResult result = {};
                 ClassifyAggregate agg;
 
@@ -1230,7 +1232,7 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
                 result.ghs_price_cents = PriceGhs(agg, result.ghs);
                 CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
 
-                out_result_set->results.ptr[out_result_set->results.len + i * 8192 + j] = result;
+                out_result_set->results.ptr[i * set_size + j] = result;
             }
             return true;
         });
