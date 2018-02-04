@@ -1970,6 +1970,7 @@ struct ThreadPool {
     std::mutex mutex;
     std::condition_variable cv;
     std::atomic_int asyncs {0};
+    std::atomic_int pending_tasks {0};
 };
 
 // thread_local breaks down on MinGW when destructors are involved, work
@@ -2009,25 +2010,22 @@ Async::Async(int max_threads)
 
 Async::~Async()
 {
-    Assert(!pending_tasks);
-
-    if (!--g_thread_pool->asyncs) {
-        g_thread_pool->mutex.lock();
-        g_thread_pool->cv.notify_all();
-        g_thread_pool->mutex.unlock();
-    }
+    Assert(!remaining_tasks);
+    g_thread_pool->asyncs--;
 }
 
 void Async::AddTask(const std::function<bool()> &func)
 {
     g_worker_thread->mutex.lock();
     g_worker_thread->tasks.Append({func, this});
-    ++pending_tasks;
+    remaining_tasks++;
     g_worker_thread->mutex.unlock();
 
-    g_thread_pool->mutex.lock();
-    g_thread_pool->cv.notify_one();
-    g_thread_pool->mutex.unlock();
+    if (!g_thread_pool->pending_tasks++) {
+        g_thread_pool->mutex.lock();
+        g_thread_pool->cv.notify_all();
+        g_thread_pool->mutex.unlock();
+    }
 }
 
 bool Async::Sync()
@@ -2044,7 +2042,7 @@ bool Async::Sync()
 
     // TODO: This will spin too much if queues are empty but one or a few workers are
     // still processing long running tasks.
-    while (pending_tasks) {
+    while (remaining_tasks) {
         StealAndRunTasks();
         std::this_thread::yield();
     }
@@ -2054,9 +2052,10 @@ bool Async::Sync()
 
 void Async::RunTask(Task *task)
 {
+    g_thread_pool->pending_tasks--;
     bool ret = task->func();
     success &= ret;
-    --pending_tasks;
+    remaining_tasks--;
 }
 
 void Async::RunWorker(ThreadPool *thread_pool, WorkerThread *worker)
@@ -2068,15 +2067,17 @@ void Async::RunWorker(ThreadPool *thread_pool, WorkerThread *worker)
         StealAndRunTasks();
 
         std::unique_lock<std::mutex> pool_lock(g_thread_pool->mutex);
-        if (THREAD_MAX_IDLE_TIME < 0 || g_thread_pool->asyncs) {
-            g_thread_pool->cv.wait(pool_lock);
-        } else {
+        while (!g_thread_pool->pending_tasks) {
+#if THREAD_MAX_IDLE_TIME >= 0
             g_thread_pool->cv.wait_for(pool_lock,
                                        std::chrono::duration<int, std::milli>(THREAD_MAX_IDLE_TIME));
             if (!g_thread_pool->asyncs) {
                 worker->running = false;
-                break;
+                return;
             }
+#else
+            g_thread_pool->cv.wait(pool_lock);
+#endif
         }
     }
 }
