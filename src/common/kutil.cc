@@ -38,7 +38,10 @@ protected:
     void *Allocate(Size size, unsigned int flags = 0) override
     {
         void *ptr = malloc((size_t)size);
-        Assert(ptr);
+        if (UNLIKELY(!ptr)) {
+            LogError("Failed to allocate %1 of memory", FmtMemSize(size));
+            abort();
+        }
         if (flags & (int)Allocator::Flag::Zero) {
             memset(ptr, 0, (size_t)size);
         }
@@ -48,7 +51,11 @@ protected:
     void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override
     {
         void *new_ptr = realloc(*ptr, (size_t)new_size);
-        Assert(new_ptr || !new_size);
+        if (UNLIKELY(new_size && !new_ptr)) {
+            LogError("Failed to resize %1 memory block to %2",
+                     FmtMemSize(old_size), FmtMemSize(new_size));
+            abort();
+        }
         if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
             memset((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
         }
@@ -66,6 +73,8 @@ static Allocator *GetDefaultAllocator()
 
 void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
+    DebugAssert(size >= 0);
+
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
@@ -75,6 +84,9 @@ void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags)
 {
+    DebugAssert(old_size >= 0);
+    DebugAssert(new_size >= 0);
+
     if (!alloc) {
         alloc = GetDefaultAllocator();
     }
@@ -97,7 +109,7 @@ void LinkedAllocator::ReleaseAll()
     Node *head = list.next;
     while (head) {
         Node *next = head->next;
-        free(head);
+        Allocator::Release(allocator, head, -1);
         head = next;
     }
     list = {};
@@ -105,16 +117,8 @@ void LinkedAllocator::ReleaseAll()
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
-    DebugAssert(size >= 0);
+    Bucket *bucket = (Bucket *)Allocator::Allocate(allocator, SIZE(*bucket) + size, flags);
 
-    if (!size)
-        return nullptr;
-
-    Bucket *bucket = (Bucket *)malloc((size_t)(SIZE(*bucket) + size));
-    if (!bucket) {
-        LogError("Failed to allocate %1 of memory", FmtMemSize(size));
-        abort();
-    }
     if (list.prev) {
         list.prev->next = &bucket->head;
         bucket->head.prev = list.prev;
@@ -127,72 +131,54 @@ void *LinkedAllocator::Allocate(Size size, unsigned int flags)
         bucket->head.next = nullptr;
     }
 
-    if (flags & (int)Flag::Zero) {
-        memset(bucket->data, 0, (size_t)size);
-    }
-
     return bucket->data;
 }
 
 void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    DebugAssert(old_size >= 0);
-    DebugAssert(new_size >= 0);
-
     if (!*ptr) {
-        *ptr = Allocate(new_size, flags | (int)Flag::Resizable);
-        return;
-    }
-    if (!new_size) {
+        *ptr = Allocate(new_size, flags);
+    } else if (!new_size) {
         Release(*ptr, old_size);
         *ptr = nullptr;
-        return;
-    }
-
-    Bucket *bucket = PTR_TO_BUCKET(*ptr);
-    Bucket *new_bucket =
-        (Bucket *)realloc(bucket, (size_t)(SIZE(*new_bucket) + new_size));
-    if (!new_bucket) {
-        LogError("Failed to resize %1 memory block to %2",
-                 FmtMemSize(old_size), FmtMemSize(new_size));
-        abort();
-    }
-    if (new_bucket->head.next) {
-        new_bucket->head.next->prev = &new_bucket->head;
     } else {
-        list.prev = &new_bucket->head;
-    }
-    if (new_bucket->head.prev) {
-        new_bucket->head.prev->next = &new_bucket->head;
-    } else {
-        list.next = &new_bucket->head;
-    }
-    *ptr = new_bucket->data;
+        Bucket *bucket = PTR_TO_BUCKET(*ptr);
+        Allocator::Resize(allocator, (void **)&bucket, SIZE(*bucket) + old_size,
+                          SIZE(*bucket) + new_size, flags);
 
-    if (flags & (int)Flag::Zero && new_size > old_size) {
-        memset(new_bucket->data + old_size, 0, (size_t)(new_size - old_size));
+        if (bucket->head.next) {
+            bucket->head.next->prev = &bucket->head;
+        } else {
+            list.prev = &bucket->head;
+        }
+        if (bucket->head.prev) {
+            bucket->head.prev->next = &bucket->head;
+        } else {
+            list.next = &bucket->head;
+        }
+
+        *ptr = bucket->data;
     }
 }
 
 void LinkedAllocator::Release(void *ptr, Size size)
 {
-    DebugAssert(size >= 0);
+    if (ptr) {
+        Bucket *bucket = PTR_TO_BUCKET(ptr);
 
-    if (!ptr)
-        return;
+        if (bucket->head.next) {
+            bucket->head.next->prev = bucket->head.prev;
+        } else {
+            list.prev = bucket->head.prev;
+        }
+        if (bucket->head.prev) {
+            bucket->head.prev->next = bucket->head.next;
+        } else {
+            list.next = bucket->head.next;
+        }
+    }
 
-    Bucket *bucket = PTR_TO_BUCKET(ptr);
-    if (bucket->head.next) {
-        bucket->head.next->prev = bucket->head.prev;
-    } else {
-        list.prev = bucket->head.prev;
-    }
-    if (bucket->head.prev) {
-        bucket->head.prev->next = bucket->head.next;
-    } else {
-        list.next = bucket->head.next;
-    }
-    free(bucket);
+    Allocator::Release(allocator, ptr, size);
 }
 
 #undef PTR_TO_BUCKET

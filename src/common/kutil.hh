@@ -508,15 +508,18 @@ class LinkedAllocator: public Allocator {
         Node *next;
     };
     struct Bucket {
+         // Keep head first or stuff will break
         Node head;
         alignas(8) uint8_t data[];
     };
 
+    Allocator *allocator;
     // We want allocators to be memmovable, which means we can't use a circular linked list.
     // Even though it makes the code less nice.
     Node list = {};
 
 public:
+    LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
     ~LinkedAllocator() override { ReleaseAll(); }
     void ReleaseAll();
 

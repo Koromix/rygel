@@ -117,9 +117,7 @@ static bool UpdateStaticResources()
 
 static void ReleaseCallback(void *ptr)
 {
-    // FIXME: Even though Allocator::Release() does not yet care about the size
-    // argument, eventually it might. When it does, this will break.
-    Allocator::Release(nullptr, ptr, 0);
+    Allocator::Release(nullptr, ptr, -1);
 }
 
 static void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
