@@ -58,13 +58,16 @@ protected:
     void Release(void *ptr, Size) override { free(ptr); }
 };
 
-static MallocAllocator g_malloc_allocator;
-Allocator *g_default_allocator = &g_malloc_allocator;
+static Allocator *GetDefaultAllocator()
+{
+    static Allocator *default_allocator = new DEFAULT_ALLOCATOR;
+    return default_allocator;
+}
 
 void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
     if (!alloc) {
-        alloc = g_default_allocator;
+        alloc = GetDefaultAllocator();
     }
     return alloc->Allocate(size, flags);
 }
@@ -73,7 +76,7 @@ void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_siz
                        unsigned int flags)
 {
     if (!alloc) {
-        alloc = g_default_allocator;
+        alloc = GetDefaultAllocator();
     }
     alloc->Resize(ptr, old_size, new_size, flags);
 }
@@ -81,7 +84,7 @@ void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_siz
 void Allocator::Release(Allocator *alloc, void *ptr, Size size)
 {
     if (!alloc) {
-        alloc = g_default_allocator;
+        alloc = GetDefaultAllocator();
     }
     alloc->Release(ptr, size);
 }
