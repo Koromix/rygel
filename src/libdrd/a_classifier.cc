@@ -1189,7 +1189,6 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
             task_stays.len++;
         }
         results_count++;
-        task_stays.len++;
         stays_sets.Append(task_stays);
     }
 
