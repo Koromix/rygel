@@ -1071,9 +1071,8 @@ INIT(MountHostFilesystem)
 {
     running_in_node = EM_ASM_INT({
         try {
+            var path = require('path');
             if (process.platform == 'win32') {
-                var path = require('path');
-
                 FS.mkdir('/host');
                 for (var c = 'a'.charCodeAt(0); c <= 'z'.charCodeAt(0); c++) {
                     var disk_path = String.fromCharCode(c) + ':';
