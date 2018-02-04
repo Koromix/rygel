@@ -551,8 +551,6 @@ bool StaySetBuilder::Finish(StaySet *out_set)
 #undef FIX_SPAN
     }
 
-    memcpy(out_set, &set, SIZE(set));
-    memset(&set, 0, SIZE(set));
-
+    SwapMemory(out_set, &set, SIZE(set));
     return true;
 }

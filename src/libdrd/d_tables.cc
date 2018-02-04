@@ -1263,9 +1263,7 @@ bool TableSetBuilder::Finish(TableSet *out_set)
     if (!success)
         return false;
 
-    memcpy(out_set, &set, SIZE(set));
-    memset(&set, 0, SIZE(set));
-
+    SwapMemory(out_set, &set, SIZE(set));
     return true;
 }
 

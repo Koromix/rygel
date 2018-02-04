@@ -102,6 +102,7 @@ enum class Endianness {
     #define FORCE_INLINE __attribute__((always_inline)) inline
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
     #define UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
+    #define RESTRICT __restrict__
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -122,6 +123,7 @@ enum class Endianness {
     #define FORCE_INLINE __forceinline
     #define LIKELY(Cond) (Cond)
     #define UNLIKELY(Cond) (Cond)
+    #define RESTRICT __restrict
 #else
     #error Compiler not supported
 #endif
@@ -212,6 +214,16 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     template <typename T>
     constexpr T BigEndian(T v) { return v; }
 #endif
+
+static inline void SwapMemory(void *RESTRICT ptr1, void *RESTRICT ptr2, Size len)
+{
+    uint8_t *raw1 = (uint8_t *)ptr1, *raw2 = (uint8_t *)ptr2;
+    for (Size i = 0; i < len; i++) {
+        uint8_t tmp = raw1[i];
+        raw1[i] = raw2[i];
+        raw2[i] = tmp;
+    }
+}
 
 #if defined(__GNUC__)
     static inline int CountLeadingZeros(uint32_t u)
