@@ -822,8 +822,8 @@ void StartConsoleLog(LogLevel level)
 
     switch (level)  {
         case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
-        case LogLevel::Info: break;
-        case LogLevel::Debug: { fputs("\x1B[36m", stderr); } break;
+        case LogLevel::Info: { fputs("\x1B[36m", stderr); } break;
+        case LogLevel::Debug: { fputs("\x1B[33m", stderr); } break;
     }
 }
 
