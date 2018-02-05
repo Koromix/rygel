@@ -2031,21 +2031,23 @@ void Async::AddTask(const std::function<bool()> &func)
 
 bool Async::Sync()
 {
-    std::unique_lock<std::mutex> queue_lock(g_worker_thread->mutex);
-    while (g_worker_thread->tasks.len) {
-        Task task = std::move(g_worker_thread->tasks[g_worker_thread->tasks.len - 1]);
-        g_worker_thread->tasks.RemoveLast();
+    if (remaining_tasks) {
+        std::unique_lock<std::mutex> queue_lock(g_worker_thread->mutex);
+        while (g_worker_thread->tasks.len) {
+            Task task = std::move(g_worker_thread->tasks[g_worker_thread->tasks.len - 1]);
+            g_worker_thread->tasks.RemoveLast();
+            queue_lock.unlock();
+            task.async->RunTask(&task);
+            queue_lock.lock();
+        }
         queue_lock.unlock();
-        task.async->RunTask(&task);
-        queue_lock.lock();
-    }
-    queue_lock.unlock();
 
-    // TODO: This will spin too much if queues are empty but one or a few workers are
-    // still processing long running tasks.
-    while (remaining_tasks) {
-        StealAndRunTasks();
-        std::this_thread::yield();
+        // TODO: This will spin too much if queues are empty but one or a few workers are
+        // still processing long running tasks.
+        while (remaining_tasks) {
+            StealAndRunTasks();
+            std::this_thread::yield();
+        }
     }
 
     return success;
