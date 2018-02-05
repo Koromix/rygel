@@ -368,22 +368,25 @@ public:
     ScopeGuard(Fun f_) : f(std::move(f_)) {}
     ~ScopeGuard()
     {
-        if (enabled)
+        if (enabled) {
             f();
+        }
     }
 
-    // Those two methods allow for lambda assignement, which makes possible the VZ_DEFER
-    // syntax possible.
+    // With C++17 we don't need any copy or move operator thanks to guaranteed
+    // copy elision. I think. MSVC does not agree... yet?
+#ifdef _MSC_VER
     ScopeGuard(ScopeGuard &&other)
         : f(std::move(other.f)), enabled(other.enabled)
     {
-        other.disable();
+        other.enabled = false;
     }
+#endif
+
+    ScopeGuard(const ScopeGuard &) = delete;
+    ScopeGuard &operator=(ScopeGuard &) = delete;
 
     void disable() { enabled = false; }
-
-    ScopeGuard(ScopeGuard &) = delete;
-    ScopeGuard& operator=(const ScopeGuard &) = delete;
 };
 
 // Honestly, I don't understand all the details in there, this comes from Andrei Alexandrescu.
