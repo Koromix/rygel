@@ -1979,15 +1979,11 @@ struct ThreadPool {
 static THREAD_LOCAL ThreadPool *g_thread_pool;
 static THREAD_LOCAL WorkerThread *g_worker_thread;
 
-Async::Async(int max_threads)
+Async::Async()
 {
-    Assert(max_threads >= 0);
-
     if (!g_thread_pool) {
-        if (!max_threads) {
-            max_threads = GetCpuCount();
-            DebugAssert(max_threads > 0);
-        }
+        int max_threads = GetCpuCount();
+        DebugAssert(max_threads > 0);
 
         // NOTE: We're leaking one ThreadPool each time a non-worker thread uses Async for
         // the first time. That's only one leak in most cases, when the main thread is the

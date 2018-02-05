@@ -2498,14 +2498,16 @@ private:
 // Tasks
 // ------------------------------------------------------------------------
 
-// TODO: Add 'max_per_core' per-task parameter to better accomodate I/O-bound tasks
 class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
 public:
-    Async(int max_threads = 0);
+    Async();
     ~Async();
+
+    Async(Async &) = delete;
+    Async &operator=(const Async &) = delete;
 
     void AddTask(const std::function<bool()> &f);
     bool Sync();
