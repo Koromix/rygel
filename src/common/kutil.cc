@@ -763,7 +763,7 @@ static bool ConfigLogTerminalOutput()
             DWORD new_mode = orig_console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
             output_is_terminal = SetConsoleMode(stderr_handle, new_mode);
             atexit([]() {
-                WriteFile(stderr_handle, "\x1B[0m", strlen("\x1B[0m"), nullptr, nullptr);
+                WriteFile(stderr_handle, "\x1B[0m", (DWORD)strlen("\x1B[0m"), nullptr, nullptr);
                 SetConsoleMode(stderr_handle, orig_console_mode);
             });
         }
