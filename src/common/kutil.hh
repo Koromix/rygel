@@ -2522,6 +2522,45 @@ private:
     static void StealAndRunTasks();
 };
 
+class AsyncHelper {
+    Async async;
+
+public:
+    template <typename Fun>
+    AsyncHelper(Fun f)
+    {
+// NOTE: Try to remove this hack in a few months
+#ifdef __EMSCRIPTEN__
+        if constexpr(std::is_same<typename std::result_of<Fun()>::type, void>::value) {
+#else
+        if constexpr(std::is_same<typename std::invoke_result<Fun>::type, void>::value) {
+#endif
+            async.AddTask([=]() {
+                f();
+                return true;
+            });
+        } else {
+            async.AddTask(std::function<bool()>(f));
+        }
+    }
+    ~AsyncHelper() { Sync(); }
+
+    AsyncHelper(const AsyncHelper &other) = delete;
+    AsyncHelper &operator=(const AsyncHelper &) = delete;
+
+    bool Sync() { return async.Sync(); }
+};
+
+// See DEFER for an explanation about the suffixes used here
+#define ASYNC \
+    AsyncHelper UNIQUE_ID(async) = [&]()
+#define ASYNC_N(Name) \
+    AsyncHelper Name = [&]()
+#define ASYNC_C(...) \
+    AsyncHelper UNIQUE_ID(async) = [&, __VA_ARGS__]()
+#define ASYNC_NC(Name, ...) \
+    AsyncHelper Name = [&, __VA_ARGS__]()
+
 // ------------------------------------------------------------------------
 // Option Parser
 // ------------------------------------------------------------------------
