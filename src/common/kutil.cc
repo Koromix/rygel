@@ -50,19 +50,27 @@ protected:
 
     void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override
     {
-        void *new_ptr = realloc(*ptr, (size_t)new_size);
-        if (UNLIKELY(new_size && !new_ptr)) {
-            LogError("Failed to resize %1 memory block to %2",
-                     FmtMemSize(old_size), FmtMemSize(new_size));
-            abort();
+        if (!new_size) {
+            Release(*ptr, old_size);
+            *ptr = nullptr;
+        } else {
+            void *new_ptr = realloc(*ptr, (size_t)new_size);
+            if (UNLIKELY(new_size && !new_ptr)) {
+                LogError("Failed to resize %1 memory block to %2",
+                         FmtMemSize(old_size), FmtMemSize(new_size));
+                abort();
+            }
+            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+                memset((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
+            }
+            *ptr = new_ptr;
         }
-        if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
-            memset((uint8_t *)new_ptr + old_size, 0, (size_t)(new_size - old_size));
-        }
-        *ptr = new_ptr;
     }
 
-    void Release(void *ptr, Size) override { free(ptr); }
+    void Release(void *ptr, Size) override
+    {
+        free(ptr);
+    }
 };
 
 static Allocator *GetDefaultAllocator()
