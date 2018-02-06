@@ -1210,7 +1210,7 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               Span<const Stay> stays, ClusterMode cluster_mode,
-              ClassifyResultSet *out_result_set)
+              HeapArray<ClassifyResult> *out_results)
 {
     if (!stays.len)
         return;
@@ -1219,19 +1219,19 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
 
     // Pessimistic assumption (no multi-stay), but we cannot resize the
     // buffer as we go because the worker threads will fill it directly.
-    out_result_set->results.Grow(stays.len);
+    out_results->Grow(stays.len);
 
     Async async;
     Size results_count = 1;
     {
-        Size results_offset = out_result_set->results.len;
+        Size results_offset = out_results->len;
         Span<const Stay> task_stays = stays[0];
         for (Size i = 1; i < stays.len; i++) {
             if (!AreStaysCompatible(stays[i - 1], stays[i], cluster_mode)) {
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
                         ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
-                                    out_result_set->results.ptr + results_offset);
+                                    out_results->ptr + results_offset);
                         return true;
                     });
                     results_offset += task_size;
@@ -1243,22 +1243,28 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
         }
         async.AddTask([&, task_stays, results_offset]() mutable {
             ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
-                        out_result_set->results.ptr + results_offset);
+                        out_results->ptr + results_offset);
             return true;
         });
     }
     async.Sync();
 
-    out_result_set->results.len += results_count;
-    for (const ClassifyResult &result: out_result_set->results) {
-        out_result_set->ghs_total_cents += result.ghs_price_cents;
-        out_result_set->supplements.rea += result.supplements.rea;
-        out_result_set->supplements.reasi += result.supplements.reasi;
-        out_result_set->supplements.si += result.supplements.si;
-        out_result_set->supplements.src += result.supplements.src;
-        out_result_set->supplements.rep += result.supplements.rep;
-        out_result_set->supplements.nn1 += result.supplements.nn1;
-        out_result_set->supplements.nn2 += result.supplements.nn2;
-        out_result_set->supplements.nn3 += result.supplements.nn3;
+    out_results->len += results_count;
+}
+
+void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary)
+{
+    out_summary->results_count += results.len;
+    for (const ClassifyResult &result: results) {
+        out_summary->stays_count += result.stays.len;
+        out_summary->ghs_total_cents += result.ghs_price_cents;
+        out_summary->supplements.rea += result.supplements.rea;
+        out_summary->supplements.reasi += result.supplements.reasi;
+        out_summary->supplements.si += result.supplements.si;
+        out_summary->supplements.src += result.supplements.src;
+        out_summary->supplements.rep += result.supplements.rep;
+        out_summary->supplements.nn1 += result.supplements.nn1;
+        out_summary->supplements.nn2 += result.supplements.nn2;
+        out_summary->supplements.nn3 += result.supplements.nn3;
     }
 }

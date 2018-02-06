@@ -200,7 +200,7 @@ Classify options:
 
     struct ClassifySet {
         StaySet stay_set;
-        ClassifyResultSet result_set;
+        HeapArray<ClassifyResult> results;
     };
     HeapArray<ClassifySet> classify_sets;
     classify_sets.AppendDefault(filenames.len);
@@ -217,7 +217,7 @@ Classify options:
 
             LogInfo("Classify '%1'", filenames[i]);
             Classify(*table_set, *authorization_set, classify_sets[i].stay_set.stays, cluster_mode,
-                     &classify_sets[i].result_set);
+                     &classify_sets[i].results);
 
             return true;
         });
@@ -225,24 +225,33 @@ Classify options:
     if (!async.Sync())
         return false;
 
+    const auto PrintSummary = [](const char *title, const ClassifySummary &summary) {
+        PrintLn("%1:", title);
+        PrintLn("  Results: %1", summary.results_count);
+        PrintLn("  Stays: %1", summary.stays_count);
+        PrintLn("  Total GHS: %1 €",
+                FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
+        PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                summary.supplements.rea, summary.supplements.reasi,
+                summary.supplements.si, summary.supplements.src,
+                summary.supplements.nn1, summary.supplements.nn2,
+                summary.supplements.nn3, summary.supplements.rep);
+        PrintLn();
+    };
+
     LogInfo("Export");
+    ClassifySummary main_summary = {};
     for (Size i = 0; i < filenames.len; i++) {
         const ClassifySet &classify_set = classify_sets[i];
+        ClassifySummary summary = {};
+        Summarize(classify_set.results, &summary);
+        main_summary += summary;
 
-        PrintLn("%1:", filenames[i]);
-        PrintLn("  N: %1", classify_set.result_set.results.len);
-        PrintLn("  Total GHS: %1 €",
-                FmtDouble((double)classify_set.result_set.ghs_total_cents / 100.0, 2));
-        PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                classify_set.result_set.supplements.rea, classify_set.result_set.supplements.reasi,
-                classify_set.result_set.supplements.si, classify_set.result_set.supplements.src,
-                classify_set.result_set.supplements.nn1, classify_set.result_set.supplements.nn2,
-                classify_set.result_set.supplements.nn3, classify_set.result_set.supplements.rep);
-        PrintLn();
+        PrintSummary(filenames[i], summary);
 
         if (verbosity >= 1 || test) {
             PrintLn("Details:");
-            for (const ClassifyResult &result: classify_set.result_set.results) {
+            for (const ClassifyResult &result: classify_set.results) {
                 PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                         result.stays.len, result.ghm, result.ghs);
@@ -316,6 +325,10 @@ Classify options:
 #endif
             }
         }
+    }
+
+    if (filenames.len > 1) {
+        PrintSummary("Global summary", main_summary);
     }
 
     return true;

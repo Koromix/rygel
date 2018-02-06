@@ -271,9 +271,9 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     LogDebug("Classify");
 
-    ClassifyResultSet result_set = {};
+    HeapArray<ClassifyResult> results;
     Classify(classifier_set->table_set, classifier_set->authorization_set,
-             stay_set.stays, ClusterMode::BillId, &result_set);
+             stay_set.stays, ClusterMode::BillId, &results);
 
     LogDebug("Export");
 
@@ -281,23 +281,23 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     {
         char buf[32];
 
-        Rcpp::IntegerVector bill_id(result_set.results.len);
-        Rcpp::CharacterVector exit_date(result_set.results.len);
-        Rcpp::IntegerVector duration(result_set.results.len);
-        Rcpp::CharacterVector ghm(result_set.results.len);
-        Rcpp::IntegerVector ghs(result_set.results.len);
-        Rcpp::NumericVector ghs_price(result_set.results.len);
-        Rcpp::IntegerVector rea(result_set.results.len);
-        Rcpp::IntegerVector reasi(result_set.results.len);
-        Rcpp::IntegerVector si(result_set.results.len);
-        Rcpp::IntegerVector src(result_set.results.len);
-        Rcpp::IntegerVector nn1(result_set.results.len);
-        Rcpp::IntegerVector nn2(result_set.results.len);
-        Rcpp::IntegerVector nn3(result_set.results.len);
-        Rcpp::IntegerVector rep(result_set.results.len);
+        Rcpp::IntegerVector bill_id(results.len);
+        Rcpp::CharacterVector exit_date(results.len);
+        Rcpp::IntegerVector duration(results.len);
+        Rcpp::CharacterVector ghm(results.len);
+        Rcpp::IntegerVector ghs(results.len);
+        Rcpp::NumericVector ghs_price(results.len);
+        Rcpp::IntegerVector rea(results.len);
+        Rcpp::IntegerVector reasi(results.len);
+        Rcpp::IntegerVector si(results.len);
+        Rcpp::IntegerVector src(results.len);
+        Rcpp::IntegerVector nn1(results.len);
+        Rcpp::IntegerVector nn2(results.len);
+        Rcpp::IntegerVector nn3(results.len);
+        Rcpp::IntegerVector rep(results.len);
 
-        for (Size i = 0; i < result_set.results.len; i++) {
-            const ClassifyResult &result = result_set.results[i];
+        for (Size i = 0; i < results.len; i++) {
+            const ClassifyResult &result = results[i];
 
             bill_id[i] = result.stays[0].bill_id;
             exit_date[i] = Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date).ptr;

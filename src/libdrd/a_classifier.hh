@@ -56,11 +56,34 @@ struct ClassifyResult {
     int ghs_price_cents;
 };
 
-struct ClassifyResultSet {
-    HeapArray<ClassifyResult> results;
+struct ClassifySummary {
+    Size results_count = 0;
+    Size stays_count = 0;
 
     SupplementCounters supplements;
     int64_t ghs_total_cents = 0;
+
+    ClassifySummary &operator+=(const ClassifySummary &other)
+    {
+        results_count += other.results_count;
+        stays_count += other.stays_count;
+        ghs_total_cents += other.ghs_total_cents;
+        supplements.rea += other.supplements.rea;
+        supplements.reasi += other.supplements.reasi;
+        supplements.si += other.supplements.si;
+        supplements.src += other.supplements.src;
+        supplements.rep += other.supplements.rep;
+        supplements.nn1 += other.supplements.nn1;
+        supplements.nn2 += other.supplements.nn2;
+        supplements.nn3 += other.supplements.nn3;
+        return *this;
+    }
+    ClassifySummary operator+(const ClassifySummary &other)
+    {
+        ClassifySummary copy = *this;
+        copy += other;
+        return copy;
+    }
 };
 
 Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
@@ -92,4 +115,6 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
                  ClassifyResult out_results[]);
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               Span<const Stay> stays, ClusterMode cluster_mode,
-              ClassifyResultSet *out_result_set);
+              HeapArray<ClassifyResult> *out_results);
+
+void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary);
