@@ -87,6 +87,9 @@ void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
 int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death);
 int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs);
 
+Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
+                 Span<const Stay> stays, ClusterMode cluster_mode,
+                 ClassifyResult out_results[]);
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set);

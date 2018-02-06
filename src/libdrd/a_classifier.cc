@@ -1165,6 +1165,49 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
     return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == 9);
 }
 
+Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
+                 Span<const Stay> stays, ClusterMode cluster_mode,
+                 ClassifyResult out_results[])
+{
+    // Reuse data structures to reduce heap allocations
+    // (around 5% faster on typical sets on my old MacBook)
+    ClassifyErrorSet errors;
+    HeapArray<DiagnosisCode> diagnoses;
+    HeapArray<ProcedureRealisation> procedures;
+
+    Size i;
+    for (i = 0; stays.len; i++) {
+        ClassifyResult result = {};
+        ClassifyAggregate agg;
+
+        errors.main_error = 0;
+        diagnoses.Clear(256);
+        procedures.Clear(512);
+
+        do {
+            result.stays = Cluster(stays, cluster_mode, &stays);
+
+            result.ghm = Aggregate(table_set, result.stays,
+                                   &agg, &diagnoses, &procedures, &errors);
+            result.duration = agg.duration;
+            if (UNLIKELY(result.ghm.IsError()))
+                break;
+            result.ghm = ClassifyGhm(agg, &errors);
+            if (UNLIKELY(result.ghm.IsError()))
+                break;
+        } while (false);
+        result.main_error = errors.main_error;
+
+        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
+        result.ghs_price_cents = PriceGhs(agg, result.ghs);
+        CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+
+        out_results[i] = result;
+    }
+
+    return i;
+}
+
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               Span<const Stay> stays, ClusterMode cluster_mode,
               ClassifyResultSet *out_result_set)
@@ -1172,67 +1215,35 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
     if (!stays.len)
         return;
 
-    static const int set_size = 2048;
+    static const int task_size = 2048;
 
-    HeapArray<Span<const Stay>> stays_sets;
-    Size results_count = 0;
+    // Pessimistic assumption (no multi-stay), but we cannot resize the
+    // buffer as we go because the worker threads will fill it directly.
+    out_result_set->results.Grow(stays.len);
+
+    Async async;
+    Size results_count = 1;
     {
+        Size results_offset = out_result_set->results.len;
         Span<const Stay> task_stays = stays[0];
         for (Size i = 1; i < stays.len; i++) {
             if (!AreStaysCompatible(stays[i - 1], stays[i], cluster_mode)) {
-                results_count++;
-                if (results_count % set_size == 0) {
-                    stays_sets.Append(task_stays);
+                if (results_count % task_size == 0) {
+                    async.AddTask([&, task_stays, results_offset]() mutable {
+                        ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
+                                    out_result_set->results.ptr + results_offset);
+                        return true;
+                    });
+                    results_offset += task_size;
                     task_stays = MakeSpan(&stays[i], 0);
                 }
+                results_count++;
             }
             task_stays.len++;
         }
-        results_count++;
-        stays_sets.Append(task_stays);
-    }
-
-    out_result_set->results.Grow(results_count);
-
-    Async async;
-    for (Size i = 0; i < stays_sets.len; i++) {
-        async.AddTask([&, i]() {
-            Span<const Stay> task_stays = stays_sets[i];
-
-            // Reuse data structures to reduce heap allocations
-            // (around 5% faster on typical sets on my old MacBook)
-            ClassifyErrorSet errors;
-            HeapArray<DiagnosisCode> diagnoses;
-            HeapArray<ProcedureRealisation> procedures;
-
-            for (Size j = out_result_set->results.len; task_stays.len; j++) {
-                ClassifyResult result = {};
-                ClassifyAggregate agg;
-
-                errors.main_error = 0;
-                diagnoses.Clear(256);
-                procedures.Clear(512);
-
-                do {
-                    result.stays = Cluster(task_stays, cluster_mode, &task_stays);
-
-                    result.ghm = Aggregate(table_set, result.stays,
-                                           &agg, &diagnoses, &procedures, &errors);
-                    result.duration = agg.duration;
-                    if (UNLIKELY(result.ghm.IsError()))
-                        break;
-                    result.ghm = ClassifyGhm(agg, &errors);
-                    if (UNLIKELY(result.ghm.IsError()))
-                        break;
-                } while (false);
-                result.main_error = errors.main_error;
-
-                result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
-                result.ghs_price_cents = PriceGhs(agg, result.ghs);
-                CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
-
-                out_result_set->results.ptr[i * set_size + j] = result;
-            }
+        async.AddTask([&, task_stays, results_offset]() mutable {
+            ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
+                        out_result_set->results.ptr + results_offset);
             return true;
         });
     }
