@@ -944,7 +944,9 @@ public:
         Grow();
 
         T *first = ptr + len;
-        new (ptr + len) T;
+        if constexpr(!std::is_trivial<T>::value) {
+            new (ptr + len) T;
+        }
         ptr[len++] = value;
         return first;
     }
@@ -954,7 +956,9 @@ public:
 
         T *first = ptr + len;
         for (const T &value: values) {
-            new (ptr + len) T;
+            if constexpr(!std::is_trivial<T>::value) {
+                new (ptr + len) T;
+            }
             ptr[len++] = value;
         }
         return first;
@@ -964,8 +968,10 @@ public:
     {
         DebugAssert(first >= 0 && first <= len);
 
-        for (Size i = first; i < len; i++) {
-            ptr[i].~T();
+        if constexpr(!std::is_trivial<T>::value) {
+            for (Size i = first; i < len; i++) {
+                ptr[i].~T();
+            }
         }
         len = first;
     }
@@ -1107,7 +1113,9 @@ public:
         Size bucket_offset = (offset + len) % BucketSize;
 
         T *first = buckets[bucket_idx]->values + bucket_offset;
-        new (first) T;
+        if constexpr(!std::is_trivial<T>::value) {
+            new (first) T;
+        }
 
         len++;
         if (bucket_offset == BucketSize - 1) {
@@ -1141,7 +1149,7 @@ public:
         Size start_bucket_idx = start_idx / BucketSize;
         Size end_bucket_idx = end_idx / BucketSize;
 
-        {
+        if constexpr(!std::is_trivial<T>::value) {
             iterator_type end_it = end();
             for (iterator_type it(this, from); it != end_it; ++it) {
                 it->~T();
@@ -1174,7 +1182,7 @@ public:
         Size end_idx = offset + count;
         Size end_bucket_idx = end_idx / BucketSize;
 
-        {
+        if constexpr(!std::is_trivial<T>::value) {
             iterator_type end_it(this, count);
             for (iterator_type it = begin(); it != end_it; ++it) {
                 it->~T();
@@ -1382,7 +1390,15 @@ public:
     Allocator *allocator = nullptr;
 
     HashTable() = default;
-    ~HashTable() { Clear(); }
+    ~HashTable()
+    {
+        if constexpr(std::is_trivial<ValueType>::value) {
+            count = 0;
+            Rehash(0);
+        } else {
+            Clear();
+        }
+    }
 
     HashTable(HashTable &&other) { *this = std::move(other); }
     HashTable &operator=(HashTable &&other)
