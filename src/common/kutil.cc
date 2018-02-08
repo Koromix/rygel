@@ -22,6 +22,7 @@
 #endif
 #include <chrono>
 #include <condition_variable>
+#include <thread>
 
 #include "kutil.hh"
 
@@ -1982,8 +1983,12 @@ static THREAD_LOCAL WorkerThread *g_worker_thread;
 Async::Async()
 {
     if (!g_thread_pool) {
-        int max_threads = GetCpuCount();
-        DebugAssert(max_threads > 0);
+#ifdef __EMSCRIPTEN__
+        int max_threads = 1;
+#else
+        int max_threads = (int)std::thread::hardware_concurrency();
+        Assert(max_threads > 0);
+#endif
 
         // NOTE: We're leaking one ThreadPool each time a non-worker thread uses Async for
         // the first time. That's only one leak in most cases, when the main thread is the

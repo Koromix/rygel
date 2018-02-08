@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #ifdef _WIN32
@@ -2310,8 +2309,6 @@ void PopLogHandler();
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------
-
-static inline int GetCpuCount() { return (int)std::thread::hardware_concurrency(); };
 
 enum class CompressionType {
     None,
