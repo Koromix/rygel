@@ -704,10 +704,13 @@ Commands:
         PrintUsage(stderr);
         return 1;
     }
-    if (TestStr(argv[1], "--help") || TestStr(argv[1], "help")) {
-        if (argc > 2 && argv[2][0] != '-') {
-            std::swap(argv[1], argv[2]);
-            argv[2] = (char *)"--help";
+
+    const char *cmd = argv[1];
+    Span<const char *> arguments((const char **)argv + 2, argc - 2);
+    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
+        if (arguments.len && arguments[0][0] != '-') {
+            cmd = arguments[0];
+            arguments[0] = "--help";
         } else {
             PrintUsage(stdout);
             return 0;
@@ -729,9 +732,6 @@ Commands:
                 return !Func(arguments); \
             } \
         } while (false)
-
-    const char *cmd = argv[1];
-    Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
     HANDLE_COMMAND(catalogs, RunCatalogs);
     HANDLE_COMMAND(classify, RunClassify);
