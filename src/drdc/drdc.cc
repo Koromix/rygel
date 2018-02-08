@@ -201,6 +201,7 @@ Classify options:
     struct ClassifySet {
         StaySet stay_set;
         HeapArray<ClassifyResult> results;
+        ClassifySummary summary;
     };
     HeapArray<ClassifySet> classify_sets;
     classify_sets.AppendDefault(filenames.len);
@@ -208,16 +209,21 @@ Classify options:
     Async async;
     for (Size i = 0; i < filenames.len; i++) {
         async.AddTask([&, i]() {
+            ClassifySet *classify_set = &classify_sets[i];
+
             LogInfo("Load '%1'", filenames[i]);
             StaySetBuilder stay_set_builder;
             if (!stay_set_builder.LoadFiles(filenames[i]))
                 return false;
-            if (!stay_set_builder.Finish(&classify_sets[i].stay_set))
+            if (!stay_set_builder.Finish(&classify_set->stay_set))
                 return false;
 
             LogInfo("Classify '%1'", filenames[i]);
-            Classify(*table_set, *authorization_set, classify_sets[i].stay_set.stays, cluster_mode,
-                     &classify_sets[i].results);
+            Classify(*table_set, *authorization_set, classify_set->stay_set.stays, cluster_mode,
+                     &classify_set->results);
+
+            LogInfo("Summarize '%1'", filenames[i]);
+            Summarize(classify_set->results, &classify_set->summary);
 
             return true;
         });
@@ -243,11 +249,9 @@ Classify options:
     ClassifySummary main_summary = {};
     for (Size i = 0; i < filenames.len; i++) {
         const ClassifySet &classify_set = classify_sets[i];
-        ClassifySummary summary = {};
-        Summarize(classify_set.results, &summary);
-        main_summary += summary;
 
-        PrintSummary(filenames[i], summary);
+        PrintSummary(filenames[i], classify_set.summary);
+        main_summary += classify_set.summary;
 
         if (verbosity >= 1 || test) {
             PrintLn("Details:");
