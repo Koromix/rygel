@@ -460,7 +460,6 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
                             if (partial_path.len > 1) {
                                 line->title = MakeSpan(partial_path.ptr + name_offset,
                                                        partial_path.len - name_offset);
-                                name_offset = partial_path.len + 1;
                             } else {
                                 line->title = ent.id;
                             }
