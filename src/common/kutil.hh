@@ -760,7 +760,7 @@ public:
 
     T *AppendDefault(Size count = 1)
     {
-        DebugAssert(len < N);
+        DebugAssert(len <= N - count);
 
         T *it = data + len;
         len += count;
@@ -929,7 +929,7 @@ public:
 
     T *AppendDefault(Size count = 1)
     {
-        Grow();
+        Grow(count);
 
         T *first = ptr + len;
         for (Size i = 0; i < count; i++) {
