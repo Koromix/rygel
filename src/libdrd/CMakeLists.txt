@@ -22,6 +22,6 @@ set(LIBDRD_SRC ../common/kutil.cc
 add_library(drd STATIC ${LIBDRD_SRC})
 set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads)
-target_link_libraries(drd PUBLIC miniz Threads::Threads)
+target_link_libraries(drd PUBLIC miniz Threads::Threads rpmalloc)
 add_amalgamated_file(drd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)
 enable_unity_build(drd)

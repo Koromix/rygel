@@ -24,6 +24,10 @@
 #include <condition_variable>
 #include <thread>
 
+#ifndef KUTIL_NO_RPMALLOC
+    #include "../../lib/rpmalloc/rpmalloc/rpmalloc.h"
+#endif
+
 #include "kutil.hh"
 
 // ------------------------------------------------------------------------
@@ -35,10 +39,25 @@
 // now it's just a doubly linked list of malloc() memory blocks.
 
 class MallocAllocator: public Allocator {
+#ifdef RPMALLOC_ATTRIBUTE
+public:
+    MallocAllocator()
+    {
+        static std::once_flag init;
+        std::call_once(init, []() {
+            Assert(!rpmalloc_initialize());
+        });
+    }
+#endif
+
 protected:
     void *Allocate(Size size, unsigned int flags = 0) override
     {
+#ifdef RPMALLOC_ATTRIBUTE
+        void *ptr = rpmalloc((size_t)size);
+#else
         void *ptr = malloc((size_t)size);
+#endif
         if (UNLIKELY(!ptr)) {
             LogError("Failed to allocate %1 of memory", FmtMemSize(size));
             abort();
@@ -55,7 +74,11 @@ protected:
             Release(*ptr, old_size);
             *ptr = nullptr;
         } else {
+#ifdef RPMALLOC_ATTRIBUTE
+            void *new_ptr = rprealloc(*ptr, (size_t)new_size);
+#else
             void *new_ptr = realloc(*ptr, (size_t)new_size);
+#endif
             if (UNLIKELY(new_size && !new_ptr)) {
                 LogError("Failed to resize %1 memory block to %2",
                          FmtMemSize(old_size), FmtMemSize(new_size));
@@ -70,7 +93,11 @@ protected:
 
     void Release(void *ptr, Size) override
     {
+#ifdef RPMALLOC_ATTRIBUTE
+        rpfree(ptr);
+#else
         free(ptr);
+#endif
     }
 };
 
@@ -1320,6 +1347,11 @@ void Async::RunWorker(ThreadPool *thread_pool, WorkerThread *worker)
 {
     g_thread_pool = thread_pool;
     g_worker_thread = worker;
+
+#ifdef RPMALLOC_ATTRIBUTE
+    rpmalloc_thread_initialize();
+    DEFER { rpmalloc_thread_finalize(); };
+#endif
 
     for (;;) {
         StealAndRunTasks();
