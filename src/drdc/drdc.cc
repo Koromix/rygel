@@ -124,6 +124,21 @@ R"(Usage: drdc catalogs [options]
     return true;
 }
 
+static void PrintSummary(const char *title, const ClassifySummary &summary)
+{
+    PrintLn("%1:", title);
+    PrintLn("  Results: %1", summary.results_count);
+    PrintLn("  Stays: %1", summary.stays_count);
+    PrintLn("  Total GHS: %1 €",
+            FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
+    PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+            summary.supplements.rea, summary.supplements.reasi,
+            summary.supplements.si, summary.supplements.src,
+            summary.supplements.nn1, summary.supplements.nn2,
+            summary.supplements.nn3, summary.supplements.rep);
+    PrintLn();
+};
+
 static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -230,20 +245,6 @@ Classify options:
     }
     if (!async.Sync())
         return false;
-
-    const auto PrintSummary = [](const char *title, const ClassifySummary &summary) {
-        PrintLn("%1:", title);
-        PrintLn("  Results: %1", summary.results_count);
-        PrintLn("  Stays: %1", summary.stays_count);
-        PrintLn("  Total GHS: %1 €",
-                FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
-        PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                summary.supplements.rea, summary.supplements.reasi,
-                summary.supplements.si, summary.supplements.src,
-                summary.supplements.nn1, summary.supplements.nn2,
-                summary.supplements.nn3, summary.supplements.rep);
-        PrintLn();
-    };
 
     LogInfo("Export");
     ClassifySummary main_summary = {};
