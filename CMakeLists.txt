@@ -57,5 +57,5 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
                                             -Wno-missing-field-initializers -Wno-old-style-cast")
 endif()
 
-add_projects("src/lib*")
+add_projects("src/lib*" EXCLUDE_FROM_ALL)
 add_projects("src/*")
