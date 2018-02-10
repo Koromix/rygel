@@ -19,7 +19,7 @@ set(LIBDRD_SRC ../common/kutil.cc
                d_tables.hh
                main.cc
                main.hh)
-add_library(drd STATIC ${LIBDRD_SRC})
+add_library(drd ${LIBDRD_SRC})
 set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads)
 target_link_libraries(drd PUBLIC miniz Threads::Threads rpmalloc)

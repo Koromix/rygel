@@ -100,7 +100,7 @@ import(Rcpp)\n")
         add_library(${TARGET} SHARED ${sources} "${pkg_directory}/DESCRIPTION")
         set_target_properties(${TARGET} PROPERTIES PREFIX ""
                                                    COMPILE_FLAGS "-frtti -fexceptions"
-                                                   LINK_FLAGS "-static-libgcc")
+                                                   LINK_FLAGS "-static-libgcc -Wl,-allow-multiple-definition")
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
 
@@ -145,10 +145,12 @@ execute_process(
         file(WRITE "${CMAKE_BINARY_DIR}/Rscript.bat" "\
 @echo off\n\
 setlocal\n\
-set \"f=%1\"\n
+set \"PATH=${CMAKE_BINARY_DIR};%PATH%\"\n\
+set \"f=%1\"\n\
 \"${R_BINARY_RSCRIPT}\" -e \".libPaths(c('${install_directory}',.libPaths()));source('%f:\\=/%')\"\n")
     else()
         file(WRITE "${CMAKE_BINARY_DIR}/Rscript" "\
+export \"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}\"\n\
 \"${R_BINARY_RSCRIPT}\" -e \".libPaths(c('${install_directory}',.libPaths()));source('$1')\"\n")
     endif()
 endif()

@@ -20,7 +20,7 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
                     render.hh
                     runner_win32.cc
                     runner.hh)
-add_library(heimdall STATIC ${LIBHEIMDALL_SRC})
+add_library(heimdall ${LIBHEIMDALL_SRC})
 set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads)
 target_link_libraries(heimdall PUBLIC miniz imgui Threads::Threads rpmalloc)
