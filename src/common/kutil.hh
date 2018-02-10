@@ -1249,7 +1249,7 @@ public:
             }
 
             ctz = CountTrailingZeros(bits);
-            bits ^= (size_t)(1 << ctz);
+            bits ^= (size_t)1 << ctz;
 
             return *this;
         }
