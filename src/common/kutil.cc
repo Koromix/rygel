@@ -27,6 +27,16 @@
 #ifndef KUTIL_NO_RPMALLOC
     #include "../../lib/rpmalloc/rpmalloc/rpmalloc.h"
 #endif
+#ifndef KUTIL_NO_MINIZ
+    #define MINIZ_NO_STDIO
+    #define MINIZ_NO_TIME
+    #define MINIZ_NO_ARCHIVE_APIS
+    #define MINIZ_NO_ARCHIVE_WRITING_APIS
+    #define MINIZ_NO_ZLIB_APIS
+    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
+    #define MINIZ_NO_MALLOC
+    #include "../../lib/miniz/miniz.h"
+#endif
 
 #include "kutil.hh"
 
@@ -1395,17 +1405,6 @@ void Async::StealAndRunTasks()
 // ------------------------------------------------------------------------
 // Streams
 // ------------------------------------------------------------------------
-
-#if __has_include("../../lib/miniz/miniz.h") && !defined(KUTIL_NO_MINIZ)
-    #define MINIZ_NO_STDIO
-    #define MINIZ_NO_TIME
-    #define MINIZ_NO_ARCHIVE_APIS
-    #define MINIZ_NO_ARCHIVE_WRITING_APIS
-    #define MINIZ_NO_ZLIB_APIS
-    #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
-    #define MINIZ_NO_MALLOC
-    #include "../../lib/miniz/miniz.h"
-#endif
 
 #ifdef MZ_VERSION
 struct MinizInflateContext {
