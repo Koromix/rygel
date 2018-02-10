@@ -130,7 +130,7 @@ enum class Endianness {
 #define Assert(Cond) \
     do { \
         if (!(Cond)) { \
-            fputs("Assertion '" STRINGIFY(Cond) "' failed", stderr); \
+            fputs("Assertion '" STRINGIFY(Cond) "' failed\n", stderr); \
             abort(); \
         } \
     } while (false)
