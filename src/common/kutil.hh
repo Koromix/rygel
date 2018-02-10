@@ -39,7 +39,7 @@
 // Config
 // ------------------------------------------------------------------------
 
-#define DEBUG_ENV_NAME "RYGEL_DEBUG"
+#define DEBUG_ENV_PREFIX "RYGEL_"
 
 #define DEFAULT_ALLOCATOR MallocAllocator
 

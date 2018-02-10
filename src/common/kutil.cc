@@ -771,15 +771,15 @@ bool enable_debug = []() {
         } catch (error) {
             return 0;
         }
-    }, DEBUG_ENV_NAME);
+    }, DEBUG_ENV_PREFIX "DEBUG");
 #else
-    const char *debug = getenv(DEBUG_ENV_NAME);
+    const char *debug = getenv(DEBUG_ENV_PREFIX "DEBUG");
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("%1 should contain value '0' or '1'", DEBUG_ENV_NAME);
+        LogError("%1 should contain value '0' or '1'", DEBUG_ENV_PREFIX "DEBUG");
         return true;
     }
 #endif
@@ -1279,9 +1279,21 @@ Async::Async()
 {
     if (!g_thread_pool) {
 #ifdef __EMSCRIPTEN__
-        int max_threads = 1;
+        static const int max_threads = 1;
 #else
-        int max_threads = (int)std::thread::hardware_concurrency();
+        static const int max_threads = []() {
+            const char *env = getenv(DEBUG_ENV_PREFIX "THREADS");
+            if (env) {
+                char *end_ptr;
+                long threads = strtol(env, &end_ptr, 10);
+                if (end_ptr > env && !end_ptr[0] && threads > 0) {
+                    return (int)threads;
+                } else {
+                    LogError("%1 must be positive number, ignoring", DEBUG_ENV_PREFIX "THREADS");
+                }
+            }
+            return (int)std::thread::hardware_concurrency();
+        }();
         Assert(max_threads > 0);
 #endif
 
