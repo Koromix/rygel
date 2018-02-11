@@ -170,10 +170,12 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
 }
 
 static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
-                         Span<const Element *const> measures, double min, double max)
+                         Span<const Element *const> measures, double min, double max,
+                         InterpolationMode interpolation)
 {
     if (!measures.len)
         return;
+    DebugAssert(measures[0]->type == Element::Type::Measure);
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -181,7 +183,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     if (std::isinf(y_scaler)) {
         y_scaler = 0.5f;
     }
-    const auto compute_coordinates = [&](const Element *elmt) {
+    const auto ComputeCoordinates = [&](const Element *elmt) {
         return ImVec2 {
             x_offset + ((float)elmt->time * time_zoom),
             y_max - 4.0f - y_scaler * (float)(elmt->u.measure.value - min)
@@ -189,23 +191,52 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     };
 
     // Draw line
-    {
-        ImVec2 prev_point = compute_coordinates(measures[0]);
-        for (Size i = 1; i < measures.len; i++) {
-            const Element *elmt = measures[i];
-            DebugAssert(elmt->type == Element::Type::Measure);
+    switch (interpolation) {
+        case InterpolationMode::Linear: {
+            ImVec2 prev_point = ComputeCoordinates(measures[0]);
+            for (Size i = 1; i < measures.len; i++) {
+                const Element *elmt = measures[i];
+                DebugAssert(elmt->type == Element::Type::Measure);
 
-            ImVec2 point = compute_coordinates(elmt);
-            draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot, alpha));
-            prev_point = point;
-        }
+                ImVec2 point = ComputeCoordinates(elmt);
+                draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot, alpha), 1.0f);
+                prev_point = point;
+            }
+        } break;
+
+        case InterpolationMode::LOCF: {
+            ImVec2 prev_point = ComputeCoordinates(measures[0]);
+            for (Size i = 1; i < measures.len; i++) {
+                const Element *elmt = measures[i];
+                DebugAssert(elmt->type == Element::Type::Measure);
+
+                ImVec2 next_point = ComputeCoordinates(elmt);
+                ImVec2 points[] = {
+                    prev_point,
+                    ImVec2(next_point.x, prev_point.y),
+                    next_point
+                };
+                draw->AddPolyline(points, ARRAY_SIZE(points), GetVisColor(VisColor::Plot, alpha),
+                                  false, 1.0f);
+                prev_point = next_point;
+            }
+        } break;
+
+        case InterpolationMode::Spline: {
+            // TODO: Implement Akima spline interpolation
+            // See http://www.iue.tuwien.ac.at/phd/rottinger/node60.html
+        } break;
+
+        case InterpolationMode::Disable: {
+            // Name speaks for itself
+        } break;
     }
 
     // Draw points
     for (const Element *elmt: measures) {
         ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
                                            : GetVisColor(VisColor::Plot, alpha);
-        ImVec2 point = compute_coordinates(elmt);
+        ImVec2 point = ComputeCoordinates(elmt);
         ImRect point_bb = {
             point.x - 3.0f, point.y - 3.0f,
             point.x + 3.0f, point.y + 3.0f
@@ -289,7 +320,7 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
         DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
         DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
         DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
-                     measures, measures_min, measures_max);
+                     measures, measures_min, measures_max, state.interpolation);
     }
 
     // Support line
@@ -644,8 +675,11 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         ImGui::Checkbox("Show plots", &state.plot_measures);
         ImGui::PushItemWidth(100.0f);
         ImGui::SliderFloat("Deployed opacity", &state.deployed_alpha, 0.0f, 1.0f);
+        ImGui::Combo("Interpolation", (int *)&state.interpolation, interpolation_mode_names,
+                     ARRAY_SIZE(interpolation_mode_names));
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
     }

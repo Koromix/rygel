@@ -11,6 +11,19 @@
 #define APPLICATION_NAME "heimdall"
 #define APPLICATION_TITLE "Heimdall"
 
+enum class InterpolationMode {
+    Linear,
+    LOCF,
+    Spline,
+    Disable
+};
+static const char *const interpolation_mode_names[] = {
+    "Linear",
+    "LOCF",
+    "Spline",
+    "Disable"
+};
+
 struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
@@ -18,6 +31,7 @@ struct InterfaceState {
 
     bool plot_measures = true;
     float deployed_alpha = 0.05f;
+    InterpolationMode interpolation = InterpolationMode::Linear;
 
     bool size_cache_valid = false;
     HeapArray<float> lines_top;
