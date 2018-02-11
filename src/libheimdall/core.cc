@@ -408,7 +408,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     bool cache_refreshed = false;
     if (!state.size_cache_valid || state.lines_top.len != entity_set.entities.len) {
         state.total_width_unscaled = 0.0f;
-        state.total_height = 0.0f;
+        state.total_height = 0.5f;
 
         state.lines_top.SetCapacity(entity_set.entities.len);
         state.lines_top.len = entity_set.entities.len;
