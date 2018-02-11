@@ -66,13 +66,19 @@ enum class Endianness {
 };
 
 #if defined(__x86_64__) || defined(_M_X64)
+    #define ARCH_64
+    #define ARCH_LITTLE_ENDIAN
+    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
+
     typedef int64_t Size;
-    #define ARCH_LITTLE_ENDIAN
-    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
+    #define LEN_MAX INT64_MAX
 #elif defined(__i386__) || defined(_M_IX86) || defined(__EMSCRIPTEN__)
-    typedef int32_t Size;
+    #define ARCH_32
     #define ARCH_LITTLE_ENDIAN
     #define ARCH_ENDIANNESS (Endianness::LittleEndian)
+
+    typedef int32_t Size;
+    #define LEN_MAX INT32_MAX
 #else
     #error Machine architecture not supported
 #endif
