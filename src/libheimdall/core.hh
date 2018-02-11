@@ -24,15 +24,21 @@ static const char *const interpolation_mode_names[] = {
     "Disable"
 };
 
+struct InterfaceSettings {
+    bool plot_measures = true;
+    float deployed_alpha = 0.05f;
+    float leaf_height = 20.0f;
+    InterpolationMode interpolation = InterpolationMode::Linear;
+};
+
 struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
     AnimatedValue<float, double> time_zoom = 1.0f;
 
-    bool plot_measures = true;
-    float deployed_alpha = 0.05f;
-    float leaf_height = 20.0f;
-    InterpolationMode interpolation = InterpolationMode::Linear;
+    bool show_settings = false;
+    InterfaceSettings settings;
+    InterfaceSettings new_settings;
 
     bool size_cache_valid = false;
     HeapArray<float> lines_top;

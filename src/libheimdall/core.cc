@@ -303,7 +303,7 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
             switch (elmt->type) {
                 case Element::Type::Event: { events.Append(elmt); } break;
                 case Element::Type::Measure: {
-                    if (line.leaf && state.plot_measures) {
+                    if (line.leaf && state.settings.plot_measures) {
                         measures_min = std::min(measures_min, elmt->u.measure.value);
                         measures_max = std::max(measures_max, elmt->u.measure.value);
                         measures.Append(elmt);
@@ -320,7 +320,7 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
         DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
         DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
         DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
-                     measures, measures_min, measures_max, state.interpolation);
+                     measures, measures_min, measures_max, state.settings.interpolation);
     }
 
     // Support line
@@ -383,7 +383,7 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state,
 
         if (fully_deployed) {
             height += lines_set.Append(elmt.concept).second *
-                      (state.leaf_height + style.ItemSpacing.y);
+                      (state.settings.leaf_height + style.ItemSpacing.y);
         }
     }
 
@@ -501,7 +501,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->leaf = false;
                             line->deployed = state.deploy_paths.Find(partial_path);
                             line->depth = tree_depth++;
-                            line->alpha = line->deployed ? state.deployed_alpha : 1.0f;
+                            line->alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
                         }
                         fully_deployed = line->deployed;
                     }
@@ -549,7 +549,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             ImRect bb(win->ClipRect.Min.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y,
                       win->ClipRect.Max.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y +
-                                           (line.leaf ? state.leaf_height : 20.0f));
+                                           (line.leaf ? state.settings.leaf_height : 20.0f));
             if (DrawEntityLine(bb, tree_width, state, time_offset, line)) {
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = entity_offset_y;
@@ -684,16 +684,9 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         //LogInfo("Framerate: %1 (%2 ms/frame)",
         //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
 
-        ImGui::Checkbox("Show plots", &state.plot_measures);
-        ImGui::PushItemWidth(100.0f);
-        ImGui::SliderFloat("Deployed opacity", &state.deployed_alpha, 0.0f, 1.0f);
-        ImGui::PushItemWidth(100.0f);
-        state.size_cache_valid &= !ImGui::SliderFloat("Leaf height", &state.leaf_height, 20.0f, 100.0f);
-        ImGui::Combo("Interpolation", (int *)&state.interpolation, interpolation_mode_names,
-                     ARRAY_SIZE(interpolation_mode_names));
+        ImGui::Checkbox("Settings", &state.show_settings);
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
     }
@@ -719,6 +712,27 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
 
         ImGui::Begin("View", nullptr, view_flags);
         valid_frame = DrawView(state, entity_set);
+        ImGui::End();
+    }
+
+    // Settings
+    if (state.show_settings) {
+        ImGui::Begin("Settings", &state.show_settings);
+        ImGui::Checkbox("Show plots", &state.new_settings.plot_measures);
+        ImGui::PushItemWidth(100.0f);
+        ImGui::SliderFloat("Deployed opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
+        ImGui::PushItemWidth(100.0f);
+        ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
+        ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
+                     interpolation_mode_names, ARRAY_SIZE(interpolation_mode_names));
+        if (ImGui::Button("Apply")) {
+            state.settings = state.new_settings;
+            state.size_cache_valid = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            state.new_settings = state.settings;
+        }
         ImGui::End();
     }
 
