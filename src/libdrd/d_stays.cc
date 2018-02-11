@@ -75,10 +75,22 @@ public:
             case State::StayObject: {
                 switch (type) {
                     case JsonBranchType::EndObject: {
+                        if (UNLIKELY(out_set->stays.len == LEN_MAX)) {
+                            LogError("Too much data to load");
+                            return false;
+                        }
                         if (LIKELY(stay.main_diagnosis.IsValid())) {
+                            if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
+                                LogError("Too much data to load");
+                                return false;
+                            }
                             out_set->store.diagnoses.Append(stay.main_diagnosis);
                         }
                         if (stay.linked_diagnosis.IsValid()) {
+                            if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
+                                LogError("Too much data to load");
+                                return false;
+                            }
                             out_set->store.diagnoses.Append(stay.linked_diagnosis);
                         }
                         stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
@@ -133,6 +145,10 @@ public:
             case State::ProcedureObject: {
                 switch (type) {
                     case JsonBranchType::EndObject: {
+                        if (UNLIKELY(out_set->store.procedures.len == LEN_MAX)) {
+                            LogError("Too much data to load");
+                            return false;
+                        }
                         out_set->store.procedures.Append(proc);
                         ResetProc();
 
@@ -288,6 +304,10 @@ public:
             case State::AssociatedDiagnosisArray: {
                 if (value.type == JsonValue::Type::String) {
                     DiagnosisCode diag = DiagnosisCode::FromString(value.u.str.ptr);
+                    if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
+                        LogError("Too much data to load");
+                        return false;
+                    }
                     out_set->store.diagnoses.Append(diag);
                 } else {
                     UnexpectedType(value.type);
