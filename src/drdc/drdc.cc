@@ -124,9 +124,8 @@ R"(Usage: drdc catalogs [options]
     return true;
 }
 
-static void PrintSummary(const char *title, const ClassifySummary &summary)
+static void PrintSummary(const ClassifySummary &summary)
 {
-    PrintLn("%1:", title);
     PrintLn("  Results: %1", summary.results_count);
     PrintLn("  Stays: %1", summary.stays_count);
     PrintLn("  Total GHS: %1 €",
@@ -149,6 +148,8 @@ Classify options:
         --cluster_mode <mode>    Change stay cluster mode
                                  (bill_id*, stay_modes, disable)
     -v, --verbose                Show more classification details (cumulative)
+
+        --test                   Enable testing against GenRSA values
 )");
         PrintLn(fp, main_options_usage);
     };
@@ -206,6 +207,8 @@ Classify options:
 
     struct ClassifySet {
         StaySet stay_set;
+        HashTable<int32_t, StayTest> tests;
+
         HeapArray<ClassifyResult> results;
         ClassifySummary summary;
     };
@@ -219,7 +222,7 @@ Classify options:
 
             LogInfo("Load '%1'", filenames[i]);
             StaySetBuilder stay_set_builder;
-            if (!stay_set_builder.LoadFiles(filenames[i]))
+            if (!stay_set_builder.LoadFiles(filenames[i], test ? &classify_set->tests : nullptr))
                 return false;
             if (!stay_set_builder.Finish(&classify_set->stay_set))
                 return false;
@@ -242,37 +245,139 @@ Classify options:
     for (Size i = 0; i < filenames.len; i++) {
         const ClassifySet &classify_set = classify_sets[i];
 
-        PrintSummary(filenames[i], classify_set.summary);
-        main_summary += classify_set.summary;
+        PrintLn("%1:", filenames[i]);
 
-        if (verbosity >= 1 || test) {
-            PrintLn("Details:");
+        if (verbosity >= 1) {
+            PrintLn("  Detailed results:");
             for (const ClassifyResult &result: classify_set.results) {
-                PrintLn("  %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
+                PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                         result.stays.len, result.ghm, result.ghs);
 
                 if (verbosity >= 2) {
                     if (result.main_error) {
-                        PrintLn("    Error: %1", result.main_error);
+                        PrintLn("      Error: %1", result.main_error);
                     }
 
-                    PrintLn("    GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
+                    PrintLn("      GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
                     if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
                             result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
                             result.supplements.nn3 || result.supplements.rep) {
-                        PrintLn("    Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
+                        PrintLn("      Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
                                 result.supplements.rea, result.supplements.reasi, result.supplements.si,
                                 result.supplements.src, result.supplements.nn1, result.supplements.nn2,
                                 result.supplements.nn3, result.supplements.rep);
                     }
                 }
             }
+            PrintLn();
+        }
+
+        PrintSummary(classify_set.summary);
+        main_summary += classify_set.summary;
+
+        if (test) {
+            PrintLn("  Tests:");
+
+            Size tested_clusters = 0, failed_clusters = 0;
+            Size tested_ghm = 0, failed_ghm = 0;
+            Size tested_ghs = 0, failed_ghs = 0;
+            for (const ClassifyResult &result: classify_set.results) {
+                const StayTest *stay_test = classify_set.tests.Find(result.stays[0].bill_id);
+                if (!stay_test)
+                    continue;
+
+                if (stay_test->cluster_len) {
+                    tested_clusters++;
+                    if (result.stays.len != stay_test->cluster_len) {
+                        failed_clusters++;
+                        if (verbosity >= 1) {
+                            PrintLn("    %1 has inadequate cluster (%2, expected %3)",
+                                    stay_test->bill_id, result.stays.len, stay_test->cluster_len);
+                        }
+                    }
+                }
+
+                if (stay_test->ghm.value) {
+                    tested_ghm++;
+                    if (stay_test->ghm != result.ghm) {
+                        failed_ghm++;
+                        if (verbosity >= 1) {
+                            PrintLn("    %1 has inadequate GHM (%2, expected %3)",
+                                    stay_test->bill_id, result.ghm, stay_test->ghm);
+                        }
+                    }
+                }
+
+                if (stay_test->ghs.number) {
+                    tested_ghs++;
+                    if (stay_test->ghs != result.ghs ||
+                            stay_test->supplements.rea != result.supplements.rea ||
+                            stay_test->supplements.reasi != result.supplements.reasi ||
+                            stay_test->supplements.si != result.supplements.si ||
+                            stay_test->supplements.src != result.supplements.src ||
+                            stay_test->supplements.nn1 != result.supplements.nn1 ||
+                            stay_test->supplements.nn2 != result.supplements.nn2 ||
+                            stay_test->supplements.nn3 != result.supplements.nn3 ||
+                            stay_test->supplements.rep != result.supplements.rep) {
+                        failed_ghs++;
+                        if (verbosity >= 1) {
+                            if (result.ghs != stay_test->ghs) {
+                                PrintLn("    %1 has inadequate GHS (%2, expected %3)",
+                                        stay_test->bill_id, result.ghs, stay_test->ghs);
+                            }
+                            if (result.supplements.rea != stay_test->supplements.rea) {
+                                PrintLn("    %1 has inadequate REA (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.rea, stay_test->supplements.rea);
+                            }
+                            if (result.supplements.reasi != stay_test->supplements.reasi) {
+                                PrintLn("    %1 has inadequate REASI (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.reasi, stay_test->supplements.reasi);
+                            }
+                            if (result.supplements.si != stay_test->supplements.si) {
+                                PrintLn("    %1 has inadequate SI (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.si, stay_test->supplements.si);
+                            }
+                            if (result.supplements.src != stay_test->supplements.src) {
+                                PrintLn("    %1 has inadequate SRC (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.src, stay_test->supplements.src);
+                            }
+                            if (result.supplements.nn1 != stay_test->supplements.nn1) {
+                                PrintLn("    %1 has inadequate NN1 (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.nn1, stay_test->supplements.nn1);
+                            }
+                            if (result.supplements.nn2 != stay_test->supplements.nn2) {
+                                PrintLn("    %1 has inadequate NN2 (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.nn2, stay_test->supplements.nn2);
+                            }
+                            if (result.supplements.nn3 != stay_test->supplements.nn3) {
+                                PrintLn("    %1 has inadequate NN3 (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.nn3, stay_test->supplements.nn3);
+                            }
+                            if (result.supplements.rep != stay_test->supplements.rep) {
+                                PrintLn("    %1 has inadequate REP (%2, expected %3)",
+                                        stay_test->bill_id, result.supplements.rep, stay_test->supplements.rep);
+                            }
+                        }
+                    }
+                }
+            }
+            if (verbosity >= 1 && (failed_clusters || failed_ghm || failed_ghs)) {
+                PrintLn();
+            }
+
+            PrintLn("    Failed cluster tests: %1 / %2 (missing %3)",
+                    failed_clusters, tested_clusters, classify_set.results.len - tested_clusters);
+            PrintLn("    Failed GHM tests: %1 / %2 (missing %3)",
+                    failed_ghm, tested_ghm, classify_set.results.len - tested_ghm);
+            PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
+                    failed_ghs, tested_ghs, classify_set.results.len - tested_ghs);
         }
     }
 
     if (filenames.len > 1) {
-        PrintSummary("Global summary", main_summary);
+        PrintLn("Global summary:");
+        PrintSummary(main_summary);
     }
 
     return true;

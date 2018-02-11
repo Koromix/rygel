@@ -58,6 +58,29 @@ struct Stay {
     uint32_t error_mask;
 };
 
+struct StayTest {
+    int32_t bill_id;
+
+    uint16_t cluster_len;
+
+    GhmCode ghm;
+    int16_t error;
+
+    GhsCode ghs;
+    struct {
+        int16_t rea;
+        int16_t reasi;
+        int16_t si;
+        int16_t src;
+        int16_t nn1;
+        int16_t nn2;
+        int16_t nn3;
+        int16_t rep;
+    } supplements;
+
+    HASH_TABLE_HANDLER(StayTest, bill_id);
+};
+
 struct StaySet {
     HeapArray<Stay> stays;
 
@@ -74,9 +97,10 @@ class StaySetBuilder {
     StaySet set;
 
 public:
-    bool LoadJson(StreamReader &st);
-    bool LoadPack(StreamReader &st);
-    bool LoadFiles(Span<const char *const> filenames);
+    bool LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+    bool LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+    bool LoadFiles(Span<const char *const> filenames,
+                   HashTable<int32_t, StayTest> *out_tests = nullptr);
 
     bool Finish(StaySet *out_set);
 };

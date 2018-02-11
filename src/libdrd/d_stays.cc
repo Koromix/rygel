@@ -42,13 +42,15 @@ class JsonStayHandler: public BaseJsonHandler<JsonStayHandler> {
     State state = State::Default;
 
     Stay stay;
+    StayTest test;
     ProcedureRealisation proc;
 
 public:
     StaySet *out_set;
+    HashTable<int32_t, StayTest> *out_tests;
 
-    JsonStayHandler(StaySet *out_set = nullptr)
-        : out_set(out_set)
+    JsonStayHandler(StaySet *out_set, HashTable<int32_t, StayTest> *out_tests)
+        : out_set(out_set), out_tests(out_tests)
     {
         ResetStay();
         ResetProc();
@@ -75,10 +77,6 @@ public:
             case State::StayObject: {
                 switch (type) {
                     case JsonBranchType::EndObject: {
-                        if (UNLIKELY(out_set->stays.len == LEN_MAX)) {
-                            LogError("Too much data to load");
-                            return false;
-                        }
                         if (LIKELY(stay.main_diagnosis.IsValid())) {
                             if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
                                 LogError("Too much data to load");
@@ -93,9 +91,20 @@ public:
                             }
                             out_set->store.diagnoses.Append(stay.linked_diagnosis);
                         }
+
+                        if (UNLIKELY(out_set->stays.len == LEN_MAX)) {
+                            LogError("Too much data to load");
+                            return false;
+                        }
                         stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
                         stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
                         out_set->stays.Append(stay);
+
+                        if (out_tests && (test.ghm.value || test.ghs.number)) {
+                            test.bill_id = stay.bill_id;
+                            out_tests->Append(test);
+                        }
+
                         ResetStay();
 
                         state = State::StayArray;
@@ -352,7 +361,37 @@ public:
             } break;
 
             case State::TestObject: {
-                // TODO: Restore self-test system
+                if (TestStr(key, "cluster_len")) {
+                    SetInt(value, &test.cluster_len);
+                } else if (TestStr(key, "ghm")) {
+                    if (value.type == JsonValue::Type::String) {
+                        test.ghm = GhmCode::FromString(value.u.str.ptr);
+                    } else {
+                        UnexpectedType(value.type);
+                    }
+                } else if (TestStr(key, "error")) {
+                    SetInt(value, &test.error);
+                } else if (TestStr(key, "ghs")) {
+                    SetInt(value, &test.ghs.number);
+                } else if (TestStr(key, "rea")) {
+                    SetInt(value, &test.supplements.rea);
+                } else if (TestStr(key, "reasi")) {
+                    SetInt(value, &test.supplements.reasi);
+                } else if (TestStr(key, "si")) {
+                    SetInt(value, &test.supplements.si);
+                } else if (TestStr(key, "src")) {
+                    SetInt(value, &test.supplements.src);
+                } else if (TestStr(key, "nn1")) {
+                    SetInt(value, &test.supplements.nn1);
+                } else if (TestStr(key, "nn2")) {
+                    SetInt(value, &test.supplements.nn2);
+                } else if (TestStr(key, "nn3")) {
+                    SetInt(value, &test.supplements.nn3);
+                } else if (TestStr(key, "rep")) {
+                    SetInt(value, &test.supplements.rep);
+                } else {
+                    return UnknownAttribute(key);
+                }
             } break;
 
             default: { return UnexpectedValue(); } break;
@@ -367,6 +406,7 @@ private:
         stay = {};
         stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
         stay.procedures.ptr = (ProcedureRealisation *)out_set->store.procedures.len;
+        test = {};
     }
 
     void ResetProc()
@@ -439,7 +479,7 @@ bool StaySet::SavePack(const char *filename) const
     return SavePack(st);
 }
 
-bool StaySetBuilder::LoadJson(StreamReader &st)
+bool StaySetBuilder::LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *out_tests)
 {
     Size stays_len = set.stays.len;
     DEFER_NC(set_guard, diagnoses_len = set.store.diagnoses.len,
@@ -449,7 +489,7 @@ bool StaySetBuilder::LoadJson(StreamReader &st)
         set.store.procedures.RemoveFrom(procedures_len);
     };
 
-    JsonStayHandler json_handler(&set);
+    JsonStayHandler json_handler(&set, out_tests);
     if (!ParseJsonFile(st, &json_handler))
         return false;
 
@@ -463,7 +503,7 @@ bool StaySetBuilder::LoadJson(StreamReader &st)
     return true;
 }
 
-bool StaySetBuilder::LoadPack(StreamReader &st)
+bool StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
     const Size start_diagnoses_len = set.store.diagnoses.len;
@@ -473,6 +513,10 @@ bool StaySetBuilder::LoadPack(StreamReader &st)
         set.store.diagnoses.RemoveFrom(start_diagnoses_len);
         set.store.procedures.RemoveFrom(start_procedures_len);
     };
+
+    if (out_tests) {
+        LogError("Testing is not supported by .dspak files");
+    }
 
     PackHeader bh;
     if (st.Read(SIZE(bh), &bh) != SIZE(bh))
@@ -573,14 +617,16 @@ corrupt_error:
     return false;
 }
 
-bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
+bool StaySetBuilder::LoadFiles(Span<const char *const> filenames,
+                               HashTable<int32_t, StayTest> *out_tests)
 {
     for (const char *filename: filenames) {
         LocalArray<char, 16> extension;
         CompressionType compression_type;
         extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
-        bool (StaySetBuilder::*load_func)(StreamReader &st);
+        bool (StaySetBuilder::*load_func)(StreamReader &st,
+                                          HashTable<int32_t, StayTest> *out_tests);
         if (TestStr(extension, ".dsjson")) {
             load_func = &StaySetBuilder::LoadJson;
         } else if (TestStr(extension, ".dspak")) {
@@ -594,7 +640,7 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
         StreamReader st(filename, compression_type);
         if (st.error)
             return false;
-        if (!(this->*load_func)(st))
+        if (!(this->*load_func)(st, out_tests))
             return false;
     }
 
