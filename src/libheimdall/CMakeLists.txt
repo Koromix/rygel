@@ -23,7 +23,7 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
 add_library(heimdall ${LIBHEIMDALL_SRC})
 set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads)
-target_link_libraries(heimdall PUBLIC miniz imgui Threads::Threads rpmalloc)
+target_link_libraries(heimdall PUBLIC miniz imgui Threads::Threads)
 if(WIN32)
     target_link_libraries(heimdall PUBLIC gdi32 opengl32 imm32)
 endif()

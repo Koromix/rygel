@@ -143,7 +143,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\lib\miniz\miniz.c" />
-    <ClCompile Include="..\..\lib\rpmalloc\rpmalloc\rpmalloc.c" />
     <ClCompile Include="..\..\src\common\kutil.cc" />
     <ClCompile Include="..\..\src\libdrd\a_classifier.cc" />
     <ClCompile Include="..\..\src\libdrd\a_constraints.cc" />

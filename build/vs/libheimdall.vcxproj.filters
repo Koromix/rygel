@@ -68,9 +68,6 @@
     <ClCompile Include="..\..\lib\miniz\miniz.c">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\lib\rpmalloc\rpmalloc\rpmalloc.c">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\common\kutil.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>

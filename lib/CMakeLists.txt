@@ -44,6 +44,3 @@ set(IMGUI_SRC imgui/imgui.cpp
               imgui/imgui_draw.cpp
               imgui/imgui_demo.cpp)
 add_library(imgui STATIC EXCLUDE_FROM_ALL ${IMGUI_SRC})
-
-set(RPMALLOC_SRC rpmalloc/rpmalloc/rpmalloc.c)
-add_library(rpmalloc STATIC EXCLUDE_FROM_ALL ${RPMALLOC_SRC})

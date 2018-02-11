@@ -42,9 +42,6 @@
     <ClCompile Include="..\..\src\libdrd\main.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\lib\rpmalloc\rpmalloc\rpmalloc.c">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\common\kutil.hh">
