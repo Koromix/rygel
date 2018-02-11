@@ -47,7 +47,7 @@ struct Stay {
     DiagnosisCode linked_diagnosis;
 
     // It's 2017, so let's assume 64-bit LE platforms are the majority. Use padding and
-    // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support mpak
+    // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support dspak
     // files on 32-bit platforms.
     Span<DiagnosisCode> diagnoses;
     Span<ProcedureRealisation> procedures;

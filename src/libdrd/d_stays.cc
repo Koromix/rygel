@@ -21,7 +21,7 @@ struct PackHeader {
 #define PACK_VERSION 2
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
-// This should warn us in most cases when we break mpak files (it's basically a memcpy format)
+// This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 StaticAssert(SIZE(Stay) == 104);
 StaticAssert(SIZE(DiagnosisCode) == 8);
@@ -411,8 +411,8 @@ bool StaySet::SavePack(const char *filename) const
 
     extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
-    if (!TestStr(extension, ".mpak")) {
-        LogError("Unknown packing extension '%1', prefer '.mpak'", extension);
+    if (!TestStr(extension, ".dspak")) {
+        LogError("Unknown packing extension '%1', prefer '.dspak'", extension);
     }
 
     StreamWriter st(filename, compression_type);
@@ -459,11 +459,11 @@ bool StaySetBuilder::LoadPack(StreamReader &st)
         goto corrupt_error;
 
     if (strncmp(bh.signature, PACK_SIGNATURE, SIZE(bh.signature)) != 0) {
-        LogError("File '%1' does not obey mpak format (wrong signature)", st.filename);
+        LogError("File '%1' does not obey dspak format (wrong signature)", st.filename);
         return false;
     }
     if (bh.version != PACK_VERSION) {
-        LogError("File '%1' does not obey mpak format (wrong signature)", st.filename);
+        LogError("File '%1' does not obey dspak format (wrong signature)", st.filename);
         return false;
     }
     if (bh.endianness != (int8_t)ARCH_ENDIANNESS) {
@@ -561,9 +561,9 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames)
         extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
         bool (StaySetBuilder::*load_func)(StreamReader &st);
-        if (TestStr(extension, ".mjson")) {
+        if (TestStr(extension, ".dsjson")) {
             load_func = &StaySetBuilder::LoadJson;
-        } else if (TestStr(extension, ".mpak")) {
+        } else if (TestStr(extension, ".dspak")) {
             load_func = &StaySetBuilder::LoadPack;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
