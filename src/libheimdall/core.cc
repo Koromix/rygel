@@ -341,13 +341,13 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
     return deploy_click;
 }
 
-static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
-                                const HashSet<Span<const char>> &deployed_paths)
+static ImVec2 ComputeEntitySize(const InterfaceState &state,
+                                const EntitySet &entity_set, const Entity &ent)
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
     HashSet<Span<const char>> lines_set;
-    float max_x = 0.0f;
+    float max_x = 0.0f, height = 0.0f;
 
     for (const Element &elmt: ent.elements) {
         max_x = std::max((float)elmt.time, max_x);
@@ -372,8 +372,8 @@ static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
         {
             Span<const char> partial_path = {path.ptr, 1};
             for (;;) {
-                lines_set.Append(partial_path);
-                fully_deployed = deployed_paths.Find(partial_path);
+                height += lines_set.Append(partial_path).second * (20.0f + style.ItemSpacing.y);
+                fully_deployed = state.deploy_paths.Find(partial_path);
 
                 if (!fully_deployed || partial_path.len == path.len)
                     break;
@@ -382,19 +382,19 @@ static ImVec2 ComputeEntitySize(const EntitySet &entity_set, const Entity &ent,
         }
 
         if (fully_deployed) {
-            lines_set.Append(elmt.concept);
+            height += lines_set.Append(elmt.concept).second *
+                      (state.leaf_height + style.ItemSpacing.y);
         }
     }
 
-    // TODO: Move spacing calculation to parents
-    return ImVec2(max_x, (float)lines_set.table.count * (20.0f + style.ItemSpacing.y));
+    return ImVec2(max_x, height);
 }
 
-static void DrawEntities(ImRect bb, float tree_width, double time_offset,
+static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                          InterfaceState &state, const EntitySet &entity_set)
 {
     if (!entity_set.entities.len)
-        return;
+        return true;
 
     const ImGuiStyle &style = ImGui::GetStyle();
     ImGuiWindow *win = ImGui::GetCurrentWindow();
@@ -403,6 +403,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
     draw->PushClipRect(bb.Min, bb.Max);
     DEFER { draw->PopClipRect(); };
 
+    bool cache_refreshed = false;
     if (!state.size_cache_valid || state.lines_top.len != entity_set.entities.len) {
         state.total_width_unscaled = 0.0f;
         state.total_height = 0.0f;
@@ -412,7 +413,7 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = 0; i < state.scroll_to_idx; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(entity_set, entity_set.entities[i], state.deploy_paths);
+            ImVec2 ent_size = ComputeEntitySize(state, entity_set, entity_set.entities[i]);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
             state.total_height += ent_size.y;
         }
@@ -420,26 +421,29 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = state.scroll_to_idx; i < entity_set.entities.len; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(entity_set, entity_set.entities[i], state.deploy_paths);
+            ImVec2 ent_size = ComputeEntitySize(state, entity_set, entity_set.entities[i]);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
             state.total_height += ent_size.y;
         }
 
         state.size_cache_valid = true;
+        cache_refreshed = true;
     }
 
     Size start_render_idx = 0;
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= ImGui::GetScrollY()) {
+            if (!cache_refreshed) {
+                state.scroll_to_idx = i;
+                state.scroll_offset_y = state.lines_top[i] - ImGui::GetScrollY();
+            }
+
             start_render_idx = i - 1;
             ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
+
             break;
         }
     }
-
-    // TODO: Set to moused over element instead?
-    state.scroll_to_idx = start_render_idx;
-    state.scroll_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y;
 
     Span<const char> deploy_path =  {};
     for (Size i = start_render_idx; i < entity_set.entities.len &&
@@ -544,7 +548,8 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
             });
 
             ImRect bb(win->ClipRect.Min.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y,
-                      win->ClipRect.Max.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y + 20.0f);
+                      win->ClipRect.Max.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y +
+                                           (line.leaf ? state.leaf_height : 20.0f));
             if (DrawEntityLine(bb, tree_width, state, time_offset, line)) {
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = entity_offset_y;
@@ -562,6 +567,8 @@ static void DrawEntities(ImRect bb, float tree_width, double time_offset,
 
         state.size_cache_valid = false;
     }
+
+    return !cache_refreshed;
 }
 
 static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
@@ -602,7 +609,7 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
     }
 }
 
-static void DrawView(InterfaceState &state, const EntitySet &entity_set)
+static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
@@ -641,9 +648,12 @@ static void DrawView(InterfaceState &state, const EntitySet &entity_set)
     state.time_zoom.Update(g_io->time.monotonic);
 
     // Render entities
-    ImRect entity_rect = win->ClipRect;
-    entity_rect.Max.y -= scale_height;
-    DrawEntities(entity_rect, tree_width, time_offset, state, entity_set);
+    bool valid_frame;
+    {
+        ImRect entity_rect = win->ClipRect;
+        entity_rect.Max.y -= scale_height;
+        valid_frame = DrawEntities(entity_rect, tree_width, time_offset, state, entity_set);
+    }
 
     // Render time scale
     ImRect scale_rect = win->ClipRect;
@@ -655,6 +665,8 @@ static void DrawView(InterfaceState &state, const EntitySet &entity_set)
     ImGui::SetCursorPos(ImVec2(tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom,
                                state.total_height + scale_height));
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
+
+    return valid_frame;
 }
 
 bool Step(InterfaceState &state, const EntitySet &entity_set)
@@ -675,6 +687,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         ImGui::Checkbox("Show plots", &state.plot_measures);
         ImGui::PushItemWidth(100.0f);
         ImGui::SliderFloat("Deployed opacity", &state.deployed_alpha, 0.0f, 1.0f);
+        ImGui::PushItemWidth(100.0f);
+        state.size_cache_valid &= !ImGui::SliderFloat("Leaf height", &state.leaf_height, 20.0f, 100.0f);
         ImGui::Combo("Interpolation", (int *)&state.interpolation, interpolation_mode_names,
                      ARRAY_SIZE(interpolation_mode_names));
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
@@ -685,6 +699,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     }
 
     // Main view
+    bool valid_frame;
     {
         ImVec2 view_pos = ImVec2(0, menu_height);
         ImVec2 view_size = ImGui::GetIO().DisplaySize;
@@ -703,12 +718,17 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         DEFER { ImGui::PopStyleVar(1); };
 
         ImGui::Begin("View", nullptr, view_flags);
-        DrawView(state, entity_set);
+        valid_frame = DrawView(state, entity_set);
         ImGui::End();
     }
 
     Render();
-    SwapGLBuffers();
+    // FIXME: This is a hack to work around the fact that ImGui::SetScroll() functions
+    // are off by one frame. We need to take over ImGui layout completely, because we
+    // do know the window size!
+    if (valid_frame) {
+        SwapGLBuffers();
+    }
 
     if (!g_io->main.run) {
         ReleaseRender();

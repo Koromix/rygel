@@ -31,6 +31,7 @@ struct InterfaceState {
 
     bool plot_measures = true;
     float deployed_alpha = 0.05f;
+    float leaf_height = 20.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
 
     bool size_cache_valid = false;
