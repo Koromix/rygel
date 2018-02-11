@@ -45,29 +45,14 @@ struct Stay {
 
     DiagnosisCode main_diagnosis;
     DiagnosisCode linked_diagnosis;
+
+    // It's 2017, so let's assume 64-bit LE platforms are the majority. Use padding and
+    // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support mpak
+    // files on 32-bit platforms.
     Span<DiagnosisCode> diagnoses;
-
     Span<ProcedureRealisation> procedures;
-
-#ifndef DISABLE_TESTS
-    struct {
-        uint16_t cluster_len;
-
-        GhmCode ghm;
-        int16_t error;
-
-        GhsCode ghs;
-        struct {
-            int16_t rea;
-            int16_t reasi;
-            int16_t si;
-            int16_t src;
-            int16_t nn1;
-            int16_t nn2;
-            int16_t nn3;
-            int16_t rep;
-        } supplements;
-    } test;
+#ifndef ARCH_64
+    char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
 #endif
 
     uint32_t error_mask;

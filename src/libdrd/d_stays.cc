@@ -13,16 +13,19 @@ struct PackHeader {
     int8_t native_size;
     int8_t endianness;
 
-    Size stay_size;
-    Size stays_len;
-
-    Size diagnoses_len;
-    Size procedures_len;
+    int64_t stays_len;
+    int64_t diagnoses_len;
+    int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 1
+#define PACK_VERSION 2
 #define PACK_SIGNATURE "DRD_STAY_PAK"
+
+// This should warn us in most cases when we break mpak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
+StaticAssert(SIZE(Stay) == 104);
+StaticAssert(SIZE(DiagnosisCode) == 8);
+StaticAssert(SIZE(ProcedureRealisation) == 16);
 
 // TODO: Flag errors and translate to FG errors
 class JsonStayHandler: public BaseJsonHandler<JsonStayHandler> {
@@ -329,39 +332,7 @@ public:
             } break;
 
             case State::TestObject: {
-#ifndef DISABLE_TESTS
-                if (TestStr(key, "cluster_len")) {
-                    SetInt(value, &stay.test.cluster_len);
-                } else if (TestStr(key, "ghm")) {
-                    if (value.type == JsonValue::Type::String) {
-                        stay.test.ghm = GhmCode::FromString(value.u.str.ptr);
-                    } else {
-                        UnexpectedType(value.type);
-                    }
-                } else if (TestStr(key, "error")) {
-                    SetInt(value, &stay.test.error);
-                } else if (TestStr(key, "ghs")) {
-                    SetInt(value, &stay.test.ghs.number);
-                } else if (TestStr(key, "rea")) {
-                    SetInt(value, &stay.test.supplements.rea);
-                } else if (TestStr(key, "reasi")) {
-                    SetInt(value, &stay.test.supplements.reasi);
-                } else if (TestStr(key, "si")) {
-                    SetInt(value, &stay.test.supplements.si);
-                } else if (TestStr(key, "src")) {
-                    SetInt(value, &stay.test.supplements.src);
-                } else if (TestStr(key, "nn1")) {
-                    SetInt(value, &stay.test.supplements.nn1);
-                } else if (TestStr(key, "nn2")) {
-                    SetInt(value, &stay.test.supplements.nn2);
-                } else if (TestStr(key, "nn3")) {
-                    SetInt(value, &stay.test.supplements.nn3);
-                } else if (TestStr(key, "rep")) {
-                    SetInt(value, &stay.test.supplements.rep);
-                } else {
-                    return UnknownAttribute(key);
-                }
-#endif
+                // TODO: Restore self-test system
             } break;
 
             default: { return UnexpectedValue(); } break;
@@ -393,13 +364,34 @@ bool StaySet::SavePack(StreamWriter &st) const
     bh.version = PACK_VERSION;
     bh.native_size = (uint8_t)SIZE(Size);
     bh.endianness = (int8_t)ARCH_ENDIANNESS;
-    bh.stay_size = SIZE(*stays.ptr);
     bh.stays_len = stays.len;
     bh.diagnoses_len = store.diagnoses.len;
     bh.procedures_len = store.procedures.len;
 
     st.Write(&bh, SIZE(bh));
+#ifdef ARCH_64
     st.Write(stays.ptr, stays.len * SIZE(*stays.ptr));
+#else
+    for (const Stay &stay: stays) {
+        Stay stay2;
+        memcpy(&stay2, &stay, SIZE(stay));
+
+        union {
+            uint8_t raw[32];
+            struct {
+                int64_t _pad1;
+                int64_t diagnoses_len;
+                int64_t _pad2;
+                int64_t procedures_len;
+            } st;
+        } u;
+        u.st.diagnoses_len = (int64_t)stay.diagnoses.len;
+        u.st.procedures_len = (int64_t)stay.procedures.len;
+        memcpy(&stay2.diagnoses, u.raw, 32);
+
+        st.Write(&stay2, SIZE(stay2));
+    }
+#endif
     for (const Stay &stay: stays) {
         st.Write(stay.diagnoses.ptr, stay.diagnoses.len * SIZE(*stay.diagnoses.ptr));
     }
@@ -453,61 +445,111 @@ bool StaySetBuilder::LoadJson(StreamReader &st)
 
 bool StaySetBuilder::LoadPack(StreamReader &st)
 {
-    DEFER_NC(set_guard, stays_len = set.stays.len,
-                        diagnoses_len = set.store.diagnoses.len,
-                        procedures_len = set.store.procedures.len) {
-        set.stays.RemoveFrom(stays_len);
-        set.store.diagnoses.RemoveFrom(diagnoses_len);
-        set.store.procedures.RemoveFrom(procedures_len);
+    const Size start_stays_len = set.stays.len;
+    const Size start_diagnoses_len = set.store.diagnoses.len;
+    const Size start_procedures_len = set.store.procedures.len;
+    DEFER_N(set_guard) {
+        set.stays.RemoveFrom(start_stays_len);
+        set.store.diagnoses.RemoveFrom(start_diagnoses_len);
+        set.store.procedures.RemoveFrom(start_procedures_len);
     };
 
     PackHeader bh;
     if (st.Read(SIZE(bh), &bh) != SIZE(bh))
-        goto error;
-    if (bh.version != PACK_VERSION)
-        goto error;
-    if (bh.native_size != (uint8_t)SIZE(Size))
-        goto error;
-    if (bh.endianness != (int8_t)ARCH_ENDIANNESS)
-        goto error;
+        goto corrupt_error;
 
-    if (bh.stay_size != SIZE(Stay))
-        goto error;
-    set.stays.Grow(bh.stays_len);
-    if (st.Read(SIZE(*set.stays.ptr) * bh.stays_len,
-                set.stays.end()) != SIZE(*set.stays.ptr) * bh.stays_len)
-        goto error;
-    set.stays.len += bh.stays_len;
-
-    set.store.diagnoses.Grow(bh.diagnoses_len);
-    if (st.Read(SIZE(*set.store.diagnoses.ptr) * bh.diagnoses_len,
-                set.store.diagnoses.end()) != SIZE(*set.store.diagnoses.ptr) * bh.diagnoses_len)
-        goto error;
-    set.store.procedures.Grow(bh.procedures_len);
-    if (st.Read(SIZE(*set.store.procedures.ptr) * bh.procedures_len,
-                set.store.procedures.end()) != SIZE(*set.store.procedures.ptr) * bh.procedures_len)
-        goto error;
-
-    for (Size i = set.stays.len - bh.stays_len; i < set.stays.len; i++) {
-        Stay *stay = &set.stays[i];
-
-        if (stay->diagnoses.len) {
-            stay->diagnoses.ptr = (DiagnosisCode *)set.store.diagnoses.len;
-            set.store.diagnoses.len += stay->diagnoses.len;
-        }
-        if (stay->procedures.len) {
-            stay->procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
-            set.store.procedures.len += stay->procedures.len;
-        }
+    if (strncmp(bh.signature, PACK_SIGNATURE, SIZE(bh.signature)) != 0) {
+        LogError("File '%1' does not obey mpak format (wrong signature)", st.filename);
+        return false;
     }
+    if (bh.version != PACK_VERSION) {
+        LogError("File '%1' does not obey mpak format (wrong signature)", st.filename);
+        return false;
+    }
+    if (bh.endianness != (int8_t)ARCH_ENDIANNESS) {
+        LogError("File '%1' is not compatible with this platform (endianness issue)",
+                 st.filename);
+        return false;
+    }
+    if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
+        goto corrupt_error;
+
+    if (bh.stays_len > (LEN_MAX - start_stays_len)
+            || bh.diagnoses_len > (LEN_MAX - start_diagnoses_len)
+            || bh.procedures_len > (LEN_MAX - start_procedures_len)) {
+        LogError("Too much data to load in '%1'", st.filename);
+        return false;
+    }
+
+    set.stays.Grow((Size)bh.stays_len);
+    if (st.Read(SIZE(*set.stays.ptr) * (Size)bh.stays_len,
+                set.stays.end()) != SIZE(*set.stays.ptr) * (Size)bh.stays_len)
+        goto corrupt_error;
+    set.stays.len += (Size)bh.stays_len;
+
+    set.store.diagnoses.Grow((Size)bh.diagnoses_len);
+    if (st.Read(SIZE(*set.store.diagnoses.ptr) * (Size)bh.diagnoses_len,
+                set.store.diagnoses.end()) != SIZE(*set.store.diagnoses.ptr) * (Size)bh.diagnoses_len)
+        goto corrupt_error;
+    set.store.procedures.Grow((Size)bh.procedures_len);
+    if (st.Read(SIZE(*set.store.procedures.ptr) * (Size)bh.procedures_len,
+                set.store.procedures.end()) != SIZE(*set.store.procedures.ptr) * (Size)bh.procedures_len)
+        goto corrupt_error;
+
+    {
+        Size store_diagnoses_len = set.store.diagnoses.len;
+        Size store_procedures_len = set.store.procedures.len;
+
+        for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
+            Stay *stay = &set.stays[i];
+
+#ifndef ARCH_64
+            union {
+                uint8_t raw[32];
+                struct {
+                    int64_t _pad1;
+                    int64_t diagnoses_len;
+                    int64_t _pad2;
+                    int64_t procedures_len;
+                } st;
+            } u;
+            memcpy(u.raw, &stay->diagnoses, 32);
+            stay->diagnoses.len = (Size)u.st.diagnoses_len;
+            stay->procedures.len = (Size)u.st.procedures_len;
+#endif
+
+            if (stay->diagnoses.len) {
+                if (UNLIKELY(stay->diagnoses.len < 0))
+                    goto corrupt_error;
+                stay->diagnoses.ptr = (DiagnosisCode *)store_diagnoses_len;
+                store_diagnoses_len += stay->diagnoses.len;
+                if (UNLIKELY(store_diagnoses_len <= 0 ||
+                             store_diagnoses_len > start_diagnoses_len + bh.diagnoses_len))
+                    goto corrupt_error;
+            }
+            if (stay->procedures.len) {
+                if (UNLIKELY(stay->procedures.len < 0))
+                    goto corrupt_error;
+                stay->procedures.ptr = (ProcedureRealisation *)store_procedures_len;
+                store_procedures_len += stay->procedures.len;
+                if (UNLIKELY(store_procedures_len <= 0 ||
+                             store_procedures_len > start_procedures_len + bh.procedures_len))
+                    goto corrupt_error;
+            }
+        }
+
+        set.store.diagnoses.len = store_diagnoses_len;
+        set.store.procedures.len = store_procedures_len;
+    }
+
 
     // We assume stays are already sorted in pak files
 
     set_guard.disable();
     return true;
 
-error:
-    LogError("Stay pack file '%1' is malformed", st.filename);
+corrupt_error:
+    LogError("Stay pack file '%1' appears to be corrupt or truncated", st.filename);
     return false;
 }
 
