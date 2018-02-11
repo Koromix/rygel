@@ -272,25 +272,26 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
     // Line header
     bool deploy_click;
     {
-        if (!line.leaf) {
-            ImRect triangle_bb(bb.Min.x + (float)line.depth * 12.0f - 3.0f, bb.Min.y + 2.0f,
-                               bb.Min.x + (float)line.depth * 12.0f + 13.0f, bb.Min.y + 18.0f);
-            if (ImGui::ItemAdd(triangle_bb, 0)) {
+        ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
+        ImRect deploy_bb(bb.Min.x + (float)line.depth * 12.0f - 3.0f, bb.Min.y + 2.0f,
+                         bb.Min.x + (float)line.depth * 12.0f + 13.0f + text_size.x, bb.Min.y + 18.0f);
+
+        if (ImGui::ItemAdd(deploy_bb, 0)) {
+            if (!line.leaf) {
                 ImGui::RenderTriangle(ImVec2(bb.Min.x + (float)line.depth * 12.0f, bb.Min.y),
                                       line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
             }
-            deploy_click = ImGui::IsItemClicked();
-        } else {
-            deploy_click = false;
+
+            ImVec4 text_rect {
+                bb.Min.x + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
+                bb.Min.x + tree_width, bb.Max.y
+            };
+            draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, text_rect.y),
+                          ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end(),
+                          0.0f, &text_rect);
         }
 
-        ImVec4 text_rect {
-            bb.Min.x + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
-            bb.Min.x + tree_width, bb.Max.y
-        };
-        draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, text_rect.y),
-                      ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end(),
-                      0.0f, &text_rect);
+        deploy_click = !line.leaf && ImGui::IsItemClicked();
     }
 
     if (line.alpha > 0.0f) {
