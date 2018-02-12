@@ -843,19 +843,16 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     if (!StartRender())
         return false;
 
-    if (!g_io->main.iteration_count) {
-        ImGui::StyleColorsDark();
-    }
-
     // Menu
     float menu_height = 0.0f;
     if (ImGui::BeginMainMenuBar()) {
-        //LogInfo("Framerate: %1 (%2 ms/frame)",
-        //        FmtDouble(ImGui::GetIO().Framerate, 1), FmtDouble(1000.0f / ImGui::GetIO().Framerate, 3));
+        ImGui::PushItemWidth(100.0f);
+        ImGui::ShowStyleSelector("##StyleSelector");
+        ImGui::Checkbox("Other settings", &state.show_settings);
 
-        ImGui::Checkbox("Settings", &state.show_settings);
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
     }
@@ -894,7 +891,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
         }
-        if (ImGui::CollapsingHeader("Style", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Parent opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
