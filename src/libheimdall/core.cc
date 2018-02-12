@@ -73,10 +73,42 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                ImGui::Text("%s [%f]", elmt->concept, elmt->time);
+                ImGui::Text("%g | %s", elmt->time, elmt->concept);
                 ImGui::EndTooltip();
             }
         }
+    }
+}
+
+static void TextMeasure(const Element &elmt)
+{
+    DebugAssert(elmt.type == Element::Type::Measure);
+
+    // FIXME: Add 'DEFER scoper' construct to avoid this kind of crap
+    bool pop_color = false;
+    if (DetectAnomaly(elmt)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
+        pop_color = true;
+    }
+
+    if (!isnan(elmt.u.measure.min) && !isnan(elmt.u.measure.max)) {
+        ImGui::Text("%g | %s = %.2f [%.2f ; %.2f]",
+                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.u.measure.min, elmt.u.measure.max);
+    } else if (!isnan(elmt.u.measure.min)) {
+        ImGui::Text("%g | %s = %.2f [min = %.2f]",
+                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.u.measure.min);
+    } else if (!isnan(elmt.u.measure.max)) {
+        ImGui::Text("%g | %s = %.2f [max = %.2f]",
+                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.u.measure.max);
+    } else {
+        ImGui::Text("%g | %s = %.2f", elmt.time, elmt.concept, elmt.u.measure.value);
+    }
+
+    if (pop_color) {
+        ImGui::PopStyleColor();
     }
 }
 
@@ -134,9 +166,9 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
         ImGui::BeginTooltip();
         for (const Element *elmt: events) {
             if (elmt->type == Element::Type::Measure) {
-                ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
+                TextMeasure(*elmt);
             } else {
-                ImGui::Text("%s [%f]", elmt->concept, elmt->time);
+                ImGui::Text("%g | %s", elmt->time, elmt->concept);
             }
         }
         ImGui::EndTooltip();
@@ -311,7 +343,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
+                TextMeasure(*elmt);
                 ImGui::EndTooltip();
             }
         }
