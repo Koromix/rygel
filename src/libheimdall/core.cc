@@ -126,18 +126,18 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
 
             draw->AddText(text_bb, ImGui::GetColorU32(ImGuiCol_Text, alpha), len_str, nullptr);
         }
+    }
 
-        if (ImGui::IsItemHovered()) {
-            ImGui::BeginTooltip();
-            for (const Element *elmt: events) {
-                if (elmt->type == Element::Type::Measure) {
-                    ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
-                } else {
-                    ImGui::Text("%s [%f]", elmt->concept, elmt->time);
-                }
+    if (ImGui::IsItemHovered()) {
+        ImGui::BeginTooltip();
+        for (const Element *elmt: events) {
+            if (elmt->type == Element::Type::Measure) {
+                ImGui::Text("%s = %.2f [%f]", elmt->concept, elmt->u.measure.value, elmt->time);
+            } else {
+                ImGui::Text("%s [%f]", elmt->concept, elmt->time);
             }
-            ImGui::EndTooltip();
         }
+        ImGui::EndTooltip();
     }
 }
 
