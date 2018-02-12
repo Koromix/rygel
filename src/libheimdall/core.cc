@@ -255,6 +255,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 }
 
 struct LineData {
+    const Entity *entity;
     Span<const char> path;
     Span<const char> title;
     bool leaf;
@@ -264,8 +265,7 @@ struct LineData {
     HeapArray<const Element *> elements;
 };
 
-static bool DrawEntityLine(ImRect bb, float tree_width,
-                           const InterfaceState &state, double time_offset, const LineData &line)
+static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -295,36 +295,6 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
         deploy_click = !line.leaf && ImGui::IsItemClicked();
     }
 
-    if (line.alpha > 0.0f) {
-        // Split elements
-        HeapArray<const Element *> events;
-        HeapArray<const Element *> periods;
-        HeapArray<const Element *> measures;
-        double measures_min = FLT_MAX, measures_max = -FLT_MAX;
-        for (const Element *elmt: line.elements) {
-            switch (elmt->type) {
-                case Element::Type::Event: { events.Append(elmt); } break;
-                case Element::Type::Measure: {
-                    if (line.leaf && state.settings.plot_measures) {
-                        measures_min = std::min(measures_min, elmt->u.measure.value);
-                        measures_max = std::max(measures_max, elmt->u.measure.value);
-                        measures.Append(elmt);
-                    } else {
-                        events.Append(elmt);
-                    }
-                } break;
-                case Element::Type::Period: { periods.Append(elmt); } break;
-            }
-        }
-
-        // Draw elements
-        float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
-        DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
-        DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
-        DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
-                     measures, measures_min, measures_max, state.settings.interpolation);
-    }
-
     // Support line
     if (ImGui::ItemAdd(bb, 0)) {
         const ImGuiStyle &style = ImGui::GetStyle();
@@ -341,6 +311,41 @@ static bool DrawEntityLine(ImRect bb, float tree_width,
     }
 
     return deploy_click;
+}
+
+static void DrawLineElements(ImRect bb, float tree_width,
+                             const InterfaceState &state, double time_offset, const LineData &line)
+{
+    if (line.alpha == 0.0f)
+        return;
+
+    // Split elements
+    HeapArray<const Element *> events;
+    HeapArray<const Element *> periods;
+    HeapArray<const Element *> measures;
+    double measures_min = FLT_MAX, measures_max = -FLT_MAX;
+    for (const Element *elmt: line.elements) {
+        switch (elmt->type) {
+            case Element::Type::Event: { events.Append(elmt); } break;
+            case Element::Type::Measure: {
+                if (line.leaf && state.settings.plot_measures) {
+                    measures_min = std::min(measures_min, elmt->u.measure.value);
+                    measures_max = std::max(measures_max, elmt->u.measure.value);
+                    measures.Append(elmt);
+                } else {
+                    events.Append(elmt);
+                }
+            } break;
+            case Element::Type::Period: { periods.Append(elmt); } break;
+        }
+    }
+
+    // Draw elements
+    float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
+    DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
+    DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
+    DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
+                 measures, measures_min, measures_max, state.settings.interpolation);
 }
 
 static ImVec2 ComputeEntitySize(const InterfaceState &state,
@@ -432,116 +437,130 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         cache_refreshed = true;
     }
 
-    Size start_render_idx = 0;
+    Size render_idx = -1;
+    float render_offset;
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= ImGui::GetScrollY()) {
             if (!cache_refreshed) {
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = state.lines_top[i] - ImGui::GetScrollY();
             }
-
-            start_render_idx = i - 1;
+            render_idx = i - 1;
             ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
-
+            render_offset = ImGui::GetCursorScreenPos().y;
             break;
         }
     }
+    DebugAssert(render_idx >= 0);
 
-    Span<const char> deploy_path =  {};
-    for (Size i = start_render_idx; i < entity_set.entities.len &&
-                                    ImGui::GetCursorScreenPos().y <= win->ClipRect.Max.y; i++) {
-        const Entity &ent = entity_set.entities[i];
+    HeapArray<LineData> lines;
+    {
+        float y = render_offset;
+        for (Size i = render_idx; i < entity_set.entities.len &&
+                                  y < win->ClipRect.Max.y; i++) {
+            const Entity &ent = entity_set.entities[i];
 
-        HeapArray<LineData> lines;
-        HashMap<Span<const char>, Size> lines_map;
+            HashMap<Span<const char>, Size> lines_map;
 
-        float entity_offset_y = ImGui::GetCursorScreenPos().y - ImGui::GetWindowPos().y -
-                                style.ItemSpacing.y;
-        for (const Element &elmt: ent.elements) {
-            Span<const char> path;
-            Span<const char> title;
-            {
-                title = elmt.concept;
-                if (elmt.concept[0] == '/') {
-                    path = title;
-                    // FIXME: Check name does not end with '/'
-                    while (path.len > 1 && path.ptr[--path.len] != '/');
-                    title.ptr += path.len + 1;
-                    title.len -= path.len + 1;
-                } else {
-                    const Concept *concept = entity_set.concepts_map.Find(elmt.concept);
-                    if (concept) {
-                        path = concept->path;
+            for (const Element &elmt: ent.elements) {
+                Span<const char> path;
+                Span<const char> title;
+                {
+                    title = elmt.concept;
+                    if (elmt.concept[0] == '/') {
+                        path = title;
+                        // FIXME: Check name does not end with '/'
+                        while (path.len > 1 && path.ptr[--path.len] != '/');
+                        title.ptr += path.len + 1;
+                        title.len -= path.len + 1;
                     } else {
-                        path = entity_set.sources.Find(elmt.source_id)->default_path;
+                        const Concept *concept = entity_set.concepts_map.Find(elmt.concept);
+                        if (concept) {
+                            path = concept->path;
+                        } else {
+                            path = entity_set.sources.Find(elmt.source_id)->default_path;
+                        }
                     }
                 }
-            }
-            DebugAssert(path.len > 0);
+                DebugAssert(path.len > 0);
 
-            bool fully_deployed = false;
-            int tree_depth = 0;
-            {
-                Size name_offset = 1;
-                Span<const char> partial_path = {path.ptr, 1};
-                for (;;) {
+                bool fully_deployed = false;
+                int tree_depth = 0;
+                {
+                    Size name_offset = 1;
+                    Span<const char> partial_path = {path.ptr, 1};
+                    for (;;) {
+                        LineData *line;
+                        {
+                            std::pair<Size *, bool> ret = lines_map.Append(partial_path, lines.len);
+                            if (!ret.second) {
+                                line = &lines[*ret.first];
+                                tree_depth = line->depth + 1;
+                            } else {
+                                line = lines.AppendDefault();
+                                line->entity = &ent;
+                                line->path = partial_path;
+                                if (partial_path.len > 1) {
+                                    line->title = MakeSpan(partial_path.ptr + name_offset,
+                                                           partial_path.len - name_offset);
+                                } else {
+                                    line->title = ent.id;
+                                }
+                                line->leaf = false;
+                                line->deployed = state.deploy_paths.Find(partial_path);
+                                line->depth = tree_depth++;
+                                line->alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
+                                y += 20.0f + style.ItemSpacing.y;
+                            }
+                            fully_deployed = line->deployed;
+                        }
+                        line->elements.Append(&elmt);
+
+                        if (!fully_deployed || partial_path.len == path.len)
+                            break;
+                        name_offset = partial_path.len + (partial_path.len > 1);
+                        while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
+                    }
+                }
+
+                if (fully_deployed) {
                     LineData *line;
                     {
-                        std::pair<Size *, bool> ret = lines_map.Append(partial_path, lines.len);
+                        std::pair<Size *, bool> ret = lines_map.Append(elmt.concept, lines.len);
                         if (!ret.second) {
                             line = &lines[*ret.first];
-                            tree_depth = line->depth + 1;
                         } else {
                             line = lines.AppendDefault();
-                            line->path = partial_path;
-                            if (partial_path.len > 1) {
-                                line->title = MakeSpan(partial_path.ptr + name_offset,
-                                                       partial_path.len - name_offset);
-                            } else {
-                                line->title = ent.id;
-                            }
-                            line->leaf = false;
-                            line->deployed = state.deploy_paths.Find(partial_path);
-                            line->depth = tree_depth++;
-                            line->alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
+                            line->entity = &ent;
+                            line->path = path;
+                            line->title = title;
+                            line->leaf = true;
+                            line->depth = tree_depth;
+                            line->alpha = 1.0f;
+                            y += state.settings.leaf_height + style.ItemSpacing.y;
                         }
-                        fully_deployed = line->deployed;
                     }
                     line->elements.Append(&elmt);
-
-                    if (!fully_deployed || partial_path.len == path.len)
-                        break;
-                    name_offset = partial_path.len + (partial_path.len > 1);
-                    while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
                 }
-            }
-
-            if (fully_deployed) {
-                LineData *line;
-                {
-                    std::pair<Size *, bool> ret = lines_map.Append(elmt.concept, lines.len);
-                    if (!ret.second) {
-                        line = &lines[*ret.first];
-                    } else {
-                        line = lines.AppendDefault();
-                        line->path = path;
-                        line->title = title;
-                        line->leaf = true;
-                        line->depth = tree_depth;
-                        line->alpha = 1.0f;
-                    }
-                }
-                line->elements.Append(&elmt);
             }
         }
+    }
 
-        std::sort(lines.begin(), lines.end(),
-                  [](const LineData &line1, const LineData &line2) {
-            return MultiCmp(CmpStr(line1.path, line2.path),
-                            (int)line1.leaf - (int)line2.leaf,
-                            CmpStr(line1.title, line2.title)) < 0;
-        });
+    std::sort(lines.begin(), lines.end(),
+              [](const LineData &line1, const LineData &line2) {
+        return MultiCmp((int)(line1.entity - line2.entity),
+                        CmpStr(line1.path, line2.path),
+                        (int)line1.leaf - (int)line2.leaf,
+                        CmpStr(line1.title, line2.title)) < 0;
+    });
 
+    // Draw elements
+    {
+        draw->PushClipRect(ImVec2(win->ClipRect.Min.x + tree_width, win->ClipRect.Min.y),
+                           win->ClipRect.Max, true);
+        DEFER { draw->PopClipRect(); };
+
+        float y = render_offset;
         for (LineData &line: lines) {
             // FIXME: Don't do this all the time
             std::stable_sort(line.elements.begin(), line.elements.end(),
@@ -549,15 +568,41 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 return elmt1->time < elmt2->time;
             });
 
-            ImRect bb(win->ClipRect.Min.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y,
-                      win->ClipRect.Max.x, ImGui::GetCursorScreenPos().y + style.ItemSpacing.y +
+            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
+                      win->ClipRect.Max.x, y + style.ItemSpacing.y +
                                            (line.leaf ? state.settings.leaf_height : 20.0f));
-            if (DrawEntityLine(bb, tree_width, state, time_offset, line)) {
-                state.scroll_to_idx = i;
-                state.scroll_offset_y = entity_offset_y;
+            DrawLineElements(bb, tree_width, state, time_offset, line);
+            y = bb.Max.y;
+        }
+    }
+
+    // Draw frames (header, support line)
+    Span<const char> deploy_path = {};
+    {
+        const Entity *ent = nullptr;
+        float ent_offset_y = 0.0f;
+
+        float y = render_offset;
+        for (Size i = 0; i < lines.len && y < win->ClipRect.Max.y; i++) {
+            const LineData &line = lines[i];
+
+            if (ent != line.entity) {
+                ent = line.entity;
+                ent_offset_y = y;
+            }
+
+            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
+                      win->ClipRect.Max.x, y + style.ItemSpacing.y +
+                                           (line.leaf ? state.settings.leaf_height : 20.0f));
+            if (DrawLineFrame(bb, tree_width, line)) {
+                state.scroll_to_idx = ent - entity_set.entities.ptr;
+                // NOTE: I'm not sure I get why ent_offset_y does not work directly but
+                // it's 5 in the morning. Fix this hack later.
+                state.scroll_offset_y = ent_offset_y - style.ItemSpacing.y - ImGui::GetWindowPos().y;
                 deploy_path = line.path;
             }
-            ImGui::SetCursorScreenPos(ImVec2(bb.Min.x, bb.Max.y));
+
+            y = bb.Max.y;
         }
     }
 
