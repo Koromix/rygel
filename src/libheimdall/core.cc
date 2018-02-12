@@ -243,9 +243,13 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    float y_scaler = (y_max - y_min - 4.0f) / (float)(max - min);
-    if (std::isinf(y_scaler)) {
-        y_scaler = 0.5f;
+    float y_scaler;
+    if (max > min) {
+        y_scaler  = (y_max - y_min - 4.0f) / (float)(max - min);;
+    } else {
+        DebugAssert(!(min > max));
+        y_max = (y_max + y_min) / 2.0f;
+        y_scaler = 1.0f;
     }
 
     const auto ComputeCoordinates = [&](double time, double value) {
