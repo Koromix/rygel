@@ -332,12 +332,19 @@ static void DrawLineElements(ImRect bb, float tree_width,
     HeapArray<const Element *> events;
     HeapArray<const Element *> periods;
     HeapArray<const Element *> measures;
-    double measures_min = FLT_MAX, measures_max = -FLT_MAX;
+    double measures_min = DBL_MAX, measures_max = -DBL_MAX;
+    double min_min = DBL_MAX, max_max = -DBL_MAX;
     for (const Element *elmt: line.elements) {
         switch (elmt->type) {
             case Element::Type::Event: { events.Append(elmt); } break;
             case Element::Type::Measure: {
                 if (line.leaf && state.settings.plot_measures) {
+                    if (!isnan(elmt->u.measure.min)) {
+                        min_min = std::min(min_min, elmt->u.measure.min);
+                    }
+                    if (!isnan(elmt->u.measure.max)) {
+                        max_max = std::max(max_max, elmt->u.measure.max);
+                    }
                     measures_min = std::min(measures_min, elmt->u.measure.value);
                     measures_max = std::max(measures_max, elmt->u.measure.value);
                     measures.Append(elmt);
@@ -346,6 +353,17 @@ static void DrawLineElements(ImRect bb, float tree_width,
                 }
             } break;
             case Element::Type::Period: { periods.Append(elmt); } break;
+        }
+    }
+
+    if (min_min < max_max) {
+        if (min_min < DBL_MAX && max_max > -DBL_MAX) {
+            measures_min = std::min(min_min - (max_max - min_min) * 0.05, measures_min);
+            measures_max = std::max(max_max + (max_max - min_min) * 0.05, measures_max);
+        } else if (min_min < DBL_MAX) {
+            measures_min = std::min(min_min - (measures_max - min_min) * 0.05, measures_min);
+        } else {
+            measures_max = std::max(max_max + (max_max - measures_min) * 0.05, measures_max);
         }
     }
 
