@@ -887,16 +887,24 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     // Settings
     if (state.show_settings) {
         ImGui::Begin("Settings", &state.show_settings);
-        ImGui::PushItemWidth(100.0f);
-        ImGui::SliderFloat("Tree width", &state.new_settings.tree_width, 100.0f, 400.0f);
-        ImGui::Checkbox("Show plots", &state.new_settings.plot_measures);
-        ImGui::PushItemWidth(100.0f);
-        ImGui::SliderFloat("Deployed opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
-        ImGui::PushItemWidth(100.0f);
-        ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
-        ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
+
+        if (ImGui::CollapsingHeader("Layout", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::PushItemWidth(100.0f);
+            ImGui::SliderFloat("Tree width", &state.new_settings.tree_width, 100.0f, 400.0f);
+            ImGui::PushItemWidth(100.0f);
+            ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
+        }
+        if (ImGui::CollapsingHeader("Style", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
+            ImGui::PushItemWidth(100.0f);
+            ImGui::SliderFloat("Parent opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
+        }
+        if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
+            ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
                      interpolation_mode_names, ARRAY_SIZE(interpolation_mode_names));
-        ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
+        }
+
         if (ImGui::Button("Apply")) {
             state.settings = state.new_settings;
             state.size_cache_valid = false;
@@ -911,6 +919,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             state.new_settings = state.settings;
             state.size_cache_valid = false;
         }
+
         ImGui::End();
     }
 
