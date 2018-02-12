@@ -394,8 +394,7 @@ static bool SetGLContext(HDC dc, HGLRC gl)
         return false;
 
     if (gl) {
-        // FIXME: Transiently disable V-sync for demo
-        if (!wglSwapIntervalEXT(0)) {
+        if (!wglSwapIntervalEXT(1)) {
             static bool vsync_error_warned;
             if (!vsync_error_warned) {
                 LogError("Failed to enable V-sync, ignoring");
