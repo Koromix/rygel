@@ -83,7 +83,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
     ImRect bb {
-        rect.Min.x - 10.0f, rect.Min.y,
+        rect.Min.x - 10.0f, std::max(rect.Min.y, rect.Max.y - 20.0f),
         rect.Max.x + 10.0f, rect.Max.y
     };
 
@@ -97,17 +97,17 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
 
         if (rect.GetWidth() >= 1.0f) {
             ImVec2 points[] = {
-                { rect.Min.x, rect.Min.y },
-                { rect.Max.x, rect.Min.y },
-                { rect.Max.x + 10.0f, rect.Max.y },
-                { rect.Min.x - 10.0f, rect.Max.y }
+                { rect.Min.x, bb.Min.y },
+                { rect.Max.x, bb.Min.y },
+                { rect.Max.x + 10.0f, bb.Max.y },
+                { rect.Min.x - 10.0f, bb.Max.y }
             };
             draw->AddConvexPolyFilled(points, ARRAY_SIZE(points), color);
         } else {
             ImVec2 points[] = {
-                { rect.Min.x, rect.Min.y },
-                { rect.Min.x + 10.0f, rect.Max.y },
-                { rect.Min.x - 10.0f, rect.Max.y }
+                { rect.Min.x, bb.Min.y },
+                { rect.Min.x + 10.0f, bb.Max.y },
+                { rect.Min.x - 10.0f, bb.Max.y }
             };
             draw->AddTriangleFilled(points[0], points[1], points[2], color);
         }
