@@ -700,9 +700,6 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    draw->PushClipRect(ImVec2(bb.Min.x - 15.0f, bb.Min.y), bb.Max, true);
-    DEFER { draw->PopClipRect(); };
-
     // float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     int precision = (int)log10f(1.0f / time_step);
@@ -712,21 +709,23 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
     float x = bb.Min.x - (float)time_offset * time_zoom, time = 0.0f;
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
-        if (x - prev_text_x >= min_text_delta) {
-            draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text));
+        if (x >= bb.Min.x) {
+            if (x - prev_text_x >= min_text_delta) {
+                draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
+                              ImGui::GetColorU32(ImGuiCol_Text));
 
-            char time_str[32];
-            ImVec2 text_size;
-            Fmt(time_str, "%1", FmtDouble(time, precision));
-            text_size = ImGui::CalcTextSize(time_str);
+                char time_str[32];
+                ImVec2 text_size;
+                Fmt(time_str, "%1", FmtDouble(time, precision));
+                text_size = ImGui::CalcTextSize(time_str);
 
-            draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text), time_str);
-            prev_text_x = x;
-        } else {
-            draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text));
+                draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
+                              ImGui::GetColorU32(ImGuiCol_Text), time_str);
+                prev_text_x = x;
+            } else {
+                draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
+                              ImGui::GetColorU32(ImGuiCol_Text));
+            }
         }
 
         x += time_step * time_zoom;
