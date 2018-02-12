@@ -25,6 +25,7 @@ static const char *const interpolation_mode_names[] = {
 };
 
 struct InterfaceSettings {
+    float tree_width = 200.0f;
     bool plot_measures = true;
     float deployed_alpha = 0.05f;
     float leaf_height = 20.0f;

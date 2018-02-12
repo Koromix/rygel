@@ -661,7 +661,6 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
     // Layout settings
-    float tree_width = 200.0f;
     float scale_height = 16.0f + ImGui::GetFontSize();
     double time_offset = ImGui::GetScrollX() / state.time_zoom;
 
@@ -699,17 +698,19 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
     {
         ImRect entity_rect = win->ClipRect;
         entity_rect.Max.y -= scale_height;
-        valid_frame = DrawEntities(entity_rect, tree_width, time_offset, state, entity_set);
+        valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
+                                   time_offset, state, entity_set);
     }
 
     // Render time scale
     ImRect scale_rect = win->ClipRect;
-    scale_rect.Min.x = ImMin(scale_rect.Min.x + tree_width + 15.0f, scale_rect.Max.x);
+    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
     scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
     DrawTimeScale(scale_rect, time_offset, state.time_zoom);
 
     // Help ImGui compute scrollbar and layout
-    ImGui::SetCursorPos(ImVec2(tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom,
+    ImGui::SetCursorPos(ImVec2(state.settings.tree_width + 20.0f + state.total_width_unscaled *
+                                                                   (float)state.time_zoom,
                                state.total_height + scale_height));
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
 
@@ -765,6 +766,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
     // Settings
     if (state.show_settings) {
         ImGui::Begin("Settings", &state.show_settings);
+        ImGui::PushItemWidth(100.0f);
+        ImGui::SliderFloat("Tree width", &state.new_settings.tree_width, 100.0f, 400.0f);
         ImGui::Checkbox("Show plots", &state.new_settings.plot_measures);
         ImGui::PushItemWidth(100.0f);
         ImGui::SliderFloat("Deployed opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
