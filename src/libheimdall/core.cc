@@ -516,7 +516,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
 
     Size render_idx = -1;
-    float render_offset;
+    float render_offset = 0.0f;
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= ImGui::GetScrollY()) {
             if (!cache_refreshed) {
