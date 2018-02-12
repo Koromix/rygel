@@ -903,8 +903,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         }
 
         if (ImGui::Button("Apply")) {
+            state.size_cache_valid &= !(state.new_settings.leaf_height != state.settings.leaf_height);
             state.settings = state.new_settings;
-            state.size_cache_valid = false;
         }
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
@@ -912,9 +912,9 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         }
         ImGui::SameLine();
         if (ImGui::Button("Reset")) {
-            state.settings = InterfaceSettings();
-            state.new_settings = state.settings;
-            state.size_cache_valid = false;
+            state.new_settings = InterfaceSettings();
+            state.size_cache_valid &= !(state.new_settings.leaf_height != state.settings.leaf_height);
+            state.settings = state.new_settings;
         }
 
         ImGui::End();
