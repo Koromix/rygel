@@ -783,6 +783,12 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         if (ImGui::Button("Cancel")) {
             state.new_settings = state.settings;
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset")) {
+            state.settings = InterfaceSettings();
+            state.new_settings = state.settings;
+            state.size_cache_valid = false;
+        }
         ImGui::End();
     }
 
