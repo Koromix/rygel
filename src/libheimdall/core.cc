@@ -183,28 +183,37 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     if (std::isinf(y_scaler)) {
         y_scaler = 0.5f;
     }
+
     const auto ComputeCoordinates = [&](const Element *elmt) {
         return ImVec2 {
             x_offset + ((float)elmt->time * time_zoom),
             y_max - 4.0f - y_scaler * (float)(elmt->u.measure.value - min)
         };
     };
+    const auto GetColor = [&](const Element *elmt) {
+        return DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
+                                    : GetVisColor(VisColor::Plot, alpha);
+    };
 
     // Draw line
     switch (interpolation) {
         case InterpolationMode::Linear: {
+            ImU32 color = GetColor(measures[0]);
             ImVec2 prev_point = ComputeCoordinates(measures[0]);
             for (Size i = 1; i < measures.len; i++) {
                 const Element *elmt = measures[i];
                 DebugAssert(elmt->type == Element::Type::Measure);
 
                 ImVec2 point = ComputeCoordinates(elmt);
-                draw->AddLine(prev_point, point, GetVisColor(VisColor::Plot, alpha), 1.0f);
+                draw->AddLine(prev_point, point, color, 1.0f);
+
+                color = GetColor(elmt);
                 prev_point = point;
             }
         } break;
 
         case InterpolationMode::LOCF: {
+            ImU32 color = GetColor(measures[0]);
             ImVec2 prev_point = ComputeCoordinates(measures[0]);
             for (Size i = 1; i < measures.len; i++) {
                 const Element *elmt = measures[i];
@@ -216,8 +225,9 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
                     ImVec2(next_point.x, prev_point.y),
                     next_point
                 };
-                draw->AddPolyline(points, ARRAY_SIZE(points), GetVisColor(VisColor::Plot, alpha),
-                                  false, 1.0f);
+                draw->AddPolyline(points, ARRAY_SIZE(points), color, false, 1.0f);
+
+                color = GetColor(elmt);
                 prev_point = next_point;
             }
         } break;
@@ -234,8 +244,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 
     // Draw points
     for (const Element *elmt: measures) {
-        ImU32 color = DetectAnomaly(*elmt) ? GetVisColor(VisColor::Alert, alpha)
-                                           : GetVisColor(VisColor::Plot, alpha);
+        ImU32 color = GetColor(elmt);
         ImVec2 point = ComputeCoordinates(elmt);
         ImRect point_bb = {
             point.x - 3.0f, point.y - 3.0f,
