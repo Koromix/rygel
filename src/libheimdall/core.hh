@@ -30,6 +30,7 @@ struct InterfaceSettings {
     float deployed_alpha = 0.05f;
     float leaf_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
+    bool paint_grid = true;
 };
 
 struct InterfaceState {

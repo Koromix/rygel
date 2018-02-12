@@ -696,7 +696,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     return !cache_refreshed;
 }
 
-static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
+static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, bool paint_grid)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -713,6 +713,10 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
             if (x - prev_text_x >= min_text_delta) {
                 draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
+                if (paint_grid) {
+                    draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
+                                  ImGui::GetColorU32(ImGuiCol_Text, 0.02f));
+                }
 
                 char time_str[32];
                 ImVec2 text_size;
@@ -725,6 +729,10 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
             } else {
                 draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
+                if (paint_grid) {
+                    draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
+                                  ImGui::GetColorU32(ImGuiCol_Text, 0.01f));
+                }
             }
         }
 
@@ -770,6 +778,12 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
     // Run animations
     state.time_zoom.Update(g_io->time.monotonic);
 
+    // Render time scale
+    ImRect scale_rect = win->ClipRect;
+    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
+    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
+    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.paint_grid);
+
     // Render entities
     bool valid_frame;
     {
@@ -778,12 +792,6 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
         valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
                                    time_offset, state, entity_set);
     }
-
-    // Render time scale
-    ImRect scale_rect = win->ClipRect;
-    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
-    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
-    DrawTimeScale(scale_rect, time_offset, state.time_zoom);
 
     // Help ImGui compute scrollbar and layout
     ImGui::SetCursorPos(ImVec2(state.settings.tree_width + 20.0f + state.total_width_unscaled *
@@ -852,6 +860,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
         ImGui::Combo("Interpolation", (int *)&state.new_settings.interpolation,
                      interpolation_mode_names, ARRAY_SIZE(interpolation_mode_names));
+        ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
         if (ImGui::Button("Apply")) {
             state.settings = state.new_settings;
             state.size_cache_valid = false;
