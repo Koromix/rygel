@@ -21,7 +21,8 @@
 enum class VisColor {
     Event,
     Alert,
-    Plot
+    Plot,
+    Limit
 };
 
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
@@ -30,6 +31,7 @@ static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
         case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.100f, 0.400f, 0.750f, alpha)); } break;
         case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.724f, 0.107f, 0.076f, alpha)); } break;
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
+        case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
     Assert(false);
 }
@@ -169,6 +171,68 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
     }
 }
 
+template <typename Fun>
+void DrawLine(InterpolationMode interpolation, Fun f)
+{
+    ImDrawList *draw = ImGui::GetWindowDrawList();
+
+    switch (interpolation) {
+        case InterpolationMode::Linear: {
+            ImU32 prev_color = 0;
+            ImVec2 prev_point;
+            f(0, &prev_point, &prev_color);
+
+            for (Size i = 1;; i++) {
+                ImU32 color = 0;
+                ImVec2 point;
+                if (!f(i, &point, &color))
+                    break;
+
+                if (LIKELY(!isnan(prev_point.y) && !isnan(point.y))) {
+                    draw->AddLine(prev_point, point, prev_color, 1.0f);
+                }
+
+                prev_color = color;
+                prev_point = point;
+            }
+        } break;
+
+        case InterpolationMode::LOCF: {
+            ImU32 prev_color = 0;
+            ImVec2 prev_point;
+            f(0, &prev_point, &prev_color);
+
+            for (Size i = 1;; i++) {
+                ImU32 color = 0;
+                ImVec2 point;
+                if (!f(i, &point, &color))
+                    break;
+
+                if (LIKELY(!isnan(prev_point.y) && !isnan(point.y))) {
+                    ImVec2 points[] = {
+                        prev_point,
+                        ImVec2(point.x, prev_point.y),
+                        point
+                    };
+                    draw->AddPolyline(points, ARRAY_SIZE(points), prev_color, false, 1.0f);
+                }
+
+                prev_color = color;
+                prev_point = point;
+            }
+        } break;
+
+        case InterpolationMode::Spline: {
+            // TODO: Implement Akima spline interpolation
+            // See http://www.iue.tuwien.ac.at/phd/rottinger/node60.html
+        } break;
+
+        case InterpolationMode::Disable: {
+            // Name speaks for itself
+        } break;
+    }
+}
+
 static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
                          Span<const Element *const> measures, double min, double max,
                          InterpolationMode interpolation)
@@ -184,10 +248,10 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
         y_scaler = 0.5f;
     }
 
-    const auto ComputeCoordinates = [&](const Element *elmt) {
+    const auto ComputeCoordinates = [&](double time, double value) {
         return ImVec2 {
-            x_offset + ((float)elmt->time * time_zoom),
-            y_max - 4.0f - y_scaler * (float)(elmt->u.measure.value - min)
+            x_offset + ((float)time * time_zoom),
+            y_max - 4.0f - y_scaler * (float)(value - min)
         };
     };
     const auto GetColor = [&](const Element *elmt) {
@@ -195,57 +259,44 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
                                     : GetVisColor(VisColor::Plot, alpha);
     };
 
+    // Draw limits
+    DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
+        if (i >= measures.len)
+            return false;
+        DebugAssert(measures[i]->type == Element::Type::Measure);
+        if (!isnan(measures[i]->u.measure.min)) {
+            *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.min);
+            *out_color = GetVisColor(VisColor::Limit, alpha);
+        } else {
+            out_point->y = NAN;
+        }
+        return true;
+    });
+    DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
+        if (i >= measures.len)
+            return false;
+        if (!isnan(measures[i]->u.measure.max)) {
+            *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.max);
+            *out_color = GetVisColor(VisColor::Limit, alpha);
+        } else {
+            out_point->y = NAN;
+        }
+        return true;
+    });
+
     // Draw line
-    switch (interpolation) {
-        case InterpolationMode::Linear: {
-            ImU32 color = GetColor(measures[0]);
-            ImVec2 prev_point = ComputeCoordinates(measures[0]);
-            for (Size i = 1; i < measures.len; i++) {
-                const Element *elmt = measures[i];
-                DebugAssert(elmt->type == Element::Type::Measure);
-
-                ImVec2 point = ComputeCoordinates(elmt);
-                draw->AddLine(prev_point, point, color, 1.0f);
-
-                color = GetColor(elmt);
-                prev_point = point;
-            }
-        } break;
-
-        case InterpolationMode::LOCF: {
-            ImU32 color = GetColor(measures[0]);
-            ImVec2 prev_point = ComputeCoordinates(measures[0]);
-            for (Size i = 1; i < measures.len; i++) {
-                const Element *elmt = measures[i];
-                DebugAssert(elmt->type == Element::Type::Measure);
-
-                ImVec2 next_point = ComputeCoordinates(elmt);
-                ImVec2 points[] = {
-                    prev_point,
-                    ImVec2(next_point.x, prev_point.y),
-                    next_point
-                };
-                draw->AddPolyline(points, ARRAY_SIZE(points), color, false, 1.0f);
-
-                color = GetColor(elmt);
-                prev_point = next_point;
-            }
-        } break;
-
-        case InterpolationMode::Spline: {
-            // TODO: Implement Akima spline interpolation
-            // See http://www.iue.tuwien.ac.at/phd/rottinger/node60.html
-        } break;
-
-        case InterpolationMode::Disable: {
-            // Name speaks for itself
-        } break;
-    }
+    DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
+        if (i >= measures.len)
+            return false;
+        *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.value);
+        *out_color = GetColor(measures[i]);
+        return true;
+    });
 
     // Draw points
     for (const Element *elmt: measures) {
         ImU32 color = GetColor(elmt);
-        ImVec2 point = ComputeCoordinates(elmt);
+        ImVec2 point = ComputeCoordinates(elmt->time, elmt->u.measure.value);
         ImRect point_bb = {
             point.x - 3.0f, point.y - 3.0f,
             point.x + 3.0f, point.y + 3.0f
