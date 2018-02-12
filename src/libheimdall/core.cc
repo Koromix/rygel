@@ -622,8 +622,8 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    // draw->PushClipRect(bb.Min, bb.Max, true);
-    // DEFER { draw->PopClipRect(); };
+    draw->PushClipRect(ImVec2(bb.Min.x - 15.0f, bb.Min.y), bb.Max, true);
+    DEFER { draw->PopClipRect(); };
 
     // float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
