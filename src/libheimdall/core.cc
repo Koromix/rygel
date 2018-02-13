@@ -753,7 +753,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     return !cache_refreshed;
 }
 
-static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, bool paint_grid)
+static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float grid_alpha)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -770,9 +770,9 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, bool p
             if (x - prev_text_x >= min_text_delta) {
                 draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
-                if (paint_grid) {
+                if (grid_alpha > 0.0f) {
                     draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
-                                  ImGui::GetColorU32(ImGuiCol_Text, 0.02f));
+                                  ImGui::GetColorU32(ImGuiCol_Text, grid_alpha));
                 }
 
                 char time_str[32];
@@ -786,9 +786,9 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, bool p
             } else {
                 draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
-                if (paint_grid) {
+                if (grid_alpha > 0.0f) {
                     draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
-                                  ImGui::GetColorU32(ImGuiCol_Text, 0.01f));
+                                  ImGui::GetColorU32(ImGuiCol_Text, grid_alpha * 0.5f));
                 }
             }
         }
@@ -839,7 +839,7 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
     ImRect scale_rect = win->ClipRect;
     scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
     scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
-    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.paint_grid);
+    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha);
 
     // Render entities
     bool valid_frame;
@@ -913,7 +913,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             ImGui::SliderFloat("Plot height", &state.new_settings.plot_height, 20.0f, 100.0f);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
+            ImGui::PushItemWidth(100.0f);
+            ImGui::SliderFloat("Grid opacity", &state.new_settings.grid_alpha, 0.0f, 1.0f);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Parent opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
         }
