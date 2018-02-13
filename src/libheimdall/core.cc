@@ -73,7 +73,7 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                ImGui::Text("%g | %s", elmt->time, elmt->concept);
+                ImGui::Text("%g | %s [until %g]", elmt->time, elmt->concept, elmt->time + elmt->u.period.duration);
                 ImGui::EndTooltip();
             }
         }
