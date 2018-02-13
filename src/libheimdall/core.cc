@@ -358,6 +358,7 @@ struct LineData {
     bool deployed;
     int depth;
     float alpha;
+    float height;
     HeapArray<const Element *> elements;
 };
 
@@ -462,12 +463,21 @@ static void DrawLineElements(ImRect bb, float tree_width,
                  measures, measures_min, measures_max, state.settings.interpolation);
 }
 
+static float ComputeElementHeight(const InterfaceSettings &settings, Element::Type type)
+{
+    if (settings.plot_measures && type == Element::Type::Measure) {
+        return settings.plot_height;
+    } else {
+        return 20.0f;
+    }
+}
+
 static ImVec2 ComputeEntitySize(const InterfaceState &state,
                                 const EntitySet &entity_set, const Entity &ent)
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
-    HashSet<Span<const char>> lines_set;
+    HashMap<Span<const char>, float> line_heights;
     float max_x = 0.0f, height = 0.0f;
 
     for (const Element &elmt: ent.elements) {
@@ -493,7 +503,8 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state,
         {
             Span<const char> partial_path = {path.ptr, 1};
             for (;;) {
-                height += lines_set.Append(partial_path).second * (20.0f + style.ItemSpacing.y);
+                height += line_heights.Append(partial_path, 20.0f).second *
+                          (20.0f + style.ItemSpacing.y);
                 fully_deployed = state.deploy_paths.Find(partial_path);
 
                 if (!fully_deployed || partial_path.len == path.len)
@@ -503,8 +514,12 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state,
         }
 
         if (fully_deployed) {
-            height += lines_set.Append(elmt.concept).second *
-                      (state.settings.leaf_height + style.ItemSpacing.y);
+            float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
+            std::pair<float *, bool> ret = line_heights.Append(elmt.concept, 0.0f);
+            if (new_height > *ret.first) {
+                height += new_height - *ret.first;
+                *ret.first = new_height;
+            }
         }
     }
 
@@ -624,7 +639,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                 line->deployed = state.deploy_paths.Find(partial_path);
                                 line->depth = tree_depth++;
                                 line->alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
-                                y += 20.0f + style.ItemSpacing.y;
+                                line->height = 20.0f;
+                                y += line->height + style.ItemSpacing.y;
                             }
                             fully_deployed = line->deployed;
                         }
@@ -651,7 +667,14 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->leaf = true;
                             line->depth = tree_depth;
                             line->alpha = 1.0f;
-                            y += state.settings.leaf_height + style.ItemSpacing.y;
+                            line->height = 0.0f;
+                            y += style.ItemSpacing.y;
+                        }
+
+                        float new_height = ComputeElementHeight(state.settings, elmt.type);
+                        if (new_height > line->height) {
+                            y += new_height - line->height;
+                            line->height = new_height;
                         }
                     }
                     line->elements.Append(&elmt);
@@ -683,8 +706,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             });
 
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
-                      win->ClipRect.Max.x, y + style.ItemSpacing.y +
-                                           (line.leaf ? state.settings.leaf_height : 20.0f));
+                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
             DrawLineElements(bb, tree_width, state, time_offset, line);
             y = bb.Max.y;
         }
@@ -706,8 +728,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             }
 
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
-                      win->ClipRect.Max.x, y + style.ItemSpacing.y +
-                                           (line.leaf ? state.settings.leaf_height : 20.0f));
+                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
             if (DrawLineFrame(bb, tree_width, line)) {
                 state.scroll_to_idx = ent - entity_set.entities.ptr;
                 // NOTE: I'm not sure I get why ent_offset_y does not work directly but
@@ -889,7 +910,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Tree width", &state.new_settings.tree_width, 100.0f, 400.0f);
             ImGui::PushItemWidth(100.0f);
-            ImGui::SliderFloat("Leaf height", &state.new_settings.leaf_height, 20.0f, 100.0f);
+            ImGui::SliderFloat("Plot height", &state.new_settings.plot_height, 20.0f, 100.0f);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Paint grid", &state.new_settings.paint_grid);
@@ -903,7 +924,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         }
 
         if (ImGui::Button("Apply")) {
-            state.size_cache_valid &= !(state.new_settings.leaf_height != state.settings.leaf_height);
+            state.size_cache_valid &= !(state.new_settings.plot_height != state.settings.plot_height ||
+                                        state.new_settings.plot_measures != state.settings.plot_measures);
             state.settings = state.new_settings;
         }
         ImGui::SameLine();
@@ -913,7 +935,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         ImGui::SameLine();
         if (ImGui::Button("Reset")) {
             state.new_settings = InterfaceSettings();
-            state.size_cache_valid &= !(state.new_settings.leaf_height != state.settings.leaf_height);
+            state.size_cache_valid &= !(state.new_settings.plot_height != state.settings.plot_height ||
+                                        state.new_settings.plot_measures != state.settings.plot_measures);
             state.settings = state.new_settings;
         }
 

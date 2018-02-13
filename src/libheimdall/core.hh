@@ -28,7 +28,7 @@ struct InterfaceSettings {
     float tree_width = 200.0f;
     bool plot_measures = true;
     float deployed_alpha = 0.05f;
-    float leaf_height = 50.0f;
+    float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
     bool paint_grid = true;
 };
