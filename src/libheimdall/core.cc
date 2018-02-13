@@ -767,11 +767,12 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
         if (x >= bb.Min.x) {
+            float x_exact = round(x);
             if (x - prev_text_x >= min_text_delta) {
-                draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 4.0f),
+                draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
-                    draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
+                    draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
                                   ImGui::GetColorU32(ImGuiCol_Text, grid_alpha));
                 }
 
@@ -784,10 +785,10 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
                               ImGui::GetColorU32(ImGuiCol_Text), time_str);
                 prev_text_x = x;
             } else {
-                draw->AddLine(ImVec2(x, bb.Min.y + 2.0f), ImVec2(x, bb.Max.y - ImGui::GetFontSize() - 8.0f),
+                draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
-                    draw->AddLine(ImVec2(x, 0.0f), ImVec2(x, bb.Min.y + 2.0f),
+                    draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
                                   ImGui::GetColorU32(ImGuiCol_Text, grid_alpha * 0.5f));
                 }
             }
