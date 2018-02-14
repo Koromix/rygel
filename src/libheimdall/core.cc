@@ -84,11 +84,12 @@ static void TextMeasure(const Element &elmt)
 {
     DebugAssert(elmt.type == Element::Type::Measure);
 
-    // FIXME: Add 'DEFER scoper' construct to avoid this kind of crap
-    bool pop_color = false;
+    DEFER_N_DISABLED(style_guard) {
+        ImGui::PopStyleColor();
+    };
     if (DetectAnomaly(elmt)) {
         ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
-        pop_color = true;
+        style_guard.enable();
     }
 
     if (!isnan(elmt.u.measure.min) && !isnan(elmt.u.measure.max)) {
@@ -105,10 +106,6 @@ static void TextMeasure(const Element &elmt)
                     elmt.u.measure.max);
     } else {
         ImGui::Text("%g | %s = %.2f", elmt.time, elmt.concept, elmt.u.measure.value);
-    }
-
-    if (pop_color) {
-        ImGui::PopStyleColor();
     }
 }
 

@@ -364,14 +364,14 @@ typename std::underlying_type<T>::type MaskEnum(T value)
 }
 
 template <typename Fun>
-class ScopeGuard {
+class DeferGuard {
     Fun f;
-    bool enabled = true;
+    bool enabled;
 
 public:
-    ScopeGuard() = delete;
-    ScopeGuard(Fun f_) : f(std::move(f_)) {}
-    ~ScopeGuard()
+    DeferGuard() = delete;
+    DeferGuard(Fun f_, bool enable = true) : f(std::move(f_)), enabled(enable) {}
+    ~DeferGuard()
     {
         if (enabled) {
             f();
@@ -381,39 +381,47 @@ public:
     // With C++17 we don't need any copy or move operator thanks to guaranteed
     // copy elision. I think. MSVC does not agree... yet?
 #ifdef _MSC_VER
-    ScopeGuard(ScopeGuard &&other)
+    DeferGuard(DeferGuard &&other)
         : f(std::move(other.f)), enabled(other.enabled)
     {
         other.enabled = false;
     }
 #endif
 
-    ScopeGuard(const ScopeGuard &) = delete;
-    ScopeGuard &operator=(ScopeGuard &) = delete;
+    DeferGuard(const DeferGuard &) = delete;
+    DeferGuard &operator=(DeferGuard &) = delete;
 
+    void enable() { enabled = true; }
     void disable() { enabled = false; }
 };
 
 // Honestly, I don't understand all the details in there, this comes from Andrei Alexandrescu.
 // https://channel9.msdn.com/Shows/Going+Deep/C-and-Beyond-2012-Andrei-Alexandrescu-Systematic-Error-Handling-in-C
-enum class ScopeGuardDeferHelper {};
+struct DeferGuardHelper {
+    bool enabled;
+    DeferGuardHelper(bool enable = true) : enabled(enable) {}
+};
 template <typename Fun>
-ScopeGuard<Fun> operator+(ScopeGuardDeferHelper, Fun &&f)
+DeferGuard<Fun> operator+(DeferGuardHelper h, Fun &&f)
 {
-    return ScopeGuard<Fun>(std::forward<Fun>(f));
+    return DeferGuard<Fun>(std::forward<Fun>(f), h.enabled);
 }
 
 // Write 'DEFER { code };' to do something at the end of the current scope, you
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
 #define DEFER \
-    auto UNIQUE_ID(defer) = ScopeGuardDeferHelper() + [&]()
+    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&]()
 #define DEFER_N(Name) \
-    auto Name = ScopeGuardDeferHelper() + [&]()
+    auto Name = DeferGuardHelper() + [&]()
+#define DEFER_N_DISABLED(Name) \
+    auto Name = DeferGuardHelper(false) + [&]()
 #define DEFER_C(...) \
-    auto UNIQUE_ID(defer) = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
+    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
 #define DEFER_NC(Name, ...) \
-    auto Name = ScopeGuardDeferHelper() + [&, __VA_ARGS__]()
+    auto Name = DeferGuardHelper() + [&, __VA_ARGS__]()
+#define DEFER_NC_DISABLED(Name, ...) \
+    auto Name = DeferGuardHelper(false) + [&, __VA_ARGS__]()
 
 #define INIT(Name) \
     class UNIQUE_ID(InitHelper) { \
