@@ -50,6 +50,8 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 {
     // FIXME: Use guard to restore stuff in case of error
 
+    std::lock_guard<std::mutex> lock(inst->lock);
+
     struct {
         Rcpp::CharacterVector entity;
         Rcpp::CharacterVector concept;
@@ -68,7 +70,6 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
         inst->entity_set.sources.Append(inst->last_source_id, src_info);
     }
 
-    std::lock_guard<std::mutex> lock(inst->lock);
     for (Size i = 0; i < values_df.nrow(); i++) {
         Entity *entity;
         {
