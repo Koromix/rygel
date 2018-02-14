@@ -698,13 +698,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         DEFER { draw->PopClipRect(); };
 
         float y = render_offset;
-        for (LineData &line: lines) {
-            // FIXME: Don't do this all the time
-            std::stable_sort(line.elements.begin(), line.elements.end(),
-                             [](const Element *elmt1, const Element *elmt2) {
-                return elmt1->time < elmt2->time;
-            });
-
+        for (const LineData &line: lines) {
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
                       win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
             DrawLineElements(bb, tree_width, state, time_offset, line);

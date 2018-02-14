@@ -102,9 +102,16 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
         }
     }
 
-    // TODO: Delay sort (diry flag, sort in run)
+    // TODO: Delay sort (diry flag, sort in run). Might also want to only sort
+    // elements in changed entities.
     std::sort(inst->entity_set.entities.begin(), inst->entity_set.entities.end(),
               [](const Entity &ent1, const Entity &ent2) { return strcmp(ent1.id, ent2.id) < 0; });
+    for (Entity &entity: inst->entity_set.entities) {
+        std::stable_sort(entity.elements.begin(), entity.elements.end(),
+                         [](const Element &elmt1, const Element &elmt2) {
+            return elmt1.time < elmt2.time;
+        });
+    }
 
     return inst->last_source_id;
 }
