@@ -1041,7 +1041,6 @@ bool ParsePricesJson(StreamReader &st, HeapArray<PriceTable> *out_tables)
     return true;
 }
 
-// TODO: Validate that index has everything we need
 const TableIndex *TableSet::FindIndex(Date date) const
 {
     if (date.value) {
