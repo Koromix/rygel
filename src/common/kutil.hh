@@ -2426,12 +2426,7 @@ public:
     template <typename Fun>
     AsyncHelper(Fun f)
     {
-// NOTE: Try to remove this hack in a few months
-#ifdef __EMSCRIPTEN__
         if constexpr(std::is_same<typename std::result_of<Fun()>::type, void>::value) {
-#else
-        if constexpr(std::is_same<typename std::invoke_result<Fun>::type, void>::value) {
-#endif
             async.AddTask([=]() {
                 f();
                 return true;
