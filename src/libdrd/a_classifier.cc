@@ -250,11 +250,6 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
-        if (!stay.main_diagnosis.IsValid()) {
-            SetError(out_errors, 0, 40);
-            valid = false;
-        }
-
         if (stay.gestational_age > 0) {
             // TODO: Must be first (newborn) or on RUM with a$41.2 only
             out_agg->stay.gestational_age = stay.gestational_age;
@@ -270,6 +265,20 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     // Individual checks
     for (const Stay &stay: stays) {
+        if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+            SetError(out_errors, 0, 40);
+            valid = false;
+        } else {
+            const DiagnosisInfo *main_diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
+            if (UNLIKELY(!main_diag_info) || !(main_diag_info->Attributes(stay.sex).raw[5] & 1)) {
+                SetError(out_errors, 0, 67);
+                valid = false;
+            } else if (UNLIKELY(main_diag_info->Attributes(stay.sex).raw[5] & 2)) {
+                SetError(out_errors, 0, 68);
+                valid = false;
+            }
+        }
+
         if (UNLIKELY(!stay.birthdate.value)) {
             if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
                 SetError(out_errors, 0, 14);
@@ -776,8 +785,10 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
+        // We wouldn't have gotten here if main_diagnosis was missing from the index
         const DiagnosisInfo *main_diag_info = agg.index->FindDiagnosis(agg.stay.main_diagnosis);
         const DiagnosisInfo *linked_diag_info = agg.index->FindDiagnosis(agg.stay.linked_diagnosis);
+
         for (const DiagnosisCode &diag: agg.diagnoses) {
             if (diag == agg.stay.main_diagnosis || diag == agg.stay.linked_diagnosis)
                 continue;
