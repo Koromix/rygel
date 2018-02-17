@@ -369,10 +369,12 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         });
 
         if (out_diagnoses->len) {
+            Span<DiagnosisCode> diagnoses = *out_diagnoses;
+
             Size j = 0;
-            for (Size i = 1; i < out_diagnoses->len; i++) {
-                if ((*out_diagnoses)[i] != (*out_diagnoses)[j]) {
-                    (*out_diagnoses)[++j] = (*out_diagnoses)[i];
+            for (Size i = 1; i < diagnoses.len; i++) {
+                if (diagnoses[i] != diagnoses[j]) {
+                    diagnoses[++j] = diagnoses[i];
                 }
             }
             out_diagnoses->RemoveFrom(j + 1);
@@ -399,20 +401,22 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         // TODO: Warn when we deduplicate procedures with different attributes,
         // such as when the two procedures fall into different date ranges / limits.
         if (out_procedures->len) {
+            Span<ProcedureRealisation> procedures = *out_procedures;
+
             Size j = 0;
             for (Size i = 1; i < out_procedures->len; i++) {
-                if ((*out_procedures)[i].proc == (*out_procedures)[j].proc &&
-                        (*out_procedures)[i].phase == (*out_procedures)[j].phase) {
-                    (*out_procedures)[j].activities =
-                        (uint8_t)((*out_procedures)[j].activities | (*out_procedures)[i].activities);
-                    // TODO: Prevent possible overflow
-                    (*out_procedures)[j].count =
-                        (int16_t)((*out_procedures)[j].count + (*out_procedures)[i].count);
-                    if (UNLIKELY((*out_procedures)[j].count > 9999)) {
-                        (*out_procedures)[j].count = 9999;
+                if (procedures[i].proc == procedures[j].proc &&
+                        procedures[i].phase == procedures[j].phase) {
+                    procedures[j].activities = (uint8_t)(procedures[j].activities |
+                                                         procedures[i].activities);
+                    int new_count = procedures[j].count + procedures[i].count;
+                    if (LIKELY(new_count < 9999)) {
+                        procedures[j].count = (int16_t)new_count;
+                    } else {
+                        procedures[j].count = 9999;
                     }
                 } else {
-                    (*out_procedures)[++j] = (*out_procedures)[i];
+                    procedures[++j] = procedures[i];
                 }
             }
             out_procedures->RemoveFrom(j + 1);
