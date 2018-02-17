@@ -258,6 +258,28 @@ static void CheckStayErrors(const TableIndex &index, const Stay &stay,
     }
 }
 
+static void CheckStayContinuity(const Stay &stay1, const Stay &stay2,
+                                ClassifyErrorSet *out_errors, bool *out_valid)
+{
+    if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
+        if (stay2.entry.mode != 0 || stay1.exit.mode != 0 ||
+                stay2.entry.date - stay1.exit.date != 1) {
+            SetError(out_errors, 0, 23);
+            *out_valid = false;
+        }
+    }
+
+    if (UNLIKELY(stay2.birthdate != stay1.birthdate)) {
+        SetError(out_errors, 0, 45);
+        *out_valid = false;
+    }
+
+    if (UNLIKELY(stay2.sex != stay1.sex)) {
+        SetError(out_errors, 0, 46);
+        *out_valid = false;
+    }
+}
+
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
@@ -278,8 +300,6 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         }
     }
 
-    bool valid = true;
-
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->duration = 0;
@@ -297,34 +317,17 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
 
-    // Individual checks
-    for (const Stay &stay: stays) {
-        CheckStayErrors(*out_agg->index, stay, out_errors, &valid);
+    // Individual and coherency checks
+    {
+        bool valid = true;
+        CheckStayErrors(*out_agg->index, stays[0], out_errors, &valid);
+        for (Size i = 1; i < stays.len; i++) {
+            CheckStayErrors(*out_agg->index, stays[i], out_errors, &valid);
+            CheckStayContinuity(stays[i - 1], stays[i], out_errors, &valid);
+        }
+        if (!valid)
+            return GhmCode::FromString("90Z00Z");
     }
-
-    // Coherency checks
-    for (Size i = 1; i < stays.len; i++) {
-        const Stay &stay = stays[i];
-
-        if (UNLIKELY(stay.entry.date != stays[i - 1].exit.date)) {
-            if (stay.entry.mode != 0 || stays[i - 1].exit.mode != 0 ||
-                    stays[i - 1].exit.date - stay.entry.date > 1) {
-                SetError(out_errors, 0, 23);
-                valid = false;
-            }
-        }
-        if (UNLIKELY(stay.birthdate != stays[0].birthdate)) {
-            SetError(out_errors, 0, 45);
-            valid = false;
-        }
-        if (UNLIKELY(stay.sex != stays[0].sex)) {
-            SetError(out_errors, 0, 46);
-            valid = false;
-        }
-    }
-
-    if (!valid)
-        return GhmCode::FromString("90Z00Z");
 
     // Deduplicate diagnoses
     if (out_diagnoses) {
