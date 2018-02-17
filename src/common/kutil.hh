@@ -812,7 +812,11 @@ public:
         }
         len = first;
     }
-    void RemoveLast(Size count = 1) { RemoveFrom(len - count); }
+    void RemoveLast(Size count = 1)
+    {
+        DebugAssert(count >= 0 && count <= len);
+        RemoveFrom(len - count);
+    }
 
     Span<T> Take(Size offset, Size len) const
         { return Span<T>(data, this->len).Take(offset, len); }
@@ -987,7 +991,11 @@ public:
         }
         len = first;
     }
-    void RemoveLast(Size count = 1) { RemoveFrom(len - count); }
+    void RemoveLast(Size count = 1)
+    {
+        DebugAssert(count >= 0 && count <= len);
+        RemoveFrom(len - count);
+    }
 
     Span<T> Take(Size offset, Size len) const
         { return Span<T>(ptr, this->len).Take(offset, len); }
@@ -1180,7 +1188,11 @@ public:
         len = from;
         bucket_allocator = &buckets[buckets.len - 1]->allocator;
     }
-    void RemoveLast(Size count = 1) { RemoveFrom(len - count); }
+    void RemoveLast(Size count = 1)
+    {
+        DebugAssert(count >= 0 && count <= len);
+        RemoveFrom(len - count);
+    }
 
     void RemoveFirst(Size count = 1)
     {
