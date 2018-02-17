@@ -76,18 +76,14 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
         PrintLn("        Warnings: %1", FmtBin(diag.warnings));
 
         if (exclusions.len) {
+            Assert(diag.exclusion_set_idx <= exclusions.len);
+            const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
+
             Print("        Exclusions (list %1):", diag.exclusion_set_idx);
-            {
-                if (diag.exclusion_set_idx <= exclusions.len) {
-                    const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
-                    for (const DiagnosisInfo &excl_diag: diagnoses) {
-                        if (excl->raw[excl_diag.cma_exclusion_mask.offset] &
-                                excl_diag.cma_exclusion_mask.value) {
-                            Print(" %1", excl_diag.diag);
-                        }
-                    }
-                } else {
-                    Print("Invalid list");
+            for (const DiagnosisInfo &excl_diag: diagnoses) {
+                if (excl->raw[excl_diag.cma_exclusion_mask.offset] &
+                        excl_diag.cma_exclusion_mask.value) {
+                    Print(" %1", excl_diag.diag);
                 }
             }
             PrintLn();

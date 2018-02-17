@@ -25,26 +25,27 @@ static int ComputeAge(Date date, Date birthdate)
 }
 
 static inline uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
-                                       DiagnosisCode diag, int16_t byte_idx)
+                                       DiagnosisCode diag, uint8_t byte_idx)
 {
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
 
-    // FIXME: Warning / classifier errors
-    if (UNLIKELY(!diag_info))
+    if (UNLIKELY(!diag_info)) {
+        LogDebug("Ignoring unknown diagnosis '%1'", diag);
         return 0;
-    if (UNLIKELY(byte_idx >= SIZE(DiagnosisInfo::attributes[0].raw)))
-        return 0;
+    }
 
+    Assert(byte_idx < SIZE(DiagnosisInfo::attributes[0].raw));
     return diag_info->Attributes(sex).raw[byte_idx];
 }
 
 static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
                                  DiagnosisCode diag, ListMask mask)
 {
-    return GetDiagnosisByte(index, sex, diag, mask.offset) & mask.value;
+    DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
+    return GetDiagnosisByte(index, sex, diag, (uint8_t)mask.offset) & mask.value;
 }
 static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
-                                 DiagnosisCode diag, int16_t offset, uint8_t value)
+                                 DiagnosisCode diag, uint8_t offset, uint8_t value)
 {
     return GetDiagnosisByte(index, sex, diag, offset) & value;
 }
@@ -54,11 +55,12 @@ static inline uint8_t GetProcedureByte(const TableIndex &index,
 {
     const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, proc.date);
 
-    if (UNLIKELY(!proc_info))
+    if (UNLIKELY(!proc_info)) {
+        LogDebug("Ignoring unknown procedure '%1' (%2)", proc.proc, proc.date);
         return 0;
-    if (UNLIKELY(byte_idx >= SIZE(ProcedureInfo::bytes)))
-        return 0;
+    }
 
+    Assert(byte_idx >= 0 && byte_idx < SIZE(ProcedureInfo::bytes));
     return proc_info->bytes[byte_idx];
 }
 
@@ -130,7 +132,7 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
         for (const ProcedureRealisation &proc: stay.procedures) {
             const ProcedureInfo *proc_info =
                 index.FindProcedure(proc.proc, proc.phase, proc.date);
-            if (!proc_info)
+            if (UNLIKELY(!proc_info))
                 continue;
 
             if (proc_info->bytes[0] & 0x80 && !(proc_info->bytes[23] & 0x80))
@@ -675,8 +677,9 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
             return SetError(out_errors, 3, 4);
         }
 
-        // FIXME: Check ghm_node_idx against CountOf()
+        Assert(ghm_node_idx < agg.index->ghm_nodes.len);
         const GhmDecisionNode &ghm_node = agg.index->ghm_nodes[ghm_node_idx];
+
         switch (ghm_node.type) {
             case GhmDecisionNode::Type::Test: {
                 int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
@@ -727,7 +730,7 @@ static bool TestExclusion(const ClassifyAggregate &agg,
             ((diag_info.Attributes(agg.stay.sex).raw[19] & 0x8) || diag_info.diag.str[0] == 'P'))
         return true;
 
-    // TODO: Check boundaries (ghm_root CMA exclusion offset, etc.)
+    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(DiagnosisInfo::attributes[0].raw));
     if (diag_info.Attributes(agg.stay.sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
             ghm_root_info.cma_exclusion_mask.value)
         return true;
@@ -759,7 +762,8 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
         int severity = ghm.parts.mode - 'A';
 
         if (ghm_root_info->childbirth_severity_list) {
-            // TODO: Check boundaries
+            Assert(ghm_root_info->childbirth_severity_list > 0 &&
+                   ghm_root_info->childbirth_severity_list <= SIZE(agg.index->cma_cells));
             for (const ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info->childbirth_severity_list - 1]) {
                 if (cell.Test(0, agg.stay.gestational_age) && cell.Test(1, severity)) {
                     severity = cell.value;

@@ -80,10 +80,10 @@ static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_id
                                       constraint_copy, out_constraints); \
         } while (false)
 
-    bool success = true;
-
-    // FIXME: Check ghm_node_idx against CountOf()
+    Assert(ghm_node_idx < index.ghm_nodes.len);
     const GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
+
+    bool success = true;
     switch (ghm_node.type) {
         case GhmDecisionNode::Type::Test: {
             switch (ghm_node.u.test.function) {
