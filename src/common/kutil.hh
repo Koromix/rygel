@@ -108,6 +108,7 @@ enum class Endianness {
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
     #define UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
     #define RESTRICT __restrict__
+    #define UNREACHABLE() __builtin_unreachable()
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -129,13 +130,14 @@ enum class Endianness {
     #define LIKELY(Cond) (Cond)
     #define UNLIKELY(Cond) (Cond)
     #define RESTRICT __restrict
+    #define UNREACHABLE()
 #else
     #error Compiler not supported
 #endif
 
 #define Assert(Cond) \
     do { \
-        if (!(Cond)) { \
+        if (!LIKELY(Cond)) { \
             fputs("Assertion '" STRINGIFY(Cond) "' failed\n", stderr); \
             abort(); \
         } \
@@ -145,7 +147,9 @@ enum class Endianness {
 #else
     #define DebugAssert(Cond) \
         do { \
-            (void)(Cond); \
+            if (!LIKELY(Cond)) { \
+                UNREACHABLE(); \
+            } \
         } while (false)
 #endif
 #define StaticAssert(Cond) \
