@@ -224,9 +224,9 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error)
 static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag, int type,
                                  ClassifyErrorSet *out_errors)
 {
-    static const int16_t error_codes[][2] = {
-        {67, 68}, // DP
-        {94, 95}  // DR
+    static const int16_t error_codes[][5] = {
+        {67, 68, 113, 114, 115}, // DP
+        {94, 95, 116, 117, 118}  // DR
     };
 
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
@@ -238,6 +238,16 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
         return SetError(out_errors, error_codes[type][0]);
     } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
         return SetError(out_errors, error_codes[type][1]);
+    } else if (!diag_attr.raw[0]) {
+        switch (diag_attr.raw[1]) {
+            case 0: { return SetError(out_errors, error_codes[type][2]); } break;
+            case 1: { return SetError(out_errors, error_codes[type][3]); } break;
+            case 2: { return SetError(out_errors, error_codes[type][4]); } break;
+            case 3: {
+                if (type == 0)
+                    return SetError(out_errors, error_codes[type][2]);
+            } break;
+        }
     }
 
     return true;
