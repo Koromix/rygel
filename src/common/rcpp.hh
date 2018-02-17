@@ -46,7 +46,7 @@ class RcppDateVector {
     };
 
     Type type;
-    struct { // FIXME: I want union
+    struct { // A union would be better, but it's a pain with non-PODs
         Rcpp::CharacterVector chr;
         Rcpp::NumericVector num;
     } u;
