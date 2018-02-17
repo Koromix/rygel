@@ -224,6 +224,40 @@ static GhmCode SetError(ClassifyErrorSet *error_set, int8_t category, int16_t er
     return error_ghm;
 }
 
+static void CheckStayErrors(const TableIndex &index, const Stay &stay,
+                            ClassifyErrorSet *out_errors, bool *out_valid)
+{
+    if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+        SetError(out_errors, 0, 40);
+        *out_valid = false;
+    } else {
+        const DiagnosisInfo *main_diag_info = index.FindDiagnosis(stay.main_diagnosis);
+        if (UNLIKELY(!main_diag_info) || !(main_diag_info->Attributes(stay.sex).raw[5] & 1)) {
+            SetError(out_errors, 0, 67);
+            *out_valid = false;
+        } else if (UNLIKELY(main_diag_info->Attributes(stay.sex).raw[5] & 2)) {
+            SetError(out_errors, 0, 68);
+            *out_valid = false;
+        }
+    }
+
+    if (UNLIKELY(!stay.birthdate.value)) {
+        if (stay.error_mask & (int)Stay::Error::MalformedBirthdate) {
+            SetError(out_errors, 0, 14);
+        } else {
+            SetError(out_errors, 0, 13);
+        }
+        *out_valid = false;
+    } else if (UNLIKELY(!stay.birthdate.IsValid())) {
+        SetError(out_errors, 0, 39);
+        *out_valid = false;
+    }
+    if (UNLIKELY(stay.exit.date < stay.entry.date)) {
+        SetError(out_errors, 0, 32);
+        *out_valid = false;
+    }
+}
+
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
@@ -265,35 +299,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     // Individual checks
     for (const Stay &stay: stays) {
-        if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-            SetError(out_errors, 0, 40);
-            valid = false;
-        } else {
-            const DiagnosisInfo *main_diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
-            if (UNLIKELY(!main_diag_info) || !(main_diag_info->Attributes(stay.sex).raw[5] & 1)) {
-                SetError(out_errors, 0, 67);
-                valid = false;
-            } else if (UNLIKELY(main_diag_info->Attributes(stay.sex).raw[5] & 2)) {
-                SetError(out_errors, 0, 68);
-                valid = false;
-            }
-        }
-
-        if (UNLIKELY(!stay.birthdate.value)) {
-            if (stays[0].error_mask & (int)Stay::Error::MalformedBirthdate) {
-                SetError(out_errors, 0, 14);
-            } else {
-                SetError(out_errors, 0, 13);
-            }
-            valid = false;
-        } else if (UNLIKELY(!stay.birthdate.IsValid())) {
-            SetError(out_errors, 0, 39);
-            valid = false;
-        }
-        if (UNLIKELY(stay.exit.date < stay.entry.date)) {
-            SetError(out_errors, 0, 32);
-            valid = false;
-        }
+        CheckStayErrors(*out_agg->index, stay, out_errors, &valid);
     }
 
     // Coherency checks
