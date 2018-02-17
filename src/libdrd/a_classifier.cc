@@ -241,6 +241,17 @@ static void CheckStayErrors(const TableIndex &index, const Stay &stay,
         }
     }
 
+    if (stay.linked_diagnosis.IsValid()) {
+        const DiagnosisInfo *linked_diag_info = index.FindDiagnosis(stay.linked_diagnosis);
+        if (UNLIKELY(!linked_diag_info) || !(linked_diag_info->Attributes(stay.sex).raw[5] & 1)) {
+            SetError(out_errors, 0, 94);
+            *out_valid = false;
+        } else if (UNLIKELY(linked_diag_info->Attributes(stay.sex).raw[5] & 2)) {
+            SetError(out_errors, 0, 95);
+            *out_valid = false;
+        }
+    }
+
     if (UNLIKELY(!stay.birthdate.value)) {
         if (stay.error_mask & (int)Stay::Error::MalformedBirthdate) {
             SetError(out_errors, 0, 14);
