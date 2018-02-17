@@ -372,6 +372,7 @@ Classify options:
                     failed_ghm, tested_ghm, classify_set.results.len - tested_ghm);
             PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
                     failed_ghs, tested_ghs, classify_set.results.len - tested_ghs);
+            PrintLn();
         }
     }
 
