@@ -383,18 +383,6 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     return {};
 }
 
-static bool TestExclusion(const TableIndex &index,
-                          const DiagnosisInfo &cma_diag_info,
-                          const DiagnosisInfo &main_diag_info)
-{
-    // TODO: Check boundaries, and take care of DumpDiagnosis too
-    const ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
-    if (UNLIKELY(!excl))
-        return false;
-    return (excl->raw[main_diag_info.cma_exclusion_mask.offset] &
-            main_diag_info.cma_exclusion_mask.value);
-}
-
 int GetMinimalDurationForSeverity(int severity)
 {
     DebugAssert(severity >= 0 && severity < 4);
@@ -713,6 +701,45 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
     return ghm;
 }
 
+static inline bool TestDiagnosisExclusion(const TableIndex &index,
+                                          const DiagnosisInfo &cma_diag_info,
+                                          const DiagnosisInfo &main_diag_info)
+{
+    Assert(cma_diag_info.exclusion_set_idx < index.exclusions.len);
+    const ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
+    if (UNLIKELY(!excl))
+        return false;
+
+    Assert(main_diag_info.cma_exclusion_mask.offset < SIZE(excl->raw));
+    return (excl->raw[main_diag_info.cma_exclusion_mask.offset] &
+            main_diag_info.cma_exclusion_mask.value);
+}
+
+static bool TestExclusion(const ClassifyAggregate &agg,
+                          const GhmRootInfo &ghm_root_info,
+                          const DiagnosisInfo &diag_info,
+                          const DiagnosisInfo &main_diag_info,
+                          const DiagnosisInfo *linked_diag_info)
+{
+    if (agg.age < 14 && (diag_info.Attributes(agg.stay.sex).raw[19] & 0x10))
+        return true;
+    if (agg.age >= 2 &&
+            ((diag_info.Attributes(agg.stay.sex).raw[19] & 0x8) || diag_info.diag.str[0] == 'P'))
+        return true;
+
+    // TODO: Check boundaries (ghm_root CMA exclusion offset, etc.)
+    if (diag_info.Attributes(agg.stay.sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
+            ghm_root_info.cma_exclusion_mask.value)
+        return true;
+
+    if (TestDiagnosisExclusion(*agg.index, diag_info, main_diag_info))
+        return true;
+    if (linked_diag_info && TestDiagnosisExclusion(*agg.index, diag_info, *linked_diag_info))
+        return true;
+
+    return false;
+}
+
 GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
                        ClassifyErrorSet *out_errors)
 {
@@ -755,16 +782,9 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
             if (UNLIKELY(!diag_info))
                 continue;
 
-            // TODO: Check boundaries (ghm_root CMA exclusion offset, etc.)
             int new_severity = diag_info->Attributes(agg.stay.sex).severity;
-            if (new_severity > severity &&
-                    !(agg.age < 14 && diag_info->Attributes(agg.stay.sex).raw[19] & 0x10) &&
-                    !(agg.age >= 2 && diag_info->Attributes(agg.stay.sex).raw[19] & 0x8) &&
-                    !(agg.age >= 2 && diag.str[0] == 'P') &&
-                    !(diag_info->Attributes(agg.stay.sex).raw[ghm_root_info->cma_exclusion_mask.offset] &
-                      ghm_root_info->cma_exclusion_mask.value) &&
-                    !TestExclusion(*agg.index, *diag_info, *main_diag_info) &&
-                    (!linked_diag_info || !TestExclusion(*agg.index, *diag_info, *linked_diag_info))) {
+            if (new_severity > severity && !TestExclusion(agg, *ghm_root_info, *diag_info,
+                                                          *main_diag_info, linked_diag_info)) {
                 severity = new_severity;
             }
         }
