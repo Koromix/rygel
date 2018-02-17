@@ -207,10 +207,8 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     return score_stay;
 }
 
-static GhmCode SetError(ClassifyErrorSet *error_set, int8_t category, int16_t error)
+static bool SetError(ClassifyErrorSet *error_set, int16_t error)
 {
-    static GhmCode base_error_ghm = GhmCode::FromString("90Z00Z");
-
     DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
         if (!error_set->main_error || error < error_set->main_error) {
@@ -219,76 +217,82 @@ static GhmCode SetError(ClassifyErrorSet *error_set, int8_t category, int16_t er
         error_set->errors.Set(error);
     }
 
-    GhmCode error_ghm = base_error_ghm;
-    error_ghm.parts.seq = category;
-    return error_ghm;
+    // For convenience
+    return false;
 }
 
-static void CheckStayErrors(const TableIndex &index, const Stay &stay,
-                            ClassifyErrorSet *out_errors, bool *out_valid)
+static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag, int type,
+                                 ClassifyErrorSet *out_errors)
 {
-    if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-        SetError(out_errors, 0, 40);
-        *out_valid = false;
-    } else {
-        const DiagnosisInfo *main_diag_info = index.FindDiagnosis(stay.main_diagnosis);
-        if (UNLIKELY(!main_diag_info) || !(main_diag_info->Attributes(stay.sex).raw[5] & 1)) {
-            SetError(out_errors, 0, 67);
-            *out_valid = false;
-        } else if (UNLIKELY(main_diag_info->Attributes(stay.sex).raw[5] & 2)) {
-            SetError(out_errors, 0, 68);
-            *out_valid = false;
-        }
+    static const int16_t error_codes[][2] = {
+        {67, 68}, // DP
+        {94, 95}  // DR
+    };
+
+    const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
+    if (UNLIKELY(!diag_info))
+        return SetError(out_errors, error_codes[type][0]);
+
+    const auto &diag_attr = diag_info->Attributes(sex);
+    if (UNLIKELY(!(diag_attr.raw[5] & 1))) {
+        return SetError(out_errors, error_codes[type][0]);
+    } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
+        return SetError(out_errors, error_codes[type][1]);
     }
 
+    return true;
+}
+
+static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
+                            ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+        valid &= SetError(out_errors, 40);
+    } else {
+        valid &= CheckDiagnosisErrors(index, stay.sex, stay.main_diagnosis, 0, out_errors);
+    }
     if (stay.linked_diagnosis.IsValid()) {
-        const DiagnosisInfo *linked_diag_info = index.FindDiagnosis(stay.linked_diagnosis);
-        if (UNLIKELY(!linked_diag_info) || !(linked_diag_info->Attributes(stay.sex).raw[5] & 1)) {
-            SetError(out_errors, 0, 94);
-            *out_valid = false;
-        } else if (UNLIKELY(linked_diag_info->Attributes(stay.sex).raw[5] & 2)) {
-            SetError(out_errors, 0, 95);
-            *out_valid = false;
-        }
+        valid &= CheckDiagnosisErrors(index, stay.sex, stay.linked_diagnosis, 1, out_errors);
     }
 
     if (UNLIKELY(!stay.birthdate.value)) {
         if (stay.error_mask & (int)Stay::Error::MalformedBirthdate) {
-            SetError(out_errors, 0, 14);
+            valid &= SetError(out_errors, 14);
         } else {
-            SetError(out_errors, 0, 13);
+            valid &= SetError(out_errors, 13);
         }
-        *out_valid = false;
     } else if (UNLIKELY(!stay.birthdate.IsValid())) {
-        SetError(out_errors, 0, 39);
-        *out_valid = false;
+        valid &= SetError(out_errors, 39);
     }
     if (UNLIKELY(stay.exit.date < stay.entry.date)) {
-        SetError(out_errors, 0, 32);
-        *out_valid = false;
+        valid &= SetError(out_errors, 32);
     }
+
+    return valid;
 }
 
-static void CheckStayContinuity(const Stay &stay1, const Stay &stay2,
-                                ClassifyErrorSet *out_errors, bool *out_valid)
+static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyErrorSet *out_errors)
 {
+    bool valid = true;
+
     if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
         if (stay2.entry.mode != 0 || stay1.exit.mode != 0 ||
                 stay2.entry.date - stay1.exit.date != 1) {
-            SetError(out_errors, 0, 23);
-            *out_valid = false;
+            valid &= SetError(out_errors, 23);
         }
     }
 
     if (UNLIKELY(stay2.birthdate != stay1.birthdate)) {
-        SetError(out_errors, 0, 45);
-        *out_valid = false;
+        valid &= SetError(out_errors, 45);
     }
 
     if (UNLIKELY(stay2.sex != stay1.sex)) {
-        SetError(out_errors, 0, 46);
-        *out_valid = false;
+        valid &= SetError(out_errors, 46);
     }
+
+    return valid;
 }
 
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
@@ -307,7 +311,8 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->index = table_set.FindIndex(date);
         if (!out_agg->index) {
             LogError("No table available on '%1'", stays[stays.len - 1].exit.date);
-            return SetError(out_errors, 3, 502);
+            SetError(out_errors, 502);
+            return GhmCode::FromString("90Z03Z");
         }
     }
 
@@ -331,11 +336,13 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     // Individual and coherency checks
     {
         bool valid = true;
-        CheckStayErrors(*out_agg->index, stays[0], out_errors, &valid);
+
+        valid &= CheckStayErrors(*out_agg->index, stays[0], out_errors);
         for (Size i = 1; i < stays.len; i++) {
-            CheckStayErrors(*out_agg->index, stays[i], out_errors, &valid);
-            CheckStayContinuity(stays[i - 1], stays[i], out_errors, &valid);
+            valid &= CheckStayErrors(*out_agg->index, stays[i], out_errors);
+            valid &= CheckStayContinuity(stays[i - 1], stays[i], out_errors);
         }
+
         if (!valid)
             return GhmCode::FromString("90Z00Z");
     }
@@ -569,7 +576,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 28: {
-            SetError(out_errors, 1, ghm_node.u.test.params[0]);
+            SetError(out_errors, ghm_node.u.test.params[0]);
             return 0;
         } break;
 
@@ -703,7 +710,8 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
     for (Size i = 0; !ghm.IsValid(); i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
-            return SetError(out_errors, 3, 4);
+            SetError(out_errors, 4);
+            return GhmCode::FromString("90Z03Z");
         }
 
         Assert(ghm_node_idx < agg.index->ghm_nodes.len);
@@ -715,7 +723,8 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
                 if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
-                    return SetError(out_errors, 3, 4);
+                    SetError(out_errors, 4);
+                    return GhmCode::FromString("90Z03Z");
                 }
 
                 ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
@@ -724,7 +733,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
             case GhmDecisionNode::Type::Ghm: {
                 ghm = ghm_node.u.ghm.ghm;
                 if (ghm_node.u.ghm.error && out_errors) {
-                    SetError(out_errors, ghm.parts.seq, ghm_node.u.ghm.error);
+                    SetError(out_errors, ghm_node.u.ghm.error);
                 }
             } break;
         }
@@ -778,7 +787,8 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
-        return SetError(out_errors, 3, 4);
+        SetError(out_errors, 4);
+        return GhmCode::FromString("90Z03Z");
     }
 
     // Ambulatory and / or short duration GHM
