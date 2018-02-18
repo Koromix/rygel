@@ -209,6 +209,9 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
 
 static bool SetError(ClassifyErrorSet *error_set, int16_t error)
 {
+    if (!error)
+        return true;
+
     DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
         if (!error_set->main_error || error < error_set->main_error) {
@@ -221,32 +224,24 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error)
     return false;
 }
 
-static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag, int type,
-                                 ClassifyErrorSet *out_errors)
+static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag,
+                                 const int16_t error_codes[6], ClassifyErrorSet *out_errors)
 {
-    static const int16_t error_codes[][5] = {
-        {67, 68, 113, 114, 115}, // DP
-        {94, 95, 116, 117, 118}  // DR
-    };
-
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
     if (UNLIKELY(!diag_info))
-        return SetError(out_errors, error_codes[type][0]);
+        return SetError(out_errors, error_codes[0]);
 
     const auto &diag_attr = diag_info->Attributes(sex);
     if (UNLIKELY(!(diag_attr.raw[5] & 1))) {
-        return SetError(out_errors, error_codes[type][0]);
+        return SetError(out_errors, error_codes[0]);
     } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
-        return SetError(out_errors, error_codes[type][1]);
+        return SetError(out_errors, error_codes[1]);
     } else if (!diag_attr.raw[0]) {
         switch (diag_attr.raw[1]) {
-            case 0: { return SetError(out_errors, error_codes[type][2]); } break;
-            case 1: { return SetError(out_errors, error_codes[type][3]); } break;
-            case 2: { return SetError(out_errors, error_codes[type][4]); } break;
-            case 3: {
-                if (type == 0)
-                    return SetError(out_errors, error_codes[type][2]);
-            } break;
+            case 0: { return SetError(out_errors, error_codes[2]); } break;
+            case 1: { return SetError(out_errors, error_codes[3]); } break;
+            case 2: { return SetError(out_errors, error_codes[4]); } break;
+            case 3: { return SetError(out_errors, error_codes[5]); } break;
         }
     }
 
@@ -256,15 +251,20 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
 static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
+    static const int16_t main_diagnosis_error_codes[6] = {67, 68, 113, 114, 115, 113};
+    static const int16_t linked_diagnosis_error_codes[6] = {94, 95, 116, 117, 118, 0};
+
     bool valid = true;
 
     if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
         valid &= SetError(out_errors, 40);
     } else {
-        valid &= CheckDiagnosisErrors(index, stay.sex, stay.main_diagnosis, 0, out_errors);
+        valid &= CheckDiagnosisErrors(index, stay.sex, stay.main_diagnosis,
+                                      main_diagnosis_error_codes, out_errors);
     }
     if (stay.linked_diagnosis.IsValid()) {
-        valid &= CheckDiagnosisErrors(index, stay.sex, stay.linked_diagnosis, 1, out_errors);
+        valid &= CheckDiagnosisErrors(index, stay.sex, stay.linked_diagnosis,
+                                      linked_diagnosis_error_codes, out_errors);
     }
 
     if (UNLIKELY(!stay.birthdate.value)) {
