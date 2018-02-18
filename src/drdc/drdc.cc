@@ -303,8 +303,9 @@ Classify options:
                     if (stay_test->ghm != result.ghm) {
                         failed_ghm++;
                         if (verbosity >= 1) {
-                            PrintLn("    %1 has inadequate GHM (%2, expected %3 [%4])",
-                                    stay_test->bill_id, result.ghm, stay_test->ghm, stay_test->error);
+                            PrintLn("    %1 has inadequate GHM (%2 [%3], expected %4 [%5])",
+                                    stay_test->bill_id, result.ghm, result.main_error,
+                                    stay_test->ghm, stay_test->error);
                         }
                     }
                 }
