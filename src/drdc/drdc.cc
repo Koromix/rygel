@@ -233,6 +233,11 @@ Classify options:
             LogInfo("Summarize '%1'", filenames[i]);
             Summarize(classify_set->results, &classify_set->summary);
 
+            if (!verbosity && !test) {
+                classify_set->stay_set = StaySet();
+                classify_set->results.Clear();
+            }
+
             return true;
         });
     }
