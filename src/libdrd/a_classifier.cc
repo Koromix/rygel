@@ -206,14 +206,14 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     return score_stay;
 }
 
-static bool SetError(ClassifyErrorSet *error_set, int16_t error)
+static bool SetError(ClassifyErrorSet *error_set, int16_t error, bool force = false)
 {
     if (!error)
         return true;
 
     DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
-        if (!error_set->main_error || error < error_set->main_error) {
+        if (!error_set->main_error || error < error_set->main_error || force) {
             error_set->main_error = error;
         }
         error_set->errors.Set(error);
@@ -460,7 +460,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
     if (!out_agg->index) {
         LogError("No table available on '%1'", stays[stays.len - 1].exit.date);
-        SetError(out_errors, 502);
+        SetError(out_errors, 502, true);
         return GhmCode::FromString("90Z03Z");
     }
 
@@ -871,7 +871,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
     for (Size i = 0; !ghm.IsValid(); i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
-            SetError(out_errors, 4);
+            SetError(out_errors, 4, true);
             return GhmCode::FromString("90Z03Z");
         }
 
@@ -884,7 +884,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
                 if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
-                    SetError(out_errors, 4);
+                    SetError(out_errors, 4, true);
                     return GhmCode::FromString("90Z03Z");
                 }
 
@@ -961,7 +961,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
-        SetError(out_errors, 4);
+        SetError(out_errors, 4, true);
         return GhmCode::FromString("90Z03Z");
     }
 
