@@ -180,9 +180,11 @@ public:
                 } else if (TestStr(key, "bill_id")) {
                     SetInt(value, &stay.bill_id);
                 } else if (TestStr(key, "birthdate")) {
-                    SetErrorFlag(Stay::Error::MalformedBirthdate, SetDate(value, &stay.birthdate));
+                    SetErrorFlag(Stay::Error::MalformedBirthdate,
+                                 !SetDate(value, &stay.birthdate) && !stay.birthdate.value);
                 } else if (TestStr(key, "entry_date")) {
-                    SetErrorFlag(Stay::Error::MalformedEntryDate, SetDate(value, &stay.entry.date));
+                    SetErrorFlag(Stay::Error::MalformedEntryDate,
+                                 !SetDate(value, &stay.entry.date) && !stay.entry.date.value);
                 } else if (TestStr(key, "entry_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
@@ -221,7 +223,8 @@ public:
                         UnexpectedType(value.type);
                     }
                 } else if (TestStr(key, "exit_date")) {
-                    SetErrorFlag(Stay::Error::MalformedExitDate, SetDate(value, &stay.exit.date));
+                    SetErrorFlag(Stay::Error::MalformedExitDate,
+                                 !SetDate(value, &stay.exit.date) && !stay.exit.date.value);
                 } else if (TestStr(key, "exit_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
@@ -280,7 +283,6 @@ public:
                 } else if (TestStr(key, "session_count")) {
                     SetInt(value, &stay.session_count);
                 } else if (TestStr(key, "sex")) {
-                    bool valid = true;
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i == 1) {
                             stay.sex = Sex::Male;
@@ -288,7 +290,6 @@ public:
                             stay.sex = Sex::Female;
                         } else {
                             LogError("Invalid sex value '%1'", value.u.i);
-                            valid = false;
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (TestStr(value.u.str, "H") || TestStr(value.u.str, "h") ||
@@ -298,12 +299,12 @@ public:
                             stay.sex = Sex::Female;
                         } else {
                             LogError("Invalid sex value '%1'", value.u.str);
-                            valid = false;
                         }
                     } else {
-                        valid = UnexpectedType(value.type);
+                        UnexpectedType(value.type);
                     }
-                    SetErrorFlag(Stay::Error::MalformedSex, valid);
+                    SetErrorFlag(Stay::Error::MalformedSex,
+                                 stay.sex != Sex::Male && stay.sex != Sex::Female);
                 } else if (TestStr(key, "stay_id")) {
                     SetInt(value, &stay.stay_id);
                 } else if (TestStr(key, "unit")) {
@@ -418,12 +419,12 @@ private:
         proc.count = 1;
     }
 
-    void SetErrorFlag(Stay::Error err, bool success)
+    void SetErrorFlag(Stay::Error flag, bool error)
     {
-        if (LIKELY(success)) {
-            stay.error_mask &= ~(uint32_t)err;
+        if (UNLIKELY(error)) {
+            stay.error_mask |= (uint32_t)flag;
         } else {
-            stay.error_mask |= (uint32_t)err;
+            stay.error_mask &= ~(uint32_t)flag;
         }
     }
 };
