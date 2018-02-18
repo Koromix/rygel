@@ -210,11 +210,10 @@ public:
                         if (!value.u.str.len) {
                             stay.entry.origin = 0;
                         } else if (value.u.str.len == 1 &&
-                                   ((value.u.str[0] >= '0' && value.u.str[0] <= '9') ||
-                                    value.u.str[0] == 'R' || value.u.str[0] == 'r')) {
-                            // This is probably incorrect for either 'R' or 'r' but this is what
-                            // the machine code in FG2017 does, so keep it that way.
+                                   value.u.str[0] >= '0' && value.u.str[0] <= '9') {
                             stay.entry.origin = (char)(value.u.str[0] - '0');
+                        } else if (value.u.str[0] == 'R' || value.u.str[0] == 'r') {
+                            stay.entry.origin = 'R' - '0';
                         } else {
                             LogError("Invalid entry origin value '%1'", value.u.str);
                         }
