@@ -108,8 +108,7 @@ Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
     return stays.Take(0, agg_len);
 }
 
-static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
-                                int duration)
+static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays, int duration)
 {
     DebugAssert(duration >= 0);
 
@@ -266,6 +265,7 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
     return true;
 }
 
+// Continuity checks are not done here, see CheckStayContinuity()
 static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
@@ -278,6 +278,7 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
 
     bool valid = true;
 
+    // Main and linked diagnosis
     if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
         valid &= SetError(out_errors, 40);
     } else {
@@ -289,6 +290,7 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                                       linked_diagnosis_error_codes, out_errors);
     }
 
+    // Sex
     if (UNLIKELY(stay.sex != Sex::Male && stay.sex != Sex::Female)) {
         if (!(int)stay.sex && !(stay.error_mask & (int)Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 16);
@@ -297,10 +299,12 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
         }
     }
 
+    // Birthdate
     valid &= CheckDateErrors(stay.birthdate,
                              stay.error_mask & (int)Stay::Error::MalformedBirthdate,
                              birthdate_error_codes, out_errors);
 
+    // Entry and exit dates
     valid &= CheckDateErrors(stay.entry.date,
                              stay.error_mask & (int)Stay::Error::MalformedEntryDate,
                              entry_date_error_codes, out_errors);
@@ -319,19 +323,22 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
 {
     bool valid = true;
 
+    // Sex
+    if (UNLIKELY(stay2.sex != stay1.sex && (stay2.sex == Sex::Male ||
+                                            stay2.sex == Sex::Female))) {
+        valid &= SetError(out_errors, 46);
+    }
+
+    // Birthdate
+    if (UNLIKELY(stay2.birthdate != stay1.birthdate && stay2.birthdate.IsValid())) {
+        valid &= SetError(out_errors, 45);
+    }
+
     if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
         if (stay2.entry.mode != 0 || stay1.exit.mode != 0 ||
                 stay2.entry.date - stay1.exit.date != 1) {
             valid &= SetError(out_errors, 23);
         }
-    }
-
-    if (UNLIKELY(stay2.birthdate != stay1.birthdate && stay2.birthdate.IsValid())) {
-        valid &= SetError(out_errors, 45);
-    }
-
-    if (UNLIKELY(stay2.sex != stay1.sex)) {
-        valid &= SetError(out_errors, 46);
     }
 
     return valid;
