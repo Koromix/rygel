@@ -194,7 +194,7 @@ public:
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (value.u.str.len == 1) {
-                            stay.entry.mode = value.u.str[0];
+                            stay.entry.mode = UpperAscii(value.u.str[0]);
                         } else {
                             LogError("Invalid entry mode value '%1'", value.u.str);
                         }
@@ -215,12 +215,8 @@ public:
                         if (!value.u.str.len) {
                             stay.entry.origin = 0;
                             valid = true;
-                        } else if (value.u.str.len == 1 &&
-                                   value.u.str[0] >= '0' && value.u.str[0] <= '9') {
-                            stay.entry.origin = value.u.str[0];
-                            valid = true;
-                        } else if (value.u.str[0] == 'R' || value.u.str[0] == 'r') {
-                            stay.entry.origin = 'R';
+                        } else if (value.u.str.len == 1) {
+                            stay.entry.origin = UpperAscii(value.u.str[0]);
                             valid = true;
                         } else {
                             LogError("Invalid entry origin value '%1'", value.u.str);
@@ -241,7 +237,7 @@ public:
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (value.u.str.len == 1) {
-                            stay.exit.mode = value.u.str[0];
+                            stay.exit.mode = UpperAscii(value.u.str[0]);
                         } else {
                             LogError("Invalid exit mode value '%1'", value.u.str);
                         }
@@ -262,9 +258,8 @@ public:
                         if (!value.u.str.len) {
                             stay.exit.destination = 0;
                             valid = true;
-                        } else if (value.u.str.len == 1 &&
-                                   (value.u.str[0] >= '0' && value.u.str[0] <= '9')) {
-                            stay.exit.destination = value.u.str[0];
+                        } else if (value.u.str.len == 1) {
+                            stay.exit.destination = UpperAscii(value.u.str[0]);
                             valid = true;
                         } else {
                             LogError("Invalid exit destination value '%1'", value.u.str);

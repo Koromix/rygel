@@ -14,12 +14,8 @@ static inline void ParseEntryExitCharacter(SEXP sexp, Stay::Error error_flag,
                                            char *out_dest, uint32_t *out_error_mask)
 {
     const char *str = CHAR(sexp);
-    if (str[0] >= '0' && !str[1]) {
-        if (LIKELY(str[0] < 'a' || str[0] > 'z')) {
-            *out_dest = str[0];
-        } else {
-            *out_dest = (int8_t)(str[0] + 'a' - 'A');
-        }
+    if (str[0] && !str[1]) {
+        *out_dest = UpperAscii(str[0]);
     } else if (sexp != NA_STRING) {
         *out_error_mask |= (uint32_t)error_flag;
     }
