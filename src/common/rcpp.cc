@@ -55,7 +55,7 @@ bool RcppDateVector::IsNA(int idx) const
         case Type::Character: { return u.chr[idx].get() == NA_STRING; } break;
         case Type::Date: { return u.num[idx] == NA_REAL; } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 Date RcppDateVector::operator[](int idx) const

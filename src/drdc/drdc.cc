@@ -88,8 +88,7 @@ error:
                        values[1] == u.cmd_jump.jump;
             } break;
         }
-
-        Assert(false);
+        DebugAssert(false);
     }
 };
 

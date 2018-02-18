@@ -1523,7 +1523,7 @@ Size StreamReader::RemainingLen() const
                 return source.u.memory.buf.len - source.u.memory.pos;
             } break;
         }
-        Assert(false);
+        DebugAssert(false);
     } else {
         return -1;
     }
@@ -1546,7 +1546,7 @@ Size StreamReader::Read(Size max_len, void *out_buf)
             return Deflate(max_len, out_buf);
         } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
@@ -1806,7 +1806,7 @@ truncated_error:
     error = true;
     return -1;
 #else
-    Assert(false);
+    DebugAssert(false);
 #endif
 }
 
@@ -1836,7 +1836,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             return copy_len;
         } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 #ifdef MZ_VERSION
@@ -2030,7 +2030,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 #endif
         } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 bool StreamWriter::InitCompressor(CompressionType type)
@@ -2120,7 +2120,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             return true;
         } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 // ------------------------------------------------------------------------

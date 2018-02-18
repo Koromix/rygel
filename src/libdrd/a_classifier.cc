@@ -88,7 +88,7 @@ static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
         case ClusterMode::BillId: { return stay2.bill_id == stay1.bill_id; } break;
         case ClusterMode::Disable: { return false; } break;
     }
-    Assert(false);
+    DebugAssert(false);
 }
 
 Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
