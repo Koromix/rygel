@@ -303,6 +303,10 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
     valid &= CheckDateErrors(stay.birthdate,
                              stay.error_mask & (int)Stay::Error::MalformedBirthdate,
                              birthdate_error_codes, out_errors);
+    if (UNLIKELY(stay.birthdate > stay.entry.date &&
+                 stay.birthdate.IsValid() && stay.entry.date.IsValid())) {
+        valid &= SetError(out_errors, 15);
+    }
 
     // Entry and exit dates
     valid &= CheckDateErrors(stay.entry.date,
