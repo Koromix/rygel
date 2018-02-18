@@ -289,6 +289,14 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                                       linked_diagnosis_error_codes, out_errors);
     }
 
+    if (UNLIKELY(stay.sex != Sex::Male && stay.sex != Sex::Female)) {
+        if (!(int)stay.sex && !(stay.error_mask & (int)Stay::Error::MalformedSex)) {
+            valid &= SetError(out_errors, 16);
+        } else {
+            valid &= SetError(out_errors, 17);
+        }
+    }
+
     valid &= CheckDateErrors(stay.birthdate,
                              stay.error_mask & (int)Stay::Error::MalformedBirthdate,
                              birthdate_error_codes, out_errors);

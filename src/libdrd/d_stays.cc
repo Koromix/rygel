@@ -281,13 +281,15 @@ public:
                 } else if (TestStr(key, "session_count")) {
                     SetInt(value, &stay.session_count);
                 } else if (TestStr(key, "sex")) {
+                    bool valid = true;
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i == 1) {
                             stay.sex = Sex::Male;
                         } else if (value.u.i == 2) {
                             stay.sex = Sex::Female;
                         } else {
-                            LogError("Invalid sex value %1", value.u.i);
+                            LogError("Invalid sex value '%1'", value.u.i);
+                            valid = false;
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (TestStr(value.u.str, "H") || TestStr(value.u.str, "h") ||
@@ -297,10 +299,12 @@ public:
                             stay.sex = Sex::Female;
                         } else {
                             LogError("Invalid sex value '%1'", value.u.str);
+                            valid = false;
                         }
                     } else {
-                        UnexpectedType(value.type);
+                        valid = UnexpectedType(value.type);
                     }
+                    SetErrorFlag(Stay::Error::MalformedSex, valid);
                 } else if (TestStr(key, "stay_id")) {
                     SetInt(value, &stay.stay_id);
                 } else if (TestStr(key, "unit")) {
