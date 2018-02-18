@@ -18,7 +18,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 2
+#define PACK_VERSION 3
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -186,13 +186,13 @@ public:
                 } else if (TestStr(key, "entry_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
-                            stay.entry.mode = (int8_t)value.u.i;
+                            stay.entry.mode = (int8_t)('0' + value.u.i);
                         } else {
                             LogError("Invalid entry mode value %1", value.u.i);
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (value.u.str.len == 1) {
-                            stay.entry.mode = (char)(value.u.str[0] - '0');
+                            stay.entry.mode = value.u.str[0];
                         } else {
                             LogError("Invalid entry mode value '%1'", value.u.str);
                         }
@@ -202,7 +202,7 @@ public:
                 } else if (TestStr(key, "entry_origin")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
-                            stay.entry.origin = (int8_t)value.u.i;
+                            stay.entry.origin = (int8_t)('0' + value.u.i);
                         } else {
                             LogError("Invalid entry origin value %1", value.u.i);
                         }
@@ -211,9 +211,9 @@ public:
                             stay.entry.origin = 0;
                         } else if (value.u.str.len == 1 &&
                                    value.u.str[0] >= '0' && value.u.str[0] <= '9') {
-                            stay.entry.origin = (char)(value.u.str[0] - '0');
+                            stay.entry.origin = value.u.str[0];
                         } else if (value.u.str[0] == 'R' || value.u.str[0] == 'r') {
-                            stay.entry.origin = 'R' - '0';
+                            stay.entry.origin = 'R';
                         } else {
                             LogError("Invalid entry origin value '%1'", value.u.str);
                         }
@@ -225,13 +225,13 @@ public:
                 } else if (TestStr(key, "exit_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
-                            stay.exit.mode = (int8_t)value.u.i;
+                            stay.exit.mode = (int8_t)('0' + value.u.i);
                         } else {
                             LogError("Invalid exit mode value %1", value.u.i);
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (value.u.str.len == 1) {
-                            stay.exit.mode = (char)(value.u.str[0] - '0');
+                            stay.exit.mode = value.u.str[0];
                         } else {
                             LogError("Invalid exit mode value '%1'", value.u.str);
                         }
@@ -241,7 +241,7 @@ public:
                 } else if (TestStr(key, "exit_destination")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
-                            stay.exit.destination = (int8_t)value.u.i;
+                            stay.exit.destination = (int8_t)('0' + value.u.i);
                         } else {
                             LogError("Invalid exit destination value %1", value.u.i);
                         }
@@ -250,7 +250,7 @@ public:
                             stay.exit.destination = 0;
                         } else if (value.u.str.len == 1 &&
                                    (value.u.str[0] >= '0' && value.u.str[0] <= '9')) {
-                            stay.exit.destination = (char)(value.u.str[0] - '0');
+                            stay.exit.destination = value.u.str[0];
                         } else {
                             LogError("Invalid exit destination value '%1'", value.u.str);
                         }

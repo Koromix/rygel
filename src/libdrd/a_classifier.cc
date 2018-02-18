@@ -83,7 +83,7 @@ static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
             return !stay1.session_count &&
                    stay2.stay_id == stay1.stay_id &&
                    !stay2.session_count &&
-                   (stay2.entry.mode == 6 || stay2.entry.mode == 0);
+                   (stay2.entry.mode == '6' || stay2.entry.mode == '0');
         } break;
         case ClusterMode::BillId: { return stay2.bill_id == stay1.bill_id; } break;
         case ClusterMode::Disable: { return false; } break;
@@ -322,34 +322,34 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
 
     // Entry mode and origin
     switch (stay.entry.mode) {
-        case 0:
-        case 6: {
-            if (UNLIKELY(stay.entry.mode == 0 && stay.entry.origin == 6)) {
+        case '0':
+        case '6': {
+            if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
                 valid &= SetError(out_errors, 25);
             }
-            if (UNLIKELY(stay.entry.mode == 6 && stay.entry.origin == ('R' - '0'))) {
+            if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
                 valid &= SetError(out_errors, 25);
             }
         } // fallthrough
-        case 7: {
+        case '7': {
             switch (stay.entry.origin) {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 6:
-                case ('R' - '0'): { /* Valid origin */ } break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '6':
+                case 'R': { /* Valid origin */ } break;
 
                 case 0: { valid &= SetError(out_errors, 53); } break;
                 default: { valid &= SetError(out_errors, 25); } break;
             }
         } break;
 
-        case 8: {
+        case '8': {
             switch (stay.entry.origin) {
                 case 0:
-                case 5:
-                case 7: { /* Valid origin */ } break;
+                case '5':
+                case '7': { /* Valid origin */ } break;
 
                 default: { valid &= SetError(out_errors, 25); } break;
             }
@@ -360,31 +360,31 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
 
     // Exit mode and destination
     switch (stay.exit.mode) {
-        case 0:
-        case 6:
-        case 7: {
+        case '0':
+        case '6':
+        case '7': {
             switch (stay.exit.destination) {
-                case 1:
-                case 2:
-                case 3:
-                case 4:
-                case 6: { /* Valid destination */ } break;
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '6': { /* Valid destination */ } break;
 
                 case 0: { valid &= SetError(out_errors, 54); } break;
                 default: { valid &= SetError(out_errors, 34); } break;
             }
         } break;
 
-        case 8: {
+        case '8': {
             switch (stay.exit.destination) {
                 case 0:
-                case 7: { /* Valid destination */ } break;
+                case '7': { /* Valid destination */ } break;
 
                 default: { valid &= SetError(out_errors, 34); } break;
             }
         } break;
 
-        case 9: {
+        case '9': {
             if (UNLIKELY(stay.exit.destination)) {
                 valid &= SetError(out_errors, 34);
             }
@@ -412,8 +412,8 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
     }
 
     switch (stay2.entry.mode) {
-        case 0: {
-            if (UNLIKELY(stay1.exit.mode != 0)) {
+        case '0': {
+            if (UNLIKELY(stay1.exit.mode != '0')) {
                 valid &= SetError(out_errors, 27);
                 SetError(out_errors, 49);
             } else if (UNLIKELY(stay2.entry.date - stay1.exit.date > 1)) {
@@ -421,8 +421,8 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
             }
         } break;
 
-        case 6: {
-            if (UNLIKELY(stay2.entry.origin != 1 || stay1.exit.mode != 6)) {
+        case '6': {
+            if (UNLIKELY(stay2.entry.origin != '1' || stay1.exit.mode != '6')) {
                 valid &= SetError(out_errors, 27);
                 SetError(out_errors, 49);
             } else if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
@@ -476,11 +476,11 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         bool valid = true;
 
         // TODO: Do complete inter-RSS compatibility checks
-        if (UNLIKELY(stays[0].entry.mode == 6 && stays[0].entry.origin == 1)) {
+        if (UNLIKELY(stays[0].entry.mode == '6' && stays[0].entry.origin == '1')) {
             valid &= SetError(out_errors, 26);
         }
-        if (UNLIKELY(stays[stays.len - 1].exit.mode == 6 &&
-                     stays[stays.len - 1].exit.destination == 1)) {
+        if (UNLIKELY(stays[stays.len - 1].exit.mode == '6' &&
+                     stays[stays.len - 1].exit.destination == '1')) {
             valid &= SetError(out_errors, 35);
         }
 
@@ -698,16 +698,16 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         case 19: {
             switch (ghm_node.u.test.params[1]) {
                 case 0: {
-                    return (ctx.agg->stay.exit.mode == ghm_node.u.test.params[0]);
+                    return (ctx.agg->stay.exit.mode == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 1: {
-                    return (ctx.agg->stay.exit.destination == ghm_node.u.test.params[0]);
+                    return (ctx.agg->stay.exit.destination == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 2: {
-                    return (ctx.agg->stay.entry.mode == ghm_node.u.test.params[0]);
+                    return (ctx.agg->stay.entry.mode == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 3: {
-                    return (ctx.agg->stay.entry.origin == ghm_node.u.test.params[0]);
+                    return (ctx.agg->stay.entry.origin == '0' + ghm_node.u.test.params[0]);
                 } break;
             }
         } break;
@@ -1004,7 +1004,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
         } else if (agg.age < ghm_root_info->young_age_treshold &&
                    severity < ghm_root_info->young_severity_limit) {
             severity++;
-        } else if (agg.stay.exit.mode == 9 && !severity) {
+        } else if (agg.stay.exit.mode == '9' && !severity) {
             severity = 1;
         }
 
@@ -1125,8 +1125,8 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
         return GhsCode(9999);
 
     // Deal with UHCD-only stays
-    if (agg.duration > 0 && agg.stays[0].entry.mode == 8 &&
-            agg.stays[agg.stays.len - 1].exit.mode == 8) {
+    if (agg.duration > 0 && agg.stays[0].entry.mode == '8' &&
+            agg.stays[agg.stays.len - 1].exit.mode == '8') {
         bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const Stay &stay) {
             int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
@@ -1246,7 +1246,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     } else {
         igs2_src_adjust = 0;
     }
-    bool prev_reanimation = (agg.stays[0].entry.mode == 7 && agg.stays[0].entry.origin == 34);
+    bool prev_reanimation = (agg.stays[0].entry.mode == '7' && agg.stays[0].entry.origin == 'R');
 
     const Stay *ambu_stay = nullptr;
     int ambu_priority = 0;
@@ -1343,11 +1343,11 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
         if (stay.exit.date != stay.entry.date) {
             if (ambu_stay && ambu_priority >= priority) {
                 if (counter) {
-                    *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == 9) - 1;
+                    *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == '9') - 1;
                 }
                 (*ambu_counter)++;
             } else if (counter) {
-                *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == 9);
+                *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == '9');
             }
             ambu_stay = nullptr;
             ambu_priority = 0;
@@ -1391,7 +1391,7 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
         return 0;
     }
 
-    return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == 9);
+    return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
 }
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,

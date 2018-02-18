@@ -30,13 +30,13 @@ struct Stay {
     Date birthdate;
     struct {
         Date date;
-        int8_t mode;
-        int8_t origin;
+        char mode;
+        char origin;
     } entry;
     struct {
         Date date;
-        int8_t mode;
-        int8_t destination;
+        char mode;
+        char destination;
     } exit;
     UnitCode unit;
     int8_t bed_authorization;

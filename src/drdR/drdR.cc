@@ -14,7 +14,7 @@ static inline int8_t ParseEntryExitCharacter(const char *str)
 {
     if (str[0] < '0' || str[1])
         return 0;
-    return (int8_t)(str[0] - '0');
+    return str[0];
 }
 
 // [[Rcpp::export(name = 'drd.options')]]
