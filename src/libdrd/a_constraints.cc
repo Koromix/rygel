@@ -62,15 +62,14 @@ static bool MergeConstraint(const TableIndex &index,
     return true;
 }
 
-// TODO: Convert to non-recursive code
 static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_idx,
                            GhmConstraint constraint,
                            HashTable<GhmCode, GhmConstraint> *out_constraints)
 {
-    if (UNLIKELY(depth >= index.ghm_nodes.len)) {
-        LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
-        return false;
-    }
+    // This limit is arbitrary, quick tests show depth maxing at less than 100 so we
+    // should be alright. If this becomes a problem, I'll rewrite this function to
+    // avoid recursion.
+    Assert(depth < 4096);
 
 #define RUN_TREE_SUB(ChildIdx, ChangeCode) \
         do { \
