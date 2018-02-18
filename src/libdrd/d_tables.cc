@@ -1390,110 +1390,80 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     return success;
 }
 
-const DiagnosisInfo *TableIndex::FindDiagnosis(DiagnosisCode code) const
+template <typename T, typename U, typename Handler>
+Span<const T> FindSpan(Span<T> arr, const HashTable<U, const T *, Handler> *map, U code)
 {
-    if (!diagnoses_map)
-        return nullptr;
+    Span<const T> ret = {};
 
-    return diagnoses_map->FindValue(code, nullptr);
-}
+    if (UNLIKELY(!map))
+        return ret;
 
-Span<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode code) const
-{
-    if (!procedures_map)
-        return {};
+    ret.ptr = map->FindValue(code, nullptr);
 
-    Span<const ProcedureInfo> procs;
-    procs.ptr = procedures_map->FindValue(code, nullptr);
-    if (!procs.ptr)
-        return {};
-
-    {
-        const ProcedureInfo *end_proc = procs.ptr + 1;
-        while (end_proc < procedures.end() && end_proc->proc == code) {
-            end_proc++;
+    if (ret.ptr) {
+        const T *end_it = ret.ptr + 1;
+        while (end_it < arr.end() && Handler::CompareKeys(Handler::GetKey(end_it), code)) {
+            end_it++;
         }
-        procs.len = end_proc - procs.ptr;
+        ret.len = end_it - ret.ptr;
     }
 
-    return procs;
+    return ret;
 }
 
-const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode code, int8_t phase, Date date) const
+const DiagnosisInfo *TableIndex::FindDiagnosis(DiagnosisCode diag) const
 {
-    if (!procedures_map)
+    if (UNLIKELY(!diagnoses_map))
         return nullptr;
 
-    const ProcedureInfo *proc = procedures_map->FindValue(code, nullptr);
-    if (!proc)
+    return diagnoses_map->FindValue(diag, nullptr);
+}
+
+Span<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode proc) const
+{
+    return FindSpan(procedures, procedures_map, proc);
+}
+
+const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode proc, int8_t phase, Date date) const
+{
+    if (UNLIKELY(!procedures_map))
+        return nullptr;
+
+    const ProcedureInfo *proc_info = procedures_map->FindValue(proc, nullptr);
+    if (!proc_info)
         return nullptr;
 
     do {
-        if (proc->phase != phase)
+        if (proc_info->phase != phase)
             continue;
-        if (date < proc->limit_dates[0] || date >= proc->limit_dates[1])
+        if (date < proc_info->limit_dates[0] || date >= proc_info->limit_dates[1])
             continue;
 
-        return proc;
-    } while (++proc < procedures.end() && proc->proc == code);
+        return proc_info;
+    } while (++proc_info < procedures.end() && proc_info->proc == proc);
 
     return nullptr;
 }
 
-const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode code) const
+const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode ghm_root) const
 {
-    if (!ghm_roots_map)
+    if (UNLIKELY(!ghm_roots_map))
         return nullptr;
 
-    return ghm_roots_map->FindValue(code, nullptr);
+    return ghm_roots_map->FindValue(ghm_root, nullptr);
 }
 
 Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmRootCode ghm_root) const
 {
-    if (!ghm_root_to_ghs_map)
-        return {};
-
-    Span<const GhsAccessInfo> compatible_ghs;
-    compatible_ghs.ptr = ghm_root_to_ghs_map->FindValue(ghm_root, nullptr);
-    if (!compatible_ghs.ptr)
-        return {};
-
-    {
-        const GhsAccessInfo *end_ghs = compatible_ghs.ptr + 1;
-        while (end_ghs < ghs.end() && end_ghs->ghm.Root() == ghm_root) {
-            end_ghs++;
-        }
-        compatible_ghs.len = end_ghs - compatible_ghs.ptr;
-    }
-
-    return compatible_ghs;
+    return FindSpan(ghs, ghm_root_to_ghs_map, ghm_root);
 }
 
 Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 {
-    if (!ghm_to_ghs_map)
-        return {};
-
-    Span<const GhsAccessInfo> compatible_ghs;
-    compatible_ghs.ptr = ghm_to_ghs_map->FindValue(ghm, nullptr);
-    if (!compatible_ghs.ptr)
-        return {};
-
-    // TODO: Make some kind of FindContiguous() abstraction for this and
-    // the previous functions that do the same.
-    {
-        const GhsAccessInfo *end_ghs = compatible_ghs.ptr + 1;
-        while (end_ghs < ghs.end() && end_ghs->ghm == ghm) {
-            end_ghs++;
-        }
-        compatible_ghs.len = end_ghs - compatible_ghs.ptr;
-    }
-
-    return compatible_ghs;
+    return FindSpan(ghs, ghm_to_ghs_map, ghm);
 }
 
-const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope,
-                                                       int8_t type) const
+const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope, int8_t type) const
 {
     if (!authorizations_map)
         return nullptr;

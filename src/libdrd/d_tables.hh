@@ -290,10 +290,10 @@ struct TableIndex {
 
     HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
 
-    const DiagnosisInfo *FindDiagnosis(DiagnosisCode code) const;
-    Span<const ProcedureInfo> FindProcedure(ProcedureCode code) const;
-    const ProcedureInfo *FindProcedure(ProcedureCode code, int8_t phase, Date date) const;
-    const GhmRootInfo *FindGhmRoot(GhmRootCode code) const;
+    const DiagnosisInfo *FindDiagnosis(DiagnosisCode diag) const;
+    Span<const ProcedureInfo> FindProcedure(ProcedureCode proc) const;
+    const ProcedureInfo *FindProcedure(ProcedureCode proc, int8_t phase, Date date) const;
+    const GhmRootInfo *FindGhmRoot(GhmRootCode ghm_root) const;
 
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmRootCode ghm_root) const;
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmCode ghm) const;
