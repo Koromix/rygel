@@ -224,6 +224,22 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error)
     return false;
 }
 
+static bool CheckDateErrors(Date date, bool malformed_flag,
+                            const int16_t error_codes[3], ClassifyErrorSet *out_errors)
+{
+    if (UNLIKELY(!date.value)) {
+        if (!malformed_flag) {
+            return SetError(out_errors, error_codes[0]);
+        } else {
+            return SetError(out_errors, error_codes[1]);
+        }
+    } else if (UNLIKELY(!date.IsValid())) {
+        return SetError(out_errors, error_codes[2]);
+    }
+
+    return true;
+}
+
 static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag,
                                  const int16_t error_codes[6], ClassifyErrorSet *out_errors)
 {
@@ -251,6 +267,10 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
 static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
+    static const int16_t birthdate_error_codes[3] = {13, 14, 39};
+    static const int16_t entry_date_error_codes[3] = {19, 20, 21};
+    static const int16_t exit_date_error_codes[3] = {28, 29, 30};
+
     static const int16_t main_diagnosis_error_codes[6] = {67, 68, 113, 114, 115, 113};
     static const int16_t linked_diagnosis_error_codes[6] = {94, 95, 116, 117, 118, 0};
 
@@ -267,16 +287,18 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                                       linked_diagnosis_error_codes, out_errors);
     }
 
-    if (UNLIKELY(!stay.birthdate.value)) {
-        if (stay.error_mask & (int)Stay::Error::MalformedBirthdate) {
-            valid &= SetError(out_errors, 14);
-        } else {
-            valid &= SetError(out_errors, 13);
-        }
-    } else if (UNLIKELY(!stay.birthdate.IsValid())) {
-        valid &= SetError(out_errors, 39);
-    }
-    if (UNLIKELY(stay.exit.date < stay.entry.date)) {
+    valid &= CheckDateErrors(stay.birthdate,
+                             stay.error_mask & (int)Stay::Error::MalformedBirthdate,
+                             birthdate_error_codes, out_errors);
+
+    valid &= CheckDateErrors(stay.entry.date,
+                             stay.error_mask & (int)Stay::Error::MalformedEntryDate,
+                             entry_date_error_codes, out_errors);
+    valid &= CheckDateErrors(stay.exit.date,
+                             stay.error_mask & (int)Stay::Error::MalformedExitDate,
+                             exit_date_error_codes, out_errors);
+    if (UNLIKELY(stay.exit.date < stay.entry.date &&
+                 stay.entry.date.IsValid() && stay.exit.date.IsValid())) {
         valid &= SetError(out_errors, 32);
     }
 
@@ -294,7 +316,7 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
         }
     }
 
-    if (UNLIKELY(stay2.birthdate != stay1.birthdate)) {
+    if (UNLIKELY(stay2.birthdate != stay1.birthdate && stay2.birthdate.IsValid())) {
         valid &= SetError(out_errors, 45);
     }
 

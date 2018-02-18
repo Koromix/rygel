@@ -180,9 +180,9 @@ public:
                 } else if (TestStr(key, "bill_id")) {
                     SetInt(value, &stay.bill_id);
                 } else if (TestStr(key, "birthdate")) {
-                    SetDate(value, &stay.birthdate);
+                    SetErrorFlag(Stay::Error::MalformedBirthdate, SetDate(value, &stay.birthdate));
                 } else if (TestStr(key, "entry_date")) {
-                    SetDate(value, &stay.entry.date);
+                    SetErrorFlag(Stay::Error::MalformedEntryDate, SetDate(value, &stay.entry.date));
                 } else if (TestStr(key, "entry_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
@@ -222,7 +222,7 @@ public:
                         UnexpectedType(value.type);
                     }
                 } else if (TestStr(key, "exit_date")) {
-                    SetDate(value, &stay.exit.date);
+                    SetErrorFlag(Stay::Error::MalformedExitDate, SetDate(value, &stay.exit.date));
                 } else if (TestStr(key, "exit_mode")) {
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
@@ -413,6 +413,15 @@ private:
     {
         proc = {};
         proc.count = 1;
+    }
+
+    void SetErrorFlag(Stay::Error err, bool success)
+    {
+        if (LIKELY(success)) {
+            stay.error_mask &= ~(uint32_t)err;
+        } else {
+            stay.error_mask |= (uint32_t)err;
+        }
     }
 };
 
