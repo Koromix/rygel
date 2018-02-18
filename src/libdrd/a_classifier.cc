@@ -772,6 +772,19 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
         }
     }
 
+    if (ghm.parts.cmd == 28) {
+        if (UNLIKELY(agg.stays.len > 1)) {
+            SetError(out_errors, 150);
+            return GhmCode::FromString("90Z00Z");
+        }
+        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) &&
+                     agg.stay.main_diagnosis.Matches("Z511") &&
+                     !agg.stay.linked_diagnosis.IsValid())) {
+            SetError(out_errors, 187);
+            return GhmCode::FromString("90Z00Z");
+        }
+    }
+
     return ghm;
 }
 
