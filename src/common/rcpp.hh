@@ -57,6 +57,7 @@ public:
     RcppDateVector() = default;
     RcppDateVector(SEXP xp);
 
+    bool IsNA(int idx) const;
     Date operator[](int idx) const;
     Date Value() const;
 };

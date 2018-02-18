@@ -49,16 +49,22 @@ RcppDateVector::RcppDateVector(SEXP xp)
     }
 }
 
+bool RcppDateVector::IsNA(int idx) const
+{
+    switch (type) {
+        case Type::Character: { return u.chr[idx].get() == NA_STRING; } break;
+        case Type::Date: { return u.num[idx] == NA_REAL; } break;
+    }
+    Assert(false);
+}
+
 Date RcppDateVector::operator[](int idx) const
 {
     switch (type) {
         case Type::Character: {
             SEXP str = u.chr[idx].get();
             if (str != NA_STRING) {
-                Date date = Date::FromString(CHAR(str));
-                if (!date.value)
-                    StopRcppWithLastMessage();
-                return date;
+                return Date::FromString(CHAR(str));
             }
         } break;
 

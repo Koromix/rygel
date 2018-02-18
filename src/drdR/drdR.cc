@@ -10,11 +10,19 @@ struct ClassifierSet {
     AuthorizationSet authorization_set;
 };
 
-static inline int8_t ParseEntryExitCharacter(const char *str)
+static inline void ParseEntryExitCharacter(SEXP sexp, Stay::Error error_flag,
+                                           char *out_dest, uint32_t *out_error_mask)
 {
-    if (str[0] < '0' || str[1])
-        return 0;
-    return str[0];
+    const char *str = CHAR(sexp);
+    if (str[0] >= '0' && !str[1]) {
+        if (LIKELY(str[0] < 'a' || str[0] > 'z')) {
+            *out_dest = str[0];
+        } else {
+            *out_dest = (int8_t)(str[0] + 'a' - 'A');
+        }
+    } else if (sexp != NA_STRING) {
+        *out_error_mask |= (uint32_t)error_flag;
+    }
 }
 
 // [[Rcpp::export(name = 'drd.options')]]
@@ -177,26 +185,35 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.stay_id = GetRcppOptionalValue(stays.stay_id, i, 0);
             stay.birthdate = stays.birthdate[i];
             {
-                const char *sex = stays.sex[i];
-                if (TestStr(sex, "1") || TestStr(sex, "M") || TestStr(sex, "m") ||
-                        TestStr(sex, "H") || TestStr(sex, "h")) {
+                const char *sex_str = stays.sex[i];
+                if (TestStr(sex_str, "1") || TestStr(sex_str, "M") || TestStr(sex_str, "m") ||
+                        TestStr(sex_str, "H") || TestStr(sex_str, "h")) {
                     stay.sex = Sex::Male;
-                } else if (TestStr(sex, "2") || TestStr(sex, "F") || TestStr(sex, "f")) {
+                } else if (TestStr(sex_str, "2") || TestStr(sex_str, "F") || TestStr(sex_str, "f")) {
                     stay.sex = Sex::Female;
-                } else {
-                    LogError("Unexpected sex '%1' on row %2", sex, i + 1);
+                } else if (stays.sex[i] != NA_STRING) {
+                    LogError("Unexpected sex '%1' on row %2", sex_str, i + 1);
+                    stay.error_mask &= (int)Stay::Error::MalformedSex;
                 }
             }
+
             stay.entry.date = stays.entry_date[i];
-            // TODO: Harmonize who deals with format errors (for example sex is dealt with here, not modes)
-            stay.entry.date = stays.entry_date[i];
-            stay.entry.mode = ParseEntryExitCharacter(stays.entry_mode[i]);
-            stay.entry.origin =
-                ParseEntryExitCharacter(GetRcppOptionalValue(stays.entry_origin, i, ""));
+            if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(i))) {
+                stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
+            }
+            ParseEntryExitCharacter(stays.entry_mode[i], Stay::Error::MalformedEntryMode,
+                                    &stay.entry.mode, &stay.error_mask);
+            ParseEntryExitCharacter(stays.entry_origin[i], Stay::Error::MalformedEntryOrigin,
+                                    &stay.entry.origin, &stay.error_mask);
             stay.exit.date = stays.exit_date[i];
-            stay.exit.mode = ParseEntryExitCharacter(stays.exit_mode[i]);
-            stay.exit.destination =
-                ParseEntryExitCharacter(GetRcppOptionalValue(stays.exit_destination, i, ""));
+            if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(i))) {
+                stay.error_mask |= (int)Stay::Error::MalformedExitDate;
+            }
+            ParseEntryExitCharacter(stays.exit_mode[i], Stay::Error::MalformedExitMode,
+                                    &stay.exit.mode, &stay.error_mask);
+            ParseEntryExitCharacter(stays.exit_destination[i], Stay::Error::MalformedExitDestination,
+                                    &stay.exit.destination, &stay.error_mask);
+
             stay.unit.number = (int16_t)GetRcppOptionalValue(stays.unit, i, 0);
             stay.bed_authorization = (int8_t)GetRcppOptionalValue(stays.bed_authorization, i, 0);
             stay.session_count = (int16_t)GetRcppOptionalValue(stays.session_count, i, 0);
@@ -204,11 +221,11 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.gestational_age = (int16_t)stays.gestational_age[i];
             stay.newborn_weight = (int16_t)stays.newborn_weight[i];
             stay.last_menstrual_period = stays.last_menstrual_period[i];
+
             stay.main_diagnosis =
                 DiagnosisCode::FromString(GetRcppOptionalValue(stays.main_diagnosis, i, ""));
             stay.linked_diagnosis =
                 DiagnosisCode::FromString(GetRcppOptionalValue(stays.linked_diagnosis, i, ""));
-
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
             while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
                 DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j]);
