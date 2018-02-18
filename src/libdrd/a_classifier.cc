@@ -320,6 +320,79 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
         valid &= SetError(out_errors, 32);
     }
 
+    // Entry mode and origin
+    switch (stay.entry.mode) {
+        case 0:
+        case 6: {
+            if (UNLIKELY(stay.entry.mode == 0 && stay.entry.origin == 6)) {
+                valid &= SetError(out_errors, 25);
+            }
+            if (UNLIKELY(stay.entry.mode == 6 && stay.entry.origin == ('R' - '0'))) {
+                valid &= SetError(out_errors, 25);
+            }
+        } // fallthrough
+        case 7: {
+            switch (stay.entry.origin) {
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 6:
+                case ('R' - '0'): { /* Valid origin */ } break;
+
+                case 0: { valid &= SetError(out_errors, 53); } break;
+                default: { valid &= SetError(out_errors, 25); } break;
+            }
+        } break;
+
+        case 8: {
+            switch (stay.entry.origin) {
+                case 0:
+                case 5:
+                case 7: { /* Valid origin */ } break;
+
+                default: { valid &= SetError(out_errors, 25); } break;
+            }
+        } break;
+
+        default: { valid &= SetError(out_errors, 25); } break;
+    }
+
+    // Exit mode and destination
+    switch (stay.exit.mode) {
+        case 0:
+        case 6:
+        case 7: {
+            switch (stay.exit.destination) {
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 6: { /* Valid destination */ } break;
+
+                case 0: { valid &= SetError(out_errors, 54); } break;
+                default: { valid &= SetError(out_errors, 34); } break;
+            }
+        } break;
+
+        case 8: {
+            switch (stay.exit.destination) {
+                case 0:
+                case 7: { /* Valid destination */ } break;
+
+                default: { valid &= SetError(out_errors, 34); } break;
+            }
+        } break;
+
+        case 9: {
+            if (UNLIKELY(stay.exit.destination)) {
+                valid &= SetError(out_errors, 34);
+            }
+        } break;
+
+        default: { valid &= SetError(out_errors, 34); } break;
+    }
+
     return valid;
 }
 
@@ -338,11 +411,26 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
         valid &= SetError(out_errors, 45);
     }
 
-    if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
-        if (stay2.entry.mode != 0 || stay1.exit.mode != 0 ||
-                stay2.entry.date - stay1.exit.date != 1) {
-            valid &= SetError(out_errors, 23);
-        }
+    switch (stay2.entry.mode) {
+        case 0: {
+            if (UNLIKELY(stay1.exit.mode != 0)) {
+                valid &= SetError(out_errors, 27);
+                SetError(out_errors, 49);
+            } else if (UNLIKELY(stay2.entry.date - stay1.exit.date > 1)) {
+                valid &= SetError(out_errors, 50);
+            }
+        } break;
+
+        case 6: {
+            if (UNLIKELY(stay2.entry.origin != 1 || stay1.exit.mode != 6)) {
+                valid &= SetError(out_errors, 27);
+                SetError(out_errors, 49);
+            } else if (UNLIKELY(stay2.entry.date != stay1.exit.date)) {
+                valid &= SetError(out_errors, 23);
+            }
+        } break;
+
+        default: { valid &= SetError(out_errors, 27); } break;
     }
 
     return valid;
@@ -386,6 +474,15 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     // Individual and coherency checks
     {
         bool valid = true;
+
+        // TODO: Do complete inter-RSS compatibility checks
+        if (UNLIKELY(stays[0].entry.mode == 6 && stays[0].entry.origin == 1)) {
+            valid &= SetError(out_errors, 26);
+        }
+        if (UNLIKELY(stays[stays.len - 1].exit.mode == 6 &&
+                     stays[stays.len - 1].exit.destination == 1)) {
+            valid &= SetError(out_errors, 35);
+        }
 
         valid &= CheckStayErrors(*out_agg->index, stays[0], out_errors);
         for (Size i = 1; i < stays.len; i++) {
