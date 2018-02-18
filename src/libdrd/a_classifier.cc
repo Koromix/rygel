@@ -241,7 +241,7 @@ static bool CheckDateErrors(Date date, bool malformed_flag,
 }
 
 static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag,
-                                 const int16_t error_codes[6], ClassifyErrorSet *out_errors)
+                                 const int16_t error_codes[7], ClassifyErrorSet *out_errors)
 {
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
     if (UNLIKELY(!diag_info))
@@ -252,13 +252,15 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
         return SetError(out_errors, error_codes[0]);
     } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
         return SetError(out_errors, error_codes[1]);
-    } else if (!diag_attr.raw[0]) {
+    } else if (UNLIKELY(!diag_attr.raw[0])) {
         switch (diag_attr.raw[1]) {
             case 0: { return SetError(out_errors, error_codes[2]); } break;
             case 1: { return SetError(out_errors, error_codes[3]); } break;
             case 2: { return SetError(out_errors, error_codes[4]); } break;
             case 3: { return SetError(out_errors, error_codes[5]); } break;
         }
+    } else if (UNLIKELY(diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
+        return SetError(out_errors, error_codes[6]);
     }
 
     return true;
@@ -271,8 +273,8 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
     static const int16_t entry_date_error_codes[3] = {19, 20, 21};
     static const int16_t exit_date_error_codes[3] = {28, 29, 30};
 
-    static const int16_t main_diagnosis_error_codes[6] = {67, 68, 113, 114, 115, 113};
-    static const int16_t linked_diagnosis_error_codes[6] = {94, 95, 116, 117, 118, 0};
+    static const int16_t main_diagnosis_error_codes[7] = {67, 68, 113, 114, 115, 113, 180};
+    static const int16_t linked_diagnosis_error_codes[7] = {94, 95, 116, 117, 118, 0, 181};
 
     bool valid = true;
 
