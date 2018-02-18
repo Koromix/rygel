@@ -201,27 +201,34 @@ public:
                     } else {
                         UnexpectedType(value.type);
                     }
+                    SetErrorFlag(Stay::Error::MalformedEntryMode, !stay.entry.mode);
                 } else if (TestStr(key, "entry_origin")) {
+                    bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
                             stay.entry.origin = (int8_t)('0' + value.u.i);
+                            valid = true;
                         } else {
                             LogError("Invalid entry origin value %1", value.u.i);
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (!value.u.str.len) {
                             stay.entry.origin = 0;
+                            valid = true;
                         } else if (value.u.str.len == 1 &&
                                    value.u.str[0] >= '0' && value.u.str[0] <= '9') {
                             stay.entry.origin = value.u.str[0];
+                            valid = true;
                         } else if (value.u.str[0] == 'R' || value.u.str[0] == 'r') {
                             stay.entry.origin = 'R';
+                            valid = true;
                         } else {
                             LogError("Invalid entry origin value '%1'", value.u.str);
                         }
                     } else {
                         UnexpectedType(value.type);
                     }
+                    SetErrorFlag(Stay::Error::MalformedEntryOrigin, !valid && !stay.entry.origin);
                 } else if (TestStr(key, "exit_date")) {
                     SetErrorFlag(Stay::Error::MalformedExitDate,
                                  !SetDate(value, &stay.exit.date) && !stay.exit.date.value);
@@ -241,25 +248,32 @@ public:
                     } else {
                         UnexpectedType(value.type);
                     }
+                    SetErrorFlag(Stay::Error::MalformedExitMode, !stay.exit.mode);
                 } else if (TestStr(key, "exit_destination")) {
+                    bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
                         if (value.u.i >= 0 && value.u.i <= 9) {
                             stay.exit.destination = (int8_t)('0' + value.u.i);
+                            valid = true;
                         } else {
                             LogError("Invalid exit destination value %1", value.u.i);
                         }
                     } else if (value.type == JsonValue::Type::String) {
                         if (!value.u.str.len) {
                             stay.exit.destination = 0;
+                            valid = true;
                         } else if (value.u.str.len == 1 &&
                                    (value.u.str[0] >= '0' && value.u.str[0] <= '9')) {
                             stay.exit.destination = value.u.str[0];
+                            valid = true;
                         } else {
                             LogError("Invalid exit destination value '%1'", value.u.str);
                         }
                     } else {
                         UnexpectedType(value.type);
                     }
+                    SetErrorFlag(Stay::Error::MalformedExitDestination,
+                                 !stay.exit.destination && !valid);
                 } else if (TestStr(key, "dp")) {
                     if (value.type == JsonValue::Type::String) {
                         stay.main_diagnosis = DiagnosisCode::FromString(value.u.str.ptr);

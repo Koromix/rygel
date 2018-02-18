@@ -17,10 +17,14 @@ struct ProcedureRealisation {
 
 struct Stay {
     enum class Error: uint32_t {
-        MalformedBirthdate = 0x1,
-        MalformedSex = 0x2,
-        MalformedEntryDate = 0x4,
-        MalformedExitDate = 0x8
+        MalformedBirthdate = 1 << 0,
+        MalformedSex = 1 << 1,
+        MalformedEntryDate = 1 << 2,
+        MalformedEntryMode = 1 << 3,
+        MalformedEntryOrigin = 1 << 4,
+        MalformedExitDate = 1 << 5,
+        MalformedExitMode = 1 << 6,
+        MalformedExitDestination = 1 << 7
     };
 
     int32_t stay_id;

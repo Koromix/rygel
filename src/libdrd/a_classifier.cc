@@ -321,6 +321,10 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
     }
 
     // Entry mode and origin
+    if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedEntryMode |
+                                    (int)Stay::Error::MalformedEntryOrigin))) {
+        valid &= SetError(out_errors, 25);
+    }
     switch (stay.entry.mode) {
         case '0':
         case '6': {
@@ -355,10 +359,15 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
             }
         } break;
 
+        case 0: { valid &= SetError(out_errors, 24); } break;
         default: { valid &= SetError(out_errors, 25); } break;
     }
 
     // Exit mode and destination
+    if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedExitMode |
+                                    (int)Stay::Error::MalformedExitDestination))) {
+        valid &= SetError(out_errors, 34);
+    }
     switch (stay.exit.mode) {
         case '0':
         case '6':
@@ -390,6 +399,7 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
             }
         } break;
 
+        case 0: { valid &= SetError(out_errors, 33); } break;
         default: { valid &= SetError(out_errors, 34); } break;
     }
 
