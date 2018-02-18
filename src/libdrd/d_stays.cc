@@ -550,11 +550,12 @@ bool StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *ou
         goto corrupt_error;
 
     if (strncmp(bh.signature, PACK_SIGNATURE, SIZE(bh.signature)) != 0) {
-        LogError("File '%1' does not obey dspak format (wrong signature)", st.filename);
+        LogError("File '%1' does not have dspak signature", st.filename);
         return false;
     }
     if (bh.version != PACK_VERSION) {
-        LogError("File '%1' does not obey dspak format (wrong signature)", st.filename);
+        LogError("Cannot load '%1' (dspak version %2), expected version %3", st.filename,
+                 bh.version, PACK_VERSION);
         return false;
     }
     if (bh.endianness != (int8_t)ARCH_ENDIANNESS) {
