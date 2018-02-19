@@ -289,14 +289,21 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 static bool CheckStayErrors(const ClassifyAggregate &agg, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
+    // Missing, malformed, incoherent (e.g. 2001/02/29)
     static const int16_t birthdate_error_codes[3] = {13, 14, 39};
     static const int16_t entry_date_error_codes[3] = {19, 20, 21};
     static const int16_t exit_date_error_codes[3] = {28, 29, 30};
 
-    static const int16_t main_diagnosis_error_codes[9] = {67, 68, 113, 114, 115, 113,
-                                                          180, 130, 133};
-    static const int16_t linked_diagnosis_error_codes[9] = {94, 95, 116, 117, 118, 0,
-                                                            181, 131, 134};
+    static const int16_t main_diagnosis_error_codes[9] = {
+        67, 68, // Missing diagnosis
+        113, 114, 115, 113, 180, // Imprecise, reserved for OMS use, etc.
+        130, 133 // Age-related (O, P, Z37, Z38)
+    };
+    static const int16_t linked_diagnosis_error_codes[9] = {
+        94, 95,
+        116, 117, 118, 0, 181,
+        131, 134
+    };
 
     bool valid = true;
 
