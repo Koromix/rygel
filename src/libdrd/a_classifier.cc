@@ -455,6 +455,7 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
         valid &= SetError(out_errors, 45);
     }
 
+    // Entry mode
     switch (stay2.entry.mode) {
         case '0': {
             if (UNLIKELY(stay1.exit.mode != '0')) {
