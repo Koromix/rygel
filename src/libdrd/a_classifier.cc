@@ -265,6 +265,22 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
     return true;
 }
 
+static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    // TODO: Do complete inter-RSS compatibility checks
+    if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
+        valid &= SetError(out_errors, 26);
+    }
+
+    if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
+        valid &= SetError(out_errors, 35);
+    }
+
+    return valid;
+}
+
 // Continuity checks are not done here, see CheckStayContinuity()
 static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
                             ClassifyErrorSet *out_errors)
@@ -485,22 +501,14 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     {
         bool valid = true;
 
-        // TODO: Do complete inter-RSS compatibility checks
-        if (UNLIKELY(stays[0].entry.mode == '6' && stays[0].entry.origin == '1')) {
-            valid &= SetError(out_errors, 26);
-        }
-        if (UNLIKELY(stays[stays.len - 1].exit.mode == '6' &&
-                     stays[stays.len - 1].exit.destination == '1')) {
-            valid &= SetError(out_errors, 35);
-        }
-
+        valid &= CheckAggregateErrors(*out_agg, out_errors);
         valid &= CheckStayErrors(*out_agg->index, stays[0], out_errors);
         for (Size i = 1; i < stays.len; i++) {
             valid &= CheckStayErrors(*out_agg->index, stays[i], out_errors);
             valid &= CheckStayContinuity(stays[i - 1], stays[i], out_errors);
         }
 
-        if (!valid)
+        if (UNLIKELY(!valid))
             return GhmCode::FromString("90Z00Z");
     }
 
