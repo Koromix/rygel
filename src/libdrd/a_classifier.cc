@@ -503,6 +503,11 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
         116, 117, 118, 0, 181,
         131, 134
     };
+    static const int16_t associate_diagnosis_errors[9] = {
+        70, 71,
+        0, 0, 119, 0, 182,
+        132, 135
+    };
 
     if (LIKELY(stay.main_diagnosis.IsValid())) {
         const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
@@ -524,6 +529,20 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
                                           linked_diagnosis_errors, out_errors);
         } else {
             valid &= SetError(out_errors, 94);
+        }
+    }
+
+    for (DiagnosisCode diag: stay.diagnoses) {
+        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
+            continue;
+
+        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
+        if (LIKELY(diag_info)) {
+            out_diagnoses->Append(diag_info);
+            valid &= CheckDiagnosisErrors(agg, *diag_info,
+                                          associate_diagnosis_errors, out_errors);
+        } else {
+            valid &= SetError(out_errors, 70);
         }
     }
 
