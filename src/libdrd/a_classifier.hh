@@ -21,8 +21,9 @@ struct ClassifyAggregate {
     const TableIndex *index;
 
     Stay stay;
-    Span<DiagnosisCode> diagnoses;
-    Span<ProcedureRealisation> procedures;
+    Span<const DiagnosisInfo *> diagnoses;
+    Span<const ProcedureInfo *> procedures;
+    uint8_t proc_activities;
 
     int age;
     int duration;
@@ -91,8 +92,8 @@ Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
 
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
-                  HeapArray<DiagnosisCode> *out_diagnoses,
-                  HeapArray<ProcedureRealisation> *out_procedures,
+                  HeapArray<const DiagnosisInfo *> *out_diagnoses,
+                  HeapArray<const ProcedureInfo *> *out_procedures,
                   ClassifyErrorSet *out_errors);
 
 int GetMinimalDurationForSeverity(int severity);
