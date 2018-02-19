@@ -239,14 +239,14 @@ static bool CheckDateErrors(Date date, bool malformed_flag,
     return true;
 }
 
-static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode diag,
-                                 const int16_t error_codes[7], ClassifyErrorSet *out_errors)
+static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, DiagnosisCode diag,
+                                 const int16_t error_codes[9], ClassifyErrorSet *out_errors)
 {
-    const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
+    const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
     if (UNLIKELY(!diag_info))
         return SetError(out_errors, error_codes[0]);
 
-    const auto &diag_attr = diag_info->Attributes(sex);
+    const auto &diag_attr = diag_info->Attributes(agg.stay.sex);
     if (UNLIKELY(!(diag_attr.raw[5] & 1))) {
         return SetError(out_errors, error_codes[0]);
     } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
@@ -260,6 +260,10 @@ static bool CheckDiagnosisErrors(const TableIndex &index, Sex sex, DiagnosisCode
         }
     } else if (UNLIKELY(diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
         return SetError(out_errors, error_codes[6]);
+    } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && agg.age < 9)) {
+        return SetError(out_errors, error_codes[7]);
+    } else if (UNLIKELY(diag_attr.raw[19] & 0x8 && agg.age >= 2)) {
+        return SetError(out_errors, error_codes[8]);
     }
 
     return true;
@@ -282,15 +286,17 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 }
 
 // Continuity checks are not done here, see CheckStayContinuity()
-static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
+static bool CheckStayErrors(const ClassifyAggregate &agg, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
     static const int16_t birthdate_error_codes[3] = {13, 14, 39};
     static const int16_t entry_date_error_codes[3] = {19, 20, 21};
     static const int16_t exit_date_error_codes[3] = {28, 29, 30};
 
-    static const int16_t main_diagnosis_error_codes[7] = {67, 68, 113, 114, 115, 113, 180};
-    static const int16_t linked_diagnosis_error_codes[7] = {94, 95, 116, 117, 118, 0, 181};
+    static const int16_t main_diagnosis_error_codes[9] = {67, 68, 113, 114, 115, 113,
+                                                          180, 130, 133};
+    static const int16_t linked_diagnosis_error_codes[9] = {94, 95, 116, 117, 118, 0,
+                                                            181, 131, 134};
 
     bool valid = true;
 
@@ -298,11 +304,11 @@ static bool CheckStayErrors(const TableIndex &index, const Stay &stay,
     if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
         valid &= SetError(out_errors, 40);
     } else {
-        valid &= CheckDiagnosisErrors(index, stay.sex, stay.main_diagnosis,
+        valid &= CheckDiagnosisErrors(agg, stay.main_diagnosis,
                                       main_diagnosis_error_codes, out_errors);
     }
     if (stay.linked_diagnosis.IsValid()) {
-        valid &= CheckDiagnosisErrors(index, stay.sex, stay.linked_diagnosis,
+        valid &= CheckDiagnosisErrors(agg, stay.linked_diagnosis,
                                       linked_diagnosis_error_codes, out_errors);
     }
 
@@ -502,9 +508,9 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         bool valid = true;
 
         valid &= CheckAggregateErrors(*out_agg, out_errors);
-        valid &= CheckStayErrors(*out_agg->index, stays[0], out_errors);
+        valid &= CheckStayErrors(*out_agg, stays[0], out_errors);
         for (Size i = 1; i < stays.len; i++) {
-            valid &= CheckStayErrors(*out_agg->index, stays[i], out_errors);
+            valid &= CheckStayErrors(*out_agg, stays[i], out_errors);
             valid &= CheckStayContinuity(stays[i - 1], stays[i], out_errors);
         }
 
