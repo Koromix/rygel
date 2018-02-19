@@ -269,6 +269,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
                                  const int16_t error_codes[9], ClassifyErrorSet *out_errors)
 {
     const auto &diag_attr = diag_info.Attributes(agg.stay.sex);
+
     if (UNLIKELY(!(diag_attr.raw[5] & 1))) {
         return SetError(out_errors, error_codes[0]);
     } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
