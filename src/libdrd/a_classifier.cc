@@ -425,6 +425,18 @@ static bool CheckStayErrors(const ClassifyAggregate &agg, const Stay &stay,
         default: { valid &= SetError(out_errors, 34); } break;
     }
 
+    // Misc checks
+    if (UNLIKELY(stay.main_diagnosis.Matches("P95"))) {
+        if (UNLIKELY(stay.exit.mode != '9')) {
+            valid &= SetError(out_errors, 143);
+            SetError(out_errors, 147);
+        } else if (UNLIKELY(agg.stays.len > 1 || stay.entry.mode != '8' || agg.age > 0 ||
+                            stay.birthdate != stay.entry.date || !stay.newborn_weight ||
+                            stay.exit.date != stay.entry.date)) {
+            valid &= SetError(out_errors, 147);
+        }
+    }
+
     return valid;
 }
 
