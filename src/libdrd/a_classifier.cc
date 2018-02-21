@@ -997,6 +997,25 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     return -1;
 }
 
+static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm,
+                           ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    if (ghm.parts.cmd == 28) {
+        if (UNLIKELY(agg.stays.len > 1)) {
+            valid &= SetError(out_errors, 150);
+        }
+        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) &&
+                     agg.stay.main_diagnosis.Matches("Z511") &&
+                     !agg.stay.linked_diagnosis.IsValid())) {
+            valid &= SetError(out_errors, 187);
+        }
+    }
+
+    return valid;
+}
+
 GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 {
     GhmCode ghm = {};
@@ -1039,18 +1058,8 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
         }
     }
 
-    if (ghm.parts.cmd == 28) {
-        if (UNLIKELY(agg.stays.len > 1)) {
-            SetError(out_errors, 150);
-            return GhmCode::FromString("90Z00Z");
-        }
-        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) &&
-                     agg.stay.main_diagnosis.Matches("Z511") &&
-                     !agg.stay.linked_diagnosis.IsValid())) {
-            SetError(out_errors, 187);
-            return GhmCode::FromString("90Z00Z");
-        }
-    }
+    if (!CheckGhmErrors(agg, ghm, out_errors))
+        return GhmCode::FromString("90Z00Z");
 
     return ghm;
 }
