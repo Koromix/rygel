@@ -1195,7 +1195,7 @@ static bool TestAuthorization(const AuthorizationSet &authorization_set,
 
     Span<const Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
     for (const Authorization &auth: facility_auths) {
-        if (auth.type == authorization)
+        if (auth.type == authorization && date >= auth.dates[0] && date < auth.dates[1])
             return true;
     }
 
