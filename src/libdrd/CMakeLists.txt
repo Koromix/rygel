@@ -10,7 +10,7 @@ set(LIBDRD_SRC ../common/kutil.cc
                a_constraints.hh
                d_authorizations.cc
                d_authorizations.hh
-               d_codes.hh
+               d_common.hh
                d_desc.cc
                d_desc.hh
                d_stays.cc

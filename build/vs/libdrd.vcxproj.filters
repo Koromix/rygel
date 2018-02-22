@@ -56,7 +56,7 @@
     <ClInclude Include="..\..\src\libdrd\d_authorizations.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_codes.hh">
+    <ClInclude Include="..\..\src\libdrd\d_common.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\libdrd\d_desc.hh">

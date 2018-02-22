@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "d_codes.hh"
+#include "d_common.hh"
 #include "d_authorizations.hh"
 #include "d_desc.hh"
 #include "d_tables.hh"

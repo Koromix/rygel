@@ -158,7 +158,7 @@
     <ClInclude Include="..\..\src\libdrd\a_classifier.hh" />
     <ClInclude Include="..\..\src\libdrd\a_constraints.hh" />
     <ClInclude Include="..\..\src\libdrd\d_authorizations.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_codes.hh" />
+    <ClInclude Include="..\..\src\libdrd\d_common.hh" />
     <ClInclude Include="..\..\src\libdrd\d_desc.hh" />
     <ClInclude Include="..\..\src\libdrd\d_stays.hh" />
     <ClInclude Include="..\..\src\libdrd\d_tables.hh" />
