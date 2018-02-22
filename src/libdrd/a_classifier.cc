@@ -1014,6 +1014,23 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm,
         }
     }
 
+    // FIXME: Find a way to optimize away calls to FromString() in simple cases
+    {
+        static GhmRootCode ghm_root_14Z08 = GhmRootCode::FromString("14Z08");
+        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
+            bool type_present = std::any_of(agg.procedures.begin(), agg.procedures.end(),
+                                            [](const ProcedureInfo *proc_info) {
+                static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
+                static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
+
+                return proc_info->proc == proc1 || proc_info->proc == proc2;
+            });
+            if (!type_present) {
+                SetError(out_errors, 179, 0);
+            }
+        }
+    }
+
     return valid;
 }
 
