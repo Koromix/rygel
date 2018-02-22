@@ -1471,11 +1471,7 @@ Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler>
 {
     Span<const T> ret = {};
 
-    if (UNLIKELY(!map))
-        return ret;
-
     ret.ptr = map->FindValue(code, nullptr);
-
     if (ret.ptr) {
         const T *end_it = ret.ptr + 1;
         while (end_it < arr.end() && Handler::CompareKeys(Handler::GetKey(end_it), code)) {
@@ -1499,9 +1495,6 @@ Span<const ProcedureInfo> TableIndex::FindProcedure(ProcedureCode proc) const
 
 const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode proc, int8_t phase, Date date) const
 {
-    if (UNLIKELY(!procedures_map))
-        return nullptr;
-
     const ProcedureInfo *proc_info = procedures_map->FindValue(proc, nullptr);
     if (!proc_info)
         return nullptr;
@@ -1520,9 +1513,6 @@ const ProcedureInfo *TableIndex::FindProcedure(ProcedureCode proc, int8_t phase,
 
 const GhmRootInfo *TableIndex::FindGhmRoot(GhmRootCode ghm_root) const
 {
-    if (UNLIKELY(!ghm_roots_map))
-        return nullptr;
-
     return ghm_roots_map->FindValue(ghm_root, nullptr);
 }
 
@@ -1538,9 +1528,6 @@ Span<const GhsAccessInfo> TableIndex::FindCompatibleGhs(GhmCode ghm) const
 
 const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope, int8_t type) const
 {
-    if (!authorizations_map)
-        return nullptr;
-
     decltype(AuthorizationInfo::type) key;
     key.st.scope = scope;
     key.st.code = type;
@@ -1550,8 +1537,6 @@ const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope,
 
 const GhsPriceInfo *TableIndex::FindGhsPrice(GhsCode ghs, Sector sector) const
 {
-    if (!ghs_prices_map[(int)sector])
-        return nullptr;
     return ghs_prices_map[(int)sector]->FindValue(ghs, nullptr);
 }
 
