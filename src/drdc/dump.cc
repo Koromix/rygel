@@ -146,7 +146,7 @@ void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
             previous_ghm = ghs_access_info.ghm;
         }
         PrintLn("        GHS %1 (public) / GHS %2 (private)",
-                ghs_access_info.ghs[0], ghs_access_info.ghs[1]);
+                ghs_access_info.Ghs(Sector::Public), ghs_access_info.Ghs(Sector::Private));
 
         if (ghs_access_info.unit_authorization) {
             PrintLn("          Requires unit authorization %1", ghs_access_info.unit_authorization);
@@ -177,22 +177,11 @@ void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
 
 void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices)
 {
-    for (Size i = 0; i < ghs_prices.len;) {
-        GhsCode ghs = ghs_prices[i].ghs;
-
-        PrintLn("      GHS %1:", ghs);
-        for (; i < ghs_prices.len && ghs_prices[i].ghs == ghs; i++) {
-            const GhsPriceInfo &price_info = ghs_prices[i];
-
-            PrintLn("        Public: %1 [exh = %2, exb = %3]",
-                    FmtDouble(price_info.sectors[0].price_cents / 100.0, 2),
-                    FmtDouble(price_info.sectors[0].exh_cents / 100.0, 2),
-                    FmtDouble(price_info.sectors[0].exb_cents / 100.0, 2));
-            PrintLn("        Private: %1 [exh = %2, exb = %3]",
-                    FmtDouble(price_info.sectors[1].price_cents / 100.0, 2),
-                    FmtDouble(price_info.sectors[1].exh_cents / 100.0, 2),
-                    FmtDouble(price_info.sectors[1].exb_cents / 100.0, 2));
-        }
+    for (const GhsPriceInfo &price_info: ghs_prices) {
+        PrintLn("        GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
+                FmtDouble(price_info.price_cents / 100.0, 2),
+                FmtDouble(price_info.exh_cents / 100.0, 2),
+                FmtDouble(price_info.exb_cents / 100.0, 2));
         PrintLn();
     }
 }
@@ -304,7 +293,10 @@ void DumpTableSetContent(const TableSet &table_set)
                 } break;
                 case TableType::PriceTable: {
                     PrintLn("    Price Table:");
-                    DumpGhsPriceTable(index.ghs_prices);
+                    PrintLn("      Public:");
+                    DumpGhsPriceTable(index.ghs_prices[0]);
+                    PrintLn("      Private:");
+                    DumpGhsPriceTable(index.ghs_prices[1]);
                 } break;
                 case TableType::AuthorizationTable: {
                     PrintLn("    Authorization Types:");

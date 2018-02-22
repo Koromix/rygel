@@ -245,7 +245,8 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
 
             Span<const GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
-                const GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_access_info.ghs[0]);
+                const GhsPriceInfo *ghs_price_info =
+                    index->FindGhsPrice(ghs_access_info.Ghs(Sector::Public), Sector::Public);
                 if (!ghs_price_info)
                     continue;
 
@@ -300,15 +301,15 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
                 }
                 writer.EndArray();
 
-                writer.Key("price_cents"); writer.Int(ghs_price_info->sectors[0].price_cents);
-                if (ghs_price_info->sectors[0].exh_treshold) {
-                    writer.Key("exh_treshold"); writer.Int(ghs_price_info->sectors[0].exh_treshold);
-                    writer.Key("exh_cents"); writer.Int(ghs_price_info->sectors[0].exh_cents);
+                writer.Key("price_cents"); writer.Int(ghs_price_info->price_cents);
+                if (ghs_price_info->exh_treshold) {
+                    writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
+                    writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
                 }
-                if (ghs_price_info->sectors[0].exb_treshold) {
-                    writer.Key("exb_treshold"); writer.Int(ghs_price_info->sectors[0].exb_treshold);
-                    writer.Key("exb_cents"); writer.Int(ghs_price_info->sectors[0].exb_cents);
-                    if (ghs_price_info->sectors[0].flags & (int)GhsPriceInfo::Flag::ExbOnce) {
+                if (ghs_price_info->exb_treshold) {
+                    writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
+                    writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
+                    if (ghs_price_info->flags & (int)GhsPriceInfo::Flag::ExbOnce) {
                         writer.Key("exb_once"); writer.Bool(true);
                     }
                 }

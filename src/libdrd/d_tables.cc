@@ -892,7 +892,7 @@ class JsonPricesHandler: public BaseJsonHandler<JsonPricesHandler> {
 
     PriceTable price_table;
     int sector;
-    GhsPriceInfo price_info = {};
+    GhsPriceInfo price_info[2] = {};
 
 public:
     HeapArray<PriceTable> *out_price_tables;
@@ -970,8 +970,11 @@ public:
                         }
                     } break;
                     case JsonBranchType::EndObject: {
-                        price_table.ghs_prices.Append(price_info);
-                        price_info = {};
+                        for (int i = 0; i < 2; i++) {
+                            price_info[i].ghs = price_info[0].ghs;
+                            price_table.ghs_prices[i].Append(price_info[i]);
+                            price_info[i] = {};
+                        }
 
                         state = State::GhsPriceArray;
                     } break;
@@ -1030,7 +1033,7 @@ public:
 
             case State::GhsPriceObject: {
                 if (TestStr(key, "ghs")) {
-                    SetInt(value, &price_info.ghs.number);
+                    SetInt(value, &price_info[0].ghs.number);
                 } else {
                     return UnknownAttribute(key);
                 }
@@ -1038,17 +1041,17 @@ public:
 
             case State::GhsPriceSectorObject: {
                 if (TestStr(key, "price_cents")) {
-                    SetInt(value, &price_info.sectors[sector].price_cents);
+                    SetInt(value, &price_info[sector].price_cents);
                 } else if (TestStr(key, "exh_treshold")) {
-                    SetInt(value, &price_info.sectors[sector].exh_treshold);
+                    SetInt(value, &price_info[sector].exh_treshold);
                 } else if (TestStr(key, "exh_cents")) {
-                    SetInt(value, &price_info.sectors[sector].exh_cents);
+                    SetInt(value, &price_info[sector].exh_cents);
                 } else if (TestStr(key, "exb_treshold")) {
-                    SetInt(value, &price_info.sectors[sector].exb_treshold);
+                    SetInt(value, &price_info[sector].exb_treshold);
                 } else if (TestStr(key, "exb_cents")) {
-                    SetInt(value, &price_info.sectors[sector].exb_cents);
+                    SetInt(value, &price_info[sector].exb_cents);
                 } else if (TestStr(key, "exb_once")) {
-                    SetFlag(value, &price_info.sectors[sector].flags, (int)GhsPriceInfo::Flag::ExbOnce);
+                    SetFlag(value, &price_info[sector].flags, (int)GhsPriceInfo::Flag::ExbOnce);
                 } else {
                     return UnknownAttribute(key);
                 }
@@ -1283,16 +1286,16 @@ bool TableSetBuilder::Finish(TableSet *out_set)
 
 #define FIX_SPAN(SpanName) \
             index.SpanName.ptr = set.store.SpanName.ptr + (Size)index.SpanName.ptr
-#define BUILD_MAP(IndexName, MapName, TableType) \
+#define BUILD_MAP(IndexName, MapPtrName, MapName, TableType) \
             do { \
                 if (!i || index.changed_tables & MaskEnum(TableType)) { \
                     auto map = set.maps.MapName.AppendDefault(); \
                     for (auto &value: index.IndexName) { \
                         map->Append(&value); \
                     } \
-                    index.CONCAT(MapName, _map) = map; \
+                    index.MapPtrName = map; \
                 } else { \
-                    index.CONCAT(MapName, _map) = &set.maps.MapName[set.maps.MapName.len - 1]; \
+                    index.MapPtrName = &set.maps.MapName[set.maps.MapName.len - 1]; \
                 } \
             } while (false)
 
@@ -1306,18 +1309,20 @@ bool TableSetBuilder::Finish(TableSet *out_set)
         FIX_SPAN(cma_cells[1]);
         FIX_SPAN(cma_cells[2]);
         FIX_SPAN(ghs);
-        FIX_SPAN(ghs_prices);
+        FIX_SPAN(ghs_prices[0]);
+        FIX_SPAN(ghs_prices[1]);
         FIX_SPAN(authorizations);
         FIX_SPAN(src_pairs[0]);
         FIX_SPAN(src_pairs[1]);
 
-        BUILD_MAP(diagnoses, diagnoses, TableType::DiagnosisTable);
-        BUILD_MAP(procedures, procedures, TableType::ProcedureTable);
-        BUILD_MAP(ghm_roots, ghm_roots, TableType::GhmRootTable);
-        BUILD_MAP(ghs, ghm_to_ghs, TableType::GhsAccessTable);
-        BUILD_MAP(ghs, ghm_root_to_ghs, TableType::GhsAccessTable);
-        BUILD_MAP(authorizations, authorizations, TableType::GhsAccessTable);
-        BUILD_MAP(ghs_prices, ghs_prices, TableType::PriceTable);
+        BUILD_MAP(diagnoses, diagnoses_map, diagnoses, TableType::DiagnosisTable);
+        BUILD_MAP(procedures, procedures_map, procedures, TableType::ProcedureTable);
+        BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots, TableType::GhmRootTable);
+        BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs, TableType::GhsAccessTable);
+        BUILD_MAP(authorizations, authorizations_map, authorizations, TableType::GhsAccessTable);
+        BUILD_MAP(ghs_prices[0], ghs_prices_map[0], ghs_prices[0], TableType::PriceTable);
+        BUILD_MAP(ghs_prices[1], ghs_prices_map[1], ghs_prices[1], TableType::PriceTable);
 
 #undef BUILD_MAP
 #undef FIX_SPAN
@@ -1426,15 +1431,19 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 if (!load_info->loaded) {
                     const PriceTable &price_table = price_tables[load_info->u.price_table_idx];
 
-                    index.ghs_prices.ptr = (GhsPriceInfo *)set.store.ghs_prices.len;
-                    set.store.ghs_prices.Append(price_table.ghs_prices);
-                    index.ghs_prices.len = set.store.ghs_prices.len - (Size)index.ghs_prices.ptr;
-                    index.supplement_prices =
-                        set.store.supplement_prices.Append(price_table.supplement_cents);
+                    for (int j = 0; j < 2; j++) {
+                        index.ghs_prices[j].ptr = (GhsPriceInfo *)set.store.ghs_prices[j].len;
+                        set.store.ghs_prices[j].Append(price_table.ghs_prices[j]);
+                        index.ghs_prices[j].len = set.store.ghs_prices[j].len - (Size)index.ghs_prices[j].ptr;
+                        index.supplement_prices[j] =
+                            set.store.supplement_prices[j].Append(price_table.supplement_cents[j]);
+                    }
                     index.changed_tables |= (uint32_t)(1 << i);
                 } else {
-                    index.ghs_prices = set.indexes[set.indexes.len - 1].ghs_prices;
-                    index.supplement_prices = set.indexes[set.indexes.len - 1].supplement_prices;
+                    for (int j = 0; j < 2; j++) {
+                        index.ghs_prices[j] = set.indexes[set.indexes.len - 1].ghs_prices[j];
+                        index.supplement_prices[j] = set.indexes[set.indexes.len - 1].supplement_prices[j];
+                    }
                 }
             } break;
 
@@ -1480,9 +1489,6 @@ Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler>
 
 const DiagnosisInfo *TableIndex::FindDiagnosis(DiagnosisCode diag) const
 {
-    if (UNLIKELY(!diagnoses_map))
-        return nullptr;
-
     return diagnoses_map->FindValue(diag, nullptr);
 }
 
@@ -1542,12 +1548,16 @@ const AuthorizationInfo *TableIndex::FindAuthorization(AuthorizationScope scope,
     return authorizations_map->FindValue(key.value, nullptr);
 }
 
-const GhsPriceInfo *TableIndex::FindGhsPrice(GhsCode ghs) const
+const GhsPriceInfo *TableIndex::FindGhsPrice(GhsCode ghs, Sector sector) const
 {
-    if (!ghs_prices_map)
+    if (!ghs_prices_map[(int)sector])
         return nullptr;
+    return ghs_prices_map[(int)sector]->FindValue(ghs, nullptr);
+}
 
-    return ghs_prices_map->FindValue(ghs, nullptr);
+const SupplementCounters<int32_t> &TableIndex::SupplementPrices(Sector sector) const
+{
+    return *supplement_prices[(int)sector];
 }
 
 #undef FAIL_PARSE_IF

@@ -15,6 +15,15 @@ static const char *const SexNames[] = {
     "Female"
 };
 
+enum class Sector: int8_t {
+    Public,
+    Private
+};
+static const char *const SectorNames[] = {
+    "Public",
+    "Private"
+};
+
 union GhmRootCode {
     int32_t value;
     struct {

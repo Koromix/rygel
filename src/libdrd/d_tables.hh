@@ -176,6 +176,12 @@ struct GhsAccessInfo {
     ListMask diagnosis_mask;
     LocalArray<ListMask, 4> procedure_masks;
 
+    GhsCode Ghs(Sector sector) const
+    {
+        StaticAssert((int)Sector::Public == 0);
+        return ghs[(int)sector];
+    }
+
     HASH_TABLE_HANDLER_N(GhmHandler, GhsAccessInfo, ghm);
     HASH_TABLE_HANDLER_N(GhmRootHandler, GhsAccessInfo, ghm.Root());
 };
@@ -187,14 +193,12 @@ struct GhsPriceInfo {
 
     GhsCode ghs;
 
-    struct {
-        int32_t price_cents;
-        int16_t exh_treshold;
-        int16_t exb_treshold;
-        int32_t exh_cents;
-        int32_t exb_cents;
-        uint16_t flags;
-    } sectors[2]; // 0 for public, 1 for private
+    int32_t price_cents;
+    int16_t exh_treshold;
+    int16_t exb_treshold;
+    int32_t exh_cents;
+    int32_t exb_cents;
+    uint16_t flags;
 
     HASH_TABLE_HANDLER(GhsPriceInfo, ghs);
 };
@@ -231,8 +235,8 @@ struct PriceTable {
     Date date;
     Date build_date;
 
-    // FIXME: Use separate (two) arrays for GHS, one per sector
-    HeapArray<GhsPriceInfo> ghs_prices;
+    // 0 for public, 1 for private
+    HeapArray<GhsPriceInfo> ghs_prices[2];
     SupplementCounters<int32_t> supplement_cents[2];
 };
 
@@ -281,8 +285,8 @@ struct TableIndex {
     Span<const AuthorizationInfo> authorizations;
     Span<const SrcPair> src_pairs[2];
 
-    Span<const GhsPriceInfo> ghs_prices;
-    const SupplementCounters<int32_t> *supplement_prices;
+    Span<const GhsPriceInfo> ghs_prices[2];
+    const SupplementCounters<int32_t> *supplement_prices[2];
 
     const HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     const HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
@@ -292,7 +296,7 @@ struct TableIndex {
     const HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
     const HashTable<int16_t, const AuthorizationInfo *> *authorizations_map;
 
-    const HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
+    const HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map[2];
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode diag) const;
     Span<const ProcedureInfo> FindProcedure(ProcedureCode proc) const;
@@ -303,7 +307,8 @@ struct TableIndex {
     Span<const GhsAccessInfo> FindCompatibleGhs(GhmCode ghm) const;
     const AuthorizationInfo *FindAuthorization(AuthorizationScope scope, int8_t type) const;
 
-    const GhsPriceInfo *FindGhsPrice(GhsCode ghs) const;
+    const GhsPriceInfo *FindGhsPrice(GhsCode ghs, Sector sector) const;
+    const SupplementCounters<int32_t> &SupplementPrices(Sector sector) const;
 };
 
 class TableSet {
@@ -321,8 +326,8 @@ public:
         HeapArray<ValueRangeCell<2>> cma_cells[3];
 
         HeapArray<GhsAccessInfo> ghs;
-        HeapArray<GhsPriceInfo> ghs_prices;
-        HeapArray<SupplementCounters<int32_t>> supplement_prices;
+        HeapArray<GhsPriceInfo> ghs_prices[2];
+        HeapArray<SupplementCounters<int32_t>> supplement_prices[2];
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<SrcPair> src_pairs[2];
     } store;
@@ -336,7 +341,7 @@ public:
         HeapArray<HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
         HeapArray<HashTable<int16_t, const AuthorizationInfo *>> authorizations;
 
-        HeapArray<HashTable<GhsCode, const GhsPriceInfo *>> ghs_prices;
+        HeapArray<HashTable<GhsCode, const GhsPriceInfo *>> ghs_prices[2];
     } maps;
 
     LinkedAllocator str_alloc;

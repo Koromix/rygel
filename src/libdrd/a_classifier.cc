@@ -1299,7 +1299,7 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 
     for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
         if (TestGhs(agg, authorization_set, ghs_access_info))
-            return ghs_access_info.ghs[0];
+            return ghs_access_info.Ghs(Sector::Public);
     }
     return GhsCode(9999);
 }
@@ -1522,16 +1522,16 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
 int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death)
 {
-    int price_cents = price_info.sectors[0].price_cents;
+    int price_cents = price_info.price_cents;
 
-    if (duration < price_info.sectors[0].exb_treshold && !death) {
-        if (price_info.sectors[0].flags & (int)GhsPriceInfo::Flag::ExbOnce) {
-            price_cents -= price_info.sectors[0].exb_cents;
+    if (duration < price_info.exb_treshold && !death) {
+        if (price_info.flags & (int)GhsPriceInfo::Flag::ExbOnce) {
+            price_cents -= price_info.exb_cents;
         } else {
-            price_cents -= price_info.sectors[0].exb_cents * (price_info.sectors[0].exb_treshold - duration);
+            price_cents -= price_info.exb_cents * (price_info.exb_treshold - duration);
         }
-    } else if (duration + death > price_info.sectors[0].exh_treshold) {
-        price_cents += price_info.sectors[0].exh_cents * (duration + death - price_info.sectors[0].exh_treshold);
+    } else if (duration + death > price_info.exh_treshold) {
+        price_cents += price_info.exh_cents * (duration + death - price_info.exh_treshold);
     }
 
     return price_cents;
@@ -1543,7 +1543,7 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
         return 0;
 
     // FIXME: Add some kind of error flag when this happens?
-    const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs);
+    const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
     if (!price_info) {
         LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
                  agg.index->limit_dates[0], agg.index->limit_dates[1]);
@@ -1556,17 +1556,12 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
 int PriceSupplements(const ClassifyAggregate &agg, const SupplementCounters<int16_t> &days,
                      SupplementCounters<int32_t> *out_prices)
 {
-    const SupplementCounters<int32_t> *prices = agg.index->supplement_prices;
-    if (!prices) {
-        LogDebug("Supplement prices are not available");
-        return 0;
-    }
+    const SupplementCounters<int32_t> &prices = agg.index->SupplementPrices(Sector::Public);
 
     int total_cents = 0;
-
     for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
-        out_prices->values[i] += days.values[i] * prices->values[i];
-        total_cents += days.values[i] * prices->values[i];
+        out_prices->values[i] += days.values[i] * prices.values[i];
+        total_cents += days.values[i] * prices.values[i];
     }
 
     return total_cents;
