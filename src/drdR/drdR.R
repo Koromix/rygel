@@ -2,8 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-summary_columns <- c('ghs_price', 'rea', 'reasi', 'si',
-                     'src', 'nn1', 'nn2', 'nn3', 'rep')
+summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents',
+                     'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
+                     'price_cents')
 
 classify <- function(classifier_set, stays, diagnoses, procedures) {
     stays <- stays[order(stays$id),]

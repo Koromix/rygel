@@ -1382,7 +1382,7 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
 
 // TODO: Count correctly when authorization date is too early (REA)
 void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                      GhsCode ghs, SupplementCounters *out_counters)
+                      GhsCode ghs, SupplementCounters<int16_t> *out_counters)
 {
     if (UNLIKELY(ghs == GhsCode(9999)))
          return;
@@ -1405,7 +1405,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
     const Stay *ambu_stay = nullptr;
     int ambu_priority = 0;
-    int32_t *ambu_counter = nullptr;
+    int16_t *ambu_counter = nullptr;
 
     for (const Stay &stay: agg.stays) {
         int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
@@ -1413,21 +1413,21 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
         if (!auth_info)
             continue;
 
-        int32_t *counter = nullptr;
+        int16_t *counter = nullptr;
         int priority = 0;
         bool reanimation = false;
 
         switch (auth_info->function) {
             case 1: {
                 if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
-                    counter = &out_counters->nn1;
+                    counter = &out_counters->st.nn1;
                     priority = 1;
                 }
             } break;
 
             case 2: {
                 if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
-                    counter = &out_counters->nn2;
+                    counter = &out_counters->st.nn2;
                     priority = 3;
                 }
             } break;
@@ -1435,11 +1435,11 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
             case 3: {
                 if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
                     if (TestSupplementRea(agg, stay, 1)) {
-                        counter = &out_counters->nn3;
+                        counter = &out_counters->st.nn3;
                         priority = 6;
                         reanimation = true;
                     } else {
-                        counter = &out_counters->nn2;
+                        counter = &out_counters->st.nn2;
                         priority = 3;
                     }
                 }
@@ -1447,24 +1447,24 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
             case 4: {
                 if (TestSupplementRea(agg, stay, 3)) {
-                    counter = &out_counters->rea;
+                    counter = &out_counters->st.rea;
                     priority = 7;
                     reanimation = true;
                 } else {
-                    counter = &out_counters->reasi;
+                    counter = &out_counters->st.reasi;
                     priority = 5;
                 }
             } break;
 
             case 6: {
                 if (TestSupplementSrc(agg, stay, igs2_src_adjust, prev_reanimation)) {
-                    counter = &out_counters->src;
+                    counter = &out_counters->st.src;
                     priority = 2;
                 }
             } break;
 
             case 8: {
-                counter = &out_counters->si;
+                counter = &out_counters->st.si;
                 priority = 4;
             } break;
 
@@ -1472,20 +1472,20 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
                 if (ghs != GhsCode(5903)) {
                     if (agg.age < 18) {
                         if (TestSupplementRea(agg, stay, 1)) {
-                            counter = &out_counters->rep;
+                            counter = &out_counters->st.rep;
                             priority = 8;
                             reanimation = true;
                         } else {
-                            counter = &out_counters->reasi;
+                            counter = &out_counters->st.reasi;
                             priority = 5;
                         }
                     } else {
                         if (TestSupplementRea(agg, stay, 3)) {
-                            counter = &out_counters->rea;
+                            counter = &out_counters->st.rea;
                             priority = 7;
                             reanimation = true;
                         } else {
-                            counter = &out_counters->reasi;
+                            counter = &out_counters->st.reasi;
                             priority = 5;
                         }
                     }
@@ -1498,11 +1498,13 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
         if (stay.exit.date != stay.entry.date) {
             if (ambu_stay && ambu_priority >= priority) {
                 if (counter) {
-                    *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == '9') - 1;
+                    *counter = (int16_t)(*counter + (stay.exit.date - stay.entry.date) +
+                                         (stay.exit.mode == '9') - 1);
                 }
                 (*ambu_counter)++;
             } else if (counter) {
-                *counter += stay.exit.date - stay.entry.date + (stay.exit.mode == '9');
+                *counter = (int16_t)(*counter + (stay.exit.date - stay.entry.date) +
+                                     (stay.exit.mode == '9'));
             }
             ambu_stay = nullptr;
             ambu_priority = 0;
@@ -1539,6 +1541,7 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
     if (ghs == GhsCode(9999))
         return 0;
 
+    // FIXME: Add some kind of error flag when this happens?
     const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs);
     if (!price_info) {
         LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
@@ -1547,6 +1550,25 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
     }
 
     return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
+}
+
+int PriceSupplements(const ClassifyAggregate &agg, const SupplementCounters<int16_t> &days,
+                     SupplementCounters<int32_t> *out_prices)
+{
+    const SupplementCounters<int32_t> *prices = agg.index->supplement_prices;
+    if (!prices) {
+        LogDebug("Supplement prices are not available");
+        return 0;
+    }
+
+    int total_cents = 0;
+
+    for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
+        out_prices->values[i] += days.values[i] * prices->values[i];
+        total_cents += days.values[i] * prices->values[i];
+    }
+
+    return total_cents;
 }
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
@@ -1583,8 +1605,12 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
         result.main_error = errors.main_error;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
+        CountSupplements(agg, authorization_set, result.ghs, &result.supplement_days);
+
         result.ghs_price_cents = PriceGhs(agg, result.ghs);
-        CountSupplements(agg, authorization_set, result.ghs, &result.supplements);
+        result.price_cents = result.ghs_price_cents +
+                             PriceSupplements(agg, result.supplement_days,
+                                              &result.supplement_cents);
 
         out_results[i] = result;
     }
@@ -1642,13 +1668,8 @@ void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary)
     for (const ClassifyResult &result: results) {
         out_summary->stays_count += result.stays.len;
         out_summary->ghs_total_cents += result.ghs_price_cents;
-        out_summary->supplements.rea += result.supplements.rea;
-        out_summary->supplements.reasi += result.supplements.reasi;
-        out_summary->supplements.si += result.supplements.si;
-        out_summary->supplements.src += result.supplements.src;
-        out_summary->supplements.rep += result.supplements.rep;
-        out_summary->supplements.nn1 += result.supplements.nn1;
-        out_summary->supplements.nn2 += result.supplements.nn2;
-        out_summary->supplements.nn3 += result.supplements.nn3;
+        out_summary->supplement_days += result.supplement_days;
+        out_summary->supplement_cents += result.supplement_cents;
+        out_summary->total_cents += result.price_cents;
     }
 }

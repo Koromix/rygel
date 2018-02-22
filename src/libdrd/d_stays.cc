@@ -396,21 +396,21 @@ public:
                 } else if (TestStr(key, "ghs")) {
                     SetInt(value, &test.ghs.number);
                 } else if (TestStr(key, "rea")) {
-                    SetInt(value, &test.supplements.rea);
+                    SetInt(value, &test.supplement_days.st.rea);
                 } else if (TestStr(key, "reasi")) {
-                    SetInt(value, &test.supplements.reasi);
+                    SetInt(value, &test.supplement_days.st.reasi);
                 } else if (TestStr(key, "si")) {
-                    SetInt(value, &test.supplements.si);
+                    SetInt(value, &test.supplement_days.st.si);
                 } else if (TestStr(key, "src")) {
-                    SetInt(value, &test.supplements.src);
+                    SetInt(value, &test.supplement_days.st.src);
                 } else if (TestStr(key, "nn1")) {
-                    SetInt(value, &test.supplements.nn1);
+                    SetInt(value, &test.supplement_days.st.nn1);
                 } else if (TestStr(key, "nn2")) {
-                    SetInt(value, &test.supplements.nn2);
+                    SetInt(value, &test.supplement_days.st.nn2);
                 } else if (TestStr(key, "nn3")) {
-                    SetInt(value, &test.supplements.nn3);
+                    SetInt(value, &test.supplement_days.st.nn3);
                 } else if (TestStr(key, "rep")) {
-                    SetInt(value, &test.supplements.rep);
+                    SetInt(value, &test.supplement_days.st.rep);
                 } else {
                     return UnknownAttribute(key);
                 }

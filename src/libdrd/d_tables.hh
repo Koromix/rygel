@@ -230,7 +230,10 @@ struct SrcPair {
 struct PriceTable {
     Date date;
     Date build_date;
+
+    // FIXME: Use separate (two) arrays for GHS, one per sector
     HeapArray<GhsPriceInfo> ghs_prices;
+    SupplementCounters<int32_t> supplement_cents[2];
 };
 
 Date ConvertDate1980(uint16_t days);
@@ -260,6 +263,7 @@ bool ParseSrcPairTable(const uint8_t *file_data, const TableInfo &table, int sec
 
 bool ParsePricesJson(StreamReader &st, HeapArray<PriceTable> *out_tables);
 
+// FIXME: Span<const T>??
 struct TableIndex {
     Date limit_dates[2];
 
@@ -279,6 +283,7 @@ struct TableIndex {
     Span<SrcPair> src_pairs[2];
 
     Span<GhsPriceInfo> ghs_prices;
+    SupplementCounters<int32_t> *supplement_prices;
 
     HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
     HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
@@ -318,6 +323,7 @@ public:
 
         HeapArray<GhsAccessInfo> ghs;
         HeapArray<GhsPriceInfo> ghs_prices;
+        HeapArray<SupplementCounters<int32_t>> supplement_prices;
         HeapArray<AuthorizationInfo> authorizations;
         HeapArray<SrcPair> src_pairs[2];
     } store;

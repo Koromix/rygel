@@ -140,13 +140,15 @@ static void PrintSummary(const ClassifySummary &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
     PrintLn("  Stays: %1", summary.stays_count);
-    PrintLn("  Total GHS: %1 €",
-            FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
-    PrintLn("  Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-            summary.supplements.rea, summary.supplements.reasi,
-            summary.supplements.si, summary.supplements.src,
-            summary.supplements.nn1, summary.supplements.nn2,
-            summary.supplements.nn3, summary.supplements.rep);
+    PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
+    PrintLn("  Supplements:");
+    for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
+        PrintLn("    %1: %2 € [%3]",
+                SupplementTypeNames[i],
+                FmtDouble((double)summary.supplement_cents.values[i] / 100.0, 2),
+                summary.supplement_days.values[i]);
+    }
+    PrintLn("  Total: %1 €", FmtDouble((double)summary.total_cents / 100.0, 2));
     PrintLn();
 };
 
@@ -276,15 +278,18 @@ Classify options:
                         PrintLn("      Error: %1", result.main_error);
                     }
 
-                    PrintLn("      GHS price: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
-                    if (result.supplements.rea || result.supplements.reasi || result.supplements.si ||
-                            result.supplements.src || result.supplements.nn1 || result.supplements.nn2 ||
-                            result.supplements.nn3 || result.supplements.rep) {
-                        PrintLn("      Supplements: REA %1, REASI %2, SI %3, SRC %4, NN1 %5, NN2 %6, NN3 %7, REP %8",
-                                result.supplements.rea, result.supplements.reasi, result.supplements.si,
-                                result.supplements.src, result.supplements.nn1, result.supplements.nn2,
-                                result.supplements.nn3, result.supplements.rep);
+                    PrintLn("      GHS: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
+                    if (result.price_cents > result.ghs_price_cents) {
+                        PrintLn("      Supplements:");
+                        for (Size j = 0; j < ARRAY_SIZE(SupplementTypeNames); j++) {
+                            if (result.supplement_cents.values[j]) {
+                                PrintLn("        %1: %2 € [%3]", SupplementTypeNames[j],
+                                        FmtDouble((double)result.supplement_cents.values[j], 2),
+                                        result.supplement_days.values[j]);
+                            }
+                        }
                     }
+                    PrintLn("      Price: %1 €", FmtDouble((double)result.price_cents / 100.0, 2));
                 }
             }
             PrintLn();
@@ -330,51 +335,21 @@ Classify options:
                 if (stay_test->ghs.number) {
                     tested_ghs++;
                     if (stay_test->ghs != result.ghs ||
-                            stay_test->supplements.rea != result.supplements.rea ||
-                            stay_test->supplements.reasi != result.supplements.reasi ||
-                            stay_test->supplements.si != result.supplements.si ||
-                            stay_test->supplements.src != result.supplements.src ||
-                            stay_test->supplements.nn1 != result.supplements.nn1 ||
-                            stay_test->supplements.nn2 != result.supplements.nn2 ||
-                            stay_test->supplements.nn3 != result.supplements.nn3 ||
-                            stay_test->supplements.rep != result.supplements.rep) {
+                            stay_test->supplement_days != result.supplement_days) {
                         failed_ghs++;
                         if (verbosity >= 1) {
                             if (result.ghs != stay_test->ghs) {
                                 PrintLn("    %1 has inadequate GHS (%2, expected %3)",
                                         stay_test->bill_id, result.ghs, stay_test->ghs);
                             }
-                            if (result.supplements.rea != stay_test->supplements.rea) {
-                                PrintLn("    %1 has inadequate REA (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.rea, stay_test->supplements.rea);
-                            }
-                            if (result.supplements.reasi != stay_test->supplements.reasi) {
-                                PrintLn("    %1 has inadequate REASI (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.reasi, stay_test->supplements.reasi);
-                            }
-                            if (result.supplements.si != stay_test->supplements.si) {
-                                PrintLn("    %1 has inadequate SI (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.si, stay_test->supplements.si);
-                            }
-                            if (result.supplements.src != stay_test->supplements.src) {
-                                PrintLn("    %1 has inadequate SRC (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.src, stay_test->supplements.src);
-                            }
-                            if (result.supplements.nn1 != stay_test->supplements.nn1) {
-                                PrintLn("    %1 has inadequate NN1 (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.nn1, stay_test->supplements.nn1);
-                            }
-                            if (result.supplements.nn2 != stay_test->supplements.nn2) {
-                                PrintLn("    %1 has inadequate NN2 (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.nn2, stay_test->supplements.nn2);
-                            }
-                            if (result.supplements.nn3 != stay_test->supplements.nn3) {
-                                PrintLn("    %1 has inadequate NN3 (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.nn3, stay_test->supplements.nn3);
-                            }
-                            if (result.supplements.rep != stay_test->supplements.rep) {
-                                PrintLn("    %1 has inadequate REP (%2, expected %3)",
-                                        stay_test->bill_id, result.supplements.rep, stay_test->supplements.rep);
+                            for (Size j = 0; j < ARRAY_SIZE(SupplementTypeNames); j++) {
+                                if (result.supplement_days.values[j] !=
+                                        stay_test->supplement_days.values[j]) {
+                                    PrintLn("    %1 has inadequate %2 (%3, expected %4)",
+                                            stay_test->bill_id, SupplementTypeNames[j],
+                                            result.supplement_days.values[j],
+                                            stay_test->supplement_days.values[j]);
+                                }
                             }
                         }
                     }

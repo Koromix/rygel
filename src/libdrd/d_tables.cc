@@ -883,7 +883,9 @@ class JsonPricesHandler: public BaseJsonHandler<JsonPricesHandler> {
         TableObject,
         GhsPriceArray,
         GhsPriceObject,
-        GhsPriceSectorObject
+        GhsPriceSectorObject,
+        SupplementPriceObject,
+        SupplementPriceSectorObject
     };
 
     State state = State::Default;
@@ -921,6 +923,13 @@ public:
                     case JsonBranchType::Array: {
                         if (TestStr(key, "ghs")) {
                             state = State::GhsPriceArray;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    case JsonBranchType::Object: {
+                        if (TestStr(key, "supplements")) {
+                            state = State::SupplementPriceObject;
                         } else {
                             return UnexpectedBranch(type);
                         }
@@ -976,6 +985,31 @@ public:
                     default: { return UnexpectedBranch(type); } break;
                 }
             } break;
+
+            case State::SupplementPriceObject: {
+                switch (type) {
+                    case JsonBranchType::Object: {
+                        if (TestStr(key, "public")) {
+                            state = State::SupplementPriceSectorObject;
+                            sector = 0;
+                        } else if (TestStr(key, "private")) {
+                            state = State::SupplementPriceSectorObject;
+                            sector = 1;
+                        } else {
+                            return UnexpectedBranch(type);
+                        }
+                    } break;
+                    case JsonBranchType::EndObject: { state = State::TableObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
+
+            case State::SupplementPriceSectorObject: {
+                switch (type) {
+                    case JsonBranchType::EndObject: { state = State::SupplementPriceObject; } break;
+                    default: { return UnexpectedBranch(type); } break;
+                }
+            } break;
         }
 
         return true;
@@ -1015,6 +1049,35 @@ public:
                     SetInt(value, &price_info.sectors[sector].exb_cents);
                 } else if (TestStr(key, "exb_once")) {
                     SetFlag(value, &price_info.sectors[sector].flags, (int)GhsPriceInfo::Flag::ExbOnce);
+                } else {
+                    return UnknownAttribute(key);
+                }
+            } break;
+
+            case State::SupplementPriceSectorObject: {
+                if (TestStr(key, "rea_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.rea);
+                } else if (TestStr(key, "stf_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.reasi);
+                    SetInt(value, &price_table.supplement_cents[sector].st.si);
+                } else if (TestStr(key, "src_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.src);
+                } else if (TestStr(key, "nn1_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.nn1);
+                } else if (TestStr(key, "nn2_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.nn2);
+                } else if (TestStr(key, "nn3_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.nn3);
+                } else if (TestStr(key, "rep_cents")) {
+                    SetInt(value, &price_table.supplement_cents[sector].st.rep);
+                } else if (TestStr(key, "ant_cents")) {
+                    // Not supported yet
+                } else if (TestStr(key, "dip_cents")) {
+                    // Not supported yet
+                } else if (TestStr(key, "rap_cents")) {
+                    // Not supported yet
+                } else if (TestStr(key, "sdc_cents")) {
+                    // Not supported yet
                 } else {
                     return UnknownAttribute(key);
                 }
@@ -1365,9 +1428,12 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                     index.ghs_prices.ptr = (GhsPriceInfo *)set.store.ghs_prices.len;
                     set.store.ghs_prices.Append(price_table.ghs_prices);
                     index.ghs_prices.len = set.store.ghs_prices.len - (Size)index.ghs_prices.ptr;
+                    index.supplement_prices =
+                        set.store.supplement_prices.Append(price_table.supplement_cents);
                     index.changed_tables |= (uint32_t)(1 << i);
                 } else {
                     index.ghs_prices = set.indexes[set.indexes.len - 1].ghs_prices;
+                    index.supplement_prices = set.indexes[set.indexes.len - 1].supplement_prices;
                 }
             } break;
 

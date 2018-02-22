@@ -294,3 +294,76 @@ struct UnitCode {
 static inline uint64_t DefaultHash(UnitCode code) { return DefaultHash(code.number); }
 static inline bool DefaultCompare(UnitCode code1, UnitCode code2)
     { return code1 == code2; }
+
+enum class SupplementType {
+    Rea,
+    Reasi,
+    Si,
+    Src,
+    Nn1,
+    Nn2,
+    Nn3,
+    Rep
+};
+static const char *const SupplementTypeNames[] = {
+    "REA",
+    "REASI",
+    "SI",
+    "SRC",
+    "NN1",
+    "NN2",
+    "NN3",
+    "REP"
+};
+
+template <typename T>
+union SupplementCounters {
+    T values[ARRAY_SIZE(SupplementTypeNames)] = {};
+    struct {
+        T rea;
+        T reasi;
+        T si;
+        T src;
+        T nn1;
+        T nn2;
+        T nn3;
+        T rep;
+    } st;
+
+    template <typename U>
+    SupplementCounters &operator+=(const SupplementCounters<U> &other)
+    {
+        st.rea += other.st.rea;
+        st.reasi += other.st.reasi;
+        st.si += other.st.si;
+        st.src += other.st.src;
+        st.nn1 += other.st.nn1;
+        st.nn2 += other.st.nn2;
+        st.nn3 += other.st.nn3;
+        st.rep += other.st.rep;
+
+        return *this;
+    }
+    template <typename U>
+    SupplementCounters operator+(const SupplementCounters<U> &other)
+    {
+        SupplementCounters copy = *this;
+        copy += other;
+        return copy;
+    }
+
+    template <typename U>
+    bool operator==(const SupplementCounters<U> &other) const
+    {
+        return st.rea == other.st.rea &&
+               st.reasi == other.st.reasi &&
+               st.si == other.st.si &&
+               st.src == other.st.src &&
+               st.nn1 == other.st.nn1 &&
+               st.nn2 == other.st.nn2 &&
+               st.nn3 == other.st.nn3 &&
+               st.rep == other.st.rep;
+    }
+    template <typename U>
+    bool operator !=(const SupplementCounters<U> &other) const { return !(*this == other); }
+};

@@ -299,15 +299,25 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector duration(results.len);
         Rcpp::CharacterVector ghm(results.len);
         Rcpp::IntegerVector ghs(results.len);
-        Rcpp::NumericVector ghs_price(results.len);
-        Rcpp::IntegerVector rea(results.len);
-        Rcpp::IntegerVector reasi(results.len);
-        Rcpp::IntegerVector si(results.len);
-        Rcpp::IntegerVector src(results.len);
-        Rcpp::IntegerVector nn1(results.len);
-        Rcpp::IntegerVector nn2(results.len);
-        Rcpp::IntegerVector nn3(results.len);
-        Rcpp::IntegerVector rep(results.len);
+        Rcpp::NumericVector ghs_cents(results.len);
+        Rcpp::NumericVector rea_cents(results.len);
+        Rcpp::NumericVector reasi_cents(results.len);
+        Rcpp::NumericVector si_cents(results.len);
+        Rcpp::NumericVector src_cents(results.len);
+        Rcpp::NumericVector nn1_cents(results.len);
+        Rcpp::NumericVector nn2_cents(results.len);
+        Rcpp::NumericVector nn3_cents(results.len);
+        Rcpp::NumericVector rep_cents(results.len);
+        Rcpp::NumericVector price_cents(results.len);
+        // FIXME: Work around Rcpp limitation with 20 columns
+        /* Rcpp::IntegerVector rea_days(results.len);
+        Rcpp::IntegerVector reasi_days(results.len);
+        Rcpp::IntegerVector si_days(results.len);
+        Rcpp::IntegerVector src_days(results.len);
+        Rcpp::IntegerVector nn1_days(results.len);
+        Rcpp::IntegerVector nn2_days(results.len);
+        Rcpp::IntegerVector nn3_days(results.len);
+        Rcpp::IntegerVector rep_days(results.len); */
 
         for (Size i = 0; i < results.len; i++) {
             const ClassifyResult &result = results[i];
@@ -317,15 +327,24 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             duration[i] = result.duration;
             ghm[i] = Fmt(buf, "%1", result.ghm).ptr;
             ghs[i] = result.ghs.number;
-            ghs_price[i] = (double)result.ghs_price_cents / 100.0;
-            rea[i] = result.supplements.rea;
-            reasi[i] = result.supplements.reasi;
-            si[i] = result.supplements.si;
-            src[i] = result.supplements.src;
-            nn1[i] = result.supplements.nn1;
-            nn2[i] = result.supplements.nn2;
-            nn3[i] = result.supplements.nn3;
-            rep[i] = result.supplements.rep;
+            ghs_cents[i] = (double)result.ghs_price_cents;
+            rea_cents[i] = result.supplement_cents.st.rea;
+            reasi_cents[i] = result.supplement_cents.st.reasi;
+            si_cents[i] = result.supplement_cents.st.si;
+            src_cents[i] = result.supplement_cents.st.src;
+            nn1_cents[i] = result.supplement_cents.st.nn1;
+            nn2_cents[i] = result.supplement_cents.st.nn2;
+            nn3_cents[i] = result.supplement_cents.st.nn3;
+            rep_cents[i] = result.supplement_cents.st.rep;
+            price_cents[i] = result.price_cents;
+            /* rea_days[i] = result.supplement_days.st.rea;
+            reasi_days[i] = result.supplement_days.st.reasi;
+            si_days[i] = result.supplement_days.st.si;
+            src_days[i] = result.supplement_days.st.src;
+            nn1_days[i] = result.supplement_days.st.nn1;
+            nn2_days[i] = result.supplement_days.st.nn2;
+            nn3_days[i] = result.supplement_days.st.nn3;
+            rep_days[i] = result.supplement_days.st.rep; */
 
             if (i % 1024 == 0) {
                 Rcpp::checkUserInterrupt();
@@ -336,10 +355,16 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             Rcpp::Named("bill_id") = bill_id,
             Rcpp::Named("exit_date") = exit_date, Rcpp::Named("duration") = duration,
             Rcpp::Named("ghm") = ghm,
-            Rcpp::Named("ghs") = ghs, Rcpp::Named("ghs_price") = ghs_price,
-            Rcpp::Named("rea") = rea, Rcpp::Named("reasi") = reasi, Rcpp::Named("si") = si,
-            Rcpp::Named("src") = src, Rcpp::Named("nn1") = nn1, Rcpp::Named("nn2") = nn2,
-            Rcpp::Named("nn3") = nn3, Rcpp::Named("rep") = rep,
+            Rcpp::Named("ghs") = ghs, Rcpp::Named("ghs_cents") = ghs_cents,
+            Rcpp::Named("rea_cents") = rea_cents, Rcpp::Named("reasi_cents") = reasi_cents,
+            Rcpp::Named("si_cents") = si_cents, Rcpp::Named("src_cents") = src_cents,
+            Rcpp::Named("nn1_cents") = nn1_cents, Rcpp::Named("nn2_cents") = nn2_cents,
+            Rcpp::Named("nn3_cents") = nn3_cents, Rcpp::Named("rep_cents") = rep_cents,
+            Rcpp::Named("price_cents") = price_cents,
+            /* Rcpp::Named("rea_days") = rea_days, Rcpp::Named("reasi") = reasi_days,
+            Rcpp::Named("si_days") = si_days, Rcpp::Named("src_days") = src_days,
+            Rcpp::Named("nn1_days") = nn1_days, Rcpp::Named("nn2_days") = nn2_days,
+            Rcpp::Named("nn3_days") = nn3_days, Rcpp::Named("rep_days") = rep_days, */
             Rcpp::Named("stringsAsFactors") = false
         );
     }

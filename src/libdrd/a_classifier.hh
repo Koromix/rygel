@@ -30,17 +30,6 @@ struct ClassifyAggregate {
     int duration;
 };
 
-struct SupplementCounters {
-    int32_t rea = 0;
-    int32_t reasi = 0;
-    int32_t si = 0;
-    int32_t src = 0;
-    int32_t nn1 = 0;
-    int32_t nn2 = 0;
-    int32_t nn3 = 0;
-    int32_t rep = 0;
-};
-
 struct ClassifyErrorSet {
     int16_t main_error = 0;
     int priority = 0;
@@ -55,30 +44,31 @@ struct ClassifyResult {
     int16_t main_error;
 
     GhsCode ghs;
-    SupplementCounters supplements;
     int ghs_price_cents;
+    SupplementCounters<int16_t> supplement_days;
+    SupplementCounters<int32_t> supplement_cents;
+    int price_cents;
 };
 
 struct ClassifySummary {
     Size results_count = 0;
     Size stays_count = 0;
 
-    SupplementCounters supplements;
     int64_t ghs_total_cents = 0;
+    SupplementCounters<int32_t> supplement_days;
+    SupplementCounters<int64_t> supplement_cents;
+    int64_t total_cents = 0;
 
     ClassifySummary &operator+=(const ClassifySummary &other)
     {
         results_count += other.results_count;
         stays_count += other.stays_count;
+
         ghs_total_cents += other.ghs_total_cents;
-        supplements.rea += other.supplements.rea;
-        supplements.reasi += other.supplements.reasi;
-        supplements.si += other.supplements.si;
-        supplements.src += other.supplements.src;
-        supplements.rep += other.supplements.rep;
-        supplements.nn1 += other.supplements.nn1;
-        supplements.nn2 += other.supplements.nn2;
-        supplements.nn3 += other.supplements.nn3;
+        supplement_days += other.supplement_days;
+        supplement_cents += other.supplement_cents;
+        total_cents += other.total_cents;
+
         return *this;
     }
     ClassifySummary operator+(const ClassifySummary &other)
@@ -109,9 +99,12 @@ GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
                     GhmCode ghm);
 void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
-                      SupplementCounters *out_counters);
+                      SupplementCounters<int16_t> *out_counters);
+
 int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death);
 int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs);
+int PriceSupplements(const ClassifyAggregate &agg, const SupplementCounters<int16_t> &days,
+                     SupplementCounters<int32_t> *out_prices);
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
                  Span<const Stay> stays, ClusterMode cluster_mode,
