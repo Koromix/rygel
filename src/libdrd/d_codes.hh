@@ -36,11 +36,10 @@ union GhmRootCode {
 
     static GhmRootCode FromString(const char *str, bool errors = true)
     {
-        GhmRootCode code;
+        GhmRootCode code = {};
 
-        code.value = 0;
         if (str[0]) {
-            int end_offset;
+            int end_offset = 0;
             sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
                    &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
             if (end_offset != 5 || str[5]) {
@@ -88,11 +87,10 @@ union GhmCode {
 
     static GhmCode FromString(const char *str, bool errors = true)
     {
-        GhmCode code;
+        GhmCode code = {};
 
-        code.value = 0;
         if (str[0]) {
-            int end_offset;
+            int end_offset = 0;
             sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
                    &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
             if (end_offset == 5 && (!str[5] || !str[6])) {
@@ -156,9 +154,8 @@ union DiagnosisCode {
 
     static DiagnosisCode FromString(const char *str, bool errors = true)
     {
-        DiagnosisCode code;
+        DiagnosisCode code = {};
 
-        code.value = 0;
         if (str[0]) {
             for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
                 code.str[i] = UpperAscii(str[i]);
@@ -217,9 +214,8 @@ union ProcedureCode {
 
     static ProcedureCode FromString(const char *str, bool errors = true)
     {
-        ProcedureCode code;
+        ProcedureCode code = {};
 
-        code.value = 0;
         if (str[0]) {
             for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
                 code.str[i] = UpperAscii(str[i]);
