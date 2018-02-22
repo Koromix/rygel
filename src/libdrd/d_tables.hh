@@ -263,37 +263,36 @@ bool ParseSrcPairTable(const uint8_t *file_data, const TableInfo &table, int sec
 
 bool ParsePricesJson(StreamReader &st, HeapArray<PriceTable> *out_tables);
 
-// FIXME: Span<const T>??
 struct TableIndex {
     Date limit_dates[2];
 
     const TableInfo *tables[ARRAY_SIZE(TableTypeNames)];
     uint32_t changed_tables;
 
-    Span<GhmDecisionNode> ghm_nodes;
-    Span<DiagnosisInfo> diagnoses;
-    Span<ExclusionInfo> exclusions;
-    Span<ProcedureInfo> procedures;
-    Span<GhmRootInfo> ghm_roots;
-    Span<ValueRangeCell<2>> gnn_cells;
-    Span<ValueRangeCell<2>> cma_cells[3];
+    Span<const GhmDecisionNode> ghm_nodes;
+    Span<const DiagnosisInfo> diagnoses;
+    Span<const ExclusionInfo> exclusions;
+    Span<const ProcedureInfo> procedures;
+    Span<const GhmRootInfo> ghm_roots;
+    Span<const ValueRangeCell<2>> gnn_cells;
+    Span<const ValueRangeCell<2>> cma_cells[3];
 
-    Span<GhsAccessInfo> ghs;
-    Span<AuthorizationInfo> authorizations;
-    Span<SrcPair> src_pairs[2];
+    Span<const GhsAccessInfo> ghs;
+    Span<const AuthorizationInfo> authorizations;
+    Span<const SrcPair> src_pairs[2];
 
-    Span<GhsPriceInfo> ghs_prices;
-    SupplementCounters<int32_t> *supplement_prices;
+    Span<const GhsPriceInfo> ghs_prices;
+    const SupplementCounters<int32_t> *supplement_prices;
 
-    HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
-    HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
-    HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
+    const HashTable<DiagnosisCode, const DiagnosisInfo *> *diagnoses_map;
+    const HashTable<ProcedureCode, const ProcedureInfo *> *procedures_map;
+    const HashTable<GhmRootCode, const GhmRootInfo *> *ghm_roots_map;
 
-    HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
-    HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
-    HashTable<int16_t, const AuthorizationInfo *> *authorizations_map;
+    const HashTable<GhmCode, const GhsAccessInfo *, GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
+    const HashTable<GhmRootCode, const GhsAccessInfo *, GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+    const HashTable<int16_t, const AuthorizationInfo *> *authorizations_map;
 
-    HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
+    const HashTable<GhsCode, const GhsPriceInfo *> *ghs_prices_map;
 
     const DiagnosisInfo *FindDiagnosis(DiagnosisCode diag) const;
     Span<const ProcedureInfo> FindProcedure(ProcedureCode proc) const;

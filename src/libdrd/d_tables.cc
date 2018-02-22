@@ -1286,10 +1286,11 @@ bool TableSetBuilder::Finish(TableSet *out_set)
 #define BUILD_MAP(IndexName, MapName, TableType) \
             do { \
                 if (!i || index.changed_tables & MaskEnum(TableType)) { \
-                    index.CONCAT(MapName, _map) = set.maps.MapName.AppendDefault(); \
+                    auto map = set.maps.MapName.AppendDefault(); \
                     for (auto &value: index.IndexName) { \
-                        index.CONCAT(MapName, _map)->Append(&value); \
+                        map->Append(&value); \
                     } \
+                    index.CONCAT(MapName, _map) = map; \
                 } else { \
                     index.CONCAT(MapName, _map) = &set.maps.MapName[set.maps.MapName.len - 1]; \
                 } \
@@ -1457,7 +1458,7 @@ bool TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 }
 
 template <typename T, typename U, typename Handler>
-Span<const T> FindSpan(Span<T> arr, const HashTable<U, const T *, Handler> *map, U code)
+Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler> *map, U code)
 {
     Span<const T> ret = {};
 
