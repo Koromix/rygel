@@ -106,8 +106,8 @@ struct DiagnosisInfo {
 
     const Attributes &Attributes(Sex sex) const
     {
-        StaticAssert((int)Sex::Male == 1);
-        return attributes[(int)sex - 1];
+        StaticAssert((int)Sex::Male == 0);
+        return attributes[(int)sex];
     }
 
     HASH_TABLE_HANDLER(DiagnosisInfo, diag);

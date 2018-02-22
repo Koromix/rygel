@@ -837,7 +837,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 14: {
-            return ((int)ctx.agg->stay.sex - 1 == ghm_node.u.test.params[0] - 49);
+            StaticAssert((int)Sex::Male == 0);
+            return ((int)ctx.agg->stay.sex == ghm_node.u.test.params[0] - 49);
         } break;
 
         case 18: {

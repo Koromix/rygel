@@ -18,7 +18,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 3
+#define PACK_VERSION 4
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)

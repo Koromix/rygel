@@ -6,8 +6,8 @@
 
 #include "../common/kutil.hh"
 
-enum class Sex: uint8_t {
-    Male = 1,
+enum class Sex: int8_t {
+    Male,
     Female
 };
 static const char *const SexNames[] = {
