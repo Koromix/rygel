@@ -180,10 +180,11 @@ public:
                 } else if (TestStr(key, "bill_id")) {
                     SetInt(value, &stay.bill_id);
                 } else if (TestStr(key, "birthdate")) {
-                    SetErrorFlag(Stay::Error::MalformedBirthdate, !SetDate(value, &stay.birthdate));
+                    SetErrorFlag(Stay::Error::MalformedBirthdate,
+                                 !SetDate(value, false, &stay.birthdate));
                 } else if (TestStr(key, "entry_date")) {
                     SetErrorFlag(Stay::Error::MalformedEntryDate,
-                                 !SetDate(value, &stay.entry.date));
+                                 !SetDate(value, false, &stay.entry.date));
                 } else if (TestStr(key, "entry_mode")) {
                     bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
@@ -228,7 +229,8 @@ public:
                     }
                     SetErrorFlag(Stay::Error::MalformedEntryOrigin, !valid);
                 } else if (TestStr(key, "exit_date")) {
-                    SetErrorFlag(Stay::Error::MalformedExitDate, !SetDate(value, &stay.exit.date));
+                    SetErrorFlag(Stay::Error::MalformedExitDate,
+                                 !SetDate(value, false, &stay.exit.date));
                 } else if (TestStr(key, "exit_mode")) {
                     bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
@@ -289,7 +291,7 @@ public:
                 } else if (TestStr(key, "igs2")) {
                     SetInt(value, &stay.igs2);
                 } else if (TestStr(key, "last_menstrual_period")) {
-                    SetDate(value, &stay.last_menstrual_period);
+                    SetDate(value, false, &stay.last_menstrual_period);
                 } else if (TestStr(key, "newborn_weight")) {
                     SetErrorFlag(Stay::Error::MalformedNewbornWeight,
                                  !SetInt(value, &stay.newborn_weight));
@@ -353,7 +355,7 @@ public:
                         UnexpectedType(value.type);
                     }
                 } else if (TestStr(key, "date")) {
-                    SetDate(value, &proc.date);
+                    SetDate(value, false, &proc.date);
                 } else if (TestStr(key, "phase")) {
                     SetInt(value, &proc.phase);
                 } else if (TestStr(key, "activity")) {
