@@ -482,6 +482,23 @@ bool ParseProcedureTable(const uint8_t *file_data,
                 memcpy(proc.bytes, proc_data, (size_t)table.sections[2].value_len);
             }
 
+            // CCAM activities
+            if (proc.bytes[31] & 0x1) {
+                proc.activities |= 1 << 1;
+            }
+            if (proc.bytes[32] & 0x80) {
+                proc.activities |= 1 << 2;
+            }
+            if (proc.bytes[32] & 0x40) {
+                proc.activities |= 1 << 3;
+            }
+            if (proc.bytes[22] & 0x20) {
+                proc.activities |= 1 << 4;
+            }
+            if (proc.bytes[32] & 0x20) {
+                proc.activities |= 1 << 5;
+            }
+
             out_procs->Append(proc);
         }
 

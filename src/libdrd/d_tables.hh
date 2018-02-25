@@ -120,6 +120,7 @@ struct ExclusionInfo {
 struct ProcedureInfo {
     ProcedureCode proc;
     int8_t phase;
+    uint8_t activities;
 
     Date limit_dates[2];
     uint8_t bytes[55];

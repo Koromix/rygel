@@ -383,6 +383,23 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                     }
                 }
 
+                if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
+                    uint8_t extra_activities = (uint8_t)(proc.activities & ~proc_info->activities);
+                    if (UNLIKELY(extra_activities)) {
+                        if (extra_activities & ~0x3E) {
+                            valid &= SetError(out_errors, 103);
+                        }
+                        extra_activities &= 0x3E;
+
+                        if (extra_activities & (1 << 4)) {
+                            valid &= SetError(out_errors, 110);
+                        }
+                        if (extra_activities & ~(1 << 4)) {
+                            SetError(out_errors, 111, 0);
+                        }
+                    }
+                }
+
                 out_procedures->Append(proc_info);
                 *out_activities |= proc.activities;
             } else {
