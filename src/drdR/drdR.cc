@@ -448,8 +448,16 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 
             proc[i] = Fmt(buf, "%1", info.proc).ptr;
             phase[i] = info.phase;
-            // FIXME: Fill activities correctly
-            activities[i] = 1;
+            {
+                int activities_dec = 0;
+                for (int activities_bin = info.activities, i = 0; activities_bin; i++) {
+                    if (activities_bin & 0x1) {
+                        activities_dec = (activities_dec * 10) + i;
+                    }
+                    activities_bin >>= 1;
+                }
+                activities[i] = activities_dec;
+            }
             start_date[i] = Rcpp::Date((unsigned int)info.limit_dates[0].st.month,
                                        (unsigned int)info.limit_dates[0].st.day,
                                        (unsigned int)info.limit_dates[0].st.year);
