@@ -270,7 +270,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
     return true;
 }
 
-static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
+static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
                                  HeapArray<const DiagnosisInfo *> *out_diagnoses,
                                  ClassifyErrorSet *out_errors)
 {
@@ -292,94 +292,128 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
         132, 135
     };
 
-    // Main diagnosis is valid (checks are done in CheckMainError)
-    const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
-    if (LIKELY(diag_info)) {
-        out_diagnoses->Append(diag_info);
-        valid &= CheckDiagnosisErrors(agg, *diag_info, main_diagnosis_errors, out_errors);
-    } else {
-        valid &= SetError(out_errors, 67);
-    }
-
-    if (stay.linked_diagnosis.IsValid()) {
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.linked_diagnosis);
+    for (const Stay &stay: agg.stays) {
+        // Main diagnosis is valid (checks are done in CheckMainError)
+        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
         if (LIKELY(diag_info)) {
             out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info,
-                                          linked_diagnosis_errors, out_errors);
+            valid &= CheckDiagnosisErrors(agg, *diag_info, main_diagnosis_errors, out_errors);
         } else {
-            valid &= SetError(out_errors, 94);
+            valid &= SetError(out_errors, 67);
+        }
+
+        if (stay.linked_diagnosis.IsValid()) {
+            const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.linked_diagnosis);
+            if (LIKELY(diag_info)) {
+                out_diagnoses->Append(diag_info);
+                valid &= CheckDiagnosisErrors(agg, *diag_info,
+                                              linked_diagnosis_errors, out_errors);
+            } else {
+                valid &= SetError(out_errors, 94);
+            }
+        }
+
+        for (DiagnosisCode diag: stay.diagnoses) {
+            if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
+                continue;
+
+            const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
+            if (LIKELY(diag_info)) {
+                out_diagnoses->Append(diag_info);
+                valid &= CheckDiagnosisErrors(agg, *diag_info,
+                                              associate_diagnosis_errors, out_errors);
+            } else {
+                valid &= SetError(out_errors, 70);
+            }
         }
     }
 
-    for (DiagnosisCode diag: stay.diagnoses) {
-        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
-            continue;
+    // Deduplicate diagnoses
+    std::sort(out_diagnoses->begin(), out_diagnoses->end());
+    if (out_diagnoses->len) {
+        Span<const DiagnosisInfo *> diagnoses = *out_diagnoses;
 
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
-        if (LIKELY(diag_info)) {
-            out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info,
-                                          associate_diagnosis_errors, out_errors);
-        } else {
-            valid &= SetError(out_errors, 70);
+        Size j = 0;
+        for (Size i = 1; i < diagnoses.len; i++) {
+            if (diagnoses[i] != diagnoses[j]) {
+                diagnoses[++j] = diagnoses[i];
+            }
         }
+        out_diagnoses->RemoveFrom(j + 1);
     }
 
     return valid;
 }
 
-static bool AppendValidProcedures(const ClassifyAggregate &agg, const Stay &stay,
+static bool AppendValidProcedures(const ClassifyAggregate &agg,
                                   HeapArray<const ProcedureInfo *> *out_procedures,
                                   uint8_t *out_activities, ClassifyErrorSet *out_errors)
 {
     bool valid = true;
 
-    for (const ProcedureRealisation &proc: stay.procedures) {
-        const ProcedureInfo *proc_info =
-            agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
+    for (const Stay &stay: agg.stays) {
+        for (const ProcedureRealisation &proc: stay.procedures) {
+            const ProcedureInfo *proc_info =
+                agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
-        if (LIKELY(proc_info)) {
-            // TODO: For error 167, we need to cross-check procedures because
-            // activities may be separated. Note: (proc_info->bytes[42] & 0x2)
+            if (LIKELY(proc_info)) {
+                // TODO: For error 167, we need to cross-check procedures because
+                // activities may be separated. Note: (proc_info->bytes[42] & 0x2)
 
-            if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
-                SetError(out_errors, 148, 0);
-            }
-            if (UNLIKELY((agg.age || agg.age_days > 28) &&
-                         (proc_info->bytes[44] & 0x20) && (!agg.stay.newborn_weight ||
-                                                           agg.stay.newborn_weight >= 3000))) {
-                valid &= SetError(out_errors, 149);
-            }
+                if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
+                    SetError(out_errors, 148, 0);
+                }
+                if (UNLIKELY((agg.age || agg.age_days > 28) &&
+                             (proc_info->bytes[44] & 0x20) && (!agg.stay.newborn_weight ||
+                                                               agg.stay.newborn_weight >= 3000))) {
+                    valid &= SetError(out_errors, 149);
+                }
 
-            if (UNLIKELY(stay.entry.date > proc_info->limit_dates[1])) {
-                valid &= SetError(out_errors, 78);
-            } else if (UNLIKELY(stay.exit.date < proc_info->limit_dates[0])) {
-                valid &= SetError(out_errors, 79);
-            } else if (UNLIKELY(!proc.date.value ||
-                                proc.date < proc_info->limit_dates[0] ||
-                                proc.date > proc_info->limit_dates[1])) {
-                if (proc_info->bytes[41] & 0x2) {
-                    valid &= SetError(out_errors, 142);
-                } else if (proc.date.value) {
-                    SetError(out_errors, 102, 0);
+                if (UNLIKELY(stay.entry.date > proc_info->limit_dates[1])) {
+                    valid &= SetError(out_errors, 78);
+                } else if (UNLIKELY(stay.exit.date < proc_info->limit_dates[0])) {
+                    valid &= SetError(out_errors, 79);
+                } else if (UNLIKELY(!proc.date.value ||
+                                    proc.date < proc_info->limit_dates[0] ||
+                                    proc.date > proc_info->limit_dates[1])) {
+                    if (proc_info->bytes[41] & 0x2) {
+                        valid &= SetError(out_errors, 142);
+                    } else if (proc.date.value) {
+                        SetError(out_errors, 102, 0);
+                    }
+                }
+
+                out_procedures->Append(proc_info);
+                *out_activities |= proc.activities;
+            } else {
+                Span <const ProcedureInfo> compatible_procs = agg.index->FindProcedure(proc.proc);
+                bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
+                                              [&](const ProcedureInfo &proc_info) {
+                    return proc_info.phase == proc.phase;
+                });
+                if (valid_proc) {
+                    LogDebug("Ignoring procedure '%1' with date %2", proc.proc, stay.exit.date);
+                } else {
+                    valid &= SetError(out_errors, 73);
                 }
             }
+        }
+    }
 
-            out_procedures->Append(proc_info);
-            *out_activities |= proc.activities;
-        } else {
-            Span <const ProcedureInfo> compatible_procs = agg.index->FindProcedure(proc.proc);
-            bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
-                                          [&](const ProcedureInfo &proc_info) {
-                return proc_info.phase == proc.phase;
-            });
-            if (valid_proc) {
-                LogDebug("Ignoring procedure '%1' with date %2", proc.proc, stay.exit.date);
-            } else {
-                valid &= SetError(out_errors, 73);
+    // Deduplicate procedures
+    // TODO: Warn when we deduplicate procedures with different attributes,
+    // such as when the two procedures fall into different date ranges / limits.
+    std::sort(out_procedures->begin(), out_procedures->end());
+    if (out_procedures->len) {
+        Span<const ProcedureInfo *> procedures = *out_procedures;
+
+        Size j = 0;
+        for (Size i = 1; i < procedures.len; i++) {
+            if (procedures[i] != procedures[j]) {
+                procedures[++j] = procedures[i];
             }
         }
+        out_procedures->RemoveFrom(j + 1);
     }
 
     return valid;
@@ -682,44 +716,14 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     bool valid = true;
 
-    // Aggregate diagnoses and procedures
-    out_agg->proc_activities = 0;
-    for (const Stay &stay: stays) {
-        valid &= AppendValidDiagnoses(*out_agg, stay, out_diagnoses, out_errors);
-        valid &= AppendValidProcedures(*out_agg, stay, out_procedures,
-                                       &out_agg->proc_activities, out_errors);
-    }
-
-    // Deduplicate diagnoses
-    std::sort(out_diagnoses->begin(), out_diagnoses->end());
-    if (out_diagnoses->len) {
-        Span<const DiagnosisInfo *> diagnoses = *out_diagnoses;
-
-        Size j = 0;
-        for (Size i = 1; i < diagnoses.len; i++) {
-            if (diagnoses[i] != diagnoses[j]) {
-                diagnoses[++j] = diagnoses[i];
-            }
-        }
-        out_diagnoses->RemoveFrom(j + 1);
-    }
+    // Aggregate diagnoses
+    valid &= AppendValidDiagnoses(*out_agg, out_diagnoses, out_errors);
     out_agg->diagnoses = *out_diagnoses;
 
-    // Deduplicate procedures
-    // TODO: Warn when we deduplicate procedures with different attributes,
-    // such as when the two procedures fall into different date ranges / limits.
-    std::sort(out_procedures->begin(), out_procedures->end());
-    if (out_procedures->len) {
-        Span<const ProcedureInfo *> procedures = *out_procedures;
-
-        Size j = 0;
-        for (Size i = 1; i < out_procedures->len; i++) {
-            if (procedures[i] != procedures[j]) {
-                procedures[++j] = procedures[i];
-            }
-        }
-        out_procedures->RemoveFrom(j + 1);
-    }
+    // Aggregate procedures
+    out_agg->proc_activities = 0;
+    valid &= AppendValidProcedures(*out_agg, out_procedures,
+                                   &out_agg->proc_activities, out_errors);
     out_agg->procedures = *out_procedures;
 
     // Pick main stay
