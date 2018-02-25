@@ -463,12 +463,10 @@ bool ParseProcedureTable(const uint8_t *file_data,
             }
 
             // CCAM code and phase
-            {
-                memcpy(proc.proc.str, code123, 3);
-                snprintf(proc.proc.str + 3, SIZE(proc.proc.str) - 3, "%c%03u",
-                         (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
-                proc.phase = (char)(raw_proc_ptr.seq_phase % 10);
-            }
+            memcpy(proc.proc.str, code123, 3);
+            snprintf(proc.proc.str + 3, SIZE(proc.proc.str) - 3, "%c%03u",
+                     (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
+            proc.phase = (char)(raw_proc_ptr.seq_phase % 10);
 
             // CCAM information and lists
             {
