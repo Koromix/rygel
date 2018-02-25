@@ -541,8 +541,16 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         }
 
         // Diagnoses
-        if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedMainDiagnosis)) {
+           valid &= SetError(out_errors, 41);
+        } else if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 40);
+        }
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLinkedDiagnosis)) {
+            valid &= SetError(out_errors, 51);
+        }
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosis)) {
+            valid &= SetError(out_errors, 42);
         }
     }
 

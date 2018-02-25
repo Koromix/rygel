@@ -276,13 +276,17 @@ public:
                     SetErrorFlag(Stay::Error::MalformedExitDestination, !valid);
                 } else if (TestStr(key, "dp")) {
                     if (value.type == JsonValue::Type::String) {
-                        stay.main_diagnosis = DiagnosisCode::FromString(value.u.str.ptr);
+                        stay.main_diagnosis = DiagnosisCode::FromString(value.u.str.ptr, false);
+                        SetErrorFlag(Stay::Error::MalformedMainDiagnosis,
+                                     !stay.main_diagnosis.IsValid());
                     } else {
                         UnexpectedType(value.type);
                     }
                 } else if (TestStr(key, "dr")) {
                     if (value.type == JsonValue::Type::String) {
-                        stay.linked_diagnosis = DiagnosisCode::FromString(value.u.str.ptr);
+                        stay.linked_diagnosis = DiagnosisCode::FromString(value.u.str.ptr, false);
+                        SetErrorFlag(Stay::Error::MalformedLinkedDiagnosis,
+                                     !stay.linked_diagnosis.IsValid());
                     } else {
                         UnexpectedType(value.type);
                     }
@@ -336,12 +340,15 @@ public:
 
             case State::AssociatedDiagnosisArray: {
                 if (value.type == JsonValue::Type::String) {
-                    DiagnosisCode diag = DiagnosisCode::FromString(value.u.str.ptr);
-                    if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
+                    DiagnosisCode diag = DiagnosisCode::FromString(value.u.str.ptr, false);
+                    if (UNLIKELY(!diag.IsValid())) {
+                        stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                    } else if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
                         LogError("Too much data to load");
                         return false;
+                    } else {
+                        out_set->store.diagnoses.Append(diag);
                     }
-                    out_set->store.diagnoses.Append(diag);
                 } else {
                     UnexpectedType(value.type);
                 }
