@@ -246,10 +246,62 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 
 }
 
 static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisInfo &diag_info,
-                                 const int16_t error_codes[9], ClassifyErrorSet *out_errors)
+                                 const int16_t error_codes[13], ClassifyErrorSet *out_errors)
 {
+    // Inappropriate, imprecise warnings
+    if (UNLIKELY(diag_info.warnings & (1 << 9))) {
+        SetError(out_errors, error_codes[8], -1);
+    }
+    if (UNLIKELY(diag_info.warnings & (1 << 0))) {
+        SetError(out_errors, error_codes[9], -1);
+    }
+    if (UNLIKELY(diag_info.warnings & (1 << 10))) {
+        SetError(out_errors, error_codes[10], -1);
+    }
+
+    // Sex warning
+    {
+        int sex_bit = 0;
+        switch (agg.stay.sex) {
+            case Sex::Male: {
+                sex_bit = 12;
+            } break;
+            case Sex::Female: {
+                sex_bit = 11;
+            } break;
+        }
+        DebugAssert(sex_bit);
+
+        if (UNLIKELY(diag_info.warnings & (1 << sex_bit))) {
+            SetError(out_errors, error_codes[11], -1);
+        }
+    }
+
+    // Age warning
+    {
+        int age_bit;
+        if (agg.age_days < 29) {
+            age_bit = 4;
+        } else if (!agg.age) {
+            age_bit = 3;
+        } else if (agg.age < 10) {
+            age_bit = 5;
+        } else if (agg.age < 20) {
+            age_bit = 6;
+        } else if (agg.age < 65) {
+            age_bit = 7;
+        } else {
+            age_bit = 8;
+        }
+
+        if (UNLIKELY(diag_info.warnings & (1 << age_bit))) {
+            SetError(out_errors, error_codes[12], -1);
+        }
+    }
+
     const auto &diag_attr = diag_info.Attributes(agg.stay.sex);
 
+    // Real errors
     if (UNLIKELY(diag_attr.raw[5] & 2)) {
         return SetError(out_errors, error_codes[0]);
     } else if (UNLIKELY(!diag_attr.raw[0])) {
@@ -276,20 +328,23 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
 {
     bool valid = true;
 
-    static const int16_t main_diagnosis_errors[8] = {
+    static const int16_t main_diagnosis_errors[13] = {
         68, // Obsolete diagnosis
         113, 114, 115, 113, 180, // Imprecise, reserved for OMS use, etc.
-        130, 133 // Age-related (O, P, Z37, Z38)
+        130, 133, // Age-related (O, P, Z37, Z38)
+        88, 84, 87, 86, 85 // Warnings
     };
-    static const int16_t linked_diagnosis_errors[8] = {
+    static const int16_t linked_diagnosis_errors[13] = {
         95,
         116, 117, 118, 0, 181,
-        131, 134
+        131, 134,
+        0, 96, 99, 98, 97
     };
-    static const int16_t associate_diagnosis_errors[8] = {
+    static const int16_t associate_diagnosis_errors[13] = {
         71,
         0, 0, 119, 0, 182,
-        132, 135
+        132, 135,
+        0, 90, 93, 92, 91
     };
 
     for (const Stay &stay: agg.stays) {
