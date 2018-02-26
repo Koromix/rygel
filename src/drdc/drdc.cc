@@ -269,15 +269,11 @@ Classify options:
         if (verbosity - test >= 1) {
             PrintLn("  Detailed results:");
             for (const ClassifyResult &result: classify_set.results) {
-                PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
+                PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 [%6] / GHS %7", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
-                        result.stays.len, result.ghm, result.ghs);
+                        result.stays.len, result.ghm, result.main_error, result.ghs);
 
                 if (verbosity - test >= 2) {
-                    if (result.main_error) {
-                        PrintLn("      Error: %1", result.main_error);
-                    }
-
                     PrintLn("      GHS: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
                     if (result.price_cents > result.ghs_price_cents) {
                         PrintLn("      Supplements:");
