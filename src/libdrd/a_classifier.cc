@@ -231,7 +231,7 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 
     if (!error)
         return true;
 
-    DebugAssert(error >= 0 && error < error_set->errors.Bits);
+    DebugAssert(error >= 0 && error < decltype(ClassifyErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
                               error < error_set->main_error)) {
