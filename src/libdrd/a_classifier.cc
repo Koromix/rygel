@@ -548,6 +548,9 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
                      stay.entry.date.IsValid() && stay.exit.date.IsValid())) {
             valid &= SetError(out_errors, 32);
         }
+        if (UNLIKELY(stay.entry.date.st.year < 1985 && stay.entry.date.IsValid())) {
+            SetError(out_errors, 77, -1);
+        }
 
         // Entry mode and origin
         if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedEntryMode |
