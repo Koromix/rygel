@@ -233,8 +233,8 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 
 
     DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
-        if (!error_set->main_error || priority > error_set->priority ||
-                error < error_set->main_error) {
+        if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
+                              error < error_set->main_error)) {
             error_set->main_error = error;
             error_set->priority = priority;
         }
@@ -361,7 +361,7 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                 // activities may be separated. Note: (proc_info->bytes[42] & 0x2)
 
                 if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
-                    SetError(out_errors, 148, 0);
+                    SetError(out_errors, 148, -1);
                 }
                 if (UNLIKELY((agg.age || agg.age_days > 28) &&
                              (proc_info->bytes[44] & 0x20) && (!agg.stay.newborn_weight ||
@@ -379,7 +379,7 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
-                        SetError(out_errors, 102, 0);
+                        SetError(out_errors, 102, -1);
                     }
                 }
 
@@ -587,7 +587,7 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
                 valid &= SetError(out_errors, 37);
             }
             if (UNLIKELY(stay.session_count < 0 || stay.session_count >= 32)) {
-                SetError(out_errors, 66, 0);
+                SetError(out_errors, 66, -1);
             }
         }
 
@@ -661,7 +661,7 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
                 SetError(out_errors, 145, 0);
             }
         } else if (UNLIKELY(agg.stay.session_count > agg.duration + 1)) {
-            SetError(out_errors, 146, 0);
+            SetError(out_errors, 146, -1);
         }
     }
 
@@ -1050,7 +1050,7 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm,
                 return proc_info->proc == proc1 || proc_info->proc == proc2;
             });
             if (!type_present) {
-                SetError(out_errors, 179, 0);
+                SetError(out_errors, 179, -1);
             }
         }
     }
