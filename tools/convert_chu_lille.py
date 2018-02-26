@@ -73,17 +73,17 @@ def parse_mco_grp(filename):
                 rum['bill_id'] = int(buf.read(20))
                 rum['stay_id'] = int(buf.read(20))
                 buf.seek(10, io.SEEK_CUR) # Skip RUM identifier
-                rum['birthdate'] = parse_date(buf.read(8))
-                rum['sex'] = int(buf.read(1))
-                rum['unit'] = int(buf.read(4))
+                rum['birthdate'] = parse_date_optional(buf.read(8))
+                rum['sex'] = int_optional(buf.read(1))
+                rum['unit'] = int_optional(buf.read(4))
                 rum['bed_authorization'] = int_optional(buf.read(2))
-                rum['entry_date'] = parse_date(buf.read(8))
-                rum['entry_mode'] = int(buf.read(1))
+                rum['entry_date'] = parse_date_optional(buf.read(8))
+                rum['entry_mode'] = int_optional(buf.read(1))
                 rum['entry_origin'] = buf.read(1).decode().upper()
                 if rum['entry_origin'] != 'R':
                     rum['entry_origin'] = int_optional(rum['entry_origin'])
-                rum['exit_date'] = parse_date(buf.read(8))
-                rum['exit_mode'] = int(buf.read(1))
+                rum['exit_date'] = parse_date_optional(buf.read(8))
+                rum['exit_mode'] = int_optional(buf.read(1))
                 rum['exit_destination'] = int_optional(buf.read(1))
                 buf.seek(5, io.SEEK_CUR) # Skip postal code
                 rum['newborn_weight'] = int_optional(buf.read(4))
@@ -94,6 +94,8 @@ def parse_mco_grp(filename):
                 dad_count = int(buf.read(2))
                 proc_count = int(buf.read(3))
                 rum['dp'] = buf.read(8).decode().strip()
+                if not rum['dp']:
+                    rum['dp'] = None
                 rum['dr'] = buf.read(8).decode().strip()
                 if not rum['dr']:
                     rum['dr'] = None
@@ -114,10 +116,10 @@ def parse_mco_grp(filename):
                         proc['code'] = buf.read(7).decode().strip()
                         if rss_version >= 117:
                             buf.seek(3, io.SEEK_CUR) # Skip CCAM code extension
-                        proc['phase'] = int(buf.read(1))
-                        proc['activity'] = int(buf.read(1))
+                        proc['phase'] = int_optional(buf.read(1))
+                        proc['activity'] = int_optional(buf.read(1))
                         buf.seek(7, io.SEEK_CUR) # Skip modificators, doc extension, etc.
-                        proc['count'] = int(buf.read(2))
+                        proc['count'] = int_optional(buf.read(2))
                         rum['procedures'].append(proc)
 
                 yield sweep(rum)
