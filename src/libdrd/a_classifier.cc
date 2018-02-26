@@ -412,9 +412,6 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                 agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
             if (LIKELY(proc_info)) {
-                // TODO: For error 167, we need to cross-check procedures because
-                // activities may be separated. Note: (proc_info->bytes[42] & 0x2)
-
                 if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
                     SetError(out_errors, 148, -1);
                 }
@@ -453,6 +450,15 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                             SetError(out_errors, 111, 0);
                         }
                     }
+
+                    // We use the pointer's LSB as a flag which is set to 1 when the procedure
+                    // requires activity 1. Combined with a pointer-based sort this allows
+                    // us to trivially detect when activity 1 is missing for a given procedure
+                    // in the deduplication phase below (error 167).
+                    StaticAssert(std::alignment_of<ProcedureInfo>::value >= 2);
+                    if (!(proc.activities & (1 << 1)) && !(proc_info->bytes[42] & 0x2)) {
+                        proc_info = (const ProcedureInfo *)((uintptr_t)proc_info | 0x1);
+                    }
                 }
 
                 out_procedures->Append(proc_info);
@@ -480,8 +486,15 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
         Span<const ProcedureInfo *> procedures = *out_procedures;
 
         Size j = 0;
-        for (Size i = 1; i < procedures.len; i++) {
-            if (procedures[i] != procedures[j]) {
+        for (Size i = 0; i < procedures.len; i++) {
+            if ((uintptr_t)procedures[i] & 0x1) {
+                const ProcedureInfo *proc_info =
+                    (const ProcedureInfo *)((uintptr_t)procedures[i] ^ 0x1);
+                if (proc_info != procedures[j]) {
+                    procedures[++j] = proc_info;
+                    valid &= SetError(out_errors, 167);
+                }
+            } else if (procedures[i] != procedures[j]) {
                 procedures[++j] = procedures[i];
             }
         }
