@@ -38,7 +38,6 @@ compare <- function(summary1, summary2, ...) {
             m[[paste0(col, '.x')]] - m[[paste0(col, '.y')]]
         }, simplify = FALSE))
     )
-    diff <- diff[rowSums(diff[, summary_columns]) != 0,]
     diff <- diff[do.call('order', diff[, groups, drop = FALSE]),]
 
     class(diff) <- c('drd.result_set', class(diff))
