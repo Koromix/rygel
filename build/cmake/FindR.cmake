@@ -5,10 +5,17 @@
 # R does not support MSVC, nothing we can do about it
 if(NOT R_BINARY AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG) AND NOT CMAKE_CROSSCOMPILING)
     if(WIN32)
-        find_program(R_BINARY R HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R64;InstallPath]\\bin\\x64"
-                                      "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R;InstallPath]\\bin\\i386")
-        find_program(R_BINARY_RSCRIPT Rscript HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R64;InstallPath]\\bin\\x64"
-                                                    "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R;InstallPath]\\bin\\i386")
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            find_program(R_BINARY R
+                         HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R64;InstallPath]\\bin\\x64")
+            find_program(R_BINARY_RSCRIPT Rscript
+                         HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R64;InstallPath]\\bin\\x64")
+        else()
+            find_program(R_BINARY R
+                         HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R;InstallPath]\\bin\\i386")
+            find_program(R_BINARY_RSCRIPT Rscript
+                         HINTS "[HKEY_LOCAL_MACHINE\\SOFTWARE\\R-core\\R;InstallPath]\\bin\\i386")
+        endif()
         get_filename_component(r_path_root "${R_BINARY_RSCRIPT}/../../.." ABSOLUTE)
         get_filename_component(r_path_bin ${R_BINARY_RSCRIPT} DIRECTORY)
         find_path(R_INCLUDE_DIRS R.h HINTS "${r_path_root}/include")
