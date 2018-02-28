@@ -38,7 +38,6 @@ struct ClassifyErrorSet {
 
 struct ClassifyResult {
     Span<const Stay> stays;
-    int duration;
 
     GhmCode ghm;
     int16_t main_error;

@@ -1701,7 +1701,6 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
 
             result.ghm = Aggregate(table_set, result.stays,
                                    &agg, &diagnoses, &procedures, &errors);
-            result.duration = agg.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.ghm = ClassifyGhm(agg, &errors);
