@@ -1497,8 +1497,7 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
 void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
                       GhsCode ghs, SupplementCounters<int16_t> *out_counters)
 {
-    if (UNLIKELY(ghs == GhsCode(9999)))
-         return;
+    DebugAssert(ghs != GhsCode(9999));
 
     int16_t igs2_src_adjust;
     if (agg.age >= 80) {
@@ -1651,8 +1650,7 @@ int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death)
 
 int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
 {
-    if (ghs == GhsCode(9999))
-        return 0;
+    DebugAssert(ghs != GhsCode(9999));
 
     // FIXME: Add some kind of error flag when this happens?
     const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
@@ -1665,10 +1663,10 @@ int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
     return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
 }
 
-int PriceSupplements(const ClassifyAggregate &agg, const SupplementCounters<int16_t> &days,
+int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> &days,
                      SupplementCounters<int32_t> *out_prices)
 {
-    const SupplementCounters<int32_t> &prices = agg.index->SupplementPrices(Sector::Public);
+    const SupplementCounters<int32_t> &prices = index.SupplementPrices(Sector::Public);
 
     int total_cents = 0;
     for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
@@ -1713,12 +1711,14 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
         result.main_error = errors.main_error;
 
         result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
-        CountSupplements(agg, authorization_set, result.ghs, &result.supplement_days);
+        if (result.ghs != GhsCode(9999)) {
+            CountSupplements(agg, authorization_set, result.ghs, &result.supplement_days);
 
-        result.ghs_price_cents = PriceGhs(agg, result.ghs);
-        result.price_cents = result.ghs_price_cents +
-                             PriceSupplements(agg, result.supplement_days,
-                                              &result.supplement_cents);
+            result.ghs_price_cents = PriceGhs(agg, result.ghs);
+            int supplement_cents = PriceSupplements(*agg.index, result.supplement_days,
+                                                     &result.supplement_cents);
+            result.price_cents = result.ghs_price_cents + supplement_cents;
+        }
 
         out_results[i] = result;
     }

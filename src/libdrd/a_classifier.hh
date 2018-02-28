@@ -103,7 +103,7 @@ void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
 
 int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death);
 int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs);
-int PriceSupplements(const ClassifyAggregate &agg, const SupplementCounters<int16_t> &days,
+int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> &days,
                      SupplementCounters<int32_t> *out_prices);
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
