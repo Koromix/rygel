@@ -334,6 +334,7 @@ union SupplementCounters {
         T nn3;
         T rep;
     } st;
+    StaticAssert(SIZE(values) == SIZE(st));
 
     template <typename U>
     SupplementCounters &operator+=(const SupplementCounters<U> &other)
