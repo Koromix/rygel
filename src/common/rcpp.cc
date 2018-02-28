@@ -71,10 +71,7 @@ Date RcppDateVector::operator[](int idx) const
         case Type::Date: {
             double value = u.num[idx];
             if (value != NA_REAL) {
-                Rcpp::Datetime dt = value * 86400;
-                Date date((int16_t)dt.getYear(), (int8_t)dt.getMonth(), (int8_t)dt.getDay());
-                DebugAssert(date.IsValid());
-                return date;
+                return Date::FromCalendarDate((int)value);
             }
         } break;
     }

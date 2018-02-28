@@ -1837,6 +1837,7 @@ union Date {
 
     static Date FromString(const char *date_str, bool strict = true);
     static Date FromJulianDays(int days);
+    static Date FromCalendarDate(int days) { return Date::FromJulianDays(days + 2440588); }
 
     bool IsValid() const
     {
