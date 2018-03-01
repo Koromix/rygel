@@ -512,18 +512,22 @@ Options:
     if (!catalog_set || !catalog_set->ghm_roots.len)
         return 1;
 
+    LogInfo("Computing constraints");
+    Async async;
     for (Size i = 0; i < table_set->indexes.len; i++) {
-        LogInfo("Computing constraints %1 / %2", i + 1, table_set->indexes.len);
 
         // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
         if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
             HashTable<GhmCode, GhmConstraint> *constraints = constraints_set.AppendDefault();
-            if (!ComputeGhmConstraints(table_set->indexes[i], constraints))
-                return 1;
+            async.AddTask([=]() {
+                return ComputeGhmConstraints(table_set->indexes[i], constraints);
+            });
         }
 
         index_to_constraints.Append(&constraints_set[constraints_set.len - 1]);
     }
+    if (!async.Sync())
+        return 1;
 
 #if !defined(NDEBUG) && defined(_WIN32)
     if (!UpdateStaticResources())
@@ -539,6 +543,7 @@ Options:
         return 1;
     DEFER { MHD_stop_daemon(daemon); };
 
+    LogInfo("Listening");
 #ifdef _WIN32
     (void)getchar();
 #else
