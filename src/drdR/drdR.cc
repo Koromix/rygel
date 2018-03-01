@@ -182,17 +182,27 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.birthdate = stays.birthdate[i];
             {
                 const char *sex_str = stays.sex[i];
-                if (TestStr(sex_str, "1") || TestStr(sex_str, "M") || TestStr(sex_str, "m") ||
-                        TestStr(sex_str, "H") || TestStr(sex_str, "h")) {
-                    stay.sex = Sex::Male;
-                } else if (TestStr(sex_str, "2") || TestStr(sex_str, "F") || TestStr(sex_str, "f")) {
-                    stay.sex = Sex::Female;
+                if (LIKELY(sex_str[0] && !sex_str[1])) {
+                    switch (sex_str[0]) {
+                        case '1':
+                        case 'm':
+                        case 'M':
+                        case 'h':
+                        case 'H': { stay.sex = Sex::Male; } break;
+                        case '2':
+                        case 'f':
+                        case 'F': { stay.sex = Sex::Female; } break;
+
+                        default: {
+                            LogError("Unexpected sex '%1' on row %2", sex_str, i + 1);
+                            stay.error_mask |= (int)Stay::Error::MalformedSex;
+                        } break;
+                    }
                 } else if (stays.sex[i] != NA_STRING) {
-                    LogError("Unexpected sex '%1' on row %2", sex_str, i + 1);
-                    stay.error_mask &= (int)Stay::Error::MalformedSex;
+                    LogError("Malformed sex string '%1' on row %2", sex_str, i + 1);
+                    stay.error_mask |= (int)Stay::Error::MalformedSex;
                 }
             }
-
             stay.entry.date = stays.entry_date[i];
             if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(i))) {
                 stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
