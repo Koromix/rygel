@@ -94,13 +94,13 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector bill_id;
         Rcpp::IntegerVector stay_id;
         RcppDateVector birthdate;
-        Rcpp::CharacterVector sex;
+        Rcpp::IntegerVector sex;
         RcppDateVector entry_date;
-        Rcpp::CharacterVector entry_mode;
+        Rcpp::IntegerVector entry_mode;
         Rcpp::CharacterVector entry_origin;
         RcppDateVector exit_date;
-        Rcpp::CharacterVector exit_mode;
-        Rcpp::CharacterVector exit_destination;
+        Rcpp::IntegerVector exit_mode;
+        Rcpp::IntegerVector exit_destination;
         Rcpp::IntegerVector unit;
         Rcpp::IntegerVector bed_authorization;
         Rcpp::IntegerVector session_count;
@@ -191,45 +191,30 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(i))) {
                 stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
             }
-            {
-                const char *sex_str = stays.sex[i];
-                if (LIKELY(sex_str[0] && !sex_str[1])) {
-                    switch (sex_str[0]) {
-                        case '1':
-                        case 'm':
-                        case 'M':
-                        case 'h':
-                        case 'H': { stay.sex = Sex::Male; } break;
-                        case '2':
-                        case 'f':
-                        case 'F': { stay.sex = Sex::Female; } break;
+            switch (stays.sex[i]) {
+                case 1: { stay.sex = Sex::Male; } break;
+                case 2: { stay.sex = Sex::Female; } break;
 
-                        default: {
-                            LogError("Unexpected sex '%1' on row %2", sex_str, i + 1);
-                            stay.error_mask |= (int)Stay::Error::MalformedSex;
-                        } break;
+                default: {
+                    if (stays.sex[i] != NA_INTEGER) {
+                        LogError("Unexpected sex %1 on row %2", stays.sex[i], i + 1);
+                        stay.error_mask |= (int)Stay::Error::MalformedSex;
                     }
-                } else if (stays.sex[i] != NA_STRING) {
-                    LogError("Malformed sex string '%1' on row %2", sex_str, i + 1);
-                    stay.error_mask |= (int)Stay::Error::MalformedSex;
-                }
+                } break;
             }
             stay.entry.date = stays.entry_date[i];
             if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(i))) {
                 stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
             }
-            ParseEntryExitCharacter(stays.entry_mode[i], Stay::Error::MalformedEntryMode,
-                                    &stay.entry.mode, &stay.error_mask);
+            stay.entry.mode = (char)('0' + stays.entry_mode[i]);
             ParseEntryExitCharacter(stays.entry_origin[i], Stay::Error::MalformedEntryOrigin,
                                     &stay.entry.origin, &stay.error_mask);
             stay.exit.date = stays.exit_date[i];
             if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(i))) {
                 stay.error_mask |= (int)Stay::Error::MalformedExitDate;
             }
-            ParseEntryExitCharacter(stays.exit_mode[i], Stay::Error::MalformedExitMode,
-                                    &stay.exit.mode, &stay.error_mask);
-            ParseEntryExitCharacter(stays.exit_destination[i], Stay::Error::MalformedExitDestination,
-                                    &stay.exit.destination, &stay.error_mask);
+            stay.exit.mode = (char)('0' + stays.exit_mode[i]);
+            stay.exit.destination = (char)('0' + GetRcppOptionalValue(stays.exit_destination, i, -'0'));
 
             stay.unit.number = (int16_t)GetRcppOptionalValue(stays.unit, i, 0);
             stay.bed_authorization = (int8_t)GetRcppOptionalValue(stays.bed_authorization, i, 0);
