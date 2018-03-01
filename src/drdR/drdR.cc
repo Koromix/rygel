@@ -112,6 +112,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::CharacterVector main_diagnosis;
         Rcpp::CharacterVector linked_diagnosis;
     } stays;
+    int stays_nrow = stays_df.nrow();
 
     struct {
         Rcpp::IntegerVector id;
@@ -119,6 +120,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::CharacterVector diag;
         Rcpp::CharacterVector type;
     } diagnoses;
+    int diagnoses_nrow = diagnoses_df.nrow();
 
     struct {
         Rcpp::IntegerVector id;
@@ -129,6 +131,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector count;
         RcppDateVector date;
     } procedures;
+    int procedures_nrow = procedures_df.nrow();
 
     LogDebug("Start");
 
@@ -177,12 +180,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     StaySet stay_set;
     {
-        stay_set.stays.Reserve(stays_df.nrow());
-        stay_set.store.diagnoses.Reserve(diagnoses_df.nrow() + 2 * stays_df.nrow());
-        stay_set.store.procedures.Reserve(procedures_df.nrow());
+        stay_set.stays.Reserve(stays_nrow);
+        stay_set.store.diagnoses.Reserve(diagnoses_nrow + 2 * stays_nrow);
+        stay_set.store.procedures.Reserve(procedures_nrow);
 
         int j = 0, k = 0;
-        for (int i = 0; i < stays_df.nrow(); i++) {
+        for (int i = 0; i < stays_nrow; i++) {
             Stay stay = {};
 
             stay.bill_id = GetRcppOptionalValue(stays.bill_id, i, 0);
@@ -226,7 +229,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
             if (diagnoses.type.size()) {
-                while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
+                while (j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]) {
                     if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
                         continue;
 
@@ -284,7 +287,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     }
                 }
 
-                while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
+                while (j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]) {
                     if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
                         continue;
 
@@ -307,7 +310,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.diagnoses.len = stay_set.store.diagnoses.end() - stay.diagnoses.ptr;
 
             stay.procedures.ptr = stay_set.store.procedures.end();
-            while (k < procedures_df.nrow() && procedures.id[k] == stays.id[i]) {
+            while (k < procedures_nrow && procedures.id[k] == stays.id[i]) {
                 ProcedureRealisation proc = {};
 
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
