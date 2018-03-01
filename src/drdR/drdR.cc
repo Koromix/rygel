@@ -150,12 +150,21 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     LOAD_OPTIONAL_COLUMN(stays, gestational_age);
     LOAD_OPTIONAL_COLUMN(stays, newborn_weight);
     LOAD_OPTIONAL_COLUMN(stays, last_menstrual_period);
-    LOAD_OPTIONAL_COLUMN(stays, main_diagnosis);
-    LOAD_OPTIONAL_COLUMN(stays, linked_diagnosis);
 
     diagnoses.id = diagnoses_df["id"];
     diagnoses.diag = diagnoses_df["diag"];
-    LOAD_OPTIONAL_COLUMN(diagnoses, type);
+    if (diagnoses_df.containsElementNamed("type")) {
+        diagnoses.type = diagnoses_df["type"];
+
+        if (stays_df.containsElementNamed("main_diagnosis") ||
+                stays_df.containsElementNamed("linked_diagnosis")) {
+            LogError("Columns 'main_diagnosis' and 'linked_diagnosis' are ignored when the "
+                     "diagnoses table has a type column");
+        }
+    } else {
+        stays.main_diagnosis = stays_df["main_diagnosis"];
+        stays.linked_diagnosis = stays_df["linked_diagnosis"];
+    }
 
     procedures.id = procedures_df["id"];
     procedures.proc = procedures_df["code"];
@@ -228,31 +237,79 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.newborn_weight = (int16_t)stays.newborn_weight[i];
             stay.last_menstrual_period = stays.last_menstrual_period[i];
 
-            stay.main_diagnosis =
-                DiagnosisCode::FromString(GetRcppOptionalValue(stays.main_diagnosis, i, ""));
-            stay.linked_diagnosis =
-                DiagnosisCode::FromString(GetRcppOptionalValue(stays.linked_diagnosis, i, ""));
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
-            while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
-                DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j]);
+            if (diagnoses.type.size()) {
+                while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
+                    if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
+                        continue;
 
-                if (diagnoses.type.size()) {
-                    const char *type = diagnoses.type[j];
-                    if (TestStr(type, "P") || TestStr(type, "p")) {
-                        stay.main_diagnosis = diag;
-                    } else if (TestStr(type, "R") || TestStr(type, "r")) {
-                        stay.linked_diagnosis = diag;
-                    } else if (TestStr(type, "S") || TestStr(type, "s")) {
-                        stay_set.store.diagnoses.Append(diag);
-                    } else if (TestStr(type, "D") || TestStr(type, "d")) {
-                        // Ignore documentary diagnoses
+                    DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
+                    const char *type_str = diagnoses.type[j];
+
+                    if (LIKELY(type_str[0] && !type_str[1])) {
+                        switch (type_str[0]) {
+                            case 'p':
+                            case 'P': {
+                                stay.main_diagnosis = diag;
+                                if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+                                    stay.error_mask |= (int)Stay::Error::MalformedMainDiagnosis;
+                                }
+                            } break;
+                            case 'r':
+                            case 'R': {
+                                stay.linked_diagnosis = diag;
+                                if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+                                    stay.error_mask |= (int)Stay::Error::MalformedLinkedDiagnosis;
+                                }
+                            } break;
+                            case 's':
+                            case 'S': {
+                                if (LIKELY(diag.IsValid())) {
+                                    stay_set.store.diagnoses.Append(diag);
+                                } else {
+                                    stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                                }
+                            } break;
+                            case 'd':
+                            case 'D': { /* Ignore documentary diagnoses */ } break;
+
+                            default: {
+                                LogError("Unexpected diagnosis type '%1' on row %2", type_str, i + 1);
+                            } break;
+                        }
                     } else {
-                        LogError("Unexpected diagnosis type '%1' on row %2", type, j + 1);
+                        LogError("Malformed diagnosis type '%1' on row %2", type_str, i + 1);
                     }
-                } else {
-                    stay_set.store.diagnoses.Append(diag);
+
+                    j++;
                 }
-                j++;
+            } else {
+                if (LIKELY(stays.main_diagnosis[i] != NA_STRING)) {
+                    stay.main_diagnosis = DiagnosisCode::FromString(stays.main_diagnosis[i], false);
+                    if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+                        stay.error_mask |= (int)Stay::Error::MalformedMainDiagnosis;
+                    }
+                }
+                if (stays.linked_diagnosis[i] != NA_STRING) {
+                    stay.linked_diagnosis = DiagnosisCode::FromString(stays.linked_diagnosis[i], false);
+                    if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
+                        stay.error_mask |= (int)Stay::Error::MalformedLinkedDiagnosis;
+                    }
+                }
+
+                while (j < diagnoses_df.nrow() && diagnoses.id[j] == stays.id[i]) {
+                    if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
+                        continue;
+
+                    DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
+                    if (UNLIKELY(!diag.IsValid())) {
+                        stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                    }
+
+                    stay_set.store.diagnoses.Append(diag);
+
+                    j++;
+                }
             }
             if (stay.main_diagnosis.IsValid()) {
                 stay_set.store.diagnoses.Append(stay.main_diagnosis);
