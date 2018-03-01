@@ -6,10 +6,12 @@ summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents',
                      'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
                      'price_cents')
 
-classify <- function(classifier_set, stays, diagnoses, procedures) {
-    stays <- stays[order(stays$id),]
-    diagnoses <- diagnoses[order(diagnoses$id),]
-    procedures <- procedures[order(procedures$id),]
+classify <- function(classifier_set, stays, diagnoses, procedures, sorted = FALSE) {
+    if (!sorted) {
+        stays <- stays[order(stays$id),]
+        diagnoses <- diagnoses[order(diagnoses$id),]
+        procedures <- procedures[order(procedures$id),]
+    }
 
     result_set <- .classify(classifier_set, stays, diagnoses, procedures)
 

@@ -175,7 +175,6 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     LogDebug("Copy");
 
-    // TODO: Don't require sorted id column (id)
     StaySet stay_set;
     {
         stay_set.stays.Reserve(stays_df.nrow());
