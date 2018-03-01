@@ -229,7 +229,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
             if (diagnoses.type.size()) {
-                while (j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]) {
+                for (; j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]; j++) {
                     if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
                         continue;
 
@@ -270,8 +270,6 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     } else {
                         LogError("Malformed diagnosis type '%1' on row %2", type_str, i + 1);
                     }
-
-                    j++;
                 }
             } else {
                 if (LIKELY(stays.main_diagnosis[i] != NA_STRING)) {
@@ -287,7 +285,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     }
                 }
 
-                while (j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]) {
+                for (; j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]; j++) {
                     if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
                         continue;
 
@@ -297,8 +295,6 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     }
 
                     stay_set.store.diagnoses.Append(diag);
-
-                    j++;
                 }
             }
             if (stay.main_diagnosis.IsValid()) {
@@ -310,7 +306,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.diagnoses.len = stay_set.store.diagnoses.end() - stay.diagnoses.ptr;
 
             stay.procedures.ptr = stay_set.store.procedures.end();
-            while (k < procedures_nrow && procedures.id[k] == stays.id[i]) {
+            for (; k < procedures_nrow && procedures.id[k] == stays.id[i]; k++) {
                 ProcedureRealisation proc = {};
 
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
@@ -327,7 +323,6 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 proc.date = procedures.date[k];
 
                 stay_set.store.procedures.Append(proc);
-                k++;
             }
             stay.procedures.len = stay_set.store.procedures.end() - stay.procedures.ptr;
 
