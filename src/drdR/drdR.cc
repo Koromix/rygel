@@ -366,6 +366,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         Rcpp::IntegerVector bill_id(results.len);
         Rcpp::CharacterVector exit_date(results.len);
         Rcpp::CharacterVector ghm(results.len);
+        Rcpp::IntegerVector main_error(results.len);
         Rcpp::IntegerVector ghs(results.len);
         Rcpp::NumericVector ghs_cents(results.len);
         Rcpp::NumericVector rea_cents(results.len);
@@ -393,6 +394,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             bill_id[i] = result.stays[0].bill_id;
             exit_date[i] = Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date).ptr;
             ghm[i] = Fmt(buf, "%1", result.ghm).ptr;
+            main_error[i] = result.main_error;
             ghs[i] = result.ghs.number;
             ghs_cents[i] = (double)result.ghs_price_cents;
             rea_cents[i] = result.supplement_cents.st.rea;
@@ -421,7 +423,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         retval = Rcpp::DataFrame::create(
             Rcpp::Named("bill_id") = bill_id,
             Rcpp::Named("exit_date") = exit_date,
-            Rcpp::Named("ghm") = ghm,
+            Rcpp::Named("ghm") = ghm, Rcpp::Named("main_error") = main_error,
             Rcpp::Named("ghs") = ghs, Rcpp::Named("ghs_cents") = ghs_cents,
             Rcpp::Named("rea_cents") = rea_cents, Rcpp::Named("reasi_cents") = reasi_cents,
             Rcpp::Named("si_cents") = si_cents, Rcpp::Named("src_cents") = src_cents,
