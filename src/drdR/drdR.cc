@@ -188,6 +188,9 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.bill_id = GetRcppOptionalValue(stays.bill_id, i, 0);
             stay.stay_id = GetRcppOptionalValue(stays.stay_id, i, 0);
             stay.birthdate = stays.birthdate[i];
+            if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(i))) {
+                stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
+            }
             {
                 const char *sex_str = stays.sex[i];
                 if (LIKELY(sex_str[0] && !sex_str[1])) {
