@@ -36,20 +36,20 @@ union GhmRootCode {
 
     static GhmRootCode FromString(const char *str, bool errors = true)
     {
-        GhmRootCode code = {};
+        GhmRootCode code;
 
-        if (str[0]) {
+        {
             int end_offset = 0;
             sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
                    &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
             if (end_offset != 5 || str[5]) {
-                if (errors) {
+                if (errors && str[0]) {
                     LogError("Malformed GHM root code '%1'", str);
                 }
                 code.value = 0;
             }
-            code.parts.type = UpperAscii(code.parts.type);
         }
+        code.parts.type = UpperAscii(code.parts.type);
 
         return code;
     }
@@ -91,22 +91,22 @@ union GhmCode {
 
     static GhmCode FromString(const char *str, bool errors = true)
     {
-        GhmCode code = {};
+        GhmCode code;
 
-        if (str[0]) {
+        {
             int end_offset = 0;
             sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
                    &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
             if (end_offset == 5 && (!str[5] || !str[6])) {
                 code.parts.mode = str[5];
             } else {
-                if (errors) {
+                if (errors && str[0]) {
                     LogError("Malformed GHM code '%1'", str);
                 }
                 code.value = 0;
             }
-            code.parts.type = UpperAscii(code.parts.type);
         }
+        code.parts.type = UpperAscii(code.parts.type);
 
         return code;
     }
