@@ -64,9 +64,13 @@ union GhmRootCode {
     {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
-        // TODO: Improve Fmt API to avoid snprintf everywhere
-        snprintf(arg.value.str_buf, SIZE(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16,
-                 parts.cmd, parts.type, parts.seq);
+        // We need to be fast here (at least for drdR), sprintf is too slow
+        arg.value.str_buf[0] = (char)('0' + (parts.cmd / 10));
+        arg.value.str_buf[1] = (char)('0' + (parts.cmd % 10));
+        arg.value.str_buf[2] = parts.type;
+        arg.value.str_buf[3] = (char)('0' + (parts.seq / 10));
+        arg.value.str_buf[4] = (char)('0' + (parts.seq % 10));
+        arg.value.str_buf[5] = 0;
         return arg;
     }
 };
@@ -128,8 +132,14 @@ union GhmCode {
     {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
-        snprintf(arg.value.str_buf, SIZE(arg.value.str_buf), "%02" PRIu8 "%c%02" PRIu16 "%c",
-                 parts.cmd, parts.type, parts.seq, parts.mode);
+        // We need to be fast here (at least for drdR), sprintf is too slow
+        arg.value.str_buf[0] = (char)('0' + (parts.cmd / 10));
+        arg.value.str_buf[1] = (char)('0' + (parts.cmd % 10));
+        arg.value.str_buf[2] = parts.type;
+        arg.value.str_buf[3] = (char)('0' + (parts.seq / 10));
+        arg.value.str_buf[4] = (char)('0' + (parts.seq % 10));
+        arg.value.str_buf[5] = parts.mode;
+        arg.value.str_buf[6] = 0;
         return arg;
     }
 
