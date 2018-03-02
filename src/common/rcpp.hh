@@ -39,36 +39,149 @@ extern bool rcpp_log_missing_messages;
 void DumpRcppWarnings();
 void StopRcppWithLastMessage() __attribute__((noreturn));
 
-class RcppDateVector {
+template <typename T>
+class RVector {
+    SEXP xp = nullptr;
+    Span<T> span = {};
+
+public:
+    RVector() = default;
+    RVector(SEXP xp)
+        : xp(xp ? PROTECT(xp) : nullptr)
+    {
+        if (xp) {
+            if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
+                span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+            }
+        }
+    }
+    ~RVector()
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+    }
+
+    RVector(const RVector &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    RVector &operator=(const RVector &other)
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = PROTECT(other.xp);
+        span = other.span;
+        return *this;
+    }
+
+    Size Len() const { return span.len; }
+
+    static bool IsNA(T value)
+    {
+        if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
+            return value == NA_INTEGER;
+        } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
+            return ISNA(value);
+        }
+    }
+
+    T &operator[](Size idx) { return span[idx]; }
+    const T &operator[](Size idx) const { return span[idx]; }
+};
+
+template <>
+class RVector<const char *> {
+    SEXP xp = nullptr;
+    Span<SEXP> span = {};
+
+public:
+
+    RVector() = default;
+    RVector(SEXP xp)
+        : xp(xp ? PROTECT(xp) : nullptr)
+    {
+        if (xp) {
+            span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+        }
+    }
+    ~RVector()
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+    }
+
+    RVector(const RVector &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    RVector &operator=(const RVector &other)
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = PROTECT(other.xp);
+        span = other.span;
+        return *this;
+    }
+
+    Size Len() const { return span.len; }
+
+    static bool IsNA(const char *value) { return value == CHAR(NA_STRING); }
+
+    const char *operator[](Size idx) const { return CHAR(span[idx]); }
+};
+
+template <>
+class RVector<Date> {
     enum class Type {
         Character,
         Date
     };
 
+    SEXP xp = nullptr;
     Type type;
-    struct { // A union would be better, but it's a pain with non-PODs
-        Rcpp::CharacterVector chr;
-        Rcpp::NumericVector num;
+    union {
+        Span<SEXP> chr;
+        Span<double> num;
     } u;
 
 public:
-    Size len = 0;
+    RVector() = default;
+    RVector(SEXP xp);
+    ~RVector()
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+    }
 
-    RcppDateVector() = default;
-    RcppDateVector(SEXP xp);
+    RVector(const RVector &other) : xp(PROTECT(other.xp)), type(other.type)
+    {
+        u.chr = other.u.chr;
+    }
+    RVector &operator=(const RVector &other)
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = PROTECT(other.xp);
+        type = other.type;
+        u.chr = other.u.chr;
+        return *this;
+    }
 
-    bool IsNA(int idx) const;
-    Date operator[](int idx) const;
+    Size Len() const { return u.chr.len; }
+
+    static bool IsNA(Date date) { return date.value == INT32_MAX; }
+
+    Date operator[](Size idx) const;
     Date Value() const;
 };
 
-template <int RTYPE, typename T>
-T GetRcppOptionalValue(Rcpp::Vector<RTYPE> &vec, R_xlen_t i, T default_value)
+template <typename T, typename U>
+U GetRcppOptionalValue(T &vec, Size idx, U default_value)
 {
-    if (UNLIKELY(i >= vec.size()))
+    if (UNLIKELY(idx >= vec.Len()))
         return default_value;
-    auto value = vec[i % vec.size()];
-    if (vec.is_na(value))
+    auto value = vec[idx];
+    if (vec.IsNA(value))
         return default_value;
     return value;
 }

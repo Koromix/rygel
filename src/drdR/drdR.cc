@@ -10,13 +10,12 @@ struct ClassifierSet {
     AuthorizationSet authorization_set;
 };
 
-static inline void ParseEntryExitCharacter(SEXP sexp, Stay::Error error_flag,
+static inline void ParseEntryExitCharacter(const char *str, Stay::Error error_flag,
                                            char *out_dest, uint32_t *out_error_mask)
 {
-    const char *str = CHAR(sexp);
     if (str[0] && !str[1]) {
         *out_dest = UpperAscii(str[0]);
-    } else if (sexp != NA_STRING) {
+    } else if (str != CHAR(NA_STRING)) {
         *out_error_mask |= (uint32_t)error_flag;
     }
 }
@@ -89,47 +88,47 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
 
     struct {
-        Rcpp::IntegerVector id;
+        RVector<const int> id;
 
-        Rcpp::IntegerVector bill_id;
-        Rcpp::IntegerVector stay_id;
-        RcppDateVector birthdate;
-        Rcpp::IntegerVector sex;
-        RcppDateVector entry_date;
-        Rcpp::IntegerVector entry_mode;
-        Rcpp::CharacterVector entry_origin;
-        RcppDateVector exit_date;
-        Rcpp::IntegerVector exit_mode;
-        Rcpp::IntegerVector exit_destination;
-        Rcpp::IntegerVector unit;
-        Rcpp::IntegerVector bed_authorization;
-        Rcpp::IntegerVector session_count;
-        Rcpp::IntegerVector igs2;
-        Rcpp::IntegerVector gestational_age;
-        Rcpp::IntegerVector newborn_weight;
-        RcppDateVector last_menstrual_period;
+        RVector<int> bill_id;
+        RVector<int> stay_id;
+        RVector<Date> birthdate;
+        RVector<int> sex;
+        RVector<Date> entry_date;
+        RVector<int> entry_mode;
+        RVector<const char *> entry_origin;
+        RVector<Date> exit_date;
+        RVector<int> exit_mode;
+        RVector<int> exit_destination;
+        RVector<int> unit;
+        RVector<int> bed_authorization;
+        RVector<int> session_count;
+        RVector<int> igs2;
+        RVector<int> gestational_age;
+        RVector<int> newborn_weight;
+        RVector<Date> last_menstrual_period;
 
-        Rcpp::CharacterVector main_diagnosis;
-        Rcpp::CharacterVector linked_diagnosis;
+        RVector<const char *> main_diagnosis;
+        RVector<const char *> linked_diagnosis;
     } stays;
     int stays_nrow = stays_df.nrow();
 
     struct {
-        Rcpp::IntegerVector id;
+        RVector<int> id;
 
-        Rcpp::CharacterVector diag;
-        Rcpp::CharacterVector type;
+        RVector<const char *> diag;
+        RVector<const char *> type;
     } diagnoses;
     int diagnoses_nrow = diagnoses_df.nrow();
 
     struct {
-        Rcpp::IntegerVector id;
+        RVector<int> id;
 
-        Rcpp::CharacterVector proc;
-        Rcpp::IntegerVector phase;
-        Rcpp::IntegerVector activity;
-        Rcpp::IntegerVector count;
-        RcppDateVector date;
+        RVector<const char *> proc;
+        RVector<int> phase;
+        RVector<int> activity;
+        RVector<int> count;
+        RVector<Date> date;
     } procedures;
     int procedures_nrow = procedures_df.nrow();
 
@@ -191,7 +190,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.bill_id = GetRcppOptionalValue(stays.bill_id, i, 0);
             stay.stay_id = GetRcppOptionalValue(stays.stay_id, i, 0);
             stay.birthdate = stays.birthdate[i];
-            if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(i))) {
+            if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(stay.birthdate))) {
                 stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
             }
             switch (stays.sex[i]) {
@@ -206,14 +205,14 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 } break;
             }
             stay.entry.date = stays.entry_date[i];
-            if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(i))) {
+            if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(stay.entry.date))) {
                 stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
             }
             stay.entry.mode = (char)('0' + stays.entry_mode[i]);
             ParseEntryExitCharacter(stays.entry_origin[i], Stay::Error::MalformedEntryOrigin,
                                     &stay.entry.origin, &stay.error_mask);
             stay.exit.date = stays.exit_date[i];
-            if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(i))) {
+            if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(stay.exit.date))) {
                 stay.error_mask |= (int)Stay::Error::MalformedExitDate;
             }
             stay.exit.mode = (char)('0' + stays.exit_mode[i]);
@@ -228,9 +227,9 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             stay.last_menstrual_period = stays.last_menstrual_period[i];
 
             stay.diagnoses.ptr = stay_set.store.diagnoses.end();
-            if (diagnoses.type.size()) {
+            if (diagnoses.type.Len()) {
                 for (; j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]; j++) {
-                    if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
+                    if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                         continue;
 
                     DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
@@ -272,13 +271,13 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                     }
                 }
             } else {
-                if (LIKELY(stays.main_diagnosis[i] != NA_STRING)) {
+                if (LIKELY(stays.main_diagnosis[i] != CHAR(NA_STRING))) {
                     stay.main_diagnosis = DiagnosisCode::FromString(stays.main_diagnosis[i], false);
                     if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
                         stay.error_mask |= (int)Stay::Error::MalformedMainDiagnosis;
                     }
                 }
-                if (stays.linked_diagnosis[i] != NA_STRING) {
+                if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
                     stay.linked_diagnosis = DiagnosisCode::FromString(stays.linked_diagnosis[i], false);
                     if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                         stay.error_mask |= (int)Stay::Error::MalformedLinkedDiagnosis;
@@ -286,7 +285,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 }
 
                 for (; j < diagnoses_nrow && diagnoses.id[j] == stays.id[i]; j++) {
-                    if (UNLIKELY(diagnoses.diag[j] == NA_STRING))
+                    if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                         continue;
 
                     DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
@@ -434,7 +433,7 @@ Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
     SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = RcppDateVector(date_xp).Value();
+    Date date = RVector<Date>(date_xp).Value();
     if (!date.value)
         StopRcppWithLastMessage();
 
@@ -476,7 +475,7 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
     SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = RcppDateVector(date_xp).Value();
+    Date date = RVector<Date>(date_xp).Value();
     if (!date.value)
         StopRcppWithLastMessage();
 

@@ -33,55 +33,47 @@ void StopRcppWithLastMessage()
     }
 }
 
-RcppDateVector::RcppDateVector(SEXP xp)
+RVector<Date>::RVector(SEXP xp)
+    : xp(PROTECT(xp))
 {
-    if (Rcpp::is<Rcpp::CharacterVector>(xp)) {
+    if (Rf_isString(xp)) {
         type = Type::Character;
-        u.chr = xp;
-        len = (Size)u.chr.size();
-    } else if ((Rcpp::is<Rcpp::NumericVector>(xp) || Rcpp::is<Rcpp::IntegerVector>(xp)) &&
-               Rf_inherits(xp, "Date")) {
+        u.chr = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+    } else if (Rf_isReal(xp) && Rf_inherits(xp, "Date")) {
         type = Type::Date;
-        u.num = xp;
-        len = (Size)u.num.size();
+        u.num = MakeSpan(REAL(xp), Rf_xlength(xp));
     } else {
         Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
     }
 }
 
-bool RcppDateVector::IsNA(int idx) const
+Date RVector<Date>::operator[](Size idx) const
 {
-    switch (type) {
-        case Type::Character: { return u.chr[idx].get() == NA_STRING; } break;
-        case Type::Date: { return u.num[idx] == NA_REAL; } break;
-    }
-    DebugAssert(false);
-}
+    Date date;
+    date.value = INT32_MAX; // NA
 
-Date RcppDateVector::operator[](int idx) const
-{
     switch (type) {
         case Type::Character: {
-            SEXP str = u.chr[idx].get();
+            SEXP str = u.chr[idx];
             if (str != NA_STRING) {
-                return Date::FromString(CHAR(str));
+                date = Date::FromString(CHAR(str));
             }
         } break;
 
         case Type::Date: {
             double value = u.num[idx];
             if (value != NA_REAL) {
-                return Date::FromCalendarDate((int)value);
+                date = Date::FromCalendarDate((int)value);
             }
         } break;
     }
 
-    return {};
+    return date;
 }
 
-Date RcppDateVector::Value() const
+Date RVector<Date>::Value() const
 {
-    if (UNLIKELY(len != 1)) {
+    if (UNLIKELY(Len() != 1)) {
         LogError("Date or date-like vector must have one value (no more, no less)");
         StopRcppWithLastMessage();
     }
