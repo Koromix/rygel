@@ -63,6 +63,17 @@ public:
             }
         }
     }
+    RVectorView(Size len)
+    {
+        if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
+            xp = PROTECT(Rf_allocVector(INTSXP, len));
+            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
+            xp = PROTECT(Rf_allocVector(REALSXP, len));
+            span = MakeSpan(REAL(xp), Rf_xlength(xp));
+        }
+    }
+
     ~RVectorView()
     {
         if (xp) {
@@ -104,7 +115,6 @@ class RVectorView<const char *> {
     Span<SEXP> span = {};
 
 public:
-
     RVectorView() = default;
     RVectorView(SEXP xp)
         : xp(xp ? PROTECT(xp) : nullptr)
@@ -116,6 +126,8 @@ public:
             span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
         }
     }
+    RVectorView(Size len) : RVectorView(Rf_allocVector(STRSXP, len)) {}
+
     ~RVectorView()
     {
         if (xp) {
@@ -171,6 +183,17 @@ class RVectorView<Date> {
 public:
     RVectorView() = default;
     RVectorView(SEXP xp);
+    RVectorView(Size len)
+    {
+        xp = PROTECT(Rf_allocVector(REALSXP, len));
+        type = Type::Date;
+        u.num = MakeSpan(REAL(xp), len);
+
+        SEXP cls = PROTECT(Rf_mkString("Date"));
+        DEFER { UNPROTECT(1); };
+        Rf_setAttrib(xp, R_ClassSymbol, cls);
+    }
+
     ~RVectorView()
     {
         if (xp) {
@@ -214,3 +237,58 @@ U RGetOptionalValue(T &vec, Size idx, U default_value)
         return default_value;
     return value;
 }
+
+class RListBuilder {
+    struct Column {
+        const char *name;
+        SEXP vec;
+    };
+
+    LocalArray<Column, 64> columns;
+
+public:
+    void Add(const char *name, SEXP vec)
+    {
+        columns.Append({name, vec});
+    }
+
+    SEXP BuildList()
+    {
+        SEXP list = PROTECT(Rf_allocVector(VECSXP, columns.len));
+        DEFER { UNPROTECT(1); };
+
+        {
+            SEXP names = PROTECT(Rf_allocVector(STRSXP, columns.len));
+            DEFER { UNPROTECT(1); };
+            for (Size i = 0; i < columns.len; i++) {
+                SET_STRING_ELT(names, i, Rf_mkChar(columns[i].name));
+                SET_VECTOR_ELT(list, i, columns[i].vec);
+            }
+            Rf_setAttrib(list, R_NamesSymbol, names);
+        }
+
+        return list;
+    }
+
+    SEXP BuildDataFrame()
+    {
+        if (columns.len >= 2) {
+            Size nrow = Rf_xlength(columns[0].vec);
+            for (Size i = 1; i < columns.len; i++) {
+                if (Rf_xlength(columns[i].vec) != nrow) {
+                    Rcpp::stop("Cannot create data.frame from vectors of unequal length");
+                }
+            }
+        }
+
+        SEXP df = BuildList();
+
+        {
+            SEXP cls = PROTECT(Rf_mkString("data.frame"));
+            DEFER { UNPROTECT(1); };
+            Rf_setAttrib(df, R_ClassSymbol, cls);
+        }
+
+        return df;
+    }
+};

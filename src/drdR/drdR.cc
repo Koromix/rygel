@@ -62,9 +62,8 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 }
 
 // [[Rcpp::export(name = '.classify')]]
-Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
-                           Rcpp::DataFrame stays_df, Rcpp::DataFrame diagnoses_df,
-                           Rcpp::DataFrame procedures_df)
+SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
+                Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df)
 {
     SETUP_RCPP_LOG_HANDLER();
 
@@ -337,25 +336,26 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
 
     LogDebug("Export");
 
-    Rcpp::DataFrame retval;
+    SEXP results_df;
     {
         char buf[32];
 
-        RVectorView<int> bill_id(Rf_allocVector(INTSXP, results.len));
-        RVectorView<const char *> exit_date(Rf_allocVector(STRSXP, results.len));
-        RVectorView<const char *> ghm(Rf_allocVector(STRSXP, results.len));
-        RVectorView<int> main_error(Rf_allocVector(INTSXP, results.len));
-        RVectorView<int> ghs(Rf_allocVector(INTSXP, results.len));
-        RVectorView<double> ghs_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> rea_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> reasi_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> si_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> src_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> nn1_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> nn2_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> nn3_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> rep_cents(Rf_allocVector(REALSXP, results.len));
-        RVectorView<double> price_cents(Rf_allocVector(REALSXP, results.len));
+        RListBuilder results_builder;
+        RVectorView<int> bill_id(results.len); results_builder.Add("bill_id", bill_id);
+        RVectorView<const char *> exit_date(results.len); results_builder.Add("exit_date", exit_date);
+        RVectorView<const char *> ghm(results.len); results_builder.Add("ghm", ghm);
+        RVectorView<int> main_error(results.len); results_builder.Add("main_error", main_error);
+        RVectorView<int> ghs(results.len); results_builder.Add("ghs", ghs);
+        RVectorView<double> ghs_cents(results.len); results_builder.Add("ghs_cents", ghs_cents);
+        RVectorView<double> rea_cents(results.len); results_builder.Add("rea_cents", rea_cents);
+        RVectorView<double> reasi_cents(results.len); results_builder.Add("reasi_cents", reasi_cents);
+        RVectorView<double> si_cents(results.len); results_builder.Add("si_cents", si_cents);
+        RVectorView<double> src_cents(results.len); results_builder.Add("src_cents", src_cents);
+        RVectorView<double> nn1_cents(results.len); results_builder.Add("nn1_cents", nn1_cents);
+        RVectorView<double> nn2_cents(results.len); results_builder.Add("nn2_cents", nn2_cents);
+        RVectorView<double> nn3_cents(results.len); results_builder.Add("nn3_cents", nn3_cents);
+        RVectorView<double> rep_cents(results.len); results_builder.Add("rep_cents", rep_cents);
+        RVectorView<double> price_cents(results.len); results_builder.Add("price_cents", price_cents);
         // FIXME: Work around Rcpp limitation with 20 columns
         /* Rcpp::IntegerVector rea_days(results.len);
         Rcpp::IntegerVector reasi_days(results.len);
@@ -398,29 +398,14 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             }
         }
 
-        retval = Rcpp::DataFrame::create(
-            Rcpp::Named("bill_id") = bill_id,
-            Rcpp::Named("exit_date") = exit_date,
-            Rcpp::Named("ghm") = ghm, Rcpp::Named("main_error") = main_error,
-            Rcpp::Named("ghs") = ghs, Rcpp::Named("ghs_cents") = ghs_cents,
-            Rcpp::Named("rea_cents") = rea_cents, Rcpp::Named("reasi_cents") = reasi_cents,
-            Rcpp::Named("si_cents") = si_cents, Rcpp::Named("src_cents") = src_cents,
-            Rcpp::Named("nn1_cents") = nn1_cents, Rcpp::Named("nn2_cents") = nn2_cents,
-            Rcpp::Named("nn3_cents") = nn3_cents, Rcpp::Named("rep_cents") = rep_cents,
-            Rcpp::Named("price_cents") = price_cents,
-            /* Rcpp::Named("rea_days") = rea_days, Rcpp::Named("reasi") = reasi_days,
-            Rcpp::Named("si_days") = si_days, Rcpp::Named("src_days") = src_days,
-            Rcpp::Named("nn1_days") = nn1_days, Rcpp::Named("nn2_days") = nn2_days,
-            Rcpp::Named("nn3_days") = nn3_days, Rcpp::Named("rep_days") = rep_days, */
-            Rcpp::Named("stringsAsFactors") = false
-        );
+        results_df = results_builder.BuildDataFrame();
     }
 
     LogDebug("Done");
 
 #undef LOAD_OPTIONAL_COLUMN
 
-    return retval;
+    return results_df;
 }
 
 // [[Rcpp::export(name = 'diagnoses')]]
