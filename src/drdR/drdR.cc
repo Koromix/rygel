@@ -408,7 +408,7 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
 }
 
 // [[Rcpp::export(name = 'diagnoses')]]
-Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
+SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 {
     SETUP_RCPP_LOG_HANDLER();
 
@@ -423,34 +423,30 @@ Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
         RStopWithLastError();
     }
 
-    Rcpp::DataFrame retval;
+    SEXP diagnoses_df;
     {
-        Rcpp::CharacterVector diag(index->diagnoses.len);
-        Rcpp::IntegerVector cmd_m(index->diagnoses.len);
-        Rcpp::IntegerVector cmd_f(index->diagnoses.len);
+        RListBuilder diagnoses_builder;
+        RVectorView<const char *> diag(index->diagnoses.len); diagnoses_builder.Add("diag", diag);
+        RVectorView<int> cmd_m(index->diagnoses.len); diagnoses_builder.Add("cmd_m", cmd_m);
+        RVectorView<int> cmd_f(index->diagnoses.len); diagnoses_builder.Add("cmd_f", cmd_f);
 
         for (Size i = 0; i < index->diagnoses.len; i++) {
             const DiagnosisInfo &info = index->diagnoses[i];
             char buf[32];
 
-            diag[i] = Fmt(buf, "%1", info.diag).ptr;
+            diag.Set(i, Fmt(buf, "%1", info.diag));
             cmd_m[i] = info.Attributes(Sex::Male).cmd;
             cmd_f[i] = info.Attributes(Sex::Female).cmd;
         }
 
-        retval = Rcpp::DataFrame::create(
-            Rcpp::Named("diag") = diag,
-            Rcpp::Named("cmd_m") = cmd_m,
-            Rcpp::Named("cmd_f") = cmd_f,
-            Rcpp::Named("stringsAsFactors") = false
-        );
+        diagnoses_df = diagnoses_builder.BuildDataFrame();
     }
 
-    return retval;
+    return diagnoses_df;
 }
 
 // [[Rcpp::export(name = 'procedures')]]
-Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
+SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 {
     SETUP_RCPP_LOG_HANDLER();
 
@@ -465,19 +461,20 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
         RStopWithLastError();
     }
 
-    Rcpp::DataFrame retval;
+    SEXP procedures_df;
     {
-        Rcpp::CharacterVector proc(index->procedures.len);
-        Rcpp::IntegerVector phase(index->procedures.len);
-        Rcpp::IntegerVector activities(index->procedures.len);
-        Rcpp::newDateVector start_date((int)index->procedures.len);
-        Rcpp::newDateVector end_date((int)index->procedures.len);
+        RListBuilder procedures_builder;
+        RVectorView<const char *> proc(index->procedures.len); procedures_builder.Add("proc", proc);
+        RVectorView<int> phase(index->procedures.len); procedures_builder.Add("phase", phase);
+        RVectorView<int> activities(index->procedures.len); procedures_builder.Add("activities", activities);
+        RVectorView<Date> start_date((int)index->procedures.len); procedures_builder.Add("start_date", start_date);
+        RVectorView<Date> end_date((int)index->procedures.len); procedures_builder.Add("end_date", end_date);
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const ProcedureInfo &info = index->procedures[i];
             char buf[32];
 
-            proc[i] = Fmt(buf, "%1", info.proc).ptr;
+            proc.Set(i, Fmt(buf, "%1", info.proc));
             phase[i] = info.phase;
             {
                 int activities_dec = 0;
@@ -489,23 +486,12 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
                 }
                 activities[i] = activities_dec;
             }
-            start_date[i] = Rcpp::Date((unsigned int)info.limit_dates[0].st.month,
-                                       (unsigned int)info.limit_dates[0].st.day,
-                                       (unsigned int)info.limit_dates[0].st.year);
-            end_date[i] = Rcpp::Date((unsigned int)info.limit_dates[1].st.month,
-                                     (unsigned int)info.limit_dates[1].st.day,
-                                     (unsigned int)info.limit_dates[1].st.year);
+            start_date.Set(i, info.limit_dates[0]);
+            end_date.Set(i, info.limit_dates[1]);
         }
 
-        retval = Rcpp::DataFrame::create(
-            Rcpp::Named("proc") = proc,
-            Rcpp::Named("phase") = phase,
-            Rcpp::Named("activities") = activities,
-            Rcpp::Named("start_date") = start_date,
-            Rcpp::Named("end_date") = end_date,
-            Rcpp::Named("stringsAsFactors") = false
-        );
+        procedures_df = procedures_builder.BuildDataFrame();
     }
 
-    return retval;
+    return procedures_df;
 }
