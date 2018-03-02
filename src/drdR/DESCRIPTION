@@ -7,5 +7,6 @@ Author: Niels Martignene
 Maintainer: Niels Martignene <niels.martignene@protonmail.com>
 Description: Alternative French PMSI Classifier
 License: MPL-2.0
+Imports: data.table (>= 1.10.0)
 Imports: Rcpp (>= 0.12.13)
 LinkingTo: Rcpp

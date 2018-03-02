@@ -40,41 +40,15 @@ compare <- function(summary1, summary2, ...) {
             m[[paste0(col, '.x')]] - m[[paste0(col, '.y')]]
         }, simplify = FALSE))
     )
-    diff <- diff[do.call('order', diff[, groups, drop = FALSE]),]
 
-    class(diff) <- c('drd.result_set', class(diff))
     return(diff)
 }
 
-summary.drd.result_set <- function(result_set, by = list(group = 1)) {
-    by_val <- eval(substitute(by), result_set, parent.frame())
-    if (!is.list(by_val)) {
-        by_val <- list(by_val)
-    }
-    by_val <- lapply(by_val, function(x) rep_len(x, nrow(result_set)))
-
-    if (first(as.character(substitute(by))) == 'list') {
-        names1 <- tail(as.character(substitute(by)), length(by_val))
-        names2 <- names(by_val)
-        if (!is.null(names2)) {
-            by_names <- ifelse(names2 == '', names1, names2)
-        } else {
-            by_names <- names1
-        }
-    } else if (length(by_val) == 1) {
-        by_names <- deparse(substitute(by))
-    } else {
-        by_names <- paste0('Group.', seq_along(by))
-    }
-
-    if (nrow(result_set) > 0) {
-        agg <- aggregate(result_set[, summary_columns], by = by_val, FUN = sum)
-        colnames(agg)[seq_along(by_val)] <- by_names
-        agg <- agg[do.call('order', agg[, by_names, drop = FALSE]),]
-    } else {
-        agg <- data.frame()
-    }
+summary.drd.result_set <- function(result_set, by = NULL) {
+    agg <- setDT(result_set)[, as.list(colSums(.SD[, ..summary_columns])),
+                             keyby = eval(substitute(by))]
+    agg <- setDF(agg)
 
     class(agg) <- c('drd.result_summary', class(agg))
-    return(agg)
+    return (agg)
 }
