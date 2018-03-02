@@ -58,12 +58,15 @@ if(R_FOUND)
         set_target_properties(R_fake_make PROPERTIES OUTPUT_NAME make)
     endif()
 
-    function(R_add_package TARGET DESCRIPTION)
+    function(R_add_package TARGET DESCRIPTION NAMESPACE)
         cmake_parse_arguments("OPT" "RCPP" "" "" ${ARGN})
         set(sources ${OPT_UNPARSED_ARGUMENTS})
 
         if(NOT IS_ABSOLUTE ${DESCRIPTION})
             get_filename_component(DESCRIPTION "${CMAKE_CURRENT_SOURCE_DIR}/${DESCRIPTION}" ABSOLUTE)
+        endif()
+        if(NOT IS_ABSOLUTE ${NAMESPACE})
+            get_filename_component(NAMESPACE "${CMAKE_CURRENT_SOURCE_DIR}/${NAMESPACE}" ABSOLUTE)
         endif()
 
         set(pkg_directory "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_R_package")
@@ -74,13 +77,12 @@ if(R_FOUND)
                                              "${pkg_directory}/DESCRIPTION"
             DEPENDS ${DESCRIPTION}
             VERBATIM)
-        file(WRITE "${pkg_directory}/NAMESPACE" "\
-useDynLib(${TARGET}, .registration = TRUE)\n\
-exportPattern('^[[:alpha:]\\\\._]+')\n")
-        if(OPT_RCPP)
-            file(APPEND "${pkg_directory}/NAMESPACE" "\
-import(Rcpp)\n")
-        endif()
+        add_custom_command(
+            OUTPUT "${pkg_directory}/NAMESPACE"
+            COMMAND ${CMAKE_COMMAND} -E copy "${NAMESPACE}"
+                                             "${pkg_directory}/NAMESPACE"
+            DEPENDS ${NAMESPACE}
+            VERBATIM)
 
         set(rcpp_depends)
         foreach(src ${sources})
@@ -104,7 +106,8 @@ import(Rcpp)\n")
             list(APPEND rcpp_depends ${src_dest})
         endforeach()
 
-        add_library(${TARGET} SHARED ${sources} "${pkg_directory}/DESCRIPTION")
+        add_library(${TARGET} SHARED ${sources}
+                    "${pkg_directory}/DESCRIPTION" "${pkg_directory}/NAMESPACE")
         set_target_properties(${TARGET} PROPERTIES PREFIX ""
                                                    COMPILE_FLAGS "-frtti -fexceptions"
                                                    LINK_FLAGS "-static-libgcc -Wl,-allow-multiple-definition")

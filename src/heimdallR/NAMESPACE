@@ -1,0 +1,3 @@
+useDynLib(heimdallR, .registration = TRUE)
+exportPattern('^[[:alpha:]\\\\._]+')
+import(Rcpp)
