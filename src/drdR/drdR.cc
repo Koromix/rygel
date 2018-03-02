@@ -10,16 +10,6 @@ struct ClassifierSet {
     AuthorizationSet authorization_set;
 };
 
-static inline void ParseEntryExitCharacter(const char *str, Stay::Error error_flag,
-                                           char *out_dest, uint32_t *out_error_mask)
-{
-    if (str[0] && !str[1]) {
-        *out_dest = UpperAscii(str[0]);
-    } else if (str != CHAR(NA_STRING)) {
-        *out_error_mask |= (uint32_t)error_flag;
-    }
-}
-
 // [[Rcpp::export(name = 'drd.options')]]
 SEXP R_Options(SEXP debug = R_NilValue)
 {
@@ -209,8 +199,14 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
             }
             stay.entry.mode = (char)('0' + stays.entry_mode[i]);
-            ParseEntryExitCharacter(stays.entry_origin[i], Stay::Error::MalformedEntryOrigin,
-                                    &stay.entry.origin, &stay.error_mask);
+            {
+                const char *origin_str = stays.entry_origin[i];
+                if (origin_str[0] && !origin_str[1]) {
+                    stay.entry.origin = UpperAscii(origin_str[0]);
+                } else if (origin_str != CHAR(NA_STRING)) {
+                    stay.error_mask |= (uint32_t)Stay::Error::MalformedEntryOrigin;
+                }
+            }
             stay.exit.date = stays.exit_date[i];
             if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(stay.exit.date))) {
                 stay.error_mask |= (int)Stay::Error::MalformedExitDate;
