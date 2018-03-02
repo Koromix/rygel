@@ -81,6 +81,8 @@ public:
         return *this;
     }
 
+    operator SEXP() const { return xp; }
+
     Size Len() const { return span.len; }
 
     static bool IsNA(T value)
@@ -132,11 +134,24 @@ public:
         return *this;
     }
 
+    operator SEXP() const { return xp; }
+
     Size Len() const { return span.len; }
 
     static bool IsNA(const char *value) { return value == CHAR(NA_STRING); }
 
     const char *operator[](Size idx) const { return CHAR(span[idx]); }
+    void Set(Size idx, const char *str)
+    {
+        DebugAssert(idx >= 0 && idx < span.len);
+        SET_STRING_ELT(xp, idx, Rf_mkChar(str));
+    }
+    void Set(Size idx, Span<const char> str)
+    {
+        DebugAssert(idx >= 0 && idx < span.len);
+        DebugAssert(str.len < INT_MAX);
+        SET_STRING_ELT(xp, idx, Rf_mkCharLen(str.ptr, (int)str.len));
+    }
 };
 
 template <>
@@ -178,6 +193,8 @@ public:
         u.chr = other.u.chr;
         return *this;
     }
+
+    operator SEXP() const { return xp; }
 
     Size Len() const { return u.chr.len; }
 

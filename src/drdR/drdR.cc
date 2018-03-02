@@ -341,21 +341,21 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     {
         char buf[32];
 
-        Rcpp::IntegerVector bill_id(results.len);
-        Rcpp::CharacterVector exit_date(results.len);
-        Rcpp::CharacterVector ghm(results.len);
-        Rcpp::IntegerVector main_error(results.len);
-        Rcpp::IntegerVector ghs(results.len);
-        Rcpp::NumericVector ghs_cents(results.len);
-        Rcpp::NumericVector rea_cents(results.len);
-        Rcpp::NumericVector reasi_cents(results.len);
-        Rcpp::NumericVector si_cents(results.len);
-        Rcpp::NumericVector src_cents(results.len);
-        Rcpp::NumericVector nn1_cents(results.len);
-        Rcpp::NumericVector nn2_cents(results.len);
-        Rcpp::NumericVector nn3_cents(results.len);
-        Rcpp::NumericVector rep_cents(results.len);
-        Rcpp::NumericVector price_cents(results.len);
+        RVectorView<int> bill_id(Rf_allocVector(INTSXP, results.len));
+        RVectorView<const char *> exit_date(Rf_allocVector(STRSXP, results.len));
+        RVectorView<const char *> ghm(Rf_allocVector(STRSXP, results.len));
+        RVectorView<int> main_error(Rf_allocVector(INTSXP, results.len));
+        RVectorView<int> ghs(Rf_allocVector(INTSXP, results.len));
+        RVectorView<double> ghs_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> rea_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> reasi_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> si_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> src_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> nn1_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> nn2_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> nn3_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> rep_cents(Rf_allocVector(REALSXP, results.len));
+        RVectorView<double> price_cents(Rf_allocVector(REALSXP, results.len));
         // FIXME: Work around Rcpp limitation with 20 columns
         /* Rcpp::IntegerVector rea_days(results.len);
         Rcpp::IntegerVector reasi_days(results.len);
@@ -370,8 +370,8 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
             const ClassifyResult &result = results[i];
 
             bill_id[i] = result.stays[0].bill_id;
-            exit_date[i] = Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date).ptr;
-            ghm[i] = Fmt(buf, "%1", result.ghm).ptr;
+            exit_date.Set(i, Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date));
+            ghm.Set(i, Fmt(buf, "%1", result.ghm));
             main_error[i] = result.main_error;
             ghs[i] = result.ghs.number;
             ghs_cents[i] = (double)result.ghs_price_cents;
