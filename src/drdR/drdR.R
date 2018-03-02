@@ -8,9 +8,18 @@ summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents',
 
 classify <- function(classifier_set, stays, diagnoses, procedures, sorted = FALSE) {
     if (!sorted) {
-        stays <- stays[order(stays$id),]
-        diagnoses <- diagnoses[order(diagnoses$id),]
-        procedures <- procedures[order(procedures$id),]
+        sort_by_id <- function(df) {
+            if (is.data.table(df)) {
+                df <- setorder(data.table(df), id)
+            } else {
+                df <- df[order(df$id),]
+            }
+            return (df)
+        }
+
+        stays <- sort_by_id(stays)
+        diagnoses <- sort_by_id(diagnoses)
+        procedures <- sort_by_id(procedures)
     }
 
     result_set <- .classify(classifier_set, stays, diagnoses, procedures)
