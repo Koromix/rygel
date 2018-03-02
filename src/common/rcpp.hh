@@ -153,6 +153,7 @@ public:
     static bool IsNA(const char *value) { return value == CHAR(NA_STRING); }
 
     const char *operator[](Size idx) const { return CHAR(span[idx]); }
+
     void Set(Size idx, const char *str)
     {
         DebugAssert(idx >= 0 && idx < span.len);
@@ -225,6 +226,8 @@ public:
 
     Date operator[](Size idx) const;
     Date Value() const;
+
+    void Set(Size idx, Date date);
 };
 
 template <typename T, typename U>

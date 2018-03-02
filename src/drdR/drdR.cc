@@ -342,7 +342,7 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
 
         RListBuilder results_builder;
         RVectorView<int> bill_id(results.len); results_builder.Add("bill_id", bill_id);
-        RVectorView<const char *> exit_date(results.len); results_builder.Add("exit_date", exit_date);
+        RVectorView<Date> exit_date(results.len); results_builder.Add("exit_date", exit_date);
         RVectorView<const char *> ghm(results.len); results_builder.Add("ghm", ghm);
         RVectorView<int> main_error(results.len); results_builder.Add("main_error", main_error);
         RVectorView<int> ghs(results.len); results_builder.Add("ghs", ghs);
@@ -369,7 +369,7 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
             const ClassifyResult &result = results[i];
 
             bill_id[i] = result.stays[0].bill_id;
-            exit_date.Set(i, Fmt(buf, "%1", result.stays[result.stays.len - 1].exit.date));
+            exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
             ghm.Set(i, Fmt(buf, "%1", result.ghm));
             main_error[i] = result.main_error;
             ghs[i] = result.ghs.number;

@@ -80,3 +80,20 @@ Date RVectorView<Date>::Value() const
 
     return (*this)[0];
 }
+
+void RVectorView<Date>::Set(Size idx, Date date)
+{
+    switch (type) {
+        case Type::Character: {
+            char buf[32];
+            Fmt(buf, "%1", date);
+
+            DebugAssert(idx >= 0 && idx < u.chr.len);
+            SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
+        } break;
+
+        case Type::Date: {
+            u.num[idx] = date.ToCalendarDate();
+        } break;
+    }
+}
