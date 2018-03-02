@@ -52,10 +52,10 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 
     if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
             !set->table_set.indexes.len)
-        StopRcppWithLastMessage();
+        RStopWithLastError();
     if (!InitAuthorizationSet(data_dirs2, authorization_filename2,
                               &set->authorization_set))
-        StopRcppWithLastMessage();
+        RStopWithLastError();
 
     set_guard.disable();
     return Rcpp::XPtr<ClassifierSet>(set, true);
@@ -78,47 +78,47 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
 
     struct {
-        RVector<const int> id;
+        RVectorView<const int> id;
 
-        RVector<int> bill_id;
-        RVector<int> stay_id;
-        RVector<Date> birthdate;
-        RVector<int> sex;
-        RVector<Date> entry_date;
-        RVector<int> entry_mode;
-        RVector<const char *> entry_origin;
-        RVector<Date> exit_date;
-        RVector<int> exit_mode;
-        RVector<int> exit_destination;
-        RVector<int> unit;
-        RVector<int> bed_authorization;
-        RVector<int> session_count;
-        RVector<int> igs2;
-        RVector<int> gestational_age;
-        RVector<int> newborn_weight;
-        RVector<Date> last_menstrual_period;
+        RVectorView<int> bill_id;
+        RVectorView<int> stay_id;
+        RVectorView<Date> birthdate;
+        RVectorView<int> sex;
+        RVectorView<Date> entry_date;
+        RVectorView<int> entry_mode;
+        RVectorView<const char *> entry_origin;
+        RVectorView<Date> exit_date;
+        RVectorView<int> exit_mode;
+        RVectorView<int> exit_destination;
+        RVectorView<int> unit;
+        RVectorView<int> bed_authorization;
+        RVectorView<int> session_count;
+        RVectorView<int> igs2;
+        RVectorView<int> gestational_age;
+        RVectorView<int> newborn_weight;
+        RVectorView<Date> last_menstrual_period;
 
-        RVector<const char *> main_diagnosis;
-        RVector<const char *> linked_diagnosis;
+        RVectorView<const char *> main_diagnosis;
+        RVectorView<const char *> linked_diagnosis;
     } stays;
     int stays_nrow = stays_df.nrow();
 
     struct {
-        RVector<int> id;
+        RVectorView<int> id;
 
-        RVector<const char *> diag;
-        RVector<const char *> type;
+        RVectorView<const char *> diag;
+        RVectorView<const char *> type;
     } diagnoses;
     int diagnoses_nrow = diagnoses_df.nrow();
 
     struct {
-        RVector<int> id;
+        RVectorView<int> id;
 
-        RVector<const char *> proc;
-        RVector<int> phase;
-        RVector<int> activity;
-        RVector<int> count;
-        RVector<Date> date;
+        RVectorView<const char *> proc;
+        RVectorView<int> phase;
+        RVectorView<int> activity;
+        RVectorView<int> count;
+        RVectorView<Date> date;
     } procedures;
     int procedures_nrow = procedures_df.nrow();
 
@@ -177,8 +177,8 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
         for (int i = 0; i < stays_nrow; i++) {
             Stay stay = {};
 
-            stay.bill_id = GetRcppOptionalValue(stays.bill_id, i, 0);
-            stay.stay_id = GetRcppOptionalValue(stays.stay_id, i, 0);
+            stay.bill_id = RGetOptionalValue(stays.bill_id, i, 0);
+            stay.stay_id = RGetOptionalValue(stays.stay_id, i, 0);
             stay.birthdate = stays.birthdate[i];
             if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(stay.birthdate))) {
                 stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
@@ -212,12 +212,12 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 stay.error_mask |= (int)Stay::Error::MalformedExitDate;
             }
             stay.exit.mode = (char)('0' + stays.exit_mode[i]);
-            stay.exit.destination = (char)('0' + GetRcppOptionalValue(stays.exit_destination, i, -'0'));
+            stay.exit.destination = (char)('0' + RGetOptionalValue(stays.exit_destination, i, -'0'));
 
-            stay.unit.number = (int16_t)GetRcppOptionalValue(stays.unit, i, 0);
-            stay.bed_authorization = (int8_t)GetRcppOptionalValue(stays.bed_authorization, i, 0);
-            stay.session_count = (int16_t)GetRcppOptionalValue(stays.session_count, i, 0);
-            stay.igs2 = (int16_t)GetRcppOptionalValue(stays.igs2, i, 0);
+            stay.unit.number = (int16_t)RGetOptionalValue(stays.unit, i, 0);
+            stay.bed_authorization = (int8_t)RGetOptionalValue(stays.bed_authorization, i, 0);
+            stay.session_count = (int16_t)RGetOptionalValue(stays.session_count, i, 0);
+            stay.igs2 = (int16_t)RGetOptionalValue(stays.igs2, i, 0);
             stay.gestational_age = (int16_t)stays.gestational_age[i];
             stay.newborn_weight = (int16_t)stays.newborn_weight[i];
             stay.last_menstrual_period = stays.last_menstrual_period[i];
@@ -305,7 +305,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                 ProcedureRealisation proc = {};
 
                 proc.proc = ProcedureCode::FromString(procedures.proc[k]);
-                proc.phase = (int8_t)GetRcppOptionalValue(procedures.phase, k, 0);
+                proc.phase = (int8_t)RGetOptionalValue(procedures.phase, k, 0);
                 {
                     int activities_dec = procedures.activity[k];
                     while (activities_dec) {
@@ -314,7 +314,7 @@ Rcpp::DataFrame R_Classify(SEXP classifier_set_xp,
                         proc.activities |= (uint8_t)(1 << activity);
                     }
                 }
-                proc.count = (int16_t)GetRcppOptionalValue(procedures.count, k, 1);
+                proc.count = (int16_t)RGetOptionalValue(procedures.count, k, 1);
                 proc.date = procedures.date[k];
 
                 stay_set.store.procedures.Append(proc);
@@ -429,14 +429,14 @@ Rcpp::DataFrame R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
     SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = RVector<Date>(date_xp).Value();
+    Date date = RVectorView<Date>(date_xp).Value();
     if (!date.value)
-        StopRcppWithLastMessage();
+        RStopWithLastError();
 
     const TableIndex *index = classifier_set->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        StopRcppWithLastMessage();
+        RStopWithLastError();
     }
 
     Rcpp::DataFrame retval;
@@ -471,14 +471,14 @@ Rcpp::DataFrame R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
     SETUP_RCPP_LOG_HANDLER();
 
     const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
-    Date date = RVector<Date>(date_xp).Value();
+    Date date = RVectorView<Date>(date_xp).Value();
     if (!date.value)
-        StopRcppWithLastMessage();
+        RStopWithLastError();
 
     const TableIndex *index = classifier_set->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        StopRcppWithLastMessage();
+        RStopWithLastError();
     }
 
     Rcpp::DataFrame retval;

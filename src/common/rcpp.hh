@@ -32,21 +32,21 @@ extern bool rcpp_log_missing_messages;
         } \
     }); \
     DEFER { \
-        DumpRcppWarnings(); \
+        RDumpWarnings(); \
         PopLogHandler(); \
     };
 
-void DumpRcppWarnings();
-void StopRcppWithLastMessage() __attribute__((noreturn));
+void RDumpWarnings();
+void RStopWithLastError() __attribute__((noreturn));
 
 template <typename T>
-class RVector {
+class RVectorView {
     SEXP xp = nullptr;
     Span<T> span = {};
 
 public:
-    RVector() = default;
-    RVector(SEXP xp)
+    RVectorView() = default;
+    RVectorView(SEXP xp)
         : xp(xp ? PROTECT(xp) : nullptr)
     {
         if (xp) {
@@ -55,15 +55,15 @@ public:
             }
         }
     }
-    ~RVector()
+    ~RVectorView()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVector(const RVector &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    RVector &operator=(const RVector &other)
+    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    RVectorView &operator=(const RVectorView &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -89,29 +89,29 @@ public:
 };
 
 template <>
-class RVector<const char *> {
+class RVectorView<const char *> {
     SEXP xp = nullptr;
     Span<SEXP> span = {};
 
 public:
 
-    RVector() = default;
-    RVector(SEXP xp)
+    RVectorView() = default;
+    RVectorView(SEXP xp)
         : xp(xp ? PROTECT(xp) : nullptr)
     {
         if (xp) {
             span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
         }
     }
-    ~RVector()
+    ~RVectorView()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVector(const RVector &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    RVector &operator=(const RVector &other)
+    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    RVectorView &operator=(const RVectorView &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -129,7 +129,7 @@ public:
 };
 
 template <>
-class RVector<Date> {
+class RVectorView<Date> {
     enum class Type {
         Character,
         Date
@@ -143,20 +143,20 @@ class RVector<Date> {
     } u;
 
 public:
-    RVector() = default;
-    RVector(SEXP xp);
-    ~RVector()
+    RVectorView() = default;
+    RVectorView(SEXP xp);
+    ~RVectorView()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVector(const RVector &other) : xp(PROTECT(other.xp)), type(other.type)
+    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), type(other.type)
     {
         u.chr = other.u.chr;
     }
-    RVector &operator=(const RVector &other)
+    RVectorView &operator=(const RVectorView &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -176,7 +176,7 @@ public:
 };
 
 template <typename T, typename U>
-U GetRcppOptionalValue(T &vec, Size idx, U default_value)
+U RGetOptionalValue(T &vec, Size idx, U default_value)
 {
     if (UNLIKELY(idx >= vec.Len()))
         return default_value;

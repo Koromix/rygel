@@ -8,7 +8,7 @@
 DynamicQueue<const char *> rcpp_log_messages;
 bool rcpp_log_missing_messages = false;
 
-void DumpRcppWarnings()
+void RDumpWarnings()
 {
     for (const char *msg: rcpp_log_messages) {
         Rcpp::warning(msg);
@@ -21,19 +21,19 @@ void DumpRcppWarnings()
     }
 }
 
-void StopRcppWithLastMessage()
+void RStopWithLastError()
 {
     if (rcpp_log_messages.len) {
         std::string error_msg = rcpp_log_messages[rcpp_log_messages.len - 1];
         rcpp_log_messages.RemoveLast();
-        DumpRcppWarnings();
+        RDumpWarnings();
         Rcpp::stop(error_msg);
     } else {
         Rcpp::stop("Unknown error");
     }
 }
 
-RVector<Date>::RVector(SEXP xp)
+RVectorView<Date>::RVectorView(SEXP xp)
     : xp(PROTECT(xp))
 {
     if (Rf_isString(xp)) {
@@ -47,7 +47,7 @@ RVector<Date>::RVector(SEXP xp)
     }
 }
 
-Date RVector<Date>::operator[](Size idx) const
+Date RVectorView<Date>::operator[](Size idx) const
 {
     Date date;
     date.value = INT32_MAX; // NA
@@ -71,11 +71,11 @@ Date RVector<Date>::operator[](Size idx) const
     return date;
 }
 
-Date RVector<Date>::Value() const
+Date RVectorView<Date>::Value() const
 {
     if (UNLIKELY(Len() != 1)) {
         LogError("Date or date-like vector must have one value (no more, no less)");
-        StopRcppWithLastMessage();
+        RStopWithLastError();
     }
 
     return (*this)[0];
