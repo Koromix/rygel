@@ -275,21 +275,34 @@ public:
 
     SEXP BuildDataFrame()
     {
+        Size nrow;
         if (columns.len >= 2) {
-            Size nrow = Rf_xlength(columns[0].vec);
+            nrow = Rf_xlength(columns[0].vec);
             for (Size i = 1; i < columns.len; i++) {
                 if (Rf_xlength(columns[i].vec) != nrow) {
                     Rcpp::stop("Cannot create data.frame from vectors of unequal length");
                 }
             }
+        } else {
+            nrow = 0;
         }
 
         SEXP df = BuildList();
 
+        // Class
         {
             SEXP cls = PROTECT(Rf_mkString("data.frame"));
             DEFER { UNPROTECT(1); };
             Rf_setAttrib(df, R_ClassSymbol, cls);
+        }
+
+        // Compact row names
+        {
+            SEXP row_names = PROTECT(Rf_allocVector(INTSXP, 2));
+            DEFER { UNPROTECT(1); };
+            INTEGER(row_names)[0] = NA_INTEGER;
+            INTEGER(row_names)[1] = (int)nrow;
+            Rf_setAttrib(df, R_RowNamesSymbol, row_names);
         }
 
         return df;
