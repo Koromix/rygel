@@ -356,15 +356,14 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
         RVectorView<double> nn3_cents(results.len); results_builder.Add("nn3_cents", nn3_cents);
         RVectorView<double> rep_cents(results.len); results_builder.Add("rep_cents", rep_cents);
         RVectorView<double> price_cents(results.len); results_builder.Add("price_cents", price_cents);
-        // FIXME: Work around Rcpp limitation with 20 columns
-        /* Rcpp::IntegerVector rea_days(results.len);
-        Rcpp::IntegerVector reasi_days(results.len);
-        Rcpp::IntegerVector si_days(results.len);
-        Rcpp::IntegerVector src_days(results.len);
-        Rcpp::IntegerVector nn1_days(results.len);
-        Rcpp::IntegerVector nn2_days(results.len);
-        Rcpp::IntegerVector nn3_days(results.len);
-        Rcpp::IntegerVector rep_days(results.len); */
+        RVectorView<int> rea_days(results.len); results_builder.Add("rea_days", rea_days);
+        RVectorView<int> reasi_days(results.len); results_builder.Add("reasi_days", reasi_days);
+        RVectorView<int> si_days(results.len); results_builder.Add("si_days", si_days);
+        RVectorView<int> src_days(results.len); results_builder.Add("src_days", src_days);
+        RVectorView<int> nn1_days(results.len); results_builder.Add("nn1_days", nn1_days);
+        RVectorView<int> nn2_days(results.len); results_builder.Add("nn2_days", nn2_days);
+        RVectorView<int> nn3_days(results.len); results_builder.Add("nn3_days", nn3_days);
+        RVectorView<int> rep_days(results.len); results_builder.Add("rep_days", rep_days);
 
         for (Size i = 0; i < results.len; i++) {
             const ClassifyResult &result = results[i];
@@ -384,14 +383,14 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
             nn3_cents[i] = result.supplement_cents.st.nn3;
             rep_cents[i] = result.supplement_cents.st.rep;
             price_cents[i] = result.price_cents;
-            /* rea_days[i] = result.supplement_days.st.rea;
+            rea_days[i] = result.supplement_days.st.rea;
             reasi_days[i] = result.supplement_days.st.reasi;
             si_days[i] = result.supplement_days.st.si;
             src_days[i] = result.supplement_days.st.src;
             nn1_days[i] = result.supplement_days.st.nn1;
             nn2_days[i] = result.supplement_days.st.nn2;
             nn3_days[i] = result.supplement_days.st.nn3;
-            rep_days[i] = result.supplement_days.st.rep; */
+            rep_days[i] = result.supplement_days.st.rep;
 
             if (i % 1024 == 0) {
                 Rcpp::checkUserInterrupt();
