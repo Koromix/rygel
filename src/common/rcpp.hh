@@ -51,7 +51,15 @@ public:
     {
         if (xp) {
             if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
+                if (TYPEOF(xp) != INTSXP) {
+                    Rcpp::stop("Expected integer vector");
+                }
                 span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+            } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
+                if (TYPEOF(xp) != REALSXP) {
+                    Rcpp::stop("Expected numeric vector");
+                }
+                span = MakeSpan(REAL(xp), Rf_xlength(xp));
             }
         }
     }
@@ -100,6 +108,9 @@ public:
         : xp(xp ? PROTECT(xp) : nullptr)
     {
         if (xp) {
+            if (TYPEOF(xp) != STRSXP) {
+                Rcpp::stop("Expected character vector");
+            }
             span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
         }
     }
@@ -152,7 +163,8 @@ public:
         }
     }
 
-    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), type(other.type)
+    RVectorView(const RVectorView &other)
+        : xp(PROTECT(other.xp)), type(other.type)
     {
         u.chr = other.u.chr;
     }
