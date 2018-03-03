@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libheimdall/libheimdall.hh"
-#include "../common/rcpp.hh"
+#include "../common/Rcc.hh"
 #include <thread>
 
 struct Instance {
@@ -21,7 +21,7 @@ struct Instance {
 // [[Rcpp::export(name = 'heimdall.options')]]
 SEXP R_Options(SEXP debug = R_NilValue)
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     if (!Rf_isNull(debug)) {
         enable_debug = Rcpp::as<bool>(debug);
@@ -35,7 +35,7 @@ SEXP R_Options(SEXP debug = R_NilValue)
 // [[Rcpp::export(name = 'heimdall')]]
 SEXP R_Heimdall()
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = new Instance;
     DEFER_N(inst_guard) { delete inst; };
@@ -120,7 +120,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 void R_HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
                          Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -133,7 +133,7 @@ void R_HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame valu
 void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
                            Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -165,7 +165,7 @@ void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame va
 void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame periods_df,
                           Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -185,7 +185,7 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
 // [[Rcpp::export(name = 'heimdall.add_concepts')]]
 void R_HeimdallAddConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -219,7 +219,7 @@ void R_HeimdallAddConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
 // [[Rcpp::export(name = 'heimdall.run')]]
 void R_HeimdallRun(SEXP inst_xp)
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -239,7 +239,7 @@ void R_HeimdallRun(SEXP inst_xp)
 // [[Rcpp::export(name = 'heimdall.run_sync')]]
 void R_HeimdallRunSync(SEXP inst_xp)
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
@@ -261,7 +261,7 @@ Instance::~Instance() { /* StopInstance(this); */ }
 // [[Rcpp::export(name = 'heimdall.stop')]]
 void R_HeimdallStop(SEXP inst_xp)
 {
-    SETUP_RCPP_LOG_HANDLER();
+    RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
     StopInstance(inst);

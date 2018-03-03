@@ -4,8 +4,8 @@
 
 find_package(R)
 if(R_FOUND)
-    set(DRDR_SRC ../common/rcpp.cc
-                 ../common/rcpp.hh
+    set(DRDR_SRC ../common/Rcc.cc
+                 ../common/Rcc.hh
                  drdR.cc
                  drdR.R)
 

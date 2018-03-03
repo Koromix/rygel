@@ -8,8 +8,8 @@ endif()
 
 find_package(R)
 if(R_FOUND)
-    set(HEIMDALLR_SRC ../common/rcpp.cc
-                      ../common/rcpp.hh
+    set(HEIMDALLR_SRC ../common/Rcc.cc
+                      ../common/Rcc.hh
                       heimdallR.cc
                       heimdallR.R)
 

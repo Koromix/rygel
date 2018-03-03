@@ -7,19 +7,19 @@
 #include "kutil.hh"
 #include <Rcpp.h>
 
-extern DynamicQueue<const char *> rcpp_log_messages;
-extern bool rcpp_log_missing_messages;
+extern DynamicQueue<const char *> rcc_log_messages;
+extern bool rcc_log_missing_messages;
 
-#define SETUP_RCPP_LOG_HANDLER() \
+#define RCC_SETUP_LOG_HANDLER() \
     PushLogHandler([](LogLevel level, const char *ctx, \
                       const char *fmt, Span<const FmtArg> args) { \
         switch (level) { \
             case LogLevel::Error: { \
-                const char *msg = FmtFmt(rcpp_log_messages.bucket_allocator, fmt, args).ptr; \
-                rcpp_log_messages.Append(msg); \
-                if (rcpp_log_messages.len > 100) { \
-                    rcpp_log_messages.RemoveFirst(); \
-                    rcpp_log_missing_messages = true; \
+                const char *msg = FmtFmt(rcc_log_messages.bucket_allocator, fmt, args).ptr; \
+                rcc_log_messages.Append(msg); \
+                if (rcc_log_messages.len > 100) { \
+                    rcc_log_messages.RemoveFirst(); \
+                    rcc_log_missing_messages = true; \
                 } \
             } break; \
  \
@@ -32,21 +32,21 @@ extern bool rcpp_log_missing_messages;
         } \
     }); \
     DEFER { \
-        RDumpWarnings(); \
+        Rcc_DumpWarnings(); \
         PopLogHandler(); \
     };
 
-void RDumpWarnings();
-void RStopWithLastError() __attribute__((noreturn));
+void Rcc_DumpWarnings();
+void Rcc_StopWithLastError() __attribute__((noreturn));
 
 template <typename T>
-class RVectorView {
+class Rcc_Vector {
     SEXP xp = nullptr;
     Span<T> span = {};
 
 public:
-    RVectorView() = default;
-    RVectorView(SEXP xp)
+    Rcc_Vector() = default;
+    Rcc_Vector(SEXP xp)
         : xp(xp ? PROTECT(xp) : nullptr)
     {
         if (xp) {
@@ -63,7 +63,7 @@ public:
             }
         }
     }
-    RVectorView(Size len)
+    Rcc_Vector(Size len)
     {
         if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
             xp = PROTECT(Rf_allocVector(INTSXP, len));
@@ -74,15 +74,15 @@ public:
         }
     }
 
-    ~RVectorView()
+    ~Rcc_Vector()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    RVectorView &operator=(const RVectorView &other)
+    Rcc_Vector(const Rcc_Vector &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    Rcc_Vector &operator=(const Rcc_Vector &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -110,13 +110,13 @@ public:
 };
 
 template <>
-class RVectorView<const char *> {
+class Rcc_Vector<const char *> {
     SEXP xp = nullptr;
     Span<SEXP> span = {};
 
 public:
-    RVectorView() = default;
-    RVectorView(SEXP xp)
+    Rcc_Vector() = default;
+    Rcc_Vector(SEXP xp)
         : xp(xp ? PROTECT(xp) : nullptr)
     {
         if (xp) {
@@ -126,17 +126,17 @@ public:
             span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
         }
     }
-    RVectorView(Size len) : RVectorView(Rf_allocVector(STRSXP, len)) {}
+    Rcc_Vector(Size len) : Rcc_Vector(Rf_allocVector(STRSXP, len)) {}
 
-    ~RVectorView()
+    ~Rcc_Vector()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVectorView(const RVectorView &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    RVectorView &operator=(const RVectorView &other)
+    Rcc_Vector(const Rcc_Vector &other) : xp(PROTECT(other.xp)), span(other.span) {}
+    Rcc_Vector &operator=(const Rcc_Vector &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -168,7 +168,7 @@ public:
 };
 
 template <>
-class RVectorView<Date> {
+class Rcc_Vector<Date> {
     enum class Type {
         Character,
         Date
@@ -182,9 +182,9 @@ class RVectorView<Date> {
     } u;
 
 public:
-    RVectorView() { u.chr = {}; }
-    RVectorView(SEXP xp);
-    RVectorView(Size len)
+    Rcc_Vector() { u.chr = {}; }
+    Rcc_Vector(SEXP xp);
+    Rcc_Vector(Size len)
     {
         xp = PROTECT(Rf_allocVector(REALSXP, len));
         type = Type::Date;
@@ -195,19 +195,19 @@ public:
         Rf_setAttrib(xp, R_ClassSymbol, cls);
     }
 
-    ~RVectorView()
+    ~Rcc_Vector()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    RVectorView(const RVectorView &other)
+    Rcc_Vector(const Rcc_Vector &other)
         : xp(PROTECT(other.xp)), type(other.type)
     {
         u.chr = other.u.chr;
     }
-    RVectorView &operator=(const RVectorView &other)
+    Rcc_Vector &operator=(const Rcc_Vector &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -231,7 +231,7 @@ public:
 };
 
 template <typename T, typename U>
-U RGetOptionalValue(T &vec, Size idx, U default_value)
+U Rcc_GetOptional(T &vec, Size idx, U default_value)
 {
     if (UNLIKELY(idx >= vec.Len()))
         return default_value;
@@ -241,7 +241,7 @@ U RGetOptionalValue(T &vec, Size idx, U default_value)
     return value;
 }
 
-class RListBuilder {
+class Rcc_ListBuilder {
     struct Variable {
         const char *name;
         SEXP vec;
@@ -250,10 +250,10 @@ class RListBuilder {
     LocalArray<Variable, 64> variables;
 
 public:
-    RListBuilder() = default;
+    Rcc_ListBuilder() = default;
 
-    RListBuilder(const RListBuilder &) = delete;
-    RListBuilder &operator=(const RListBuilder &) = delete;
+    Rcc_ListBuilder(const Rcc_ListBuilder &) = delete;
+    Rcc_ListBuilder &operator=(const Rcc_ListBuilder &) = delete;
 
     SEXP Add(const char *name, SEXP vec)
     {
@@ -315,18 +315,18 @@ public:
     }
 };
 
-class RDataFrameBuilder {
-    RListBuilder list_builder;
+class Rcc_DataFrameBuilder {
+    Rcc_ListBuilder list_builder;
     Size len;
 
 public:
-    RDataFrameBuilder(Size len) : len(len) {}
+    Rcc_DataFrameBuilder(Size len) : len(len) {}
 
-    RDataFrameBuilder(const RDataFrameBuilder &) = delete;
-    RDataFrameBuilder &operator=(const RDataFrameBuilder &) = delete;
+    Rcc_DataFrameBuilder(const Rcc_DataFrameBuilder &) = delete;
+    Rcc_DataFrameBuilder &operator=(const Rcc_DataFrameBuilder &) = delete;
 
     template <typename T>
-    RVectorView<T> Add(const char *name) { return list_builder.Add(name, RVectorView<T>(len)); }
+    Rcc_Vector<T> Add(const char *name) { return list_builder.Add(name, Rcc_Vector<T>(len)); }
 
     SEXP Build() { return list_builder.BuildDataFrame(); }
 };

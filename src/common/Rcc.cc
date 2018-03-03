@@ -3,37 +3,37 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "kutil.hh"
-#include "rcpp.hh"
+#include "Rcc.hh"
 
-DynamicQueue<const char *> rcpp_log_messages;
-bool rcpp_log_missing_messages = false;
+DynamicQueue<const char *> rcc_log_messages;
+bool rcc_log_missing_messages = false;
 
-void RDumpWarnings()
+void Rcc_DumpWarnings()
 {
-    for (const char *msg: rcpp_log_messages) {
+    for (const char *msg: rcc_log_messages) {
         Rcpp::warning(msg);
     }
-    rcpp_log_messages.Clear();
+    rcc_log_messages.Clear();
 
-    if (rcpp_log_missing_messages) {
+    if (rcc_log_missing_messages) {
         Rcpp::warning("There were too many warnings, some have been lost");
-        rcpp_log_missing_messages = false;
+        rcc_log_missing_messages = false;
     }
 }
 
-void RStopWithLastError()
+void Rcc_StopWithLastError()
 {
-    if (rcpp_log_messages.len) {
-        std::string error_msg = rcpp_log_messages[rcpp_log_messages.len - 1];
-        rcpp_log_messages.RemoveLast();
-        RDumpWarnings();
+    if (rcc_log_messages.len) {
+        std::string error_msg = rcc_log_messages[rcc_log_messages.len - 1];
+        rcc_log_messages.RemoveLast();
+        Rcc_DumpWarnings();
         Rcpp::stop(error_msg);
     } else {
         Rcpp::stop("Unknown error");
     }
 }
 
-RVectorView<Date>::RVectorView(SEXP xp)
+Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
     : xp(PROTECT(xp))
 {
     if (Rf_isString(xp)) {
@@ -47,7 +47,7 @@ RVectorView<Date>::RVectorView(SEXP xp)
     }
 }
 
-Date RVectorView<Date>::operator[](Size idx) const
+Date Rcc_Vector<Date>::operator[](Size idx) const
 {
     Date date;
     date.value = INT32_MAX; // NA
@@ -71,17 +71,17 @@ Date RVectorView<Date>::operator[](Size idx) const
     return date;
 }
 
-Date RVectorView<Date>::Value() const
+Date Rcc_Vector<Date>::Value() const
 {
     if (UNLIKELY(Len() != 1)) {
         LogError("Date or date-like vector must have one value (no more, no less)");
-        RStopWithLastError();
+        Rcc_StopWithLastError();
     }
 
     return (*this)[0];
 }
 
-void RVectorView<Date>::Set(Size idx, Date date)
+void Rcc_Vector<Date>::Set(Size idx, Date date)
 {
     switch (type) {
         case Type::Character: {
