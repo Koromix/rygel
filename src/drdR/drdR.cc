@@ -66,8 +66,8 @@ struct StaysProxy {
 
     Rcc_Vector<const int> id;
 
+    Rcc_Vector<int> admin_id;
     Rcc_Vector<int> bill_id;
-    Rcc_Vector<int> stay_id;
     Rcc_Vector<Date> birthdate;
     Rcc_Vector<int> sex;
     Rcc_Vector<Date> entry_date;
@@ -131,8 +131,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             return false;
         prev_id = stays.id[i];
 
+        stay.admin_id = Rcc_GetOptional(stays.admin_id, i, 0);
         stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
-        stay.stay_id = Rcc_GetOptional(stays.stay_id, i, 0);
         stay.birthdate = stays.birthdate[i];
         if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(stay.birthdate))) {
             stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
@@ -315,8 +315,8 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     StaysProxy stays;
     stays.nrow = stays_df.nrow();
     stays.id = stays_df["id"];
+    LOAD_OPTIONAL_COLUMN(stays, admin_id);
     LOAD_OPTIONAL_COLUMN(stays, bill_id);
-    LOAD_OPTIONAL_COLUMN(stays, stay_id);
     stays.birthdate = stays_df["birthdate"];
     stays.sex = stays_df["sex"];
     stays.entry_date = stays_df["entry_date"];

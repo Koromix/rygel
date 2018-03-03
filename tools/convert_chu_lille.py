@@ -71,7 +71,7 @@ def parse_mco_grp(filename):
                 rum['test']['error'] = int_optional(buf.read(3))
                 buf.seek(12, io.SEEK_CUR) # Skip FINESS and RUM version
                 rum['bill_id'] = int(buf.read(20))
-                rum['stay_id'] = int(buf.read(20))
+                rum['admin_id'] = int(buf.read(20))
                 buf.seek(10, io.SEEK_CUR) # Skip RUM identifier
                 rum['birthdate'] = parse_date_optional(buf.read(8))
                 rum['sex'] = int_optional(buf.read(1))
@@ -133,7 +133,7 @@ def parse_mco_rsa(filename):
 
             try:
                 rss = {}
-                rss['stay_id'] = rss_id
+                rss['admin_id'] = rss_id
                 rss['bill_id'] = rss_id
                 buf.seek(9, io.SEEK_CUR) # Skip FINESS
                 rsa_version = int(buf.read(3))

@@ -32,7 +32,7 @@ struct Stay {
         MalformedAssociatedDiagnosis = 1 << 12
     };
 
-    int32_t stay_id;
+    int32_t admin_id;
     int32_t bill_id;
 
     Sex sex;

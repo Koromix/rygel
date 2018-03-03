@@ -175,7 +175,9 @@ public:
     {
         switch (state) {
             case State::StayObject: {
-                if (TestStr(key, "bed_authorization")) {
+                if (TestStr(key, "admin_id")) {
+                    SetInt(value, &stay.admin_id);
+                } else if (TestStr(key, "bed_authorization")) {
                     SetInt(value, &stay.bed_authorization);
                 } else if (TestStr(key, "bill_id")) {
                     SetInt(value, &stay.bill_id);
@@ -329,8 +331,6 @@ public:
                         UnexpectedType(value.type);
                     }
                     SetErrorFlag(Stay::Error::MalformedSex, !valid);
-                } else if (TestStr(key, "stay_id")) {
-                    SetInt(value, &stay.stay_id);
                 } else if (TestStr(key, "unit")) {
                     SetInt(value, &stay.unit.number);
                 } else {
@@ -535,7 +535,7 @@ bool StaySetBuilder::LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *ou
 
     std::stable_sort(set.stays.begin() + stays_len, set.stays.end(),
                      [](const Stay &stay1, const Stay &stay2) {
-        return MultiCmp(stay1.stay_id - stay2.stay_id,
+        return MultiCmp(stay1.admin_id - stay2.admin_id,
                         stay1.bill_id - stay2.bill_id) < 0;
     });
 
