@@ -178,7 +178,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
         stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
         if (diagnoses.type.Len()) {
-            for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
+            for (; j < diagnoses_end && diagnoses.id[j] <= stays.id[i]; j++) {
+                if (UNLIKELY(diagnoses.id[j] < stays.id[i]))
+                    continue;
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
@@ -234,7 +236,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
 
-            for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
+            for (; j < diagnoses_end && diagnoses.id[j] <= stays.id[i]; j++) {
+                if (UNLIKELY(diagnoses.id[j] < stays.id[i]))
+                    continue;
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
@@ -255,7 +259,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.diagnoses.len = out_stay_set->store.diagnoses.end() - stay.diagnoses.ptr;
 
         stay.procedures.ptr = out_stay_set->store.procedures.end();
-        for (; k < procedures_end && procedures.id[k] == stays.id[i]; k++) {
+        for (; k < procedures_end && procedures.id[k] <= stays.id[i]; k++) {
+            if (UNLIKELY(procedures.id[k] < stays.id[i]))
+                continue;
+
             ProcedureRealisation proc = {};
 
             proc.proc = ProcedureCode::FromString(procedures.proc[k]);
