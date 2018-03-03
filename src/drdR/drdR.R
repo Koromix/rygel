@@ -7,7 +7,7 @@ summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_c
                      'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                      'nn3_days', 'rep_days')
 
-classify <- function(classifier_set, stays, diagnoses, procedures,
+classify <- function(classifier, stays, diagnoses, procedures,
                      sorted = FALSE, details = TRUE) {
     if (!sorted) {
         sort_by_id <- function(df) {
@@ -24,7 +24,7 @@ classify <- function(classifier_set, stays, diagnoses, procedures,
         procedures <- sort_by_id(procedures)
     }
 
-    result_set <- .classify(classifier_set, stays, diagnoses, procedures, details)
+    result_set <- .classify(classifier, stays, diagnoses, procedures, details)
 
     class(result_set$summary) <- c('drd.summary', class(result_set$summary))
     if (details) {
