@@ -109,6 +109,8 @@ public:
 
     T &operator[](Size idx) { return span[idx]; }
     const T &operator[](Size idx) const { return span[idx]; }
+
+    void Set(Size idx, T value) { span[idx] = value; }
 };
 
 template <>
@@ -261,6 +263,14 @@ public:
     {
         variables.Append({name, vec});
         return vec;
+    }
+
+    template <typename T>
+    SEXP Set(const char *name, T value)
+    {
+        Rcc_Vector<T> vec(1);
+        vec.Set(0, value);
+        return Add(name, vec);
     }
 
     SEXP BuildList()

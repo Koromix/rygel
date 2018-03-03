@@ -7,7 +7,8 @@ summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_c
                      'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                      'nn3_days', 'rep_days')
 
-classify <- function(classifier_set, stays, diagnoses, procedures, sorted = FALSE) {
+classify <- function(classifier_set, stays, diagnoses, procedures,
+                     sorted = FALSE, details = TRUE) {
     if (!sorted) {
         sort_by_id <- function(df) {
             if (is.data.table(df)) {
@@ -23,17 +24,22 @@ classify <- function(classifier_set, stays, diagnoses, procedures, sorted = FALS
         procedures <- sort_by_id(procedures)
     }
 
-    result_set <- .classify(classifier_set, stays, diagnoses, procedures)
+    result_set <- .classify(classifier_set, stays, diagnoses, procedures, details)
 
+    class(result_set$summary) <- c('drd.summary', class(result_set$summary))
+    if (details) {
+        class(result_set$results) <- c('drd.results', class(result_set$results))
+    }
     class(result_set) <- c('drd.result_set', class(result_set))
-    return(result_set)
+
+    return (result_set)
 }
 
 compare <- function(summary1, summary2, ...) {
-    if (!('drd.result_summary' %in% class(summary1))) {
+    if (!('drd.summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
     }
-    if (!('drd.result_summary' %in% class(summary2))) {
+    if (!('drd.summary' %in% class(summary2))) {
         summary2 <- summary(summary2, ...)
     }
 
@@ -54,11 +60,18 @@ compare <- function(summary1, summary2, ...) {
     return(diff)
 }
 
-summary.drd.result_set <- function(result_set, by = NULL) {
+summary.drd.results <- function(results, by = NULL) {
     agg <- setDT(result_set)[, as.list(colSums(.SD[, ..summary_columns])),
                              keyby = eval(substitute(by))]
     agg <- setDF(agg)
 
-    class(agg) <- c('drd.result_summary', class(agg))
+    class(agg) <- c('drd.summary', class(agg))
     return (agg)
+}
+summary.drd.result_set <- function(result_set, by = NULL) {
+    if (is.null(by)) {
+        return (result_set$summary)
+    } else {
+        return (summary(result_set$results, by = by))
+    }
 }

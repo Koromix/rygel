@@ -5,7 +5,7 @@
 #include "../libdrd/libdrd.hh"
 #include "../common/Rcc.hh"
 
-struct ClassifierSet {
+struct ClassifierInstance {
     TableSet table_set;
     AuthorizationSet authorization_set;
 };
@@ -30,8 +30,8 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 {
     RCC_SETUP_LOG_HANDLER();
 
-    ClassifierSet *set = new ClassifierSet;
-    DEFER_N(set_guard) { delete set; };
+    ClassifierInstance *classifier = new ClassifierInstance;
+    DEFER_N(classifier_guard) { delete classifier; };
 
     HeapArray<const char *> data_dirs2;
     HeapArray<const char *> table_dirs2;
@@ -50,15 +50,15 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
         authorization_filename2 = authorization_filename.as().get_cstring();
     }
 
-    if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &set->table_set) ||
-            !set->table_set.indexes.len)
+    if (!InitTableSet(data_dirs2, table_dirs2, table_filenames2, &classifier->table_set) ||
+            !classifier->table_set.indexes.len)
         Rcc_StopWithLastError();
     if (!InitAuthorizationSet(data_dirs2, authorization_filename2,
-                              &set->authorization_set))
+                              &classifier->authorization_set))
         Rcc_StopWithLastError();
 
-    set_guard.disable();
-    return Rcpp::XPtr<ClassifierSet>(set, true);
+    classifier_guard.disable();
+    return Rcpp::XPtr<ClassifierInstance>(classifier, true);
 }
 
 struct StaysProxy {
@@ -109,7 +109,7 @@ struct ProceduresProxy {
     Rcc_Vector<Date> date;
 };
 
-static void RunClassifier(const ClassifierSet &classifier_set,
+static void RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
@@ -273,15 +273,19 @@ static void RunClassifier(const ClassifierSet &classifier_set,
         stay_set.stays.Append(stay);
     }
 
-    Classify(classifier_set.table_set, classifier_set.authorization_set,
+    Classify(classifier.table_set, classifier.authorization_set,
              stay_set.stays, ClusterMode::BillId, out_results);
 }
 
 // [[Rcpp::export(name = '.classify')]]
-SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
-                Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df)
+SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
+                Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df, bool details = true)
 {
     RCC_SETUP_LOG_HANDLER();
+
+    static const int task_size = 2048;
+
+    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_xp).get();
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
@@ -289,10 +293,6 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
                 (Var).Name = (Var ##_df)[STRINGIFY(Name)]; \
             } \
         } while (false)
-
-    static const int task_size = 2048;
-
-    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
 
     LogDebug("Start");
 
@@ -343,59 +343,90 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
     LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
 
+#undef LOAD_OPTIONAL_COLUMN
+
     LogDebug("Classify");
 
-    HeapArray<HeapArray<ClassifyResult>> results_set;
+    struct ClassifySet {
+        HeapArray<ClassifyResult> results;
+        ClassifySummary summary;
+    };
+    HeapArray<ClassifySet> classify_sets;
+    classify_sets.Reserve((stays.nrow - 1) / task_size + 1);
+
+    Async async;
     {
-        results_set.Reserve((stays.nrow - 1) / task_size + 1);
+        Size stays_offset = 0;
+        Size diagnoses_offset = 0;
+        Size procedures_offset = 0;
+        while (stays_offset < stays.nrow) {
+            Size stays_end = std::min(stays.nrow, stays_offset + task_size);
 
-        Async async;
-        {
-            Size stays_offset = 0;
-            Size diagnoses_offset = 0;
-            Size procedures_offset = 0;
-            while (stays_offset < stays.nrow) {
-                Size stays_end = std::min(stays.nrow, stays_offset + task_size);
-
-                Size diagnoses_end = diagnoses_offset;
-                while (diagnoses_end < diagnoses.nrow &&
-                       diagnoses.id[diagnoses_end] <= stays.id[stays_end - 1]) {
-                    diagnoses_end++;
-                }
-                Size procedures_end = procedures_offset;
-                while (procedures_end < procedures.nrow &&
-                       procedures.id[procedures_end] <= stays.id[stays_end - 1]) {
-                    procedures_end++;
-                }
-
-                HeapArray<ClassifyResult> *task_results = results_set.AppendDefault();
-                async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
-                    RunClassifier(*classifier_set, stays, stays_offset, stays_end,
-                                  diagnoses, diagnoses_offset, diagnoses_end,
-                                  procedures, procedures_offset, procedures_end, task_results);
-                    return true;
-                });
-
-                stays_offset = stays_end;
-                diagnoses_offset = diagnoses_end;
-                procedures_offset = procedures_end;
+            Size diagnoses_end = diagnoses_offset;
+            while (diagnoses_end < diagnoses.nrow &&
+                   diagnoses.id[diagnoses_end] <= stays.id[stays_end - 1]) {
+                diagnoses_end++;
             }
+            Size procedures_end = procedures_offset;
+            while (procedures_end < procedures.nrow &&
+                   procedures.id[procedures_end] <= stays.id[stays_end - 1]) {
+                procedures_end++;
+            }
+
+            ClassifySet *classify_set = classify_sets.AppendDefault();
+
+            async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
+                RunClassifier(*classifier, stays, stays_offset, stays_end,
+                              diagnoses, diagnoses_offset, diagnoses_end,
+                              procedures, procedures_offset, procedures_end,
+                              &classify_set->results);
+                Summarize(classify_set->results, &classify_set->summary);
+                return true;
+            });
+
+            stays_offset = stays_end;
+            diagnoses_offset = diagnoses_end;
+            procedures_offset = procedures_end;
         }
-        async.Sync();
     }
+    async.Sync();
 
     LogDebug("Export");
 
-    SEXP results_df;
+    ClassifySummary summary = {};
+    SEXP summary_df;
     {
-        char buf[32];
-
-        Size results_count = 0;
-        for (const HeapArray<ClassifyResult> &results: results_set) {
-            results_count += results.len;
+        for (const ClassifySet &classify_set: classify_sets) {
+            summary += classify_set.summary;
         }
 
-        Rcc_DataFrameBuilder df_builder(results_count);
+        Rcc_ListBuilder df_builder;
+        df_builder.Set("ghs_cents", (double)summary.ghs_total_cents);
+        df_builder.Set("rea_cents", (double)summary.supplement_cents.st.rea);
+        df_builder.Set("reasi_cents", (double)summary.supplement_cents.st.reasi);
+        df_builder.Set("si_cents", (double)summary.supplement_cents.st.si);
+        df_builder.Set("src_cents", (double)summary.supplement_cents.st.src);
+        df_builder.Set("nn1_cents", (double)summary.supplement_cents.st.nn1);
+        df_builder.Set("nn2_cents", (double)summary.supplement_cents.st.nn2);
+        df_builder.Set("nn3_cents", (double)summary.supplement_cents.st.nn3);
+        df_builder.Set("rep_cents", (double)summary.supplement_cents.st.rep);
+        df_builder.Set("price_cents", (double)summary.total_cents);
+        df_builder.Set("rea_days", summary.supplement_days.st.rea);
+        df_builder.Set("reasi_days", summary.supplement_days.st.reasi);
+        df_builder.Set("si_days", summary.supplement_days.st.si);
+        df_builder.Set("src_days", summary.supplement_days.st.src);
+        df_builder.Set("nn1_days", summary.supplement_days.st.nn1);
+        df_builder.Set("nn2_days", summary.supplement_days.st.nn2);
+        df_builder.Set("nn3_days", summary.supplement_days.st.nn3);
+        df_builder.Set("rep_days", summary.supplement_days.st.rep);
+        summary_df = df_builder.BuildDataFrame();
+    }
+
+    SEXP results_df;
+    if (details) {
+        char buf[32];
+
+        Rcc_DataFrameBuilder df_builder(summary.results_count);
         Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
         Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
         Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
@@ -421,8 +452,8 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
         Rcc_Vector<int> rep_days = df_builder.Add<int>("rep_days");
 
         Size i = 0;
-        for (Span<const ClassifyResult> results: results_set) {
-            for (const ClassifyResult &result: results) {
+        for (const ClassifySet &classify_set: classify_sets) {
+            for (const ClassifyResult &result: classify_set.results) {
                 bill_id[i] = result.stays[0].bill_id;
                 exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
                 ghm.Set(i, Fmt(buf, "%1", result.ghm));
@@ -452,13 +483,19 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
         }
 
         results_df = df_builder.Build();
+    } else {
+        results_df = R_NilValue;
     }
 
-    LogDebug("Done");
+    SEXP ret_list;
+    {
+        Rcc_ListBuilder ret_builder;
+        ret_builder.Add("summary", summary_df);
+        ret_builder.Add("results", results_df);
+        ret_list = ret_builder.BuildList();
+    }
 
-#undef LOAD_OPTIONAL_COLUMN
-
-    return results_df;
+    return ret_list;
 }
 
 // [[Rcpp::export(name = 'diagnoses')]]
@@ -466,12 +503,12 @@ SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
+    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_set_xp).get();
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
         Rcc_StopWithLastError();
 
-    const TableIndex *index = classifier_set->table_set.FindIndex(date);
+    const TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         Rcc_StopWithLastError();
@@ -504,12 +541,12 @@ SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    const ClassifierSet *classifier_set = Rcpp::XPtr<ClassifierSet>(classifier_set_xp).get();
+    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_set_xp).get();
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
         Rcc_StopWithLastError();
 
-    const TableIndex *index = classifier_set->table_set.FindIndex(date);
+    const TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         Rcc_StopWithLastError();
