@@ -7,6 +7,7 @@
 #include "kutil.hh"
 #include <Rcpp.h>
 
+extern std::mutex rcc_log_mutex;
 extern DynamicQueue<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
@@ -15,6 +16,7 @@ extern bool rcc_log_missing_messages;
                       const char *fmt, Span<const FmtArg> args) { \
         switch (level) { \
             case LogLevel::Error: { \
+                std::lock_guard<std::mutex> lock(rcc_log_mutex); \
                 const char *msg = FmtFmt(rcc_log_messages.bucket_allocator, fmt, args).ptr; \
                 rcc_log_messages.Append(msg); \
                 if (rcc_log_messages.len > 100) { \

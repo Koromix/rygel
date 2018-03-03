@@ -5,6 +5,7 @@
 #include "kutil.hh"
 #include "Rcc.hh"
 
+std::mutex rcc_log_mutex;
 DynamicQueue<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
