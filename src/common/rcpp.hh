@@ -181,7 +181,7 @@ class RVectorView<Date> {
     } u;
 
 public:
-    RVectorView() = default;
+    RVectorView() { u.chr = {}; }
     RVectorView(SEXP xp);
     RVectorView(Size len)
     {
