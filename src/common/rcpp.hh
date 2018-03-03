@@ -242,30 +242,36 @@ U RGetOptionalValue(T &vec, Size idx, U default_value)
 }
 
 class RListBuilder {
-    struct Column {
+    struct Variable {
         const char *name;
         SEXP vec;
     };
 
-    LocalArray<Column, 64> columns;
+    LocalArray<Variable, 64> variables;
 
 public:
-    void Add(const char *name, SEXP vec)
+    RListBuilder() = default;
+
+    RListBuilder(const RListBuilder &) = delete;
+    RListBuilder &operator=(const RListBuilder &) = delete;
+
+    SEXP Add(const char *name, SEXP vec)
     {
-        columns.Append({name, vec});
+        variables.Append({name, vec});
+        return vec;
     }
 
     SEXP BuildList()
     {
-        SEXP list = PROTECT(Rf_allocVector(VECSXP, columns.len));
+        SEXP list = PROTECT(Rf_allocVector(VECSXP, variables.len));
         DEFER { UNPROTECT(1); };
 
         {
-            SEXP names = PROTECT(Rf_allocVector(STRSXP, columns.len));
+            SEXP names = PROTECT(Rf_allocVector(STRSXP, variables.len));
             DEFER { UNPROTECT(1); };
-            for (Size i = 0; i < columns.len; i++) {
-                SET_STRING_ELT(names, i, Rf_mkChar(columns[i].name));
-                SET_VECTOR_ELT(list, i, columns[i].vec);
+            for (Size i = 0; i < variables.len; i++) {
+                SET_STRING_ELT(names, i, Rf_mkChar(variables[i].name));
+                SET_VECTOR_ELT(list, i, variables[i].vec);
             }
             Rf_setAttrib(list, R_NamesSymbol, names);
         }
@@ -276,10 +282,10 @@ public:
     SEXP BuildDataFrame()
     {
         Size nrow;
-        if (columns.len >= 2) {
-            nrow = Rf_xlength(columns[0].vec);
-            for (Size i = 1; i < columns.len; i++) {
-                if (Rf_xlength(columns[i].vec) != nrow) {
+        if (variables.len >= 2) {
+            nrow = Rf_xlength(variables[0].vec);
+            for (Size i = 1; i < variables.len; i++) {
+                if (Rf_xlength(variables[i].vec) != nrow) {
                     Rcpp::stop("Cannot create data.frame from vectors of unequal length");
                 }
             }
@@ -307,4 +313,20 @@ public:
 
         return df;
     }
+};
+
+class RDataFrameBuilder {
+    RListBuilder list_builder;
+    Size len;
+
+public:
+    RDataFrameBuilder(Size len) : len(len) {}
+
+    RDataFrameBuilder(const RDataFrameBuilder &) = delete;
+    RDataFrameBuilder &operator=(const RDataFrameBuilder &) = delete;
+
+    template <typename T>
+    RVectorView<T> Add(const char *name) { return list_builder.Add(name, RVectorView<T>(len)); }
+
+    SEXP Build() { return list_builder.BuildDataFrame(); }
 };

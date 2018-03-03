@@ -395,30 +395,30 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
             results_count += results.len;
         }
 
-        RListBuilder results_builder;
-        RVectorView<int> bill_id(results_count); results_builder.Add("bill_id", bill_id);
-        RVectorView<Date> exit_date(results_count); results_builder.Add("exit_date", exit_date);
-        RVectorView<const char *> ghm(results_count); results_builder.Add("ghm", ghm);
-        RVectorView<int> main_error(results_count); results_builder.Add("main_error", main_error);
-        RVectorView<int> ghs(results_count); results_builder.Add("ghs", ghs);
-        RVectorView<double> ghs_cents(results_count); results_builder.Add("ghs_cents", ghs_cents);
-        RVectorView<double> rea_cents(results_count); results_builder.Add("rea_cents", rea_cents);
-        RVectorView<double> reasi_cents(results_count); results_builder.Add("reasi_cents", reasi_cents);
-        RVectorView<double> si_cents(results_count); results_builder.Add("si_cents", si_cents);
-        RVectorView<double> src_cents(results_count); results_builder.Add("src_cents", src_cents);
-        RVectorView<double> nn1_cents(results_count); results_builder.Add("nn1_cents", nn1_cents);
-        RVectorView<double> nn2_cents(results_count); results_builder.Add("nn2_cents", nn2_cents);
-        RVectorView<double> nn3_cents(results_count); results_builder.Add("nn3_cents", nn3_cents);
-        RVectorView<double> rep_cents(results_count); results_builder.Add("rep_cents", rep_cents);
-        RVectorView<double> price_cents(results_count); results_builder.Add("price_cents", price_cents);
-        RVectorView<int> rea_days(results_count); results_builder.Add("rea_days", rea_days);
-        RVectorView<int> reasi_days(results_count); results_builder.Add("reasi_days", reasi_days);
-        RVectorView<int> si_days(results_count); results_builder.Add("si_days", si_days);
-        RVectorView<int> src_days(results_count); results_builder.Add("src_days", src_days);
-        RVectorView<int> nn1_days(results_count); results_builder.Add("nn1_days", nn1_days);
-        RVectorView<int> nn2_days(results_count); results_builder.Add("nn2_days", nn2_days);
-        RVectorView<int> nn3_days(results_count); results_builder.Add("nn3_days", nn3_days);
-        RVectorView<int> rep_days(results_count); results_builder.Add("rep_days", rep_days);
+        RDataFrameBuilder df_builder(results_count);
+        RVectorView<int> bill_id = df_builder.Add<int>("bill_id");
+        RVectorView<Date> exit_date = df_builder.Add<Date>("exit_date");
+        RVectorView<const char *> ghm = df_builder.Add<const char *>("ghm");
+        RVectorView<int> main_error = df_builder.Add<int>("main_error");
+        RVectorView<int> ghs = df_builder.Add<int>("ghs");
+        RVectorView<double> ghs_cents = df_builder.Add<double>("ghs_cents");
+        RVectorView<double> rea_cents = df_builder.Add<double>("rea_cents");
+        RVectorView<double> reasi_cents = df_builder.Add<double>("reasi_cents");
+        RVectorView<double> si_cents = df_builder.Add<double>("si_cents");
+        RVectorView<double> src_cents = df_builder.Add<double>("src_cents");
+        RVectorView<double> nn1_cents = df_builder.Add<double>("nn1_cents");
+        RVectorView<double> nn2_cents = df_builder.Add<double>("nn2_cents");
+        RVectorView<double> nn3_cents = df_builder.Add<double>("nn3_cents");
+        RVectorView<double> rep_cents = df_builder.Add<double>("rep_cents");
+        RVectorView<double> price_cents = df_builder.Add<double>("price_cents");
+        RVectorView<int> rea_days = df_builder.Add<int>("rea_days");
+        RVectorView<int> reasi_days = df_builder.Add<int>("reasi_days");
+        RVectorView<int> si_days = df_builder.Add<int>("si_days");
+        RVectorView<int> src_days = df_builder.Add<int>("src_days");
+        RVectorView<int> nn1_days = df_builder.Add<int>("nn1_days");
+        RVectorView<int> nn2_days = df_builder.Add<int>("nn2_days");
+        RVectorView<int> nn3_days = df_builder.Add<int>("nn3_days");
+        RVectorView<int> rep_days = df_builder.Add<int>("rep_days");
 
         Size i = 0;
         for (Span<const ClassifyResult> results: results_set) {
@@ -451,7 +451,7 @@ SEXP R_Classify(SEXP classifier_set_xp, Rcpp::DataFrame stays_df,
             }
         }
 
-        results_df = results_builder.BuildDataFrame();
+        results_df = df_builder.Build();
     }
 
     LogDebug("Done");
@@ -479,10 +479,10 @@ SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 
     SEXP diagnoses_df;
     {
-        RListBuilder diagnoses_builder;
-        RVectorView<const char *> diag(index->diagnoses.len); diagnoses_builder.Add("diag", diag);
-        RVectorView<int> cmd_m(index->diagnoses.len); diagnoses_builder.Add("cmd_m", cmd_m);
-        RVectorView<int> cmd_f(index->diagnoses.len); diagnoses_builder.Add("cmd_f", cmd_f);
+        RDataFrameBuilder df_builder(index->diagnoses.len);
+        RVectorView<const char *> diag = df_builder.Add<const char *>("diag");
+        RVectorView<int> cmd_m = df_builder.Add<int>("cmd_m");
+        RVectorView<int> cmd_f = df_builder.Add<int>("cmd_f");
 
         for (Size i = 0; i < index->diagnoses.len; i++) {
             const DiagnosisInfo &info = index->diagnoses[i];
@@ -493,7 +493,7 @@ SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
             cmd_f[i] = info.Attributes(Sex::Female).cmd;
         }
 
-        diagnoses_df = diagnoses_builder.BuildDataFrame();
+        diagnoses_df = df_builder.Build();
     }
 
     return diagnoses_df;
@@ -517,12 +517,12 @@ SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
 
     SEXP procedures_df;
     {
-        RListBuilder procedures_builder;
-        RVectorView<const char *> proc(index->procedures.len); procedures_builder.Add("proc", proc);
-        RVectorView<int> phase(index->procedures.len); procedures_builder.Add("phase", phase);
-        RVectorView<int> activities(index->procedures.len); procedures_builder.Add("activities", activities);
-        RVectorView<Date> start_date((int)index->procedures.len); procedures_builder.Add("start_date", start_date);
-        RVectorView<Date> end_date((int)index->procedures.len); procedures_builder.Add("end_date", end_date);
+        RDataFrameBuilder df_builder(index->procedures.len);
+        RVectorView<const char *> proc = df_builder.Add<const char *>("proc");
+        RVectorView<int> phase = df_builder.Add<int>("phase");
+        RVectorView<int> activities = df_builder.Add<int>("activities");
+        RVectorView<Date> start_date = df_builder.Add<Date>("start_date");
+        RVectorView<Date> end_date = df_builder.Add<Date>("end_date");
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const ProcedureInfo &info = index->procedures[i];
@@ -544,7 +544,7 @@ SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
             end_date.Set(i, info.limit_dates[1]);
         }
 
-        procedures_df = procedures_builder.BuildDataFrame();
+        procedures_df = df_builder.Build();
     }
 
     return procedures_df;
