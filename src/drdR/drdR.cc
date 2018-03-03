@@ -361,6 +361,10 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         Size procedures_offset = 0;
         while (stays_offset < stays.nrow) {
             Size stays_end = std::min(stays.nrow, stays_offset + task_size);
+            while (stays_end < stays.nrow &&
+                   stays.bill_id[stays_end] == stays.bill_id[stays_end - 1]) {
+                stays_end++;
+            }
 
             Size diagnoses_end = diagnoses_offset;
             while (diagnoses_end < diagnoses.nrow &&
