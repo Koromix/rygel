@@ -103,6 +103,7 @@ static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
             return !stay1.session_count &&
                    stay2.admin_id == stay1.admin_id &&
                    !stay2.session_count &&
+                   (stay1.exit.mode == '6' || stay1.exit.mode == '0') &&
                    (stay2.entry.mode == '6' || stay2.entry.mode == '0');
         } break;
         case ClusterMode::BillId: { return stay2.bill_id == stay1.bill_id; } break;
