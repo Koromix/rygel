@@ -271,6 +271,8 @@ static void RunClassifier(const ClassifierInstance &classifier,
         out_stay_set->stays.Append(stay);
     }
 
+    // We're already running in parallel, using ClassifyParallel would slow us down,
+    // because it has some overhead caused by multi-stays.
     Classify(classifier.table_set, classifier.authorization_set,
              out_stay_set->stays, ClusterMode::BillId, out_results);
 }

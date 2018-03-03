@@ -1729,6 +1729,16 @@ void Classify(const TableSet &table_set, const AuthorizationSet &authorization_s
               Span<const Stay> stays, ClusterMode cluster_mode,
               HeapArray<ClassifyResult> *out_results)
 {
+    // Pessimistic assumption (no multi-stay)
+    out_results->Grow(stays.len);
+    out_results->len += ClassifyRaw(table_set, authorization_set, stays, cluster_mode,
+                                    out_results->end());
+}
+
+void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
+                      Span<const Stay> stays, ClusterMode cluster_mode,
+                      HeapArray<ClassifyResult> *out_results)
+{
     if (!stays.len)
         return;
 

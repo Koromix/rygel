@@ -242,8 +242,8 @@ Classify options:
                 return false;
 
             LogInfo("Classify '%1'", filenames[i]);
-            Classify(*table_set, *authorization_set, classify_set->stay_set.stays, cluster_mode,
-                     &classify_set->results);
+            ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
+                             cluster_mode, &classify_set->results);
 
             LogInfo("Summarize '%1'", filenames[i]);
             Summarize(classify_set->results, &classify_set->summary);

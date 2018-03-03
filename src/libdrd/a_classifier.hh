@@ -111,5 +111,8 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
               Span<const Stay> stays, ClusterMode cluster_mode,
               HeapArray<ClassifyResult> *out_results);
+void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
+                      Span<const Stay> stays, ClusterMode cluster_mode,
+                      HeapArray<ClassifyResult> *out_results);
 
 void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary);
