@@ -28,6 +28,8 @@ struct ClassifyAggregate {
     int age;
     int age_days;
     int duration;
+
+    const Stay *main_stay;
 };
 
 struct ClassifyErrorSet {
@@ -38,6 +40,7 @@ struct ClassifyErrorSet {
 
 struct ClassifyResult {
     Span<const Stay> stays;
+    Size main_stay_idx;
 
     GhmCode ghm;
     int16_t main_error;

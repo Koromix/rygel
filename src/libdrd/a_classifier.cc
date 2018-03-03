@@ -816,10 +816,12 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     // Pick main stay
     if (stays.len > 1) {
-        const Stay *main_stay = FindMainStay(*out_agg->index, stays, out_agg->duration);
+        out_agg->main_stay = FindMainStay(*out_agg->index, stays, out_agg->duration);
 
-        out_agg->stay.main_diagnosis = main_stay->main_diagnosis;
-        out_agg->stay.linked_diagnosis = main_stay->linked_diagnosis;
+        out_agg->stay.main_diagnosis = out_agg->main_stay->main_diagnosis;
+        out_agg->stay.linked_diagnosis = out_agg->main_stay->linked_diagnosis;
+    } else {
+        out_agg->main_stay = &stays[0];
     }
 
     valid &= CheckAggregateErrors(*out_agg, out_errors);
@@ -1703,6 +1705,7 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
                                    &agg, &diagnoses, &procedures, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
+            result.main_stay_idx = agg.main_stay - agg.stays.ptr;
             result.ghm = ClassifyGhm(agg, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;

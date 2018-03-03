@@ -454,6 +454,8 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         Rcc_DataFrameBuilder df_builder(summary.results_count);
         Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
         Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
+        Rcc_Vector<int> stays_count = df_builder.Add<int>("stays_count");
+        Rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
         Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
         Rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
         Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
@@ -481,6 +483,8 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
             for (const ClassifyResult &result: classify_set.results) {
                 bill_id[i] = result.stays[0].bill_id;
                 exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
+                stays_count[i] = (int)result.stays.len;
+                main_stay[i] = (int)result.main_stay_idx + 1;
                 ghm.Set(i, Fmt(buf, "%1", result.ghm));
                 main_error[i] = result.main_error;
                 ghs[i] = result.ghs.number;
