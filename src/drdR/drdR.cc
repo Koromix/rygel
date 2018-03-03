@@ -109,7 +109,7 @@ struct ProceduresProxy {
     Rcc_Vector<Date> date;
 };
 
-static void RunClassifier(const ClassifierInstance &classifier,
+static bool RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
@@ -119,10 +119,17 @@ static void RunClassifier(const ClassifierInstance &classifier,
     out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
     out_stay_set->store.procedures.Reserve(procedures_end - procedures_offset);
 
+    int prev_id = INT_MIN;
     Size j = diagnoses_offset;
     Size k = procedures_offset;
     for (Size i = stays_offset; i < stays_end; i++) {
         Stay stay = {};
+
+        if (UNLIKELY(stays.id[i] < prev_id ||
+                     (j < diagnoses_end && diagnoses.id[j] < prev_id) ||
+                     (k < procedures_end && procedures.id[k] < prev_id)))
+            return false;
+        prev_id = stays.id[i];
 
         stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
         stay.stay_id = Rcc_GetOptional(stays.stay_id, i, 0);
@@ -275,6 +282,8 @@ static void RunClassifier(const ClassifierInstance &classifier,
     // because it has some overhead caused by multi-stays.
     Classify(classifier.table_set, classifier.authorization_set,
              out_stay_set->stays, ClusterMode::BillId, out_results);
+
+    return true;
 }
 
 // [[Rcpp::export(name = '.classify')]]
@@ -382,10 +391,11 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
             ClassifySet *classify_set = classify_sets.AppendDefault();
 
             async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
-                RunClassifier(*classifier, stays, stays_offset, stays_end,
-                              diagnoses, diagnoses_offset, diagnoses_end,
-                              procedures, procedures_offset, procedures_end,
-                              &classify_set->stay_set, &classify_set->results);
+                if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
+                                   diagnoses, diagnoses_offset, diagnoses_end,
+                                   procedures, procedures_offset, procedures_end,
+                                   &classify_set->stay_set, &classify_set->results))
+                    return false;
                 Summarize(classify_set->results, &classify_set->summary);
                 return true;
             });
@@ -395,7 +405,9 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
             procedures_offset = procedures_end;
         }
     }
-    async.Sync();
+    if (!async.Sync()) {
+        Rcpp::stop("The 'id' column must be ordered in all data.frames");
+    }
 
     LogDebug("Export");
 
