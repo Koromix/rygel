@@ -565,15 +565,6 @@ protected:
 // Collections
 // ------------------------------------------------------------------------
 
-template <typename T>
-struct ArraySlice {
-    Size offset;
-    Size len;
-
-    ArraySlice() = default;
-    ArraySlice(Size offset, Size len) : offset(offset), len(len) {}
-};
-
 // I'd love to make Span default to { nullptr, 0 } but unfortunately that makes
 // it a non-POD and prevents putting it in a union.
 template <typename T>
@@ -607,18 +598,16 @@ struct Span {
 
     operator Span<const T>() const { return Span<const T>(ptr, len); }
 
-    Span Take(ArraySlice<T> slice) const
+    Span Take(Size offset, Size sub_len) const
     {
-        DebugAssert(slice.len >= 0 && slice.len <= len);
-        DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
+        DebugAssert(sub_len >= 0 && sub_len <= len);
+        DebugAssert(offset >= 0 && offset <= len - sub_len);
 
         Span<T> sub;
-        sub.ptr = ptr + slice.offset;
-        sub.len = slice.len;
+        sub.ptr = ptr + offset;
+        sub.len = sub_len;
         return sub;
     }
-    Span Take(Size offset, Size len) const
-        { return Take(ArraySlice<T>(offset, len)); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -656,18 +645,16 @@ struct Span<const char> {
     bool operator!=(Span<const char> other) const { return !(*this == other); }
     bool operator!=(const char *other) const { return !(*this == other); }
 
-    Span Take(ArraySlice<const char> slice) const
+    Span Take(Size offset, Size sub_len) const
     {
-        DebugAssert(slice.len >= 0 && slice.len <= len);
-        DebugAssert(slice.offset >= 0 && slice.offset <= len - slice.len);
+        DebugAssert(sub_len >= 0 && sub_len <= len);
+        DebugAssert(offset >= 0 && offset <= len - sub_len);
 
         Span<const char> sub;
-        sub.ptr = ptr + slice.offset;
-        sub.len = slice.len;
+        sub.ptr = ptr + offset;
+        sub.len = sub_len;
         return sub;
     }
-    Span Take(Size offset, Size len) const
-        { return Take(ArraySlice<const char>(offset, len)); }
 };
 
 template <typename T>
@@ -719,8 +706,6 @@ public:
 
     Span<T> Take(Size offset, Size len) const
         { return Span<T>(data, N).Take(offset, len); }
-    Span<T> Take(ArraySlice<T> slice) const
-        { return Span<T>(data, N).Take(slice); }
 };
 
 template <typename T, Size N>
@@ -820,8 +805,6 @@ public:
 
     Span<T> Take(Size offset, Size len) const
         { return Span<T>(data, this->len).Take(offset, len); }
-    Span<T> Take(ArraySlice<T> slice) const
-        { return Span<T>(data, this->len).Take(slice); }
 };
 
 template <typename T>
@@ -999,8 +982,6 @@ public:
 
     Span<T> Take(Size offset, Size len) const
         { return Span<T>(ptr, this->len).Take(offset, len); }
-    Span<T> Take(ArraySlice<T> slice) const
-        { return Span<T>(ptr, this->len).Take(slice); }
 
     Span<T> Leak()
     {
