@@ -394,7 +394,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LogDebug("Export");
 
     ClassifySummary summary = {};
-    SEXP summary_df;
+    Rcc_AutoSexp summary_df;
     {
         for (const ClassifySet &classify_set: classify_sets) {
             summary += classify_set.summary;
@@ -422,7 +422,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         summary_df = df_builder.BuildDataFrame();
     }
 
-    SEXP results_df;
+    Rcc_AutoSexp results_df;
     if (details) {
         char buf[32];
 
@@ -487,7 +487,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         results_df = R_NilValue;
     }
 
-    SEXP ret_list;
+    Rcc_AutoSexp ret_list;
     {
         Rcc_ListBuilder ret_builder;
         ret_builder.Add("summary", summary_df);
@@ -514,7 +514,7 @@ SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
         Rcc_StopWithLastError();
     }
 
-    SEXP diagnoses_df;
+    Rcc_AutoSexp diagnoses_df;
     {
         Rcc_DataFrameBuilder df_builder(index->diagnoses.len);
         Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
@@ -552,7 +552,7 @@ SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
         Rcc_StopWithLastError();
     }
 
-    SEXP procedures_df;
+    Rcc_AutoSexp procedures_df;
     {
         Rcc_DataFrameBuilder df_builder(index->procedures.len);
         Rcc_Vector<const char *> proc = df_builder.Add<const char *>("proc");

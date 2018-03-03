@@ -41,15 +41,51 @@ extern bool rcc_log_missing_messages;
 void Rcc_DumpWarnings();
 void Rcc_StopWithLastError() __attribute__((noreturn));
 
+class Rcc_AutoSexp {
+    SEXP xp = nullptr;
+
+public:
+    Rcc_AutoSexp() = default;
+    Rcc_AutoSexp(SEXP xp) : xp(PROTECT(xp)) {}
+
+    ~Rcc_AutoSexp()
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+    }
+
+    Rcc_AutoSexp(const Rcc_AutoSexp &other) : xp(other.xp ? PROTECT(other.xp) : nullptr) {}
+    Rcc_AutoSexp &operator=(const Rcc_AutoSexp &other)
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = other.xp ? PROTECT(other.xp) : nullptr;
+        return *this;
+    }
+
+    operator bool() const { return xp; }
+    operator SEXP() const { return xp; }
+    Rcc_AutoSexp &operator=(SEXP new_xp)
+    {
+        if (xp) {
+            UNPROTECT_PTR(xp);
+        }
+        xp = PROTECT(new_xp);
+        return *this;
+    }
+};
+
 template <typename T>
 class Rcc_Vector {
-    SEXP xp = nullptr;
+    Rcc_AutoSexp xp;
     Span<T> span = {};
 
 public:
     Rcc_Vector() = default;
     Rcc_Vector(SEXP xp)
-        : xp(xp ? PROTECT(xp) : nullptr)
+        : xp(xp)
     {
         if (xp) {
             if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
@@ -68,30 +104,12 @@ public:
     Rcc_Vector(Size len)
     {
         if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
-            xp = PROTECT(Rf_allocVector(INTSXP, len));
+            xp = Rf_allocVector(INTSXP, len);
             span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
         } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
-            xp = PROTECT(Rf_allocVector(REALSXP, len));
+            xp = Rf_allocVector(REALSXP, len);
             span = MakeSpan(REAL(xp), Rf_xlength(xp));
         }
-    }
-
-    ~Rcc_Vector()
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-    }
-
-    Rcc_Vector(const Rcc_Vector &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    Rcc_Vector &operator=(const Rcc_Vector &other)
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-        xp = PROTECT(other.xp);
-        span = other.span;
-        return *this;
     }
 
     operator SEXP() const { return xp; }
@@ -115,13 +133,13 @@ public:
 
 template <>
 class Rcc_Vector<const char *> {
-    SEXP xp = nullptr;
+    Rcc_AutoSexp xp;
     Span<SEXP> span = {};
 
 public:
     Rcc_Vector() = default;
     Rcc_Vector(SEXP xp)
-        : xp(xp ? PROTECT(xp) : nullptr)
+        : xp(xp)
     {
         if (xp) {
             if (TYPEOF(xp) != STRSXP) {
@@ -131,24 +149,6 @@ public:
         }
     }
     Rcc_Vector(Size len) : Rcc_Vector(Rf_allocVector(STRSXP, len)) {}
-
-    ~Rcc_Vector()
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-    }
-
-    Rcc_Vector(const Rcc_Vector &other) : xp(PROTECT(other.xp)), span(other.span) {}
-    Rcc_Vector &operator=(const Rcc_Vector &other)
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-        xp = PROTECT(other.xp);
-        span = other.span;
-        return *this;
-    }
 
     operator SEXP() const { return xp; }
 
@@ -178,7 +178,7 @@ class Rcc_Vector<Date> {
         Date
     };
 
-    SEXP xp = nullptr;
+    Rcc_AutoSexp xp;
     Type type;
     union {
         Span<SEXP> chr;
@@ -190,36 +190,12 @@ public:
     Rcc_Vector(SEXP xp);
     Rcc_Vector(Size len)
     {
-        xp = PROTECT(Rf_allocVector(REALSXP, len));
+        xp = Rf_allocVector(REALSXP, len);
         type = Type::Date;
         u.num = MakeSpan(REAL(xp), len);
 
-        SEXP cls = PROTECT(Rf_mkString("Date"));
-        DEFER { UNPROTECT(1); };
+        Rcc_AutoSexp cls = Rf_mkString("Date");
         Rf_setAttrib(xp, R_ClassSymbol, cls);
-    }
-
-    ~Rcc_Vector()
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-    }
-
-    Rcc_Vector(const Rcc_Vector &other)
-        : xp(PROTECT(other.xp)), type(other.type)
-    {
-        u.chr = other.u.chr;
-    }
-    Rcc_Vector &operator=(const Rcc_Vector &other)
-    {
-        if (xp) {
-            UNPROTECT_PTR(xp);
-        }
-        xp = PROTECT(other.xp);
-        type = other.type;
-        u.chr = other.u.chr;
-        return *this;
     }
 
     operator SEXP() const { return xp; }
@@ -275,12 +251,10 @@ public:
 
     SEXP BuildList()
     {
-        SEXP list = PROTECT(Rf_allocVector(VECSXP, variables.len));
-        DEFER { UNPROTECT(1); };
+        Rcc_AutoSexp list = Rf_allocVector(VECSXP, variables.len);
 
         {
-            SEXP names = PROTECT(Rf_allocVector(STRSXP, variables.len));
-            DEFER { UNPROTECT(1); };
+            Rcc_AutoSexp names = Rf_allocVector(STRSXP, variables.len);
             for (Size i = 0; i < variables.len; i++) {
                 SET_STRING_ELT(names, i, Rf_mkChar(variables[i].name));
                 SET_VECTOR_ELT(list, i, variables[i].vec);
@@ -309,15 +283,13 @@ public:
 
         // Class
         {
-            SEXP cls = PROTECT(Rf_mkString("data.frame"));
-            DEFER { UNPROTECT(1); };
+            Rcc_AutoSexp cls = Rf_mkString("data.frame");
             Rf_setAttrib(df, R_ClassSymbol, cls);
         }
 
         // Compact row names
         {
-            SEXP row_names = PROTECT(Rf_allocVector(INTSXP, 2));
-            DEFER { UNPROTECT(1); };
+            Rcc_AutoSexp row_names = Rf_allocVector(INTSXP, 2);
             INTEGER(row_names)[0] = NA_INTEGER;
             INTEGER(row_names)[1] = (int)nrow;
             Rf_setAttrib(df, R_RowNamesSymbol, row_names);

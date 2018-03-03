@@ -35,7 +35,7 @@ void Rcc_StopWithLastError()
 }
 
 Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
-    : xp(PROTECT(xp))
+    : xp(xp)
 {
     if (Rf_isString(xp)) {
         type = Type::Character;
