@@ -113,13 +113,11 @@ static void RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
-                          HeapArray<ClassifyResult> *out_results)
+                          StaySet *out_stay_set, HeapArray<ClassifyResult> *out_results)
 {
-    StaySet stay_set;
-
-    stay_set.stays.Reserve(stays_end - stays_offset);
-    stay_set.store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
-    stay_set.store.procedures.Reserve(procedures_end - procedures_offset);
+    out_stay_set->stays.Reserve(stays_end - stays_offset);
+    out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
+    out_stay_set->store.procedures.Reserve(procedures_end - procedures_offset);
 
     Size j = diagnoses_offset;
     Size k = procedures_offset;
@@ -171,7 +169,7 @@ static void RunClassifier(const ClassifierInstance &classifier,
         stay.newborn_weight = (int16_t)stays.newborn_weight[i];
         stay.last_menstrual_period = stays.last_menstrual_period[i];
 
-        stay.diagnoses.ptr = stay_set.store.diagnoses.end();
+        stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
         if (diagnoses.type.Len()) {
             for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
@@ -199,7 +197,7 @@ static void RunClassifier(const ClassifierInstance &classifier,
                         case 's':
                         case 'S': {
                             if (LIKELY(diag.IsValid())) {
-                                stay_set.store.diagnoses.Append(diag);
+                                out_stay_set->store.diagnoses.Append(diag);
                             } else {
                                 stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
                             }
@@ -238,18 +236,18 @@ static void RunClassifier(const ClassifierInstance &classifier,
                     stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
                 }
 
-                stay_set.store.diagnoses.Append(diag);
+                out_stay_set->store.diagnoses.Append(diag);
             }
         }
         if (stay.main_diagnosis.IsValid()) {
-            stay_set.store.diagnoses.Append(stay.main_diagnosis);
+            out_stay_set->store.diagnoses.Append(stay.main_diagnosis);
         }
         if (stay.linked_diagnosis.IsValid()) {
-            stay_set.store.diagnoses.Append(stay.linked_diagnosis);
+            out_stay_set->store.diagnoses.Append(stay.linked_diagnosis);
         }
-        stay.diagnoses.len = stay_set.store.diagnoses.end() - stay.diagnoses.ptr;
+        stay.diagnoses.len = out_stay_set->store.diagnoses.end() - stay.diagnoses.ptr;
 
-        stay.procedures.ptr = stay_set.store.procedures.end();
+        stay.procedures.ptr = out_stay_set->store.procedures.end();
         for (; k < procedures_end && procedures.id[k] == stays.id[i]; k++) {
             ProcedureRealisation proc = {};
 
@@ -266,15 +264,15 @@ static void RunClassifier(const ClassifierInstance &classifier,
             proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 1);
             proc.date = procedures.date[k];
 
-            stay_set.store.procedures.Append(proc);
+            out_stay_set->store.procedures.Append(proc);
         }
-        stay.procedures.len = stay_set.store.procedures.end() - stay.procedures.ptr;
+        stay.procedures.len = out_stay_set->store.procedures.end() - stay.procedures.ptr;
 
-        stay_set.stays.Append(stay);
+        out_stay_set->stays.Append(stay);
     }
 
     Classify(classifier.table_set, classifier.authorization_set,
-             stay_set.stays, ClusterMode::BillId, out_results);
+             out_stay_set->stays, ClusterMode::BillId, out_results);
 }
 
 // [[Rcpp::export(name = '.classify')]]
@@ -348,6 +346,8 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LogDebug("Classify");
 
     struct ClassifySet {
+        StaySet stay_set;
+
         HeapArray<ClassifyResult> results;
         ClassifySummary summary;
     };
@@ -379,7 +379,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
                 RunClassifier(*classifier, stays, stays_offset, stays_end,
                               diagnoses, diagnoses_offset, diagnoses_end,
                               procedures, procedures_offset, procedures_end,
-                              &classify_set->results);
+                              &classify_set->stay_set, &classify_set->results);
                 Summarize(classify_set->results, &classify_set->summary);
                 return true;
             });
