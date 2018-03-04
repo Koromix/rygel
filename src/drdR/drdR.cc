@@ -57,8 +57,14 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
                               &classifier->authorization_set))
         Rcc_StopWithLastError();
 
+    SEXP classifier_xp = R_MakeExternalPtr(classifier, R_NilValue, R_NilValue);
+    R_RegisterCFinalizerEx(classifier_xp, [](SEXP classifier_xp) {
+        ClassifierInstance *classifier = (ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+        delete classifier;
+    }, TRUE);
     classifier_guard.disable();
-    return Rcpp::XPtr<ClassifierInstance>(classifier, true);
+
+    return classifier_xp;
 }
 
 struct StaysProxy {
@@ -303,7 +309,8 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
 
     static const int task_size = 2048;
 
-    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_xp).get();
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
@@ -530,11 +537,13 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
 }
 
 // [[Rcpp::export(name = 'diagnoses')]]
-SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
+SEXP R_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_set_xp).get();
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
         Rcc_StopWithLastError();
@@ -568,11 +577,13 @@ SEXP R_Diagnoses(SEXP classifier_set_xp, SEXP date_xp)
 }
 
 // [[Rcpp::export(name = 'procedures')]]
-SEXP R_Procedures(SEXP classifier_set_xp, SEXP date_xp)
+SEXP R_Procedures(SEXP classifier_xp, SEXP date_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    const ClassifierInstance *classifier = Rcpp::XPtr<ClassifierInstance>(classifier_set_xp).get();
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
         Rcc_StopWithLastError();
