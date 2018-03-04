@@ -262,6 +262,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         for (; k < procedures_end && procedures.id[k] <= stays.id[i]; k++) {
             if (UNLIKELY(procedures.id[k] < stays.id[i]))
                 continue;
+            if (UNLIKELY(procedures.proc[k] == CHAR(NA_STRING)))
+                continue;
 
             ProcedureRealisation proc = {};
 
