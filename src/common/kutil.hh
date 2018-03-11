@@ -1893,6 +1893,22 @@ extern uint64_t g_start_time;
 
 uint64_t GetMonotonicTime();
 
+static inline uint64_t GetClockCounter()
+{
+#if defined(_MSC_VER)
+    return __rdtsc();
+#elif defined(__i386__) || defined(__x86_64__)
+    uint32_t counter_low, counter_high;
+    __asm__ __volatile__ ("cpuid; rdtsc"
+                          : "=a" (counter_low), "=d" (counter_high)
+                          : : "%ebx", "%ecx");
+    uint64_t counter = ((uint64_t)counter_high << 32) | counter_low;
+    return counter;
+#else
+    #error Clock counter reading is not implemented for this CPU architecture
+#endif
+}
+
 // ------------------------------------------------------------------------
 // Strings
 // ------------------------------------------------------------------------
