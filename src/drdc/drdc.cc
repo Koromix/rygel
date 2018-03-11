@@ -494,29 +494,38 @@ R"(Usage: drdc info [options] name ...
 
     for (const char *name: names) {
         {
-            DiagnosisCode diag = DiagnosisCode::FromString(name, false);
-            const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
-            if (diag_info) {
-                DumpDiagnosisTable(*diag_info, index->exclusions);
-                continue;
+            DiagnosisCode diag =
+                DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (diag.IsValid()) {
+                const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
+                if (diag_info) {
+                    DumpDiagnosisTable(*diag_info, index->exclusions);
+                    continue;
+                }
             }
         }
 
         {
-            ProcedureCode proc = ProcedureCode::FromString(name, false);
-            Span<const ProcedureInfo> proc_info = index->FindProcedure(proc);
-            if (proc_info.len) {
-                DumpProcedureTable(proc_info);
-                continue;
+            ProcedureCode proc =
+                ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (proc.IsValid()) {
+                Span<const ProcedureInfo> proc_info = index->FindProcedure(proc);
+                if (proc_info.len) {
+                    DumpProcedureTable(proc_info);
+                    continue;
+                }
             }
         }
 
         {
-            GhmRootCode ghm_root = GhmRootCode::FromString(name, false);
-            const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
-            if (ghm_root_info) {
-                DumpGhmRootTable(*ghm_root_info);
-                continue;
+            GhmRootCode ghm_root =
+                GhmRootCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (ghm_root.IsValid()) {
+                const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
+                if (ghm_root_info) {
+                    DumpGhmRootTable(*ghm_root_info);
+                    continue;
+                }
             }
         }
 

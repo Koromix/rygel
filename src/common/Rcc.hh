@@ -156,7 +156,8 @@ public:
 
     static bool IsNA(const char *value) { return value == CHAR(NA_STRING); }
 
-    const char *operator[](Size idx) const { return CHAR(span[idx]); }
+    Span<const char> operator[](Size idx) const
+        { return MakeSpan(CHAR(span[idx]), Rf_xlength(span[idx])); }
 
     void Set(Size idx, const char *str)
     {

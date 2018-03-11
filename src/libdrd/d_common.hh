@@ -34,23 +34,30 @@ union GhmRootCode {
 
     GhmRootCode() = default;
 
-    static GhmRootCode FromString(const char *str, bool errors = true)
+    static GhmRootCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                  Span<const char> *out_remaining = nullptr)
     {
         GhmRootCode code = {};
-
         {
-            int end_offset = 0;
-            sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
-                   &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
-            if (end_offset != 5 || str[5]) {
-                if (errors && str[0]) {
+            bool valid = (flags & (int)ParseFlag::End ? str.len == 5 : str.len >= 5) &&
+                         IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
+                         IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]);
+            if (UNLIKELY(!valid)) {
+                if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM root code '%1'", str);
                 }
-                code.value = 0;
+                return code;
             }
+
+            code.parts.cmd = (int8_t)(10 * (str[0] - '0') + (str[1] - '0'));
+            code.parts.type = UpperAscii(str[2]);
+            code.parts.seq = (int8_t)(10 * (str[3] - '0') + (str[4] - '0'));
         }
         code.parts.type = UpperAscii(code.parts.type);
 
+        if (out_remaining) {
+            *out_remaining = str.Take(5, str.len - 5);
+        }
         return code;
     }
 
@@ -89,25 +96,33 @@ union GhmCode {
 
     GhmCode() = default;
 
-    static GhmCode FromString(const char *str, bool errors = true)
+    static GhmCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                              Span<const char> *out_remaining = nullptr)
     {
         GhmCode code = {};
-
         {
-            int end_offset = 0;
-            sscanf(str, "%02" SCNu8 "%c%02" SCNu8 "%n",
-                   &code.parts.cmd, &code.parts.type, &code.parts.seq, &end_offset);
-            if (end_offset == 5 && (!str[5] || !str[6])) {
-                code.parts.mode = str[5];
-            } else {
-                if (errors && str[0]) {
+            bool valid = (str.len >= 5) && (!(flags & (int)ParseFlag::End) || str.len < 7) &&
+                         IsAsciiDigit(str[0]) && IsAsciiDigit(str[1]) && IsAsciiAlpha(str[2]) &&
+                         IsAsciiDigit(str[3]) && IsAsciiDigit(str[4]) &&
+                         (str.len == 5 || str[5] == ' ' || IsAsciiAlphaOrDigit(str[5]));
+            if (UNLIKELY(!valid)) {
+                if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed GHM code '%1'", str);
                 }
-                code.value = 0;
+                return code;
+            }
+
+            code.parts.cmd = (int8_t)(10 * (str[0] - '0') + (str[1] - '0'));
+            code.parts.type = UpperAscii(str[2]);
+            code.parts.seq = (int8_t)(10 * (str[3] - '0') + (str[4] - '0'));
+            if (str.len >= 6) {
+                code.parts.mode = UpperAscii(str[5]);
             }
         }
-        code.parts.type = UpperAscii(code.parts.type);
 
+        if (out_remaining) {
+            *out_remaining = str.Take(6, str.len - 6);
+        }
         return code;
     }
 
@@ -162,36 +177,44 @@ union DiagnosisCode {
 
     DiagnosisCode() = default;
 
-    static DiagnosisCode FromString(const char *str, bool errors = true)
+    static DiagnosisCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                    Span<const char> *out_remaining = nullptr)
     {
         DiagnosisCode code = {};
-
-        if (str[0]) {
-            for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
-                code.str[i] = UpperAscii(str[i]);
+        Size end = 0;
+        {
+            Size copy_len = std::min(SIZE(code.str) - 1, str.len);
+            for (; end < copy_len && str[end] != ' '; end++) {
+                code.str[end] = UpperAscii(str[end]);
             }
 
-            bool valid = (IsAsciiAlpha(code.str[0]) && IsAsciiDigit(code.str[1]) &&
-                          IsAsciiDigit(code.str[2]));
-            if (valid) {
-                size_t end = 3;
-                while (code.str[end]) {
-                    valid &= (IsAsciiDigit(code.str[end]) || (end < 5 && code.str[end] == '+'));
-                    end++;
+            bool valid = (str.len >= 3 && (!(flags & (int)ParseFlag::End) ||
+                                           str.len < 7 || str[end] == ' ')) &&
+                         IsAsciiAlpha(code.str[0]) && IsAsciiDigit(code.str[1]) &&
+                         IsAsciiDigit(code.str[2]);
+            if (LIKELY(valid)) {
+                Size real_end = 3;
+                while (code.str[real_end]) {
+                    valid &= IsAsciiDigit(code.str[real_end]) ||
+                             (real_end < 5 && code.str[real_end] == '+');
+                    real_end++;
                 }
-                while (end > 3 && code.str[--end] == '+') {
-                    code.str[end] = '\0';
+                while (real_end > 3 && code.str[--real_end] == '+') {
+                    code.str[real_end] = '\0';
                 }
             }
 
-            if (!valid) {
-                if (errors) {
+            if (UNLIKELY(!valid)) {
+                if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed diagnosis code '%1'", str);
                 }
                 code.value = 0;
             }
         }
 
+        if (out_remaining) {
+            *out_remaining = str.Take(end, str.len - end);
+        }
         return code;
     }
 
@@ -222,27 +245,33 @@ union ProcedureCode {
 
     ProcedureCode() = default;
 
-    static ProcedureCode FromString(const char *str, bool errors = true)
+    static ProcedureCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                    Span<const char> *out_remaining = nullptr)
     {
         ProcedureCode code = {};
-
-        if (str[0]) {
-            for (size_t i = 0; i < SIZE(code.str) - 1 && str[i] && str[i] != ' '; i++) {
+        {
+            Size copy_len = std::min(SIZE(str) - 1, str.len);
+            for (Size i = 0; i < copy_len; i++) {
                 code.str[i] = UpperAscii(str[i]);
             }
 
-            bool valid = (IsAsciiAlpha(code.str[0]) && IsAsciiAlpha(code.str[1]) &&
-                          IsAsciiAlpha(code.str[2]) && IsAsciiAlpha(code.str[3]) &&
-                          IsAsciiDigit(code.str[4]) && IsAsciiDigit(code.str[5]) &&
-                          IsAsciiDigit(code.str[6]) && !code.str[7]);
-            if (!valid) {
-                if (errors) {
+            bool valid = (flags & (int)ParseFlag::End ? str.len == 7 : str.len >= 7) &&
+                         IsAsciiAlpha(code.str[0]) && IsAsciiAlpha(code.str[1]) &&
+                         IsAsciiAlpha(code.str[2]) && IsAsciiAlpha(code.str[3]) &&
+                         IsAsciiDigit(code.str[4]) && IsAsciiDigit(code.str[5]) &&
+                         IsAsciiDigit(code.str[6]);
+            if (UNLIKELY(!valid)) {
+                if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed procedure code '%1'", str);
                 }
                 code.value = 0;
+                return code;
             }
         }
 
+        if (out_remaining) {
+            *out_remaining = str.Take(7, str.len - 7);
+        }
         return code;
     }
 
@@ -263,22 +292,39 @@ struct GhsCode {
     GhsCode() = default;
     explicit GhsCode(int16_t number) : number(number) {}
 
-    static GhsCode FromString(const char *str, bool errors = true)
+    static GhsCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                              Span<const char> *out_remaining = nullptr)
     {
-        GhsCode code;
+        GhsCode code = {};
 
-        char *end_ptr;
-        errno = 0;
-        unsigned long l = strtoul(str, &end_ptr, 10);
-        if (!errno && !end_ptr[0] && l <= INT16_MAX) {
-            code.number = (int16_t)l;
-        } else {
-            if (errors) {
-                LogError("Malformed GHS code '%1'", str);
+        Size end;
+        {
+            int value = 0;
+            for (end = 0; end < str.len; end++) {
+                int digit = str[end] - '0';
+                if ((unsigned int)digit > 9) {
+                    if (flags & (int)ParseFlag::End || !end) {
+                        if (flags & (int)ParseFlag::Log) {
+                            LogError("Malformed GHS code '%1'", str);
+                        }
+                        return code;
+                    }
+                    break;
+                }
+                value = (value * 10) + digit;
+                if (value > INT16_MAX) {
+                    if (flags & (int)ParseFlag::Log) {
+                        LogError("GHS code '%1' is too big", str);
+                    }
+                    return code;
+                }
             }
-            code.number = 0;
+            code.number = (int16_t)value;
         }
 
+        if (out_remaining) {
+            *out_remaining = str.Take(end, str.len - end);
+        }
         return code;
     }
 

@@ -278,7 +278,7 @@ public:
                     SetErrorFlag(Stay::Error::MalformedExitDestination, !valid);
                 } else if (TestStr(key, "dp")) {
                     if (value.type == JsonValue::Type::String) {
-                        stay.main_diagnosis = DiagnosisCode::FromString(value.u.str.ptr, false);
+                        stay.main_diagnosis = DiagnosisCode::FromString(value.u.str, false);
                         SetErrorFlag(Stay::Error::MalformedMainDiagnosis,
                                      !stay.main_diagnosis.IsValid());
                     } else {
@@ -286,7 +286,7 @@ public:
                     }
                 } else if (TestStr(key, "dr")) {
                     if (value.type == JsonValue::Type::String) {
-                        stay.linked_diagnosis = DiagnosisCode::FromString(value.u.str.ptr, false);
+                        stay.linked_diagnosis = DiagnosisCode::FromString(value.u.str, false);
                         SetErrorFlag(Stay::Error::MalformedLinkedDiagnosis,
                                      !stay.linked_diagnosis.IsValid());
                     } else {
@@ -340,7 +340,7 @@ public:
 
             case State::AssociatedDiagnosisArray: {
                 if (value.type == JsonValue::Type::String) {
-                    DiagnosisCode diag = DiagnosisCode::FromString(value.u.str.ptr, false);
+                    DiagnosisCode diag = DiagnosisCode::FromString(value.u.str, false);
                     if (UNLIKELY(!diag.IsValid())) {
                         stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
                     } else if (UNLIKELY(out_set->store.diagnoses.len == LEN_MAX)) {
@@ -357,7 +357,7 @@ public:
             case State::ProcedureObject: {
                 if (TestStr(key, "code")) {
                     if (value.type == JsonValue::Type::String) {
-                        proc.proc = ProcedureCode::FromString(value.u.str.ptr);
+                        proc.proc = ProcedureCode::FromString(value.u.str);
                     } else {
                         UnexpectedType(value.type);
                     }
@@ -396,7 +396,7 @@ public:
                     SetInt(value, &test.cluster_len);
                 } else if (TestStr(key, "ghm")) {
                     if (value.type == JsonValue::Type::String) {
-                        test.ghm = GhmCode::FromString(value.u.str.ptr);
+                        test.ghm = GhmCode::FromString(value.u.str);
                     } else {
                         UnexpectedType(value.type);
                     }

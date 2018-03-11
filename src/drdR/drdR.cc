@@ -160,7 +160,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         }
         stay.entry.mode = (char)('0' + stays.entry_mode[i]);
         {
-            const char *origin_str = stays.entry_origin[i];
+            const char *origin_str = stays.entry_origin[i].ptr;
             if (origin_str[0] && !origin_str[1]) {
                 stay.entry.origin = UpperAscii(origin_str[0]);
             } else if (origin_str != CHAR(NA_STRING)) {
@@ -191,7 +191,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     continue;
 
                 DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
-                const char *type_str = diagnoses.type[j];
+                const char *type_str = diagnoses.type[j].ptr;
 
                 if (LIKELY(type_str[0] && !type_str[1])) {
                     switch (type_str[0]) {
