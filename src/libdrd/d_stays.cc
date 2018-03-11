@@ -182,11 +182,11 @@ public:
                 } else if (TestStr(key, "bill_id")) {
                     SetInt(value, &stay.bill_id);
                 } else if (TestStr(key, "birthdate")) {
-                    SetErrorFlag(Stay::Error::MalformedBirthdate,
-                                 !SetDate(value, false, &stay.birthdate));
+                    bool success = SetDate(value, (int)ParseFlag::End, &stay.birthdate);
+                    SetErrorFlag(Stay::Error::MalformedBirthdate, !success);
                 } else if (TestStr(key, "entry_date")) {
-                    SetErrorFlag(Stay::Error::MalformedEntryDate,
-                                 !SetDate(value, false, &stay.entry.date));
+                    bool success = SetDate(value, (int)ParseFlag::End, &stay.entry.date);
+                    SetErrorFlag(Stay::Error::MalformedEntryDate, !success);
                 } else if (TestStr(key, "entry_mode")) {
                     bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
@@ -231,8 +231,8 @@ public:
                     }
                     SetErrorFlag(Stay::Error::MalformedEntryOrigin, !valid);
                 } else if (TestStr(key, "exit_date")) {
-                    SetErrorFlag(Stay::Error::MalformedExitDate,
-                                 !SetDate(value, false, &stay.exit.date));
+                    bool success = SetDate(value, (int)ParseFlag::End, &stay.exit.date);
+                    SetErrorFlag(Stay::Error::MalformedExitDate, !success);
                 } else if (TestStr(key, "exit_mode")) {
                     bool valid = false;
                     if (value.type == JsonValue::Type::Int) {
@@ -297,7 +297,7 @@ public:
                 } else if (TestStr(key, "igs2")) {
                     SetInt(value, &stay.igs2);
                 } else if (TestStr(key, "last_menstrual_period")) {
-                    SetDate(value, false, &stay.last_menstrual_period);
+                    SetDate(value, &stay.last_menstrual_period);
                 } else if (TestStr(key, "newborn_weight")) {
                     SetErrorFlag(Stay::Error::MalformedNewbornWeight,
                                  !SetInt(value, &stay.newborn_weight));
@@ -362,7 +362,7 @@ public:
                         UnexpectedType(value.type);
                     }
                 } else if (TestStr(key, "date")) {
-                    SetDate(value, false, &proc.date);
+                    SetDate(value, &proc.date);
                 } else if (TestStr(key, "phase")) {
                     SetInt(value, &proc.phase);
                 } else if (TestStr(key, "activity")) {

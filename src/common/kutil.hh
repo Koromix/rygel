@@ -458,6 +458,13 @@ T MultiCmp(T cmp_value, Args... other_args)
     }
 }
 
+enum class ParseFlag {
+    Log = 1 << 0,
+    Validate = 1 << 1,
+    End = 1 << 2
+};
+#define DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
+
 // ------------------------------------------------------------------------
 // Overflow Safety
 // ------------------------------------------------------------------------
@@ -1816,7 +1823,8 @@ union Date {
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
-    static Date FromString(const char *date_str, bool strict = true);
+    static Date FromString(Span<const char> date_str, int flags = DEFAULT_PARSE_FLAGS,
+                           Span<const char> *out_remaining = nullptr);
     static Date FromJulianDays(int days);
     static Date FromCalendarDate(int days) { return Date::FromJulianDays(days + 2440588); }
 

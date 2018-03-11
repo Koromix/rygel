@@ -264,18 +264,19 @@ public:
         return true;
     }
 
-    bool SetDate(const JsonValue &value, bool strict, Date *dest)
+    bool SetDate(const JsonValue &value, int flags, Date *dest)
     {
         if (value.type != JsonValue::Type::String)
             return UnexpectedType(value.type);
 
-        Date date = Date::FromString(value.u.str.ptr, strict);
+        Date date = Date::FromString(value.u.str.ptr, flags);
         if (!date.value)
             return false;
         *dest = date;
         return true;
     }
-    bool SetDate(const JsonValue &value, Date *dest) { return SetDate(value, true, dest); }
+    bool SetDate(const JsonValue &value, Date *dest)
+        { return SetDate(value, DEFAULT_PARSE_FLAGS, dest); }
 
     bool UnexpectedBranch(JsonBranchType type)
     {

@@ -208,44 +208,64 @@ void LinkedAllocator::Release(void *ptr, Size size)
 // Date
 // ------------------------------------------------------------------------
 
-Date Date::FromString(const char *date_str, bool strict)
+Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *out_remaining)
 {
     Date date = {};
 
-GCC_PUSH_IGNORE(-Wformat-nonliteral)
-    int parts[3];
-    const auto TryFormat = [&](const char *format) {
-        int end_offset;
-        int parts_count = sscanf(date_str, format, &parts[0], &parts[1], &parts[2], &end_offset);
-        return parts_count == 3 && !date_str[end_offset];
-    };
-    if (!TryFormat("%6d-%2u-%2u%n")) {
-        if (!TryFormat("%6d/%2u/%6d%n")) {
-            LogError("Malformed date string '%1'", date_str);
-            return date;
+    int parts[3] = {};
+    Size offset = 0;
+    for (int i = 0; i < 3; i++) {
+        while (offset < date_str.len) {
+            char c = date_str[offset++];
+            int digit = c - '0';
+            if ((unsigned int)digit > 9) {
+                if (c != '/' && c != '-') {
+                    if (flags & (int)ParseFlag::Log) {
+                        LogError("Malformed date string '%1'", date_str);
+                    }
+                    return date;
+                }
+                break;
+            }
+            parts[i] = (parts[i] * 10) + digit;
         }
     }
-GCC_POP_IGNORE()
+    if ((flags & (int)ParseFlag::End) && offset < date_str.len) {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Invalid date string '%1'", date_str);
+        }
+        return date;
+    }
 
     if (parts[2] >= 100 || parts[2] <= -100) {
         std::swap(parts[0], parts[2]);
     } else if (parts[0] < 100 && parts[0] > -100) {
-        LogError("Ambiguous date string '%1'", date_str);
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Ambiguous date string '%1'", date_str);
+        }
         return date;
     }
     if (parts[0] > UINT16_MAX || parts[1] > UINT8_MAX || parts[2] > UINT8_MAX) {
-        LogError("Invalid date string '%1'", date_str);
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Invalid date string '%1'", date_str);
+        }
         return date;
     }
 
     date.st.year = (int16_t)parts[0];
     date.st.month = (int8_t)parts[1];
     date.st.day = (int8_t)parts[2];
-    if (strict && !date.IsValid()) {
-        LogError("Invalid date string '%1'", date_str);
+    if ((flags & (int)ParseFlag::Validate) && !date.IsValid()) {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Invalid date string '%1'", date_str);
+        }
         date.value = 0;
+        return date;
     }
 
+    if (out_remaining) {
+        *out_remaining = date_str.Take(offset, date_str.len - offset);
+    }
     return date;
 }
 
