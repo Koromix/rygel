@@ -2148,6 +2148,9 @@ public:
             const char *separator;
         } list;
     } value;
+
+    int pad_len = 0;
+    char pad_char;
     int repeat = 1;
 
     FmtArg() = default;
@@ -2174,6 +2177,8 @@ public:
         value.list.separator = ", ";
     }
 
+    FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
+    FmtArg &Pad0(int len) { return Pad(len, '0'); }
     FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
 };
 
