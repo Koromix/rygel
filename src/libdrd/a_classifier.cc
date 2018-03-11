@@ -1788,6 +1788,7 @@ void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary)
     out_summary->results_count += results.len;
     for (const ClassifyResult &result: results) {
         out_summary->stays_count += result.stays.len;
+        out_summary->failures_count += result.ghm.IsError();
         out_summary->ghs_total_cents += result.ghs_price_cents;
         out_summary->supplement_days += result.supplement_days;
         out_summary->supplement_cents += result.supplement_cents;

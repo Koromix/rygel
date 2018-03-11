@@ -55,6 +55,7 @@ struct ClassifyResult {
 struct ClassifySummary {
     Size results_count = 0;
     Size stays_count = 0;
+    Size failures_count = 0;
 
     int64_t ghs_total_cents = 0;
     SupplementCounters<int32_t> supplement_days;
@@ -65,6 +66,7 @@ struct ClassifySummary {
     {
         results_count += other.results_count;
         stays_count += other.stays_count;
+        failures_count += other.failures_count;
 
         ghs_total_cents += other.ghs_total_cents;
         supplement_days += other.supplement_days;

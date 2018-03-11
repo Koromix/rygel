@@ -140,6 +140,8 @@ static void PrintSummary(const ClassifySummary &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
     PrintLn("  Stays: %1", summary.stays_count);
+    PrintLn("  Failures: %1", summary.failures_count);
+    PrintLn();
     PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
     PrintLn("  Supplements:");
     for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
