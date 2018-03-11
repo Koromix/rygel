@@ -543,7 +543,7 @@ Options:
         return 1;
     DEFER { MHD_stop_daemon(daemon); };
 
-    LogInfo("Listening");
+    LogInfo("Listening on port %1", MHD_get_daemon_info(daemon, MHD_DAEMON_INFO_BIND_PORT)->port);
 #ifdef _WIN32
     (void)getchar();
 #else
