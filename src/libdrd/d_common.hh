@@ -36,7 +36,7 @@ union GhmRootCode {
 
     static GhmRootCode FromString(const char *str, bool errors = true)
     {
-        GhmRootCode code;
+        GhmRootCode code = {};
 
         {
             int end_offset = 0;
@@ -91,7 +91,7 @@ union GhmCode {
 
     static GhmCode FromString(const char *str, bool errors = true)
     {
-        GhmCode code;
+        GhmCode code = {};
 
         {
             int end_offset = 0;
