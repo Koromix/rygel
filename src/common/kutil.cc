@@ -841,9 +841,9 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
-            snprintf(ctx_buf, SIZE(ctx_buf), " ...%s [%8.3f]  ", ctx + ctx_len - 17, time);
+            Fmt(ctx_buf, " ...%1 [%2]  ", ctx + ctx_len - 17, FmtDouble(time, 3).Pad(-8));
         } else {
-            snprintf(ctx_buf, SIZE(ctx_buf), "%21s [%8.3f]  ", ctx, time);
+            Fmt(ctx_buf, " ...%1 [%2]  ", FmtArg(ctx).Pad(-21), FmtDouble(time, 3).Pad(-8));
         }
     }
 
