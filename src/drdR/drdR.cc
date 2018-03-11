@@ -428,13 +428,16 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LogDebug("Export");
 
     ClassifySummary summary = {};
+    for (const ClassifySet &classify_set: classify_sets) {
+        summary += classify_set.summary;
+    }
+
     Rcc_AutoSexp summary_df;
     {
-        for (const ClassifySet &classify_set: classify_sets) {
-            summary += classify_set.summary;
-        }
-
         Rcc_ListBuilder df_builder;
+        df_builder.Set("results", (int)summary.results_count);
+        df_builder.Set("stays", (int)summary.stays_count);
+        df_builder.Set("failures", (int)summary.failures_count);
         df_builder.Set("ghs_cents", (double)summary.ghs_total_cents);
         df_builder.Set("rea_cents", (double)summary.supplement_cents.st.rea);
         df_builder.Set("reasi_cents", (double)summary.supplement_cents.st.reasi);

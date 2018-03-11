@@ -2,7 +2,8 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-summary_columns <- c('ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_cents',
+summary_columns <- c('results', 'stays', 'failures',
+                     'ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_cents',
                      'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents', 'price_cents',
                      'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                      'nn3_days', 'rep_days')
@@ -61,8 +62,16 @@ compare <- function(summary1, summary2, ...) {
 }
 
 summary.drd.results <- function(results, by = NULL) {
-    agg <- setDT(result_set)[, as.list(colSums(.SD[, ..summary_columns])),
-                             keyby = eval(substitute(by))]
+    agg_columns <- setdiff(summary_columns, c('results', 'stays', 'failures'))
+
+    agg <- setDT(results)[, c(
+        list(
+            results = .N,
+            stays = sum(stays_count),
+            failures = sum(startsWith(ghm, '90'))
+        ),
+        as.list(colSums(.SD[, ..agg_columns]))
+    ), keyby = by]
     agg <- setDF(agg)
 
     class(agg) <- c('drd.summary', class(agg))
@@ -72,6 +81,6 @@ summary.drd.result_set <- function(result_set, by = NULL) {
     if (is.null(by)) {
         return (result_set$summary)
     } else {
-        return (summary(result_set$results, by = by))
+        return (summary.drd.results(result_set$results, by = by))
     }
 }
