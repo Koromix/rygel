@@ -37,7 +37,7 @@ diagnoses <- rbindlist(lapply(1:nrow(stays), function(i) {
 }))
 procedures <- rbindlist(lapply(1:nrow(stays), function(i) {
     procedures <- stays$procedures[i][[1]]
-    if (nrow(procedures) > 0) {
+    if (!is.null(procedures) && nrow(procedures) > 0) {
         procedures$id <- i
         as.data.table(procedures)
     } else {
