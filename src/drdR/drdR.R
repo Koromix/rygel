@@ -29,6 +29,7 @@ classify <- function(classifier, stays, diagnoses, procedures,
 
     class(result_set$summary) <- c('drd.summary', class(result_set$summary))
     if (details) {
+        setDT(result_set$results)
         class(result_set$results) <- c('drd.results', class(result_set$results))
     }
     class(result_set) <- c('drd.result_set', class(result_set))
@@ -64,7 +65,7 @@ compare <- function(summary1, summary2, ...) {
 summary.drd.results <- function(results, by = NULL) {
     agg_columns <- setdiff(summary_columns, c('results', 'stays', 'failures'))
 
-    agg <- setDT(results)[, c(
+    agg <- results[, c(
         list(
             results = .N,
             stays = sum(stays_count),
