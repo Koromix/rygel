@@ -225,7 +225,7 @@ union DiagnosisCode {
 
     bool Matches(const char *other_str) const
     {
-        size_t i = 0;
+        Size i = 0;
         while (str[i] && other_str[i] && str[i] == other_str[i]) {
             i++;
         }
