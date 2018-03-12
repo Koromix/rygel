@@ -2526,6 +2526,8 @@ public:
 
     Size Read(Size max_len, void *out_buf);
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
+    Size ReadAll(Size max_len, HeapArray<char> *out_buf)
+        { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
 private:
     bool InitDecompressor(CompressionType type);
@@ -2596,6 +2598,7 @@ public:
     bool Close();
 
     bool Write(Span<const uint8_t> buf);
+    bool Write(Span<const char> buf) { return Write(MakeSpan((const uint8_t *)buf.ptr, buf.len)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
