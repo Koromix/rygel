@@ -100,10 +100,19 @@ class StaySetBuilder {
     StaySet set;
 
 public:
-    bool LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
     bool LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+    bool LoadGrp(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr)
+        { return LoadRssOrGrp(st, true, out_tests); }
+    bool LoadRss(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr)
+        { return LoadRssOrGrp(st, false, out_tests); }
+    bool LoadRsa(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+    bool LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+
     bool LoadFiles(Span<const char *const> filenames,
                    HashTable<int32_t, StayTest> *out_tests = nullptr);
 
     bool Finish(StaySet *out_set);
+
+private:
+    bool LoadRssOrGrp(StreamReader &st, bool grp, HashTable<int32_t, StayTest> *out_tests);
 };

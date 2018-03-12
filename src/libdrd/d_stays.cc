@@ -214,10 +214,16 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames,
 
         bool (StaySetBuilder::*load_func)(StreamReader &st,
                                           HashTable<int32_t, StayTest> *out_tests);
-        if (TestStr(extension, ".dsjson")) {
-            load_func = &StaySetBuilder::LoadJson;
-        } else if (TestStr(extension, ".dspak")) {
+        if (TestStr(extension, ".dspak")) {
             load_func = &StaySetBuilder::LoadPack;
+        } else if (TestStr(extension, ".grp")) {
+            load_func = &StaySetBuilder::LoadGrp;
+        } else if (TestStr(extension, ".rss")) {
+            load_func = &StaySetBuilder::LoadRss;
+        } else if (TestStr(extension, ".rsa")) {
+            load_func = &StaySetBuilder::LoadRsa;
+        } else if (TestStr(extension, ".dsjson")) {
+            load_func = &StaySetBuilder::LoadJson;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
