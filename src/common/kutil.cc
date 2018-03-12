@@ -534,7 +534,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
             case FmtArg::Type::DiskSize: {
                 size_t size_unsigned;
-                if (arg.value.size >= 0) {
+                if (arg.value.size < 0) {
                     size_unsigned = (size_t)-arg.value.size;
                     out_buf.Append('-');
                 } else {
