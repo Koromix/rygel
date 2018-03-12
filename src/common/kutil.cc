@@ -1596,7 +1596,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         }
 
         out_buf->Grow(st_len);
-        Size read_len = Read(st_len, out_buf->ptr);
+        Size read_len = Read(st_len, out_buf->end());
         if (read_len < 0)
             return -1;
         out_buf->len += read_len;
