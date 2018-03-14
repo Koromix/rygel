@@ -54,6 +54,8 @@
 #define FMT_STRING_GROWTH_FACTOR 1.5f
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
 
+#define LINE_READER_STEP_SIZE 65536
+
 #define THREAD_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
@@ -2549,6 +2551,53 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_
     StreamReader st(filename);
     return st.ReadAll(max_len, out_buf);
 }
+
+template <typename Fun>
+class LineReader {
+    Fun read;
+
+    HeapArray<char> buf;
+    Span<const char> view = {};
+
+public:
+    Size line_number = 0;
+    bool eof = false;
+    bool error = false;
+
+    LineReader(Fun read_func) : read(read_func) {}
+
+    // TODO: Maximum line length
+    Span<const char> GetLine()
+    {
+        if (UNLIKELY(error))
+            return {};
+
+        while (!eof) {
+            if (!view.len) {
+                buf.Grow(LINE_READER_STEP_SIZE);
+
+                Size read_len = read(LINE_READER_STEP_SIZE, buf.end());
+                if (read_len < 0) {
+                    error = true;
+                    return {};
+                }
+                buf.len += read_len;
+                eof = !read_len;
+
+                view = buf;
+            }
+
+            Span<const char> line = SplitStrLine(view, &view);
+            if (view.len || eof)
+                return line;
+
+            buf.len = view.ptr - line.ptr;
+            memmove(buf.ptr, line.ptr, (size_t)buf.len);
+        }
+
+        return {};
+    }
+};
 
 class StreamWriter {
 public:
