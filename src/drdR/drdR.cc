@@ -92,7 +92,7 @@ struct StaysProxy {
 
     Rcc_Vector<const char *> main_diagnosis;
     Rcc_Vector<const char *> linked_diagnosis;
-} stays;
+};
 
 struct DiagnosesProxy {
     Size nrow;
@@ -101,7 +101,7 @@ struct DiagnosesProxy {
 
     Rcc_Vector<const char *> diag;
     Rcc_Vector<const char *> type;
-} diagnoses;
+};
 
 struct ProceduresProxy {
     Size nrow;
@@ -630,4 +630,150 @@ SEXP R_Procedures(SEXP classifier_xp, SEXP date_xp)
     }
 
     return procedures_df;
+}
+
+// [[Rcpp::export(name = 'load_stays')]]
+SEXP R_LoadStays(Rcpp::CharacterVector filenames)
+{
+    RCC_SETUP_LOG_HANDLER();
+
+    StaySet stay_set;
+    {
+        StaySetBuilder stay_set_builder;
+
+        bool valid = true;
+        for (const char *filename: filenames) {
+            valid &= stay_set_builder.LoadFiles(filename);
+        }
+        if (!valid)
+            Rcc_StopWithLastError();
+
+        if (!stay_set_builder.Finish(&stay_set))
+            Rcc_StopWithLastError();
+    }
+
+    if (stay_set.stays.len >= INT_MAX)
+        Rcpp::stop("Cannot load more than %1 stays in data.frame", INT_MAX);
+
+    SEXP stays_df;
+    SEXP diagnoses_df;
+    SEXP procedures_df;
+    {
+        Rcc_DataFrameBuilder stays_builder(stay_set.stays.len);
+        Rcc_Vector<int> stays_id = stays_builder.Add<int>("id");
+        Rcc_Vector<int> stays_admin_id = stays_builder.Add<int>("admin_id");
+        Rcc_Vector<int> stays_bill_id = stays_builder.Add<int>("bill_id");
+        Rcc_Vector<int> stays_sex = stays_builder.Add<int>("sex");
+        Rcc_Vector<Date> stays_birthdate = stays_builder.Add<Date>("birthdate");
+        Rcc_Vector<Date> stays_entry_date = stays_builder.Add<Date>("entry_date");
+        Rcc_Vector<int> stays_entry_mode = stays_builder.Add<int>("entry_mode");
+        Rcc_Vector<const char *> stays_entry_origin = stays_builder.Add<const char *>("entry_origin");
+        Rcc_Vector<Date> stays_exit_date = stays_builder.Add<Date>("exit_date");
+        Rcc_Vector<int> stays_exit_mode = stays_builder.Add<int>("exit_mode");
+        Rcc_Vector<int> stays_exit_destination = stays_builder.Add<int>("exit_destination");
+        Rcc_Vector<int> stays_unit = stays_builder.Add<int>("unit");
+        Rcc_Vector<int> stays_bed_authorization = stays_builder.Add<int>("bed_authorization");
+        Rcc_Vector<int> stays_session_count = stays_builder.Add<int>("session_count");
+        Rcc_Vector<int> stays_igs2 = stays_builder.Add<int>("igs2");
+        Rcc_Vector<Date> stays_last_menstrual_period = stays_builder.Add<Date>("last_menstrual_period");
+        Rcc_Vector<int> stays_gestational_age = stays_builder.Add<int>("gestational_age");
+        Rcc_Vector<int> stays_newborn_weight = stays_builder.Add<int>("newborn_weight");
+        Rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
+        Rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
+
+        Rcc_DataFrameBuilder diagnoses_builder(stay_set.store.diagnoses.len);
+        Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
+        Rcc_Vector<const char *> diagnoses_diag = diagnoses_builder.Add<const char *>("diag");
+
+        Rcc_DataFrameBuilder procedures_builder(stay_set.store.procedures.len);
+        Rcc_Vector<int> procedures_id = procedures_builder.Add<int>("id");
+        Rcc_Vector<const char *> procedures_proc = procedures_builder.Add<const char *>("code");
+        Rcc_Vector<int> procedures_phase = procedures_builder.Add<int>("phase");
+        Rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
+        Rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
+        Rcc_Vector<Date> procedures_date = procedures_builder.Add<Date>("date");
+
+        Size j = 0, k = 0;
+        for (Size i = 0; i < stay_set.stays.len; i++) {
+            char buf[32];
+
+            const Stay &stay = stay_set.stays[i];
+
+            stays_id[i] = (int)(i + 1);
+            stays_admin_id[i] = stay.admin_id;
+            stays_bill_id[i] = stay.bill_id;
+            // FIXME: Restore NA value for sex and deal with it here
+            switch (stay.sex) {
+                case Sex::Male: { stays_sex[i] = 1; } break;
+                case Sex::Female: { stays_sex[i] = 2; } break;
+            }
+            stays_birthdate.Set(i, stay.birthdate);
+            stays_entry_date.Set(i, stay.entry.date);
+            stays_entry_mode[i] = stay.entry.mode ? stay.entry.mode - '0' : NA_INTEGER;
+            if (stay.entry.origin) {
+                stays_entry_origin.Set(i, stay.entry.origin);
+            } else {
+                stays_entry_origin.Set(i, nullptr);
+            }
+            stays_exit_date.Set(i, stay.exit.date);
+            stays_exit_mode[i] = stay.exit.mode ? stay.exit.mode - '0' : NA_INTEGER;
+            stays_exit_destination[i] = stay.exit.destination ? stay.exit.destination - '0' : NA_INTEGER;
+            stays_unit[i] = stay.unit.number ? stay.unit.number : NA_INTEGER;
+            stays_bed_authorization[i] = stay.bed_authorization ? stay.bed_authorization : NA_INTEGER;
+            stays_session_count[i] = stay.session_count ? stay.session_count : NA_INTEGER;
+            stays_igs2[i] = stay.igs2 ? stay.igs2 : NA_INTEGER;
+            stays_last_menstrual_period.Set(i, stay.last_menstrual_period);
+            stays_gestational_age[i] = stay.gestational_age ? stay.gestational_age : NA_INTEGER;
+            stays_newborn_weight[i] = stay.newborn_weight ? stay.newborn_weight : NA_INTEGER;
+            if (stay.main_diagnosis.IsValid()) {
+                stays_main_diagnosis.Set(i, Fmt(buf, "%1", stay.main_diagnosis));
+            } else {
+                stays_main_diagnosis.Set(i, nullptr);
+            }
+            if (stay.linked_diagnosis.IsValid()) {
+                stays_linked_diagnosis.Set(i, Fmt(buf, "%1", stay.linked_diagnosis));
+            } else {
+                stays_linked_diagnosis.Set(i, nullptr);
+            }
+
+            for (DiagnosisCode diag: stay.diagnoses) {
+                diagnoses_id[j] = (int)(i + 1);
+                diagnoses_diag.Set(j, Fmt(buf, "%1", diag));
+                j++;
+            }
+
+            for (const ProcedureRealisation &proc: stay.procedures) {
+                procedures_id[k] = (int)(i + 1);
+                procedures_proc.Set(k, Fmt(buf, "%1", proc.proc));
+                procedures_phase[k] = proc.phase;
+                {
+                    int activities_dec = 0;
+                    for (int i = 1; i < 8; i++) {
+                        if (proc.activities & (1 << i)) {
+                            activities_dec = (activities_dec * 10) + i;
+                        }
+                    }
+                    procedures_activity[k] = activities_dec;
+                }
+                procedures_date.Set(k, proc.date);
+                procedures_count[k] = proc.count ? proc.count : NA_INTEGER;
+                k++;
+            }
+        }
+
+        stays_df = stays_builder.Build();
+        diagnoses_df = diagnoses_builder.Build();
+        procedures_df = procedures_builder.Build();
+    }
+
+    SEXP list;
+    {
+        Rcc_ListBuilder list_builder;
+        list_builder.Add("stays", stays_df);
+        list_builder.Add("diagnoses", diagnoses_df);
+        list_builder.Add("procedures", procedures_df);
+        list = list_builder.BuildList();
+    }
+
+    return list;
 }

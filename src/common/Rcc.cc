@@ -86,15 +86,23 @@ void Rcc_Vector<Date>::Set(Size idx, Date date)
 {
     switch (type) {
         case Type::Character: {
-            char buf[32];
-            Fmt(buf, "%1", date);
+            if (date.value) {
+                char buf[32];
+                Fmt(buf, "%1", date);
 
-            DebugAssert(idx >= 0 && idx < u.chr.len);
-            SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
+                DebugAssert(idx >= 0 && idx < u.chr.len);
+                SET_STRING_ELT(xp, idx, Rf_mkChar(buf));
+            } else {
+                SET_STRING_ELT(xp, idx, NA_STRING);
+            }
         } break;
 
         case Type::Date: {
-            u.num[idx] = date.ToCalendarDate();
+            if (date.value) {
+                u.num[idx] = date.ToCalendarDate();
+            } else {
+                u.num[idx] = NA_REAL;
+            }
         } break;
     }
 }

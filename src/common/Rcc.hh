@@ -162,7 +162,11 @@ public:
     void Set(Size idx, const char *str)
     {
         DebugAssert(idx >= 0 && idx < span.len);
-        SET_STRING_ELT(xp, idx, Rf_mkChar(str));
+        if (str) {
+            SET_STRING_ELT(xp, idx, Rf_mkChar(str));
+        } else {
+            SET_STRING_ELT(xp, idx, NA_STRING);
+        }
     }
     void Set(Size idx, Span<const char> str)
     {
