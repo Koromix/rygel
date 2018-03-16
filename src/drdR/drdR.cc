@@ -283,7 +283,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     proc.activities |= (uint8_t)(1 << activity);
                 }
             }
-            proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 1);
+            proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 0);
             proc.date = procedures.date[k];
 
             out_stay_set->store.procedures.Append(proc);
