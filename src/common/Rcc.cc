@@ -48,7 +48,7 @@ Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
     }
 }
 
-Date Rcc_Vector<Date>::operator[](Size idx) const
+const Date Rcc_Vector<Date>::operator[](Size idx) const
 {
     Date date;
     date.value = INT32_MAX; // NA
