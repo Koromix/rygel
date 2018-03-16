@@ -222,8 +222,6 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames,
             load_func = &StaySetBuilder::LoadRss;
         } else if (TestStr(extension, ".rsa")) {
             load_func = &StaySetBuilder::LoadRsa;
-        } else if (TestStr(extension, ".dsjson")) {
-            load_func = &StaySetBuilder::LoadJson;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);

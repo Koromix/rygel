@@ -106,7 +106,6 @@ public:
     bool LoadRss(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr)
         { return LoadRssOrGrp(st, false, out_tests); }
     bool LoadRsa(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
-    bool LoadJson(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
                    HashTable<int32_t, StayTest> *out_tests = nullptr);
