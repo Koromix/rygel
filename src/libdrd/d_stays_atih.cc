@@ -238,6 +238,12 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
     if (errors && set.stays.len == stays_len)
         return false;
 
+    std::stable_sort(set.stays.begin() + stays_len, set.stays.end(),
+                     [](const Stay &stay1, const Stay &stay2) {
+        return MultiCmp(stay1.admin_id - stay2.admin_id,
+                        stay1.bill_id - stay2.bill_id) < 0;
+    });
+
     set_guard.disable();
     return true;
 }
