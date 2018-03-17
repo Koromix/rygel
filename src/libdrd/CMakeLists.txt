@@ -14,7 +14,6 @@ set(LIBDRD_SRC ../common/kutil.cc
                d_desc.cc
                d_desc.hh
                d_stays.cc
-               d_stays_atih.cc
                d_stays.hh
                d_tables.cc
                d_tables.hh
