@@ -1883,219 +1883,6 @@ static inline uint64_t GetClockCounter()
 }
 
 // ------------------------------------------------------------------------
-// Strings
-// ------------------------------------------------------------------------
-
-Span<const char> MakeString(Allocator *alloc, Span<const char> str);
-Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
-
-static inline bool IsAsciiAlpha(char c)
-{
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-static inline bool IsAsciiDigit(char c)
-{
-    return (c >= '0' && c <= '9');
-}
-static inline bool IsAsciiAlphaOrDigit(char c)
-{
-    return IsAsciiAlpha(c) || IsAsciiDigit(c);
-}
-
-static inline char UpperAscii(char c)
-{
-    if (c >= 'a' && c <= 'z') {
-        return (char)(c - 32);
-    } else {
-        return c;
-    }
-}
-static inline char LowerAscii(char c)
-{
-    if (c >= 'A' && c <= 'Z') {
-        return (char)(c + 32);
-    } else {
-        return c;
-    }
-}
-
-static inline bool TestStr(Span<const char> str1, Span<const char> str2)
-{
-    if (str1.len != str2.len)
-        return false;
-    for (Size i = 0; i < str1.len; i++) {
-        if (str1[i] != str2[i])
-            return false;
-    }
-    return true;
-}
-inline bool Span<const char>::operator==(Span<const char> other) const
-    { return TestStr(*this, other); }
-static inline bool TestStr(Span<const char> str1, const char *str2)
-{
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
-        if (str1[i] != str2[i])
-            return false;
-    }
-    return (i == str1.len) && !str2[i];
-}
-inline bool Span<const char>::operator==(const char *other) const
-    { return TestStr(*this, other); }
-static inline bool TestStr(const char *str1, const char *str2)
-    { return !strcmp(str1, str2); }
-
-static inline int CmpStr(Span<const char> str1, Span<const char> str2)
-{
-    for (Size i = 0; i < str1.len && i < str2.len; i++) {
-        if (str1[i] != str2[i])
-            return str1[i] - str2[i];
-    }
-    if (str1.len < str2.len) {
-        return -str2[str1.len];
-    } else if (str1.len > str2.len) {
-        return str1[str2.len];
-    } else {
-        return 0;
-    }
-}
-static inline int CmpStr(Span<const char> str1, const char *str2)
-{
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
-        if (str1[i] != str2[i])
-            return str1[i] - str2[i];
-    }
-    if (str1.len == i) {
-        return -str2[i];
-    } else {
-        return str1[i];
-    }
-}
-static inline int CmpStr(const char *str1, const char *str2)
-    { return strcmp(str1, str2); }
-
-static inline Span<const char> SplitStr(Span<const char> str, char split_char,
-                                        Span<const char> *out_remainder = nullptr)
-{
-    Size part_len = 0;
-    while (part_len < str.len) {
-        if (str[part_len] == split_char) {
-            if (out_remainder) {
-                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
-            }
-            return str.Take(0, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(str.len, 0);
-    }
-    return str;
-}
-static inline Span<const char> SplitStr(const char *str, char split_char,
-                                        const char **out_remainder = nullptr)
-{
-    Size part_len = 0;
-    while (str[part_len]) {
-        if (str[part_len] == split_char) {
-            if (out_remainder) {
-                *out_remainder = str + part_len + 1;
-            }
-            return MakeSpan(str, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str + part_len;
-    }
-    return MakeSpan(str, part_len);
-}
-
-static inline Span<const char> SplitStrLine(Span<const char> str,
-                                            Span<const char> *out_remainder = nullptr)
-{
-    Span<const char> part = SplitStr(str, '\n', out_remainder);
-    if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
-        part.len--;
-    }
-    return part;
-}
-static inline Span<const char> SplitStrLine(const char *str,
-                                            const char **out_remainder = nullptr)
-{
-    Span<const char> part = SplitStr(str, '\n', out_remainder);
-    if (str[part.len] && part.len && part[part.len - 1] == '\r') {
-        part.len--;
-    }
-    return part;
-}
-
-static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
-                                           Span<const char> *out_remainder = nullptr)
-{
-    Bitset<256> split_mask;
-    for (Size i = 0; split_chars[i]; i++) {
-        split_mask.Set(split_chars[i]);
-    }
-
-    Size part_len = 0;
-    while (part_len < str.len) {
-        if (split_mask.Test(str[part_len])) {
-            if (out_remainder) {
-                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
-            }
-            return str.Take(0, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(str.len, 0);
-    }
-    return str.Take(0, str.len);
-}
-static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
-                                           const char **out_remainder = nullptr)
-{
-    Bitset<256> split_mask;
-    for (Size i = 0; split_chars[i]; i++) {
-        split_mask.Set(split_chars[i]);
-    }
-
-    Size part_len = 0;
-    while (str[part_len]) {
-        if (split_mask.Test(str[part_len])) {
-            if (out_remainder) {
-                *out_remainder = str + part_len + 1;
-            }
-            return MakeSpan(str, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str + part_len;
-    }
-    return MakeSpan(str, part_len);
-}
-
-static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
-{
-    while (str.len && strchr(trim_chars, str[0])) {
-        str.ptr++;
-        str.len--;
-    }
-    while (str.len && strchr(trim_chars, str[str.len - 1])) {
-        str.len--;
-    }
-
-    return str;
-}
-
-// ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
 
@@ -2330,6 +2117,271 @@ void EndConsoleLog();
 
 void PushLogHandler(std::function<LogHandlerFunc> handler);
 void PopLogHandler();
+
+// ------------------------------------------------------------------------
+// Strings
+// ------------------------------------------------------------------------
+
+Span<const char> MakeString(Allocator *alloc, Span<const char> str);
+Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
+
+static inline bool IsAsciiAlpha(char c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+static inline bool IsAsciiDigit(char c)
+{
+    return (c >= '0' && c <= '9');
+}
+static inline bool IsAsciiAlphaOrDigit(char c)
+{
+    return IsAsciiAlpha(c) || IsAsciiDigit(c);
+}
+
+static inline char UpperAscii(char c)
+{
+    if (c >= 'a' && c <= 'z') {
+        return (char)(c - 32);
+    } else {
+        return c;
+    }
+}
+static inline char LowerAscii(char c)
+{
+    if (c >= 'A' && c <= 'Z') {
+        return (char)(c + 32);
+    } else {
+        return c;
+    }
+}
+
+static inline bool TestStr(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len != str2.len)
+        return false;
+    for (Size i = 0; i < str1.len; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return true;
+}
+inline bool Span<const char>::operator==(Span<const char> other) const
+    { return TestStr(*this, other); }
+static inline bool TestStr(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return (i == str1.len) && !str2[i];
+}
+inline bool Span<const char>::operator==(const char *other) const
+    { return TestStr(*this, other); }
+static inline bool TestStr(const char *str1, const char *str2)
+    { return !strcmp(str1, str2); }
+
+static inline int CmpStr(Span<const char> str1, Span<const char> str2)
+{
+    for (Size i = 0; i < str1.len && i < str2.len; i++) {
+        if (str1[i] != str2[i])
+            return str1[i] - str2[i];
+    }
+    if (str1.len < str2.len) {
+        return -str2[str1.len];
+    } else if (str1.len > str2.len) {
+        return str1[str2.len];
+    } else {
+        return 0;
+    }
+}
+static inline int CmpStr(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (str1[i] != str2[i])
+            return str1[i] - str2[i];
+    }
+    if (str1.len == i) {
+        return -str2[i];
+    } else {
+        return str1[i];
+    }
+}
+static inline int CmpStr(const char *str1, const char *str2)
+    { return strcmp(str1, str2); }
+
+static inline Span<const char> SplitStr(Span<const char> str, char split_char,
+                                        Span<const char> *out_remainder = nullptr)
+{
+    Size part_len = 0;
+    while (part_len < str.len) {
+        if (str[part_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline Span<const char> SplitStr(const char *str, char split_char,
+                                        const char **out_remainder = nullptr)
+{
+    Size part_len = 0;
+    while (str[part_len]) {
+        if (str[part_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+
+static inline Span<const char> SplitStrLine(Span<const char> str,
+                                            Span<const char> *out_remainder = nullptr)
+{
+    Span<const char> part = SplitStr(str, '\n', out_remainder);
+    if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+static inline Span<const char> SplitStrLine(const char *str,
+                                            const char **out_remainder = nullptr)
+{
+    Span<const char> part = SplitStr(str, '\n', out_remainder);
+    if (str[part.len] && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+
+static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
+                                           Span<const char> *out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        split_mask.Set(split_chars[i]);
+    }
+
+    Size part_len = 0;
+    while (part_len < str.len) {
+        if (split_mask.Test(str[part_len])) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str.Take(0, str.len);
+}
+static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
+                                           const char **out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        split_mask.Set(split_chars[i]);
+    }
+
+    Size part_len = 0;
+    while (str[part_len]) {
+        if (split_mask.Test(str[part_len])) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+
+static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+{
+    while (str.len && strchr(trim_chars, str[0])) {
+        str.ptr++;
+        str.len--;
+    }
+    while (str.len && strchr(trim_chars, str[str.len - 1])) {
+        str.len--;
+    }
+
+    return str;
+}
+
+template <typename T>
+std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                            Span<const char> *out_remaining = nullptr)
+{
+    uint64_t value = 0;
+
+    Size pos = 0;
+    uint64_t neg = 0;
+    if (str.len >= 2) {
+        if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
+            pos = 1;
+            neg = UINT64_MAX;
+        } else if (str[0] == '+') {
+            pos = 1;
+        }
+    }
+
+    for (; pos < str.len; pos++) {
+        unsigned int digit = (unsigned int)(str[pos] - '0');
+        if (UNLIKELY(digit > 9)) {
+            if (!pos || flags & (int)ParseFlag::End) {
+                if (flags & (int)ParseFlag::Log) {
+                    LogError("Malformed integer number '%1'", str);
+                }
+                return {0, false};
+            } else {
+                break;
+            }
+        }
+
+        uint64_t new_value = (value * 10) + digit;
+        if (UNLIKELY(new_value < value))
+            goto overflow;
+        value = new_value;
+    }
+    if (UNLIKELY(value > std::numeric_limits<T>::max()))
+        goto overflow;
+    value = ((value ^ neg) - neg);
+
+    if (out_remaining) {
+        *out_remaining = str.Take(pos, str.len - pos);
+    }
+    return {(T)value, true};
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Integer overflow for number '%1' (max = %2)", str,
+                std::numeric_limits<T>::max());
+    }
+    return {0, false};
+}
 
 // ------------------------------------------------------------------------
 // System
@@ -2611,62 +2663,6 @@ private:
 
     bool WriteRaw(Span<const uint8_t> buf);
 };
-
-// ------------------------------------------------------------------------
-// Parsers
-// ------------------------------------------------------------------------
-
-template <typename T>
-std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                            Span<const char> *out_remaining = nullptr)
-{
-    uint64_t value = 0;
-
-    Size pos = 0;
-    uint64_t neg = 0;
-    if (str.len >= 2) {
-        if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
-            pos = 1;
-            neg = UINT64_MAX;
-        } else if (str[0] == '+') {
-            pos = 1;
-        }
-    }
-
-    for (; pos < str.len; pos++) {
-        unsigned int digit = (unsigned int)(str[pos] - '0');
-        if (UNLIKELY(digit > 9)) {
-            if (!pos || flags & (int)ParseFlag::End) {
-                if (flags & (int)ParseFlag::Log) {
-                    LogError("Malformed integer number '%1'", str);
-                }
-                return {0, false};
-            } else {
-                break;
-            }
-        }
-
-        uint64_t new_value = (value * 10) + digit;
-        if (UNLIKELY(new_value < value))
-            goto overflow;
-        value = new_value;
-    }
-    if (UNLIKELY(value > std::numeric_limits<T>::max()))
-        goto overflow;
-    value = ((value ^ neg) - neg);
-
-    if (out_remaining) {
-        *out_remaining = str.Take(pos, str.len - pos);
-    }
-    return {(T)value, true};
-
-overflow:
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Integer overflow for number '%1' (max = %2)", str,
-                std::numeric_limits<T>::max());
-    }
-    return {0, false};
-}
 
 // ------------------------------------------------------------------------
 // Options
