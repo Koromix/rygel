@@ -2528,20 +2528,25 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_
 
 class LineReader {
     std::function<Size(Size, void *)> read;
+    const char *filename;
 
     HeapArray<char> buf;
     Span<const char> view = {};
 
 public:
-    Size line_number = 0;
     bool eof = false;
     bool error = false;
 
-    LineReader(std::function<Size(Size, void *)> read_func) : read(read_func) {}
+    Span<const char> line = {};
+    Size line_number = 0;
+
+    LineReader(std::function<Size(Size, void *)> read_func, const char *filename = "?")
+        : read(read_func), filename(filename) {}
     LineReader(StreamReader *st) {
         read = [=](Size max_len, void *out_buf) {
             return st->Read(max_len, out_buf);
         };
+        filename = st->filename;
     }
 
     Span<const char> GetLine();

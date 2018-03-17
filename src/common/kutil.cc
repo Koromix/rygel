@@ -1878,8 +1878,12 @@ Span<const char> LineReader::GetLine()
 {
     if (UNLIKELY(error))
         return {};
+    if (eof) {
+        line = line.Take(line.len, 0);
+        return line;
+    }
 
-    while (!eof) {
+    for (;;) {
         if (!view.len) {
             buf.Grow(LINE_READER_STEP_SIZE);
 
@@ -1894,15 +1898,15 @@ Span<const char> LineReader::GetLine()
             view = buf;
         }
 
-        Span<const char> line = SplitStrLine(view, &view);
-        if (view.len || eof)
+        line = SplitStrLine(view, &view);
+        if (view.len || eof) {
+            line_number++;
             return line;
+        }
 
         buf.len = view.ptr - line.ptr;
         memmove(buf.ptr, line.ptr, (size_t)buf.len);
     }
-
-    return {};
 }
 
 #ifdef MZ_VERSION
