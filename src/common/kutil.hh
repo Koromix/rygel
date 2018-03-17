@@ -2613,6 +2613,62 @@ private:
 };
 
 // ------------------------------------------------------------------------
+// Parsers
+// ------------------------------------------------------------------------
+
+template <typename T>
+std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                            Span<const char> *out_remaining = nullptr)
+{
+    uint64_t value = 0;
+
+    Size pos = 0;
+    uint64_t neg = 0;
+    if (str.len >= 2) {
+        if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
+            pos = 1;
+            neg = UINT64_MAX;
+        } else if (str[0] == '+') {
+            pos = 1;
+        }
+    }
+
+    for (; pos < str.len; pos++) {
+        unsigned int digit = (unsigned int)(str[pos] - '0');
+        if (UNLIKELY(digit > 9)) {
+            if (!pos || flags & (int)ParseFlag::End) {
+                if (flags & (int)ParseFlag::Log) {
+                    LogError("Malformed integer number '%1'", str);
+                }
+                return {0, false};
+            } else {
+                break;
+            }
+        }
+
+        uint64_t new_value = (value * 10) + digit;
+        if (UNLIKELY(new_value < value))
+            goto overflow;
+        value = new_value;
+    }
+    if (UNLIKELY(value > std::numeric_limits<T>::max()))
+        goto overflow;
+    value = ((value ^ neg) - neg);
+
+    if (out_remaining) {
+        *out_remaining = str.Take(pos, str.len - pos);
+    }
+    return {(T)value, true};
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Integer overflow for number '%1' (max = %2)", str,
+                std::numeric_limits<T>::max());
+    }
+    return {0, false};
+}
+
+// ------------------------------------------------------------------------
 // Option Parser
 // ------------------------------------------------------------------------
 

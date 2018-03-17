@@ -12,20 +12,14 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
 
     if (str[0] == ' ')
         return true;
+    if (UNLIKELY((unsigned int)(str[0] - '0') > 9))
+        return false;
 
-    T value = 0;
-    for (Size i = 0; i < str.len && str[i] != ' '; i++) {
-        int digit = str[i] - '0';
-        if (UNLIKELY((unsigned int)digit > 9))
-            return false;
-        T new_value = (T)((value * 10) + digit);
-        if (UNLIKELY(new_value < value))
-            return false;
-        value = new_value;
+    std::pair<T, bool> ret = ParseDec<T>(str, 0, &str);
+    if (LIKELY(ret.second && (!str.len || str[0] == ' '))) {
+        *out_value = ret.first;
     }
-
-    *out_value = value;
-    return true;
+    return ret.second;
 }
 
 static bool ParsePmsiDate(Span<const char> str, Date *out_date)
