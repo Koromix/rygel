@@ -2036,16 +2036,16 @@ static inline Span<const char> SplitStrLine(const char *str,
 static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
                                            Span<const char> *out_remainder = nullptr)
 {
-    char split_mask[256 / 8] = {};
+    Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask[i / 8] |= (char)(1 << (split_chars[i] % 8));
+        split_mask.Set(split_chars[i]);
     }
 
     Size part_len = 0;
     while (part_len < str.len) {
-        if (split_mask[str[part_len] / 8] & (str[part_len] % 8)) {
+        if (split_mask.Test(str[part_len])) {
             if (out_remainder) {
-                *out_remainder = str.Take(part_len, str.len - part_len);
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
             }
             return str.Take(0, part_len);
         }
@@ -2053,21 +2053,21 @@ static inline Span<const char> SplitStrAny(Span<const char> str, const char *spl
     }
 
     if (out_remainder) {
-        *out_remainder = str.Take(part_len, 0);
+        *out_remainder = str.Take(str.len, 0);
     }
     return str.Take(0, str.len);
 }
 static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
                                            const char **out_remainder = nullptr)
 {
-    char split_mask[256 / 8] = {};
+    Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
-        split_mask[i / 8] |= (char)(1 << (split_chars[i] % 8));
+        split_mask.Set(split_chars[i]);
     }
 
     Size part_len = 0;
     while (str[part_len]) {
-        if (split_mask[str[part_len] / 8] & (str[part_len] % 8)) {
+        if (split_mask.Test(str[part_len])) {
             if (out_remainder) {
                 *out_remainder = str + part_len + 1;
             }
