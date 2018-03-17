@@ -697,26 +697,26 @@ SEXP R_LoadStays(Rcpp::CharacterVector filenames)
             stays_id[i] = (int)(i + 1);
             stays_admin_id[i] = stay.admin_id;
             stays_bill_id[i] = stay.bill_id;
-            stays_sex[i] = stay.sex ? stay.sex : NA_INTEGER;
+            stays_sex[i] = LIKELY(stay.sex) ? stay.sex : NA_INTEGER;
             stays_birthdate.Set(i, stay.birthdate);
             stays_entry_date.Set(i, stay.entry.date);
-            stays_entry_mode[i] = stay.entry.mode ? stay.entry.mode - '0' : NA_INTEGER;
+            stays_entry_mode[i] = LIKELY(stay.entry.mode) ? stay.entry.mode - '0' : NA_INTEGER;
             if (stay.entry.origin) {
                 stays_entry_origin.Set(i, stay.entry.origin);
             } else {
                 stays_entry_origin.Set(i, nullptr);
             }
             stays_exit_date.Set(i, stay.exit.date);
-            stays_exit_mode[i] = stay.exit.mode ? stay.exit.mode - '0' : NA_INTEGER;
+            stays_exit_mode[i] = LIKELY(stay.exit.mode) ? stay.exit.mode - '0' : NA_INTEGER;
             stays_exit_destination[i] = stay.exit.destination ? stay.exit.destination - '0' : NA_INTEGER;
-            stays_unit[i] = stay.unit.number ? stay.unit.number : NA_INTEGER;
+            stays_unit[i] = LIKELY(stay.unit.number) ? stay.unit.number : NA_INTEGER;
             stays_bed_authorization[i] = stay.bed_authorization ? stay.bed_authorization : NA_INTEGER;
             stays_session_count[i] = stay.session_count ? stay.session_count : NA_INTEGER;
             stays_igs2[i] = stay.igs2 ? stay.igs2 : NA_INTEGER;
             stays_last_menstrual_period.Set(i, stay.last_menstrual_period);
             stays_gestational_age[i] = stay.gestational_age ? stay.gestational_age : NA_INTEGER;
             stays_newborn_weight[i] = stay.newborn_weight ? stay.newborn_weight : NA_INTEGER;
-            if (stay.main_diagnosis.IsValid()) {
+            if (LIKELY(stay.main_diagnosis.IsValid())) {
                 stays_main_diagnosis.Set(i, Fmt(buf, "%1", stay.main_diagnosis));
             } else {
                 stays_main_diagnosis.Set(i, nullptr);
@@ -747,7 +747,7 @@ SEXP R_LoadStays(Rcpp::CharacterVector filenames)
                     procedures_activity[k] = activities_dec;
                 }
                 procedures_date.Set(k, proc.date);
-                procedures_count[k] = proc.count ? proc.count : NA_INTEGER;
+                procedures_count[k] = LIKELY(proc.count) ? proc.count : NA_INTEGER;
                 k++;
             }
         }
