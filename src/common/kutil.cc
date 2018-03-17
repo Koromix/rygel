@@ -1873,6 +1873,38 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
     DebugAssert(false);
 }
 
+// TODO: Maximum line length
+Span<const char> LineReader::GetLine()
+{
+    if (UNLIKELY(error))
+        return {};
+
+    while (!eof) {
+        if (!view.len) {
+            buf.Grow(LINE_READER_STEP_SIZE);
+
+            Size read_len = read(LINE_READER_STEP_SIZE, buf.end());
+            if (read_len < 0) {
+                error = true;
+                return {};
+            }
+            buf.len += read_len;
+            eof = !read_len;
+
+            view = buf;
+        }
+
+        Span<const char> line = SplitStrLine(view, &view);
+        if (view.len || eof)
+            return line;
+
+        buf.len = view.ptr - line.ptr;
+        memmove(buf.ptr, line.ptr, (size_t)buf.len);
+    }
+
+    return {};
+}
+
 #ifdef MZ_VERSION
 struct MinizDeflateContext {
     tdefl_compressor deflator;

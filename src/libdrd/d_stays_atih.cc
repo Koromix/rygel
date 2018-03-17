@@ -60,9 +60,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
 
     Size errors = 0;
     {
-        LineReader reader([&](Size max_len, void *out_buf) {
-            return st.Read(max_len, out_buf);
-        });
+        LineReader reader(&st);
 
         while (!reader.eof) {
             Span<const char> line = reader.GetLine();

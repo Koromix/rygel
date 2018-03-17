@@ -70,7 +70,7 @@ SEXP R_Drd(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
 struct StaysProxy {
     Size nrow;
 
-    Rcc_Vector<const int> id;
+    Rcc_Vector<int> id;
 
     Rcc_Vector<int> admin_id;
     Rcc_Vector<int> bill_id;

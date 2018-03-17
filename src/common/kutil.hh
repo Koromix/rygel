@@ -384,15 +384,11 @@ public:
         }
     }
 
-    // With C++17 we don't need any copy or move operator thanks to guaranteed
-    // copy elision. I think. MSVC does not agree... yet?
-#ifdef _MSC_VER
     DeferGuard(DeferGuard &&other)
         : f(std::move(other.f)), enabled(other.enabled)
     {
         other.enabled = false;
     }
-#endif
 
     DeferGuard(const DeferGuard &) = delete;
     DeferGuard &operator=(DeferGuard &) = delete;
@@ -466,55 +462,6 @@ enum class ParseFlag {
     End = 1 << 2
 };
 #define DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
-
-// ------------------------------------------------------------------------
-// Overflow Safety
-// ------------------------------------------------------------------------
-
-#if defined(__GNUC__)
-    template <typename T> bool AddOverflow(T a, T b, T *rret)
-        { return __builtin_add_overflow(a, b, rret); }
-    template <typename T> bool SubOverflow(T a, T b, T *rret)
-        { return __builtin_sub_overflow(a, b, rret); }
-    template <typename T> bool MulOverflow(T a, T b, T *rret)
-        { return __builtin_mul_overflow(a, b, rret); }
-#elif defined(_MSC_VER)
-    // Unfortunately intsafe.h functions change rret to an invalid value when overflow would
-    // occur. We want to keep the old value in, like GCC instrinsics do. The good solution
-    // would be to implement our own functions, but I'm too lazy to do it right now and test
-    // it's working. That'll do for now.
-    #define DEFINE_OVERFLOW_OPERATION(Type, Operation, Func) \
-        static inline bool Operation##Overflow(Type a, Type b, Type *rret) \
-        { \
-            Type backup = *rret; \
-            if (!Func(a, b, rret)) { \
-                return false; \
-            } else { \
-                *rret = backup; \
-                return true; \
-            } \
-        }
-    #define OVERFLOW_OPERATIONS(Type, Prefix) \
-        DEFINE_OVERFLOW_OPERATION(Type, Add, Prefix##Add) \
-        DEFINE_OVERFLOW_OPERATION(Type, Sub, Prefix##Sub) \
-        DEFINE_OVERFLOW_OPERATION(Type, Mul, Prefix##Mult)
-
-    OVERFLOW_OPERATIONS(signed char, Int8)
-    OVERFLOW_OPERATIONS(unsigned char, UInt8)
-    OVERFLOW_OPERATIONS(short, Short)
-    OVERFLOW_OPERATIONS(unsigned short, UShort)
-    OVERFLOW_OPERATIONS(int, Int)
-    OVERFLOW_OPERATIONS(unsigned int, UInt)
-    OVERFLOW_OPERATIONS(long, Long)
-    OVERFLOW_OPERATIONS(unsigned long, ULong)
-    OVERFLOW_OPERATIONS(long long, LongLong)
-    OVERFLOW_OPERATIONS(unsigned long long, ULongLong)
-
-    #undef OVERFLOW_OPERATIONS
-    #undef DEFINE_OVERFLOW_OPERATION
-#else
-    #error Overflow operations are not implemented for this compiler
-#endif
 
 // ------------------------------------------------------------------------
 // Memory / Allocator
@@ -913,12 +860,8 @@ public:
         if (reserve_capacity <= capacity - len)
             return;
 
-        Size needed_capacity;
-#ifndef NDEBUG
-        DebugAssert(!AddOverflow(capacity, reserve_capacity, &needed_capacity));
-#else
-        needed_capacity = capacity + reserve_capacity;
-#endif
+        Size needed_capacity = capacity + reserve_capacity;
+        DebugAssert(needed_capacity >= capacity);
 
         Size new_capacity;
         if (!capacity) {
@@ -952,7 +895,11 @@ public:
         Grow();
 
         T *first = ptr + len;
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             new (ptr + len) T;
         }
         ptr[len++] = value;
@@ -964,7 +911,11 @@ public:
 
         T *first = ptr + len;
         for (const T &value: values) {
+#if __cplusplus >= 201703L
             if constexpr(!std::is_trivial<T>::value) {
+#else
+            if (true) {
+#endif
                 new (ptr + len) T;
             }
             ptr[len++] = value;
@@ -976,7 +927,11 @@ public:
     {
         DebugAssert(first >= 0 && first <= len);
 
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             for (Size i = first; i < len; i++) {
                 ptr[i].~T();
             }
@@ -1123,7 +1078,11 @@ public:
         Size bucket_offset = (offset + len) % BucketSize;
 
         T *first = buckets[bucket_idx]->values + bucket_offset;
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             new (first) T;
         }
 
@@ -1159,7 +1118,11 @@ public:
         Size start_bucket_idx = start_idx / BucketSize;
         Size end_bucket_idx = end_idx / BucketSize;
 
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             iterator_type end_it = end();
             for (iterator_type it(this, from); it != end_it; ++it) {
                 it->~T();
@@ -1196,7 +1159,11 @@ public:
         Size end_idx = offset + count;
         Size end_bucket_idx = end_idx / BucketSize;
 
+#if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
             iterator_type end_it(this, count);
             for (iterator_type it = begin(); it != end_it; ++it) {
                 it->~T();
@@ -1406,7 +1373,11 @@ public:
     HashTable() = default;
     ~HashTable()
     {
+#if __cplusplus >= 201703L
         if constexpr(std::is_trivial<ValueType>::value) {
+#else
+        if (false) {
+#endif
             count = 0;
             Rehash(0);
         } else {
@@ -2438,16 +2409,19 @@ class AsyncHelper {
 
 public:
     template <typename Fun>
-    AsyncHelper(Fun f)
+    AsyncHelper(typename std::enable_if<std::is_same<typename std::result_of<Fun()>::type,
+                                                     void>::value, Fun>::type f)
     {
-        if constexpr(std::is_same<typename std::result_of<Fun()>::type, void>::value) {
-            async.AddTask([=]() {
-                f();
-                return true;
-            });
-        } else {
-            async.AddTask(std::function<bool()>(f));
-        }
+        async.AddTask([=]() {
+            f();
+            return true;
+        });
+    }
+    template <typename Fun>
+    AsyncHelper(typename std::enable_if<std::is_same<typename std::result_of<Fun()>::type,
+                                                     bool>::value, Fun>::type f)
+    {
+        async.AddTask(std::function<bool()>(f));
     }
     ~AsyncHelper() { Sync(); }
 
@@ -2552,9 +2526,8 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_
     return st.ReadAll(max_len, out_buf);
 }
 
-template <typename Fun>
 class LineReader {
-    Fun read;
+    std::function<Size(Size, void *)> read;
 
     HeapArray<char> buf;
     Span<const char> view = {};
@@ -2564,39 +2537,14 @@ public:
     bool eof = false;
     bool error = false;
 
-    LineReader(Fun read_func) : read(read_func) {}
-
-    // TODO: Maximum line length
-    Span<const char> GetLine()
-    {
-        if (UNLIKELY(error))
-            return {};
-
-        while (!eof) {
-            if (!view.len) {
-                buf.Grow(LINE_READER_STEP_SIZE);
-
-                Size read_len = read(LINE_READER_STEP_SIZE, buf.end());
-                if (read_len < 0) {
-                    error = true;
-                    return {};
-                }
-                buf.len += read_len;
-                eof = !read_len;
-
-                view = buf;
-            }
-
-            Span<const char> line = SplitStrLine(view, &view);
-            if (view.len || eof)
-                return line;
-
-            buf.len = view.ptr - line.ptr;
-            memmove(buf.ptr, line.ptr, (size_t)buf.len);
-        }
-
-        return {};
+    LineReader(std::function<Size(Size, void *)> read_func) : read(read_func) {}
+    LineReader(StreamReader *st) {
+        read = [=](Size max_len, void *out_buf) {
+            return st->Read(max_len, out_buf);
+        };
     }
+
+    Span<const char> GetLine();
 };
 
 class StreamWriter {

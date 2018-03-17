@@ -78,9 +78,12 @@ public:
 };
 
 template <typename T>
-class Rcc_Vector {
+class Rcc_Vector {};
+
+template <>
+class Rcc_Vector<double> {
     Rcc_AutoSexp xp;
-    Span<T> span = {};
+    Span<double> span = {};
 
 public:
     Rcc_Vector() = default;
@@ -88,47 +91,63 @@ public:
         : xp(xp)
     {
         if (xp) {
-            if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
-                if (TYPEOF(xp) != INTSXP) {
-                    Rcpp::stop("Expected integer vector");
-                }
-                span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
-            } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
-                if (TYPEOF(xp) != REALSXP) {
-                    Rcpp::stop("Expected numeric vector");
-                }
-                span = MakeSpan(REAL(xp), Rf_xlength(xp));
+            if (TYPEOF(xp) != REALSXP) {
+                Rcpp::stop("Expected numeric vector");
             }
+            span = MakeSpan(REAL(xp), Rf_xlength(xp));
         }
     }
     Rcc_Vector(Size len)
     {
-        if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
-            xp = Rf_allocVector(INTSXP, len);
-            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
-        } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
-            xp = Rf_allocVector(REALSXP, len);
-            span = MakeSpan(REAL(xp), Rf_xlength(xp));
-        }
+        xp = Rf_allocVector(REALSXP, len);
+        span = MakeSpan(REAL(xp), Rf_xlength(xp));
     }
 
     operator SEXP() const { return xp; }
 
     Size Len() const { return span.len; }
 
-    static bool IsNA(T value)
+    static bool IsNA(double value) { return ISNA(value); }
+
+    double &operator[](Size idx) { return span[idx]; }
+    const double &operator[](Size idx) const { return span[idx]; }
+
+    void Set(Size idx, double value) { span[idx] = value; }
+};
+
+template <>
+class Rcc_Vector<int> {
+    Rcc_AutoSexp xp;
+    Span<int> span = {};
+
+public:
+    Rcc_Vector() = default;
+    Rcc_Vector(SEXP xp)
+        : xp(xp)
     {
-        if constexpr(std::is_same<typename std::remove_cv<T>::type, int>::value) {
-            return value == NA_INTEGER;
-        } else if constexpr(std::is_same<typename std::remove_cv<T>::type, double>::value) {
-            return ISNA(value);
+        if (xp) {
+            if (TYPEOF(xp) != INTSXP) {
+                Rcpp::stop("Expected integer vector");
+            }
+            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
         }
     }
+    Rcc_Vector(Size len)
+    {
+        xp = Rf_allocVector(INTSXP, len);
+        span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+    }
 
-    T &operator[](Size idx) { return span[idx]; }
-    const T &operator[](Size idx) const { return span[idx]; }
+    operator SEXP() const { return xp; }
 
-    void Set(Size idx, T value) { span[idx] = value; }
+    Size Len() const { return span.len; }
+
+    static bool IsNA(int value) { return value == NA_INTEGER; }
+
+    int &operator[](Size idx) { return span[idx]; }
+    const int &operator[](Size idx) const { return span[idx]; }
+
+    void Set(Size idx, int value) { span[idx] = value; }
 };
 
 template <>
