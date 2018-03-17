@@ -27,9 +27,10 @@ struct Stay {
         MalformedExitDestination = 1 << 7,
         MalformedSessionCount = 1 << 8,
         MalformedNewbornWeight = 1 << 9,
-        MalformedMainDiagnosis = 1 << 10,
-        MalformedLinkedDiagnosis = 1 << 11,
-        MalformedAssociatedDiagnosis = 1 << 12
+        MalformedIgs2 = 1 << 10,
+        MalformedMainDiagnosis = 1 << 11,
+        MalformedLinkedDiagnosis = 1 << 12,
+        MalformedAssociatedDiagnosis = 1 << 13
     };
 
     int32_t admin_id;

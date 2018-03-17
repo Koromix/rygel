@@ -653,6 +653,11 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
             }
         }
 
+        // IGS2
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedIgs2)) {
+            valid &= SetError(out_errors, 169);
+        }
+
         // Diagnoses
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);

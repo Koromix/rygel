@@ -340,7 +340,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 }
             }
             offset += 8;
-            ParsePmsiInt(ReadFragment(3), &stay.igs2);
+            ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(Stay::Error::MalformedIgs2);
             offset += 33; // Skip a bunch of fields
 
             if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
