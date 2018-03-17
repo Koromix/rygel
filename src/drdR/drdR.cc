@@ -185,7 +185,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
-                DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
+                DiagnosisCode diag =
+                    DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 const char *type_str = diagnoses.type[j].ptr;
 
                 if (LIKELY(type_str[0] && !type_str[1])) {
@@ -225,13 +226,15 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
         } else {
             if (LIKELY(stays.main_diagnosis[i] != CHAR(NA_STRING))) {
-                stay.main_diagnosis = DiagnosisCode::FromString(stays.main_diagnosis[i], false);
+                stay.main_diagnosis =
+                    DiagnosisCode::FromString(stays.main_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
                     stay.error_mask |= (int)Stay::Error::MalformedMainDiagnosis;
                 }
             }
             if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
-                stay.linked_diagnosis = DiagnosisCode::FromString(stays.linked_diagnosis[i], false);
+                stay.linked_diagnosis =
+                    DiagnosisCode::FromString(stays.linked_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                     stay.error_mask |= (int)Stay::Error::MalformedLinkedDiagnosis;
                 }
@@ -243,7 +246,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
-                DiagnosisCode diag = DiagnosisCode::FromString(diagnoses.diag[j], false);
+                DiagnosisCode diag =
+                    DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 if (UNLIKELY(!diag.IsValid())) {
                     stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
                 }
