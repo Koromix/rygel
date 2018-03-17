@@ -85,12 +85,9 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 offset += len;
                 return frag;
             };
-            const auto SetErrorFlag = [&stay](Stay::Error flag, bool error) {
-                if (UNLIKELY(error)) {
-                    stay.error_mask |= (uint32_t)flag;
-                } else {
-                    stay.error_mask &= ~(uint32_t)flag;
-                }
+            const auto SetErrorFlag = [&stay](Stay::Error flag) {
+                stay.error_mask |= (uint32_t)flag;
+                return true;
             };
 
             int16_t version = 0;
@@ -104,14 +101,11 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             ParsePmsiInt(ReadFragment(20), &stay.bill_id);
             ParsePmsiInt(ReadFragment(20), &stay.admin_id);
             offset += 10; // Skip RUM id
-            SetErrorFlag(Stay::Error::MalformedBirthdate,
-                         !ParsePmsiDate(ReadFragment(8), &stay.birthdate));
-            SetErrorFlag(Stay::Error::MalformedSex,
-                         !ParsePmsiInt(ReadFragment(1), &stay.sex));
+            ParsePmsiDate(ReadFragment(8), &stay.birthdate) || SetErrorFlag(Stay::Error::MalformedBirthdate);
+            ParsePmsiInt(ReadFragment(1), &stay.sex) || SetErrorFlag(Stay::Error::MalformedSex);
             ParsePmsiInt(ReadFragment(4), &stay.unit.number);
             ParsePmsiInt(ReadFragment(2), &stay.bed_authorization);
-            SetErrorFlag(Stay::Error::MalformedEntryDate,
-                         !ParsePmsiDate(ReadFragment(8), &stay.entry.date));
+            ParsePmsiDate(ReadFragment(8), &stay.entry.date) || SetErrorFlag(Stay::Error::MalformedEntryDate);
             if (LIKELY(line[offset] != ' ')) {
                 stay.entry.mode = line[offset];
             }
@@ -120,8 +114,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 stay.entry.origin = line[offset];
             }
             offset += 1;
-            SetErrorFlag(Stay::Error::MalformedExitDate,
-                         !ParsePmsiDate(ReadFragment(8), &stay.exit.date));
+            ParsePmsiDate(ReadFragment(8), &stay.exit.date) || SetErrorFlag(Stay::Error::MalformedExitDate);
             if (LIKELY(line[offset] != ' ')) {
                 stay.exit.mode = line[offset];
             }
@@ -131,12 +124,10 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             }
             offset += 1;
             offset += 5; // Skip postal code
-            SetErrorFlag(Stay::Error::MalformedNewbornWeight,
-                         !ParsePmsiInt(ReadFragment(4), &stay.newborn_weight));
+            ParsePmsiInt(ReadFragment(4), &stay.newborn_weight) || SetErrorFlag(Stay::Error::MalformedNewbornWeight);
             ParsePmsiInt(ReadFragment(2), &stay.gestational_age);
             ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period);
-            SetErrorFlag(Stay::Error::MalformedSessionCount,
-                         !ParsePmsiInt(ReadFragment(2), &stay.session_count));
+            ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(Stay::Error::MalformedSessionCount);
             ParsePmsiInt(ReadFragment(2), &das_count);
             ParsePmsiInt(ReadFragment(2), &dad_count);
             ParsePmsiInt(ReadFragment(3), &procedures_count);
