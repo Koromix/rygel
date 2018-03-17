@@ -2207,7 +2207,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 }
 
 // ------------------------------------------------------------------------
-// Option Parser
+// Options
 // ------------------------------------------------------------------------
 
 static inline bool IsOption(const char *arg)

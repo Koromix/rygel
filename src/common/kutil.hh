@@ -2669,7 +2669,7 @@ overflow:
 }
 
 // ------------------------------------------------------------------------
-// Option Parser
+// Options
 // ------------------------------------------------------------------------
 
 static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
