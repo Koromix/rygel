@@ -2550,6 +2550,8 @@ public:
     }
 
     Span<const char> GetLine();
+
+    void PushLogHandler();
 };
 
 class StreamWriter {

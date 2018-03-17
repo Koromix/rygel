@@ -1909,6 +1909,19 @@ Span<const char> LineReader::GetLine()
     }
 }
 
+void LineReader::PushLogHandler()
+{
+    ::PushLogHandler([=](LogLevel level, const char *ctx,
+                         const char *fmt, Span<const FmtArg> args) {
+        StartConsoleLog(level);
+        Print(stderr, ctx);
+        Print(stderr, "%1(%2): ", filename, line_number);
+        PrintFmt(stderr, fmt, args);
+        PrintLn(stderr);
+        EndConsoleLog();
+    });
+}
+
 #ifdef MZ_VERSION
 struct MinizDeflateContext {
     tdefl_compressor deflator;
