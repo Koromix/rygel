@@ -374,6 +374,9 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 ProcedureRealisation proc = {};
                 ParsePmsiDate(ReadFragment(8), &proc.date);
                 proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+                if (UNLIKELY(!proc.proc.IsValid())) {
+                    stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+                }
                 if (version >= 17) {
                     offset += 3; // Skip CCAM extension
                 }

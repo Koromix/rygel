@@ -272,7 +272,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
             ProcedureRealisation proc = {};
 
-            proc.proc = ProcedureCode::FromString(procedures.proc[k]);
+            proc.proc = ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
+            if (UNLIKELY(!proc.proc.IsValid())) {
+                stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+            }
             proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
             {
                 int activities_dec = procedures.activity[k];
