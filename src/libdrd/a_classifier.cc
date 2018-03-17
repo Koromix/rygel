@@ -755,7 +755,6 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     return valid;
 }
 
-// FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
                   HeapArray<const DiagnosisInfo *> *out_diagnoses,
