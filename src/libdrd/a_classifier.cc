@@ -24,12 +24,12 @@ static int ComputeAge(Date date, Date birthdate)
     return age;
 }
 
-static inline uint8_t GetDiagnosisByte(Sex sex, const DiagnosisInfo &diag_info, uint8_t byte_idx)
+static inline uint8_t GetDiagnosisByte(int8_t sex, const DiagnosisInfo &diag_info, uint8_t byte_idx)
 {
     Assert(byte_idx < SIZE(DiagnosisInfo::attributes[0].raw));
     return diag_info.Attributes(sex).raw[byte_idx];
 }
-static inline uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
+static inline uint8_t GetDiagnosisByte(const TableIndex &index, int8_t sex,
                                        DiagnosisCode diag, uint8_t byte_idx)
 {
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
@@ -39,23 +39,23 @@ static inline uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
     return GetDiagnosisByte(sex, *diag_info, byte_idx);
 }
 
-static inline bool TestDiagnosis(Sex sex, const DiagnosisInfo &diag_info, ListMask mask)
+static inline bool TestDiagnosis(int8_t sex, const DiagnosisInfo &diag_info, ListMask mask)
 {
     DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(sex, diag_info, (uint8_t)mask.offset) & mask.value;
 }
-static inline bool TestDiagnosis(Sex sex, const DiagnosisInfo &diag_info,
+static inline bool TestDiagnosis(int8_t sex, const DiagnosisInfo &diag_info,
                                  uint8_t offset, uint8_t value)
 {
     return GetDiagnosisByte(sex, diag_info, offset) & value;
 }
-static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
+static inline bool TestDiagnosis(const TableIndex &index, int8_t sex,
                                  DiagnosisCode diag, ListMask mask)
 {
     DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(index, sex, diag, (uint8_t)mask.offset) & mask.value;
 }
-static inline bool TestDiagnosis(const TableIndex &index, Sex sex,
+static inline bool TestDiagnosis(const TableIndex &index, int8_t sex,
                                  DiagnosisCode diag, uint8_t offset, uint8_t value)
 {
     return GetDiagnosisByte(index, sex, diag, offset) & value;
@@ -262,17 +262,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
 
     // Sex warning
     {
-        int sex_bit = 0;
-        switch (agg.stay.sex) {
-            case Sex::Male: {
-                sex_bit = 12;
-            } break;
-            case Sex::Female: {
-                sex_bit = 11;
-            } break;
-        }
-        DebugAssert(sex_bit);
-
+        int sex_bit = 13 - agg.stay.sex;
         if (UNLIKELY(diag_info.warnings & (1 << sex_bit))) {
             SetError(out_errors, error_codes[11], -1);
         }
@@ -413,7 +403,7 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                 agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
             if (LIKELY(proc_info)) {
-                if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
+                if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == 2)) {
                     SetError(out_errors, 148, -1);
                 }
                 if (UNLIKELY((agg.age || agg.age_days > 28) &&
@@ -541,8 +531,8 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         // Sex
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 17);
-        } else if (UNLIKELY(stay.sex != Sex::Male && stay.sex != Sex::Female)) {
-            valid &= SetError(out_errors, (int)stay.sex ? 17 : 16);
+        } else if (UNLIKELY(stay.sex != 1 && stay.sex != 2)) {
+            valid &= SetError(out_errors, stay.sex ? 17 : 16);
         }
 
         // Birthdate
@@ -680,7 +670,7 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
     // Continuity checks
     for (Size i = 1; i < stays.len; i++) {
         if (UNLIKELY(stays[i].sex != stays[i - 1].sex &&
-                     (stays[i].sex == Sex::Male || stays[i].sex == Sex::Female))) {
+                     (stays[i].sex == 1 || stays[i].sex == 2))) {
             valid &= SetError(out_errors, 46);
         }
 
@@ -935,8 +925,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 14: {
-            StaticAssert((int)Sex::Male == 0);
-            return ((int)ctx.agg->stay.sex == ghm_node.u.test.params[0] - 49);
+            return ((int)ctx.agg->stay.sex == ghm_node.u.test.params[0] - 48);
         } break;
 
         case 18: {

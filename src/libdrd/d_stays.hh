@@ -35,7 +35,7 @@ struct Stay {
     int32_t admin_id;
     int32_t bill_id;
 
-    Sex sex;
+    int8_t sex;
     Date birthdate;
     struct {
         Date date;

@@ -104,10 +104,10 @@ struct DiagnosisInfo {
     uint16_t exclusion_set_idx;
     ListMask cma_exclusion_mask;
 
-    const Attributes &Attributes(Sex sex) const
+    const Attributes &Attributes(int8_t sex) const
     {
-        StaticAssert((int)Sex::Male == 0);
-        return attributes[(int)sex];
+        DebugAssert(sex == 1 || sex == 2);
+        return attributes[sex - 1];
     }
 
     HASH_TABLE_HANDLER(DiagnosisInfo, diag);

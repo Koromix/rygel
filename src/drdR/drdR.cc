@@ -143,16 +143,11 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(stay.birthdate))) {
             stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
         }
-        switch (stays.sex[i]) {
-            case 1: { stay.sex = Sex::Male; } break;
-            case 2: { stay.sex = Sex::Female; } break;
-
-            default: {
-                if (stays.sex[i] != NA_INTEGER) {
-                    LogError("Unexpected sex %1 on row %2", stays.sex[i], i + 1);
-                    stay.error_mask |= (int)Stay::Error::MalformedSex;
-                }
-            } break;
+        if (stays.sex[i] != NA_INTEGER) {
+            stay.sex = (int8_t)stays.sex[i];
+            if (UNLIKELY(stay.sex != stays.sex[i])) {
+                stay.error_mask |= (int)Stay::Error::MalformedSex;
+            }
         }
         stay.entry.date = stays.entry_date[i];
         if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(stay.entry.date))) {
@@ -569,8 +564,8 @@ SEXP R_Diagnoses(SEXP classifier_xp, SEXP date_xp)
             char buf[32];
 
             diag.Set(i, Fmt(buf, "%1", info.diag));
-            cmd_m[i] = info.Attributes(Sex::Male).cmd;
-            cmd_f[i] = info.Attributes(Sex::Female).cmd;
+            cmd_m[i] = info.Attributes(1).cmd;
+            cmd_f[i] = info.Attributes(2).cmd;
         }
 
         diagnoses_df = df_builder.Build();
@@ -702,11 +697,7 @@ SEXP R_LoadStays(Rcpp::CharacterVector filenames)
             stays_id[i] = (int)(i + 1);
             stays_admin_id[i] = stay.admin_id;
             stays_bill_id[i] = stay.bill_id;
-            // FIXME: Restore NA value for sex and deal with it here
-            switch (stay.sex) {
-                case Sex::Male: { stays_sex[i] = 1; } break;
-                case Sex::Female: { stays_sex[i] = 2; } break;
-            }
+            stays_sex[i] = stay.sex ? stay.sex : NA_INTEGER;
             stays_birthdate.Set(i, stay.birthdate);
             stays_entry_date.Set(i, stay.entry.date);
             stays_entry_mode[i] = stay.entry.mode ? stay.entry.mode - '0' : NA_INTEGER;

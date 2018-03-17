@@ -600,14 +600,14 @@ List options:
             case ListSpecifier::Table::Diagnoses: {
                 for (const DiagnosisInfo &diag: index->diagnoses) {
                     if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
-                        if (spec.Match(diag.Attributes(Sex::Male).raw)) {
+                        if (spec.Match(diag.Attributes(1).raw)) {
                             PrintLn("  %1 (male)", diag.diag);
                         }
-                        if (spec.Match(diag.Attributes(Sex::Female).raw)) {
+                        if (spec.Match(diag.Attributes(2).raw)) {
                             PrintLn("  %1 (female)", diag.diag);
                         }
                     } else {
-                        if (spec.Match(diag.Attributes(Sex::Male).raw)) {
+                        if (spec.Match(diag.Attributes(1).raw)) {
                             PrintLn("  %1", diag.diag);
                         }
                     }

@@ -108,13 +108,8 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             offset += 10; // Skip RUM id
             SetErrorFlag(Stay::Error::MalformedBirthdate,
                          !ParsePmsiDate(ReadFragment(8), &stay.birthdate));
-            switch (line[offset++]) {
-                case '1': { stay.sex = Sex::Male; } break;
-                case '2': { stay.sex = Sex::Female; } break;
-
-                case ' ': { /* Mandatory but the classifier will handle */ } break;
-                default: { stay.error_mask |= (int)Stay::Error::MalformedSex; } break;
-            }
+            SetErrorFlag(Stay::Error::MalformedSex,
+                         !ParsePmsiInt(ReadFragment(1), &stay.sex));
             ParsePmsiInt(ReadFragment(4), &stay.unit.number);
             ParsePmsiInt(ReadFragment(2), &stay.bed_authorization);
             SetErrorFlag(Stay::Error::MalformedEntryDate,

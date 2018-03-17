@@ -47,7 +47,7 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
                         Span<const ExclusionInfo> exclusions)
 {
     for (const DiagnosisInfo &diag: diagnoses) {
-        const auto DumpMask = [&](Sex sex) {
+        const auto DumpMask = [&](int8_t sex) {
             for (Size i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
                 Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
             }
@@ -57,21 +57,21 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
         PrintLn("      %1:", diag.diag);
         if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
             PrintLn("        Male:");
-            PrintLn("          Category: %1", diag.Attributes(Sex::Male).cmd);
-            PrintLn("          Severity: %1", diag.Attributes(Sex::Male).severity + 1);
+            PrintLn("          Category: %1", diag.Attributes(1).cmd);
+            PrintLn("          Severity: %1", diag.Attributes(1).severity + 1);
             Print("          Mask:");
-            DumpMask(Sex::Male);
+            DumpMask(1);
 
             PrintLn("        Female:");
-            PrintLn("          Category: %1", diag.Attributes(Sex::Female).cmd);
-            PrintLn("          Severity: %1", diag.Attributes(Sex::Female).severity + 1);
+            PrintLn("          Category: %1", diag.Attributes(2).cmd);
+            PrintLn("          Severity: %1", diag.Attributes(2).severity + 1);
             Print("          Mask:");
-            DumpMask(Sex::Female);
+            DumpMask(2);
         } else {
-            PrintLn("        Category: %1", diag.Attributes(Sex::Male).cmd);
-            PrintLn("        Severity: %1", diag.Attributes(Sex::Male).severity + 1);
+            PrintLn("        Category: %1", diag.Attributes(1).cmd);
+            PrintLn("        Severity: %1", diag.Attributes(1).severity + 1);
             Print("        Mask:");
-            DumpMask(Sex::Male);
+            DumpMask(1);
         }
         PrintLn("        Warnings: %1", FmtBin(diag.warnings));
 
