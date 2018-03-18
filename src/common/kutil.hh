@@ -1883,6 +1883,183 @@ static inline uint64_t GetClockCounter()
 }
 
 // ------------------------------------------------------------------------
+// Streams
+// ------------------------------------------------------------------------
+
+enum class CompressionType {
+    None,
+    Zlib,
+    Gzip
+};
+
+class StreamReader {
+public:
+    enum class SourceType {
+        File,
+        Memory
+    };
+
+    // NOTE: Should we use DuplicateString() for this? Same question in StreamWriter.
+    const char *filename;
+
+    struct {
+        SourceType type;
+        union {
+            FILE *fp;
+            struct {
+                Span<const uint8_t> buf;
+                Size pos;
+            } memory;
+        } u;
+        bool owned = false;
+
+        bool eof;
+    } source;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        union {
+            struct MinizInflateContext *miniz;
+        } u;
+    } compression;
+
+    bool eof;
+    bool error;
+
+    StreamReader() { Close(); }
+    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(buf, filename, compression_type); }
+    StreamReader(FILE *fp, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(fp, filename, compression_type); }
+    StreamReader(const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(filename, compression_type); }
+    ~StreamReader() { Close(); }
+
+    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(FILE *fp, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    void Close();
+
+    Size RemainingLen() const;
+
+    Size Read(Size max_len, void *out_buf);
+    Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
+    Size ReadAll(Size max_len, HeapArray<char> *out_buf)
+        { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
+
+private:
+    bool InitDecompressor(CompressionType type);
+    void ReleaseResources();
+
+    Size Deflate(Size max_len, void *out_buf);
+
+    Size ReadRaw(Size max_len, void *out_buf);
+};
+
+static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
+                            HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
+{
+    StreamReader st(filename);
+    return st.ReadAll(max_len, out_buf);
+}
+
+class LineReader {
+    std::function<Size(Size, void *)> read;
+    const char *filename;
+
+    HeapArray<char> buf;
+    Span<const char> view = {};
+
+public:
+    bool eof = false;
+    bool error = false;
+
+    Span<const char> line = {};
+    Size line_number = 0;
+
+    LineReader(std::function<Size(Size, void *)> read_func, const char *filename = "?")
+        : read(read_func), filename(filename) {}
+    LineReader(StreamReader *st) {
+        read = [=](Size max_len, void *out_buf) {
+            return st->Read(max_len, out_buf);
+        };
+        filename = st->filename;
+    }
+
+    Span<const char> GetLine();
+
+    void PushLogHandler();
+};
+
+class StreamWriter {
+public:
+    enum class DestinationType {
+        File,
+        Memory
+    };
+
+    const char *filename;
+
+    struct {
+        DestinationType type;
+        union {
+            HeapArray<uint8_t> *mem;
+            FILE *fp;
+        } u;
+        bool owned = false;
+    } dest;
+
+    struct {
+        CompressionType type = CompressionType::None;
+        union {
+            struct MinizDeflateContext *miniz;
+        } u;
+    } compression;
+
+    bool open = false;
+    bool error;
+
+    StreamWriter() { Close(); }
+    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(mem, filename, compression_type); }
+    StreamWriter(FILE *fp, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(fp, filename, compression_type); }
+    StreamWriter(const char *filename,
+                 CompressionType compression_type = CompressionType::None)
+        { Open(filename, compression_type); }
+    ~StreamWriter() { Close(); }
+
+    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(FILE *fp, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None);
+    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
+    bool Close();
+
+    bool Write(Span<const uint8_t> buf);
+    bool Write(Span<const char> buf) { return Write(MakeSpan((const uint8_t *)buf.ptr, buf.len)); }
+    bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
+
+private:
+    bool InitCompressor(CompressionType type);
+    void ReleaseResources();
+
+    bool WriteRaw(Span<const uint8_t> buf);
+};
+
+// ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
 
@@ -2387,12 +2564,6 @@ overflow:
 // System
 // ------------------------------------------------------------------------
 
-enum class CompressionType {
-    None,
-    Zlib,
-    Gzip
-};
-
 #ifdef _WIN32
     #define PATH_SEPARATORS "\\/"
     #define FOPEN_COMMON_FLAGS
@@ -2492,177 +2663,6 @@ public:
     AsyncHelper UNIQUE_ID(async) = [&, __VA_ARGS__]()
 #define ASYNC_NC(Name, ...) \
     AsyncHelper Name = [&, __VA_ARGS__]()
-
-// ------------------------------------------------------------------------
-// Streams
-// ------------------------------------------------------------------------
-
-class StreamReader {
-public:
-    enum class SourceType {
-        File,
-        Memory
-    };
-
-    // NOTE: Should we use DuplicateString() for this? Same question in StreamWriter.
-    const char *filename;
-
-    struct {
-        SourceType type;
-        union {
-            FILE *fp;
-            struct {
-                Span<const uint8_t> buf;
-                Size pos;
-            } memory;
-        } u;
-        bool owned = false;
-
-        bool eof;
-    } source;
-
-    struct {
-        CompressionType type = CompressionType::None;
-        union {
-            struct MinizInflateContext *miniz;
-        } u;
-    } compression;
-
-    bool eof;
-    bool error;
-
-    StreamReader() { Close(); }
-    StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(buf, filename, compression_type); }
-    StreamReader(FILE *fp, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(fp, filename, compression_type); }
-    StreamReader(const char *filename,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(filename, compression_type); }
-    ~StreamReader() { Close(); }
-
-    bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    void Close();
-
-    Size RemainingLen() const;
-
-    Size Read(Size max_len, void *out_buf);
-    Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
-    Size ReadAll(Size max_len, HeapArray<char> *out_buf)
-        { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
-
-private:
-    bool InitDecompressor(CompressionType type);
-    void ReleaseResources();
-
-    Size Deflate(Size max_len, void *out_buf);
-
-    Size ReadRaw(Size max_len, void *out_buf);
-};
-
-static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
-                            HeapArray<uint8_t> *out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.ReadAll(max_len, out_buf);
-}
-static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
-{
-    StreamReader st(filename);
-    return st.ReadAll(max_len, out_buf);
-}
-
-class LineReader {
-    std::function<Size(Size, void *)> read;
-    const char *filename;
-
-    HeapArray<char> buf;
-    Span<const char> view = {};
-
-public:
-    bool eof = false;
-    bool error = false;
-
-    Span<const char> line = {};
-    Size line_number = 0;
-
-    LineReader(std::function<Size(Size, void *)> read_func, const char *filename = "?")
-        : read(read_func), filename(filename) {}
-    LineReader(StreamReader *st) {
-        read = [=](Size max_len, void *out_buf) {
-            return st->Read(max_len, out_buf);
-        };
-        filename = st->filename;
-    }
-
-    Span<const char> GetLine();
-
-    void PushLogHandler();
-};
-
-class StreamWriter {
-public:
-    enum class DestinationType {
-        File,
-        Memory
-    };
-
-    const char *filename;
-
-    struct {
-        DestinationType type;
-        union {
-            HeapArray<uint8_t> *mem;
-            FILE *fp;
-        } u;
-        bool owned = false;
-    } dest;
-
-    struct {
-        CompressionType type = CompressionType::None;
-        union {
-            struct MinizDeflateContext *miniz;
-        } u;
-    } compression;
-
-    bool open = false;
-    bool error;
-
-    StreamWriter() { Close(); }
-    StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(mem, filename, compression_type); }
-    StreamWriter(FILE *fp, const char *filename = nullptr,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(fp, filename, compression_type); }
-    StreamWriter(const char *filename,
-                 CompressionType compression_type = CompressionType::None)
-        { Open(filename, compression_type); }
-    ~StreamWriter() { Close(); }
-
-    bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename = nullptr,
-              CompressionType compression_type = CompressionType::None);
-    bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
-    bool Close();
-
-    bool Write(Span<const uint8_t> buf);
-    bool Write(Span<const char> buf) { return Write(MakeSpan((const uint8_t *)buf.ptr, buf.len)); }
-    bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
-
-private:
-    bool InitCompressor(CompressionType type);
-    void ReleaseResources();
-
-    bool WriteRaw(Span<const uint8_t> buf);
-};
 
 // ------------------------------------------------------------------------
 // Options
