@@ -762,6 +762,24 @@ void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args)
     fwrite(buf.data, 1, (size_t)buf.len, fp);
 }
 
+void PrintFmt(StreamWriter &st, const char *fmt, Span<const FmtArg> args)
+{
+    LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
+    DoFormat(fmt, args, [&](Span<const char> fragment) {
+        if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
+            st.Write(buf);
+            buf.len = 0;
+        }
+        if (fragment.len >= ARRAY_SIZE(buf.data)) {
+            st.Write(fragment);
+        } else {
+            memcpy(buf.data + buf.len, fragment.ptr, (size_t)fragment.len);
+            buf.len += fragment.len;
+        }
+    });
+    st.Write(buf);
+}
+
 // ------------------------------------------------------------------------
 // Debug and errors
 // ------------------------------------------------------------------------

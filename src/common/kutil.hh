@@ -2191,6 +2191,7 @@ enum class LogLevel {
 Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args);
 Span<char> FmtFmt(Allocator *alloc, const char *fmt, Span<const FmtArg> args);
 void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args);
+void PrintFmt(StreamWriter &st, const char *fmt, Span<const FmtArg> args);
 
 // Print formatted strings to fixed-size buffer
 static inline Span<char> Fmt(Span<char> buf, const char *fmt)
@@ -2226,6 +2227,18 @@ static inline void Print(FILE *fp, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
     PrintFmt(fp, fmt, fmt_args);
+}
+
+// Print formatted strings to stream
+static inline void Print(StreamWriter &st, const char *fmt)
+{
+    PrintFmt(st, fmt, {});
+}
+template <typename... Args>
+static inline void Print(StreamWriter &st, const char *fmt, Args... args)
+{
+    const FmtArg fmt_args[] = { FmtArg(args)... };
+    PrintFmt(st, fmt, fmt_args);
 }
 
 // Print formatted strings to stdout
