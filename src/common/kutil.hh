@@ -50,10 +50,7 @@
 #define HASHSET_BASE_CAPACITY 32
 #define HASHSET_MAX_LOAD_FACTOR 0.4f
 
-#define FMT_STRING_BASE_CAPACITY 128
-#define FMT_STRING_GROWTH_FACTOR 1.5f
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
-
 #define LINE_READER_STEP_SIZE 65536
 
 #define THREAD_MAX_IDLE_TIME 10000
@@ -2052,6 +2049,7 @@ public:
 
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(MakeSpan((const uint8_t *)buf.ptr, buf.len)); }
+    bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }
     bool Write(const void *buf, Size len) { return Write(MakeSpan((const uint8_t *)buf, len)); }
 
 private:
@@ -2190,88 +2188,52 @@ enum class LogLevel {
     Error
 };
 
-Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args);
-Span<char> FmtFmt(Allocator *alloc, const char *fmt, Span<const FmtArg> args);
-void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args);
-void PrintFmt(StreamWriter &st, const char *fmt, Span<const FmtArg> args);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out_buf);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc);
+void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
+void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *out_fp);
+void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
+void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *out_fp);
 
-// Print formatted strings to fixed-size buffer
-static inline Span<char> Fmt(Span<char> buf, const char *fmt)
-{
-    return FmtFmt(buf, fmt, {});
-}
-template <typename... Args>
-static inline Span<char> Fmt(Span<char> buf, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtFmt(buf, fmt, fmt_args);
-}
+#define DEFINE_FMT_VARIANT(Name, Ret, Type) \
+    static inline Ret Name(Type out, const char *fmt) \
+    { \
+        return Name##Fmt(fmt, {}, out); \
+    } \
+    template <typename... Args> \
+    Ret Name(Type out, const char *fmt, Args... args) \
+    { \
+        const FmtArg fmt_args[] = { FmtArg(args)... }; \
+        return Name##Fmt(fmt, fmt_args, out); \
+    }
 
-// Print formatted strings to dynamic char array
-static inline Span<char> Fmt(Allocator *alloc, const char *fmt)
-{
-    return FmtFmt(alloc, fmt, {});
-}
-template <typename... Args>
-static inline Span<char> Fmt(Allocator *alloc, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    return FmtFmt(alloc, fmt, fmt_args);
-}
+DEFINE_FMT_VARIANT(Fmt, Span<char>, Span<char>)
+DEFINE_FMT_VARIANT(Fmt, Span<char>, HeapArray<char> *)
+DEFINE_FMT_VARIANT(Fmt, Span<char>, Allocator *)
+DEFINE_FMT_VARIANT(Print, void, StreamWriter *)
+DEFINE_FMT_VARIANT(Print, void, FILE *)
+DEFINE_FMT_VARIANT(PrintLn, void, StreamWriter *)
+DEFINE_FMT_VARIANT(PrintLn, void, FILE *)
 
-// Print formatted strings to stdio FILE
-static inline void Print(FILE *fp, const char *fmt)
-{
-    PrintFmt(fp, fmt, {});
-}
-template <typename... Args>
-static inline void Print(FILE *fp, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    PrintFmt(fp, fmt, fmt_args);
-}
-
-// Print formatted strings to stream
-static inline void Print(StreamWriter &st, const char *fmt)
-{
-    PrintFmt(st, fmt, {});
-}
-template <typename... Args>
-static inline void Print(StreamWriter &st, const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    PrintFmt(st, fmt, fmt_args);
-}
+#undef DEFINE_FMT_VARIANT
 
 // Print formatted strings to stdout
-static inline void Print(const char *fmt)
-{
-    PrintFmt(stdout, fmt, {});
-}
 template <typename... Args>
-static inline void Print(const char *fmt, Args... args)
-{
-    const FmtArg fmt_args[] = { FmtArg(args)... };
-    PrintFmt(stdout, fmt, fmt_args);
-}
-
-// Variants of the Print() functions with terminating newline
-template <typename... Args>
-static inline void PrintLn(FILE *fp, const char *fmt, Args... args)
-{
-    Print(fp, fmt, args...);
-    putc('\n', fp);
-}
-template <typename... Args>
-static inline void PrintLn(const char *fmt, Args... args)
+void Print(const char *fmt, Args... args)
 {
     Print(stdout, fmt, args...);
-    putchar('\n');
 }
-static inline void PrintLn(FILE *fp = stdout)
+template <typename... Args>
+void PrintLn(const char *fmt, Args... args)
 {
-    fputc('\n', fp);
+    PrintLn(stdout, fmt, args...);
 }
+
+// PrintLn variants without format strings
+static inline void PrintLn(StreamWriter *out_st) { out_st->Write('\n'); }
+static inline void PrintLn(FILE *out_fp) { fputc('\n', out_fp); }
+static inline void PrintLn() { putchar('\n'); }
 
 // ------------------------------------------------------------------------
 // Debug and errors

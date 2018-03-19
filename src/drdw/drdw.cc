@@ -138,7 +138,7 @@ struct Response {
 
 static Response CreateErrorPage(int code)
 {
-    Span<char> page = Fmt(nullptr, "Error %1", code);
+    Span<char> page = Fmt((Allocator *)nullptr, "Error %1", code);
     MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
                                                            ReleaseCallback);
     return {code, response};

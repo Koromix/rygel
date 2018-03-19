@@ -17,7 +17,7 @@ extern bool rcc_log_missing_messages;
         switch (level) { \
             case LogLevel::Error: { \
                 std::lock_guard<std::mutex> lock(rcc_log_mutex); \
-                const char *msg = FmtFmt(rcc_log_messages.bucket_allocator, fmt, args).ptr; \
+                const char *msg = FmtFmt(fmt, args, rcc_log_messages.bucket_allocator).ptr; \
                 rcc_log_messages.Append(msg); \
                 if (rcc_log_messages.len > 100) { \
                     rcc_log_messages.RemoveFirst(); \
@@ -28,7 +28,7 @@ extern bool rcc_log_missing_messages;
             case LogLevel::Info: \
             case LogLevel::Debug: { \
                 Print("%1", ctx); \
-                PrintFmt(stdout, fmt, args); \
+                PrintFmt(fmt, args, stdout); \
                 PrintLn(); \
             } break; \
         } \

@@ -690,94 +690,101 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
 #endif
 }
 
-Span<char> FmtFmt(Span<char> buf, const char *fmt, Span<const FmtArg> args)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 {
-    DebugAssert(buf.len >= 0);
+    DebugAssert(out_buf.len >= 0);
 
-    if (!buf.len)
+    if (!out_buf.len)
         return {};
-    buf.len--;
+    out_buf.len--;
 
     Size real_len = 0;
 
     DoFormat(fmt, args, [&](Span<const char> fragment) {
-        if (LIKELY(real_len < buf.len)) {
+        if (LIKELY(real_len < out_buf.len)) {
             Size copy_len = fragment.len;
-            if (copy_len > buf.len - real_len) {
-                copy_len = buf.len - real_len;
+            if (copy_len > out_buf.len - real_len) {
+                copy_len = out_buf.len - real_len;
             }
-            memcpy(buf.ptr + real_len, fragment.ptr, (size_t)copy_len);
+            memcpy(out_buf.ptr + real_len, fragment.ptr, (size_t)copy_len);
         }
         real_len += fragment.len;
     });
-    if (real_len < buf.len) {
-        buf.len = real_len;
+    if (real_len < out_buf.len) {
+        out_buf.len = real_len;
     }
-    buf.ptr[buf.len] = 0;
+    out_buf.ptr[out_buf.len] = 0;
 
-    return buf;
+    return out_buf;
 }
 
-Span<char> FmtFmt(Allocator *alloc, const char *fmt, Span<const FmtArg> args)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out_buf)
 {
-    char *buf = (char *)Allocator::Allocate(alloc, FMT_STRING_BASE_CAPACITY,
-                                            (int)Allocator::Flag::Resizable);
-    Size buf_len = 0;
-    // Cheat a little bit to make room for the NUL byte
-    Size buf_capacity = FMT_STRING_BASE_CAPACITY - 1;
+    Size start_len = out_buf->len;
 
-    DoFormat(fmt, args, [&](Span<const char> fragment) {
-        // Same thing, use >= and <= to make sure we have enough place for the NUL byte
-        if (fragment.len >= buf_capacity - buf_len) {
-            Size new_capacity = buf_capacity;
-            do {
-                new_capacity = (Size)((float)new_capacity * FMT_STRING_GROWTH_FACTOR);
-            } while (fragment.len >= new_capacity - buf_len);
-            Allocator::Resize(alloc, (void **)&buf, buf_capacity, new_capacity);
-            buf_capacity = new_capacity;
-        }
-        memcpy(buf + buf_len, fragment.ptr, (size_t)fragment.len);
-        buf_len += fragment.len;
+    DoFormat(fmt, args, [&](Span<const char> frag) {
+        out_buf->Grow(frag.len + 1);
+        memcpy(out_buf->end(), frag.ptr, (size_t)frag.len);
+        out_buf->len += frag.len;
     });
-    buf[buf_len] = 0;
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
 
-    return MakeSpan(buf, buf_len);
+    return out_buf->Take(start_len, out_buf->len - start_len);
 }
 
-void PrintFmt(FILE *fp, const char *fmt, Span<const FmtArg> args)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
+{
+    HeapArray<char> buf(alloc);
+    FmtFmt(fmt, args, &buf);
+    return buf.Leak();
+}
+
+void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](Span<const char> fragment) {
-        if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
+    DoFormat(fmt, args, [&](Span<const char> frag) {
+        if (frag.len > ARRAY_SIZE(buf.data) - buf.len) {
+            st->Write(buf);
+            buf.len = 0;
+        }
+        if (frag.len >= ARRAY_SIZE(buf.data)) {
+            st->Write(frag);
+        } else {
+            memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
+            buf.len += frag.len;
+        }
+    });
+    st->Write(buf);
+}
+
+void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
+{
+    LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
+    DoFormat(fmt, args, [&](Span<const char> frag) {
+        if (frag.len > ARRAY_SIZE(buf.data) - buf.len) {
             fwrite(buf.data, 1, (size_t)buf.len, fp);
             buf.len = 0;
         }
-        if (fragment.len >= ARRAY_SIZE(buf.data)) {
-            fwrite(fragment.ptr, 1, (size_t)fragment.len, fp);
+        if (frag.len >= ARRAY_SIZE(buf.data)) {
+            fwrite(frag.ptr, 1, (size_t)frag.len, fp);
         } else {
-            memcpy(buf.data + buf.len, fragment.ptr, (size_t)fragment.len);
-            buf.len += fragment.len;
+            memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
+            buf.len += frag.len;
         }
     });
     fwrite(buf.data, 1, (size_t)buf.len, fp);
 }
 
-void PrintFmt(StreamWriter &st, const char *fmt, Span<const FmtArg> args)
+void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
-    LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, [&](Span<const char> fragment) {
-        if (fragment.len > ARRAY_SIZE(buf.data) - buf.len) {
-            st.Write(buf);
-            buf.len = 0;
-        }
-        if (fragment.len >= ARRAY_SIZE(buf.data)) {
-            st.Write(fragment);
-        } else {
-            memcpy(buf.data + buf.len, fragment.ptr, (size_t)fragment.len);
-            buf.len += fragment.len;
-        }
-    });
-    st.Write(buf);
+    PrintFmt(fmt, args, st);
+    st->Write('\n');
+}
+void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
+{
+    PrintFmt(fmt, args, fp);
+    fputc('\n', fp);
 }
 
 // ------------------------------------------------------------------------
@@ -880,7 +887,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx,
 {
     StartConsoleLog(level);
     Print(stderr, ctx);
-    PrintFmt(stderr, fmt, args);
+    PrintFmt(fmt, args, stderr);
     PrintLn(stderr);
     EndConsoleLog();
 }
@@ -1951,7 +1958,7 @@ void LineReader::PushLogHandler()
         StartConsoleLog(level);
         Print(stderr, ctx);
         Print(stderr, "%1(%2): ", filename, line_number);
-        PrintFmt(stderr, fmt, args);
+        PrintFmt(fmt, args, stderr);
         PrintLn(stderr);
         EndConsoleLog();
     });

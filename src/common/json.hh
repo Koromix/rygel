@@ -91,7 +91,7 @@ bool ParseJsonFile(StreamReader &st, T *json_handler)
         StartConsoleLog(level);
         Print(stderr, ctx);
         Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
-        PrintFmt(stderr, fmt, args);
+        PrintFmt(fmt, args, stderr);
         PrintLn(stderr);
         EndConsoleLog();
     });
