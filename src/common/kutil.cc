@@ -1734,6 +1734,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
             uint16_t extra_len = (uint16_t)((header[11] << 8) | header[10]);
             if (extra_len > header_len - header_offset)
                 goto truncated_error;
+            header_offset += extra_len;
         }
         if (header[3] & 0x8) { // FNAME
             uint8_t *end_ptr = (uint8_t *)memchr(header + header_offset, '\0',
