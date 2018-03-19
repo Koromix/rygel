@@ -1980,13 +1980,13 @@ class LineReader {
     const char *filename;
 
     HeapArray<char> buf;
-    Span<const char> view = {};
+    Span<char> view = {};
 
 public:
     bool eof = false;
     bool error = false;
 
-    Span<const char> line = {};
+    Span<char> line = {};
     Size line_number = 0;
 
     LineReader(std::function<Size(Size, void *)> read_func, const char *filename = "?")
@@ -1998,7 +1998,7 @@ public:
         filename = st->filename;
     }
 
-    Span<const char> GetLine();
+    Span<char> GetLine();
 
     void PushLogHandler();
 };

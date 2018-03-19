@@ -1907,10 +1907,10 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 }
 
 // TODO: Maximum line length
-Span<const char> LineReader::GetLine()
+Span<char> LineReader::GetLine()
 {
     if (UNLIKELY(error))
-        return {};
+        return {buf.ptr, 0};
     if (eof) {
         line = line.Take(line.len, 0);
         return line;
@@ -1918,12 +1918,13 @@ Span<const char> LineReader::GetLine()
 
     for (;;) {
         if (!view.len) {
-            buf.Grow(LINE_READER_STEP_SIZE);
+            buf.Grow(LINE_READER_STEP_SIZE + 1);
 
             Size read_len = read(LINE_READER_STEP_SIZE, buf.end());
             if (read_len < 0) {
                 error = true;
-                return {};
+                buf.ptr[0] = 0;
+                return {buf.ptr, 0};
             }
             buf.len += read_len;
             eof = !read_len;
@@ -1933,6 +1934,7 @@ Span<const char> LineReader::GetLine()
 
         line = SplitStrLine(view, &view);
         if (view.len || eof) {
+            line.ptr[line.len] = 0;
             line_number++;
             return line;
         }
