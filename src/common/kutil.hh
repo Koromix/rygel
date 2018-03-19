@@ -2403,8 +2403,8 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
 static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
-static inline Span<const char> SplitStr(Span<const char> str, char split_char,
-                                        Span<const char> *out_remainder = nullptr)
+template <typename T>
+static inline Span<T> SplitStr(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -2422,8 +2422,8 @@ static inline Span<const char> SplitStr(Span<const char> str, char split_char,
     }
     return str;
 }
-static inline Span<const char> SplitStr(const char *str, char split_char,
-                                        const char **out_remainder = nullptr)
+template <typename T>
+Span<T> SplitStr(T *str, char split_char, T **out_remainder = nullptr)
 {
     Size part_len = 0;
     while (str[part_len]) {
@@ -2442,27 +2442,27 @@ static inline Span<const char> SplitStr(const char *str, char split_char,
     return MakeSpan(str, part_len);
 }
 
-static inline Span<const char> SplitStrLine(Span<const char> str,
-                                            Span<const char> *out_remainder = nullptr)
+template <typename T>
+Span<T> SplitStrLine(Span<T> str, Span<T> *out_remainder = nullptr)
 {
-    Span<const char> part = SplitStr(str, '\n', out_remainder);
+    Span<T> part = SplitStr(str, '\n', out_remainder);
     if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
-static inline Span<const char> SplitStrLine(const char *str,
-                                            const char **out_remainder = nullptr)
+template <typename T>
+Span<T> SplitStrLine(T *str, T **out_remainder = nullptr)
 {
-    Span<const char> part = SplitStr(str, '\n', out_remainder);
+    Span<T> part = SplitStr(str, '\n', out_remainder);
     if (str[part.len] && part.len && part[part.len - 1] == '\r') {
         part.len--;
     }
     return part;
 }
 
-static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars,
-                                           Span<const char> *out_remainder = nullptr)
+template <typename T>
+Span<T> SplitStrAny(Span<T> str, const char *split_chars, Span<T> *out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -2485,8 +2485,8 @@ static inline Span<const char> SplitStrAny(Span<const char> str, const char *spl
     }
     return str.Take(0, str.len);
 }
-static inline Span<const char> SplitStrAny(const char *str, const char *split_chars,
-                                           const char **out_remainder = nullptr)
+template <typename T>
+Span<T> SplitStrAny(T *str, const char *split_chars, T **out_remainder = nullptr)
 {
     Bitset<256> split_mask;
     for (Size i = 0; split_chars[i]; i++) {
@@ -2510,7 +2510,8 @@ static inline Span<const char> SplitStrAny(const char *str, const char *split_ch
     return MakeSpan(str, part_len);
 }
 
-static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+template <typename T>
+Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[0])) {
         str.ptr++;
