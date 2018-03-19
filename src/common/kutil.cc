@@ -1543,42 +1543,11 @@ void StreamReader::Close()
 
     filename = "?";
     source.eof = false;
+    raw_len = -1;
+    read = 0;
+    raw_read = 0;
     error = false;
     eof = false;
-}
-
-Size StreamReader::RemainingLen() const
-{
-    if (compression.type == CompressionType::None) {
-        switch (source.type) {
-            case SourceType::File: {
-                Size remaining_len;
-                {
-                    long pos = (Size)ftell(source.u.fp);
-#ifdef _WIN32
-                    DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
-#else
-                    DEFER { fseeko(source.u.fp, (off_t)pos, SEEK_SET); };
-#endif
-                    if (fseek(source.u.fp, 0, SEEK_END) < 0)
-                        return -1;
-                    remaining_len = ftell(source.u.fp) - pos;
-                    if (UNLIKELY(remaining_len < 0)) {
-                        remaining_len = 0;
-                    }
-                }
-
-                return remaining_len;
-            } break;
-
-            case SourceType::Memory: {
-                return source.u.memory.buf.len - source.u.memory.pos;
-            } break;
-        }
-        DebugAssert(false);
-    } else {
-        return -1;
-    }
 }
 
 Size StreamReader::Read(Size max_len, void *out_buf)
@@ -1586,19 +1555,23 @@ Size StreamReader::Read(Size max_len, void *out_buf)
     if (UNLIKELY(error))
         return -1;
 
+    Size read_len = 0;
     switch (compression.type) {
         case CompressionType::None: {
-            Size read_len = ReadRaw(max_len, out_buf);
+            read_len = ReadRaw(max_len, out_buf);
             eof = source.eof;
-            return read_len;
         } break;
 
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
-            return Deflate(max_len, out_buf);
+            read_len = Deflate(max_len, out_buf);
         } break;
     }
-    DebugAssert(false);
+
+    if (LIKELY(read_len >= 0)) {
+        read += read_len;
+    }
+    return read_len;
 }
 
 Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
@@ -1606,20 +1579,19 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     if (error)
         return -1;
 
-    Size st_len = RemainingLen();
-    if (st_len >= 0) {
-        if (st_len > max_len) {
+    if (compression.type == CompressionType::None && ComputeStreamLen() >= 0) {
+        if (raw_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
         }
 
-        out_buf->Grow(st_len);
-        Size read_len = Read(st_len, out_buf->end());
+        out_buf->Grow(raw_len);
+        Size read_len = Read(raw_len, out_buf->end());
         if (read_len < 0)
             return -1;
         out_buf->len += read_len;
 
-        return st_len;
+        return read_len;
     } else {
         DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
 
@@ -1640,6 +1612,45 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         buf_guard.disable();
         return total_len;
     }
+}
+
+Size StreamReader::ComputeStreamLen()
+{
+    if (raw_read || raw_len >= 0)
+        return raw_len;
+
+    switch (source.type) {
+        case SourceType::File: {
+#ifdef _WIN32
+            int64_t pos = _ftelli64(source.u.fp);
+            DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
+            if (_fseeki64(source.u.fp, 0, SEEK_END) < 0)
+                return -1;
+            int64_t len = _ftelli64(source.u.fp);
+#else
+            off64_t pos = ftello64(source.u.fp);
+            DEFER { fseeko64(source.u.fp, pos, SEEK_SET); };
+            if (fseeko64(source.u.fp, 0, SEEK_END) < 0)
+                return -1;
+            off64_t len = ftello64(source.u.fp);
+#endif
+            if (len > LEN_MAX) {
+                static bool warned = false;
+                if (!warned) {
+                    LogError("Files bigger than %1 are not well supported", FmtMemSize(LEN_MAX));
+                    warned = true;
+                }
+                len = LEN_MAX;
+            }
+            raw_len = (Size)len;
+        } break;
+
+        case SourceType::Memory: {
+            raw_len = source.u.memory.buf.len;
+        } break;
+    }
+
+    return raw_len;
 }
 
 bool StreamReader::InitDecompressor(CompressionType type)
@@ -1864,9 +1875,12 @@ truncated_error:
 
 Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 {
+    ComputeStreamLen();
+
+    Size read_len = 0;
     switch (source.type) {
         case SourceType::File: {
-            size_t read_len = fread(out_buf, 1, (size_t)max_len, source.u.fp);
+            read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.fp);
             if (ferror(source.u.fp)) {
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
                 error = true;
@@ -1875,20 +1889,20 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             if (feof(source.u.fp)) {
                 source.eof = true;
             }
-            return (Size)read_len;
-        }
+        } break;
 
         case SourceType::Memory: {
-            Size copy_len = source.u.memory.buf.len - source.u.memory.pos;
-            if (copy_len > max_len) {
-                copy_len = max_len;
+            read_len = source.u.memory.buf.len - source.u.memory.pos;
+            if (read_len > max_len) {
+                read_len = max_len;
             }
-            memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)copy_len);
-            source.u.memory.pos += copy_len;
-            return copy_len;
+            memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
+            source.u.memory.pos += read_len;
         } break;
     }
-    DebugAssert(false);
+
+    raw_read += read_len;
+    return read_len;
 }
 
 // TODO: Maximum line length

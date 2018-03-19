@@ -1923,6 +1923,9 @@ public:
         } u;
     } compression;
 
+    Size raw_len;
+    Size read;
+    Size raw_read;
     bool eof;
     bool error;
 
@@ -1945,13 +1948,12 @@ public:
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     void Close();
 
-    Size RemainingLen() const;
-
     Size Read(Size max_len, void *out_buf);
     Size ReadAll(Size max_len, HeapArray<uint8_t> *out_buf);
     Size ReadAll(Size max_len, HeapArray<char> *out_buf)
         { return ReadAll(max_len, (HeapArray<uint8_t> *)out_buf); }
 
+    Size ComputeStreamLen();
 private:
     bool InitDecompressor(CompressionType type);
     void ReleaseResources();
