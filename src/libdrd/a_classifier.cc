@@ -583,6 +583,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
+    out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
     out_agg->duration = 0;
     for (const Stay &stay: stays) {
         if (stay.gestational_age > 0) {
@@ -696,8 +697,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 3: {
             if (ghm_node.u.test.params[1] == 1) {
-                int age_days = ctx.agg->stay.entry.date - ctx.agg->stay.birthdate;
-                return (age_days > ghm_node.u.test.params[0]);
+                return (ctx.agg->age_days > ghm_node.u.test.params[0]);
             } else {
                 return (ctx.agg->age > ghm_node.u.test.params[0]);
             }

@@ -26,6 +26,7 @@ struct ClassifyAggregate {
     uint8_t proc_activities;
 
     int age;
+    int age_days;
     int duration;
 };
 
