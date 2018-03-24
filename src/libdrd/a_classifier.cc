@@ -11,8 +11,8 @@ struct RunGhmTreeContext {
     const ClassifyAggregate *agg;
 
     // Keep a copy for DP - DR reversal (function 34)
-    DiagnosisCode main_diagnosis;
-    DiagnosisCode linked_diagnosis;
+    const DiagnosisInfo *main_diagnosis;
+    const DiagnosisInfo *linked_diagnosis;
     int gnn;
 };
 
@@ -849,8 +849,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     switch (ghm_node.u.test.function) {
         case 0:
         case 1: {
-            return GetDiagnosisByte(*ctx.agg->index, ctx.agg->stay.sex,
-                                    ctx.main_diagnosis, ghm_node.u.test.params[0]);
+            return GetDiagnosisByte(ctx.agg->stay.sex, *ctx.main_diagnosis,
+                                    ghm_node.u.test.params[0]);
         } break;
 
         case 2: {
@@ -870,7 +870,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 5: {
-            return TestDiagnosis(*ctx.agg->index, ctx.agg->stay.sex, ctx.main_diagnosis,
+            return TestDiagnosis(ctx.agg->stay.sex, *ctx.main_diagnosis,
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
         } break;
 
@@ -878,8 +878,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
             for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
-                if (diag_info->diag == ctx.main_diagnosis ||
-                        diag_info->diag == ctx.linked_diagnosis)
+                if (diag_info == ctx.main_diagnosis || diag_info == ctx.linked_diagnosis)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
@@ -926,8 +925,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 13: {
-            uint8_t diag_byte = GetDiagnosisByte(*ctx.agg->index, ctx.agg->stay.sex,
-                                                 ctx.main_diagnosis, ghm_node.u.test.params[0]);
+            uint8_t diag_byte = GetDiagnosisByte(ctx.agg->stay.sex, *ctx.main_diagnosis,
+                                                 ghm_node.u.test.params[0]);
             return (diag_byte == ghm_node.u.test.params[1]);
         } break;
 
@@ -941,8 +940,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                     matches++;
-                    if (diag_info->diag == ctx.main_diagnosis ||
-                            diag_info->diag == ctx.linked_diagnosis) {
+                    if (diag_info == ctx.main_diagnosis || diag_info == ctx.linked_diagnosis) {
                         special_matches++;
                     }
                     if (matches >= 2 && matches > special_matches)
@@ -1003,15 +1001,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 34: {
-            if (ctx.linked_diagnosis.IsValid() &&
-                    ctx.linked_diagnosis == ctx.agg->stay.linked_diagnosis) {
-                const DiagnosisInfo *diag_info = ctx.agg->index->FindDiagnosis(ctx.linked_diagnosis);
-                if (LIKELY(diag_info)) {
-                    uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
-                    uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
-                    if (cmd || jump != 3) {
-                        std::swap(ctx.main_diagnosis, ctx.linked_diagnosis);
-                    }
+            if (ctx.linked_diagnosis &&
+                    ctx.linked_diagnosis->diag == ctx.agg->stay.linked_diagnosis) {
+                uint8_t cmd = ctx.linked_diagnosis->Attributes(ctx.agg->stay.sex).cmd;
+                uint8_t jump = ctx.linked_diagnosis->Attributes(ctx.agg->stay.sex).jump;
+                if (cmd || jump != 3) {
+                    std::swap(ctx.main_diagnosis, ctx.linked_diagnosis);
                 }
             }
 
@@ -1019,12 +1014,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 35: {
-            return (ctx.main_diagnosis != ctx.agg->stay.main_diagnosis);
+            return (ctx.main_diagnosis->diag != ctx.agg->stay.main_diagnosis);
         } break;
 
         case 36: {
             for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
-                if (diag_info->diag == ctx.linked_diagnosis)
+                if (diag_info == ctx.linked_diagnosis)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
@@ -1075,7 +1070,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 43: {
             for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
-                if (diag_info->diag == ctx.linked_diagnosis)
+                if (diag_info == ctx.linked_diagnosis)
                     continue;
 
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
@@ -1134,8 +1129,10 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 
     RunGhmTreeContext ctx = {};
     ctx.agg = &agg;
-    ctx.main_diagnosis = agg.stay.main_diagnosis;
-    ctx.linked_diagnosis = agg.stay.linked_diagnosis;
+    ctx.main_diagnosis = agg.index->FindDiagnosis(agg.stay.main_diagnosis);
+    if (agg.stay.linked_diagnosis.IsValid()) {
+        ctx.linked_diagnosis = agg.index->FindDiagnosis(agg.stay.linked_diagnosis);
+    }
 
     Size ghm_node_idx = 0;
     for (Size i = 0; !ghm.IsValid(); i++) {
