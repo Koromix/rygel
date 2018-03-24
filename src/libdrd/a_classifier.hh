@@ -43,6 +43,7 @@ struct SupplementCounters {
 
 struct ClassifyErrorSet {
     int16_t main_error = 0;
+    int priority = 0;
     Bitset<512> errors;
 };
 

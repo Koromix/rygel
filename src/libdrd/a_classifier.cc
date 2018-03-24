@@ -226,15 +226,17 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     return score_stay;
 }
 
-static bool SetError(ClassifyErrorSet *error_set, int16_t error, bool force = false)
+static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 1)
 {
     if (!error)
         return true;
 
     DebugAssert(error >= 0 && error < error_set->errors.Bits);
     if (error_set) {
-        if (!error_set->main_error || error < error_set->main_error || force) {
+        if (!error_set->main_error || priority > error_set->priority ||
+                error < error_set->main_error) {
             error_set->main_error = error;
+            error_set->priority = priority;
         }
         error_set->errors.Set(error);
     }
@@ -243,44 +245,158 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error, bool force = fa
     return false;
 }
 
-static bool CheckDateErrors(Date date, bool malformed_flag,
-                            const int16_t error_codes[3], ClassifyErrorSet *out_errors)
-{
-    if (UNLIKELY(!date.value)) {
-        if (!malformed_flag) {
-            return SetError(out_errors, error_codes[0]);
-        } else {
-            return SetError(out_errors, error_codes[1]);
-        }
-    } else if (UNLIKELY(!date.IsValid())) {
-        return SetError(out_errors, error_codes[2]);
-    }
-
-    return true;
-}
-
 static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisInfo &diag_info,
                                  const int16_t error_codes[9], ClassifyErrorSet *out_errors)
 {
     const auto &diag_attr = diag_info.Attributes(agg.stay.sex);
 
-    if (UNLIKELY(!(diag_attr.raw[5] & 1))) {
+    if (UNLIKELY(diag_attr.raw[5] & 2)) {
         return SetError(out_errors, error_codes[0]);
-    } else if (UNLIKELY(diag_attr.raw[5] & 2)) {
-        return SetError(out_errors, error_codes[1]);
     } else if (UNLIKELY(!diag_attr.raw[0])) {
         switch (diag_attr.raw[1]) {
-            case 0: { return SetError(out_errors, error_codes[2]); } break;
-            case 1: { return SetError(out_errors, error_codes[3]); } break;
-            case 2: { return SetError(out_errors, error_codes[4]); } break;
-            case 3: { return SetError(out_errors, error_codes[5]); } break;
+            case 0: { return SetError(out_errors, error_codes[1]); } break;
+            case 1: { return SetError(out_errors, error_codes[2]); } break;
+            case 2: { return SetError(out_errors, error_codes[3]); } break;
+            case 3: { return SetError(out_errors, error_codes[4]); } break;
         }
     } else if (UNLIKELY(diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
-        return SetError(out_errors, error_codes[6]);
+        return SetError(out_errors, error_codes[5]);
     } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && agg.age < 9)) {
-        return SetError(out_errors, error_codes[7]);
+        return SetError(out_errors, error_codes[6]);
     } else if (UNLIKELY(diag_attr.raw[19] & 0x8 && agg.age >= 2)) {
-        return SetError(out_errors, error_codes[8]);
+        return SetError(out_errors, error_codes[7]);
+    }
+
+    return true;
+}
+
+static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
+                                 HeapArray<const DiagnosisInfo *> *out_diagnoses,
+                                 ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    static const int16_t main_diagnosis_errors[8] = {
+        68, // Obsolete diagnosis
+        113, 114, 115, 113, 180, // Imprecise, reserved for OMS use, etc.
+        130, 133 // Age-related (O, P, Z37, Z38)
+    };
+    static const int16_t linked_diagnosis_errors[8] = {
+        95,
+        116, 117, 118, 0, 181,
+        131, 134
+    };
+    static const int16_t associate_diagnosis_errors[8] = {
+        71,
+        0, 0, 119, 0, 182,
+        132, 135
+    };
+
+    if (LIKELY(stay.main_diagnosis.IsValid())) {
+        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
+        if (LIKELY(diag_info)) {
+            out_diagnoses->Append(diag_info);
+            valid &= CheckDiagnosisErrors(agg, *diag_info, main_diagnosis_errors, out_errors);
+        } else {
+            valid &= SetError(out_errors, 67);
+        }
+    } else {
+        valid &= SetError(out_errors, 40);
+    }
+
+    if (stay.linked_diagnosis.IsValid()) {
+        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.linked_diagnosis);
+        if (LIKELY(diag_info)) {
+            out_diagnoses->Append(diag_info);
+            valid &= CheckDiagnosisErrors(agg, *diag_info,
+                                          linked_diagnosis_errors, out_errors);
+        } else {
+            valid &= SetError(out_errors, 94);
+        }
+    }
+
+    for (DiagnosisCode diag: stay.diagnoses) {
+        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
+            continue;
+
+        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
+        if (LIKELY(diag_info)) {
+            out_diagnoses->Append(diag_info);
+            valid &= CheckDiagnosisErrors(agg, *diag_info,
+                                          associate_diagnosis_errors, out_errors);
+        } else {
+            valid &= SetError(out_errors, 70);
+        }
+    }
+
+    return valid;
+}
+
+static bool AppendValidProcedures(const ClassifyAggregate &agg, const Stay &stay,
+                                  HeapArray<const ProcedureInfo *> *out_procedures,
+                                  uint8_t *out_activities, ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    for (const ProcedureRealisation &proc: stay.procedures) {
+        const ProcedureInfo *proc_info =
+            agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
+
+        if (LIKELY(proc_info)) {
+            // TODO: For error 167, we need to cross-check procedures because
+            // activities may be separated. Note: (proc_info->bytes[42] & 0x2)
+
+            if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == Sex::Female)) {
+                SetError(out_errors, 148, 0);
+            }
+            if (UNLIKELY((agg.age || agg.age_days > 28) &&
+                         (proc_info->bytes[44] & 0x20) && (!agg.stay.newborn_weight ||
+                                                           agg.stay.newborn_weight >= 3000))) {
+                valid &= SetError(out_errors, 149);
+            }
+
+            if (UNLIKELY(stay.entry.date > proc_info->limit_dates[1])) {
+                valid &= SetError(out_errors, 78);
+            } else if (UNLIKELY(stay.exit.date < proc_info->limit_dates[0])) {
+                valid &= SetError(out_errors, 79);
+            } else if (UNLIKELY(!proc.date.value ||
+                                proc.date < proc_info->limit_dates[0] ||
+                                proc.date > proc_info->limit_dates[1])) {
+                if (proc_info->bytes[41] & 0x2) {
+                    valid &= SetError(out_errors, 142);
+                } else if (proc.date.value) {
+                    SetError(out_errors, 102, 0);
+                }
+            }
+
+            out_procedures->Append(proc_info);
+            *out_activities |= proc.activities;
+        } else {
+            Span <const ProcedureInfo> compatible_procs = agg.index->FindProcedure(proc.proc);
+            bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
+                                          [&](const ProcedureInfo &proc_info) {
+                return proc_info.phase == proc.phase;
+            });
+            if (valid_proc) {
+                LogDebug("Ignoring procedure '%1' with date %2", proc.proc, stay.exit.date);
+            } else {
+                valid &= SetError(out_errors, 73);
+            }
+        }
+    }
+
+    return valid;
+}
+
+static bool CheckDateErrors(bool malformed_flag, Date date,
+                            const int16_t error_codes[3], ClassifyErrorSet *out_errors)
+{
+    if (UNLIKELY(malformed_flag)) {
+        return SetError(out_errors, error_codes[0]);
+    } else if (UNLIKELY(!date.value)) {
+        return SetError(out_errors, error_codes[1]);
+    } else if (UNLIKELY(!date.IsValid())) {
+        return SetError(out_errors, error_codes[2]);
     }
 
     return true;
@@ -294,9 +410,36 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
         valid &= SetError(out_errors, 26);
     }
-
     if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
         valid &= SetError(out_errors, 35);
+    }
+
+    // Sessions
+    if (TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, 8, 0x2)) {
+        if (UNLIKELY(!agg.duration && !agg.stay.session_count)) {
+            bool tolerate = std::any_of(agg.procedures.begin(), agg.procedures.end(),
+                                        [](const ProcedureInfo *proc_info) {
+                return (proc_info->bytes[44] & 0x40);
+            });
+            if (!tolerate) {
+                // According to the manual, this is a blocking error but the
+                // official classifier does not actually enforce it.
+                SetError(out_errors, 145, 0);
+            }
+        } else if (UNLIKELY(agg.stay.session_count > agg.duration + 1)) {
+            SetError(out_errors, 146, 0);
+        }
+    }
+
+    // Newborn
+    if (UNLIKELY(agg.stay.error_mask & (int)Stay::Error::MalformedNewbornWeight)) {
+        valid &= SetError(out_errors, 82);
+    } else {
+        if (UNLIKELY(agg.age_days < 29 && !agg.stay.newborn_weight)) {
+            valid &= SetError(out_errors, 168);
+        } else if (UNLIKELY(agg.stay.newborn_weight > 0 && agg.stay.newborn_weight < 100)) {
+            valid &= SetError(out_errors, 128);
+        }
     }
 
     return valid;
@@ -306,38 +449,33 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 static bool CheckStayErrors(const ClassifyAggregate &agg, const Stay &stay,
                             ClassifyErrorSet *out_errors)
 {
-    // Missing, malformed, incoherent (e.g. 2001/02/29)
-    static const int16_t birthdate_errors[3] = {13, 14, 39};
-    static const int16_t entry_date_errors[3] = {19, 20, 21};
-    static const int16_t exit_date_errors[3] = {28, 29, 30};
+    // Malformed, missing, incoherent (e.g. 2001/02/29)
+    static const int16_t birthdate_errors[3] = {14, 13, 39};
+    static const int16_t entry_date_errors[3] = {20, 19, 21};
+    static const int16_t exit_date_errors[3] = {29, 28, 30};
 
     bool valid = true;
 
     // Sex
-    if (UNLIKELY(stay.sex != Sex::Male && stay.sex != Sex::Female)) {
-        if (!(int)stay.sex && !(stay.error_mask & (int)Stay::Error::MalformedSex)) {
-            valid &= SetError(out_errors, 16);
-        } else {
-            valid &= SetError(out_errors, 17);
-        }
+    if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSex)) {
+        valid &= SetError(out_errors, 17);
+    } else if (UNLIKELY(stay.sex != Sex::Male && stay.sex != Sex::Female)) {
+        valid &= SetError(out_errors, (int)stay.sex ? 17 : 16);
     }
 
     // Birthdate
-    valid &= CheckDateErrors(stay.birthdate,
-                             stay.error_mask & (int)Stay::Error::MalformedBirthdate,
-                             birthdate_errors, out_errors);
+    valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedBirthdate,
+                             stay.birthdate, birthdate_errors, out_errors);
     if (UNLIKELY(stay.birthdate > stay.entry.date &&
                  stay.birthdate.IsValid() && stay.entry.date.IsValid())) {
         valid &= SetError(out_errors, 15);
     }
 
     // Entry and exit dates
-    valid &= CheckDateErrors(stay.entry.date,
-                             stay.error_mask & (int)Stay::Error::MalformedEntryDate,
-                             entry_date_errors, out_errors);
-    valid &= CheckDateErrors(stay.exit.date,
-                             stay.error_mask & (int)Stay::Error::MalformedExitDate,
-                             exit_date_errors, out_errors);
+    valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedEntryDate,
+                             stay.entry.date, entry_date_errors, out_errors);
+    valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedExitDate,
+                             stay.exit.date, exit_date_errors, out_errors);
     if (UNLIKELY(stay.exit.date < stay.entry.date &&
                  stay.entry.date.IsValid() && stay.exit.date.IsValid())) {
         valid &= SetError(out_errors, 32);
@@ -347,83 +485,97 @@ static bool CheckStayErrors(const ClassifyAggregate &agg, const Stay &stay,
     if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedEntryMode |
                                     (int)Stay::Error::MalformedEntryOrigin))) {
         valid &= SetError(out_errors, 25);
-    }
-    switch (stay.entry.mode) {
-        case '0':
-        case '6': {
-            if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
-                valid &= SetError(out_errors, 25);
-            }
-            if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
-                valid &= SetError(out_errors, 25);
-            }
-        } // fallthrough
-        case '7': {
-            switch (stay.entry.origin) {
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '6':
-                case 'R': { /* Valid origin */ } break;
+    } else {
+        switch (stay.entry.mode) {
+            case '0':
+            case '6': {
+                if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
+                    valid &= SetError(out_errors, 25);
+                }
+                if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
+                    valid &= SetError(out_errors, 25);
+                }
+            } // fallthrough
+            case '7': {
+                switch (stay.entry.origin) {
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '6':
+                    case 'R': { /* Valid origin */ } break;
 
-                case 0: { valid &= SetError(out_errors, 53); } break;
-                default: { valid &= SetError(out_errors, 25); } break;
-            }
-        } break;
+                    case 0: { valid &= SetError(out_errors, 53); } break;
+                    default: { valid &= SetError(out_errors, 25); } break;
+                }
+            } break;
 
-        case '8': {
-            switch (stay.entry.origin) {
-                case 0:
-                case '5':
-                case '7': { /* Valid origin */ } break;
+            case '8': {
+                switch (stay.entry.origin) {
+                    case 0:
+                    case '5':
+                    case '7': { /* Valid origin */ } break;
 
-                default: { valid &= SetError(out_errors, 25); } break;
-            }
-        } break;
+                    default: { valid &= SetError(out_errors, 25); } break;
+                }
+            } break;
 
-        case 0: { valid &= SetError(out_errors, 24); } break;
-        default: { valid &= SetError(out_errors, 25); } break;
+            case 0: { valid &= SetError(out_errors, 24); } break;
+            default: { valid &= SetError(out_errors, 25); } break;
+        }
     }
 
     // Exit mode and destination
     if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedExitMode |
                                     (int)Stay::Error::MalformedExitDestination))) {
         valid &= SetError(out_errors, 34);
+    } else {
+        switch (stay.exit.mode) {
+            case '0':
+            case '6':
+            case '7': {
+                switch (stay.exit.destination) {
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '6': { /* Valid destination */ } break;
+
+                    case 0: { valid &= SetError(out_errors, 54); } break;
+                    default: { valid &= SetError(out_errors, 34); } break;
+                }
+            } break;
+
+            case '8': {
+                switch (stay.exit.destination) {
+                    case 0:
+                    case '7': { /* Valid destination */ } break;
+
+                    default: { valid &= SetError(out_errors, 34); } break;
+                }
+            } break;
+
+            case '9': {
+                if (UNLIKELY(stay.exit.destination)) {
+                    valid &= SetError(out_errors, 34);
+                }
+            } break;
+
+            case 0: { valid &= SetError(out_errors, 33); } break;
+            default: { valid &= SetError(out_errors, 34); } break;
+        }
     }
-    switch (stay.exit.mode) {
-        case '0':
-        case '6':
-        case '7': {
-            switch (stay.exit.destination) {
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '6': { /* Valid destination */ } break;
 
-                case 0: { valid &= SetError(out_errors, 54); } break;
-                default: { valid &= SetError(out_errors, 34); } break;
-            }
-        } break;
-
-        case '8': {
-            switch (stay.exit.destination) {
-                case 0:
-                case '7': { /* Valid destination */ } break;
-
-                default: { valid &= SetError(out_errors, 34); } break;
-            }
-        } break;
-
-        case '9': {
-            if (UNLIKELY(stay.exit.destination)) {
-                valid &= SetError(out_errors, 34);
-            }
-        } break;
-
-        case 0: { valid &= SetError(out_errors, 33); } break;
-        default: { valid &= SetError(out_errors, 34); } break;
+    // Sessions
+    if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSessionCount)) {
+        valid &= SetError(out_errors, 36);
+    } else {
+        if (UNLIKELY(agg.stays.len > 1 && stay.session_count > 0)) {
+            valid &= SetError(out_errors, 37);
+        }
+        if (UNLIKELY(stay.session_count < 0 || stay.session_count >= 32)) {
+            SetError(out_errors, 66, 0);
+        }
     }
 
     // Misc checks
@@ -482,87 +634,6 @@ static bool CheckStayContinuity(const Stay &stay1, const Stay &stay2, ClassifyEr
     return valid;
 }
 
-static bool AppendValidDiagnoses(const ClassifyAggregate &agg, const Stay &stay,
-                                 HeapArray<const DiagnosisInfo *> *out_diagnoses,
-                                 ClassifyErrorSet *out_errors)
-{
-    bool valid = true;
-
-    static const int16_t main_diagnosis_errors[9] = {
-        67, 68, // Missing diagnosis
-        113, 114, 115, 113, 180, // Imprecise, reserved for OMS use, etc.
-        130, 133 // Age-related (O, P, Z37, Z38)
-    };
-    static const int16_t linked_diagnosis_errors[9] = {
-        94, 95,
-        116, 117, 118, 0, 181,
-        131, 134
-    };
-    static const int16_t associate_diagnosis_errors[9] = {
-        70, 71,
-        0, 0, 119, 0, 182,
-        132, 135
-    };
-
-    if (LIKELY(stay.main_diagnosis.IsValid())) {
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
-        if (LIKELY(diag_info)) {
-            out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info, main_diagnosis_errors, out_errors);
-        } else {
-            valid &= SetError(out_errors, 67);
-        }
-    } else {
-        valid &= SetError(out_errors, 40);
-    }
-
-    if (stay.linked_diagnosis.IsValid()) {
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.linked_diagnosis);
-        if (LIKELY(diag_info)) {
-            out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info,
-                                          linked_diagnosis_errors, out_errors);
-        } else {
-            valid &= SetError(out_errors, 94);
-        }
-    }
-
-    for (DiagnosisCode diag: stay.diagnoses) {
-        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
-            continue;
-
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
-        if (LIKELY(diag_info)) {
-            out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info,
-                                          associate_diagnosis_errors, out_errors);
-        } else {
-            valid &= SetError(out_errors, 70);
-        }
-    }
-
-    return valid;
-}
-
-static bool AppendValidProcedures(const ClassifyAggregate &agg, const Stay &stay,
-                                  HeapArray<const ProcedureInfo *> *out_procedures,
-                                  uint8_t *out_activities, ClassifyErrorSet *out_errors)
-{
-    bool valid = true;
-
-    for (const ProcedureRealisation &proc: stay.procedures) {
-        const ProcedureInfo *proc_info = agg.index->FindProcedure(proc.proc, proc.phase, proc.date);
-        if (LIKELY(proc_info)) {
-            out_procedures->Append(proc_info);
-            *out_activities |= proc.activities;
-        } else {
-            // TODO: Add error codes for procedures
-        }
-    }
-
-    return valid;
-}
-
 // FIXME: Check Stay invariants before classification (all diag and proc exist, etc.)
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
@@ -572,15 +643,16 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 {
     DebugAssert(stays.len > 0);
 
-    out_agg->stays = stays;
+    bool valid = true;
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
     if (!out_agg->index) {
         LogError("No table available on '%1'", stays[stays.len - 1].exit.date);
-        SetError(out_errors, 502, true);
+        SetError(out_errors, 502, 2);
         return GhmCode::FromString("90Z03Z");
     }
 
+    out_agg->stays = stays;
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
@@ -599,26 +671,12 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
 
-    {
-        bool valid = true;
-
-        out_agg->proc_activities = 0;
-        for (const Stay &stay: stays) {
-            valid &= AppendValidDiagnoses(*out_agg, stay, out_diagnoses, out_errors);
-            valid &= AppendValidProcedures(*out_agg, stay, out_procedures,
-                                           &out_agg->proc_activities, out_errors);
-        }
-
-        // Individual and coherency checks
-        valid &= CheckAggregateErrors(*out_agg, out_errors);
-        valid &= CheckStayErrors(*out_agg, stays[0], out_errors);
-        for (Size i = 1; i < stays.len; i++) {
-            valid &= CheckStayErrors(*out_agg, stays[i], out_errors);
-            valid &= CheckStayContinuity(stays[i - 1], stays[i], out_errors);
-        }
-
-        if (UNLIKELY(!valid))
-            return GhmCode::FromString("90Z00Z");
+    // Aggregate diagnoses and procedures
+    out_agg->proc_activities = 0;
+    for (const Stay &stay: stays) {
+        valid &= AppendValidDiagnoses(*out_agg, stay, out_diagnoses, out_errors);
+        valid &= AppendValidProcedures(*out_agg, stay, out_procedures,
+                                       &out_agg->proc_activities, out_errors);
     }
 
     // Deduplicate diagnoses
@@ -653,6 +711,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
     }
     out_agg->procedures = *out_procedures;
 
+    // Pick main stay
     if (stays.len > 1) {
         const Stay *main_stay = FindMainStay(*out_agg->index, stays, out_agg->duration);
 
@@ -660,7 +719,19 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->stay.linked_diagnosis = main_stay->linked_diagnosis;
     }
 
-    return {};
+    // Individual and coherency checks
+    valid &= CheckAggregateErrors(*out_agg, out_errors);
+    valid &= CheckStayErrors(*out_agg, stays[0], out_errors);
+    for (Size i = 1; i < stays.len; i++) {
+        valid &= CheckStayErrors(*out_agg, stays[i], out_errors);
+        valid &= CheckStayContinuity(stays[i - 1], stays[i], out_errors);
+    }
+
+    if (LIKELY(valid)) {
+        return {};
+    } else {
+        return GhmCode::FromString("90Z00Z");
+    }
 }
 
 int GetMinimalDurationForSeverity(int severity)
@@ -939,7 +1010,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
     for (Size i = 0; !ghm.IsValid(); i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
-            SetError(out_errors, 4, true);
+            SetError(out_errors, 4, 2);
             return GhmCode::FromString("90Z03Z");
         }
 
@@ -952,7 +1023,7 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
                 if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
-                    SetError(out_errors, 4, true);
+                    SetError(out_errors, 4, 2);
                     return GhmCode::FromString("90Z03Z");
                 }
 
@@ -1029,7 +1100,7 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
-        SetError(out_errors, 4, true);
+        SetError(out_errors, 4, 2);
         return GhmCode::FromString("90Z03Z");
     }
 
