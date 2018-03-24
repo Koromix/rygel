@@ -722,12 +722,12 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
 {
     Size start_len = out_buf->len;
 
+    out_buf->Grow(FMT_STRING_BASE_CAPACITY);
     DoFormat(fmt, args, [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
         memcpy(out_buf->end(), frag.ptr, (size_t)frag.len);
         out_buf->len += frag.len;
     });
-    out_buf->Grow(1);
     out_buf->ptr[out_buf->len] = 0;
 
     return out_buf->Take(start_len, out_buf->len - start_len);
