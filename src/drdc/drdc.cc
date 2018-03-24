@@ -264,14 +264,14 @@ Classify options:
 
         PrintLn("%1:", filenames[i]);
 
-        if (verbosity >= 1) {
+        if (verbosity - test >= 1) {
             PrintLn("  Detailed results:");
             for (const ClassifyResult &result: classify_set.results) {
                 PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 / GHS %6", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                         result.stays.len, result.ghm, result.ghs);
 
-                if (verbosity >= 2) {
+                if (verbosity - test >= 2) {
                     if (result.main_error) {
                         PrintLn("      Error: %1", result.main_error);
                     }
