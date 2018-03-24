@@ -33,11 +33,8 @@ static inline uint8_t GetDiagnosisByte(const TableIndex &index, Sex sex,
                                        DiagnosisCode diag, uint8_t byte_idx)
 {
     const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
-
-    if (UNLIKELY(!diag_info)) {
-        LogDebug("Ignoring unknown diagnosis '%1'", diag);
+    if (UNLIKELY(!diag_info))
         return 0;
-    }
 
     return GetDiagnosisByte(sex, *diag_info, byte_idx);
 }
@@ -73,11 +70,8 @@ static inline uint8_t GetProcedureByte(const TableIndex &index,
                                        const ProcedureRealisation &proc, int16_t byte_idx)
 {
     const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, proc.date);
-
-    if (UNLIKELY(!proc_info)) {
-        LogDebug("Ignoring unknown procedure '%1' (%2)", proc.proc, proc.date);
+    if (UNLIKELY(!proc_info))
         return 0;
-    }
 
     return GetProcedureByte(*proc_info, byte_idx);
 }
