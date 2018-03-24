@@ -66,10 +66,10 @@ static inline uint8_t GetProcedureByte(const ProcedureInfo &proc_info, int16_t b
     Assert(byte_idx >= 0 && byte_idx < SIZE(ProcedureInfo::bytes));
     return proc_info.bytes[byte_idx];
 }
-static inline uint8_t GetProcedureByte(const TableIndex &index,
+static inline uint8_t GetProcedureByte(const TableIndex &index, Date exit_date,
                                        const ProcedureRealisation &proc, int16_t byte_idx)
 {
-    const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, proc.date);
+    const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, exit_date);
     if (UNLIKELY(!proc_info))
         return 0;
 
@@ -84,15 +84,15 @@ static inline bool TestProcedure(const ProcedureInfo &proc_info, int16_t offset,
 {
     return GetProcedureByte(proc_info, offset) & value;
 }
-static inline bool TestProcedure(const TableIndex &index,
+static inline bool TestProcedure(const TableIndex &index, Date exit_date,
                                  const ProcedureRealisation &proc, ListMask mask)
 {
-    return GetProcedureByte(index, proc, mask.offset) & mask.value;
+    return GetProcedureByte(index, exit_date, proc, mask.offset) & mask.value;
 }
-static inline bool TestProcedure(const TableIndex &index,
+static inline bool TestProcedure(const TableIndex &index, Date exit_date,
                                  const ProcedureRealisation &proc, int16_t offset, uint8_t value)
 {
-    return GetProcedureByte(index, proc, offset) & value;
+    return GetProcedureByte(index, exit_date, proc, offset) & value;
 }
 
 static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
@@ -150,7 +150,7 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
         proc_priority = 0;
         for (const ProcedureRealisation &proc: stay.procedures) {
             const ProcedureInfo *proc_info =
-                index.FindProcedure(proc.proc, proc.phase, proc.date);
+                index.FindProcedure(proc.proc, proc.phase, stay.exit.date);
             if (UNLIKELY(!proc_info))
                 continue;
 
@@ -1229,9 +1229,9 @@ static bool TestSupplementRea(const ClassifyAggregate &agg, const Stay &stay,
     if (stay.igs2 >= 15 || agg.age < 18) {
         Size list2_matches = 0;
         for (const ProcedureRealisation &proc: stay.procedures) {
-            if (TestProcedure(*agg.index, proc, 27, 0x10))
+            if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x10))
                 return true;
-            if (TestProcedure(*agg.index, proc, 27, 0x8)) {
+            if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x8)) {
                 list2_matches++;
                 if (list2_matches >= list2_treshold)
                     return true;
@@ -1287,12 +1287,12 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
     }
 
     for (const ProcedureRealisation &proc: stay.procedures) {
-        if (TestProcedure(*agg.index, proc, 38, 0x1))
+        if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
             return true;
     }
     if (&stay > &agg.stays[0]) {
         for (const ProcedureRealisation &proc: (&stay - 1)->procedures) {
-            if (TestProcedure(*agg.index, proc, 38, 0x1))
+            if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
                 return true;
         }
     }
