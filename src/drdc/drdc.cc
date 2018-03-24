@@ -12,6 +12,7 @@ struct ListSpecifier {
     };
     enum class Type {
         Mask,
+        ReverseMask,
         CmdJump
     };
 
@@ -23,6 +24,7 @@ struct ListSpecifier {
         struct {
             uint8_t offset;
             uint8_t mask;
+            bool reverse;
         } mask;
 
         struct {
@@ -48,8 +50,14 @@ struct ListSpecifier {
 
         switch (spec_str[1]) {
             case '$': {
-                spec.type = ListSpecifier::Type::Mask;
-                if (sscanf(spec_str + 2, "%" SCNu8 ".%" SCNu8,
+                const char *mask_str = spec_str + 2;
+                if (mask_str[0] == '~') {
+                    spec.type = ListSpecifier::Type::ReverseMask;
+                    mask_str++;
+                } else {
+                    spec.type = ListSpecifier::Type::Mask;
+                }
+                if (sscanf(mask_str, "%" SCNu8 ".%" SCNu8,
                            &spec.u.mask.offset, &spec.u.mask.mask) != 2)
                     goto error;
             } break;
@@ -81,6 +89,11 @@ error:
             case Type::Mask: {
                 return LIKELY(u.mask.offset < values.len) &&
                        values[u.mask.offset] & u.mask.mask;
+            } break;
+
+            case Type::ReverseMask: {
+                return LIKELY(u.mask.offset < values.len) &&
+                       !(values[u.mask.offset] & u.mask.mask);
             } break;
 
             case Type::CmdJump: {
