@@ -788,7 +788,6 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
     if (!out_agg->index) {
-        LogError("No table available on '%1'", stays[stays.len - 1].exit.date);
         SetError(out_errors, 502, 2);
         return GhmCode::FromString("90Z03Z");
     }
