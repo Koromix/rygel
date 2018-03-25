@@ -667,7 +667,7 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
             valid &= SetError(out_errors, 169);
         }
 
-        // Diagnoses and procedures
+        // Diagnoses
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
         } else if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
@@ -676,10 +676,20 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosis)) {
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingAssociatedDiagnosesCount)) {
+            valid &= SetError(out_errors, 55);
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosesCount)) {
+            valid &= SetError(out_errors, 56);
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedProcedureCode)) {
+
+        // Procedures
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingProceduresCount)) {
+            valid &= SetError(out_errors, 57);
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedProceduresCount)) {
+            valid &= SetError(out_errors, 58);
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedProcedureCode)) {
             valid &= SetError(out_errors, 43);
         }
     }

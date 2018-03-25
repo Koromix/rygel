@@ -268,9 +268,9 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             }
 
             Stay stay = {};
-            int das_count = 0;
-            int dad_count = 0;
-            int procedures_count = 0;
+            int das_count = -1;
+            int dad_count = -1;
+            int procedures_count = -1;
 
             // Declaring (simple) lambdas inside loops does not seem to impact performance
             const auto ReadFragment = [&](Size len) {
@@ -321,9 +321,27 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             ParsePmsiInt(ReadFragment(2), &stay.gestational_age);
             ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period);
             ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(Stay::Error::MalformedSessionCount);
-            ParsePmsiInt(ReadFragment(2), &das_count);
-            ParsePmsiInt(ReadFragment(2), &dad_count);
-            ParsePmsiInt(ReadFragment(3), &procedures_count);
+            if (LIKELY(line[offset] != ' ')) {
+                ParsePmsiInt(line.Take(offset, 2), &das_count) ||
+                    SetErrorFlag(Stay::Error::MalformedAssociatedDiagnosesCount);
+            } else {
+                SetErrorFlag(Stay::Error::MissingAssociatedDiagnosesCount);
+            }
+            offset += 2;
+            if (LIKELY(line[offset] != ' ')) {
+                ParsePmsiInt(line.Take(offset, 2), &dad_count) ||
+                    SetErrorFlag(Stay::Error::MalformedAssociatedDiagnosesCount);
+            } else {
+                SetErrorFlag(Stay::Error::MissingAssociatedDiagnosesCount);
+            }
+            offset += 2;
+            if (LIKELY(line[offset] != ' ')) {
+                ParsePmsiInt(line.Take(offset, 3), &procedures_count) ||
+                    SetErrorFlag(Stay::Error::MalformedProceduresCount);
+            } else {
+                SetErrorFlag(Stay::Error::MissingProceduresCount);
+            }
+            offset += 3;
             if (LIKELY(line[offset] != ' ')) {
                 stay.main_diagnosis =
                     DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
@@ -343,54 +361,56 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(Stay::Error::MalformedIgs2);
             offset += 33; // Skip a bunch of fields
 
-            if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
-                                    (version >= 17 ? 29 : 26) * procedures_count)) {
-                LogError("Truncated RUM line %1 in '%2'", reader.line_number, st.filename);
-                errors++;
-                continue;
-            }
+            if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
+                if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
+                                        (version >= 17 ? 29 : 26) * procedures_count)) {
+                    LogError("Truncated RUM line %1 in '%2'", reader.line_number, st.filename);
+                    errors++;
+                    continue;
+                }
 
-            stay.diagnoses.ptr = (DiagnosisCode *)set.store.diagnoses.len;
-            if (LIKELY(stay.main_diagnosis.IsValid())) {
-                set.store.diagnoses.Append(stay.main_diagnosis);
-            }
-            if (stay.linked_diagnosis.IsValid()) {
-                set.store.diagnoses.Append(stay.linked_diagnosis);
-            }
-            for (int i = 0; i < das_count; i++) {
-                DiagnosisCode diag =
-                    DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
-                if (LIKELY(diag.IsValid())) {
-                    set.store.diagnoses.Append(diag);
-                } else {
-                    stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                stay.diagnoses.ptr = (DiagnosisCode *)set.store.diagnoses.len;
+                if (LIKELY(stay.main_diagnosis.IsValid())) {
+                    set.store.diagnoses.Append(stay.main_diagnosis);
                 }
-            }
-            stay.diagnoses.len = set.store.diagnoses.len - (Size)stay.diagnoses.ptr;
-            offset += 8 * dad_count; // Skip documentary diagnoses
+                if (stay.linked_diagnosis.IsValid()) {
+                    set.store.diagnoses.Append(stay.linked_diagnosis);
+                }
+                for (int i = 0; i < das_count; i++) {
+                    DiagnosisCode diag =
+                        DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
+                    if (LIKELY(diag.IsValid())) {
+                        set.store.diagnoses.Append(diag);
+                    } else {
+                        stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                    }
+                }
+                stay.diagnoses.len = set.store.diagnoses.len - (Size)stay.diagnoses.ptr;
+                offset += 8 * dad_count; // Skip documentary diagnoses
 
-            stay.procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
-            for (int i = 0; i < procedures_count; i++) {
-                ProcedureRealisation proc = {};
-                ParsePmsiDate(ReadFragment(8), &proc.date);
-                proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
-                if (UNLIKELY(!proc.proc.IsValid())) {
-                    stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+                stay.procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
+                for (int i = 0; i < procedures_count; i++) {
+                    ProcedureRealisation proc = {};
+                    ParsePmsiDate(ReadFragment(8), &proc.date);
+                    proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+                    if (UNLIKELY(!proc.proc.IsValid())) {
+                        stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+                    }
+                    if (version >= 17) {
+                        offset += 3; // Skip CCAM extension
+                    }
+                    ParsePmsiInt(ReadFragment(1), &proc.phase);
+                    {
+                        int activity = 0;
+                        ParsePmsiInt(ReadFragment(1), &activity);
+                        proc.activities = (uint8_t)(1 << activity);
+                    }
+                    offset += 7; // Skip extension, modifiers, etc.
+                    ParsePmsiInt(ReadFragment(2), &proc.count);
+                    set.store.procedures.Append(proc);
                 }
-                if (version >= 17) {
-                    offset += 3; // Skip CCAM extension
-                }
-                ParsePmsiInt(ReadFragment(1), &proc.phase);
-                {
-                    int activity = 0;
-                    ParsePmsiInt(ReadFragment(1), &activity);
-                    proc.activities = (uint8_t)(1 << activity);
-                }
-                offset += 7; // Skip extension, modifiers, etc.
-                ParsePmsiInt(ReadFragment(2), &proc.count);
-                set.store.procedures.Append(proc);
+                stay.procedures.len = set.store.procedures.len - (Size)stay.procedures.ptr;
             }
-            stay.procedures.len = set.store.procedures.len - (Size)stay.procedures.ptr;
 
             if (out_tests && grp) {
                 StayTest test = {};

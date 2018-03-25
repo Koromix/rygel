@@ -30,8 +30,12 @@ struct Stay {
         MalformedIgs2 = 1 << 10,
         MalformedMainDiagnosis = 1 << 11,
         MalformedLinkedDiagnosis = 1 << 12,
-        MalformedAssociatedDiagnosis = 1 << 13,
-        MalformedProcedureCode = 1 << 14
+        MissingAssociatedDiagnosesCount = 1 << 13,
+        MalformedAssociatedDiagnosesCount = 1 << 14,
+        MalformedAssociatedDiagnosis = 1 << 15,
+        MissingProceduresCount = 1 << 16,
+        MalformedProceduresCount = 1 << 17,
+        MalformedProcedureCode = 1 << 18
     };
 
     int32_t admin_id;
