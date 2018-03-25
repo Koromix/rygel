@@ -510,8 +510,14 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
 
     bool valid = true;
 
-    if (UNLIKELY(!stays[0].bill_id)) {
-        DebugAssert(stays.len == 1);
+    if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::MalformedBillId)) {
+        static bool warned = false;
+        if (!warned) {
+            LogError("Non-numeric RSS identifiers are not supported");
+            warned = true;
+        }
+        valid &= SetError(out_errors, 61);
+    } else if (UNLIKELY(!stays[0].bill_id)) {
         valid &= SetError(out_errors, 11);
     }
 

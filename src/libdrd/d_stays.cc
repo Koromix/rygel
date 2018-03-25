@@ -291,7 +291,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 continue;
             }
 
-            ParsePmsiInt(ReadFragment(20), &stay.bill_id);
+            ParsePmsiInt(ReadFragment(20), &stay.bill_id) || SetErrorFlag(Stay::Error::MalformedBillId);
             ParsePmsiInt(ReadFragment(20), &stay.admin_id);
             offset += 10; // Skip RUM id
             ParsePmsiDate(ReadFragment(8), &stay.birthdate) || SetErrorFlag(Stay::Error::MalformedBirthdate);
