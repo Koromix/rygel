@@ -897,7 +897,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
         ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 
-        ImGui::Combo("Views", &state.settings.concept_set_idx,
+        ImGui::Combo("Views", &state.concept_set_idx,
                      [](void *udata, int idx, const char **out_text) {
             Span<const ConceptSet> &concept_sets = *(Span<const ConceptSet> *)udata;
             *out_text = concept_sets[idx].name;
@@ -930,9 +930,8 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
         ImGui::Begin("View", nullptr, view_flags);
         {
             const ConceptSet *concept_set = nullptr;
-            if (state.settings.concept_set_idx >= 0 &&
-                    state.settings.concept_set_idx < concept_sets.len) {
-                concept_set = &concept_sets[state.settings.concept_set_idx];
+            if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
+                concept_set = &concept_sets[state.concept_set_idx];
             }
             valid_frame = DrawView(state, entity_set, concept_set);
         }

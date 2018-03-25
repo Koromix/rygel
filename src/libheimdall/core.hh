@@ -31,7 +31,6 @@ struct InterfaceSettings {
     float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
     float grid_alpha = 0.04f;
-    int concept_set_idx = 0;
 };
 
 struct InterfaceState {
@@ -44,7 +43,9 @@ struct InterfaceState {
     InterfaceSettings settings;
     InterfaceSettings new_settings;
 
+    int concept_set_idx = 0;
     const ConceptSet *prev_concept_set = nullptr;
+
     bool size_cache_valid = false;
     HeapArray<float> lines_top;
     float total_width_unscaled;
