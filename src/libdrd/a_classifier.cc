@@ -422,6 +422,8 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
+                        // NOTE: I don't know if I'm supposed to ignore this procedure in this
+                        // case. I need to test how the official classifier deals with this.
                         SetError(out_errors, 102, -1);
                     }
                 }
