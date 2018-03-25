@@ -58,6 +58,7 @@ struct RunIO {
         Bitset<256> keys;
         LocalArray<char, 256> text;
 
+        bool mouseover;
         int x, y;
         unsigned int buttons;
         int wheel_x, wheel_y;

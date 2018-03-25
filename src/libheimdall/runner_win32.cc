@@ -33,8 +33,6 @@ struct Win32Window {
     HWND hwnd;
     HDC hdc;
     HGLRC hgl;
-
-    bool mouse_tracked = false;
 };
 
 static THREAD_LOCAL Win32Window *g_window;
@@ -72,7 +70,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             g_io->display.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: { g_window->mouse_tracked = false; } // fallthrough
+        case WM_MOUSELEAVE: { g_io->input.mouseover = false; } // fallthrough
         case WM_KILLFOCUS: {
             g_io->input.keys.Clear();
             g_io->input.buttons = 0;
@@ -135,13 +133,13 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             g_io->input.x = (int16_t)(lparam & 0xFFFF);
             g_io->input.y = (int16_t)(lparam >> 16);
 
-            if (!g_window->mouse_tracked) {
+            if (!g_io->input.mouseover) {
                 TRACKMOUSEEVENT tme = { SIZE(tme) };
                 tme.hwndTrack = g_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
 
-                g_window->mouse_tracked = true;
+                g_io->input.mouseover = true;
             }
         } break;
         case WM_LBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Left); } break;

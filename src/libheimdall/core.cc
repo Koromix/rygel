@@ -354,7 +354,8 @@ struct LineData {
     bool leaf;
     bool deployed;
     int depth;
-    float alpha;
+    float text_alpha;
+    float elements_alpha;
     float height;
     HeapArray<const Element *> elements;
 };
@@ -372,6 +373,9 @@ static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
                          bb.Min.x + (float)line.depth * 12.0f + 23.0f + text_size.x, y + 7.0f);
 
         if (ImGui::ItemAdd(deploy_bb, 0)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha));
+            DEFER { ImGui::PopStyleColor(1); };
+
             if (!line.leaf) {
                 ImGui::RenderTriangle(ImVec2(bb.Min.x + (float)line.depth * 12.0f, y - 9.0f),
                                       line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
@@ -382,8 +386,8 @@ static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
                 bb.Min.x + tree_width, bb.Max.y
             };
             draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y - 9.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text), line.title.ptr, line.title.end(),
-                          0.0f, &text_rect);
+                          ImGui::GetColorU32(ImGuiCol_Text),
+                          line.title.ptr, line.title.end(), 0.0f, &text_rect);
         }
 
         deploy_click = !line.leaf && ImGui::IsItemClicked();
@@ -410,7 +414,7 @@ static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
 static void DrawLineElements(ImRect bb, float tree_width,
                              const InterfaceState &state, double time_offset, const LineData &line)
 {
-    if (line.alpha == 0.0f)
+    if (line.elements_alpha == 0.0f)
         return;
 
     // Split elements
@@ -454,9 +458,9 @@ static void DrawLineElements(ImRect bb, float tree_width,
 
     // Draw elements
     float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
-    DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, periods);
-    DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha, events);
-    DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.alpha,
+    DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, periods);
+    DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, events);
+    DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha,
                  measures, measures_min, measures_max, state.settings.interpolation);
 }
 
@@ -589,11 +593,13 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     HeapArray<LineData> lines;
     {
-        float y = render_offset;
+        float base_y = render_offset;
+        float y = base_y;
         for (Size i = render_idx; i < entity_set.entities.len &&
                                   y < win->ClipRect.Max.y; i++) {
             const Entity &ent = entity_set.entities[i];
 
+            Size prev_lines_len = lines.len;
             HashMap<Span<const char>, Size> lines_map;
 
             for (const Element &elmt: ent.elements) {
@@ -645,7 +651,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                 line->leaf = false;
                                 line->deployed = state.deploy_paths.Find(partial_path);
                                 line->depth = tree_depth++;
-                                line->alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
+                                line->text_alpha = 1.0f;
+                                line->elements_alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
                                 line->height = 20.0f;
                                 y += line->height + style.ItemSpacing.y;
                             }
@@ -673,7 +680,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->title = title;
                             line->leaf = true;
                             line->depth = tree_depth;
-                            line->alpha = 1.0f;
+                            line->text_alpha = 1.0f;
+                            line->elements_alpha = 1.0f;
                             line->height = 0.0f;
                             y += style.ItemSpacing.y;
                         }
@@ -687,6 +695,14 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                     line->elements.Append(&elmt);
                 }
             }
+
+            if (!g_io->input.mouseover || (g_io->input.y < base_y || g_io->input.y >= y)) {
+                for (Size i = prev_lines_len; i < lines.len; i++) {
+                    lines[i].text_alpha *= 0.4f;
+                    lines[i].elements_alpha *= 0.4f;
+                }
+            }
+            base_y = y;
         }
     }
 
