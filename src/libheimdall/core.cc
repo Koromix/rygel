@@ -469,8 +469,8 @@ static float ComputeElementHeight(const InterfaceSettings &settings, Element::Ty
     }
 }
 
-static ImVec2 ComputeEntitySize(const InterfaceState &state,
-                                const EntitySet &entity_set, const Entity &ent)
+static ImVec2 ComputeEntitySize(const InterfaceState &state, const EntitySet &entity_set,
+                                const ConceptSet *concept_set, const Entity &ent)
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
@@ -485,13 +485,15 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state,
             if (elmt.concept[0] == '/') {
                 path = elmt.concept;
                 while (path.len > 1 && path.ptr[--path.len] != '/');
-            } else {
-                const Concept *concept = entity_set.concepts_map.Find(elmt.concept);
+            } else if (concept_set) {
+                const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
                 if (concept) {
                     path = concept->path;
                 } else {
                     path = entity_set.sources.Find(elmt.source_id)->default_path;
                 }
+            } else {
+                path = entity_set.sources.Find(elmt.source_id)->default_path;
             }
         }
         DebugAssert(path.len > 0);
@@ -524,7 +526,8 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state,
 }
 
 static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
-                         InterfaceState &state, const EntitySet &entity_set)
+                         InterfaceState &state, const EntitySet &entity_set,
+                         const ConceptSet *concept_set)
 {
     if (!entity_set.entities.len)
         return true;
@@ -537,7 +540,9 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     DEFER { draw->PopClipRect(); };
 
     bool cache_refreshed = false;
-    if (!state.size_cache_valid || state.lines_top.len != entity_set.entities.len) {
+    if (!state.size_cache_valid ||
+            state.lines_top.len != entity_set.entities.len ||
+            state.prev_concept_set != concept_set) {
         state.total_width_unscaled = 0.0f;
         state.total_height = 0.5f;
 
@@ -546,7 +551,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = 0; i < state.scroll_to_idx; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(state, entity_set, entity_set.entities[i]);
+            ImVec2 ent_size = ComputeEntitySize(state, entity_set, concept_set,
+                                                entity_set.entities[i]);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
             state.total_height += ent_size.y;
         }
@@ -554,11 +560,13 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = state.scroll_to_idx; i < entity_set.entities.len; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(state, entity_set, entity_set.entities[i]);
+            ImVec2 ent_size = ComputeEntitySize(state, entity_set, concept_set,
+                                                entity_set.entities[i]);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
             state.total_height += ent_size.y;
         }
 
+        state.prev_concept_set = concept_set;
         state.size_cache_valid = true;
         cache_refreshed = true;
     }
@@ -599,13 +607,15 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                         while (path.len > 1 && path.ptr[--path.len] != '/');
                         title.ptr += path.len + 1;
                         title.len -= path.len + 1;
-                    } else {
-                        const Concept *concept = entity_set.concepts_map.Find(elmt.concept);
+                    } else if (concept_set) {
+                        const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
                         if (concept) {
                             path = concept->path;
                         } else {
                             path = entity_set.sources.Find(elmt.source_id)->default_path;
                         }
+                    } else {
+                        path = entity_set.sources.Find(elmt.source_id)->default_path;
                     }
                 }
                 DebugAssert(path.len > 0);
@@ -790,7 +800,8 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
     }
 }
 
-static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
+static bool DrawView(InterfaceState &state,
+                     const EntitySet &entity_set, const ConceptSet *concept_set)
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
@@ -839,7 +850,7 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
         ImRect entity_rect = win->ClipRect;
         entity_rect.Max.y -= scale_height;
         valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
-                                   time_offset, state, entity_set);
+                                   time_offset, state, entity_set, concept_set);
     }
 
     // Help ImGui compute scrollbar and layout
@@ -851,7 +862,7 @@ static bool DrawView(InterfaceState &state, const EntitySet &entity_set)
     return valid_frame;
 }
 
-bool Step(InterfaceState &state, const EntitySet &entity_set)
+bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets)
 {
     if (!StartRender())
         return false;
@@ -863,8 +874,15 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         ImGui::ShowStyleSelector("##StyleSelector");
         ImGui::Checkbox("Other settings", &state.show_settings);
 
-        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)",
+        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
                     ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
+
+        ImGui::Combo("Views", &state.settings.concept_set_idx,
+                     [](void *udata, int idx, const char **out_text) {
+            Span<const ConceptSet> &concept_sets = *(Span<const ConceptSet> *)udata;
+            *out_text = concept_sets[idx].name;
+            return true;
+        }, &concept_sets, concept_sets.len);
 
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
@@ -890,7 +908,14 @@ bool Step(InterfaceState &state, const EntitySet &entity_set)
         DEFER { ImGui::PopStyleVar(1); };
 
         ImGui::Begin("View", nullptr, view_flags);
-        valid_frame = DrawView(state, entity_set);
+        {
+            const ConceptSet *concept_set = nullptr;
+            if (state.settings.concept_set_idx >= 0 &&
+                    state.settings.concept_set_idx < concept_sets.len) {
+                concept_set = &concept_sets[state.settings.concept_set_idx];
+            }
+            valid_frame = DrawView(state, entity_set, concept_set);
+        }
         ImGui::End();
     }
 

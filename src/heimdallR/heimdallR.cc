@@ -13,6 +13,8 @@ struct Instance {
     int last_source_id = 0;
     HashMap<const char *, Size> entities_map;
 
+    HeapArray<ConceptSet> concept_sets;
+
     bool run = false;
     std::thread run_thread;
     std::mutex lock;
@@ -64,9 +66,9 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
     inst->last_source_id++;
     {
         SourceInfo src_info;
-        src_info.name = DuplicateString(&inst->entity_set.entities_alloc, source.get_cstring()).ptr;
+        src_info.name = DuplicateString(&inst->entity_set.str_alloc, source.get_cstring()).ptr;
         src_info.default_path =
-            DuplicateString(&inst->entity_set.entities_alloc, default_path.get_cstring()).ptr;
+            DuplicateString(&inst->entity_set.str_alloc, default_path.get_cstring()).ptr;
         inst->entity_set.sources.Append(inst->last_source_id, src_info);
     }
 
@@ -76,7 +78,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
             Size idx = inst->entities_map.FindValue(values.entity[i], -1);
             if (idx == -1) {
                 entity = inst->entity_set.entities.AppendDefault();
-                entity->id = DuplicateString(&inst->entity_set.entities_alloc, values.entity[i]).ptr;
+                entity->id = DuplicateString(&inst->entity_set.str_alloc, values.entity[i]).ptr;
 
                 inst->entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
             } else {
@@ -86,20 +88,10 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
         Element elmt;
         elmt.source_id = inst->last_source_id;
-        elmt.concept = DuplicateString(&inst->entity_set.entities_alloc, values.concept[i]).ptr;
+        elmt.concept = DuplicateString(&inst->entity_set.str_alloc, values.concept[i]).ptr;
         elmt.time = values.time[i];
         func(elmt, i);
         entity->elements.Append(elmt);
-    }
-
-    // TODO: Share this code with set_concepts. And fail if path does not start with '/'.
-    {
-        if (!inst->entity_set.paths_set.Find(default_path.get_cstring())) {
-            const char *path =
-                DuplicateString(&inst->entity_set.concepts_alloc, default_path.get_cstring()).ptr;
-            inst->entity_set.paths.Append(path);
-            inst->entity_set.paths_set.Append(path);
-        }
     }
 
     // TODO: Delay sort (diry flag, sort in run). Might also want to only sort
@@ -183,7 +175,7 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
 }
 
 // [[Rcpp::export(name = 'heimdall.set_concepts')]]
-void R_HeimdallSetConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
+void R_HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame concepts_df)
 {
     RCC_SETUP_LOG_HANDLER();
 
@@ -196,26 +188,39 @@ void R_HeimdallSetConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
     concepts.name = concepts_df["name"];
     concepts.path = concepts_df["path"];
 
-    inst->entity_set.paths.Clear();
-    inst->entity_set.paths_set.Clear();
-    inst->entity_set.concepts_map.Clear();
-    inst->entity_set.concepts_alloc.ReleaseAll();
+    ConceptSet *concept_set = nullptr;
+    for (Size i = 0; i < inst->concept_sets.len; i++) {
+        if (inst->concept_sets[i].name == name) {
+            concept_set = &inst->concept_sets[i];
+            break;
+        }
+    }
+
+    if (concept_set) {
+        concept_set->paths.Clear();
+        concept_set->paths_set.Clear();
+        concept_set->concepts_map.Clear();
+        concept_set->str_alloc.ReleaseAll();
+    } else {
+        concept_set = inst->concept_sets.AppendDefault();
+    }
+    concept_set->name = DuplicateString(&concept_set->str_alloc, name.c_str()).ptr;
 
     for (Size i = 0; i < concepts_df.nrow(); i++) {
         if (((const char *)concepts.path[i])[0] != '/')
             Rcpp::stop("Paths must start with '/'");
 
-        const char *path = inst->entity_set.paths_set.FindValue(concepts.path[i], nullptr);
+        const char *path = concept_set->paths_set.FindValue(concepts.path[i], nullptr);
         if (!path) {
-            path = DuplicateString(&inst->entity_set.concepts_alloc, concepts.path[i]).ptr;
-            inst->entity_set.paths.Append(path);
-            inst->entity_set.paths_set.Append(path);
+            path = DuplicateString(&inst->entity_set.str_alloc, concepts.path[i]).ptr;
+            concept_set->paths.Append(path);
+            concept_set->paths_set.Append(path);
         }
 
         Concept concept;
-        concept.name = DuplicateString(&inst->entity_set.concepts_alloc, concepts.name[i]).ptr;
+        concept.name = DuplicateString(&inst->entity_set.str_alloc, concepts.name[i]).ptr;
         concept.path = path;
-        if (!inst->entity_set.concepts_map.Append(concept).second) {
+        if (!concept_set->concepts_map.Append(concept).second) {
             LogError("Concept '%1' already exists", concept.name);
         }
     }
@@ -235,7 +240,7 @@ void R_HeimdallRun(SEXP inst_xp)
 
         inst->run = true;
         inst->run_thread = std::thread([=]() {
-            Run(inst->entity_set, &inst->run, &inst->lock);
+            Run(inst->entity_set, inst->concept_sets, &inst->run, &inst->lock);
             inst->run = false;
         });
     }
@@ -251,7 +256,7 @@ void R_HeimdallRunSync(SEXP inst_xp)
     if (inst->run)
         Rcpp::stop("Async run in progress");
 
-    Run(inst->entity_set);
+    Run(inst->entity_set, inst->concept_sets);
 }
 
 static void StopInstance(Instance *inst)

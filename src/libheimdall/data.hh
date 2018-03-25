@@ -34,6 +34,13 @@ struct SourceInfo {
     const char *default_path = nullptr;
 };
 
+struct EntitySet {
+    HashMap<int, SourceInfo> sources;
+    HeapArray<Entity> entities;
+
+    LinkedAllocator str_alloc;
+};
+
 struct Concept {
     const char *name = nullptr;
     const char *title = nullptr;
@@ -42,13 +49,12 @@ struct Concept {
     HASH_TABLE_HANDLER(Concept, name);
 };
 
-struct EntitySet {
-    HashMap<int, SourceInfo> sources;
-    HeapArray<Entity> entities;
-    LinkedAllocator entities_alloc;
+struct ConceptSet {
+    const char *name;
 
     HashSet<const char *> paths_set;
     HeapArray<const char *> paths;
     HashTable<const char *, Concept> concepts_map;
-    LinkedAllocator concepts_alloc;
+
+    LinkedAllocator str_alloc;
 };

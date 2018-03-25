@@ -66,4 +66,5 @@ struct RunIO {
 
 extern THREAD_LOCAL RunIO *g_io;
 
-bool Run(const EntitySet &entity_set, bool *run_flag = nullptr, std::mutex *lock = nullptr);
+bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
+         bool *run_flag = nullptr, std::mutex *lock = nullptr);
