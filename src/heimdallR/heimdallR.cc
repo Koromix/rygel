@@ -64,9 +64,9 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
     inst->last_source_id++;
     {
         SourceInfo src_info;
-        src_info.name = DuplicateString(&inst->entity_set.str_alloc, source.get_cstring()).ptr;
+        src_info.name = DuplicateString(&inst->entity_set.entities_alloc, source.get_cstring()).ptr;
         src_info.default_path =
-            DuplicateString(&inst->entity_set.str_alloc, default_path.get_cstring()).ptr;
+            DuplicateString(&inst->entity_set.entities_alloc, default_path.get_cstring()).ptr;
         inst->entity_set.sources.Append(inst->last_source_id, src_info);
     }
 
@@ -76,7 +76,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
             Size idx = inst->entities_map.FindValue(values.entity[i], -1);
             if (idx == -1) {
                 entity = inst->entity_set.entities.AppendDefault();
-                entity->id = DuplicateString(&inst->entity_set.str_alloc, values.entity[i]).ptr;
+                entity->id = DuplicateString(&inst->entity_set.entities_alloc, values.entity[i]).ptr;
 
                 inst->entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
             } else {
@@ -86,17 +86,17 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
         Element elmt;
         elmt.source_id = inst->last_source_id;
-        elmt.concept = DuplicateString(&inst->entity_set.str_alloc, values.concept[i]).ptr;
+        elmt.concept = DuplicateString(&inst->entity_set.entities_alloc, values.concept[i]).ptr;
         elmt.time = values.time[i];
         func(elmt, i);
         entity->elements.Append(elmt);
     }
 
-    // TODO: Share this code with add_concepts. And fail if path does not start with '/'.
+    // TODO: Share this code with set_concepts. And fail if path does not start with '/'.
     {
         if (!inst->entity_set.paths_set.Find(default_path.get_cstring())) {
             const char *path =
-                DuplicateString(&inst->entity_set.str_alloc, default_path.get_cstring()).ptr;
+                DuplicateString(&inst->entity_set.concepts_alloc, default_path.get_cstring()).ptr;
             inst->entity_set.paths.Append(path);
             inst->entity_set.paths_set.Append(path);
         }
@@ -182,8 +182,8 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
     });
 }
 
-// [[Rcpp::export(name = 'heimdall.add_concepts')]]
-void R_HeimdallAddConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
+// [[Rcpp::export(name = 'heimdall.set_concepts')]]
+void R_HeimdallSetConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
 {
     RCC_SETUP_LOG_HANDLER();
 
@@ -196,19 +196,24 @@ void R_HeimdallAddConcepts(SEXP inst_xp, Rcpp::DataFrame concepts_df)
     concepts.name = concepts_df["name"];
     concepts.path = concepts_df["path"];
 
+    inst->entity_set.paths.Clear();
+    inst->entity_set.paths_set.Clear();
+    inst->entity_set.concepts_map.Clear();
+    inst->entity_set.concepts_alloc.ReleaseAll();
+
     for (Size i = 0; i < concepts_df.nrow(); i++) {
         if (((const char *)concepts.path[i])[0] != '/')
             Rcpp::stop("Paths must start with '/'");
 
         const char *path = inst->entity_set.paths_set.FindValue(concepts.path[i], nullptr);
         if (!path) {
-            path = DuplicateString(&inst->entity_set.str_alloc, concepts.path[i]).ptr;
+            path = DuplicateString(&inst->entity_set.concepts_alloc, concepts.path[i]).ptr;
             inst->entity_set.paths.Append(path);
             inst->entity_set.paths_set.Append(path);
         }
 
         Concept concept;
-        concept.name = DuplicateString(&inst->entity_set.str_alloc, concepts.name[i]).ptr;
+        concept.name = DuplicateString(&inst->entity_set.concepts_alloc, concepts.name[i]).ptr;
         concept.path = path;
         if (!inst->entity_set.concepts_map.Append(concept).second) {
             LogError("Concept '%1' already exists", concept.name);

@@ -45,11 +45,10 @@ struct Concept {
 struct EntitySet {
     HashMap<int, SourceInfo> sources;
     HeapArray<Entity> entities;
+    LinkedAllocator entities_alloc;
 
     HashSet<const char *> paths_set;
     HeapArray<const char *> paths;
     HashTable<const char *, Concept> concepts_map;
-
-    // TODO: Use a string pool to use less memory and for faster string tests
-    LinkedAllocator str_alloc;
+    LinkedAllocator concepts_alloc;
 };
