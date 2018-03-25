@@ -210,7 +210,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                             if (LIKELY(diag.IsValid())) {
                                 out_stay_set->store.diagnoses.Append(diag);
                             } else {
-                                stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                                stay.error_mask |= (int)Stay::Error::MalformedOtherDiagnosis;
                             }
                         } break;
                         case 'd':
@@ -249,7 +249,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 DiagnosisCode diag =
                     DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 if (UNLIKELY(!diag.IsValid())) {
-                    stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                    stay.error_mask |= (int)Stay::Error::MalformedOtherDiagnosis;
                 }
 
                 out_stay_set->store.diagnoses.Append(diag);

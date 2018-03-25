@@ -676,11 +676,11 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingAssociatedDiagnosesCount)) {
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 55);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosesCount)) {
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 56);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedAssociatedDiagnosis)) {
+        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedOtherDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
 

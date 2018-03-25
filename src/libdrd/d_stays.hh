@@ -30,9 +30,9 @@ struct Stay {
         MalformedIgs2 = 1 << 10,
         MalformedMainDiagnosis = 1 << 11,
         MalformedLinkedDiagnosis = 1 << 12,
-        MissingAssociatedDiagnosesCount = 1 << 13,
-        MalformedAssociatedDiagnosesCount = 1 << 14,
-        MalformedAssociatedDiagnosis = 1 << 15,
+        MissingOtherDiagnosesCount = 1 << 13,
+        MalformedOtherDiagnosesCount = 1 << 14,
+        MalformedOtherDiagnosis = 1 << 15,
         MissingProceduresCount = 1 << 16,
         MalformedProceduresCount = 1 << 17,
         MalformedProcedureCode = 1 << 18

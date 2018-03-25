@@ -323,16 +323,16 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(Stay::Error::MalformedSessionCount);
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 2), &das_count) ||
-                    SetErrorFlag(Stay::Error::MalformedAssociatedDiagnosesCount);
+                    SetErrorFlag(Stay::Error::MalformedOtherDiagnosesCount);
             } else {
-                SetErrorFlag(Stay::Error::MissingAssociatedDiagnosesCount);
+                SetErrorFlag(Stay::Error::MissingOtherDiagnosesCount);
             }
             offset += 2;
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 2), &dad_count) ||
-                    SetErrorFlag(Stay::Error::MalformedAssociatedDiagnosesCount);
+                    SetErrorFlag(Stay::Error::MalformedOtherDiagnosesCount);
             } else {
-                SetErrorFlag(Stay::Error::MissingAssociatedDiagnosesCount);
+                SetErrorFlag(Stay::Error::MissingOtherDiagnosesCount);
             }
             offset += 2;
             if (LIKELY(line[offset] != ' ')) {
@@ -382,7 +382,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                     if (LIKELY(diag.IsValid())) {
                         set.store.diagnoses.Append(diag);
                     } else {
-                        stay.error_mask |= (int)Stay::Error::MalformedAssociatedDiagnosis;
+                        stay.error_mask |= (int)Stay::Error::MalformedOtherDiagnosis;
                     }
                 }
                 stay.diagnoses.len = set.store.diagnoses.len - (Size)stay.diagnoses.ptr;
