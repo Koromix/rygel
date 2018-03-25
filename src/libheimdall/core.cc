@@ -902,7 +902,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             Span<const ConceptSet> &concept_sets = *(Span<const ConceptSet> *)udata;
             *out_text = concept_sets[idx].name;
             return true;
-        }, &concept_sets, concept_sets.len);
+        }, &concept_sets, (int)concept_sets.len);
 
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
