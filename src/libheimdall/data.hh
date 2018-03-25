@@ -29,13 +29,8 @@ struct Entity {
     HeapArray<Element> elements;
 };
 
-struct SourceInfo {
-    const char *name = nullptr;
-    const char *default_path = nullptr;
-};
-
 struct EntitySet {
-    HashMap<int, SourceInfo> sources;
+    HashMap<int, const char *> sources;
     HeapArray<Entity> entities;
 
     LinkedAllocator str_alloc;

@@ -48,7 +48,7 @@ SEXP R_Heimdall()
 
 template <typename Fun>
 int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame values_df,
-                Rcpp::CharacterVector keys, Rcpp::String default_path, Fun func)
+                Rcpp::CharacterVector keys, Fun func)
 {
     // FIXME: Use guard to restore stuff in case of error
 
@@ -65,11 +65,8 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
     inst->last_source_id++;
     {
-        SourceInfo src_info;
-        src_info.name = DuplicateString(&inst->entity_set.str_alloc, source.get_cstring()).ptr;
-        src_info.default_path =
-            DuplicateString(&inst->entity_set.str_alloc, default_path.get_cstring()).ptr;
-        inst->entity_set.sources.Append(inst->last_source_id, src_info);
+        const char *src_name = DuplicateString(&inst->entity_set.str_alloc, source.get_cstring()).ptr;
+        inst->entity_set.sources.Append(inst->last_source_id, src_name);
     }
 
     for (Size i = 0; i < values_df.nrow(); i++) {
@@ -110,20 +107,20 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
 // [[Rcpp::export(name = 'heimdall.add_events')]]
 void R_HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                         Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
+                         Rcpp::CharacterVector keys)
 {
     RCC_SETUP_LOG_HANDLER();
 
     Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
 
-    AddElements(inst, source, values_df, keys, default_path, [&](Element &elmt, Size) {
+    AddElements(inst, source, values_df, keys, [&](Element &elmt, Size) {
         elmt.type = Element::Type::Event;
     });
 }
 
 // [[Rcpp::export(name = 'heimdall.add_measures')]]
 void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame values_df,
-                           Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
+                           Rcpp::CharacterVector keys)
 {
     RCC_SETUP_LOG_HANDLER();
 
@@ -140,7 +137,7 @@ void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame va
         values.max = values_df[(const char *)keys["max"]];
     }
 
-    AddElements(inst, source, values_df, keys, default_path, [&](Element &elmt, Size i) {
+    AddElements(inst, source, values_df, keys, [&](Element &elmt, Size i) {
         elmt.type = Element::Type::Measure;
         elmt.u.measure.value = values.value[i];
         if (values.min.size()) {
@@ -155,7 +152,7 @@ void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame va
 
 // [[Rcpp::export(name = 'heimdall.add_periods')]]
 void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame periods_df,
-                          Rcpp::CharacterVector keys, Rcpp::String default_path = "/misc")
+                          Rcpp::CharacterVector keys)
 {
     RCC_SETUP_LOG_HANDLER();
 
@@ -166,7 +163,7 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
     } periods;
     periods.duration = periods_df[(const char *)keys["duration"]];
 
-    AddElements(inst, source, periods_df, keys, default_path, [&](Element &elmt, Size i) {
+    AddElements(inst, source, periods_df, keys, [&](Element &elmt, Size i) {
         elmt.type = Element::Type::Period;
         elmt.u.period.duration = periods.duration[i];
         if (std::isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0)

@@ -491,13 +491,15 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state, const EntitySet &en
                 while (path.len > 1 && path.ptr[--path.len] != '/');
             } else if (concept_set) {
                 const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
-                if (concept) {
-                    path = concept->path;
-                } else {
-                    path = entity_set.sources.Find(elmt.source_id)->default_path;
+                if (!concept) {
+                    const char *src_name = *entity_set.sources.Find(elmt.source_id);
+                    concept = concept_set->concepts_map.Find(src_name);
+                    if (!concept)
+                        continue;
                 }
+                path = concept->path;
             } else {
-                path = entity_set.sources.Find(elmt.source_id)->default_path;
+                continue;
             }
         }
         DebugAssert(path.len > 0);
@@ -615,13 +617,15 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                         title.len -= path.len + 1;
                     } else if (concept_set) {
                         const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
-                        if (concept) {
-                            path = concept->path;
-                        } else {
-                            path = entity_set.sources.Find(elmt.source_id)->default_path;
+                        if (!concept) {
+                            const char *src_name = *entity_set.sources.Find(elmt.source_id);
+                            concept = concept_set->concepts_map.Find(src_name);
+                            if (!concept)
+                                continue;
                         }
+                        path = concept->path;
                     } else {
-                        path = entity_set.sources.Find(elmt.source_id)->default_path;
+                        continue;
                     }
                 }
                 DebugAssert(path.len > 0);
