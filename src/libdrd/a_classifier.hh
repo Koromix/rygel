@@ -9,12 +9,6 @@
 #include "d_stays.hh"
 #include "d_tables.hh"
 
-enum class ClusterMode {
-    StayModes,
-    BillId,
-    Disable
-};
-
 struct ClassifyAggregate {
     Span<const Stay> stays;
 
@@ -83,8 +77,7 @@ struct ClassifySummary {
     }
 };
 
-Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
-                         Span<const Stay> *out_remainder = nullptr);
+Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder = nullptr);
 
 GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
                   ClassifyAggregate *out_agg,
@@ -111,13 +104,10 @@ int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> 
                      SupplementCounters<int32_t> *out_prices);
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                 Span<const Stay> stays, ClusterMode cluster_mode,
-                 ClassifyResult out_results[]);
+                 Span<const Stay> stays, ClassifyResult out_results[]);
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              Span<const Stay> stays, ClusterMode cluster_mode,
-              HeapArray<ClassifyResult> *out_results);
+              Span<const Stay> stays, HeapArray<ClassifyResult> *out_results);
 void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                      Span<const Stay> stays, ClusterMode cluster_mode,
-                      HeapArray<ClassifyResult> *out_results);
+                      Span<const Stay> stays, HeapArray<ClassifyResult> *out_results);
 
 void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary);

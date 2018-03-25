@@ -161,8 +161,6 @@ static bool RunClassify(Span<const char *> arguments)
 R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
-        --cluster_mode <mode>    Change stay cluster mode
-                                 (bill_id*, stay_modes, disable)
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
@@ -173,7 +171,6 @@ Classify options:
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
-    ClusterMode cluster_mode = ClusterMode::BillId;
     int verbosity = 0;
     bool test = false;
     {
@@ -182,21 +179,6 @@ Classify options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "--cluster_mode")) {
-                const char *mode_str = opt_parser.RequireOptionValue(PrintUsage);
-                if (!mode_str)
-                    return false;
-
-                if (TestStr(mode_str, "bill_id")) {
-                    cluster_mode = ClusterMode::BillId;
-                } else if (TestStr(mode_str, "stay_modes")) {
-                    cluster_mode = ClusterMode::StayModes;
-                } else if (TestStr(mode_str, "disable")) {
-                    cluster_mode = ClusterMode::Disable;
-                } else {
-                    LogError("Unknown cluster mode '%1'", mode_str);
-                    return false;
-                }
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
@@ -245,7 +227,7 @@ Classify options:
 
             LogInfo("Classify '%1'", filenames[i]);
             ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                             cluster_mode, &classify_set->results);
+                             &classify_set->results);
 
             LogInfo("Summarize '%1'", filenames[i]);
             Summarize(classify_set->results, &classify_set->summary);

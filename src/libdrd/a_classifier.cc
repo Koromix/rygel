@@ -95,31 +95,12 @@ static inline bool TestProcedure(const TableIndex &index, Date exit_date,
     return GetProcedureByte(index, exit_date, proc, offset) & value;
 }
 
-static inline bool AreStaysCompatible(const Stay &stay1, const Stay &stay2,
-                                      ClusterMode cluster_mode)
-{
-    switch (cluster_mode) {
-        case ClusterMode::StayModes: {
-            return !stay1.session_count &&
-                   stay2.admin_id == stay1.admin_id &&
-                   !stay2.session_count &&
-                   (stay1.exit.mode == '6' || stay1.exit.mode == '0') &&
-                   (stay2.entry.mode == '6' || stay2.entry.mode == '0');
-        } break;
-        case ClusterMode::BillId: { return stay2.bill_id == stay1.bill_id; } break;
-        case ClusterMode::Disable: { return false; } break;
-    }
-    DebugAssert(false);
-}
-
-Span<const Stay> Cluster(Span<const Stay> stays, ClusterMode cluster_mode,
-                         Span<const Stay> *out_remainder)
+Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder)
 {
     DebugAssert(stays.len > 0);
 
     Size agg_len = 1;
-    while (agg_len < stays.len &&
-           AreStaysCompatible(stays[agg_len - 1], stays[agg_len], cluster_mode)) {
+    while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
         agg_len++;
     }
 
@@ -1693,8 +1674,7 @@ int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> 
 }
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                 Span<const Stay> stays, ClusterMode cluster_mode,
-                 ClassifyResult out_results[])
+                 Span<const Stay> stays, ClassifyResult out_results[])
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
@@ -1712,7 +1692,7 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
         procedures.Clear(512);
 
         do {
-            result.stays = Cluster(stays, cluster_mode, &stays);
+            result.stays = Cluster(stays, &stays);
 
             result.ghm = Aggregate(table_set, result.stays,
                                    &agg, &diagnoses, &procedures, &errors);
@@ -1742,18 +1722,16 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              Span<const Stay> stays, ClusterMode cluster_mode,
-              HeapArray<ClassifyResult> *out_results)
+              Span<const Stay> stays, HeapArray<ClassifyResult> *out_results)
 {
     // Pessimistic assumption (no multi-stay)
     out_results->Grow(stays.len);
-    out_results->len += ClassifyRaw(table_set, authorization_set, stays, cluster_mode,
+    out_results->len += ClassifyRaw(table_set, authorization_set, stays,
                                     out_results->end());
 }
 
 void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                      Span<const Stay> stays, ClusterMode cluster_mode,
-                      HeapArray<ClassifyResult> *out_results)
+                      Span<const Stay> stays, HeapArray<ClassifyResult> *out_results)
 {
     if (!stays.len)
         return;
@@ -1770,10 +1748,10 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
         Size results_offset = out_results->len;
         Span<const Stay> task_stays = stays[0];
         for (Size i = 1; i < stays.len; i++) {
-            if (!AreStaysCompatible(stays[i - 1], stays[i], cluster_mode)) {
+            if (stays[i].bill_id != stays[i - 1 ].bill_id) {
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
-                        ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
+                        ClassifyRaw(table_set, authorization_set, task_stays,
                                     out_results->ptr + results_offset);
                         return true;
                     });
@@ -1785,7 +1763,7 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
             task_stays.len++;
         }
         async.AddTask([&, task_stays, results_offset]() mutable {
-            ClassifyRaw(table_set, authorization_set, task_stays, cluster_mode,
+            ClassifyRaw(table_set, authorization_set, task_stays,
                         out_results->ptr + results_offset);
             return true;
         });
