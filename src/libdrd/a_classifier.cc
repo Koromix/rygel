@@ -399,6 +399,13 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
 
     for (const Stay &stay: agg.stays) {
         for (const ProcedureRealisation &proc: stay.procedures) {
+            if (UNLIKELY(!proc.count)) {
+                valid &= SetError(out_errors, 52);
+            }
+            if (UNLIKELY(!proc.activities)) {
+                valid &= SetError(out_errors, 103);
+            }
+
             const ProcedureInfo *proc_info =
                 agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
