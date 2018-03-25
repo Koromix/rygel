@@ -286,8 +286,8 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             int16_t version = 0;
             ParsePmsiInt(ReadFragment(3), &version);
             if (UNLIKELY(version < 16 || version > 18)) {
-                LogError("Unsupported RUM version %1 in '%2'", version, st.filename);
-                errors++;
+                stay.error_mask |= (int)Stay::Error::UnknownRumVersion;
+                set.stays.Append(stay);
                 continue;
             }
 

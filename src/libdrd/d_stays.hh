@@ -17,25 +17,26 @@ struct ProcedureRealisation {
 
 struct Stay {
     enum class Error: uint32_t {
-        MalformedBirthdate = 1 << 0,
-        MalformedSex = 1 << 1,
-        MalformedEntryDate = 1 << 2,
-        MalformedEntryMode = 1 << 3,
-        MalformedEntryOrigin = 1 << 4,
-        MalformedExitDate = 1 << 5,
-        MalformedExitMode = 1 << 6,
-        MalformedExitDestination = 1 << 7,
-        MalformedSessionCount = 1 << 8,
-        MalformedNewbornWeight = 1 << 9,
-        MalformedIgs2 = 1 << 10,
-        MalformedMainDiagnosis = 1 << 11,
-        MalformedLinkedDiagnosis = 1 << 12,
-        MissingOtherDiagnosesCount = 1 << 13,
-        MalformedOtherDiagnosesCount = 1 << 14,
-        MalformedOtherDiagnosis = 1 << 15,
-        MissingProceduresCount = 1 << 16,
-        MalformedProceduresCount = 1 << 17,
-        MalformedProcedureCode = 1 << 18
+        UnknownRumVersion = 1 << 0,
+        MalformedBirthdate = 1 << 1,
+        MalformedSex = 1 << 2,
+        MalformedEntryDate = 1 << 3,
+        MalformedEntryMode = 1 << 4,
+        MalformedEntryOrigin = 1 << 5,
+        MalformedExitDate = 1 << 6,
+        MalformedExitMode = 1 << 7,
+        MalformedExitDestination = 1 << 8,
+        MalformedSessionCount = 1 << 9,
+        MalformedNewbornWeight = 1 << 10,
+        MalformedIgs2 = 1 << 11,
+        MalformedMainDiagnosis = 1 << 12,
+        MalformedLinkedDiagnosis = 1 << 13,
+        MissingOtherDiagnosesCount = 1 << 14,
+        MalformedOtherDiagnosesCount = 1 << 15,
+        MalformedOtherDiagnosis = 1 << 16,
+        MissingProceduresCount = 1 << 17,
+        MalformedProceduresCount = 1 << 18,
+        MalformedProcedureCode = 1 << 19
     };
 
     int32_t admin_id;

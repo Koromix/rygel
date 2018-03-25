@@ -100,8 +100,10 @@ Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder
     DebugAssert(stays.len > 0);
 
     Size agg_len = 1;
-    while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
-        agg_len++;
+    if (LIKELY(!(stays[0].error_mask & (int)Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
+        while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
+            agg_len++;
+        }
     }
 
     if (out_remainder) {
@@ -508,6 +510,11 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
 
     bool valid = true;
 
+    if (UNLIKELY(!stays[0].bill_id)) {
+        DebugAssert(stays.len == 1);
+        valid &= SetError(out_errors, 11);
+    }
+
     // TODO: Do complete inter-RSS compatibility checks
     if (UNLIKELY(stays[0].entry.mode == '6' && stays[0].entry.origin == '1')) {
         valid &= SetError(out_errors, 26);
@@ -771,7 +778,12 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 {
     DebugAssert(stays.len > 0);
 
-    if (!CheckMainErrors(stays, out_errors))
+    if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::UnknownRumVersion)) {
+        DebugAssert(stays.len == 1);
+        SetError(out_errors, 59);
+        return GhmCode::FromString("90Z00Z");
+    }
+    if (UNLIKELY(!CheckMainErrors(stays, out_errors)))
         return GhmCode::FromString("90Z00Z");
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
