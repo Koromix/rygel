@@ -1192,6 +1192,72 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     return -1;
 }
 
+static bool CheckConfirmation(const ClassifyAggregate &agg, GhmCode ghm,
+                              const GhmRootInfo &ghm_root_info, ClassifyErrorSet *out_errors)
+{
+    bool valid = true;
+
+    bool confirm = false;
+    if (UNLIKELY(agg.duration >= 365)) {
+        confirm = true;
+    } else if (agg.duration < ghm_root_info.confirm_duration_treshold &&
+               agg.stay.exit.mode != '9' && agg.stay.exit.mode != '0' &&
+               (agg.stay.exit.mode != '7' || agg.stay.exit.destination != '1')) {
+        confirm = true;
+    } else if (agg.flags & ((int)ClassifyAggregate::Flag::Childbirth |
+                            (int)ClassifyAggregate::Flag::ChildbirthType)) {
+        // I don't really know the rational behind these tests, to be honest. It's
+        // what the official classifier does.
+        switch (ghm.parts.cmd) {
+            case 12:
+            case 14:
+            case 22:
+            case 25:
+            case 26:
+            case 27: { /* No need */ } break;
+
+            case 1: {
+                confirm |= !((ghm.parts.type == 'C' && ghm.parts.seq == 3) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 4) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 5) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 6) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 10) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 11) ||
+                             (ghm.parts.type == 'C' && ghm.parts.seq == 12) ||
+                             (ghm.parts.type == 'K' && ghm.parts.seq == 7) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 13) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 18) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 19) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 24) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 25) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 30) ||
+                             (ghm.parts.type == 'M' && ghm.parts.seq == 31));
+            } break;
+            case 7: {
+                confirm |= !(ghm.parts.type == 'C' &&
+                             ghm.parts.seq >= 9 && ghm.parts.seq <= 14);
+            } break;
+            case 23: {
+                confirm |= !(ghm.parts.type == 'Z' && ghm.parts.seq == 2);
+            } break;
+
+            default: { confirm = true; } break;
+        }
+    }
+
+    if (agg.stay.flags & (int)Stay::Flag::Confirmed) {
+        if (confirm) {
+            SetError(out_errors, 223, 0);
+        } else if (agg.duration >= ghm_root_info.confirm_duration_treshold) {
+            valid &= SetError(out_errors, 124);
+        }
+    } else if (confirm) {
+        valid &= SetError(out_errors, 120);
+    }
+
+    return valid;
+}
+
 static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyErrorSet *out_errors)
 {
     bool valid = true;
@@ -1388,6 +1454,8 @@ GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 
     if (UNLIKELY(!CheckGhmErrors(agg, ghm, out_errors)))
         return GhmCode::FromString("90Z00Z");
+    if (UNLIKELY(!CheckConfirmation(agg, ghm, *ghm_root_info, out_errors)))
+        return GhmCode::FromString("90Z00Z");
 
     ghm = RunGhmSeverity(agg, ghm, *ghm_root_info);
 
@@ -1505,7 +1573,14 @@ GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
         if (uhcd) {
             ClassifyAggregate agg0 = agg;
             agg0.duration = 0;
-            ghm = ClassifyGhm(agg0, nullptr);
+
+            // Don't run ClassifyGhm() because that would test the confirmation flag,
+            // which makes no sense when duration is forced to 0.
+            ghm = RunGhmTree(agg0, nullptr);
+            const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+            if (LIKELY(ghm_root_info)) {
+                ghm = RunGhmSeverity(agg0, ghm, *ghm_root_info);
+            }
         }
     }
 

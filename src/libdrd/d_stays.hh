@@ -16,6 +16,10 @@ struct ProcedureRealisation {
 };
 
 struct Stay {
+    enum class Flag {
+        Confirmed = 1 << 0,
+    };
+
     enum class Error {
         UnknownRumVersion = 1 << 0,
         MalformedBillId = 1 << 1,
@@ -32,16 +36,18 @@ struct Stay {
         MalformedNewbornWeight = 1 << 12,
         MalformedLastMenstrualPeriod = 1 << 13,
         MalformedIgs2 = 1 << 14,
-        MalformedMainDiagnosis = 1 << 15,
-        MalformedLinkedDiagnosis = 1 << 16,
-        MissingOtherDiagnosesCount = 1 << 17,
-        MalformedOtherDiagnosesCount = 1 << 18,
-        MalformedOtherDiagnosis = 1 << 19,
-        MissingProceduresCount = 1 << 20,
-        MalformedProceduresCount = 1 << 21,
-        MalformedProcedureCode = 1 << 22
+        MalformedConfirmation = 1 << 15,
+        MalformedMainDiagnosis = 1 << 16,
+        MalformedLinkedDiagnosis = 1 << 17,
+        MissingOtherDiagnosesCount = 1 << 18,
+        MalformedOtherDiagnosesCount = 1 << 19,
+        MalformedOtherDiagnosis = 1 << 20,
+        MissingProceduresCount = 1 << 21,
+        MalformedProceduresCount = 1 << 22,
+        MalformedProcedureCode = 1 << 23
     };
 
+    uint32_t flags;
     uint32_t error_mask;
 
     int32_t admin_id;

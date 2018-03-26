@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 6
+#define PACK_VERSION 7
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -361,6 +361,11 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             }
             offset += 8;
             ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(Stay::Error::MalformedIgs2);
+            if (line[offset] == '1') {
+                stay.flags |= (int)Stay::Flag::Confirmed;
+            } else if (UNLIKELY(line[offset] != ' ')) {
+                stay.error_mask |= (int)Stay::Error::MalformedConfirmation;
+            }
             offset += 33; // Skip a bunch of fields
 
             if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
