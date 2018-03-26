@@ -10,6 +10,13 @@
 #include "d_tables.hh"
 
 struct ClassifyAggregate {
+    enum class Flag {
+        ChildbirthDiagnosis = 1 << 0,
+        ChildbirthProcedure = 1 << 1,
+        Childbirth = (1 << 0) | (1 << 1),
+        ChildbirthType = 1 << 2
+    };
+
     Span<const Stay> stays;
 
     const TableIndex *index;
@@ -19,6 +26,7 @@ struct ClassifyAggregate {
     Span<const ProcedureInfo *> procedures;
     uint8_t proc_activities;
 
+    uint16_t flags;
     int age;
     int age_days;
     int duration;
@@ -88,9 +96,6 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 int GetMinimalDurationForSeverity(int severity);
 int LimitSeverityWithDuration(int severity, int duration);
 
-GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
-GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
-                       ClassifyErrorSet *out_errors);
 GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
 
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,

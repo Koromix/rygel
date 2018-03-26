@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 5
+#define PACK_VERSION 6
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -225,6 +225,8 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 {
     DebugAssert(str.len == 8);
 
+    if (str[0] == ' ')
+        return true;
     if (UNLIKELY(!IsAsciiDigit(str[0]) || !IsAsciiDigit(str[1]) || !IsAsciiDigit(str[2]) ||
                  !IsAsciiDigit(str[3]) || !IsAsciiDigit(str[4]) || !IsAsciiDigit(str[5]) ||
                  !IsAsciiDigit(str[6]) || !IsAsciiDigit(str[7])))
@@ -318,8 +320,8 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             offset += 1;
             offset += 5; // Skip postal code
             ParsePmsiInt(ReadFragment(4), &stay.newborn_weight) || SetErrorFlag(Stay::Error::MalformedNewbornWeight);
-            ParsePmsiInt(ReadFragment(2), &stay.gestational_age);
-            ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period);
+            ParsePmsiInt(ReadFragment(2), &stay.gestational_age) || SetErrorFlag(Stay::Error::MalformedGestationalAge);
+            ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period) || SetErrorFlag(Stay::Error::MalformedLastMenstrualPeriod);
             ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(Stay::Error::MalformedSessionCount);
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 2), &das_count) ||

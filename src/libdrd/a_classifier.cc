@@ -296,7 +296,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
     return true;
 }
 
-static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
+static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
                                  HeapArray<const DiagnosisInfo *> *out_diagnoses,
                                  ClassifyErrorSet *out_errors)
 {
@@ -321,21 +321,21 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
         0, 90, 93, 92, 91
     };
 
-    for (const Stay &stay: agg.stays) {
+    for (const Stay &stay: out_agg->stays) {
         // Main diagnosis is valid (checks are done in CheckMainError)
-        const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.main_diagnosis);
+        const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
         if (LIKELY(diag_info)) {
             out_diagnoses->Append(diag_info);
-            valid &= CheckDiagnosisErrors(agg, *diag_info, main_diagnosis_errors, out_errors);
+            valid &= CheckDiagnosisErrors(*out_agg, *diag_info, main_diagnosis_errors, out_errors);
         } else {
             valid &= SetError(out_errors, 67);
         }
 
         if (stay.linked_diagnosis.IsValid()) {
-            const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(stay.linked_diagnosis);
+            const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
             if (LIKELY(diag_info)) {
                 out_diagnoses->Append(diag_info);
-                valid &= CheckDiagnosisErrors(agg, *diag_info,
+                valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
                                               linked_diagnosis_errors, out_errors);
             } else {
                 valid &= SetError(out_errors, 94);
@@ -346,10 +346,19 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
             if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
                 continue;
 
-            const DiagnosisInfo *diag_info = agg.index->FindDiagnosis(diag);
+            if (diag.Matches("Z37")) {
+                out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthDiagnosis;
+            }
+            if (diag.Matches("O8") && (diag.str[2] == '0' || diag.str[2] == '1' ||
+                                       diag.str[2] == '2' || diag.str[2] == '3' ||
+                                       diag.str[2] == '4')) {
+                out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthType;
+            }
+
+            const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
             if (LIKELY(diag_info)) {
                 out_diagnoses->Append(diag_info);
-                valid &= CheckDiagnosisErrors(agg, *diag_info,
+                valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
                                               associate_diagnosis_errors, out_errors);
             } else {
                 valid &= SetError(out_errors, 70);
@@ -370,17 +379,19 @@ static bool AppendValidDiagnoses(const ClassifyAggregate &agg,
         }
         out_diagnoses->RemoveFrom(j + 1);
     }
+    out_agg->diagnoses = *out_diagnoses;
 
     return valid;
 }
 
-static bool AppendValidProcedures(const ClassifyAggregate &agg,
+static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                                   HeapArray<const ProcedureInfo *> *out_procedures,
-                                  uint8_t *out_activities, ClassifyErrorSet *out_errors)
+                                  ClassifyErrorSet *out_errors)
 {
     bool valid = true;
 
-    for (const Stay &stay: agg.stays) {
+    out_agg->proc_activities = 0;
+    for (const Stay &stay: out_agg->stays) {
         for (const ProcedureRealisation &proc: stay.procedures) {
             if (UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
@@ -390,16 +401,20 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
             }
 
             const ProcedureInfo *proc_info =
-                agg.index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
+                out_agg->index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
             if (LIKELY(proc_info)) {
                 if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == 2)) {
                     SetError(out_errors, 148, -1);
                 }
-                if (UNLIKELY((agg.age || agg.age_days > 28) &&
-                             (proc_info->bytes[44] & 0x20) && (!agg.stay.newborn_weight ||
-                                                               agg.stay.newborn_weight >= 3000))) {
+                if (UNLIKELY((out_agg->age || out_agg->age_days > 28) &&
+                             (proc_info->bytes[44] & 0x20) && (!out_agg->stay.newborn_weight ||
+                                                               out_agg->stay.newborn_weight >= 3000))) {
                     valid &= SetError(out_errors, 149);
+                }
+
+                if (proc_info->bytes[41] & 0x2) {
+                    out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthProcedure;
                 }
 
                 if (UNLIKELY(stay.entry.date > proc_info->limit_dates[1])) {
@@ -445,9 +460,10 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
                 }
 
                 out_procedures->Append(proc_info);
-                *out_activities |= proc.activities;
+                out_agg->proc_activities |= proc.activities;
             } else {
-                Span <const ProcedureInfo> compatible_procs = agg.index->FindProcedure(proc.proc);
+                Span <const ProcedureInfo> compatible_procs =
+                    out_agg->index->FindProcedure(proc.proc);
                 bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
                                               [&](const ProcedureInfo &proc_info) {
                     return proc_info.phase == proc.phase;
@@ -483,6 +499,7 @@ static bool AppendValidProcedures(const ClassifyAggregate &agg,
         }
         out_procedures->RemoveFrom(j + 1);
     }
+    out_agg->procedures = *out_procedures;
 
     return valid;
 }
@@ -501,7 +518,7 @@ static bool CheckDateErrors(bool malformed_flag, Date date,
     return true;
 }
 
-static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors)
+static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors)
 {
     // Malformed, missing, incoherent (e.g. 2001/02/29)
     static const int16_t birthdate_errors[3] = {14, 13, 39};
@@ -510,6 +527,7 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
 
     bool valid = true;
 
+    // Bill id
     if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::MalformedBillId)) {
         static bool warned = false;
         if (!warned) {
@@ -519,15 +537,6 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         valid &= SetError(out_errors, 61);
     } else if (UNLIKELY(!stays[0].bill_id)) {
         valid &= SetError(out_errors, 11);
-    }
-
-    // TODO: Do complete inter-RSS compatibility checks
-    if (UNLIKELY(stays[0].entry.mode == '6' && stays[0].entry.origin == '1')) {
-        valid &= SetError(out_errors, 26);
-    }
-    if (UNLIKELY(stays[stays.len - 1].exit.mode == '6' &&
-                 stays[stays.len - 1].exit.destination == '1')) {
-        valid &= SetError(out_errors, 35);
     }
 
     for (const Stay &stay: stays) {
@@ -555,105 +564,35 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
                      stay.entry.date.IsValid() && stay.exit.date.IsValid())) {
             valid &= SetError(out_errors, 32);
         }
-        if (UNLIKELY(stay.entry.date.st.year < 1985 && stay.entry.date.IsValid())) {
-            SetError(out_errors, 77, -1);
-        }
 
         // Entry mode and origin
         if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedEntryMode |
                                         (int)Stay::Error::MalformedEntryOrigin))) {
             valid &= SetError(out_errors, 25);
-        } else {
-            switch (stay.entry.mode) {
-                case '0':
-                case '6': {
-                    if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
-                        valid &= SetError(out_errors, 25);
-                    }
-                    if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
-                        valid &= SetError(out_errors, 25);
-                    }
-                } // fallthrough
-                case '7': {
-                    switch (stay.entry.origin) {
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '6':
-                        case 'R': { /* Valid origin */ } break;
-
-                        case 0: { valid &= SetError(out_errors, 53); } break;
-                        default: { valid &= SetError(out_errors, 25); } break;
-                    }
-                } break;
-
-                case '8': {
-                    switch (stay.entry.origin) {
-                        case 0:
-                        case '5':
-                        case '7': { /* Valid origin */ } break;
-
-                        default: { valid &= SetError(out_errors, 25); } break;
-                    }
-                } break;
-
-                case 0: { valid &= SetError(out_errors, 24); } break;
-                default: { valid &= SetError(out_errors, 25); } break;
-            }
         }
 
         // Exit mode and destination
         if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedExitMode |
                                         (int)Stay::Error::MalformedExitDestination))) {
             valid &= SetError(out_errors, 34);
-        } else {
-            switch (stay.exit.mode) {
-                case '0':
-                case '6':
-                case '7': {
-                    switch (stay.exit.destination) {
-                        case '1':
-                        case '2':
-                        case '3':
-                        case '4':
-                        case '6': { /* Valid destination */ } break;
-
-                        case 0: { valid &= SetError(out_errors, 54); } break;
-                        default: { valid &= SetError(out_errors, 34); } break;
-                    }
-                } break;
-
-                case '8': {
-                    switch (stay.exit.destination) {
-                        case 0:
-                        case '7': { /* Valid destination */ } break;
-
-                        default: { valid &= SetError(out_errors, 34); } break;
-                    }
-                } break;
-
-                case '9': {
-                    if (UNLIKELY(stay.exit.destination)) {
-                        valid &= SetError(out_errors, 34);
-                    }
-                } break;
-
-                case 0: { valid &= SetError(out_errors, 33); } break;
-                default: { valid &= SetError(out_errors, 34); } break;
-            }
         }
 
         // Sessions
         if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSessionCount)) {
             valid &= SetError(out_errors, 36);
-        } else {
-            if (UNLIKELY(stays.len > 1 && stay.session_count > 0)) {
-                valid &= SetError(out_errors, 37);
-            }
-            if (UNLIKELY(stay.session_count < 0 || stay.session_count >= 32)) {
-                SetError(out_errors, 66, -1);
-            }
+        }
+
+        // Gestational age
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedGestationalAge)) {
+            valid &= SetError(out_errors, 125);
+        }
+
+        // Menstrual period
+        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLastMenstrualPeriod)) {
+            valid &= SetError(out_errors, 160);
+        } else if (UNLIKELY(stay.last_menstrual_period.value &&
+                            !stay.last_menstrual_period.IsValid())) {
+            valid &= SetError(out_errors, 161);
         }
 
         // IGS2
@@ -688,7 +627,7 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         }
     }
 
-    // Continuity checks
+    // Coherency checks
     for (Size i = 1; i < stays.len; i++) {
         if (UNLIKELY(stays[i].sex != stays[i - 1].sex &&
                      (stays[i].sex == 1 || stays[i].sex == 2))) {
@@ -699,29 +638,6 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
                      stays[i].birthdate.IsValid())) {
             valid &= SetError(out_errors, 45);
         }
-
-        switch (stays[i].entry.mode) {
-            case '0': {
-                if (UNLIKELY(stays[i - 1].exit.mode != '0')) {
-                    valid &= SetError(out_errors, 27);
-                    SetError(out_errors, 49);
-                } else if (UNLIKELY(stays[i].entry.date != stays[i - 1].exit.date &&
-                                    stays[i].entry.date - stays[i - 1].exit.date != 1)) {
-                    valid &= SetError(out_errors, 50);
-                }
-            } break;
-
-            case '6': {
-                if (UNLIKELY(stays[i].entry.origin != '1' || stays[i - 1].exit.mode != '6')) {
-                    valid &= SetError(out_errors, 27);
-                    SetError(out_errors, 49);
-                } else if (UNLIKELY(stays[i].entry.date != stays[i - 1].exit.date)) {
-                    valid &= SetError(out_errors, 23);
-                }
-            } break;
-
-            default: { valid &= SetError(out_errors, 27); } break;
-        }
     }
 
     return valid;
@@ -730,6 +646,161 @@ static bool CheckMainErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
 static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 {
     bool valid = true;
+
+    // TODO: Do complete inter-RSS compatibility checks
+    if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
+        valid &= SetError(out_errors, 26);
+    }
+    if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
+        valid &= SetError(out_errors, 35);
+    }
+
+    for (const Stay &stay: agg.stays) {
+        // Dates
+        if (UNLIKELY(stay.entry.date.st.year < 1985 && stay.entry.date.IsValid())) {
+            SetError(out_errors, 77, -1);
+        }
+
+        // Entry mode and origin
+        switch (stay.entry.mode) {
+            case '0':
+            case '6': {
+                if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
+                    valid &= SetError(out_errors, 25);
+                }
+                if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
+                    valid &= SetError(out_errors, 25);
+                }
+            } // fallthrough
+            case '7': {
+                switch (stay.entry.origin) {
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '6':
+                    case 'R': { /* Valid origin */ } break;
+
+                    case 0: { valid &= SetError(out_errors, 53); } break;
+                    default: { valid &= SetError(out_errors, 25); } break;
+                }
+            } break;
+
+            case '8': {
+                switch (stay.entry.origin) {
+                    case 0:
+                    case '5':
+                    case '7': { /* Valid origin */ } break;
+
+                    default: { valid &= SetError(out_errors, 25); } break;
+                }
+            } break;
+
+            case 0: { valid &= SetError(out_errors, 24); } break;
+            default: { valid &= SetError(out_errors, 25); } break;
+        }
+
+        // Exit mode and destination
+        switch (stay.exit.mode) {
+            case '0':
+            case '6':
+            case '7': {
+                switch (stay.exit.destination) {
+                    case '1':
+                    case '2':
+                    case '3':
+                    case '4':
+                    case '6': { /* Valid destination */ } break;
+
+                    case 0: { valid &= SetError(out_errors, 54); } break;
+                    default: { valid &= SetError(out_errors, 34); } break;
+                }
+            } break;
+
+            case '8': {
+                switch (stay.exit.destination) {
+                    case 0:
+                    case '7': { /* Valid destination */ } break;
+
+                    default: { valid &= SetError(out_errors, 34); } break;
+                }
+            } break;
+
+            case '9': {
+                if (UNLIKELY(stay.exit.destination)) {
+                    valid &= SetError(out_errors, 34);
+                }
+            } break;
+
+            case 0: { valid &= SetError(out_errors, 33); } break;
+            default: { valid &= SetError(out_errors, 34); } break;
+        }
+
+        // Sessions
+        if (UNLIKELY(agg.stays.len > 1 && stay.session_count > 0)) {
+            valid &= SetError(out_errors, 37);
+        }
+        if (UNLIKELY(stay.session_count < 0 || stay.session_count >= 32)) {
+            SetError(out_errors, 66, -1);
+        }
+
+        // Gestational age
+        if (stay.gestational_age) {
+            if (UNLIKELY((stay.gestational_age > 44 ||
+                          (stay.gestational_age < 22 && agg.stay.exit.mode != '9' && !agg.age)))) {
+                valid &= SetError(out_errors, 127);
+            } else if (UNLIKELY(agg.stay.newborn_weight &&
+                                ((stay.gestational_age >= 37 && agg.stay.newborn_weight < 1000 && !stay.main_diagnosis.Matches("P95")) ||
+                                 (stay.gestational_age < 33 && agg.stay.newborn_weight > 4000) ||
+                                 (stay.gestational_age < 28 && agg.stay.newborn_weight > 2500)))) {
+                valid &= SetError(out_errors, 129);
+            }
+        }
+
+        // Menstrual period
+        if (UNLIKELY(stay.last_menstrual_period.value &&
+                     stay.last_menstrual_period != agg.stay.last_menstrual_period)) {
+            valid &= SetError(out_errors, 163);
+        }
+
+        // Stillborn
+        if (UNLIKELY(stay.main_diagnosis.Matches("P95"))) {
+            if (UNLIKELY(stay.exit.mode != '9')) {
+                valid &= SetError(out_errors, 143);
+                SetError(out_errors, 147);
+            } else if (UNLIKELY(agg.stays.len > 1 || stay.entry.mode != '8' ||
+                                stay.birthdate != stay.entry.date || !stay.newborn_weight ||
+                                stay.exit.date != stay.entry.date)) {
+                valid &= SetError(out_errors, 147);
+            }
+        }
+    }
+
+    // Continuity checks
+    for (Size i = 1; i < agg.stays.len; i++) {
+        switch (agg.stays[i].entry.mode) {
+            case '0': {
+                if (UNLIKELY(agg.stays[i - 1].exit.mode != '0')) {
+                    valid &= SetError(out_errors, 27);
+                    SetError(out_errors, 49);
+                } else if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date &&
+                                    agg.stays[i].entry.date - agg.stays[i - 1].exit.date != 1)) {
+                    valid &= SetError(out_errors, 50);
+                }
+            } break;
+
+            case '6': {
+                if (UNLIKELY(agg.stays[i].entry.origin != '1' || agg.stays[i - 1].exit.mode != '6')) {
+                    valid &= SetError(out_errors, 27);
+                    SetError(out_errors, 49);
+                } else if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date)) {
+                    valid &= SetError(out_errors, 23);
+                }
+            } break;
+
+            default: { valid &= SetError(out_errors, 27); } break;
+        }
+    }
 
     // Sessions
     if (TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, 8, 0x2)) {
@@ -748,21 +819,12 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
         }
     }
 
-    // Stillborn
-    for (const Stay &stay: agg.stays) {
-        if (UNLIKELY(stay.main_diagnosis.Matches("P95"))) {
-            if (UNLIKELY(stay.exit.mode != '9')) {
-                valid &= SetError(out_errors, 143);
-                SetError(out_errors, 147);
-            } else if (UNLIKELY(agg.stays.len > 1 || stay.entry.mode != '8' ||
-                                stay.birthdate != stay.entry.date || !stay.newborn_weight ||
-                                stay.exit.date != stay.entry.date)) {
-                valid &= SetError(out_errors, 147);
-            }
-        }
+    // Gestation and newborn
+    if (UNLIKELY(!agg.stay.gestational_age &&
+                 ((agg.flags & (int)ClassifyAggregate::Flag::Childbirth) ||
+                  agg.stay.birthdate == agg.stay.entry.date))) {
+        valid &= SetError(out_errors, 126);
     }
-
-    // Newborn
     if (UNLIKELY(agg.stay.error_mask & (int)Stay::Error::MalformedNewbornWeight)) {
         valid &= SetError(out_errors, 82);
     } else {
@@ -770,6 +832,27 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
             valid &= SetError(out_errors, 168);
         } else if (UNLIKELY(agg.stay.newborn_weight > 0 && agg.stay.newborn_weight < 100)) {
             valid &= SetError(out_errors, 128);
+        }
+    }
+    if (UNLIKELY(agg.stay.exit.date >= Date(2013, 3, 1) &&
+                 (agg.flags & (int)ClassifyAggregate::Flag::ChildbirthProcedure) &&
+                 agg.stay.gestational_age < 22)) {
+        valid &= SetError(out_errors, 174);
+    }
+
+    // Menstruation
+    if (UNLIKELY((agg.flags & (int)ClassifyAggregate::Flag::Childbirth) &&
+                 !agg.stay.last_menstrual_period.value)) {
+        valid &= SetError(out_errors, 162);
+    }
+    if (UNLIKELY(agg.stay.sex == 1 && agg.stay.last_menstrual_period.value)) {
+        SetError(out_errors, 164, -1);
+    }
+    if (agg.stay.last_menstrual_period.value) {
+        if (UNLIKELY(agg.stay.last_menstrual_period > agg.stay.entry.date)) {
+            SetError(out_errors, 165, -1);
+        } else if (UNLIKELY(agg.stay.entry.date - agg.stay.last_menstrual_period > 305)) {
+            SetError(out_errors, 166, -1);
         }
     }
 
@@ -784,12 +867,13 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 {
     DebugAssert(stays.len > 0);
 
+    // These errors are too serious to continue (broken data, etc.)
     if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::UnknownRumVersion)) {
         DebugAssert(stays.len == 1);
         SetError(out_errors, 59);
         return GhmCode::FromString("90Z00Z");
     }
-    if (UNLIKELY(!CheckMainErrors(stays, out_errors)))
+    if (UNLIKELY(!CheckDataErrors(stays, out_errors)))
         return GhmCode::FromString("90Z00Z");
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
@@ -798,15 +882,20 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         return GhmCode::FromString("90Z03Z");
     }
 
+    // Aggregate basic information
     out_agg->stays = stays;
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
     out_agg->duration = 0;
+    out_agg->flags = 0;
+    out_agg->stay.last_menstrual_period = {};
     for (const Stay &stay: stays) {
         if (stay.gestational_age > 0) {
-            // TODO: Must be first (newborn) or on RUM with a$41.2 only
             out_agg->stay.gestational_age = stay.gestational_age;
+        }
+        if (stay.last_menstrual_period.value && !out_agg->stay.last_menstrual_period.value) {
+            out_agg->stay.last_menstrual_period = stay.last_menstrual_period;
         }
         if (stay.igs2 > out_agg->stay.igs2) {
             out_agg->stay.igs2 = stay.igs2;
@@ -814,20 +903,18 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->duration += stay.exit.date - stay.entry.date;
     }
     out_agg->stay.exit = stays[stays.len - 1].exit;
+    out_agg->stay.flags = 0;
+    if (out_agg->stays[stays.len - 1].flags & (int)Stay::Flag::Confirmed) {
+        out_agg->stay.flags |= (int)Stay::Flag::Confirmed;
+    }
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
 
     bool valid = true;
 
-    // Aggregate diagnoses
-    valid &= AppendValidDiagnoses(*out_agg, out_diagnoses, out_errors);
-    out_agg->diagnoses = *out_diagnoses;
-
-    // Aggregate procedures
-    out_agg->proc_activities = 0;
-    valid &= AppendValidProcedures(*out_agg, out_procedures,
-                                   &out_agg->proc_activities, out_errors);
-    out_agg->procedures = *out_procedures;
+    // Aggregate diagnoses and procedures
+    valid &= AppendValidDiagnoses(out_agg, out_diagnoses, out_errors);
+    valid &= AppendValidProcedures(out_agg, out_procedures, out_errors);
 
     // Pick main stay
     if (stays.len > 1) {
@@ -839,6 +926,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
         out_agg->main_stay = &stays[0];
     }
 
+    // Check remaining stay errors
     valid &= CheckAggregateErrors(*out_agg, out_errors);
     if (UNLIKELY(!valid))
         return GhmCode::FromString("90Z00Z");
@@ -1104,11 +1192,11 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     return -1;
 }
 
-static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm,
-                           ClassifyErrorSet *out_errors)
+static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyErrorSet *out_errors)
 {
     bool valid = true;
 
+    // Sessions
     if (ghm.parts.cmd == 28) {
         if (UNLIKELY(agg.stays.len > 1)) {
             valid &= SetError(out_errors, 150);
@@ -1140,7 +1228,7 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm,
     return valid;
 }
 
-GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
+static GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 {
     GhmCode ghm = {};
 
@@ -1184,9 +1272,6 @@ GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
         }
     }
 
-    if (!CheckGhmErrors(agg, ghm, out_errors))
-        return GhmCode::FromString("90Z00Z");
-
     return ghm;
 }
 
@@ -1229,29 +1314,22 @@ static bool TestExclusion(const ClassifyAggregate &agg,
     return false;
 }
 
-GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
-                       ClassifyErrorSet *out_errors)
+static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
+                              const GhmRootInfo &ghm_root_info)
 {
-    const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
-    if (UNLIKELY(!ghm_root_info)) {
-        LogError("Unknown GHM root '%1'", ghm.Root());
-        SetError(out_errors, 4, 2);
-        return GhmCode::FromString("90Z03Z");
-    }
-
     // Ambulatory and / or short duration GHM
-    if (ghm_root_info->allow_ambulatory && agg.duration == 0) {
+    if (ghm_root_info.allow_ambulatory && agg.duration == 0) {
         ghm.parts.mode = 'J';
-    } else if (ghm_root_info->short_duration_treshold &&
-               agg.duration < ghm_root_info->short_duration_treshold) {
+    } else if (ghm_root_info.short_duration_treshold &&
+               agg.duration < ghm_root_info.short_duration_treshold) {
         ghm.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
 
-        if (ghm_root_info->childbirth_severity_list) {
-            Assert(ghm_root_info->childbirth_severity_list > 0 &&
-                   ghm_root_info->childbirth_severity_list <= SIZE(agg.index->cma_cells));
-            for (const ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info->childbirth_severity_list - 1]) {
+        if (ghm_root_info.childbirth_severity_list) {
+            Assert(ghm_root_info.childbirth_severity_list > 0 &&
+                   ghm_root_info.childbirth_severity_list <= SIZE(agg.index->cma_cells));
+            for (const ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info.childbirth_severity_list - 1]) {
                 if (cell.Test(0, agg.stay.gestational_age) && cell.Test(1, severity)) {
                     severity = cell.value;
                     break;
@@ -1273,17 +1351,17 @@ GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
                 continue;
 
             int new_severity = diag_info->Attributes(agg.stay.sex).severity;
-            if (new_severity > severity && !TestExclusion(agg, *ghm_root_info, *diag_info,
+            if (new_severity > severity && !TestExclusion(agg, ghm_root_info, *diag_info,
                                                           *main_diag_info, linked_diag_info)) {
                 severity = new_severity;
             }
         }
 
-        if (agg.age >= ghm_root_info->old_age_treshold &&
-                severity < ghm_root_info->old_severity_limit) {
+        if (agg.age >= ghm_root_info.old_age_treshold &&
+                severity < ghm_root_info.old_severity_limit) {
             severity++;
-        } else if (agg.age < ghm_root_info->young_age_treshold &&
-                   severity < ghm_root_info->young_severity_limit) {
+        } else if (agg.age < ghm_root_info.young_age_treshold &&
+                   severity < ghm_root_info.young_severity_limit) {
             severity++;
         } else if (agg.stay.exit.mode == '9' && !severity) {
             severity = 1;
@@ -1300,7 +1378,18 @@ GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
     GhmCode ghm;
 
     ghm = RunGhmTree(agg, out_errors);
-    ghm = RunGhmSeverity(agg, ghm, out_errors);
+
+    const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+    if (UNLIKELY(!ghm_root_info)) {
+        LogError("Unknown GHM root '%1'", ghm.Root());
+        SetError(out_errors, 4, 2);
+        return GhmCode::FromString("90Z03Z");
+    }
+
+    if (UNLIKELY(!CheckGhmErrors(agg, ghm, out_errors)))
+        return GhmCode::FromString("90Z00Z");
+
+    ghm = RunGhmSeverity(agg, ghm, *ghm_root_info);
 
     return ghm;
 }

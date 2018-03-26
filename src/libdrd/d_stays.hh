@@ -16,7 +16,7 @@ struct ProcedureRealisation {
 };
 
 struct Stay {
-    enum class Error: uint32_t {
+    enum class Error {
         UnknownRumVersion = 1 << 0,
         MalformedBillId = 1 << 1,
         MalformedBirthdate = 1 << 2,
@@ -28,17 +28,21 @@ struct Stay {
         MalformedExitMode = 1 << 8,
         MalformedExitDestination = 1 << 9,
         MalformedSessionCount = 1 << 10,
-        MalformedNewbornWeight = 1 << 11,
-        MalformedIgs2 = 1 << 12,
-        MalformedMainDiagnosis = 1 << 13,
-        MalformedLinkedDiagnosis = 1 << 14,
-        MissingOtherDiagnosesCount = 1 << 15,
-        MalformedOtherDiagnosesCount = 1 << 16,
-        MalformedOtherDiagnosis = 1 << 17,
-        MissingProceduresCount = 1 << 18,
-        MalformedProceduresCount = 1 << 19,
-        MalformedProcedureCode = 1 << 20
+        MalformedGestationalAge = 1 << 11,
+        MalformedNewbornWeight = 1 << 12,
+        MalformedLastMenstrualPeriod = 1 << 13,
+        MalformedIgs2 = 1 << 14,
+        MalformedMainDiagnosis = 1 << 15,
+        MalformedLinkedDiagnosis = 1 << 16,
+        MissingOtherDiagnosesCount = 1 << 17,
+        MalformedOtherDiagnosesCount = 1 << 18,
+        MalformedOtherDiagnosis = 1 << 19,
+        MissingProceduresCount = 1 << 20,
+        MalformedProceduresCount = 1 << 21,
+        MalformedProcedureCode = 1 << 22
     };
+
+    uint32_t error_mask;
 
     int32_t admin_id;
     int32_t bill_id;
@@ -74,8 +78,6 @@ struct Stay {
 #ifndef ARCH_64
     char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
 #endif
-
-    uint32_t error_mask;
 };
 
 struct StayTest {
