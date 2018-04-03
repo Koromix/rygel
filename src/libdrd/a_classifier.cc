@@ -647,12 +647,18 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 {
     bool valid = true;
 
-    // TODO: Do complete inter-RSS compatibility checks
-    if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
-        valid &= SetError(out_errors, 26);
-    }
-    if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
-        valid &= SetError(out_errors, 35);
+    if (agg.stay.entry.mode == '0' || agg.stay.exit.mode == '0') {
+        if (UNLIKELY(agg.stay.exit.mode != agg.stay.entry.mode)) {
+            valid &= SetError(out_errors, 26);
+            SetError(out_errors, 35);
+        }
+    } else {
+        if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
+            valid &= SetError(out_errors, 26);
+        }
+        if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
+            valid &= SetError(out_errors, 35);
+        }
     }
 
     for (const Stay &stay: agg.stays) {
