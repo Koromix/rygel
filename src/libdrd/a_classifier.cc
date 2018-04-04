@@ -1282,6 +1282,16 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyEr
         }
     }
 
+    // Menstruation
+    {
+        static GhmRootCode ghm_root_14C04 = GhmRootCode::FromString("14C04");
+        static GhmRootCode ghm_root_14M02 = GhmRootCode::FromString("14M02");
+        if (UNLIKELY((ghm.parts.cmd == 14 && ghm.Root() != ghm_root_14C04 && ghm.Root() != ghm_root_14M02) &&
+                     !agg.stay.last_menstrual_period.value)) {
+            valid &= SetError(out_errors, 162);
+        }
+    }
+
     // FIXME: Find a way to optimize away calls to FromString() in simple cases
     {
         static GhmRootCode ghm_root_14Z08 = GhmRootCode::FromString("14Z08");
