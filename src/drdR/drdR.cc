@@ -113,6 +113,7 @@ struct ProceduresProxy {
     Rcc_Vector<int> activity;
     Rcc_Vector<int> count;
     Rcc_Vector<Date> date;
+    Rcc_Vector<const char *> doc;
 };
 
 static bool RunClassifier(const ClassifierInstance &classifier,
@@ -287,6 +288,15 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
             proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 0);
             proc.date = procedures.date[k];
+            if (procedures.doc.Len()) {
+                const char *doc_str = procedures.doc[k].ptr;
+                if (doc_str[0] && !doc_str[1]) {
+                    proc.doc = doc_str[0];
+                } else if (doc_str != CHAR(NA_STRING)) {
+                    // Put garbage in doc to trigger classifier error 173
+                    proc.doc = '?';
+                }
+            }
 
             out_stay_set->store.procedures.Append(proc);
         }
@@ -369,6 +379,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     procedures.activity = procedures_df["activity"];
     LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
+    LOAD_OPTIONAL_COLUMN(procedures, doc);
 
 #undef LOAD_OPTIONAL_COLUMN
 
@@ -694,6 +705,7 @@ SEXP R_LoadStays(Rcpp::CharacterVector filenames)
         Rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
         Rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
         Rcc_Vector<Date> procedures_date = procedures_builder.Add<Date>("date");
+        Rcc_Vector<const char *> procedures_doc = procedures_builder.Add<const char *>("doc");
 
         Size j = 0, k = 0;
         for (Size i = 0; i < stay_set.stays.len; i++) {
@@ -755,6 +767,11 @@ SEXP R_LoadStays(Rcpp::CharacterVector filenames)
                 }
                 procedures_date.Set(k, proc.date);
                 procedures_count[k] = LIKELY(proc.count) ? proc.count : NA_INTEGER;
+                if (proc.doc) {
+                    procedures_doc.Set(k, proc.doc);
+                } else {
+                    procedures_doc.Set(k, nullptr);
+                }
                 k++;
             }
         }

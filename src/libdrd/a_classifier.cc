@@ -399,6 +399,10 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
             if (UNLIKELY(!proc.activities)) {
                 valid &= SetError(out_errors, 103);
             }
+            if (UNLIKELY(proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
+                                      proc.doc == 'I' || proc.doc == 'O'))) {
+                valid &= SetError(out_errors, 173);
+            }
 
             const ProcedureInfo *proc_info =
                 out_agg->index->FindProcedure(proc.proc, proc.phase, stay.exit.date);

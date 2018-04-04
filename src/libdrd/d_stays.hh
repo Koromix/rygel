@@ -13,6 +13,8 @@ struct ProcedureRealisation {
     uint8_t activities;
     int16_t count;
     Date date;
+
+    char doc;
 };
 
 struct Stay {

@@ -17,14 +17,14 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 7
+#define PACK_VERSION 8
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 StaticAssert(SIZE(Stay) == 104);
 StaticAssert(SIZE(DiagnosisCode) == 8);
-StaticAssert(SIZE(ProcedureRealisation) == 16);
+StaticAssert(SIZE(ProcedureRealisation) == 24);
 
 bool StaySet::SavePack(StreamWriter &st) const
 {
@@ -412,7 +412,11 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                         ParsePmsiInt(ReadFragment(1), &activity);
                         proc.activities = (uint8_t)(1 << activity);
                     }
-                    offset += 7; // Skip extension, modifiers, etc.
+                    if (line[offset] != ' ') {
+                        proc.doc = UpperAscii(line[offset]);
+                    }
+                    offset += 1;
+                    offset += 6; // Skip modifiers, etc.
                     ParsePmsiInt(ReadFragment(2), &proc.count);
                     set.store.procedures.Append(proc);
                 }
