@@ -141,7 +141,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.admin_id = Rcc_GetOptional(stays.admin_id, i, 0);
         stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
         stay.birthdate = stays.birthdate[i];
-        if (UNLIKELY(!stay.birthdate.value && !stays.birthdate.IsNA(stay.birthdate))) {
+        if (UNLIKELY(stay.birthdate.value && !stay.birthdate.IsValid())) {
             stay.error_mask |= (int)Stay::Error::MalformedBirthdate;
         }
         if (stays.sex[i] != NA_INTEGER) {
@@ -151,7 +151,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
         }
         stay.entry.date = stays.entry_date[i];
-        if (UNLIKELY(!stay.entry.date.value && !stays.entry_date.IsNA(stay.entry.date))) {
+        if (UNLIKELY(stay.entry.date.value && !stay.entry.date.IsValid())) {
             stay.error_mask |= (int)Stay::Error::MalformedEntryDate;
         }
         stay.entry.mode = (char)('0' + stays.entry_mode[i]);
@@ -164,7 +164,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
         }
         stay.exit.date = stays.exit_date[i];
-        if (UNLIKELY(!stay.exit.date.value && !stays.exit_date.IsNA(stay.exit.date))) {
+        if (UNLIKELY(stay.exit.date.value && !stay.exit.date.IsValid())) {
             stay.error_mask |= (int)Stay::Error::MalformedExitDate;
         }
         stay.exit.mode = (char)('0' + stays.exit_mode[i]);

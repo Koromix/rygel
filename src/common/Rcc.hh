@@ -226,7 +226,7 @@ public:
 
     Size Len() const { return u.chr.len; }
 
-    static bool IsNA(Date date) { return date.value == INT32_MAX; }
+    static bool IsNA(Date date) { return !date.value; }
 
     const Date operator[](Size idx) const;
     Date Value() const;

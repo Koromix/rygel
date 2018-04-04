@@ -50,20 +50,19 @@ Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
 
 const Date Rcc_Vector<Date>::operator[](Size idx) const
 {
-    Date date;
-    date.value = INT32_MAX; // NA
+    Date date = {}; // NA
 
     switch (type) {
         case Type::Character: {
             SEXP str = u.chr[idx];
             if (str != NA_STRING) {
-                date = Date::FromString(CHAR(str));
+                date = Date::FromString(CHAR(str), (int)ParseFlag::End);
             }
         } break;
 
         case Type::Date: {
             double value = u.num[idx];
-            if (value != NA_REAL) {
+            if (!ISNA(value)) {
                 date = Date::FromCalendarDate((int)value);
             }
         } break;
