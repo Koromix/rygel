@@ -417,9 +417,9 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                     out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthProcedure;
                 }
 
-                if (UNLIKELY(!proc.date.value ||
-                             proc.date < proc_info->limit_dates[0] ||
-                             proc.date > proc_info->limit_dates[1])) {
+                if (UNLIKELY(!proc.date.IsValid() ||
+                             proc.date < stay.entry.date ||
+                             proc.date > stay.exit.date)) {
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
