@@ -417,13 +417,9 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                     out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthProcedure;
                 }
 
-                if (UNLIKELY(stay.entry.date > proc_info->limit_dates[1])) {
-                    valid &= SetError(out_errors, 78);
-                } else if (UNLIKELY(stay.exit.date < proc_info->limit_dates[0])) {
-                    valid &= SetError(out_errors, 79);
-                } else if (UNLIKELY(!proc.date.value ||
-                                    proc.date < proc_info->limit_dates[0] ||
-                                    proc.date > proc_info->limit_dates[1])) {
+                if (UNLIKELY(!proc.date.value ||
+                             proc.date < proc_info->limit_dates[0] ||
+                             proc.date > proc_info->limit_dates[1])) {
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
@@ -469,7 +465,13 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                     return proc_info.phase == proc.phase;
                 });
                 if (valid_proc) {
-                    LogDebug("Ignoring procedure '%1' with date %2", proc.proc, stay.exit.date);
+                    if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
+                        if (stay.exit.date < compatible_procs[0].limit_dates[0]) {
+                            valid &= SetError(out_errors, 79);
+                        } else if (stay.entry.date >= compatible_procs[compatible_procs.len - 1].limit_dates[1]) {
+                            valid &= SetError(out_errors, 78);
+                        }
+                    }
                 } else {
                     valid &= SetError(out_errors, 73);
                 }
