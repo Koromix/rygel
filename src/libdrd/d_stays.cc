@@ -398,11 +398,9 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 stay.procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
                 for (int i = 0; i < procedures_count; i++) {
                     ProcedureRealisation proc = {};
+
                     ParsePmsiDate(ReadFragment(8), &proc.date);
                     proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
-                    if (UNLIKELY(!proc.proc.IsValid())) {
-                        stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
-                    }
                     if (version >= 17) {
                         offset += 3; // Skip CCAM extension
                     }
@@ -418,7 +416,12 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                     offset += 1;
                     offset += 6; // Skip modifiers, etc.
                     ParsePmsiInt(ReadFragment(2), &proc.count);
-                    set.store.procedures.Append(proc);
+
+                    if (LIKELY(proc.proc.IsValid())) {
+                        set.store.procedures.Append(proc);
+                    } else {
+                        stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+                    }
                 }
                 stay.procedures.len = set.store.procedures.len - (Size)stay.procedures.ptr;
             }

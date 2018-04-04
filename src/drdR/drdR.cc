@@ -274,9 +274,6 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             ProcedureRealisation proc = {};
 
             proc.proc = ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
-            if (UNLIKELY(!proc.proc.IsValid())) {
-                stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
-            }
             proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
             {
                 int activities_dec = procedures.activity[k];
@@ -298,7 +295,11 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
 
-            out_stay_set->store.procedures.Append(proc);
+            if (LIKELY(proc.proc.IsValid())) {
+                out_stay_set->store.procedures.Append(proc);
+            } else {
+                stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+            }
         }
         stay.procedures.len = out_stay_set->store.procedures.end() - stay.procedures.ptr;
 
