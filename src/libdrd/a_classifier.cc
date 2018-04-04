@@ -526,11 +526,6 @@ static bool CheckDateErrors(bool malformed_flag, Date date,
 
 static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors)
 {
-    // Malformed, missing, incoherent (e.g. 2001/02/29)
-    static const int16_t birthdate_errors[3] = {14, 13, 39};
-    static const int16_t entry_date_errors[3] = {20, 19, 21};
-    static const int16_t exit_date_errors[3] = {29, 28, 30};
-
     bool valid = true;
 
     // Bill id
@@ -553,22 +548,31 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
             valid &= SetError(out_errors, stay.sex ? 17 : 16);
         }
 
-        // Birthdate
-        valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedBirthdate,
-                                 stay.birthdate, birthdate_errors, out_errors);
-        if (UNLIKELY(stay.birthdate > stay.entry.date &&
-                     stay.birthdate.IsValid() && stay.entry.date.IsValid())) {
-            valid &= SetError(out_errors, 15);
-        }
+        // Dates
+        {
+            // Malformed, missing, incoherent (e.g. 2001/02/29)
+            static const int16_t birthdate_errors[3] = {14, 13, 39};
+            static const int16_t entry_date_errors[3] = {20, 19, 21};
+            static const int16_t exit_date_errors[3] = {29, 28, 30};
 
-        // Entry and exit dates
-        valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedEntryDate,
-                                 stay.entry.date, entry_date_errors, out_errors);
-        valid &= CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedExitDate,
-                                 stay.exit.date, exit_date_errors, out_errors);
-        if (UNLIKELY(stay.exit.date < stay.entry.date &&
-                     stay.entry.date.IsValid() && stay.exit.date.IsValid())) {
-            valid &= SetError(out_errors, 32);
+            bool birthdate_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedBirthdate,
+                                                   stay.birthdate, birthdate_errors, out_errors);
+            bool entry_date_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedEntryDate,
+                                                    stay.entry.date, entry_date_errors, out_errors);
+            bool exit_date_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedExitDate,
+                                                   stay.exit.date, exit_date_errors, out_errors);
+
+            if (UNLIKELY(birthdate_valid && entry_date_valid &&
+                         (stay.birthdate > stay.entry.date ||
+                          stay.entry.date.st.year - stay.birthdate.st.year > 140))) {
+                valid &= SetError(out_errors, 15);
+            }
+            if (UNLIKELY(entry_date_valid && exit_date_valid &&
+                         stay.exit.date < stay.entry.date)) {
+                valid &= SetError(out_errors, 32);
+            }
+
+            valid &= birthdate_valid && entry_date_valid && exit_date_valid;
         }
 
         // Entry mode and origin
