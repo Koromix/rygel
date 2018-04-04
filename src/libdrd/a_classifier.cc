@@ -651,6 +651,8 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
         if (UNLIKELY(agg.stay.exit.mode != agg.stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
             SetError(out_errors, 35);
+        } else if (UNLIKELY(agg.duration > 1)) {
+            valid &= SetError(out_errors, 50);
         }
     } else {
         if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
