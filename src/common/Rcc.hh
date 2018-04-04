@@ -151,6 +151,40 @@ public:
 };
 
 template <>
+class Rcc_Vector<bool> {
+    Rcc_AutoSexp xp;
+    Span<int> span = {};
+
+public:
+    Rcc_Vector() = default;
+    Rcc_Vector(SEXP xp)
+        : xp(xp)
+    {
+        if (xp) {
+            if (TYPEOF(xp) != LGLSXP) {
+                Rcpp::stop("Expected logical vector");
+            }
+            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        }
+    }
+    Rcc_Vector(Size len)
+    {
+        xp = Rf_allocVector(LGLSXP, len);
+        span = MakeSpan(LOGICAL(xp), Rf_xlength(xp));
+    }
+
+    operator SEXP() const { return xp; }
+
+    Size Len() const { return span.len; }
+
+    static bool IsNA(int value) { return value == NA_LOGICAL; }
+
+    int operator[](Size idx) const { return span[idx]; }
+
+    void Set(Size idx, bool value) { span[idx] = value; }
+};
+
+template <>
 class Rcc_Vector<const char *> {
     Rcc_AutoSexp xp;
     Span<SEXP> span = {};
