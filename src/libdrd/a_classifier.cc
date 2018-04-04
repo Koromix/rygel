@@ -449,6 +449,10 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                         }
                     }
 
+                    if (UNLIKELY((proc.activities & (1 << 4)) && !proc.doc)) {
+                        SetError(out_errors, 170, 0);
+                    }
+
                     // We use the pointer's LSB as a flag which is set to 1 when the procedure
                     // requires activity 1. Combined with a pointer-based sort this allows
                     // us to trivially detect when activity 1 is missing for a given procedure
