@@ -285,7 +285,8 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
             case 2: { return SetError(out_errors, error_codes[3]); } break;
             case 3: { return SetError(out_errors, error_codes[4]); } break;
         }
-    } else if (UNLIKELY(diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
+    } else if (UNLIKELY(agg.stay.exit.date >= Date(2014, 3, 1) &&
+                        diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
         return SetError(out_errors, error_codes[5]);
     } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && agg.age < 9)) {
         return SetError(out_errors, error_codes[6]);
