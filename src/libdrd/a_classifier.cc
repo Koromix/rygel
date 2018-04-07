@@ -872,7 +872,11 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     }
     if (agg.stay.last_menstrual_period.value) {
         if (UNLIKELY(agg.stay.last_menstrual_period > agg.stay.entry.date)) {
-            SetError(out_errors, 165, -1);
+            if (agg.stay.exit.date >= Date(2016, 3, 1)) {
+                valid &= SetError(out_errors, 165);
+            } else {
+                SetError(out_errors, 165, -1);
+            }
         } else if (UNLIKELY(agg.stay.entry.date - agg.stay.last_menstrual_period > 305)) {
             SetError(out_errors, 166, -1);
         }
