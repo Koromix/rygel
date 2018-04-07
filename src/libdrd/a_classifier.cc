@@ -258,7 +258,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
             age_bit = 4;
         } else if (!agg.age) {
             age_bit = 3;
-        } else if (agg.age < 10) {
+        } else if (agg.age < (agg.stay.exit.date >= Date(2016, 3, 1) ? 8 : 10)) {
             age_bit = 5;
         } else if (agg.age < 20) {
             age_bit = 6;
