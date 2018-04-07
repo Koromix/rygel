@@ -22,6 +22,8 @@ struct ClassifyAggregate {
     const TableIndex *index;
 
     Stay stay;
+    const DiagnosisInfo *main_diag_info;
+    const DiagnosisInfo *linked_diag_info;
     Span<const DiagnosisInfo *> diagnoses;
     Span<const ProcedureInfo *> procedures;
     uint8_t proc_activities;
