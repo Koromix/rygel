@@ -298,9 +298,11 @@ bool ParseDiagnosisTable(const uint8_t *file_data,
                                   table.sections[3].value_len > SIZE(DiagnosisInfo::warnings) * 8);
     FAIL_PARSE_IF(table.filename, !table.sections[4].value_len);
 
-    Size block_start = table.sections[1].raw_offset;
+    Size block_end = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
-        Size block_end;
+        Size block_start = block_end;
+
+        // Find block end
         {
             const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
                                          root_idx * 2;
@@ -308,6 +310,8 @@ bool ParseDiagnosisTable(const uint8_t *file_data,
             FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedDiagnosisPtr);
         }
+        if (block_end == block_start)
+            continue;
 
         for (Size block_offset = block_start; block_offset < block_end;
              block_offset += SIZE(PackedDiagnosisPtr)) {
@@ -373,8 +377,6 @@ bool ParseDiagnosisTable(const uint8_t *file_data,
 
             out_diags->Append(diag);
         }
-
-        block_start = block_end;
     }
 
     out_diags_guard.disable();
@@ -426,9 +428,11 @@ bool ParseProcedureTable(const uint8_t *file_data,
     FAIL_PARSE_IF(table.filename, !table.sections[2].value_len ||
                                   table.sections[2].value_len > SIZE(ProcedureInfo::bytes));
 
-    Size block_start = table.sections[1].raw_offset;
+    Size block_end = table.sections[1].raw_offset;
     for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
-        Size block_end;
+        Size block_start = block_end;
+
+        // Find block end
         {
             const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
                                          root_idx * 2;
@@ -436,6 +440,8 @@ bool ParseProcedureTable(const uint8_t *file_data,
             FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
             block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedProcedurePtr);
         }
+        if (block_end == block_start)
+            continue;
 
         char code123[3];
         {
@@ -501,8 +507,6 @@ bool ParseProcedureTable(const uint8_t *file_data,
 
             out_procs->Append(proc);
         }
-
-        block_start = block_end;
     }
 
     out_proc_guard.disable();
