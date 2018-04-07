@@ -768,8 +768,8 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 
         // Gestational age
         if (stay.gestational_age) {
-            if (UNLIKELY((stay.gestational_age > 44 ||
-                          (stay.gestational_age < 22 && agg.stay.exit.mode != '9' && !agg.age)))) {
+            if (UNLIKELY(stay.gestational_age > 44 ||
+                         (stay.gestational_age < 22 && agg.stay.exit.mode != '9' && !agg.age))) {
                 valid &= SetError(out_errors, 127);
             } else if (UNLIKELY(agg.stay.newborn_weight &&
                                 ((stay.gestational_age >= 37 && agg.stay.newborn_weight < 1000 && !stay.main_diagnosis.Matches("P95")) ||
