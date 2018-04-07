@@ -252,7 +252,7 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
     }
 
     // Age warning
-    {
+    if (diag_info.warnings) {
         int age_bit;
         if (agg.age_days < 29) {
             age_bit = 4;
