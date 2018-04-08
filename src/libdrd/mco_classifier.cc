@@ -399,7 +399,8 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
             if (UNLIKELY(!proc.activities)) {
                 valid &= SetError(out_errors, 103);
             }
-            if (UNLIKELY(proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
+            if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureDoc) &&
+                         proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
                                       proc.doc == 'I' || proc.doc == 'O'))) {
                 valid &= SetError(out_errors, 173);
             }

@@ -410,7 +410,9 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     procedures.activity = procedures_df["activity"];
     LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
-    LOAD_OPTIONAL_COLUMN(procedures, doc);
+    if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureDoc)) {
+        LOAD_OPTIONAL_COLUMN(procedures, doc);
+    }
 
 #undef LOAD_OPTIONAL_COLUMN
 

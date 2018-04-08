@@ -11,10 +11,12 @@
 
 enum class mco_ClassifyFlag {
     IgnoreConfirmation = 1 << 0,
-    IgnoreProcedureExtension = 1 << 1,
+    IgnoreProcedureDoc = 1 << 1,
+    IgnoreProcedureExtension = 1 << 2
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
     {"ignore_confirm", "Ignore RSS confirmation flag"},
+    {"ignore_proc_doc", "Ignore procedure documentation check"},
     {"ignore_proc_ext", "Ignore ATIH procedure extension check"}
 };
 
