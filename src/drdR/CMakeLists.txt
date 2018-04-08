@@ -6,8 +6,8 @@ find_package(R)
 if(R_FOUND)
     set(DRDR_SRC ../common/Rcc.cc
                  ../common/Rcc.hh
-                 mco.cc
-                 mco.R)
+                 drdR_mco.cc
+                 drdR_mco.R)
 
     R_add_package(drdR DESCRIPTION NAMESPACE RCPP ${DRDR_SRC})
     target_link_libraries(drdR PRIVATE drd miniz)
