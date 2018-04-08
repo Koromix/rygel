@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 8
+#define PACK_VERSION 9
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -404,7 +404,13 @@ bool mco_StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                     ParsePmsiDate(ReadFragment(8), &proc.date);
                     proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
                     if (version >= 17) {
-                        offset += 3; // Skip CCAM extension
+                        if (line[offset] != ' ') {
+                            if (UNLIKELY(line[offset] != '-' ||
+                                         !ParsePmsiInt(line.Take(offset + 1, 2), &proc.extension))) {
+                                SetErrorFlag(mco_Stay::Error::MalformedProcedureExtension);
+                            }
+                        }
+                        offset += 3;
                     }
                     ParsePmsiInt(ReadFragment(1), &proc.phase);
                     {

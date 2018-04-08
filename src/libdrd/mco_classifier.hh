@@ -10,10 +10,12 @@
 #include "mco_tables.hh"
 
 enum class mco_ClassifyFlag {
-    IgnoreConfirmation = 1 << 0
+    IgnoreConfirmation = 1 << 0,
+    IgnoreProcedureExtension = 1 << 1,
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
-    {"ignore_confirm", "Ignore RSS confirmation flag"}
+    {"ignore_confirm", "Ignore RSS confirmation flag"},
+    {"ignore_proc_ext", "Ignore ATIH procedure extension check"}
 };
 
 struct mco_Aggregate {

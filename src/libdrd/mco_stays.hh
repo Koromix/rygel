@@ -15,6 +15,7 @@ struct mco_ProcedureRealisation {
     Date date;
 
     char doc;
+    int8_t extension;
 };
 
 struct mco_Stay {
@@ -46,7 +47,8 @@ struct mco_Stay {
         MalformedOtherDiagnosis = 1 << 20,
         MissingProceduresCount = 1 << 21,
         MalformedProceduresCount = 1 << 22,
-        MalformedProcedureCode = 1 << 23
+        MalformedProcedureCode = 1 << 23,
+        MalformedProcedureExtension = 1 << 24
     };
 
     uint32_t flags;

@@ -296,7 +296,7 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
     return true;
 }
 
-static bool AppendValidDiagnoses(mco_Aggregate *out_agg,
+static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
                                  HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
                                  mco_ErrorSet *out_errors)
 {
@@ -384,7 +384,7 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg,
     return valid;
 }
 
-static bool AppendValidProcedures(mco_Aggregate *out_agg,
+static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                                   HeapArray<const mco_ProcedureInfo *> *out_procedures,
                                   mco_ErrorSet *out_errors)
 {
@@ -430,6 +430,16 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg,
                         // NOTE: I don't know if I'm supposed to ignore this procedure in this
                         // case. I need to test how the official classifier deals with this.
                         SetError(out_errors, 102, -1);
+                    }
+                }
+
+                if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
+                             out_agg->stay.exit.date >= Date(2016, 3, 1) &&
+                             !(proc_info->extensions & (1u << proc.extension)))) {
+                    if (out_agg->stay.exit.date >= Date(2017, 3, 1)) {
+                        valid &= SetError(out_errors, 186);
+                    } else {
+                        SetError(out_errors, 186, 0);
                     }
                 }
 
@@ -641,8 +651,14 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
             valid &= SetError(out_errors, 57);
         } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProceduresCount)) {
             valid &= SetError(out_errors, 58);
-        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProcedureCode)) {
-            valid &= SetError(out_errors, 43);
+        } else {
+            if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProcedureCode)) {
+                valid &= SetError(out_errors, 43);
+            }
+            if (UNLIKELY(stays[stays.len - 1].exit.date >= Date(2016, 3, 1) &&
+                         stay.error_mask & (int)mco_Stay::Error::MalformedProcedureExtension)) {
+                valid &= SetError(out_errors, 185);
+            }
         }
     }
 
@@ -891,7 +907,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
 }
 
 mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stays,
-                        unsigned int /*flags*/, mco_Aggregate *out_agg,
+                        unsigned int flags, mco_Aggregate *out_agg,
                         HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
                         HeapArray<const mco_ProcedureInfo *> *out_procedures,
                         mco_ErrorSet *out_errors)
@@ -944,8 +960,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     bool valid = true;
 
     // Aggregate diagnoses and procedures
-    valid &= AppendValidDiagnoses(out_agg, out_diagnoses, out_errors);
-    valid &= AppendValidProcedures(out_agg, out_procedures, out_errors);
+    valid &= AppendValidDiagnoses(out_agg, flags, out_diagnoses, out_errors);
+    valid &= AppendValidProcedures(out_agg, flags, out_procedures, out_errors);
 
     // Pick main stay
     if (stays.len > 1) {

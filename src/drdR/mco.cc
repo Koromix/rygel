@@ -111,6 +111,7 @@ struct ProceduresProxy {
     Rcc_Vector<int> id;
 
     Rcc_Vector<const char *> proc;
+    Rcc_Vector<int> extension;
     Rcc_Vector<int> phase;
     Rcc_Vector<int> activity;
     Rcc_Vector<int> count;
@@ -279,6 +280,14 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             mco_ProcedureRealisation proc = {};
 
             proc.proc = ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
+            if (procedures.extension.Len() && procedures.extension[k] != NA_INTEGER) {
+                int extension = procedures.extension[k];
+                if (LIKELY(extension >= 0 && extension < 100)) {
+                    proc.extension = (int8_t)extension;
+                } else {
+                    stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureExtension;
+                }
+            }
             proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
             {
                 int activities_dec = procedures.activity[k];
@@ -394,6 +403,9 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     procedures.nrow = procedures_df.nrow();
     procedures.id = procedures_df["id"];
     procedures.proc = procedures_df["code"];
+    if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension)) {
+        LOAD_OPTIONAL_COLUMN(procedures, extension);
+    }
     LOAD_OPTIONAL_COLUMN(procedures, phase);
     procedures.activity = procedures_df["activity"];
     LOAD_OPTIONAL_COLUMN(procedures, count);
@@ -721,6 +733,7 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
         Rcc_DataFrameBuilder procedures_builder(stay_set.store.procedures.len);
         Rcc_Vector<int> procedures_id = procedures_builder.Add<int>("id");
         Rcc_Vector<const char *> procedures_proc = procedures_builder.Add<const char *>("code");
+        Rcc_Vector<int> procedures_extension = procedures_builder.Add<int>("extension");
         Rcc_Vector<int> procedures_phase = procedures_builder.Add<int>("phase");
         Rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
         Rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
@@ -776,6 +789,7 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
             for (const mco_ProcedureRealisation &proc: stay.procedures) {
                 procedures_id[k] = (int)(i + 1);
                 procedures_proc.Set(k, Fmt(buf, "%1", proc.proc));
+                procedures_extension[k] = proc.extension ? proc.extension : NA_INTEGER;
                 procedures_phase[k] = proc.phase;
                 {
                     int activities_dec = 0;
