@@ -179,6 +179,7 @@ public:
 
     static bool IsNA(int value) { return value == NA_LOGICAL; }
 
+    // FIXME: Assigning to bool will unexpectecdly turn NA_LOGICAL into true
     int operator[](Size idx) const { return span[idx]; }
 
     void Set(Size idx, bool value) { span[idx] = value; }
