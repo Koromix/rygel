@@ -32,10 +32,10 @@ static const Page pages[] = {
     {"Listes",   "/lists/procedures",  "Actes"}
 };
 
-static const TableSet *table_set;
-static HeapArray<HashTable<GhmCode, GhmConstraint>> constraints_set;
-static HeapArray<HashTable<GhmCode, GhmConstraint> *> index_to_constraints;
-static const CatalogSet *catalog_set;
+static const mco_TableSet *table_set;
+static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
+static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> index_to_constraints;
+static const mco_CatalogSet *catalog_set;
 
 #if !defined(NDEBUG) && defined(_WIN32)
 static HeapArray<Resource> static_resources;
@@ -172,16 +172,16 @@ static Response ProduceIndexes(MHD_Connection *, const char *, CompressionType c
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
-        for (const TableIndex &index: table_set->indexes) {
+        for (const mco_TableIndex &index: table_set->indexes) {
             char buf[32];
 
             writer.StartObject();
             writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
             writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(TableType::PriceTable)) {
+            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTable)) {
                 writer.Key("changed_tables"); writer.Bool(true);
             }
-            if (index.changed_tables & MaskEnum(TableType::PriceTable)) {
+            if (index.changed_tables & MaskEnum(mco_TableType::PriceTable)) {
                 writer.Key("changed_prices"); writer.Bool(true);
             }
             writer.EndObject();
@@ -207,7 +207,7 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
             return CreateErrorPage(404);
     }
 
-    const TableIndex *index = table_set->FindIndex(date);
+    const mco_TableIndex *index = table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         return CreateErrorPage(404);
@@ -225,7 +225,7 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
 
         return {303, response};
     }
-    const HashTable<GhmCode, GhmConstraint> &constraints =
+    const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *index_to_constraints[index - table_set->indexes.ptr];
 
     MHD_Response *response = BuildJson(compression_type,
@@ -233,8 +233,8 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
         char buf[512];
 
         writer.StartArray();
-        for (const GhmRootInfo &ghm_root_info: index->ghm_roots) {
-            const GhmRootDesc *ghm_root_desc = catalog_set->ghm_roots_map.Find(ghm_root_info.ghm_root);
+        for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
+            const mco_GhmRootDesc *ghm_root_desc = catalog_set->ghm_roots_map.Find(ghm_root_info.ghm_root);
 
             writer.StartObject();
             writer.Key("ghm_root"); writer.String(Fmt(buf, "%1", ghm_root_info.ghm_root).ptr);
@@ -243,14 +243,14 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
             }
             writer.Key("ghs"); writer.StartArray();
 
-            Span<const GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
-            for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
-                const GhsPriceInfo *ghs_price_info =
+            Span<const mco_GhsAccessInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+            for (const mco_GhsAccessInfo &ghs_access_info: compatible_ghs) {
+                const mco_GhsPriceInfo *ghs_price_info =
                     index->FindGhsPrice(ghs_access_info.Ghs(Sector::Public), Sector::Public);
                 if (!ghs_price_info)
                     continue;
 
-                const GhmConstraint *constraint = constraints.Find(ghs_access_info.ghm);
+                const mco_GhmConstraint *constraint = constraints.Find(ghs_access_info.ghm);
                 if (!constraint)
                     continue;
 
@@ -309,7 +309,7 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
                 if (ghs_price_info->exb_treshold) {
                     writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
                     writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
-                    if (ghs_price_info->flags & (int)GhsPriceInfo::Flag::ExbOnce) {
+                    if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
                         writer.Key("exb_once"); writer.Bool(true);
                     }
                 }
@@ -335,7 +335,7 @@ static Response ProduceGhmRoots(MHD_Connection *, const char *,
         char buf[32];
 
         writer.StartArray();
-        for (const GhmRootDesc &desc: catalog_set->ghm_roots) {
+        for (const mco_GhmRootDesc &desc: catalog_set->ghm_roots) {
             writer.StartObject();
             writer.Key("ghm_root"); writer.String(Fmt(buf, "%1", desc.ghm_root).ptr);
             writer.Key("ghm_root_desc"); writer.String(desc.ghm_root_desc);
@@ -464,7 +464,7 @@ Options:
                                  (default: 8888)
 
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     LinkedAllocator temp_alloc;
@@ -474,7 +474,7 @@ Options:
         const char *app_dir = GetApplicationDirectory();
         if (app_dir) {
             const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", app_dir).ptr;
-            main_data_directories.Append(default_data_dir);
+            mco_data_directories.Append(default_data_dir);
         }
     }
 
@@ -499,16 +499,16 @@ Options:
                     return 1;
                 }
                 port = (uint16_t)new_port;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return 1;
             }
         }
     }
 
-    table_set = GetMainTableSet();
+    table_set = mco_GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return 1;
-    catalog_set = GetMainCatalogSet();
+    catalog_set = mco_GetMainCatalogSet();
     if (!catalog_set || !catalog_set->ghm_roots.len)
         return 1;
 
@@ -517,10 +517,10 @@ Options:
     for (Size i = 0; i < table_set->indexes.len; i++) {
 
         // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-        if (table_set->indexes[i].changed_tables & MaskEnum(TableType::GhmDecisionTree)) {
-            HashTable<GhmCode, GhmConstraint> *constraints = constraints_set.AppendDefault();
+        if (table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree)) {
+            HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = constraints_set.AppendDefault();
             async.AddTask([=]() {
-                return ComputeGhmConstraints(table_set->indexes[i], constraints);
+                return mco_ComputeGhmConstraints(table_set->indexes[i], constraints);
             });
         }
 

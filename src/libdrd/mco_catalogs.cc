@@ -4,7 +4,7 @@
 
 #include "../common/kutil.hh"
 #include "../common/json.hh"
-#include "d_desc.hh"
+#include "mco_catalogs.hh"
 
 class JsonGhmRootDescHandler: public BaseJsonHandler<JsonGhmRootDescHandler> {
     enum class State {
@@ -15,13 +15,13 @@ class JsonGhmRootDescHandler: public BaseJsonHandler<JsonGhmRootDescHandler> {
 
     State state = State::Default;
 
-    GhmRootDesc desc = {};
+    mco_GhmRootDesc desc = {};
 
 public:
-    HeapArray<GhmRootDesc> *out_catalog;
+    HeapArray<mco_GhmRootDesc> *out_catalog;
     Allocator *out_alloc;
 
-    JsonGhmRootDescHandler(HeapArray<GhmRootDesc> *out_catalog = nullptr,
+    JsonGhmRootDescHandler(HeapArray<mco_GhmRootDesc> *out_catalog = nullptr,
                            Allocator *out_alloc = nullptr)
         : out_catalog(out_catalog), out_alloc(out_alloc) {}
 
@@ -66,7 +66,7 @@ public:
         if (state == State::DescObject) {
             if (TestStr(key, "root")) {
                 if (value.type == JsonValue::Type::String) {
-                    desc.ghm_root = GhmRootCode::FromString(value.u.str.ptr);
+                    desc.ghm_root = mco_GhmRootCode::FromString(value.u.str.ptr);
                 } else {
                     UnexpectedType(value.type);
                 }
@@ -100,9 +100,9 @@ public:
     }
 };
 
-bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
-                        HeapArray<GhmRootDesc> *out_catalog,
-                        HashTable<GhmRootCode, GhmRootDesc> *out_map)
+bool mco_LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
+                            HeapArray<mco_GhmRootDesc> *out_catalog,
+                            HashTable<mco_GhmRootCode, mco_GhmRootDesc> *out_map)
 {
     DEFER_NC(out_guard, len = out_catalog->len) { out_catalog->RemoveFrom(len); };
 
@@ -117,7 +117,7 @@ bool LoadGhmRootCatalog(const char *filename, Allocator *str_alloc,
     }
 
     if (out_map) {
-        for (const GhmRootDesc &desc: *out_catalog) {
+        for (const mco_GhmRootDesc &desc: *out_catalog) {
             out_map->Append(desc);
         }
     }

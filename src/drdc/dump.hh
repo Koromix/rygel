@@ -6,21 +6,21 @@
 
 #include "../libdrd/libdrd.hh"
 
-void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
-                         Size node_idx = 0, int depth = 0);
-void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
-                        Span<const ExclusionInfo> exclusions = {});
-void DumpProcedureTable(Span<const ProcedureInfo> procedures);
-void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots);
-void DumpSeverityTable(Span<const ValueRangeCell<2>> cells);
+void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
+                             Size node_idx = 0, int depth = 0);
+void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
+                            Span<const mco_ExclusionInfo> exclusions = {});
+void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures);
+void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots);
+void mco_DumpSeverityTable(Span<const mco_ValueRangeCell<2>> cells);
 
-void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs);
-void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices);
-void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations);
-void DumpSupplementPairTable(Span<const SrcPair> pairs);
+void mco_DumpGhsAccessTable(Span<const mco_GhsAccessInfo> ghs);
+void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices);
+void mco_DumpAuthorizationTable(Span<const mco_AuthorizationInfo> authorizations);
+void mco_DumpSupplementPairTable(Span<const mco_SrcPair> pairs);
 
-void DumpTableSetHeaders(const TableSet &table_set);
-void DumpTableSetContent(const TableSet &table_set);
+void mco_DumpTableSetHeaders(const mco_TableSet &table_set);
+void mco_DumpTableSetContent(const mco_TableSet &table_set);
 
-void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots);
-void DumpCatalogSet(const CatalogSet &catalog_set);
+void mco_DumpGhmRootCatalog(Span<const mco_GhmRootDesc> ghm_roots);
+void mco_DumpCatalogSet(const mco_CatalogSet &catalog_set);

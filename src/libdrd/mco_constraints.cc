@@ -3,20 +3,20 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "a_constraints.hh"
-#include "a_classifier.hh"
+#include "mco_classifier.hh"
+#include "mco_constraints.hh"
 
-static bool MergeConstraint(const TableIndex &index,
-                            const GhmCode ghm, GhmConstraint constraint,
-                            HashTable<GhmCode, GhmConstraint> *out_constraints)
+static bool MergeConstraint(const mco_TableIndex &index,
+                            const mco_GhmCode ghm, mco_GhmConstraint constraint,
+                            HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
 #define MERGE_CONSTRAINT(ModeChar, DurationMask) \
         do { \
-            GhmConstraint new_constraint = constraint; \
+            mco_GhmConstraint new_constraint = constraint; \
             new_constraint.ghm.parts.mode = (char)(ModeChar); \
             new_constraint.duration_mask &= (DurationMask); \
             if (new_constraint.duration_mask) { \
-                std::pair<GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
+                std::pair<mco_GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
                 if (!ret.second) { \
                     ret.first->duration_mask |= new_constraint.duration_mask; \
                 } \
@@ -25,7 +25,7 @@ static bool MergeConstraint(const TableIndex &index,
 
     constraint.ghm = ghm;
 
-    const GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
+    const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
     if (!ghm_root_info) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         return false;
@@ -45,12 +45,12 @@ static bool MergeConstraint(const TableIndex &index,
     if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
         if (!ghm.parts.mode) {
             for (int severity = 0; severity < 4; severity++) {
-                uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
+                uint32_t mode_mask = ~((uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1);
                 MERGE_CONSTRAINT('1' + severity, mode_mask);
             }
         } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
             int severity = ghm.parts.mode - 'A';
-            uint32_t mode_mask = ~((uint32_t)(1 << GetMinimalDurationForSeverity(severity)) - 1);
+            uint32_t mode_mask = ~((uint32_t)(1 << mco_GetMinimalDurationForSeverity(severity)) - 1);
             MERGE_CONSTRAINT('A' + severity, mode_mask);
         } else {
             MERGE_CONSTRAINT(ghm.parts.mode, UINT32_MAX);
@@ -62,9 +62,9 @@ static bool MergeConstraint(const TableIndex &index,
     return true;
 }
 
-static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_idx,
-                           GhmConstraint constraint,
-                           HashTable<GhmCode, GhmConstraint> *out_constraints)
+static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_node_idx,
+                           mco_GhmConstraint constraint,
+                           HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
     // This limit is arbitrary, quick tests show depth maxing at less than 100 so we
     // should be alright. If this becomes a problem, I'll rewrite this function to
@@ -73,18 +73,18 @@ static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_id
 
 #define RUN_TREE_SUB(ChildIdx, ChangeCode) \
         do { \
-            GhmConstraint constraint_copy = constraint; \
+            mco_GhmConstraint constraint_copy = constraint; \
             constraint_copy.ChangeCode; \
             success &= RecurseGhmTree(index, depth + 1, ghm_node.u.test.children_idx + (ChildIdx), \
                                       constraint_copy, out_constraints); \
         } while (false)
 
     Assert(ghm_node_idx < index.ghm_nodes.len);
-    const GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
+    const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
 
     bool success = true;
     switch (ghm_node.type) {
-        case GhmDecisionNode::Type::Test: {
+        case mco_GhmDecisionNode::Type::Test: {
             switch (ghm_node.u.test.function) {
                 case 22: {
                     uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
@@ -138,7 +138,7 @@ static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_id
             }
         } break;
 
-        case GhmDecisionNode::Type::Ghm: {
+        case mco_GhmDecisionNode::Type::Ghm: {
             success &= MergeConstraint(index, ghm_node.u.ghm.ghm, constraint, out_constraints);
         } break;
     }
@@ -148,12 +148,12 @@ static bool RecurseGhmTree(const TableIndex &index, Size depth, Size ghm_node_id
     return success;
 }
 
-bool ComputeGhmConstraints(const TableIndex &index,
-                           HashTable<GhmCode, GhmConstraint> *out_constraints)
+bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
+                               HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
     Assert(!out_constraints->count);
 
-    GhmConstraint null_constraint = {};
+    mco_GhmConstraint null_constraint = {};
     null_constraint.duration_mask = UINT32_MAX;
 
     return RecurseGhmTree(index, 0, 0, null_constraint, out_constraints);

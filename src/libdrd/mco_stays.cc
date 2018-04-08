@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "d_stays.hh"
+#include "mco_stays.hh"
 
 #pragma pack(push, 1)
 struct PackHeader {
@@ -22,11 +22,11 @@ struct PackHeader {
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
-StaticAssert(SIZE(Stay) == 104);
+StaticAssert(SIZE(mco_Stay) == 104);
 StaticAssert(SIZE(DiagnosisCode) == 8);
-StaticAssert(SIZE(ProcedureRealisation) == 24);
+StaticAssert(SIZE(mco_ProcedureRealisation) == 24);
 
-bool StaySet::SavePack(StreamWriter &st) const
+bool mco_StaySet::SavePack(StreamWriter &st) const
 {
     PackHeader bh = {};
 
@@ -43,7 +43,7 @@ bool StaySet::SavePack(StreamWriter &st) const
     st.Write(stays.ptr, stays.len * SIZE(*stays.ptr));
 #else
     for (const Stay &stay: stays) {
-        Stay stay2;
+        mco_Stay stay2;
         memcpy(&stay2, &stay, SIZE(stay));
 
         union {
@@ -62,10 +62,10 @@ bool StaySet::SavePack(StreamWriter &st) const
         st.Write(&stay2, SIZE(stay2));
     }
 #endif
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         st.Write(stay.diagnoses.ptr, stay.diagnoses.len * SIZE(*stay.diagnoses.ptr));
     }
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         st.Write(stay.procedures.ptr, stay.procedures.len * SIZE(*stay.procedures.ptr));
     }
     if (!st.Close())
@@ -74,7 +74,7 @@ bool StaySet::SavePack(StreamWriter &st) const
     return true;
 }
 
-bool StaySet::SavePack(const char *filename) const
+bool mco_StaySet::SavePack(const char *filename) const
 {
     LocalArray<char, 16> extension;
     CompressionType compression_type;
@@ -89,7 +89,7 @@ bool StaySet::SavePack(const char *filename) const
     return SavePack(st);
 }
 
-bool StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
     const Size start_diagnoses_len = set.store.diagnoses.len;
@@ -152,7 +152,7 @@ bool StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *ou
         Size store_procedures_len = set.store.procedures.len;
 
         for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
-            Stay *stay = &set.stays[i];
+            mco_Stay *stay = &set.stays[i];
 
 #ifndef ARCH_64
             union {
@@ -181,7 +181,7 @@ bool StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *ou
             if (stay->procedures.len) {
                 if (UNLIKELY(stay->procedures.len < 0))
                     goto corrupt_error;
-                stay->procedures.ptr = (ProcedureRealisation *)store_procedures_len;
+                stay->procedures.ptr = (mco_ProcedureRealisation *)store_procedures_len;
                 store_procedures_len += stay->procedures.len;
                 if (UNLIKELY(store_procedures_len <= 0 ||
                              store_procedures_len > start_procedures_len + bh.procedures_len))
@@ -242,8 +242,8 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
     return true;
 }
 
-bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
-                                  HashTable<int32_t, StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
+                                      HashTable<int32_t, mco_StayTest> *out_tests)
 {
     Size stays_len = set.stays.len;
     DEFER_NC(set_guard, diagnoses_len = set.store.diagnoses.len,
@@ -269,7 +269,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 continue;
             }
 
-            Stay stay = {};
+            mco_Stay stay = {};
             int das_count = -1;
             int dad_count = -1;
             int procedures_count = -1;
@@ -280,7 +280,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 offset += len;
                 return frag;
             };
-            const auto SetErrorFlag = [&stay](Stay::Error flag) {
+            const auto SetErrorFlag = [&stay](mco_Stay::Error flag) {
                 stay.error_mask |= (uint32_t)flag;
                 return true;
             };
@@ -288,19 +288,19 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             int16_t version = 0;
             ParsePmsiInt(ReadFragment(3), &version);
             if (UNLIKELY(version < 16 || version > 18)) {
-                stay.error_mask |= (int)Stay::Error::UnknownRumVersion;
+                stay.error_mask |= (int)mco_Stay::Error::UnknownRumVersion;
                 set.stays.Append(stay);
                 continue;
             }
 
-            ParsePmsiInt(ReadFragment(20), &stay.bill_id) || SetErrorFlag(Stay::Error::MalformedBillId);
+            ParsePmsiInt(ReadFragment(20), &stay.bill_id) || SetErrorFlag(mco_Stay::Error::MalformedBillId);
             ParsePmsiInt(ReadFragment(20), &stay.admin_id);
             offset += 10; // Skip RUM id
-            ParsePmsiDate(ReadFragment(8), &stay.birthdate) || SetErrorFlag(Stay::Error::MalformedBirthdate);
-            ParsePmsiInt(ReadFragment(1), &stay.sex) || SetErrorFlag(Stay::Error::MalformedSex);
+            ParsePmsiDate(ReadFragment(8), &stay.birthdate) || SetErrorFlag(mco_Stay::Error::MalformedBirthdate);
+            ParsePmsiInt(ReadFragment(1), &stay.sex) || SetErrorFlag(mco_Stay::Error::MalformedSex);
             ParsePmsiInt(ReadFragment(4), &stay.unit.number);
             ParsePmsiInt(ReadFragment(2), &stay.bed_authorization);
-            ParsePmsiDate(ReadFragment(8), &stay.entry.date) || SetErrorFlag(Stay::Error::MalformedEntryDate);
+            ParsePmsiDate(ReadFragment(8), &stay.entry.date) || SetErrorFlag(mco_Stay::Error::MalformedEntryDate);
             if (LIKELY(line[offset] != ' ')) {
                 stay.entry.mode = line[offset];
             }
@@ -309,7 +309,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 stay.entry.origin = line[offset];
             }
             offset += 1;
-            ParsePmsiDate(ReadFragment(8), &stay.exit.date) || SetErrorFlag(Stay::Error::MalformedExitDate);
+            ParsePmsiDate(ReadFragment(8), &stay.exit.date) || SetErrorFlag(mco_Stay::Error::MalformedExitDate);
             if (LIKELY(line[offset] != ' ')) {
                 stay.exit.mode = line[offset];
             }
@@ -319,36 +319,36 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             }
             offset += 1;
             offset += 5; // Skip postal code
-            ParsePmsiInt(ReadFragment(4), &stay.newborn_weight) || SetErrorFlag(Stay::Error::MalformedNewbornWeight);
-            ParsePmsiInt(ReadFragment(2), &stay.gestational_age) || SetErrorFlag(Stay::Error::MalformedGestationalAge);
-            ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period) || SetErrorFlag(Stay::Error::MalformedLastMenstrualPeriod);
-            ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(Stay::Error::MalformedSessionCount);
+            ParsePmsiInt(ReadFragment(4), &stay.newborn_weight) || SetErrorFlag(mco_Stay::Error::MalformedNewbornWeight);
+            ParsePmsiInt(ReadFragment(2), &stay.gestational_age) || SetErrorFlag(mco_Stay::Error::MalformedGestationalAge);
+            ParsePmsiDate(ReadFragment(8), &stay.last_menstrual_period) || SetErrorFlag(mco_Stay::Error::MalformedLastMenstrualPeriod);
+            ParsePmsiInt(ReadFragment(2), &stay.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 2), &das_count) ||
-                    SetErrorFlag(Stay::Error::MalformedOtherDiagnosesCount);
+                    SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
             } else {
-                SetErrorFlag(Stay::Error::MissingOtherDiagnosesCount);
+                SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
             }
             offset += 2;
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 2), &dad_count) ||
-                    SetErrorFlag(Stay::Error::MalformedOtherDiagnosesCount);
+                    SetErrorFlag(mco_Stay::Error::MalformedOtherDiagnosesCount);
             } else {
-                SetErrorFlag(Stay::Error::MissingOtherDiagnosesCount);
+                SetErrorFlag(mco_Stay::Error::MissingOtherDiagnosesCount);
             }
             offset += 2;
             if (LIKELY(line[offset] != ' ')) {
                 ParsePmsiInt(line.Take(offset, 3), &procedures_count) ||
-                    SetErrorFlag(Stay::Error::MalformedProceduresCount);
+                    SetErrorFlag(mco_Stay::Error::MalformedProceduresCount);
             } else {
-                SetErrorFlag(Stay::Error::MissingProceduresCount);
+                SetErrorFlag(mco_Stay::Error::MissingProceduresCount);
             }
             offset += 3;
             if (LIKELY(line[offset] != ' ')) {
                 stay.main_diagnosis =
                     DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
                 if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-                    stay.error_mask |= (int)Stay::Error::MalformedMainDiagnosis;
+                    stay.error_mask |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                 }
             }
             offset += 8;
@@ -356,15 +356,15 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                 stay.linked_diagnosis =
                     DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
                 if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
-                    stay.error_mask |= (int)Stay::Error::MalformedLinkedDiagnosis;
+                    stay.error_mask |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                 }
             }
             offset += 8;
-            ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(Stay::Error::MalformedIgs2);
+            ParsePmsiInt(ReadFragment(3), &stay.igs2) || SetErrorFlag(mco_Stay::Error::MalformedIgs2);
             if (line[offset] == '1') {
-                stay.flags |= (int)Stay::Flag::Confirmed;
+                stay.flags |= (int)mco_Stay::Flag::Confirmed;
             } else if (UNLIKELY(line[offset] != ' ')) {
-                stay.error_mask |= (int)Stay::Error::MalformedConfirmation;
+                stay.error_mask |= (int)mco_Stay::Error::MalformedConfirmation;
             }
             offset += 33; // Skip a bunch of fields
 
@@ -389,15 +389,15 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                     if (LIKELY(diag.IsValid())) {
                         set.store.diagnoses.Append(diag);
                     } else {
-                        stay.error_mask |= (int)Stay::Error::MalformedOtherDiagnosis;
+                        stay.error_mask |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                     }
                 }
                 stay.diagnoses.len = set.store.diagnoses.len - (Size)stay.diagnoses.ptr;
                 offset += 8 * dad_count; // Skip documentary diagnoses
 
-                stay.procedures.ptr = (ProcedureRealisation *)set.store.procedures.len;
+                stay.procedures.ptr = (mco_ProcedureRealisation *)set.store.procedures.len;
                 for (int i = 0; i < procedures_count; i++) {
-                    ProcedureRealisation proc = {};
+                    mco_ProcedureRealisation proc = {};
 
                     ParsePmsiDate(ReadFragment(8), &proc.date);
                     proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
@@ -420,26 +420,26 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
                     if (LIKELY(proc.proc.IsValid())) {
                         set.store.procedures.Append(proc);
                     } else {
-                        stay.error_mask |= (int)Stay::Error::MalformedProcedureCode;
+                        stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureCode;
                     }
                 }
                 stay.procedures.len = set.store.procedures.len - (Size)stay.procedures.ptr;
             }
 
             if (out_tests && grp) {
-                StayTest test = {};
+                mco_StayTest test = {};
 
                 bool valid = true;
                 test.bill_id = stay.bill_id;
-                test.ghm = GhmCode::FromString(line.Take(2, 6));
+                test.ghm = mco_GhmCode::FromString(line.Take(2, 6));
                 valid &= test.ghm.IsValid();
                 valid &= ParsePmsiInt(line.Take(12, 3), &test.error);
 
                 if (valid) {
-                    StayTest *it = out_tests->Append(test).first;
+                    mco_StayTest *it = out_tests->Append(test).first;
                     it->cluster_len++;
                 } else {
-                    StayTest *it = out_tests->Find(test.bill_id);
+                    mco_StayTest *it = out_tests->Find(test.bill_id);
                     if (it) {
                         it->cluster_len++;
                     }
@@ -453,7 +453,7 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
         return false;
 
     std::stable_sort(set.stays.begin() + stays_len, set.stays.end(),
-                     [](const Stay &stay1, const Stay &stay2) {
+                     [](const mco_Stay &stay1, const mco_Stay &stay2) {
         return MultiCmp(stay1.admin_id - stay2.admin_id,
                         stay1.bill_id - stay2.bill_id) < 0;
     });
@@ -462,30 +462,30 @@ bool StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
     return true;
 }
 
-bool StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests)
 {
     LogError("RSA files are not supported yet");
     return false;
 }
 
-bool StaySetBuilder::LoadFiles(Span<const char *const> filenames,
-                               HashTable<int32_t, StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
+                                   HashTable<int32_t, mco_StayTest> *out_tests)
 {
     for (const char *filename: filenames) {
         LocalArray<char, 16> extension;
         CompressionType compression_type;
         extension.len = GetPathExtension(filename, extension.data, &compression_type);
 
-        bool (StaySetBuilder::*load_func)(StreamReader &st,
-                                          HashTable<int32_t, StayTest> *out_tests);
+        bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
+                                          HashTable<int32_t, mco_StayTest> *out_tests);
         if (TestStr(extension, ".dspak")) {
-            load_func = &StaySetBuilder::LoadPack;
+            load_func = &mco_StaySetBuilder::LoadPack;
         } else if (TestStr(extension, ".grp")) {
-            load_func = &StaySetBuilder::LoadGrp;
+            load_func = &mco_StaySetBuilder::LoadGrp;
         } else if (TestStr(extension, ".rss")) {
-            load_func = &StaySetBuilder::LoadRss;
+            load_func = &mco_StaySetBuilder::LoadRss;
         } else if (TestStr(extension, ".rsa")) {
-            load_func = &StaySetBuilder::LoadRsa;
+            load_func = &mco_StaySetBuilder::LoadRsa;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
@@ -502,9 +502,9 @@ bool StaySetBuilder::LoadFiles(Span<const char *const> filenames,
     return true;
 }
 
-bool StaySetBuilder::Finish(StaySet *out_set)
+bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
 {
-    for (Stay &stay: set.stays) {
+    for (mco_Stay &stay: set.stays) {
 #define FIX_SPAN(SpanName) \
             stay.SpanName.ptr = set.store.SpanName.ptr + (Size)stay.SpanName.ptr
 

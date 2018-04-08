@@ -3,20 +3,18 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "main.hh"
-#include "d_desc.hh"
-#include "d_tables.hh"
+#include "mco_main.hh"
 
-HeapArray<const char *> main_data_directories;
-HeapArray<const char *> main_table_directories;
-HeapArray<const char *> main_price_filenames;
-const char *main_authorization_filename;
-HeapArray<const char *> main_catalog_directories;
+HeapArray<const char *> mco_data_directories;
+HeapArray<const char *> mco_table_directories;
+HeapArray<const char *> mco_price_filenames;
+const char *mco_authorization_filename;
+HeapArray<const char *> mco_catalog_directories;
 
-bool InitTableSet(Span<const char *const> data_directories,
-                  Span<const char *const> table_directories,
-                  Span<const char *const> price_filenames,
-                  TableSet *out_set)
+bool mco_InitTableSet(Span<const char *const> data_directories,
+                      Span<const char *const> table_directories,
+                      Span<const char *const> price_filenames,
+                      mco_TableSet *out_set)
 {
     LinkedAllocator temp_alloc;
 
@@ -52,7 +50,7 @@ bool InitTableSet(Span<const char *const> data_directories,
     }
 
     {
-        TableSetBuilder table_set_builder;
+        mco_TableSetBuilder table_set_builder;
         if (!table_set_builder.LoadFiles(tab_filenames2, price_filenames2))
             return false;
         if (!table_set_builder.Finish(out_set))
@@ -62,9 +60,9 @@ bool InitTableSet(Span<const char *const> data_directories,
     return true;
 }
 
-bool InitAuthorizationSet(Span<const char *const> data_directories,
-                          const char *authorization_filename,
-                          AuthorizationSet *out_set)
+bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
+                              const char *authorization_filename,
+                              mco_AuthorizationSet *out_set)
 {
     LinkedAllocator temp_alloc;
 
@@ -86,7 +84,7 @@ bool InitAuthorizationSet(Span<const char *const> data_directories,
     }
 
     if (filename && filename[0]) {
-        if (!LoadAuthorizationFile(filename, out_set))
+        if (!mco_LoadAuthorizationFile(filename, out_set))
             return false;
     } else {
         LogError("No authorization file specified or found");
@@ -95,9 +93,9 @@ bool InitAuthorizationSet(Span<const char *const> data_directories,
     return true;
 }
 
-bool InitCatalogSet(Span<const char *const> data_directories,
-                    Span<const char *const> catalog_directories,
-                    CatalogSet *out_set)
+bool mco_InitCatalogSet(Span<const char *const> data_directories,
+                        Span<const char *const> catalog_directories,
+                        mco_CatalogSet *out_set)
 {
     LinkedAllocator temp_alloc;
 
@@ -115,7 +113,7 @@ bool InitCatalogSet(Span<const char *const> data_directories,
         if (!out_set->ghm_roots.len) {
             const char *filename = Fmt(&temp_alloc, "%1%/ghm_roots.json", directories[i]).ptr;
             if (TestPath(filename, FileType::File)) {
-                success &= LoadGhmRootCatalog(filename, &out_set->str_alloc, &out_set->ghm_roots,
+                success &= mco_LoadGhmRootCatalog(filename, &out_set->str_alloc, &out_set->ghm_roots,
                                               &out_set->ghm_roots_map);
             }
         }
@@ -130,13 +128,13 @@ bool InitCatalogSet(Span<const char *const> data_directories,
     return true;
 }
 
-const TableSet *GetMainTableSet()
+const mco_TableSet *mco_GetMainTableSet()
 {
-    static TableSet table_set;
+    static mco_TableSet table_set;
     static bool loaded = false;
 
     if (!loaded) {
-        if (!InitTableSet(main_data_directories, main_table_directories, main_price_filenames,
+        if (!mco_InitTableSet(mco_data_directories, mco_table_directories, mco_price_filenames,
                           &table_set))
             return nullptr;
         loaded = true;
@@ -145,13 +143,13 @@ const TableSet *GetMainTableSet()
     return &table_set;
 }
 
-const AuthorizationSet *GetMainAuthorizationSet()
+const mco_AuthorizationSet *mco_GetMainAuthorizationSet()
 {
-    static AuthorizationSet authorization_set;
+    static mco_AuthorizationSet authorization_set;
     static bool loaded = false;
 
     if (!loaded) {
-        if (!InitAuthorizationSet(main_data_directories, main_authorization_filename,
+        if (!mco_InitAuthorizationSet(mco_data_directories, mco_authorization_filename,
                                   &authorization_set))
             return nullptr;
         loaded = true;
@@ -160,13 +158,13 @@ const AuthorizationSet *GetMainAuthorizationSet()
     return &authorization_set;
 }
 
-const CatalogSet *GetMainCatalogSet()
+const mco_CatalogSet *mco_GetMainCatalogSet()
 {
-    static CatalogSet catalog_set;
+    static mco_CatalogSet catalog_set;
     static bool loaded = false;
 
     if (!loaded) {
-        if (!InitCatalogSet(main_data_directories, main_catalog_directories,
+        if (!mco_InitCatalogSet(mco_data_directories, mco_catalog_directories,
                             &catalog_set))
             return nullptr;
         loaded = true;
@@ -175,7 +173,7 @@ const CatalogSet *GetMainCatalogSet()
     return &catalog_set;
 }
 
-bool HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
+bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
 {
     if (opt_parser.TestOption("-O", "--output")) {
         const char *filename = opt_parser.RequireOptionValue(usage_func);
@@ -191,31 +189,31 @@ bool HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
         if (!opt_parser.RequireOptionValue(usage_func))
             return false;
 
-        main_data_directories.Append(opt_parser.current_value);
+        mco_data_directories.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--table-dir")) {
         if (!opt_parser.RequireOptionValue(usage_func))
             return false;
 
-        main_table_directories.Append(opt_parser.current_value);
+        mco_table_directories.Append(opt_parser.current_value);
         return true;
     }  else if (opt_parser.TestOption("--price-file")) {
         if (!opt_parser.RequireOptionValue(usage_func))
             return false;
 
-        main_price_filenames.Append(opt_parser.current_value);
+        mco_price_filenames.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--auth-file")) {
         if (!opt_parser.RequireOptionValue(usage_func))
             return false;
 
-        main_authorization_filename = opt_parser.current_value;
+        mco_authorization_filename = opt_parser.current_value;
         return true;
     } else if (opt_parser.TestOption("--catalog-dir")) {
         if (!opt_parser.RequireOptionValue(usage_func))
             return false;
 
-        main_catalog_directories.Append(opt_parser.current_value);
+        mco_catalog_directories.Append(opt_parser.current_value);
         return true;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);

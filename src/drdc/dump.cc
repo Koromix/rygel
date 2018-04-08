@@ -5,14 +5,14 @@
 #include "../libdrd/libdrd.hh"
 #include "dump.hh"
 
-void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
+void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                          Size node_idx, int depth)
 {
     while (node_idx < ghm_nodes.len) {
-        const GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
+        const mco_GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
 
         switch (ghm_node.type) {
-            case GhmDecisionNode::Type::Test: {
+            case mco_GhmDecisionNode::Type::Test: {
                 PrintLn("      %1%2. %3(%4, %5) => %6 [%7]", FmtArg("  ").Repeat(depth), node_idx,
                         ghm_node.u.test.function, ghm_node.u.test.params[0],
                         ghm_node.u.test.params[1], ghm_node.u.test.children_idx,
@@ -20,7 +20,7 @@ void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
 
                 if (ghm_node.u.test.function != 20) {
                     for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
-                        DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + i, depth + 1);
+                        mco_DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + i, depth + 1);
                     }
 
                     node_idx = ghm_node.u.test.children_idx;
@@ -29,7 +29,7 @@ void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
                 }
             } break;
 
-            case GhmDecisionNode::Type::Ghm: {
+            case mco_GhmDecisionNode::Type::Ghm: {
                 if (ghm_node.u.ghm.error) {
                     PrintLn("      %1%2. %3 (err = %4)", FmtArg("  ").Repeat(depth), node_idx,
                             ghm_node.u.ghm.ghm, ghm_node.u.ghm.error);
@@ -43,10 +43,10 @@ void DumpGhmDecisionTree(Span<const GhmDecisionNode> ghm_nodes,
     }
 }
 
-void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
-                        Span<const ExclusionInfo> exclusions)
+void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
+                        Span<const mco_ExclusionInfo> exclusions)
 {
-    for (const DiagnosisInfo &diag: diagnoses) {
+    for (const mco_DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](int8_t sex) {
             for (Size i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
                 Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
@@ -55,7 +55,7 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
         };
 
         PrintLn("      %1:", diag.diag);
-        if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
+        if (diag.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
             PrintLn("        Male:");
             PrintLn("          Category: %1", diag.Attributes(1).cmd);
             PrintLn("          Severity: %1", diag.Attributes(1).severity + 1);
@@ -77,10 +77,10 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
 
         if (exclusions.len) {
             Assert(diag.exclusion_set_idx <= exclusions.len);
-            const ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
+            const mco_ExclusionInfo *excl = &exclusions[diag.exclusion_set_idx];
 
             Print("        Exclusions (list %1):", diag.exclusion_set_idx);
-            for (const DiagnosisInfo &excl_diag: diagnoses) {
+            for (const mco_DiagnosisInfo &excl_diag: diagnoses) {
                 if (excl->raw[excl_diag.cma_exclusion_mask.offset] &
                         excl_diag.cma_exclusion_mask.value) {
                     Print(" %1", excl_diag.diag);
@@ -91,9 +91,9 @@ void DumpDiagnosisTable(Span<const DiagnosisInfo> diagnoses,
     }
 }
 
-void DumpProcedureTable(Span<const ProcedureInfo> procedures)
+void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures)
 {
-    for (const ProcedureInfo &proc: procedures) {
+    for (const mco_ProcedureInfo &proc: procedures) {
         Print("      %1/%2 =", proc.proc, proc.phase);
         for (Size i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
             Print(" %1", FmtBin(proc.bytes[i]));
@@ -104,9 +104,9 @@ void DumpProcedureTable(Span<const ProcedureInfo> procedures)
     }
 }
 
-void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots)
+void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots)
 {
-    for (const GhmRootInfo &ghm_root: ghm_roots) {
+    for (const mco_GhmRootInfo &ghm_root: ghm_roots) {
         PrintLn("      %1:", ghm_root.ghm_root);
 
         if (ghm_root.confirm_duration_treshold) {
@@ -137,10 +137,10 @@ void DumpGhmRootTable(Span<const GhmRootInfo> ghm_roots)
     }
 }
 
-void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
+void mco_DumpGhsAccessTable(Span<const mco_GhsAccessInfo> ghs)
 {
-    GhmCode previous_ghm = {};
-    for (const GhsAccessInfo &ghs_access_info: ghs) {
+    mco_GhmCode previous_ghm = {};
+    for (const mco_GhsAccessInfo &ghs_access_info: ghs) {
         if (ghs_access_info.ghm != previous_ghm) {
             PrintLn("      GHM %1:", ghs_access_info.ghm);
             previous_ghm = ghs_access_info.ghm;
@@ -175,9 +175,9 @@ void DumpGhsAccessTable(Span<const GhsAccessInfo> ghs)
     }
 }
 
-void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices)
+void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices)
 {
-    for (const GhsPriceInfo &price_info: ghs_prices) {
+    for (const mco_GhsPriceInfo &price_info: ghs_prices) {
         PrintLn("        GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
                 FmtDouble(price_info.price_cents / 100.0, 2),
                 FmtDouble(price_info.exh_cents / 100.0, 2),
@@ -186,35 +186,35 @@ void DumpGhsPriceTable(Span<const GhsPriceInfo> ghs_prices)
     }
 }
 
-void DumpSeverityTable(Span<const ValueRangeCell<2>> cells)
+void mco_DumpSeverityTable(Span<const mco_ValueRangeCell<2>> cells)
 {
-    for (const ValueRangeCell<2> &cell: cells) {
+    for (const mco_ValueRangeCell<2> &cell: cells) {
         PrintLn("      %1-%2 and %3-%4 = %5",
                 cell.limits[0].min, cell.limits[0].max, cell.limits[1].min, cell.limits[1].max,
                 cell.value);
     }
 }
 
-void DumpAuthorizationTable(Span<const AuthorizationInfo> authorizations)
+void mco_DumpAuthorizationTable(Span<const mco_AuthorizationInfo> authorizations)
 {
-    for (const AuthorizationInfo &auth: authorizations) {
+    for (const mco_AuthorizationInfo &auth: authorizations) {
         PrintLn("      %1 [%2] => Function %3",
-                auth.type.st.code, AuthorizationScopeNames[(int)auth.type.st.scope], auth.function);
+                auth.type.st.code, mco_AuthorizationScopeNames[(int)auth.type.st.scope], auth.function);
     }
 }
 
-void DumpSupplementPairTable(Span<const SrcPair> pairs)
+void DumpSupplementPairTable(Span<const mco_SrcPair> pairs)
 {
-    for (const SrcPair &pair: pairs) {
+    for (const mco_SrcPair &pair: pairs) {
         PrintLn("      %1 -- %2", pair.diag, pair.proc);
     }
 }
 
-void DumpTableSetHeaders(const TableSet &table_set)
+void mco_DumpTableSetHeaders(const mco_TableSet &table_set)
 {
     PrintLn("Headers:");
-    for (const TableInfo &table: table_set.tables) {
-        PrintLn("  Table '%1' build %2:", TableTypeNames[(int)table.type], table.build_date);
+    for (const mco_TableInfo &table: table_set.tables) {
+        PrintLn("  Table '%1' build %2:", mco_TableTypeNames[(int)table.type], table.build_date);
         PrintLn("    Source: %1", table.filename);
         PrintLn("    Raw Type: %1", table.raw_type);
         PrintLn("    Version: %1.%2", table.version[0], table.version[1]);
@@ -229,24 +229,24 @@ void DumpTableSetHeaders(const TableSet &table_set)
     }
 
     PrintLn("Index:");
-    for (const TableIndex &index: table_set.indexes) {
+    for (const mco_TableIndex &index: table_set.indexes) {
         PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
-        for (const TableInfo *table: index.tables) {
+        for (const mco_TableInfo *table: index.tables) {
             if (!table)
                 continue;
 
             PrintLn("    %1: %2.%3 [%4 -- %5, build: %6]",
-                    TableTypeNames[(int)table->type], table->version[0], table->version[1],
+                    mco_TableTypeNames[(int)table->type], table->version[0], table->version[1],
                     table->limit_dates[0], table->limit_dates[1], table->build_date);
         }
         PrintLn();
     }
 }
 
-void DumpTableSetContent(const TableSet &table_set)
+void mco_DumpTableSetContent(const mco_TableSet &table_set)
 {
     PrintLn("Content:");
-    for (const TableIndex &index: table_set.indexes) {
+    for (const mco_TableIndex &index: table_set.indexes) {
         PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
         // We don't really need to loop here, but we want the switch to get
         // warnings when we introduce new table types.
@@ -254,55 +254,55 @@ void DumpTableSetContent(const TableSet &table_set)
             if (!index.tables[i])
                 continue;
 
-            switch ((TableType)i) {
-                case TableType::GhmDecisionTree: {
+            switch ((mco_TableType)i) {
+                case mco_TableType::GhmDecisionTree: {
                     PrintLn("    GHM Decision Tree:");
-                    DumpGhmDecisionTree(index.ghm_nodes);
+                    mco_DumpGhmDecisionTree(index.ghm_nodes);
                     PrintLn();
                 } break;
-                case TableType::DiagnosisTable: {
+                case mco_TableType::DiagnosisTable: {
                     PrintLn("    Diagnoses:");
-                    DumpDiagnosisTable(index.diagnoses, index.exclusions);
+                    mco_DumpDiagnosisTable(index.diagnoses, index.exclusions);
                     PrintLn();
                 } break;
-                case TableType::ProcedureTable: {
+                case mco_TableType::ProcedureTable: {
                     PrintLn("    Procedures:");
-                    DumpProcedureTable(index.procedures);
+                    mco_DumpProcedureTable(index.procedures);
                     PrintLn();
                 } break;
-                case TableType::GhmRootTable: {
+                case mco_TableType::GhmRootTable: {
                     PrintLn("    GHM Roots:");
-                    DumpGhmRootTable(index.ghm_roots);
+                    mco_DumpGhmRootTable(index.ghm_roots);
                     PrintLn();
                 } break;
-                case TableType::SeverityTable: {
+                case mco_TableType::SeverityTable: {
                     PrintLn("    GNN Table:");
-                    DumpSeverityTable(index.gnn_cells);
+                    mco_DumpSeverityTable(index.gnn_cells);
                     PrintLn();
 
                     for (Size j = 0; j < ARRAY_SIZE(index.cma_cells); j++) {
                         PrintLn("    CMA Table %1:", j + 1);
-                        DumpSeverityTable(index.cma_cells[j]);
+                        mco_DumpSeverityTable(index.cma_cells[j]);
                         PrintLn();
                     }
                 } break;
 
-                case TableType::GhsAccessTable: {
+                case mco_TableType::GhsAccessTable: {
                     PrintLn("    GHS Access Table:");
-                    DumpGhsAccessTable(index.ghs);
+                    mco_DumpGhsAccessTable(index.ghs);
                 } break;
-                case TableType::PriceTable: {
+                case mco_TableType::PriceTable: {
                     PrintLn("    Price Table:");
                     PrintLn("      Public:");
-                    DumpGhsPriceTable(index.ghs_prices[0]);
+                    mco_DumpGhsPriceTable(index.ghs_prices[0]);
                     PrintLn("      Private:");
-                    DumpGhsPriceTable(index.ghs_prices[1]);
+                    mco_DumpGhsPriceTable(index.ghs_prices[1]);
                 } break;
-                case TableType::AuthorizationTable: {
+                case mco_TableType::AuthorizationTable: {
                     PrintLn("    Authorization Types:");
-                    DumpAuthorizationTable(index.authorizations);
+                    mco_DumpAuthorizationTable(index.authorizations);
                 } break;
-                case TableType::SrcPairTable: {
+                case mco_TableType::SrcPairTable: {
                     for (Size j = 0; j < ARRAY_SIZE(index.src_pairs); j++) {
                         PrintLn("    Supplement Pairs List %1:", j + 1);
                         DumpSupplementPairTable(index.src_pairs[j]);
@@ -310,7 +310,7 @@ void DumpTableSetContent(const TableSet &table_set)
                     }
                 } break;
 
-                case TableType::UnknownTable:
+                case mco_TableType::UnknownTable:
                     break;
             }
         }
@@ -318,9 +318,9 @@ void DumpTableSetContent(const TableSet &table_set)
     }
 }
 
-void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots)
+void mco_DumpGhmRootCatalog(Span<const mco_GhmRootDesc> ghm_roots)
 {
-    for (const GhmRootDesc &desc: ghm_roots) {
+    for (const mco_GhmRootDesc &desc: ghm_roots) {
         PrintLn("  %1:", desc.ghm_root);
         PrintLn("    Description: %1", desc.ghm_root_desc);
         PrintLn("    DA: %1 -- %2", desc.da, desc.da_desc);
@@ -328,8 +328,8 @@ void DumpGhmRootCatalog(Span<const GhmRootDesc> ghm_roots)
     }
 }
 
-void DumpCatalogSet(const CatalogSet &catalog_set)
+void mco_DumpCatalogSet(const mco_CatalogSet &catalog_set)
 {
     PrintLn("GHM Roots:");
-    DumpGhmRootCatalog(catalog_set.ghm_roots);
+    mco_DumpGhmRootCatalog(catalog_set.ghm_roots);
 }

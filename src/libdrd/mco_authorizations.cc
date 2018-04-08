@@ -4,8 +4,8 @@
 
 #include "../common/kutil.hh"
 #include "../common/json.hh"
-#include "d_authorizations.hh"
-#include "d_tables.hh"
+#include "mco_authorizations.hh"
+#include "mco_tables.hh"
 
 class JsonAuthorizationHandler: public BaseJsonHandler<JsonAuthorizationHandler> {
     enum class State {
@@ -16,12 +16,12 @@ class JsonAuthorizationHandler: public BaseJsonHandler<JsonAuthorizationHandler>
 
     State state = State::Default;
 
-    Authorization auth = {};
+    mco_Authorization auth = {};
 
 public:
-    HeapArray<Authorization> *out_authorizations;
+    HeapArray<mco_Authorization> *out_authorizations;
 
-    JsonAuthorizationHandler(HeapArray<Authorization> *out_authorizations = nullptr)
+    JsonAuthorizationHandler(HeapArray<mco_Authorization> *out_authorizations = nullptr)
         : out_authorizations(out_authorizations) {}
 
     bool Branch(JsonBranchType type, const char *)
@@ -46,7 +46,7 @@ public:
                 switch (type) {
                     case JsonBranchType::EndObject: {
                         if (!auth.dates[1].value) {
-                            static const Date default_end_date = ConvertDate1980(UINT16_MAX);
+                            static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
                             auth.dates[1] = default_end_date;
                         }
 
@@ -119,7 +119,7 @@ public:
     }
 };
 
-bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
+bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set)
 {
     DEFER_NC(out_guard, len = out_set->authorizations.len)
         { out_set->authorizations.RemoveFrom(len); };
@@ -134,7 +134,7 @@ bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
             return false;
     }
 
-    for (const Authorization &auth: out_set->authorizations) {
+    for (const mco_Authorization &auth: out_set->authorizations) {
         out_set->authorizations_map.Append(&auth);
     }
 
@@ -142,15 +142,15 @@ bool LoadAuthorizationFile(const char *filename, AuthorizationSet *out_set)
     return true;
 }
 
-Span<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
+Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) const
 {
-    Span<const Authorization> auths;
+    Span<const mco_Authorization> auths;
     auths.ptr = authorizations_map.FindValue(unit, nullptr);
     if (!auths.ptr)
         return {};
 
     {
-        const Authorization *end_auth = auths.ptr + 1;
+        const mco_Authorization *end_auth = auths.ptr + 1;
         while (end_auth < authorizations.end() &&
                end_auth->unit == unit) {
             end_auth++;
@@ -161,9 +161,9 @@ Span<const Authorization> AuthorizationSet::FindUnit(UnitCode unit) const
     return auths;
 }
 
-const Authorization *AuthorizationSet::FindUnit(UnitCode unit, Date date) const
+const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date) const
 {
-    const Authorization *auth = authorizations_map.FindValue(unit, nullptr);
+    const mco_Authorization *auth = authorizations_map.FindValue(unit, nullptr);
     if (!auth)
         return nullptr;
 

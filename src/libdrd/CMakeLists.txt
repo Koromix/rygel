@@ -4,21 +4,22 @@
 
 set(LIBDRD_SRC ../common/kutil.cc
                ../common/kutil.hh
-               a_classifier.cc
-               a_classifier.hh
-               a_constraints.cc
-               a_constraints.hh
-               d_authorizations.cc
-               d_authorizations.hh
-               d_common.hh
-               d_desc.cc
-               d_desc.hh
-               d_stays.cc
-               d_stays.hh
-               d_tables.cc
-               d_tables.hh
-               main.cc
-               main.hh)
+               common.hh
+               mco_authorizations.cc
+               mco_authorizations.hh
+               mco_classifier.cc
+               mco_classifier.hh
+               mco_constraints.cc
+               mco_constraints.hh
+               mco_common.hh
+               mco_catalogs.cc
+               mco_catalogs.hh
+               mco_main.cc
+               mco_main.hh
+               mco_stays.cc
+               mco_stays.hh
+               mco_tables.cc
+               mco_tables.hh)
 add_library(drd ${LIBDRD_SRC})
 set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 find_package(Threads)

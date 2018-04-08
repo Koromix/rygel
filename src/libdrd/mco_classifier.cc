@@ -3,16 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "a_classifier.hh"
-#include "d_stays.hh"
-#include "d_tables.hh"
+#include "mco_classifier.hh"
 
 struct RunGhmTreeContext {
-    const ClassifyAggregate *agg;
+    const mco_Aggregate *agg;
 
     // Keep a copy for DP - DR reversal (function 34)
-    const DiagnosisInfo *main_diag_info;
-    const DiagnosisInfo *linked_diag_info;
+    const mco_DiagnosisInfo *main_diag_info;
+    const mco_DiagnosisInfo *linked_diag_info;
     int gnn;
 };
 
@@ -24,83 +22,83 @@ static int ComputeAge(Date date, Date birthdate)
     return age;
 }
 
-static inline uint8_t GetDiagnosisByte(int8_t sex, const DiagnosisInfo &diag_info, uint8_t byte_idx)
+static inline uint8_t GetDiagnosisByte(int8_t sex, const mco_DiagnosisInfo &diag_info, uint8_t byte_idx)
 {
-    Assert(byte_idx < SIZE(DiagnosisInfo::attributes[0].raw));
+    Assert(byte_idx < SIZE(mco_DiagnosisInfo::attributes[0].raw));
     return diag_info.Attributes(sex).raw[byte_idx];
 }
-static inline uint8_t GetDiagnosisByte(const TableIndex &index, int8_t sex,
+static inline uint8_t GetDiagnosisByte(const mco_TableIndex &index, int8_t sex,
                                        DiagnosisCode diag, uint8_t byte_idx)
 {
-    const DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
+    const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
     if (UNLIKELY(!diag_info))
         return 0;
 
     return GetDiagnosisByte(sex, *diag_info, byte_idx);
 }
 
-static inline bool TestDiagnosis(int8_t sex, const DiagnosisInfo &diag_info, ListMask mask)
+static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, ListMask mask)
 {
     DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(sex, diag_info, (uint8_t)mask.offset) & mask.value;
 }
-static inline bool TestDiagnosis(int8_t sex, const DiagnosisInfo &diag_info,
+static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
                                  uint8_t offset, uint8_t value)
 {
     return GetDiagnosisByte(sex, diag_info, offset) & value;
 }
-static inline bool TestDiagnosis(const TableIndex &index, int8_t sex,
+static inline bool TestDiagnosis(const mco_TableIndex &index, int8_t sex,
                                  DiagnosisCode diag, ListMask mask)
 {
     DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
     return GetDiagnosisByte(index, sex, diag, (uint8_t)mask.offset) & mask.value;
 }
-static inline bool TestDiagnosis(const TableIndex &index, int8_t sex,
+static inline bool TestDiagnosis(const mco_TableIndex &index, int8_t sex,
                                  DiagnosisCode diag, uint8_t offset, uint8_t value)
 {
     return GetDiagnosisByte(index, sex, diag, offset) & value;
 }
 
-static inline uint8_t GetProcedureByte(const ProcedureInfo &proc_info, int16_t byte_idx)
+static inline uint8_t GetProcedureByte(const mco_ProcedureInfo &proc_info, int16_t byte_idx)
 {
-    Assert(byte_idx >= 0 && byte_idx < SIZE(ProcedureInfo::bytes));
+    Assert(byte_idx >= 0 && byte_idx < SIZE(mco_ProcedureInfo::bytes));
     return proc_info.bytes[byte_idx];
 }
-static inline uint8_t GetProcedureByte(const TableIndex &index, Date exit_date,
-                                       const ProcedureRealisation &proc, int16_t byte_idx)
+static inline uint8_t GetProcedureByte(const mco_TableIndex &index, Date exit_date,
+                                       const mco_ProcedureRealisation &proc, int16_t byte_idx)
 {
-    const ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, exit_date);
+    const mco_ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, exit_date);
     if (UNLIKELY(!proc_info))
         return 0;
 
     return GetProcedureByte(*proc_info, byte_idx);
 }
 
-static inline bool TestProcedure(const ProcedureInfo &proc_info, ListMask mask)
+static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, ListMask mask)
 {
     return GetProcedureByte(proc_info, mask.offset) & mask.value;
 }
-static inline bool TestProcedure(const ProcedureInfo &proc_info, int16_t offset, uint8_t value)
+static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t offset, uint8_t value)
 {
     return GetProcedureByte(proc_info, offset) & value;
 }
-static inline bool TestProcedure(const TableIndex &index, Date exit_date,
-                                 const ProcedureRealisation &proc, ListMask mask)
+static inline bool TestProcedure(const mco_TableIndex &index, Date exit_date,
+                                 const mco_ProcedureRealisation &proc, ListMask mask)
 {
     return GetProcedureByte(index, exit_date, proc, mask.offset) & mask.value;
 }
-static inline bool TestProcedure(const TableIndex &index, Date exit_date,
-                                 const ProcedureRealisation &proc, int16_t offset, uint8_t value)
+static inline bool TestProcedure(const mco_TableIndex &index, Date exit_date,
+                                 const mco_ProcedureRealisation &proc, int16_t offset, uint8_t value)
 {
     return GetProcedureByte(index, exit_date, proc, offset) & value;
 }
 
-Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder)
+Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> *out_remainder)
 {
     DebugAssert(stays.len > 0);
 
     Size agg_len = 1;
-    if (LIKELY(!(stays[0].error_mask & (int)Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
+    if (LIKELY(!(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
         while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
             agg_len++;
         }
@@ -112,28 +110,29 @@ Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder
     return stays.Take(0, agg_len);
 }
 
-static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays, int duration)
+static const mco_Stay *FindMainStay(const mco_TableIndex &index, Span<const mco_Stay> stays,
+                                    int duration)
 {
     DebugAssert(duration >= 0);
 
     int max_duration = -1;
-    const Stay *zx_stay = nullptr;
+    const mco_Stay *zx_stay = nullptr;
     int zx_duration = -1;
     int proc_priority = 0;
-    const Stay *trauma_stay = nullptr;
-    const Stay *last_trauma_stay = nullptr;
+    const mco_Stay *trauma_stay = nullptr;
+    const mco_Stay *last_trauma_stay = nullptr;
     bool ignore_trauma = false;
-    const Stay *score_stay = nullptr;
+    const mco_Stay *score_stay = nullptr;
     int base_score = 0;
     int min_score = INT_MAX;
 
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         int stay_duration = stay.exit.date - stay.entry.date;
         int stay_score = base_score;
 
         proc_priority = 0;
-        for (const ProcedureRealisation &proc: stay.procedures) {
-            const ProcedureInfo *proc_info =
+        for (const mco_ProcedureRealisation &proc: stay.procedures) {
+            const mco_ProcedureInfo *proc_info =
                 index.FindProcedure(proc.proc, proc.phase, stay.exit.date);
             if (UNLIKELY(!proc_info))
                 continue;
@@ -210,12 +209,12 @@ static const Stay *FindMainStay(const TableIndex &index, Span<const Stay> stays,
     return score_stay;
 }
 
-static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 1)
+static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
 {
     if (!error)
         return true;
 
-    DebugAssert(error >= 0 && error < decltype(ClassifyErrorSet::errors)::Bits);
+    DebugAssert(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
                               error < error_set->main_error)) {
@@ -229,8 +228,8 @@ static bool SetError(ClassifyErrorSet *error_set, int16_t error, int priority = 
     return false;
 }
 
-static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisInfo &diag_info,
-                                 const int16_t error_codes[13], ClassifyErrorSet *out_errors)
+static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisInfo &diag_info,
+                                 const int16_t error_codes[13], mco_ErrorSet *out_errors)
 {
     // Inappropriate, imprecise warnings
     if (UNLIKELY(diag_info.warnings & (1 << 9))) {
@@ -297,9 +296,9 @@ static bool CheckDiagnosisErrors(const ClassifyAggregate &agg, const DiagnosisIn
     return true;
 }
 
-static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
-                                 HeapArray<const DiagnosisInfo *> *out_diagnoses,
-                                 ClassifyErrorSet *out_errors)
+static bool AppendValidDiagnoses(mco_Aggregate *out_agg,
+                                 HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
+                                 mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
@@ -322,9 +321,9 @@ static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
         0, 90, 93, 92, 91
     };
 
-    for (const Stay &stay: out_agg->stays) {
+    for (const mco_Stay &stay: out_agg->stays) {
         // Main diagnosis is valid (checks are done in CheckMainError)
-        const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
+        const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
         if (LIKELY(diag_info)) {
             out_diagnoses->Append(diag_info);
             valid &= CheckDiagnosisErrors(*out_agg, *diag_info, main_diagnosis_errors, out_errors);
@@ -333,7 +332,7 @@ static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
         }
 
         if (stay.linked_diagnosis.IsValid()) {
-            const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
+            const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
             if (LIKELY(diag_info)) {
                 out_diagnoses->Append(diag_info);
                 valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
@@ -348,15 +347,15 @@ static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
                 continue;
 
             if (diag.Matches("Z37")) {
-                out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthDiagnosis;
+                out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthDiagnosis;
             }
             if (diag.Matches("O8") && (diag.str[2] == '0' || diag.str[2] == '1' ||
                                        diag.str[2] == '2' || diag.str[2] == '3' ||
                                        diag.str[2] == '4')) {
-                out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthType;
+                out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthType;
             }
 
-            const DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
+            const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
             if (LIKELY(diag_info)) {
                 out_diagnoses->Append(diag_info);
                 valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
@@ -370,7 +369,7 @@ static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
     // Deduplicate diagnoses
     std::sort(out_diagnoses->begin(), out_diagnoses->end());
     if (out_diagnoses->len) {
-        Span<const DiagnosisInfo *> diagnoses = *out_diagnoses;
+        Span<const mco_DiagnosisInfo *> diagnoses = *out_diagnoses;
 
         Size j = 0;
         for (Size i = 1; i < diagnoses.len; i++) {
@@ -385,15 +384,15 @@ static bool AppendValidDiagnoses(ClassifyAggregate *out_agg,
     return valid;
 }
 
-static bool AppendValidProcedures(ClassifyAggregate *out_agg,
-                                  HeapArray<const ProcedureInfo *> *out_procedures,
-                                  ClassifyErrorSet *out_errors)
+static bool AppendValidProcedures(mco_Aggregate *out_agg,
+                                  HeapArray<const mco_ProcedureInfo *> *out_procedures,
+                                  mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
     out_agg->proc_activities = 0;
-    for (const Stay &stay: out_agg->stays) {
-        for (const ProcedureRealisation &proc: stay.procedures) {
+    for (const mco_Stay &stay: out_agg->stays) {
+        for (const mco_ProcedureRealisation &proc: stay.procedures) {
             if (UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
             }
@@ -405,7 +404,7 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                 valid &= SetError(out_errors, 173);
             }
 
-            const ProcedureInfo *proc_info =
+            const mco_ProcedureInfo *proc_info =
                 out_agg->index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
 
             if (LIKELY(proc_info)) {
@@ -419,7 +418,7 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                 }
 
                 if (proc_info->bytes[41] & 0x2) {
-                    out_agg->flags |= (int)ClassifyAggregate::Flag::ChildbirthProcedure;
+                    out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthProcedure;
                 }
 
                 if (UNLIKELY(!proc.date.IsValid() ||
@@ -458,19 +457,19 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
                     // requires activity 1. Combined with a pointer-based sort this allows
                     // us to trivially detect when activity 1 is missing for a given procedure
                     // in the deduplication phase below (error 167).
-                    StaticAssert(std::alignment_of<ProcedureInfo>::value >= 2);
+                    StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 2);
                     if (!(proc.activities & (1 << 1)) && !(proc_info->bytes[42] & 0x2)) {
-                        proc_info = (const ProcedureInfo *)((uintptr_t)proc_info | 0x1);
+                        proc_info = (const mco_ProcedureInfo *)((uintptr_t)proc_info | 0x1);
                     }
                 }
 
                 out_procedures->Append(proc_info);
                 out_agg->proc_activities |= proc.activities;
             } else {
-                Span <const ProcedureInfo> compatible_procs =
+                Span <const mco_ProcedureInfo> compatible_procs =
                     out_agg->index->FindProcedure(proc.proc);
                 bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
-                                              [&](const ProcedureInfo &proc_info) {
+                                              [&](const mco_ProcedureInfo &proc_info) {
                     return proc_info.phase == proc.phase;
                 });
                 if (valid_proc) {
@@ -493,13 +492,13 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
     // such as when the two procedures fall into different date ranges / limits.
     std::sort(out_procedures->begin(), out_procedures->end());
     if (out_procedures->len) {
-        Span<const ProcedureInfo *> procedures = *out_procedures;
+        Span<const mco_ProcedureInfo *> procedures = *out_procedures;
 
         Size j = 0;
         for (Size i = 0; i < procedures.len; i++) {
             if ((uintptr_t)procedures[i] & 0x1) {
-                const ProcedureInfo *proc_info =
-                    (const ProcedureInfo *)((uintptr_t)procedures[i] ^ 0x1);
+                const mco_ProcedureInfo *proc_info =
+                    (const mco_ProcedureInfo *)((uintptr_t)procedures[i] ^ 0x1);
                 if (proc_info != procedures[j]) {
                     procedures[++j] = proc_info;
                     valid &= SetError(out_errors, 167);
@@ -515,8 +514,8 @@ static bool AppendValidProcedures(ClassifyAggregate *out_agg,
     return valid;
 }
 
-static bool CheckDateErrors(bool malformed_flag, Date date,
-                            const int16_t error_codes[3], ClassifyErrorSet *out_errors)
+static bool CheckDateErrors(bool malformed_flag, Date date, const int16_t error_codes[3],
+                            mco_ErrorSet *out_errors)
 {
     if (UNLIKELY(malformed_flag)) {
         return SetError(out_errors, error_codes[0]);
@@ -529,12 +528,12 @@ static bool CheckDateErrors(bool malformed_flag, Date date,
     return true;
 }
 
-static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors)
+static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
     // Bill id
-    if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::MalformedBillId)) {
+    if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::MalformedBillId)) {
         static bool warned = false;
         if (!warned) {
             LogError("Non-numeric RSS identifiers are not supported");
@@ -545,9 +544,9 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         valid &= SetError(out_errors, 11);
     }
 
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         // Sex
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSex)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 17);
         } else if (UNLIKELY(stay.sex != 1 && stay.sex != 2)) {
             valid &= SetError(out_errors, stay.sex ? 17 : 16);
@@ -560,11 +559,11 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
             static const int16_t entry_date_errors[3] = {20, 19, 21};
             static const int16_t exit_date_errors[3] = {29, 28, 30};
 
-            bool birthdate_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedBirthdate,
+            bool birthdate_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedBirthdate,
                                                    stay.birthdate, birthdate_errors, out_errors);
-            bool entry_date_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedEntryDate,
+            bool entry_date_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedEntryDate,
                                                     stay.entry.date, entry_date_errors, out_errors);
-            bool exit_date_valid = CheckDateErrors(stay.error_mask & (int)Stay::Error::MalformedExitDate,
+            bool exit_date_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedExitDate,
                                                    stay.exit.date, exit_date_errors, out_errors);
 
             if (UNLIKELY(birthdate_valid && entry_date_valid &&
@@ -581,29 +580,29 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         }
 
         // Entry mode and origin
-        if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedEntryMode |
-                                        (int)Stay::Error::MalformedEntryOrigin))) {
+        if (UNLIKELY(stay.error_mask & ((int)mco_Stay::Error::MalformedEntryMode |
+                                        (int)mco_Stay::Error::MalformedEntryOrigin))) {
             valid &= SetError(out_errors, 25);
         }
 
         // Exit mode and destination
-        if (UNLIKELY(stay.error_mask & ((int)Stay::Error::MalformedExitMode |
-                                        (int)Stay::Error::MalformedExitDestination))) {
+        if (UNLIKELY(stay.error_mask & ((int)mco_Stay::Error::MalformedExitMode |
+                                        (int)mco_Stay::Error::MalformedExitDestination))) {
             valid &= SetError(out_errors, 34);
         }
 
         // Sessions
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedSessionCount)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedSessionCount)) {
             valid &= SetError(out_errors, 36);
         }
 
         // Gestational age
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedGestationalAge)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedGestationalAge)) {
             valid &= SetError(out_errors, 125);
         }
 
         // Menstrual period
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLastMenstrualPeriod)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
             valid &= SetError(out_errors, 160);
         } else if (UNLIKELY(stay.last_menstrual_period.value &&
                             !stay.last_menstrual_period.IsValid())) {
@@ -611,33 +610,33 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
         }
 
         // IGS2
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedIgs2)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedIgs2)) {
             valid &= SetError(out_errors, 169);
         }
 
         // Diagnoses
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedMainDiagnosis)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
         } else if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 40);
         }
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedLinkedDiagnosis)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingOtherDiagnosesCount)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 55);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedOtherDiagnosesCount)) {
+        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 56);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedOtherDiagnosis)) {
+        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
 
         // Procedures
-        if (UNLIKELY(stay.error_mask & (int)Stay::Error::MissingProceduresCount)) {
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MissingProceduresCount)) {
             valid &= SetError(out_errors, 57);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedProceduresCount)) {
+        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProceduresCount)) {
             valid &= SetError(out_errors, 58);
-        } else if (UNLIKELY(stay.error_mask & (int)Stay::Error::MalformedProcedureCode)) {
+        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProcedureCode)) {
             valid &= SetError(out_errors, 43);
         }
     }
@@ -658,7 +657,7 @@ static bool CheckDataErrors(Span<const Stay> stays, ClassifyErrorSet *out_errors
     return valid;
 }
 
-static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
+static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
@@ -678,7 +677,7 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
         }
     }
 
-    for (const Stay &stay: agg.stays) {
+    for (const mco_Stay &stay: agg.stays) {
         // Dates
         if (UNLIKELY(stay.entry.date.st.year < 1985 && stay.entry.date.IsValid())) {
             SetError(out_errors, 77, -1);
@@ -829,7 +828,7 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     if (TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, 8, 0x2)) {
         if (UNLIKELY(!agg.duration && !agg.stay.session_count)) {
             bool tolerate = std::any_of(agg.procedures.begin(), agg.procedures.end(),
-                                        [](const ProcedureInfo *proc_info) {
+                                        [](const mco_ProcedureInfo *proc_info) {
                 return (proc_info->bytes[44] & 0x40);
             });
             if (!tolerate) {
@@ -844,11 +843,11 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
 
     // Gestation and newborn
     if (UNLIKELY(!agg.stay.gestational_age &&
-                 ((agg.flags & (int)ClassifyAggregate::Flag::Childbirth) ||
+                 ((agg.flags & (int)mco_Aggregate::Flag::Childbirth) ||
                   agg.stay.birthdate == agg.stay.entry.date))) {
         valid &= SetError(out_errors, 126);
     }
-    if (UNLIKELY(agg.stay.error_mask & (int)Stay::Error::MalformedNewbornWeight)) {
+    if (UNLIKELY(agg.stay.error_mask & (int)mco_Stay::Error::MalformedNewbornWeight)) {
         valid &= SetError(out_errors, 82);
     } else {
         if (UNLIKELY(agg.age_days < 29 && !agg.stay.newborn_weight)) {
@@ -858,13 +857,13 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
         }
     }
     if (UNLIKELY(agg.stay.exit.date >= Date(2013, 3, 1) &&
-                 (agg.flags & (int)ClassifyAggregate::Flag::ChildbirthProcedure) &&
+                 (agg.flags & (int)mco_Aggregate::Flag::ChildbirthProcedure) &&
                  agg.stay.gestational_age < 22)) {
         valid &= SetError(out_errors, 174);
     }
 
     // Menstruation
-    if (UNLIKELY((agg.flags & (int)ClassifyAggregate::Flag::Childbirth) &&
+    if (UNLIKELY((agg.flags & (int)mco_Aggregate::Flag::Childbirth) &&
                  !agg.stay.last_menstrual_period.value)) {
         valid &= SetError(out_errors, 162);
     }
@@ -886,27 +885,27 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     return valid;
 }
 
-GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned int /*flags*/,
-                  ClassifyAggregate *out_agg,
-                  HeapArray<const DiagnosisInfo *> *out_diagnoses,
-                  HeapArray<const ProcedureInfo *> *out_procedures,
-                  ClassifyErrorSet *out_errors)
+mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stays,
+                        unsigned int /*flags*/, mco_Aggregate *out_agg,
+                        HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
+                        HeapArray<const mco_ProcedureInfo *> *out_procedures,
+                        mco_ErrorSet *out_errors)
 {
     DebugAssert(stays.len > 0);
 
     // These errors are too serious to continue (broken data, etc.)
-    if (UNLIKELY(stays[0].error_mask & (int)Stay::Error::UnknownRumVersion)) {
+    if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion)) {
         DebugAssert(stays.len == 1);
         SetError(out_errors, 59);
-        return GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::FromString("90Z00Z");
     }
     if (UNLIKELY(!CheckDataErrors(stays, out_errors)))
-        return GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::FromString("90Z00Z");
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
     if (!out_agg->index) {
         SetError(out_errors, 502, 2);
-        return GhmCode::FromString("90Z03Z");
+        return mco_GhmCode::FromString("90Z03Z");
     }
 
     // Aggregate basic information
@@ -917,7 +916,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned in
     out_agg->duration = 0;
     out_agg->flags = 0;
     out_agg->stay.last_menstrual_period = {};
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         if (stay.gestational_age > 0) {
             out_agg->stay.gestational_age = stay.gestational_age;
         }
@@ -931,8 +930,8 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned in
     }
     out_agg->stay.exit = stays[stays.len - 1].exit;
     out_agg->stay.flags = 0;
-    if (out_agg->stays[stays.len - 1].flags & (int)Stay::Flag::Confirmed) {
-        out_agg->stay.flags |= (int)Stay::Flag::Confirmed;
+    if (out_agg->stays[stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed) {
+        out_agg->stay.flags |= (int)mco_Stay::Flag::Confirmed;
     }
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
@@ -956,7 +955,7 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned in
     // Check remaining stay errors
     valid &= CheckAggregateErrors(*out_agg, out_errors);
     if (UNLIKELY(!valid))
-        return GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::FromString("90Z00Z");
 
     out_agg->main_diag_info = out_agg->index->FindDiagnosis(out_agg->stay.main_diagnosis);
     if (out_agg->stay.linked_diagnosis.IsValid()) {
@@ -968,22 +967,22 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned in
     return {};
 }
 
-int GetMinimalDurationForSeverity(int severity)
+int mco_GetMinimalDurationForSeverity(int severity)
 {
     DebugAssert(severity >= 0 && severity < 4);
     return severity ? (severity + 2) : 0;
 }
 
-int LimitSeverityWithDuration(int severity, int duration)
+int mco_LimitSeverityWithDuration(int severity, int duration)
 {
     DebugAssert(severity >= 0 && severity < 4);
     return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
-static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_node,
-                          ClassifyErrorSet *out_errors)
+static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
+                          mco_ErrorSet *out_errors)
 {
-    DebugAssert(ghm_node.type == GhmDecisionNode::Type::Test);
+    DebugAssert(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     switch (ghm_node.u.test.function) {
         case 0:
@@ -993,7 +992,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 2: {
-            for (const ProcedureInfo *proc_info: ctx.agg->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
                 if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
@@ -1016,7 +1015,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 if (diag_info == ctx.main_diag_info || diag_info == ctx.linked_diag_info)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
@@ -1027,7 +1026,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 7: {
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
@@ -1037,7 +1036,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 9: {
             int result = 0;
-            for (const ProcedureInfo *proc_info: ctx.agg->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
                 if (TestProcedure(*proc_info, 0, 0x80)) {
                     if (TestProcedure(*proc_info,
                                       ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
@@ -1052,7 +1051,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 10: {
             Size matches = 0;
-            for (const ProcedureInfo *proc_info: ctx.agg->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
                 if (TestProcedure(*proc_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                     matches++;
@@ -1075,7 +1074,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
 
         case 18: {
             Size matches = 0, special_matches = 0;
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                     matches++;
@@ -1157,7 +1156,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 36: {
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 if (diag_info == ctx.linked_diag_info)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
@@ -1179,7 +1178,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
                     gestational_age = 99;
                 }
 
-                for (const ValueRangeCell<2> &cell: ctx.agg->index->gnn_cells) {
+                for (const mco_ValueRangeCell<2> &cell: ctx.agg->index->gnn_cells) {
                     if (cell.Test(0, ctx.agg->stay.newborn_weight) &&
                             cell.Test(1, gestational_age)) {
                         ctx.gnn = cell.value;
@@ -1192,7 +1191,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 41: {
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
                 uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
@@ -1208,7 +1207,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
         } break;
 
         case 43: {
-            for (const DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
                 if (diag_info == ctx.linked_diag_info)
                     continue;
 
@@ -1226,8 +1225,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const GhmDecisionNode &ghm_nod
     return -1;
 }
 
-static bool CheckConfirmation(const ClassifyAggregate &agg, GhmCode ghm,
-                              const GhmRootInfo &ghm_root_info, ClassifyErrorSet *out_errors)
+static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
+                              const mco_GhmRootInfo &ghm_root_info, mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
@@ -1238,8 +1237,8 @@ static bool CheckConfirmation(const ClassifyAggregate &agg, GhmCode ghm,
                agg.stay.exit.mode != '9' && agg.stay.exit.mode != '0' &&
                (agg.stay.exit.mode != '7' || agg.stay.exit.destination != '1')) {
         confirm = true;
-    } else if (agg.flags & ((int)ClassifyAggregate::Flag::Childbirth |
-                            (int)ClassifyAggregate::Flag::ChildbirthType)) {
+    } else if (agg.flags & ((int)mco_Aggregate::Flag::Childbirth |
+                            (int)mco_Aggregate::Flag::ChildbirthType)) {
         // I don't really know the rational behind these tests, to be honest. It's
         // what the official classifier does.
         switch (ghm.parts.cmd) {
@@ -1279,7 +1278,7 @@ static bool CheckConfirmation(const ClassifyAggregate &agg, GhmCode ghm,
         }
     }
 
-    if (agg.stay.flags & (int)Stay::Flag::Confirmed) {
+    if (agg.stay.flags & (int)mco_Stay::Flag::Confirmed) {
         if (confirm) {
             SetError(out_errors, 223, 0);
         } else if (agg.duration >= ghm_root_info.confirm_duration_treshold) {
@@ -1292,7 +1291,7 @@ static bool CheckConfirmation(const ClassifyAggregate &agg, GhmCode ghm,
     return valid;
 }
 
-static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyErrorSet *out_errors)
+static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
@@ -1310,8 +1309,8 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyEr
 
     // Menstruation
     {
-        static GhmRootCode ghm_root_14C04 = GhmRootCode::FromString("14C04");
-        static GhmRootCode ghm_root_14M02 = GhmRootCode::FromString("14M02");
+        static mco_GhmRootCode ghm_root_14C04 = mco_GhmRootCode::FromString("14C04");
+        static mco_GhmRootCode ghm_root_14M02 = mco_GhmRootCode::FromString("14M02");
         if (UNLIKELY((ghm.parts.cmd == 14 && ghm.Root() != ghm_root_14C04 && ghm.Root() != ghm_root_14M02) &&
                      !agg.stay.last_menstrual_period.value)) {
             valid &= SetError(out_errors, 162);
@@ -1320,10 +1319,10 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyEr
 
     // FIXME: Find a way to optimize away calls to FromString() in simple cases
     {
-        static GhmRootCode ghm_root_14Z08 = GhmRootCode::FromString("14Z08");
+        static mco_GhmRootCode ghm_root_14Z08 = mco_GhmRootCode::FromString("14Z08");
         if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
             bool type_present = std::any_of(agg.procedures.begin(), agg.procedures.end(),
-                                            [](const ProcedureInfo *proc_info) {
+                                            [](const mco_ProcedureInfo *proc_info) {
                 static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
                 static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
 
@@ -1338,9 +1337,9 @@ static bool CheckGhmErrors(const ClassifyAggregate &agg, GhmCode ghm, ClassifyEr
     return valid;
 }
 
-static GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
+static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, mco_ErrorSet *out_errors)
 {
-    GhmCode ghm = {};
+    mco_GhmCode ghm = {};
 
     RunGhmTreeContext ctx = {};
     ctx.agg = &agg;
@@ -1352,26 +1351,26 @@ static GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_er
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
             SetError(out_errors, 4, 2);
-            return GhmCode::FromString("90Z03Z");
+            return mco_GhmCode::FromString("90Z03Z");
         }
 
         Assert(ghm_node_idx < agg.index->ghm_nodes.len);
-        const GhmDecisionNode &ghm_node = agg.index->ghm_nodes[ghm_node_idx];
+        const mco_GhmDecisionNode &ghm_node = agg.index->ghm_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
-            case GhmDecisionNode::Type::Test: {
+            case mco_GhmDecisionNode::Type::Test: {
                 int function_ret = ExecuteGhmTest(ctx, ghm_node, out_errors);
                 if (UNLIKELY(function_ret < 0 || function_ret >= ghm_node.u.test.children_count)) {
                     LogError("Result for GHM tree test %1 out of range (%2 - %3)",
                              ghm_node.u.test.function, 0, ghm_node.u.test.children_count);
                     SetError(out_errors, 4, 2);
-                    return GhmCode::FromString("90Z03Z");
+                    return mco_GhmCode::FromString("90Z03Z");
                 }
 
                 ghm_node_idx = ghm_node.u.test.children_idx + function_ret;
             } break;
 
-            case GhmDecisionNode::Type::Ghm: {
+            case mco_GhmDecisionNode::Type::Ghm: {
                 ghm = ghm_node.u.ghm.ghm;
                 if (ghm_node.u.ghm.error && out_errors) {
                     SetError(out_errors, ghm_node.u.ghm.error);
@@ -1383,12 +1382,12 @@ static GhmCode RunGhmTree(const ClassifyAggregate &agg, ClassifyErrorSet *out_er
     return ghm;
 }
 
-static inline bool TestDiagnosisExclusion(const TableIndex &index,
-                                          const DiagnosisInfo &cma_diag_info,
-                                          const DiagnosisInfo &main_diag_info)
+static inline bool TestDiagnosisExclusion(const mco_TableIndex &index,
+                                          const mco_DiagnosisInfo &cma_diag_info,
+                                          const mco_DiagnosisInfo &main_diag_info)
 {
     Assert(cma_diag_info.exclusion_set_idx < index.exclusions.len);
-    const ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
+    const mco_ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
     if (UNLIKELY(!excl))
         return false;
 
@@ -1397,11 +1396,11 @@ static inline bool TestDiagnosisExclusion(const TableIndex &index,
             main_diag_info.cma_exclusion_mask.value);
 }
 
-static bool TestExclusion(const ClassifyAggregate &agg,
-                          const GhmRootInfo &ghm_root_info,
-                          const DiagnosisInfo &diag_info,
-                          const DiagnosisInfo &main_diag_info,
-                          const DiagnosisInfo *linked_diag_info)
+static bool TestExclusion(const mco_Aggregate &agg,
+                          const mco_GhmRootInfo &ghm_root_info,
+                          const mco_DiagnosisInfo &diag_info,
+                          const mco_DiagnosisInfo &main_diag_info,
+                          const mco_DiagnosisInfo *linked_diag_info)
 {
     if (agg.age < 14 && (diag_info.Attributes(agg.stay.sex).raw[19] & 0x10))
         return true;
@@ -1409,7 +1408,7 @@ static bool TestExclusion(const ClassifyAggregate &agg,
             ((diag_info.Attributes(agg.stay.sex).raw[19] & 0x8) || diag_info.diag.str[0] == 'P'))
         return true;
 
-    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(DiagnosisInfo::attributes[0].raw));
+    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(mco_DiagnosisInfo::attributes[0].raw));
     if (diag_info.Attributes(agg.stay.sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
             ghm_root_info.cma_exclusion_mask.value)
         return true;
@@ -1422,8 +1421,8 @@ static bool TestExclusion(const ClassifyAggregate &agg,
     return false;
 }
 
-static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
-                              const GhmRootInfo &ghm_root_info)
+static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, mco_GhmCode ghm,
+                                  const mco_GhmRootInfo &ghm_root_info)
 {
     // Ambulatory and / or short duration GHM
     if (ghm_root_info.allow_ambulatory && agg.duration == 0) {
@@ -1437,7 +1436,7 @@ static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
         if (ghm_root_info.childbirth_severity_list) {
             Assert(ghm_root_info.childbirth_severity_list > 0 &&
                    ghm_root_info.childbirth_severity_list <= SIZE(agg.index->cma_cells));
-            for (const ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info.childbirth_severity_list - 1]) {
+            for (const mco_ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info.childbirth_severity_list - 1]) {
                 if (cell.Test(0, agg.stay.gestational_age) && cell.Test(1, severity)) {
                     severity = cell.value;
                     break;
@@ -1445,11 +1444,11 @@ static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
             }
         }
 
-        ghm.parts.mode = (char)('A' + LimitSeverityWithDuration(severity, agg.duration));
+        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, agg.duration));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
-        for (const DiagnosisInfo *diag_info: agg.diagnoses) {
+        for (const mco_DiagnosisInfo *diag_info: agg.diagnoses) {
             if (diag_info->diag == agg.stay.main_diagnosis ||
                     diag_info->diag == agg.stay.linked_diagnosis)
                 continue;
@@ -1472,43 +1471,43 @@ static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
             severity = 1;
         }
 
-        ghm.parts.mode = (char)('1' + LimitSeverityWithDuration(severity, agg.duration));
+        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, agg.duration));
     }
 
     return ghm;
 }
 
-GhmCode ClassifyGhm(const ClassifyAggregate &agg, unsigned int flags, ClassifyErrorSet *out_errors)
+mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors)
 {
-    GhmCode ghm;
+    mco_GhmCode ghm;
 
     ghm = RunGhmTree(agg, out_errors);
 
-    const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+    const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         SetError(out_errors, 4, 2);
-        return GhmCode::FromString("90Z03Z");
+        return mco_GhmCode::FromString("90Z03Z");
     }
 
     if (UNLIKELY(!CheckGhmErrors(agg, ghm, out_errors)))
-        return GhmCode::FromString("90Z00Z");
-    if (UNLIKELY(!(flags & (int)ClassifyFlag::IgnoreConfirmation) &&
+        return mco_GhmCode::FromString("90Z00Z");
+    if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
                  !CheckConfirmation(agg, ghm, *ghm_root_info, out_errors)))
-        return GhmCode::FromString("90Z00Z");
+        return mco_GhmCode::FromString("90Z00Z");
 
     ghm = RunGhmSeverity(agg, ghm, *ghm_root_info);
 
     return ghm;
 }
 
-static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
+static int8_t GetAuthorizationType(const mco_AuthorizationSet &authorization_set,
                                    UnitCode unit, Date date)
 {
     if (unit.number >= 10000) {
         return (int8_t)(unit.number % 100);
     } else if (unit.number) {
-        const Authorization *auth = authorization_set.FindUnit(unit, date);
+        const mco_Authorization *auth = authorization_set.FindUnit(unit, date);
         if (UNLIKELY(!auth)) {
             LogDebug("Unit %1 is missing from authorization set", unit);
             return 0;
@@ -1519,14 +1518,14 @@ static int8_t GetAuthorizationType(const AuthorizationSet &authorization_set,
     }
 }
 
-static bool TestAuthorization(const AuthorizationSet &authorization_set,
+static bool TestAuthorization(const mco_AuthorizationSet &authorization_set,
                               UnitCode unit, Date date, int8_t authorization)
 {
     if (GetAuthorizationType(authorization_set, unit, date) == authorization)
         return true;
 
-    Span<const Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
-    for (const Authorization &auth: facility_auths) {
+    Span<const mco_Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
+    for (const mco_Authorization &auth: facility_auths) {
         if (auth.type == authorization && date >= auth.dates[0] && date < auth.dates[1])
             return true;
     }
@@ -1534,8 +1533,8 @@ static bool TestAuthorization(const AuthorizationSet &authorization_set,
     return false;
 }
 
-static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                    const GhsAccessInfo &ghs_access_info)
+static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                    const mco_GhsAccessInfo &ghs_access_info)
 {
     if (ghs_access_info.minimal_age && agg.age < ghs_access_info.minimal_age)
         return false;
@@ -1544,7 +1543,7 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     if (ghs_access_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
-        for (const Stay &stay: agg.stays) {
+        for (const mco_Stay &stay: agg.stays) {
             if (TestAuthorization(authorization_set, stay.unit, stay.exit.date,
                                   ghs_access_info.unit_authorization)) {
                 if (stay.exit.date != stay.entry.date) {
@@ -1562,7 +1561,7 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     }
     if (ghs_access_info.bed_authorization) {
         bool test = std::any_of(agg.stays.begin(), agg.stays.end(),
-                                [&](const Stay &stay) {
+                                [&](const mco_Stay &stay) {
             return stay.bed_authorization == ghs_access_info.bed_authorization;
         });
         if (!test)
@@ -1578,7 +1577,7 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     }
     if (ghs_access_info.diagnosis_mask.value) {
         bool test = std::any_of(agg.diagnoses.begin(), agg.diagnoses.end(),
-                                [&](const DiagnosisInfo *diag_info) {
+                                [&](const mco_DiagnosisInfo *diag_info) {
             return TestDiagnosis(agg.stay.sex, *diag_info, ghs_access_info.diagnosis_mask);
         });
         if (!test)
@@ -1586,7 +1585,7 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     }
     for (const ListMask &mask: ghs_access_info.procedure_masks) {
         bool test = std::any_of(agg.procedures.begin(), agg.procedures.end(),
-                                [&](const ProcedureInfo *proc_info) {
+                                [&](const mco_ProcedureInfo *proc_info) {
             return TestProcedure(*proc_info, mask);
         });
         if (!test)
@@ -1596,49 +1595,49 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
     return true;
 }
 
-GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                    GhmCode ghm, unsigned int /*flags*/)
+mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                            mco_GhmCode ghm, unsigned int /*flags*/)
 {
     if (UNLIKELY(!ghm.IsValid() || ghm.IsError()))
-        return GhsCode(9999);
+        return mco_GhsCode(9999);
 
     // Deal with UHCD-only stays
     if (agg.duration > 0 && agg.stays[0].entry.mode == '8' &&
             agg.stays[agg.stays.len - 1].exit.mode == '8') {
         bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
-                                [&](const Stay &stay) {
+                                [&](const mco_Stay &stay) {
             int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
             return (auth_type == 7);
         });
         if (uhcd) {
-            ClassifyAggregate agg0 = agg;
+            mco_Aggregate agg0 = agg;
             agg0.duration = 0;
 
             // Don't run ClassifyGhm() because that would test the confirmation flag,
             // which makes no sense when duration is forced to 0.
             ghm = RunGhmTree(agg0, nullptr);
-            const GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+            const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
             if (LIKELY(ghm_root_info)) {
                 ghm = RunGhmSeverity(agg0, ghm, *ghm_root_info);
             }
         }
     }
 
-    Span<const GhsAccessInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+    Span<const mco_GhsAccessInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
 
-    for (const GhsAccessInfo &ghs_access_info: compatible_ghs) {
+    for (const mco_GhsAccessInfo &ghs_access_info: compatible_ghs) {
         if (TestGhs(agg, authorization_set, ghs_access_info))
             return ghs_access_info.Ghs(Sector::Public);
     }
-    return GhsCode(9999);
+    return mco_GhsCode(9999);
 }
 
-static bool TestSupplementRea(const ClassifyAggregate &agg, const Stay &stay,
+static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Stay &stay,
                               Size list2_treshold)
 {
     if (stay.igs2 >= 15 || agg.age < 18) {
         Size list2_matches = 0;
-        for (const ProcedureRealisation &proc: stay.procedures) {
+        for (const mco_ProcedureRealisation &proc: stay.procedures) {
             if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x10))
                 return true;
             if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x8)) {
@@ -1652,7 +1651,7 @@ static bool TestSupplementRea(const ClassifyAggregate &agg, const Stay &stay,
     return false;
 }
 
-static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
+static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Stay &stay,
                               int16_t igs2_src_adjust, bool prev_reanimation)
 {
     if (prev_reanimation)
@@ -1668,7 +1667,7 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
                 return true;
             if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 21, 0x8)) {
                 // TODO: HashSet for SrcPair on diagnoses to accelerate this
-                for (const SrcPair &pair: agg.index->src_pairs[0]) {
+                for (const mco_SrcPair &pair: agg.index->src_pairs[0]) {
                     if (pair.diag == diag) {
                         src_procedures.Append(pair.proc);
                     }
@@ -1681,7 +1680,7 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
             if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 22, 0x80))
                 return true;
             if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 22, 0x40)) {
-                for (const SrcPair &pair: agg.index->src_pairs[1]) {
+                for (const mco_SrcPair &pair: agg.index->src_pairs[1]) {
                     if (pair.diag == diag) {
                         src_procedures.Append(pair.proc);
                     }
@@ -1689,19 +1688,19 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
             }
         }
     }
-    for (const ProcedureRealisation &proc: stay.procedures) {
+    for (const mco_ProcedureRealisation &proc: stay.procedures) {
         for (ProcedureCode diag_proc: src_procedures) {
             if (diag_proc == proc.proc)
                 return true;
         }
     }
 
-    for (const ProcedureRealisation &proc: stay.procedures) {
+    for (const mco_ProcedureRealisation &proc: stay.procedures) {
         if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
             return true;
     }
     if (&stay > &agg.stays[0]) {
-        for (const ProcedureRealisation &proc: (&stay - 1)->procedures) {
+        for (const mco_ProcedureRealisation &proc: (&stay - 1)->procedures) {
             if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
                 return true;
         }
@@ -1711,11 +1710,11 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
 }
 
 // TODO: Count correctly when authorization date is too early (REA)
-void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                      GhsCode ghs, unsigned int /*flags*/,
-                      SupplementCounters<int16_t> *out_counters)
+void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                          mco_GhsCode ghs, unsigned int /*flags*/,
+                          mco_SupplementCounters<int16_t> *out_counters)
 {
-    DebugAssert(ghs != GhsCode(9999));
+    DebugAssert(ghs != mco_GhsCode(9999));
 
     int16_t igs2_src_adjust;
     if (agg.age >= 80) {
@@ -1733,13 +1732,13 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
     bool prev_reanimation = (agg.stays[0].entry.mode == '7' && agg.stays[0].entry.origin == 'R');
 
-    const Stay *ambu_stay = nullptr;
+    const mco_Stay *ambu_stay = nullptr;
     int ambu_priority = 0;
     int16_t *ambu_counter = nullptr;
 
-    for (const Stay &stay: agg.stays) {
+    for (const mco_Stay &stay: agg.stays) {
         int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
-        const AuthorizationInfo *auth_info = agg.index->FindAuthorization(AuthorizationScope::Unit, auth_type);
+        const mco_AuthorizationInfo *auth_info = agg.index->FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
         if (!auth_info)
             continue;
 
@@ -1749,21 +1748,21 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
 
         switch (auth_info->function) {
             case 1: {
-                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
                     counter = &out_counters->st.nn1;
                     priority = 1;
                 }
             } break;
 
             case 2: {
-                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
                     counter = &out_counters->st.nn2;
                     priority = 3;
                 }
             } break;
 
             case 3: {
-                if (LIKELY(agg.age < 2) && ghs != GhsCode(5903)) {
+                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
                     if (TestSupplementRea(agg, stay, 1)) {
                         counter = &out_counters->st.nn3;
                         priority = 6;
@@ -1799,7 +1798,7 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
             } break;
 
             case 9: {
-                if (ghs != GhsCode(5903)) {
+                if (ghs != mco_GhsCode(5903)) {
                     if (agg.age < 18) {
                         if (TestSupplementRea(agg, stay, 1)) {
                             counter = &out_counters->st.rep;
@@ -1849,12 +1848,12 @@ void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &auth
     }
 }
 
-int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death)
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death)
 {
     int price_cents = price_info.price_cents;
 
     if (duration < price_info.exb_treshold && !death) {
-        if (price_info.flags & (int)GhsPriceInfo::Flag::ExbOnce) {
+        if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
             price_cents -= price_info.exb_cents;
         } else {
             price_cents -= price_info.exb_cents * (price_info.exb_treshold - duration);
@@ -1866,28 +1865,28 @@ int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death)
     return price_cents;
 }
 
-int PriceGhs(const ClassifyAggregate &agg, GhsCode ghs)
+int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs)
 {
-    DebugAssert(ghs != GhsCode(9999));
+    DebugAssert(ghs != mco_GhsCode(9999));
 
     // FIXME: Add some kind of error flag when this happens?
-    const GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
+    const mco_GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
     if (!price_info) {
         LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
                  agg.index->limit_dates[0], agg.index->limit_dates[1]);
         return 0;
     }
 
-    return PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
+    return mco_PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
 }
 
-int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> &days,
-                     SupplementCounters<int32_t> *out_prices)
+int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounters<int16_t> &days,
+                         mco_SupplementCounters<int32_t> *out_prices)
 {
-    const SupplementCounters<int32_t> &prices = index.SupplementPrices(Sector::Public);
+    const mco_SupplementCounters<int32_t> &prices = index.SupplementPrices(Sector::Public);
 
     int total_cents = 0;
-    for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
+    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         out_prices->values[i] += days.values[i] * prices.values[i];
         total_cents += days.values[i] * prices.values[i];
     }
@@ -1895,44 +1894,44 @@ int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> 
     return total_cents;
 }
 
-Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                 Span<const Stay> stays, unsigned int flags, ClassifyResult out_results[])
+Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                     Span<const mco_Stay> stays, unsigned int flags, mco_Result out_results[])
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
-    ClassifyErrorSet errors;
-    HeapArray<const DiagnosisInfo *> diagnoses;
-    HeapArray<const ProcedureInfo *> procedures;
+    mco_ErrorSet errors;
+    HeapArray<const mco_DiagnosisInfo *> diagnoses;
+    HeapArray<const mco_ProcedureInfo *> procedures;
 
     Size i;
     for (i = 0; stays.len; i++) {
-        ClassifyResult result = {};
-        ClassifyAggregate agg;
+        mco_Result result = {};
+        mco_Aggregate agg;
 
         errors.main_error = 0;
         diagnoses.Clear(256);
         procedures.Clear(512);
 
         do {
-            result.stays = Cluster(stays, &stays);
+            result.stays = mco_Split(stays, &stays);
 
-            result.ghm = Aggregate(table_set, result.stays, flags,
-                                   &agg, &diagnoses, &procedures, &errors);
+            result.ghm = mco_Prepare(table_set, result.stays, flags,
+                                     &agg, &diagnoses, &procedures, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.main_stay_idx = agg.main_stay - agg.stays.ptr;
-            result.ghm = ClassifyGhm(agg, flags, &errors);
+            result.ghm = mco_ClassifyGhm(agg, flags, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
         } while (false);
         result.main_error = errors.main_error;
 
-        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm, flags);
-        if (result.ghs != GhsCode(9999)) {
-            CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
+        result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags);
+        if (result.ghs != mco_GhsCode(9999)) {
+            mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
 
-            result.ghs_price_cents = PriceGhs(agg, result.ghs);
-            int supplement_cents = PriceSupplements(*agg.index, result.supplement_days,
+            result.ghs_price_cents = mco_PriceGhs(agg, result.ghs);
+            int supplement_cents = mco_PriceSupplements(*agg.index, result.supplement_days,
                                                      &result.supplement_cents);
             result.price_cents = result.ghs_price_cents + supplement_cents;
         }
@@ -1943,17 +1942,18 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
     return i;
 }
 
-void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              Span<const Stay> stays, unsigned int flags, HeapArray<ClassifyResult> *out_results)
+void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                  Span<const mco_Stay> stays, unsigned int flags,
+                  HeapArray<mco_Result> *out_results)
 {
     // Pessimistic assumption (no multi-stay)
     out_results->Grow(stays.len);
-    out_results->len += ClassifyRaw(table_set, authorization_set, stays, flags, out_results->end());
+    out_results->len += mco_ClassifyRaw(table_set, authorization_set, stays, flags, out_results->end());
 }
 
-void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                      Span<const Stay> stays, unsigned int flags,
-                      HeapArray<ClassifyResult> *out_results)
+void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                          Span<const mco_Stay> stays, unsigned int flags,
+                          HeapArray<mco_Result> *out_results)
 {
     if (!stays.len)
         return;
@@ -1968,12 +1968,12 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
     Size results_count = 1;
     {
         Size results_offset = out_results->len;
-        Span<const Stay> task_stays = stays[0];
+        Span<const mco_Stay> task_stays = stays[0];
         for (Size i = 1; i < stays.len; i++) {
             if (stays[i].bill_id != stays[i - 1 ].bill_id) {
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
-                        ClassifyRaw(table_set, authorization_set, task_stays, flags,
+                        mco_ClassifyRaw(table_set, authorization_set, task_stays, flags,
                                     out_results->ptr + results_offset);
                         return true;
                     });
@@ -1985,7 +1985,7 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
             task_stays.len++;
         }
         async.AddTask([&, task_stays, results_offset]() mutable {
-            ClassifyRaw(table_set, authorization_set, task_stays, flags,
+            mco_ClassifyRaw(table_set, authorization_set, task_stays, flags,
                         out_results->ptr + results_offset);
             return true;
         });
@@ -1995,10 +1995,10 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
     out_results->len += results_count;
 }
 
-void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary)
+void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
 {
     out_summary->results_count += results.len;
-    for (const ClassifyResult &result: results) {
+    for (const mco_Result &result: results) {
         out_summary->stays_count += result.stays.len;
         out_summary->failures_count += result.ghm.IsError();
         out_summary->ghs_total_cents += result.ghs_price_cents;

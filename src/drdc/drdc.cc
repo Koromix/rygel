@@ -111,7 +111,7 @@ static bool RunCatalogs(Span<const char *> arguments)
         PrintLn(fp,
 R"(Usage: drdc catalogs [options]
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -122,21 +122,21 @@ R"(Usage: drdc catalogs [options]
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
     }
 
-    const CatalogSet *catalog_set = GetMainCatalogSet();
+    const mco_CatalogSet *catalog_set = mco_GetMainCatalogSet();
     if (!catalog_set)
         return false;
-    DumpCatalogSet(*catalog_set);
+    mco_DumpCatalogSet(*catalog_set);
 
     return true;
 }
 
-static void PrintSummary(const ClassifySummary &summary)
+static void PrintSummary(const mco_Summary &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
     PrintLn("  Stays: %1", summary.stays_count);
@@ -144,9 +144,9 @@ static void PrintSummary(const ClassifySummary &summary)
     PrintLn();
     PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
     PrintLn("  Supplements:");
-    for (Size i = 0; i < ARRAY_SIZE(SupplementTypeNames); i++) {
+    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         PrintLn("    %1: %2 € [%3]",
-                SupplementTypeNames[i],
+                mco_SupplementTypeNames[i],
                 FmtDouble((double)summary.supplement_cents.values[i] / 100.0, 2),
                 summary.supplement_days.values[i]);
     }
@@ -167,12 +167,12 @@ Classify options:
         --test                   Enable testing against GenRSA values
 
 Classifier flags:)");
-        for (const OptionDesc &desc: ClassifyFlagOptions) {
+        for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
             PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(fp);
 
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -194,18 +194,18 @@ Classifier flags:)");
 
                 while (flags_str[0]) {
                     Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const OptionDesc *desc = FindOption(ClassifyFlagOptions, flag);
+                    const OptionDesc *desc = FindOption(mco_ClassifyFlagOptions, flag);
                     if (!desc) {
                         LogError("Unknown classifier flag '%1'", flag);
                         return false;
                     }
-                    flags |= 1u << (desc - ClassifyFlagOptions);
+                    flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
                 test = true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
@@ -218,19 +218,19 @@ Classifier flags:)");
         }
     }
 
-    const TableSet *table_set = GetMainTableSet();
+    const mco_TableSet *table_set = mco_GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return false;
-    const AuthorizationSet *authorization_set = GetMainAuthorizationSet();
+    const mco_AuthorizationSet *authorization_set = mco_GetMainAuthorizationSet();
     if (!authorization_set)
         return false;
 
     struct ClassifySet {
-        StaySet stay_set;
-        HashTable<int32_t, StayTest> tests;
+        mco_StaySet stay_set;
+        HashTable<int32_t, mco_StayTest> tests;
 
-        HeapArray<ClassifyResult> results;
-        ClassifySummary summary;
+        HeapArray<mco_Result> results;
+        mco_Summary summary;
     };
     HeapArray<ClassifySet> classify_sets;
     classify_sets.AppendDefault(filenames.len);
@@ -241,21 +241,21 @@ Classifier flags:)");
             ClassifySet *classify_set = &classify_sets[i];
 
             LogInfo("Load '%1'", filenames[i]);
-            StaySetBuilder stay_set_builder;
+            mco_StaySetBuilder stay_set_builder;
             if (!stay_set_builder.LoadFiles(filenames[i], test ? &classify_set->tests : nullptr))
                 return false;
             if (!stay_set_builder.Finish(&classify_set->stay_set))
                 return false;
 
             LogInfo("Classify '%1'", filenames[i]);
-            ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
+            mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
                              flags, &classify_set->results);
 
             LogInfo("Summarize '%1'", filenames[i]);
-            Summarize(classify_set->results, &classify_set->summary);
+            mco_Summarize(classify_set->results, &classify_set->summary);
 
             if (!verbosity && !test) {
-                classify_set->stay_set = StaySet();
+                classify_set->stay_set = mco_StaySet();
                 classify_set->results.Clear();
             }
 
@@ -266,7 +266,7 @@ Classifier flags:)");
         return false;
 
     LogInfo("Export");
-    ClassifySummary main_summary = {};
+    mco_Summary main_summary = {};
     for (Size i = 0; i < filenames.len; i++) {
         const ClassifySet &classify_set = classify_sets[i];
 
@@ -274,7 +274,7 @@ Classifier flags:)");
 
         if (verbosity - test >= 1) {
             PrintLn("  Detailed results:");
-            for (const ClassifyResult &result: classify_set.results) {
+            for (const mco_Result &result: classify_set.results) {
                 PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 [%6] / GHS %7", result.stays[0].bill_id,
                         result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
                         result.stays.len, result.ghm, result.main_error, result.ghs);
@@ -283,9 +283,9 @@ Classifier flags:)");
                     PrintLn("      GHS: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
                     if (result.price_cents > result.ghs_price_cents) {
                         PrintLn("      Supplements:");
-                        for (Size j = 0; j < ARRAY_SIZE(SupplementTypeNames); j++) {
+                        for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                             if (result.supplement_cents.values[j]) {
-                                PrintLn("        %1: %2 € [%3]", SupplementTypeNames[j],
+                                PrintLn("        %1: %2 € [%3]", mco_SupplementTypeNames[j],
                                         FmtDouble((double)result.supplement_cents.values[j], 2),
                                         result.supplement_days.values[j]);
                             }
@@ -306,8 +306,8 @@ Classifier flags:)");
             Size tested_clusters = 0, failed_clusters = 0;
             Size tested_ghm = 0, failed_ghm = 0;
             Size tested_ghs = 0, failed_ghs = 0;
-            for (const ClassifyResult &result: classify_set.results) {
-                const StayTest *stay_test = classify_set.tests.Find(result.stays[0].bill_id);
+            for (const mco_Result &result: classify_set.results) {
+                const mco_StayTest *stay_test = classify_set.tests.Find(result.stays[0].bill_id);
                 if (!stay_test)
                     continue;
 
@@ -347,12 +347,12 @@ Classifier flags:)");
                                         stay_test->bill_id, result.stays[0].exit.date,
                                         result.ghs, stay_test->ghs);
                             }
-                            for (Size j = 0; j < ARRAY_SIZE(SupplementTypeNames); j++) {
+                            for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                                 if (result.supplement_days.values[j] !=
                                         stay_test->supplement_days.values[j]) {
                                     PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
                                             stay_test->bill_id, result.stays[0].exit.date,
-                                            SupplementTypeNames[j], result.supplement_days.values[j],
+                                            mco_SupplementTypeNames[j], result.supplement_days.values[j],
                                             stay_test->supplement_days.values[j]);
                                 }
                             }
@@ -392,7 +392,7 @@ Constraints options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables)
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -410,16 +410,16 @@ Constraints options:
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
     }
 
-    const TableSet *table_set;
-    const TableIndex *index;
+    const mco_TableSet *table_set;
+    const mco_TableIndex *index;
     {
-        table_set = GetMainTableSet();
+        table_set = mco_GetMainTableSet();
         if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
@@ -430,13 +430,13 @@ Constraints options:
     }
 
     LogInfo("Computing");
-    HashTable<GhmCode, GhmConstraint> ghm_constraints;
-    if (!ComputeGhmConstraints(*index, &ghm_constraints))
+    HashTable<mco_GhmCode, mco_GhmConstraint> ghm_constraints;
+    if (!mco_ComputeGhmConstraints(*index, &ghm_constraints))
         return false;
 
     LogInfo("Export");
-    for (const GhsAccessInfo &ghs_access_info: index->ghs)  {
-        const GhmConstraint *constraint = ghm_constraints.Find(ghs_access_info.ghm);
+    for (const mco_GhsAccessInfo &ghs_access_info: index->ghs)  {
+        const mco_GhmConstraint *constraint = ghm_constraints.Find(ghs_access_info.ghm);
         if (constraint) {
             PrintLn("Constraint for %1", ghs_access_info.ghm);
             PrintLn("  Duration = %1", FmtHex(constraint->duration_mask));
@@ -454,7 +454,7 @@ static bool RunInfo(Span<const char *> arguments)
         PrintLn(fp,
 R"(Usage: drdc info [options] name ...
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -473,7 +473,7 @@ R"(Usage: drdc info [options] name ...
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
@@ -486,10 +486,10 @@ R"(Usage: drdc info [options] name ...
         }
     }
 
-    const TableSet *table_set;
-    const TableIndex *index;
+    const mco_TableSet *table_set;
+    const mco_TableIndex *index;
     {
-        table_set = GetMainTableSet();
+        table_set = mco_GetMainTableSet();
         if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
@@ -504,9 +504,9 @@ R"(Usage: drdc info [options] name ...
             DiagnosisCode diag =
                 DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (diag.IsValid()) {
-                const DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
+                const mco_DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (diag_info) {
-                    DumpDiagnosisTable(*diag_info, index->exclusions);
+                    mco_DumpDiagnosisTable(*diag_info, index->exclusions);
                     continue;
                 }
             }
@@ -516,21 +516,21 @@ R"(Usage: drdc info [options] name ...
             ProcedureCode proc =
                 ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (proc.IsValid()) {
-                Span<const ProcedureInfo> proc_info = index->FindProcedure(proc);
+                Span<const mco_ProcedureInfo> proc_info = index->FindProcedure(proc);
                 if (proc_info.len) {
-                    DumpProcedureTable(proc_info);
+                    mco_DumpProcedureTable(proc_info);
                     continue;
                 }
             }
         }
 
         {
-            GhmRootCode ghm_root =
-                GhmRootCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            mco_GhmRootCode ghm_root =
+                mco_GhmRootCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghm_root.IsValid()) {
-                const GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
+                const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
-                    DumpGhmRootTable(*ghm_root_info);
+                    mco_DumpGhmRootTable(*ghm_root_info);
                     continue;
                 }
             }
@@ -552,7 +552,7 @@ List options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables)
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -571,7 +571,7 @@ List options:
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
@@ -584,10 +584,10 @@ List options:
         }
     }
 
-    const TableSet *table_set;
-    const TableIndex *index;
+    const mco_TableSet *table_set;
+    const mco_TableIndex *index;
     {
-        table_set = GetMainTableSet();
+        table_set = mco_GetMainTableSet();
         if (!table_set)
             return false;
         index = table_set->FindIndex(index_date);
@@ -605,8 +605,8 @@ List options:
         PrintLn("%1:", spec_str);
         switch (spec.table) {
             case ListSpecifier::Table::Diagnoses: {
-                for (const DiagnosisInfo &diag: index->diagnoses) {
-                    if (diag.flags & (int)DiagnosisInfo::Flag::SexDifference) {
+                for (const mco_DiagnosisInfo &diag: index->diagnoses) {
+                    if (diag.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
                         if (spec.Match(diag.Attributes(1).raw)) {
                             PrintLn("  %1 (male)", diag.diag);
                         }
@@ -622,7 +622,7 @@ List options:
             } break;
 
             case ListSpecifier::Table::Procedures: {
-                for (const ProcedureInfo &proc: index->procedures) {
+                for (const mco_ProcedureInfo &proc: index->procedures) {
                     if (spec.Match(proc.bytes)) {
                         PrintLn("  %1", proc.proc);
                     }
@@ -641,7 +641,7 @@ static bool RunPack(Span<const char *> arguments)
         PrintLn(fp,
 R"(Usage: drdc pack [options] stay_file ... -O output_file
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -658,7 +658,7 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
                 if (!opt_parser.RequireOptionValue(PrintUsage))
                     return false;
                 dest_filename = opt_parser.current_value;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
@@ -677,9 +677,9 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
     }
 
     LogInfo("Load");
-    StaySet stay_set;
+    mco_StaySet stay_set;
     {
-        StaySetBuilder stay_set_builder;
+        mco_StaySetBuilder stay_set_builder;
 
         if (!stay_set_builder.LoadFiles(filenames))
             return false;
@@ -703,7 +703,7 @@ R"(Usage: drdc tables [options] [filename] ...
 Dump options:
     -d, --dump                   Dump content of (readable) tables
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -718,7 +718,7 @@ Dump options:
                 return true;
             } else if (TestOption(opt, "-d", "--dump")) {
                 dump = true;
-            } else if (!HandleMainOption(opt_parser, PrintUsage)) {
+            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
         }
@@ -726,12 +726,12 @@ Dump options:
         opt_parser.ConsumeNonOptions(&filenames);
     }
 
-    const TableSet *table_set = GetMainTableSet();
+    const mco_TableSet *table_set = mco_GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return false;
-    DumpTableSetHeaders(*table_set);
+    mco_DumpTableSetHeaders(*table_set);
     if (dump) {
-        DumpTableSetContent(*table_set);
+        mco_DumpTableSetContent(*table_set);
     }
 
     return true;
@@ -752,7 +752,7 @@ Commands:
     pack                         Pack stays for quicker loads
     tables                       Dump available tables and lists
 )");
-        PrintLn(fp, main_options_usage);
+        PrintLn(fp, mco_options_usage);
     };
 
     LinkedAllocator temp_alloc;
@@ -779,7 +779,7 @@ Commands:
         const char *app_dir = GetApplicationDirectory();
         if (app_dir) {
             const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", app_dir).ptr;
-            main_data_directories.Append(default_data_dir);
+            mco_data_directories.Append(default_data_dir);
         }
     }
 

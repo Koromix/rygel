@@ -5,9 +5,9 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "d_common.hh"
+#include "mco_common.hh"
 
-struct ProcedureRealisation {
+struct mco_ProcedureRealisation {
     ProcedureCode proc;
     int8_t phase;
     uint8_t activities;
@@ -17,7 +17,7 @@ struct ProcedureRealisation {
     char doc;
 };
 
-struct Stay {
+struct mco_Stay {
     enum class Flag {
         Confirmed = 1 << 0,
     };
@@ -82,54 +82,54 @@ struct Stay {
     // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support dspak
     // files on 32-bit platforms.
     Span<DiagnosisCode> diagnoses;
-    Span<ProcedureRealisation> procedures;
+    Span<mco_ProcedureRealisation> procedures;
 #ifndef ARCH_64
     char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
 #endif
 };
 
-struct StayTest {
+struct mco_StayTest {
     int32_t bill_id;
 
     uint16_t cluster_len;
 
-    GhmCode ghm;
+    mco_GhmCode ghm;
     int16_t error;
 
-    GhsCode ghs;
-    SupplementCounters<int16_t> supplement_days;
+    mco_GhsCode ghs;
+    mco_SupplementCounters<int16_t> supplement_days;
 
-    HASH_TABLE_HANDLER(StayTest, bill_id);
+    HASH_TABLE_HANDLER(mco_StayTest, bill_id);
 };
 
-struct StaySet {
-    HeapArray<Stay> stays;
+struct mco_StaySet {
+    HeapArray<mco_Stay> stays;
 
     struct {
         HeapArray<DiagnosisCode> diagnoses;
-        HeapArray<ProcedureRealisation> procedures;
+        HeapArray<mco_ProcedureRealisation> procedures;
     } store;
 
     bool SavePack(StreamWriter &st) const;
     bool SavePack(const char *filename) const;
 };
 
-class StaySetBuilder {
-    StaySet set;
+class mco_StaySetBuilder {
+    mco_StaySet set;
 
 public:
-    bool LoadPack(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
-    bool LoadGrp(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr)
+    bool LoadPack(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
+    bool LoadGrp(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr)
         { return LoadRssOrGrp(st, true, out_tests); }
-    bool LoadRss(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr)
+    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr)
         { return LoadRssOrGrp(st, false, out_tests); }
-    bool LoadRsa(StreamReader &st, HashTable<int32_t, StayTest> *out_tests = nullptr);
+    bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
-                   HashTable<int32_t, StayTest> *out_tests = nullptr);
+                   HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
 
-    bool Finish(StaySet *out_set);
+    bool Finish(mco_StaySet *out_set);
 
 private:
-    bool LoadRssOrGrp(StreamReader &st, bool grp, HashTable<int32_t, StayTest> *out_tests);
+    bool LoadRssOrGrp(StreamReader &st, bool grp, HashTable<int32_t, mco_StayTest> *out_tests);
 };

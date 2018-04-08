@@ -2,14 +2,14 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-summary_columns <- c('results', 'stays', 'failures',
-                     'ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_cents',
-                     'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents', 'price_cents',
-                     'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
-                     'nn3_days', 'rep_days')
+mco_summary_columns <- c('results', 'stays', 'failures',
+                         'ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_cents',
+                         'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents', 'price_cents',
+                         'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
+                         'nn3_days', 'rep_days')
 
-classify <- function(classifier, stays, diagnoses, procedures,
-                     sorted = FALSE, details = TRUE) {
+mco_classify <- function(classifier, stays, diagnoses, procedures,
+                         sorted = FALSE, options = character(0), details = TRUE) {
     if (!sorted) {
         sort_by_id <- function(df) {
             if (is.data.table(df)) {
@@ -25,23 +25,24 @@ classify <- function(classifier, stays, diagnoses, procedures,
         procedures <- sort_by_id(procedures)
     }
 
-    result_set <- .classify(classifier, stays, diagnoses, procedures, details)
+    result_set <- .mco_classify(classifier, stays, diagnoses, procedures,
+                                options = options, details = details)
 
-    class(result_set$summary) <- c('drd.summary', class(result_set$summary))
+    class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if (details) {
         setDT(result_set$results)
-        class(result_set$results) <- c('drd.results', class(result_set$results))
+        class(result_set$results) <- c('mco_results', class(result_set$results))
     }
-    class(result_set) <- c('drd.result_set', class(result_set))
+    class(result_set) <- c('mco_result_set', class(result_set))
 
     return (result_set)
 }
 
-compare <- function(summary1, summary2, ...) {
-    if (!('drd.summary' %in% class(summary1))) {
+mco_compare <- function(summary1, summary2, ...) {
+    if (!('mco_summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
     }
-    if (!('drd.summary' %in% class(summary2))) {
+    if (!('mco_summary' %in% class(summary2))) {
         summary2 <- summary(summary2, ...)
     }
 
@@ -62,7 +63,7 @@ compare <- function(summary1, summary2, ...) {
     return(diff)
 }
 
-summary.drd.results <- function(results, by = NULL) {
+summary.mco_results <- function(results, by = NULL) {
     agg_columns <- setdiff(summary_columns, c('results', 'stays', 'failures'))
 
     agg <- results[, c(
@@ -75,13 +76,13 @@ summary.drd.results <- function(results, by = NULL) {
     ), keyby = by]
     agg <- setDF(agg)
 
-    class(agg) <- c('drd.summary', class(agg))
+    class(agg) <- c('mco_summary', class(agg))
     return (agg)
 }
-summary.drd.result_set <- function(result_set, by = NULL) {
+summary.mco_result_set <- function(result_set, by = NULL) {
     if (is.null(by)) {
         return (result_set$summary)
     } else {
-        return (summary.drd.results(result_set$results, by = by))
+        return (summary.mco_results(result_set$results, by = by))
     }
 }
