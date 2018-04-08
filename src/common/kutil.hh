@@ -131,7 +131,7 @@ enum class Endianness {
     #define LIKELY(Cond) (Cond)
     #define UNLIKELY(Cond) (Cond)
     #define RESTRICT __restrict
-    #define UNREACHABLE()
+    #define UNREACHABLE() __assume(0)
 #else
     #error Compiler not supported
 #endif
