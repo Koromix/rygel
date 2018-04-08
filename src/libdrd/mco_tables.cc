@@ -1376,6 +1376,24 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     return true;
 }
 
+template <typename... Args>
+void mco_TableSetBuilder::HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args)
+{
+    TableLoadInfo *secondary_tables[] = {secondary_args...};
+    for (TableLoadInfo *secondary_table: secondary_tables) {
+        if (secondary_table && !secondary_table->loaded) {
+            main_table->loaded = false;
+        }
+    }
+    if (!main_table->loaded) {
+        for (TableLoadInfo *secondary_table: secondary_tables) {
+            if (secondary_table) {
+                secondary_table->loaded = false;
+            }
+        }
+    }
+}
+
 bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                       mco_TableSetBuilder::TableLoadInfo *current_tables[])
 {
@@ -1413,12 +1431,11 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 #undef CHECK_PIECE
 
     // Some tables are used to modify existing tables (e.g. procedure extensions from
-    // ccamdesc.tab are added to the ProcedureInfo table). When we load a dependent table, we
-    // need to make sure the primary table (and other secondary tables) is a new copy.
-    if (current_tables[(int)mco_TableType::ProcedureExtensionTable] &&
-            !current_tables[(int)mco_TableType::ProcedureExtensionTable]->loaded) {
-        current_tables[(int)mco_TableType::ProcedureTable]->loaded = false;
-    }
+    // ccamdesc.tab are added to the ProcedureInfo table). Two consequences:
+    // - when we load a new main table, we need to reload secondary tables,
+    // - when we load a new secondary table, we need to make a new version of the main table.
+    HandleTableDependencies(current_tables[(int)mco_TableType::ProcedureTable],
+                            current_tables[(int)mco_TableType::ProcedureExtensionTable]);
 
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \

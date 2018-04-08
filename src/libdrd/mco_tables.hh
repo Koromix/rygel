@@ -384,5 +384,7 @@ public:
     bool Finish(mco_TableSet *out_set);
 
 private:
+    template <typename... Args>
+    void HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args);
     bool CommitIndex(Date start_date, Date end_date, TableLoadInfo *current_tables[]);
 };
