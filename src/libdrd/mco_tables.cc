@@ -1305,53 +1305,6 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     }
     success &= CommitIndex(start_date, end_date, active_tables);
 
-    for (Size i = 0 ; i < set.indexes.len; i++) {
-        mco_TableIndex &index = set.indexes[i];
-
-#define FIX_SPAN(SpanName) \
-            index.SpanName.ptr = set.store.SpanName.ptr + (Size)index.SpanName.ptr
-#define BUILD_MAP(IndexName, MapPtrName, MapName, TableType) \
-            do { \
-                if (!i || index.changed_tables & MaskEnum(TableType)) { \
-                    auto map = set.maps.MapName.AppendDefault(); \
-                    for (auto &value: index.IndexName) { \
-                        map->Append(&value); \
-                    } \
-                    index.MapPtrName = map; \
-                } else { \
-                    index.MapPtrName = &set.maps.MapName[set.maps.MapName.len - 1]; \
-                } \
-            } while (false)
-
-        FIX_SPAN(ghm_nodes);
-        FIX_SPAN(diagnoses);
-        FIX_SPAN(exclusions);
-        FIX_SPAN(procedures);
-        FIX_SPAN(ghm_roots);
-        FIX_SPAN(gnn_cells);
-        FIX_SPAN(cma_cells[0]);
-        FIX_SPAN(cma_cells[1]);
-        FIX_SPAN(cma_cells[2]);
-        FIX_SPAN(ghs);
-        FIX_SPAN(ghs_prices[0]);
-        FIX_SPAN(ghs_prices[1]);
-        FIX_SPAN(authorizations);
-        FIX_SPAN(src_pairs[0]);
-        FIX_SPAN(src_pairs[1]);
-
-        BUILD_MAP(diagnoses, diagnoses_map, diagnoses, mco_TableType::DiagnosisTable);
-        BUILD_MAP(procedures, procedures_map, procedures, mco_TableType::ProcedureTable);
-        BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots, mco_TableType::GhmRootTable);
-        BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs, mco_TableType::GhsAccessTable);
-        BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs, mco_TableType::GhsAccessTable);
-        BUILD_MAP(authorizations, authorizations_map, authorizations, mco_TableType::GhsAccessTable);
-        BUILD_MAP(ghs_prices[0], ghs_prices_map[0], ghs_prices[0], mco_TableType::PriceTable);
-        BUILD_MAP(ghs_prices[1], ghs_prices_map[1], ghs_prices[1], mco_TableType::PriceTable);
-
-#undef BUILD_MAP
-#undef FIX_SPAN
-    }
-
     if (!success)
         return false;
 
@@ -1375,17 +1328,6 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                     pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
                 } \
             } while (false)
-#define LOAD_TABLE(MemberName, LoadFunc, ...) \
-        do { \
-            if (!load_info->loaded) { \
-                index.MemberName.ptr = (decltype(index.MemberName.ptr))set.store.MemberName.len; \
-                success &= LoadFunc(__VA_ARGS__, &set.store.MemberName); \
-                index.MemberName.len = set.store.MemberName.len - (Size)index.MemberName.ptr; \
-                index.changed_tables |= (uint32_t)(1 << i); \
-            } else { \
-                index.MemberName = set.indexes[set.indexes.len - 1].MemberName; \
-            } \
-        } while (false)
 
     // FIXME: Validate all tables (some were not always needed)
     {
@@ -1404,6 +1346,32 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         }
     }
 
+#undef CHECK_PIECE
+
+#define LOAD_TABLE(MemberName, LoadFunc, ...) \
+        do { \
+            if (!load_info->loaded) { \
+                auto array = set.store.MemberName.AppendDefault(); \
+                success &= LoadFunc(__VA_ARGS__, array); \
+                index.MemberName = *array; \
+                index.changed_tables |= (uint32_t)(1 << i); \
+            } else { \
+                index.MemberName = set.indexes[set.indexes.len - 1].MemberName; \
+            } \
+        } while (false)
+#define BUILD_MAP(IndexName, MapPtrName, MapName) \
+            do { \
+                if (!load_info->loaded) { \
+                    auto map = set.maps.MapName.AppendDefault(); \
+                    for (auto &value: index.IndexName) { \
+                        map->Append(&value); \
+                    } \
+                    index.MapPtrName = map; \
+                } else { \
+                    index.MapPtrName = &set.maps.MapName[set.maps.MapName.len - 1]; \
+                } \
+            } while (false)
+
     Size active_count = 0;
     for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
         if (!current_tables[i])
@@ -1416,16 +1384,26 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
             case mco_TableType::GhmDecisionTree: {
                 LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree, load_info->u.raw_data.ptr, table_info);
             } break;
+
             case mco_TableType::DiagnosisTable: {
                 LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable, load_info->u.raw_data.ptr, table_info);
                 LOAD_TABLE(exclusions, mco_ParseExclusionTable, load_info->u.raw_data.ptr, table_info);
+
+                BUILD_MAP(diagnoses, diagnoses_map, diagnoses);
             } break;
+
             case mco_TableType::ProcedureTable: {
                 LOAD_TABLE(procedures, mco_ParseProcedureTable, load_info->u.raw_data.ptr, table_info);
+
+                BUILD_MAP(procedures, procedures_map, procedures);
             } break;
+
             case mco_TableType::GhmRootTable: {
                 LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable, load_info->u.raw_data.ptr, table_info);
+
+                BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots);
             } break;
+
             case mco_TableType::SeverityTable: {
                 LOAD_TABLE(gnn_cells, mco_ParseSeverityTable,
                            load_info->u.raw_data.ptr, table_info, 0);
@@ -1439,11 +1417,18 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
             case mco_TableType::GhsAccessTable: {
                 LOAD_TABLE(ghs, mco_ParseGhsAccessTable, load_info->u.raw_data.ptr, table_info);
+
+                BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs);
+                BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs);
             } break;
+
             case mco_TableType::AuthorizationTable: {
                 LOAD_TABLE(authorizations, mco_ParseAuthorizationTable,
                            load_info->u.raw_data.ptr, table_info);
+
+                BUILD_MAP(authorizations, authorizations_map, authorizations);
             } break;
+
             case mco_TableType::SrcPairTable: {
                 LOAD_TABLE(src_pairs[0], mco_ParseSrcPairTable,
                            load_info->u.raw_data.ptr, table_info, 0);
@@ -1453,14 +1438,15 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
             case mco_TableType::PriceTable: {
                 if (!load_info->loaded) {
-                    const mco_PriceTable &price_table = price_tables[load_info->u.price_table_idx];
+                    mco_PriceTable &price_table = price_tables[load_info->u.price_table_idx];
 
                     for (int j = 0; j < 2; j++) {
-                        index.ghs_prices[j].ptr = (mco_GhsPriceInfo *)set.store.ghs_prices[j].len;
-                        set.store.ghs_prices[j].Append(price_table.ghs_prices[j]);
-                        index.ghs_prices[j].len = set.store.ghs_prices[j].len - (Size)index.ghs_prices[j].ptr;
-                        index.supplement_prices[j] =
-                            set.store.supplement_prices[j].Append(price_table.supplement_cents[j]);
+                        SwapMemory(set.store.ghs_prices[j].AppendDefault(),
+                                   &price_table.ghs_prices[j], SIZE(price_table.ghs_prices[j]));
+                        index.ghs_prices[j] = set.store.ghs_prices[j][set.store.ghs_prices[j].len - 1];
+
+                        set.store.supplement_prices[j].Append(price_table.supplement_cents[j]);
+                        index.supplement_prices[j] = &set.store.supplement_prices[j][set.store.supplement_prices[j].len - 1];
                     }
                     index.changed_tables |= (uint32_t)(1 << i);
                 } else {
@@ -1469,10 +1455,12 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                         index.supplement_prices[j] = set.indexes[set.indexes.len - 1].supplement_prices[j];
                     }
                 }
+
+                BUILD_MAP(ghs_prices[0], ghs_prices_map[0], ghs_prices[0]);
+                BUILD_MAP(ghs_prices[1], ghs_prices_map[1], ghs_prices[1]);
             } break;
 
-            case mco_TableType::UnknownTable:
-                break;
+            case mco_TableType::UnknownTable: {} break;
         }
         load_info->loaded = true;
         index.tables[i] = &table_info;
@@ -1484,8 +1472,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         set.indexes.Append(index);
     }
 
+#undef BUILD_MAP
 #undef LOAD_TABLE
-#undef CHECK_PIECE
 
     return success;
 }
@@ -1564,9 +1552,9 @@ const mco_GhsPriceInfo *mco_TableIndex::FindGhsPrice(mco_GhsCode ghs, Sector sec
     return ghs_prices_map[(int)sector]->FindValue(ghs, nullptr);
 }
 
-const mco_SupplementCounters<int32_t> &mco_TableIndex::SupplementPrices(Sector sector) const
+const mco_SupplementCounters<int32_t> *mco_TableIndex::SupplementPrices(Sector sector) const
 {
-    return *supplement_prices[(int)sector];
+    return supplement_prices[(int)sector];
 }
 
 #undef FAIL_PARSE_IF

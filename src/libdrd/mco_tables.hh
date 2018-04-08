@@ -304,7 +304,7 @@ struct mco_TableIndex {
     const mco_AuthorizationInfo *FindAuthorization(mco_AuthorizationScope scope, int8_t type) const;
 
     const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, Sector sector) const;
-    const mco_SupplementCounters<int32_t> &SupplementPrices(Sector sector) const;
+    const mco_SupplementCounters<int32_t> *SupplementPrices(Sector sector) const;
 };
 
 class mco_TableSet {
@@ -313,19 +313,19 @@ public:
     HeapArray<mco_TableIndex> indexes;
 
     struct {
-        HeapArray<mco_GhmDecisionNode> ghm_nodes;
-        HeapArray<mco_DiagnosisInfo> diagnoses;
-        HeapArray<mco_ExclusionInfo> exclusions;
-        HeapArray<mco_ProcedureInfo> procedures;
-        HeapArray<mco_GhmRootInfo> ghm_roots;
-        HeapArray<mco_ValueRangeCell<2>> gnn_cells;
-        HeapArray<mco_ValueRangeCell<2>> cma_cells[3];
+        HeapArray<HeapArray<mco_GhmDecisionNode>> ghm_nodes;
+        HeapArray<HeapArray<mco_DiagnosisInfo>> diagnoses;
+        HeapArray<HeapArray<mco_ExclusionInfo>> exclusions;
+        HeapArray<HeapArray<mco_ProcedureInfo>> procedures;
+        HeapArray<HeapArray<mco_GhmRootInfo>> ghm_roots;
+        HeapArray<HeapArray<mco_ValueRangeCell<2>>> gnn_cells;
+        HeapArray<HeapArray<mco_ValueRangeCell<2>>> cma_cells[3];
 
-        HeapArray<mco_GhsAccessInfo> ghs;
-        HeapArray<mco_GhsPriceInfo> ghs_prices[2];
+        HeapArray<HeapArray<mco_GhsAccessInfo>> ghs;
+        HeapArray<HeapArray<mco_GhsPriceInfo>> ghs_prices[2];
         HeapArray<mco_SupplementCounters<int32_t>> supplement_prices[2];
-        HeapArray<mco_AuthorizationInfo> authorizations;
-        HeapArray<mco_SrcPair> src_pairs[2];
+        HeapArray<HeapArray<mco_AuthorizationInfo>> authorizations;
+        HeapArray<HeapArray<mco_SrcPair>> src_pairs[2];
     } store;
 
     struct {
