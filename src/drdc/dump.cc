@@ -182,7 +182,6 @@ void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices)
                 FmtDouble(price_info.price_cents / 100.0, 2),
                 FmtDouble(price_info.exh_cents / 100.0, 2),
                 FmtDouble(price_info.exb_cents / 100.0, 2));
-        PrintLn();
     }
 }
 
