@@ -908,6 +908,7 @@ class JsonPricesHandler: public BaseJsonHandler<JsonPricesHandler> {
 
     mco_PriceTable price_table;
     int sector;
+    mco_GhsCode ghs = {};
     mco_GhsPriceInfo price_info[2] = {};
 
 public:
@@ -986,11 +987,18 @@ public:
                         }
                     } break;
                     case JsonBranchType::EndObject: {
-                        for (int i = 0; i < 2; i++) {
-                            price_info[i].ghs = price_info[0].ghs;
-                            price_table.ghs_prices[i].Append(price_info[i]);
-                            price_info[i] = {};
+                        if (ghs.IsValid()) {
+                            for (int i = 0; i < 2; i++) {
+                                if (price_info[i].price_cents) {
+                                    price_info[i].ghs = ghs;
+                                    price_table.ghs_prices[i].Append(price_info[i]);
+                                    price_info[i] = {};
+                                }
+                            }
+                        } else {
+                            LogError("Invalid or unspecified GHS");
                         }
+                        ghs = {};
 
                         state = State::GhsPriceArray;
                     } break;
@@ -1049,7 +1057,7 @@ public:
 
             case State::GhsPriceObject: {
                 if (TestStr(key, "ghs")) {
-                    SetInt(value, &price_info[0].ghs.number);
+                    SetInt(value, &ghs.number);
                 } else {
                     return UnknownAttribute(key);
                 }
