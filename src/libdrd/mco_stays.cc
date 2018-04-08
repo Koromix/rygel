@@ -364,6 +364,8 @@ bool mco_StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
             if (line[offset] == '1') {
                 stay.flags |= (int)mco_Stay::Flag::Confirmed;
             } else if (UNLIKELY(line[offset] != ' ')) {
+                // According to the GenRSA manual and what the official FG does, confirmation
+                // code '2' is supposed to be okay... but why? I don't accept it here.
                 stay.error_mask |= (int)mco_Stay::Error::MalformedConfirmation;
             }
             offset += 33; // Skip a bunch of fields

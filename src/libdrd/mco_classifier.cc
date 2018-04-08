@@ -614,6 +614,11 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
             valid &= SetError(out_errors, 169);
         }
 
+        // Confirmation code
+        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedConfirmation)) {
+            SetError(out_errors, 121, -1);
+        }
+
         // Diagnoses
         if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
