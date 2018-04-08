@@ -294,7 +294,7 @@ Classify options:
                     if (result.stays.len != stay_test->cluster_len) {
                         failed_clusters++;
                         if (verbosity >= 1) {
-                            PrintLn("    %1 [%2] has inadequate cluster (%3, expected %4)",
+                            PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
                                     stay_test->bill_id, result.stays[0].exit.date,
                                     result.stays.len, stay_test->cluster_len);
                         }
@@ -306,9 +306,10 @@ Classify options:
                     if (stay_test->ghm != result.ghm) {
                         failed_ghm++;
                         if (verbosity >= 1) {
-                            PrintLn("    %1 [%2] has inadequate GHM (%3 [%4], expected %5 [%6])",
+                            PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
                                     stay_test->bill_id, result.stays[0].exit.date,
-                                    result.ghm, result.main_error, stay_test->ghm, stay_test->error);
+                                    result.ghm, FmtArg(result.main_error).Pad(-3),
+                                    stay_test->ghm, FmtArg(stay_test->error).Pad(-3));
                         }
                     }
                 }
@@ -320,14 +321,14 @@ Classify options:
                         failed_ghs++;
                         if (verbosity >= 1) {
                             if (result.ghs != stay_test->ghs) {
-                                PrintLn("    %1 [%2] has inadequate GHS (%3, expected %4)",
+                                PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
                                         stay_test->bill_id, result.stays[0].exit.date,
                                         result.ghs, stay_test->ghs);
                             }
                             for (Size j = 0; j < ARRAY_SIZE(SupplementTypeNames); j++) {
                                 if (result.supplement_days.values[j] !=
                                         stay_test->supplement_days.values[j]) {
-                                    PrintLn("    %1 [%2] has inadequate %3 (%4, expected %5)",
+                                    PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
                                             stay_test->bill_id, result.stays[0].exit.date,
                                             SupplementTypeNames[j], result.supplement_days.values[j],
                                             stay_test->supplement_days.values[j]);
