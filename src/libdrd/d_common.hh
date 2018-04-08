@@ -44,7 +44,6 @@ union GhmRootCode {
             code.parts.type = UpperAscii(str[2]);
             code.parts.seq = (int8_t)(10 * (str[3] - '0') + (str[4] - '0'));
         }
-        code.parts.type = UpperAscii(code.parts.type);
 
         if (out_remaining) {
             *out_remaining = str.Take(5, str.len - 5);
