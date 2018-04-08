@@ -217,7 +217,7 @@ static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
     DebugAssert(error >= 0 && error < decltype(mco_ErrorSet::errors)::Bits);
     if (error_set) {
         if (priority >= 0 && (!error_set->main_error || priority > error_set->priority ||
-                              error < error_set->main_error)) {
+                              (priority == error_set->priority && error < error_set->main_error))) {
             error_set->main_error = error;
             error_set->priority = priority;
         }
