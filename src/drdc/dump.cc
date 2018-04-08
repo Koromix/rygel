@@ -269,6 +269,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
                     mco_DumpProcedureTable(index.procedures);
                     PrintLn();
                 } break;
+                case mco_TableType::ProcedureExtensionTable: {} break;
                 case mco_TableType::GhmRootTable: {
                     PrintLn("    GHM Roots:");
                     mco_DumpGhmRootTable(index.ghm_roots);

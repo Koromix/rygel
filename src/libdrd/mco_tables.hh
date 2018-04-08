@@ -13,6 +13,7 @@ enum class mco_TableType: uint32_t {
     GhmDecisionTree,
     DiagnosisTable,
     ProcedureTable,
+    ProcedureExtensionTable,
     GhmRootTable,
     SeverityTable,
 
@@ -28,6 +29,7 @@ static const char *const mco_TableTypeNames[] = {
     "GHM Decision Tree",
     "Diagnosis Table",
     "Procedure Table",
+    "Procedure Extension Table",
     "GHM Root Table",
     "Severity Table",
 
@@ -118,9 +120,17 @@ struct mco_ProcedureInfo {
     uint8_t activities;
 
     Date limit_dates[2];
-    uint8_t bytes[55];
+    uint8_t bytes[54];
+    uint16_t extensions;
 
     HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
+};
+
+struct mco_ProcedureExtensionInfo {
+    ProcedureCode proc;
+    int8_t phase;
+
+    int8_t extension;
 };
 
 template <Size N>
@@ -249,6 +259,8 @@ bool mco_ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &tabl
                              HeapArray<mco_ExclusionInfo> *out_exclusions);
 bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &table,
                              HeapArray<mco_ProcedureInfo> *out_procs);
+bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                      HeapArray<mco_ProcedureExtensionInfo> *out_procedures);
 bool mco_ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
                            HeapArray<mco_GhmRootInfo> *out_ghm_roots);
 bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,

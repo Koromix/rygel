@@ -39,6 +39,19 @@ static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
     return code;
 }
 
+static ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint16_t seq)
+{
+    ProcedureCode proc = {};
+
+    for (int i = 0; i < 3; i++) {
+        proc.str[2 - i] = (char)((root_idx % 26) + 65);
+        root_idx /= 26;
+    }
+    snprintf(proc.str + 3, SIZE(proc.str) - 3, "%c%03u", (char4 % 26) + 65, seq % 1000);
+
+    return proc;
+}
+
 // TODO: Be careful with overflow in offset and length checks
 bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
                            Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables)
@@ -182,6 +195,8 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
             table.type = mco_TableType::GhsAccessTable;
         } else if (TestStr(table.raw_type, "TABCOMBI")) {
             table.type = mco_TableType::SeverityTable;
+        } else if (TestStr(table.raw_type, "CCAMDESC")) {
+            table.type = mco_TableType::ProcedureExtensionTable;
         } else if (TestStr(table.raw_type, "AUTOREFS")) {
             table.type = mco_TableType::AuthorizationTable;
         } else if (TestStr(table.raw_type, "SRCDGACT")) {
@@ -442,15 +457,6 @@ bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &tabl
         if (block_end == block_start)
             continue;
 
-        char code123[3];
-        {
-            int16_t root_idx_remain = root_idx;
-            for (int i = 0; i < 3; i++) {
-                code123[2 - i] = (char)((root_idx_remain % 26) + 65);
-                root_idx_remain /= 26;
-            }
-        }
-
         for (Size block_offset = block_start; block_offset < block_end;
              block_offset += SIZE(PackedProcedurePtr)) {
             mco_ProcedureInfo proc = {};
@@ -468,9 +474,8 @@ bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &tabl
             }
 
             // CCAM code and phase
-            memcpy(proc.proc.str, code123, 3);
-            snprintf(proc.proc.str + 3, SIZE(proc.proc.str) - 3, "%c%03u",
-                     (raw_proc_ptr.char4 % 26) + 65, raw_proc_ptr.seq_phase / 10 % 1000);
+            proc.proc = ConvertProcedureCode(root_idx, raw_proc_ptr.char4,
+                                             raw_proc_ptr.seq_phase / 10);
             proc.phase = (char)(raw_proc_ptr.seq_phase % 10);
 
             // CCAM information and lists
@@ -509,6 +514,65 @@ bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &tabl
     }
 
     out_proc_guard.disable();
+    return true;
+}
+
+bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                      HeapArray<mco_ProcedureExtensionInfo> *out_extensions)
+{
+    DEFER_NC(out_guard, len = out_extensions->len) { out_extensions->RemoveFrom(len); };
+
+#pragma pack(push, 1)
+    struct PackedProcedureExtension {
+        char char4;
+        uint16_t seq_phase;
+
+        uint8_t extension;
+    };
+#pragma pack(pop)
+
+    FAIL_PARSE_IF(table.filename, table.sections.len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
+                                  table.sections[0].value_len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != SIZE(PackedProcedureExtension));
+
+    Size block_end = table.sections[1].raw_offset;
+    for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
+        Size block_start = block_end;
+
+        // Find block end
+        {
+            const uint8_t *end_idx_ptr = file_data + table.sections[0].raw_offset +
+                                         root_idx * 2;
+            uint16_t end_idx = (uint16_t)((end_idx_ptr[0] << 8) | end_idx_ptr[1]);
+            FAIL_PARSE_IF(table.filename, end_idx > table.sections[1].values_count);
+            block_end = table.sections[1].raw_offset + end_idx * SIZE(PackedProcedureExtension);
+        }
+        if (block_end == block_start)
+            continue;
+
+        for (Size block_offset = block_start; block_offset < block_end;
+             block_offset += SIZE(PackedProcedureExtension)) {
+            mco_ProcedureExtensionInfo ext_info = {};
+
+            PackedProcedureExtension raw_proc_ext;
+            {
+                memcpy(&raw_proc_ext, file_data + block_offset, SIZE(PackedProcedureExtension));
+                raw_proc_ext.seq_phase = BigEndian(raw_proc_ext.seq_phase);
+            }
+
+            ext_info.proc = ConvertProcedureCode(root_idx, raw_proc_ext.char4,
+                                                 raw_proc_ext.seq_phase / 10);
+            ext_info.phase = (char)(raw_proc_ext.seq_phase % 10);
+
+            FAIL_PARSE_IF(table.filename, raw_proc_ext.extension > 15);
+            ext_info.extension = (int8_t)raw_proc_ext.extension;
+
+            out_extensions->Append(ext_info);
+        }
+    }
+
+    out_guard.disable();
     return true;
 }
 
@@ -1348,6 +1412,14 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
 #undef CHECK_PIECE
 
+    // Some tables are used to modify existing tables (e.g. procedure extensions from
+    // ccamdesc.tab are added to the ProcedureInfo table). When we load a dependent table, we
+    // need to make sure the primary table (and other secondary tables) is a new copy.
+    if (current_tables[(int)mco_TableType::ProcedureExtensionTable] &&
+            !current_tables[(int)mco_TableType::ProcedureExtensionTable]->loaded) {
+        current_tables[(int)mco_TableType::ProcedureTable]->loaded = false;
+    }
+
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
             if (!load_info->loaded) { \
@@ -1396,6 +1468,26 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 LOAD_TABLE(procedures, mco_ParseProcedureTable, load_info->u.raw_data.ptr, table_info);
 
                 BUILD_MAP(procedures, procedures_map, procedures);
+            } break;
+            case mco_TableType::ProcedureExtensionTable: {
+                StaticAssert((int)mco_TableType::ProcedureExtensionTable > (int)mco_TableType::ProcedureTable);
+
+                HeapArray<mco_ProcedureExtensionInfo> extensions;
+                success &= mco_ParseProcedureExtensionTable(load_info->u.raw_data.ptr, table_info,
+                                                            &extensions);
+
+                for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
+                    mco_ProcedureInfo *proc_info =
+                        (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
+                    if (proc_info) {
+                        do {
+                            if (proc_info->phase == ext_info.phase) {
+                                proc_info->extensions |= (uint16_t)(1u << ext_info.extension);
+                            }
+                        } while (++proc_info < index.procedures.end() &&
+                                 proc_info->proc == ext_info.proc);
+                    }
+                }
             } break;
 
             case mco_TableType::GhmRootTable: {
