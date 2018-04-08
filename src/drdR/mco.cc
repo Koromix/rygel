@@ -179,7 +179,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.gestational_age = (int16_t)stays.gestational_age[i];
         stay.newborn_weight = (int16_t)stays.newborn_weight[i];
         stay.last_menstrual_period = stays.last_menstrual_period[i];
-        if (stays.confirm[i]) {
+        if (stays.confirm.Len() && stays.confirm[i] == TRUE) {
             stay.flags |= (int)mco_Stay::Flag::Confirmed;
         }
 
@@ -332,6 +332,14 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
 
+    unsigned int flags = 0;
+    for (const char *opt: options) {
+        const OptionDesc *desc = FindOption(mco_ClassifyFlagOptions, opt);
+        if (!desc)
+            Rcpp::stop("Unknown classifier option '%1'", opt);
+        flags |= 1u << (desc - mco_ClassifyFlagOptions);
+    }
+
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
         do { \
             if ((Var ## _df).containsElementNamed(STRINGIFY(Name))) { \
@@ -361,7 +369,9 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LOAD_OPTIONAL_COLUMN(stays, gestational_age);
     LOAD_OPTIONAL_COLUMN(stays, newborn_weight);
     LOAD_OPTIONAL_COLUMN(stays, last_menstrual_period);
-    stays.confirm = stays_df["confirm"];
+    if (!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation)) {
+        stays.confirm = stays_df["confirm"];
+    }
 
     DiagnosesProxy diagnoses;
     diagnoses.nrow = diagnoses_df.nrow();
@@ -391,14 +401,6 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LOAD_OPTIONAL_COLUMN(procedures, doc);
 
 #undef LOAD_OPTIONAL_COLUMN
-
-    unsigned int flags = 0;
-    for (const char *opt: options) {
-        const OptionDesc *desc = FindOption(mco_ClassifyFlagOptions, opt);
-        if (!desc)
-            Rcpp::stop("Unknown classifier option '%1'", opt);
-        flags |= 1u << (desc - mco_ClassifyFlagOptions);
-    }
 
     LogDebug("Classify");
 
