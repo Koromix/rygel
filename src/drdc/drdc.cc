@@ -161,10 +161,17 @@ static bool RunClassify(Span<const char *> arguments)
 R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
+    -f, --flag <flags>           Classifier flags (see below)
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
-)");
+
+Classifier flags:)");
+        for (const OptionDesc &desc: ClassifyFlagOptions) {
+            PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
+        }
+        PrintLn(fp);
+
         PrintLn(fp, main_options_usage);
     };
 
@@ -172,6 +179,7 @@ Classify options:
 
     HeapArray<const char *> filenames;
     int verbosity = 0;
+    unsigned int flags = 0;
     bool test = false;
     {
         const char *opt;
@@ -179,6 +187,20 @@ Classify options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-f", "--flag")) {
+                const char *flags_str = opt_parser.RequireOptionValue();
+                if (!flags_str)
+                    return false;
+
+                while (flags_str[0]) {
+                    Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                    const OptionDesc *desc = FindOption(ClassifyFlagOptions, flag);
+                    if (!desc) {
+                        LogError("Unknown classifier flag '%1'", flag);
+                        return false;
+                    }
+                    flags |= 1u << (desc - ClassifyFlagOptions);
+                }
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
@@ -227,7 +249,7 @@ Classify options:
 
             LogInfo("Classify '%1'", filenames[i]);
             ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                             &classify_set->results);
+                             flags, &classify_set->results);
 
             LogInfo("Summarize '%1'", filenames[i]);
             Summarize(classify_set->results, &classify_set->summary);

@@ -886,7 +886,7 @@ static bool CheckAggregateErrors(const ClassifyAggregate &agg, ClassifyErrorSet 
     return valid;
 }
 
-GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
+GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned int /*flags*/,
                   ClassifyAggregate *out_agg,
                   HeapArray<const DiagnosisInfo *> *out_diagnoses,
                   HeapArray<const ProcedureInfo *> *out_procedures,
@@ -1478,7 +1478,7 @@ static GhmCode RunGhmSeverity(const ClassifyAggregate &agg, GhmCode ghm,
     return ghm;
 }
 
-GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
+GhmCode ClassifyGhm(const ClassifyAggregate &agg, unsigned int flags, ClassifyErrorSet *out_errors)
 {
     GhmCode ghm;
 
@@ -1493,7 +1493,8 @@ GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors)
 
     if (UNLIKELY(!CheckGhmErrors(agg, ghm, out_errors)))
         return GhmCode::FromString("90Z00Z");
-    if (UNLIKELY(!CheckConfirmation(agg, ghm, *ghm_root_info, out_errors)))
+    if (UNLIKELY(!(flags & (int)ClassifyFlag::IgnoreConfirmation) &&
+                 !CheckConfirmation(agg, ghm, *ghm_root_info, out_errors)))
         return GhmCode::FromString("90Z00Z");
 
     ghm = RunGhmSeverity(agg, ghm, *ghm_root_info);
@@ -1596,7 +1597,7 @@ static bool TestGhs(const ClassifyAggregate &agg, const AuthorizationSet &author
 }
 
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                    GhmCode ghm)
+                    GhmCode ghm, unsigned int /*flags*/)
 {
     if (UNLIKELY(!ghm.IsValid() || ghm.IsError()))
         return GhsCode(9999);
@@ -1711,7 +1712,8 @@ static bool TestSupplementSrc(const ClassifyAggregate &agg, const Stay &stay,
 
 // TODO: Count correctly when authorization date is too early (REA)
 void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                      GhsCode ghs, SupplementCounters<int16_t> *out_counters)
+                      GhsCode ghs, unsigned int /*flags*/,
+                      SupplementCounters<int16_t> *out_counters)
 {
     DebugAssert(ghs != GhsCode(9999));
 
@@ -1894,7 +1896,7 @@ int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> 
 }
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                 Span<const Stay> stays, ClassifyResult out_results[])
+                 Span<const Stay> stays, unsigned int flags, ClassifyResult out_results[])
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
@@ -1914,20 +1916,20 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
         do {
             result.stays = Cluster(stays, &stays);
 
-            result.ghm = Aggregate(table_set, result.stays,
+            result.ghm = Aggregate(table_set, result.stays, flags,
                                    &agg, &diagnoses, &procedures, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.main_stay_idx = agg.main_stay - agg.stays.ptr;
-            result.ghm = ClassifyGhm(agg, &errors);
+            result.ghm = ClassifyGhm(agg, flags, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
         } while (false);
         result.main_error = errors.main_error;
 
-        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm);
+        result.ghs = ClassifyGhs(agg, authorization_set, result.ghm, flags);
         if (result.ghs != GhsCode(9999)) {
-            CountSupplements(agg, authorization_set, result.ghs, &result.supplement_days);
+            CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
 
             result.ghs_price_cents = PriceGhs(agg, result.ghs);
             int supplement_cents = PriceSupplements(*agg.index, result.supplement_days,
@@ -1942,16 +1944,16 @@ Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorizatio
 }
 
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              Span<const Stay> stays, HeapArray<ClassifyResult> *out_results)
+              Span<const Stay> stays, unsigned int flags, HeapArray<ClassifyResult> *out_results)
 {
     // Pessimistic assumption (no multi-stay)
     out_results->Grow(stays.len);
-    out_results->len += ClassifyRaw(table_set, authorization_set, stays,
-                                    out_results->end());
+    out_results->len += ClassifyRaw(table_set, authorization_set, stays, flags, out_results->end());
 }
 
 void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                      Span<const Stay> stays, HeapArray<ClassifyResult> *out_results)
+                      Span<const Stay> stays, unsigned int flags,
+                      HeapArray<ClassifyResult> *out_results)
 {
     if (!stays.len)
         return;
@@ -1971,7 +1973,7 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
             if (stays[i].bill_id != stays[i - 1 ].bill_id) {
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
-                        ClassifyRaw(table_set, authorization_set, task_stays,
+                        ClassifyRaw(table_set, authorization_set, task_stays, flags,
                                     out_results->ptr + results_offset);
                         return true;
                     });
@@ -1983,7 +1985,7 @@ void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authori
             task_stays.len++;
         }
         async.AddTask([&, task_stays, results_offset]() mutable {
-            ClassifyRaw(table_set, authorization_set, task_stays,
+            ClassifyRaw(table_set, authorization_set, task_stays, flags,
                         out_results->ptr + results_offset);
             return true;
         });

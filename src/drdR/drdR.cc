@@ -122,7 +122,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
-                          StaySet *out_stay_set, HeapArray<ClassifyResult> *out_results)
+                          unsigned int flags, StaySet *out_stay_set, HeapArray<ClassifyResult> *out_results)
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
     out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
@@ -314,14 +314,16 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     // We're already running in parallel, using ClassifyParallel would slow us down,
     // because it has some overhead caused by multi-stays.
     Classify(classifier.table_set, classifier.authorization_set,
-             out_stay_set->stays, out_results);
+             out_stay_set->stays, flags, out_results);
 
     return true;
 }
 
 // [[Rcpp::export(name = '.classify')]]
 SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
-                Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df, bool details = true)
+                Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df,
+                Rcpp::CharacterVector options = Rcpp::CharacterVector::create(),
+                bool details = true)
 {
     RCC_SETUP_LOG_HANDLER();
 
@@ -390,6 +392,14 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
 
 #undef LOAD_OPTIONAL_COLUMN
 
+    unsigned int flags = 0;
+    for (const char *opt: options) {
+        const OptionDesc *desc = FindOption(ClassifyFlagOptions, opt);
+        if (!desc)
+            Rcpp::stop("Unknown classifier option '%1'", opt);
+        flags |= 1u << (desc - ClassifyFlagOptions);
+    }
+
     LogDebug("Classify");
 
     struct ClassifySet {
@@ -430,7 +440,7 @@ SEXP R_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
                 if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
                                    diagnoses, diagnoses_offset, diagnoses_end,
                                    procedures, procedures_offset, procedures_end,
-                                   &classify_set->stay_set, &classify_set->results))
+                                   flags, &classify_set->stay_set, &classify_set->results))
                     return false;
                 Summarize(classify_set->results, &classify_set->summary);
                 return true;

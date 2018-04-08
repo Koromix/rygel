@@ -2654,6 +2654,21 @@ static inline bool TestOption(const char *opt, const char *test1, const char *te
            (test2 && TestStr(opt, test2));
 }
 
+struct OptionDesc {
+    const char *name;
+    const char *help;
+};
+
+template <typename T>
+const OptionDesc *FindOption(Span<const OptionDesc> options, T name)
+{
+    for (const OptionDesc &opt: options) {
+        if (TestStr(opt.name, name))
+            return &opt;
+    }
+    return nullptr;
+}
+
 class OptionParser {
     Size limit;
     Size smallopt_offset = 0;

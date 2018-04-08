@@ -9,6 +9,13 @@
 #include "d_stays.hh"
 #include "d_tables.hh"
 
+enum class ClassifyFlag {
+    IgnoreConfirmation = 1 << 0
+};
+static const OptionDesc ClassifyFlagOptions[] = {
+    {"ignore_confirm", "Ignore RSS confirmation flag"}
+};
+
 struct ClassifyAggregate {
     enum class Flag {
         ChildbirthDiagnosis = 1 << 0,
@@ -89,7 +96,7 @@ struct ClassifySummary {
 
 Span<const Stay> Cluster(Span<const Stay> stays, Span<const Stay> *out_remainder = nullptr);
 
-GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
+GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays, unsigned int flags,
                   ClassifyAggregate *out_agg,
                   HeapArray<const DiagnosisInfo *> *out_diagnoses,
                   HeapArray<const ProcedureInfo *> *out_procedures,
@@ -98,11 +105,12 @@ GhmCode Aggregate(const TableSet &table_set, Span<const Stay> stays,
 int GetMinimalDurationForSeverity(int severity);
 int LimitSeverityWithDuration(int severity, int duration);
 
-GhmCode ClassifyGhm(const ClassifyAggregate &agg, ClassifyErrorSet *out_errors);
+GhmCode ClassifyGhm(const ClassifyAggregate &agg, unsigned int flags, ClassifyErrorSet *out_errors);
 
 GhsCode ClassifyGhs(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
-                    GhmCode ghm);
-void CountSupplements(const ClassifyAggregate &agg, GhsCode ghs,
+                    GhmCode ghm, unsigned int flags);
+void CountSupplements(const ClassifyAggregate &agg, const AuthorizationSet &authorization_set,
+                      GhsCode ghs, unsigned int flags,
                       SupplementCounters<int16_t> *out_counters);
 
 int PriceGhs(const GhsPriceInfo &price_info, int duration, bool death);
@@ -111,10 +119,11 @@ int PriceSupplements(const TableIndex &index, const SupplementCounters<int16_t> 
                      SupplementCounters<int32_t> *out_prices);
 
 Size ClassifyRaw(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                 Span<const Stay> stays, ClassifyResult out_results[]);
+                 Span<const Stay> stays, unsigned int flags, ClassifyResult out_results[]);
 void Classify(const TableSet &table_set, const AuthorizationSet &authorization_set,
-              Span<const Stay> stays, HeapArray<ClassifyResult> *out_results);
+              Span<const Stay> stays, unsigned int flags, HeapArray<ClassifyResult> *out_results);
 void ClassifyParallel(const TableSet &table_set, const AuthorizationSet &authorization_set,
-                      Span<const Stay> stays, HeapArray<ClassifyResult> *out_results);
+                      Span<const Stay> stays, unsigned int flags,
+                      HeapArray<ClassifyResult> *out_results);
 
 void Summarize(Span<const ClassifyResult> results, ClassifySummary *out_summary);
