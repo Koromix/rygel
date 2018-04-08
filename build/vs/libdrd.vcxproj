@@ -144,26 +144,27 @@
   <ItemGroup>
     <ClCompile Include="..\..\lib\miniz\miniz.c" />
     <ClCompile Include="..\..\src\common\kutil.cc" />
-    <ClCompile Include="..\..\src\libdrd\a_classifier.cc" />
-    <ClCompile Include="..\..\src\libdrd\a_constraints.cc" />
-    <ClCompile Include="..\..\src\libdrd\d_authorizations.cc" />
-    <ClCompile Include="..\..\src\libdrd\d_desc.cc" />
-    <ClCompile Include="..\..\src\libdrd\d_stays.cc" />
-    <ClCompile Include="..\..\src\libdrd\d_tables.cc" />
-    <ClCompile Include="..\..\src\libdrd\main.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_authorizations.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_catalogs.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_classifier.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_constraints.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_main.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_stays.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_tables.cc" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\common\json.hh" />
     <ClInclude Include="..\..\src\common\kutil.hh" />
-    <ClInclude Include="..\..\src\libdrd\a_classifier.hh" />
-    <ClInclude Include="..\..\src\libdrd\a_constraints.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_authorizations.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_common.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_desc.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_stays.hh" />
-    <ClInclude Include="..\..\src\libdrd\d_tables.hh" />
+    <ClInclude Include="..\..\src\libdrd\common.hh" />
     <ClInclude Include="..\..\src\libdrd\libdrd.hh" />
-    <ClInclude Include="..\..\src\libdrd\main.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_authorizations.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_catalogs.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_classifier.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_common.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_constraints.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_main.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_stays.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_tables.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

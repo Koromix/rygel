@@ -240,7 +240,7 @@ union mco_SupplementCounters {
         T nn3;
         T rep;
     } st;
-    StaticAssert(SIZE(values) == SIZE(st));
+    StaticAssert(SIZE(mco_SupplementCounters::values) == SIZE(mco_SupplementCounters::st));
 
     template <typename U>
     mco_SupplementCounters &operator+=(const mco_SupplementCounters<U> &other)

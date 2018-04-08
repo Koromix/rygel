@@ -21,25 +21,25 @@
     <ClCompile Include="..\..\src\common\kutil.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\a_classifier.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_classifier.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\a_constraints.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_constraints.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\d_authorizations.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_authorizations.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\d_desc.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_catalogs.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\d_stays.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_stays.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\d_tables.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_tables.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\main.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_main.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,35 +47,38 @@
     <ClInclude Include="..\..\src\common\kutil.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\a_classifier.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_classifier.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\a_constraints.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_constraints.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_authorizations.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_authorizations.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_common.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_common.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_desc.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_catalogs.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_stays.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_stays.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\d_tables.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_tables.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\libdrd\libdrd.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\main.hh">
+    <ClInclude Include="..\..\src\libdrd\mco_main.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\common\json.hh">
       <Filter>Fichiers sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libdrd\common.hh">
+      <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
