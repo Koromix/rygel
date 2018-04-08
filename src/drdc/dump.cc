@@ -94,13 +94,33 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
 void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures)
 {
     for (const mco_ProcedureInfo &proc: procedures) {
-        Print("      %1/%2 =", proc.proc, proc.phase);
+        PrintLn("      %1/%2:", proc.proc, proc.phase);
+        PrintLn("        Validity: %1 to %2", proc.limit_dates[0], proc.limit_dates[1]);
+        {
+            int activities_dec = 0;
+            for (int activities_bin = proc.activities, i = 0; activities_bin; i++) {
+                if (activities_bin & 0x1) {
+                    activities_dec = (activities_dec * 10) + i;
+                }
+                activities_bin >>= 1;
+            }
+            PrintLn("        Activities: %1", activities_dec);
+        }
+        {
+            LocalArray<FmtArg, 64> extensions;
+            for (int extensions_bin = proc.extensions, i = 0; extensions_bin; i++) {
+                if (extensions_bin & 0x1) {
+                    extensions.Append(i);
+                }
+                extensions_bin >>= 1;
+            }
+            PrintLn("        Extensions: %1", extensions);
+        }
+        Print("        Mask: ");
         for (Size i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
             Print(" %1", FmtBin(proc.bytes[i]));
         }
         PrintLn();
-
-        PrintLn("        Validity: %1 to %2", proc.limit_dates[0], proc.limit_dates[1]);
     }
 }
 
