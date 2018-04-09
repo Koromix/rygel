@@ -822,27 +822,25 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
 
     // Continuity checks
     for (Size i = 1; i < agg.stays.len; i++) {
-        switch (agg.stays[i].entry.mode) {
-            case '0': {
-                if (UNLIKELY(agg.stays[i - 1].exit.mode != '0')) {
-                    valid &= SetError(out_errors, 27);
-                    SetError(out_errors, 49);
-                } else if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date &&
-                                    agg.stays[i].entry.date - agg.stays[i - 1].exit.date != 1)) {
-                    valid &= SetError(out_errors, 50);
-                }
-            } break;
-
-            case '6': {
-                if (UNLIKELY(agg.stays[i].entry.origin != '1' || agg.stays[i - 1].exit.mode != '6')) {
-                    valid &= SetError(out_errors, 27);
-                    SetError(out_errors, 49);
-                } else if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date)) {
-                    valid &= SetError(out_errors, 23);
-                }
-            } break;
-
-            default: { valid &= SetError(out_errors, 27); } break;
+        if (agg.stays[i - 1].exit.mode == '0' && agg.stays[i].entry.mode == '0') {
+            if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date &&
+                         agg.stays[i].entry.date - agg.stays[i - 1].exit.date != 1)) {
+                valid &= SetError(out_errors, 50);
+            }
+        } else {
+            if (UNLIKELY(agg.stays[i - 1].exit.mode == '0' ||
+                         agg.stays[i].entry.mode != '6' ||
+                         agg.stays[i].entry.origin != '1')) {
+                valid &= SetError(out_errors, 27);
+            }
+            if (UNLIKELY(agg.stays[i].entry.mode == '0' ||
+                         agg.stays[i - 1].exit.mode != '6' ||
+                         agg.stays[i - 1].exit.destination != '1')) {
+                valid &= SetError(out_errors, 49);
+            }
+            if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date)) {
+                valid &= SetError(out_errors, 23);
+            }
         }
     }
 
