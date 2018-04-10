@@ -8,7 +8,7 @@
 
 #define FAIL_PARSE_IF(Filename, Cond) \
     do { \
-        if (Cond) { \
+        if (UNLIKELY(Cond)) { \
             LogError("Malformed binary table file '%1': %2", \
                      (Filename) ? (Filename) : "?", STRINGIFY(Cond)); \
             return false; \
@@ -113,17 +113,14 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
         mco_TableInfo table = {};
 
         PackedTablePtr1111 raw_table_ptr;
-        {
-            memcpy(&raw_table_ptr, file_data.ptr + SIZE(PackedHeader1111) +
-                                   SIZE(PackedSection1111) + i * SIZE(PackedTablePtr1111),
-                   SIZE(PackedTablePtr1111));
-            raw_table_ptr.date_range[0] = BigEndian(raw_table_ptr.date_range[0]);
-            raw_table_ptr.date_range[1] = BigEndian(raw_table_ptr.date_range[1]);
-            raw_table_ptr.raw_offset = BigEndian(raw_table_ptr.raw_offset);
-
-            FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
-                                                           SIZE(PackedHeader1111)));
-        }
+        memcpy(&raw_table_ptr, file_data.ptr + SIZE(PackedHeader1111) +
+                               SIZE(PackedSection1111) + i * SIZE(PackedTablePtr1111),
+               SIZE(PackedTablePtr1111));
+        raw_table_ptr.date_range[0] = BigEndian(raw_table_ptr.date_range[0]);
+        raw_table_ptr.date_range[1] = BigEndian(raw_table_ptr.date_range[1]);
+        raw_table_ptr.raw_offset = BigEndian(raw_table_ptr.raw_offset);
+        FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +
+                                                       SIZE(PackedHeader1111)));
 
         PackedHeader1111 raw_table_header;
         PackedSection1111 raw_table_sections[ARRAY_SIZE(table.sections.data)];
@@ -333,20 +330,17 @@ bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &tabl
             mco_DiagnosisInfo diag = {};
 
             PackedDiagnosisPtr raw_diag_ptr;
-            {
-                memcpy(&raw_diag_ptr, file_data + block_offset, SIZE(PackedDiagnosisPtr));
-                raw_diag_ptr.code456 = BigEndian(raw_diag_ptr.code456);
-                raw_diag_ptr.section2_idx = BigEndian(raw_diag_ptr.section2_idx);
-                raw_diag_ptr.section4_bit = BigEndian(raw_diag_ptr.section4_bit);
-                raw_diag_ptr.section4_idx = BigEndian(raw_diag_ptr.section4_idx);
-
-                FAIL_PARSE_IF(table.filename,
-                              raw_diag_ptr.section2_idx >= table.sections[2].values_count);
-                FAIL_PARSE_IF(table.filename,
-                              raw_diag_ptr.section3_idx >= table.sections[3].values_count);
-                FAIL_PARSE_IF(table.filename,
-                              raw_diag_ptr.section4_idx >= table.sections[4].values_count);
-            }
+            memcpy(&raw_diag_ptr, file_data + block_offset, SIZE(PackedDiagnosisPtr));
+            raw_diag_ptr.code456 = BigEndian(raw_diag_ptr.code456);
+            raw_diag_ptr.section2_idx = BigEndian(raw_diag_ptr.section2_idx);
+            raw_diag_ptr.section4_bit = BigEndian(raw_diag_ptr.section4_bit);
+            raw_diag_ptr.section4_idx = BigEndian(raw_diag_ptr.section4_idx);
+            FAIL_PARSE_IF(table.filename,
+                          raw_diag_ptr.section2_idx >= table.sections[2].values_count);
+            FAIL_PARSE_IF(table.filename,
+                          raw_diag_ptr.section3_idx >= table.sections[3].values_count);
+            FAIL_PARSE_IF(table.filename,
+                          raw_diag_ptr.section4_idx >= table.sections[4].values_count);
 
             diag.diag = ConvertDiagnosisCode(root_idx, raw_diag_ptr.code456);
 
@@ -462,16 +456,13 @@ bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &tabl
             mco_ProcedureInfo proc = {};
 
             PackedProcedurePtr raw_proc_ptr;
-            {
-                memcpy(&raw_proc_ptr, file_data + block_offset, SIZE(PackedProcedurePtr));
-                raw_proc_ptr.seq_phase = BigEndian(raw_proc_ptr.seq_phase);
-                raw_proc_ptr.section2_idx = BigEndian(raw_proc_ptr.section2_idx);
-                raw_proc_ptr.date_min = BigEndian(raw_proc_ptr.date_min);
-                raw_proc_ptr.date_max = BigEndian(raw_proc_ptr.date_max);
-
-                FAIL_PARSE_IF(table.filename,
-                              raw_proc_ptr.section2_idx >= table.sections[2].values_count);
-            }
+            memcpy(&raw_proc_ptr, file_data + block_offset, SIZE(PackedProcedurePtr));
+            raw_proc_ptr.seq_phase = BigEndian(raw_proc_ptr.seq_phase);
+            raw_proc_ptr.section2_idx = BigEndian(raw_proc_ptr.section2_idx);
+            raw_proc_ptr.date_min = BigEndian(raw_proc_ptr.date_min);
+            raw_proc_ptr.date_max = BigEndian(raw_proc_ptr.date_max);
+            FAIL_PARSE_IF(table.filename,
+                          raw_proc_ptr.section2_idx >= table.sections[2].values_count);
 
             // CCAM code and phase
             proc.proc = ConvertProcedureCode(root_idx, raw_proc_ptr.char4,
