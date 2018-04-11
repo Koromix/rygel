@@ -129,17 +129,15 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
     out_stay_set->store.procedures.Reserve(procedures_end - procedures_offset);
 
-    int prev_id = INT_MIN;
     Size j = diagnoses_offset;
     Size k = procedures_offset;
     for (Size i = stays_offset; i < stays_end; i++) {
         mco_Stay stay = {};
 
-        if (UNLIKELY(stays.id[i] < prev_id ||
-                     (j < diagnoses_end && diagnoses.id[j] < prev_id) ||
-                     (k < procedures_end && procedures.id[k] < prev_id)))
+        if (UNLIKELY(i && (stays.id[i] < stays.id[i - 1] ||
+                          (j < diagnoses_end && diagnoses.id[j] < stays.id[i - 1]) ||
+                          (k < procedures_end && procedures.id[k] < stays.id[i - 1]))))
             return false;
-        prev_id = stays.id[i];
 
         stay.admin_id = Rcc_GetOptional(stays.admin_id, i, 0);
         stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
