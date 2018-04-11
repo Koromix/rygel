@@ -763,7 +763,7 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
             stays_exit_destination[i] = stay.exit.destination ? stay.exit.destination - '0' : NA_INTEGER;
             stays_unit[i] = LIKELY(stay.unit.number) ? stay.unit.number : NA_INTEGER;
             stays_bed_authorization[i] = stay.bed_authorization ? stay.bed_authorization : NA_INTEGER;
-            stays_session_count[i] = stay.session_count ? stay.session_count : NA_INTEGER;
+            stays_session_count[i] = stay.session_count;
             stays_igs2[i] = stay.igs2 ? stay.igs2 : NA_INTEGER;
             stays_last_menstrual_period.Set(i, stay.last_menstrual_period);
             stays_gestational_age[i] = stay.gestational_age ? stay.gestational_age : NA_INTEGER;
