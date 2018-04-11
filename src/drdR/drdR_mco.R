@@ -46,7 +46,7 @@ mco_compare <- function(summary1, summary2, ...) {
         summary2 <- summary(summary2, ...)
     }
 
-    groups <- setdiff(colnames(summary1), summary_columns)
+    groups <- setdiff(colnames(summary1), mco_summary_columns)
 
     m <- merge(summary1, summary2, by = groups, all = TRUE)
     for (col in setdiff(colnames(m), groups)) {
@@ -55,7 +55,7 @@ mco_compare <- function(summary1, summary2, ...) {
 
     diff <- cbind(
         m[, groups, drop = FALSE],
-        as.data.frame(sapply(summary_columns, function(col) {
+        as.data.frame(sapply(mco_summary_columns, function(col) {
             m[[paste0(col, '.x')]] - m[[paste0(col, '.y')]]
         }, simplify = FALSE))
     )
@@ -64,7 +64,7 @@ mco_compare <- function(summary1, summary2, ...) {
 }
 
 summary.mco_results <- function(results, by = NULL) {
-    agg_columns <- setdiff(summary_columns, c('results', 'stays', 'failures'))
+    agg_columns <- setdiff(mco_summary_columns, c('results', 'stays', 'failures'))
 
     agg <- results[, c(
         list(
