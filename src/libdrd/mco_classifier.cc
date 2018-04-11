@@ -460,7 +460,8 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                         }
                     }
 
-                    if (UNLIKELY((proc.activities & (1 << 4)) && !proc.doc)) {
+                    if (UNLIKELY(out_agg->stay.exit.date >= Date(2013, 3, 1) &&
+                                 (proc.activities & (1 << 4)) && !proc.doc)) {
                         SetError(out_errors, 170, 0);
                     }
 
