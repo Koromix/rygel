@@ -10,9 +10,9 @@
         <script type="text/javascript" src="static/drdw.js"></script>
     </head>
     <body>
-        <div id="menu">
-            <a class="deploy" href="#" onclick="toggleNav('menu'); return false;"></a>
-            <nav>
+        <div id="side_bar">
+            <a class="deploy" href="#" onclick="switchMenu('#side_menu'); return false;"></a>
+            <nav id="side_menu">
                 <img id="logo" src="static/logo.png" alt="drdw logo"/>
                 <ul>
                 </ul>
@@ -20,9 +20,9 @@
         </div>
 
         <main>
-            <div id="pricing">
-                <a class="deploy" href="#" onclick="toggleNav('pricing'); return false;"></a>
-                <nav>
+            <div id="pricing" class="page page_pricing">
+                <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
+                <nav id="pricing_menu">
                     <label>
                         Racine de GHM
                         <select id="pricing_ghm_roots" onchange="pricing.updateAndRefresh();"
@@ -45,8 +45,8 @@
                     <h1></h1>
                 </nav>
 
-                <div class="table"><table></table></div>
-                <div class="chart"><canvas width="400" height="300"></canvas></div>
+                <table class="page page_pricing_table" id="pricing_table"></table>
+                <canvas class="page page_pricing_chart" id="pricing_chart" width="400" height="300"></canvas>
             </div>
         </main>
     </body>

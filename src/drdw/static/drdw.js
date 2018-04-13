@@ -2,6 +2,24 @@
 // Utility
 // ------------------------------------------------------------------------
 
+function addClass(elements, cls)
+{
+    for (var i = 0; i < elements.length; i++)
+        elements[i].classList.add(cls);
+}
+
+function removeClass(elements, cls)
+{
+    for (var i = 0; i < elements.length; i++)
+        elements[i].classList.remove(cls);
+}
+
+function toggleClass(elements, cls)
+{
+    for (var i = 0; i < elements.length; i++)
+        elements[i].classList.toggle(cls);
+}
+
 function getFullNamespace(ns)
 {
     return ({
@@ -38,17 +56,10 @@ function createElementNS(ns, tag, attr)
     return el;
 }
 
-function toggleNav(id, enable)
-{
-    var el = document.querySelector('div#' + id + ' nav');
-    if (enable === undefined)
-        enable = !el.classList.contains('active');
-    if (enable) {
-        var els = document.querySelectorAll('div nav');
-        for (var i = 0; i < els.length; i++)
-            els[i].classList.toggle('active', els[i] == el);
-    } else {
-        el.classList.remove('active');
+function cloneAttributes(src_node, element) {
+    var attributes = src_node.attributes;
+    for (var i = 0; i < attributes.length; i++) {
+        element.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
     }
 }
 
@@ -78,6 +89,8 @@ function downloadJson(method, url, arguments, func)
     xhr.send();
 }
 
+var modules = {};
+
 // ------------------------------------------------------------------------
 // Pricing
 // ------------------------------------------------------------------------
@@ -96,7 +109,7 @@ var pricing = {};
         if (force === undefined)
             force = true;
 
-        var date = document.querySelector('input#pricing_date').value;
+        var date = document.querySelector('#pricing_date').value;
 
         if (force || date !== database_date) {
             table_ready = false;
@@ -116,22 +129,23 @@ var pricing = {};
 
     function refreshView()
     {
-        var ghm_root_info = ghm_roots_map[document.querySelector('select#pricing_ghm_roots').value];
-        var merge_cells = document.querySelector('input#pricing_merge_cells').checked;
-        var max_duration = parseInt(document.querySelector('input#pricing_max_duration').value) + 1;
+        var ghm_root_info = ghm_roots_map[document.querySelector('#pricing_ghm_roots').value];
+        var merge_cells = document.querySelector('#pricing_merge_cells').checked;
+        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
 
-        var h1 = document.querySelector('div#pricing > nav > h1');
+        var h1 = document.querySelector('#pricing_menu > h1');
         h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
 
-        if (!document.querySelector('div#pricing > div.table').classList.contains('inactive') && !table_ready) {
-            var old_table = document.querySelector('div#pricing > div.table > table');
+        if (document.querySelector('.page_pricing_table').classList.contains('active') && !table_ready) {
+            var old_table = document.querySelector('#pricing_table');
             var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
+            cloneAttributes(old_table, table);
             old_table.parentNode.replaceChild(table, old_table);
             table_ready = true;
         }
 
-        if (!document.querySelector('div#pricing > div.chart').classList.contains('inactive') && !chart_ready) {
-            var chart_ctx = document.querySelector('div#pricing > div.chart > canvas').getContext('2d');
+        if (document.querySelector('.page_pricing_chart').classList.contains('active') && !chart_ready) {
+            var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
             chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
             chart_ready = true;
         }
@@ -156,7 +170,7 @@ var pricing = {};
 
     function refreshGhmRoots()
     {
-        var el = document.querySelector('select#pricing_ghm_roots');
+        var el = document.querySelector('#pricing_ghm_roots');
         var previous_value = el.value;
         el.innerHTML = '';
         for (var i = 0; i < ghm_roots.length; i++) {
@@ -392,9 +406,10 @@ var pricing = {};
         }
     }
 }).call(pricing);
+modules['pricing'] = pricing;
 
 document.addEventListener('DOMContentLoaded', function(e) {
-    var date_input = document.querySelector('input#pricing_date');
+    var date_input = document.querySelector('#pricing_date');
     if (!date_input.value) {
         date_input.valueAsDate = new Date();
     }
@@ -407,23 +422,69 @@ document.addEventListener('DOMContentLoaded', function(e) {
 var url_base;
 var url_name;
 
+function switchMenu(selector, enable)
+{
+    var el = document.querySelector(selector);
+    if (enable === undefined)
+        enable = !el.classList.contains('active');
+    if (enable) {
+        var els = document.querySelectorAll('nav');
+        for (var i = 0; i < els.length; i++)
+            els[i].classList.toggle('active', els[i] == el);
+    } else {
+        el.classList.remove('active');
+    }
+}
+
+function switchPage(page_url, mark_history)
+{
+    if (mark_history === undefined)
+        mark_history = true;
+
+    removeClass(document.querySelectorAll('.page'), 'active');
+
+    var page_url_parts = page_url.split('/');
+    for (var i = 0; i < page_url_parts.length; i++) {
+        var css_selector = '.page_' + page_url_parts.slice(0, i + 1).join('_');
+        addClass(document.querySelectorAll(css_selector), 'active');
+    }
+
+    var page_module = modules[page_url_parts[0]];
+    if (page_module !== undefined)
+        page_module.updateAndRefresh(false);
+
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        var active = (menu_anchors[i].getAttribute('href') == page_url &&
+                      !menu_anchors[i].classList.contains('category'));
+        menu_anchors[i].classList.toggle('active', active);
+    }
+
+    if (mark_history && page_url != url_page) {
+        url_page = page_url;
+        window.history.pushState(null, null, url_base + url_page);
+    }
+
+    switchMenu('#side_menu', false);
+}
+
 document.addEventListener('DOMContentLoaded', function(e) {
     url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
                document.querySelector('base').getAttribute('href');
-    url_name = window.location.pathname.substr(url_base.length);
+    url_page = window.location.pathname.substr(url_base.length);
 
     downloadJson('get', 'api/pages.json', {}, function(categories) {
-        if (url_name == '') {
-            url_name = categories[0].pages[0].url;
-            window.history.replaceState(null, null, url_base + url_name);
+        if (url_page == '') {
+            url_page = categories[0].pages[0].url;
+            window.history.replaceState(null, null, url_base + url_page);
         }
 
-        var ul = document.querySelector('div#menu nav ul');
+        var ul = document.querySelector('#side_menu ul');
         function addMenuItem(name, url)
         {
             var li =
                 createElement('li', {},
-                    createElement('a', {href: url, class: url == url_name ? 'active' : null}, name)
+                    createElement('a', {href: url, class: url == url_page ? 'active' : null}, name)
                 );
             ul.appendChild(li);
         }
@@ -451,40 +512,14 @@ document.addEventListener('DOMContentLoaded', function(e) {
             }
         }
 
-        switchPage(url_name);
+        switchPage(url_page);
     });
 });
 
-function switchPage(page_url)
-{
-    var page_divs = document.querySelectorAll('main > div');
-    for (var i = 0; i < page_divs.length; i++) {
-        page_divs[i].classList.remove('active');
-    }
+window.addEventListener('popstate', function(e) {
+    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
+               document.querySelector('base').getAttribute('href');
+    url_name = window.location.pathname.substr(url_base.length);
 
-    if (page_url == 'pricing/table') {
-        document.querySelector('div#pricing').classList.add('active');
-        document.querySelector('div#pricing > div.table').classList.remove('inactive');
-        document.querySelector('div#pricing > div.chart').classList.add('inactive');
-        pricing.updateAndRefresh(false);
-    } else if (page_url == 'pricing/chart') {
-        document.querySelector('div#pricing').classList.add('active');
-        document.querySelector('div#pricing > div.table').classList.add('inactive');
-        document.querySelector('div#pricing > div.chart').classList.remove('inactive');
-        pricing.updateAndRefresh(false);
-    }
-
-    var menu_anchors = document.querySelectorAll('div#menu nav a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (menu_anchors[i].getAttribute('href') == page_url &&
-                      !menu_anchors[i].classList.contains('category'));
-        menu_anchors[i].classList.toggle('active', active);
-    }
-
-    if (page_url != url_name) {
-        url_name = page_url;
-        window.history.pushState(null, null, url_base + url_name);
-    }
-
-    toggleNav('menu', false);
-}
+    switchPage(url_name, false);
+});
