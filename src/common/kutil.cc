@@ -210,47 +210,45 @@ void LinkedAllocator::Release(void *ptr, Size size)
 
 Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *out_remaining)
 {
-    Date date = {};
+    Date date;
 
     int parts[3] = {};
+    int lengths[3] = {};
     Size offset = 0;
     for (int i = 0; i < 3; i++) {
+        int mult = 1;
         while (offset < date_str.len) {
             char c = date_str[offset++];
             int digit = c - '0';
-            if ((unsigned int)digit > 9) {
-                if (c != '/' && c != '-') {
-                    if (flags & (int)ParseFlag::Log) {
-                        LogError("Malformed date string '%1'", date_str);
-                    }
-                    return date;
-                }
+            if ((unsigned int)digit < 10) {
+                parts[i] = (parts[i] * 10) + digit;
+                if (UNLIKELY(++lengths[i] > 5))
+                    goto malformed;
+            } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
+                mult = -1;
+            } else if (UNLIKELY(!lengths[i] || (c != '/' && c != '-'))) {
+                goto malformed;
+            } else {
                 break;
             }
-            parts[i] = (parts[i] * 10) + digit;
         }
+        parts[i] *= mult;
     }
-    if ((flags & (int)ParseFlag::End) && offset < date_str.len) {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Invalid date string '%1'", date_str);
-        }
-        return date;
-    }
+    if ((flags & (int)ParseFlag::End) && offset < date_str.len)
+        goto malformed;
 
-    if (parts[2] >= 100 || parts[2] <= -100) {
-        std::swap(parts[0], parts[2]);
-    } else if (parts[0] < 100 && parts[0] > -100) {
+    if (UNLIKELY((unsigned int)lengths[1] > 2))
+        goto malformed;
+    if (UNLIKELY((lengths[0] > 2) == (lengths[2] > 2))) {
         if (flags & (int)ParseFlag::Log) {
             LogError("Ambiguous date string '%1'", date_str);
         }
-        return date;
+        return {};
+    } else if (lengths[2] > 2) {
+        std::swap(parts[0], parts[2]);
     }
-    if (parts[0] > UINT16_MAX || parts[1] > UINT8_MAX || parts[2] > UINT8_MAX) {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Invalid date string '%1'", date_str);
-        }
-        return date;
-    }
+    if (UNLIKELY(parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99))
+        goto malformed;
 
     date.st.year = (int16_t)parts[0];
     date.st.month = (int8_t)parts[1];
@@ -259,14 +257,19 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
         if (flags & (int)ParseFlag::Log) {
             LogError("Invalid date string '%1'", date_str);
         }
-        date.value = 0;
-        return date;
+        return {};
     }
 
     if (out_remaining) {
         *out_remaining = date_str.Take(offset, date_str.len - offset);
     }
     return date;
+
+malformed:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Malformed date string '%1'", date_str);
+    }
+    return {};
 }
 
 Date Date::FromJulianDays(int days)
