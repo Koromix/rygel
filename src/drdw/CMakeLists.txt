@@ -9,7 +9,8 @@ endif()
 # Application HTML must be kept first
 set(DRDW_RESOURCES static/drdw.html
                    static/drdw.css
-                   static/drdw.js
+                   static/common.js
+                   static/pricing.js
                    static/logo.png
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc
