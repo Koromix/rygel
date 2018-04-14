@@ -41,13 +41,13 @@
                 <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu">
                     <label>
+                        Date
+                        <input id="pricing_date" type="date" onchange="pricing.updateAndRefresh();"/>
+                    </label>
+                    <label>
                         Racine de GHM
                         <select id="pricing_ghm_roots" onchange="pricing.updateAndRefresh();"
                                 style="width: 7em;"></select>
-                    </label>
-                    <label>
-                        Date
-                        <input id="pricing_date" type="date" onchange="pricing.updateAndRefresh();"/>
                     </label>
                     <label>
                         Durée maximale
