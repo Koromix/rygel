@@ -15,21 +15,15 @@ GCC_PUSH_IGNORE(-Wsign-conversion)
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 
-struct Page {
-    const char *const category;
-    const char *const url;
-    const char *const name;
-};
-
-static const Page pages[] = {
-    {"Tarifs",   "/pricing/table",     "Table"},
-    {"Tarifs",   "/pricing/chart",     "Graphique"},
-    {"Listes",   "/lists/ghm_tree",    "Arbre de groupage"},
-    {"Listes",   "/lists/ghm_roots",   "Racines de GHM"},
-    {"Listes",   "/lists/ghs",         "GHS"},
-    {"Listes",   "/lists/diagnoses",   "Diagnostics"},
-    {"Listes",   "/lists/exclusions",  "Exclusions"},
-    {"Listes",   "/lists/procedures",  "Actes"}
+static const char *const pages[] = {
+    "/pricing/table",
+    "/pricing/chart",
+    "/lists/ghm_tree",
+    "/lists/ghm_roots",
+    "/lists/ghs",
+    "/lists/diagnoses",
+    "/lists/exclusions",
+    "/lists/procedures"
 };
 
 static const mco_TableSet *table_set;
@@ -50,8 +44,8 @@ static void InitRoutes()
 {
     Assert(static_resources.len > 0);
     routes.Set("/", static_resources[0].data);
-    for (const Page &page: pages) {
-        routes.Set(page.url, static_resources[0].data);
+    for (const char *page: pages) {
+        routes.Set(page, static_resources[0].data);
     }
 
     for (const Resource &res: static_resources) {
@@ -353,35 +347,6 @@ static Response ProduceGhmRoots(MHD_Connection *, const char *,
     return {200, response};
 }
 
-static Response ProducePages(MHD_Connection *, const char *,
-                             CompressionType compression_type)
-{
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-       writer.StartArray();
-       for (Size i = 0; i < ARRAY_SIZE(pages);) {
-           writer.StartObject();
-           writer.Key("category"); writer.String(pages[i].category);
-           writer.Key("pages"); writer.StartArray();
-           Size j = i;
-           for (; j < ARRAY_SIZE(pages) && pages[j].category == pages[i].category; j++) {
-               writer.StartObject();
-               writer.Key("url"); writer.String(pages[j].url + 1);
-               writer.Key("name"); writer.Key(pages[j].name);
-               writer.EndObject();
-           }
-           i = j;
-           writer.EndArray();
-           writer.EndObject();
-       }
-       writer.EndArray();
-
-       return true;
-    });
-
-    return {200, response};
-}
-
 static Response ProduceStaticResource(MHD_Connection *, const char *url,
                                       CompressionType compression_type)
 {
@@ -443,8 +408,6 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         response = ProducePriceMap(conn, url, compression_type);
     } else if (TestStr(url, "/api/ghm_roots.json")) {
         response = ProduceGhmRoots(conn, url, compression_type);
-    } else if (TestStr(url, "/api/pages.json")) {
-        response = ProducePages(conn, url, compression_type);
     } else {
         response = ProduceStaticResource(conn, url, compression_type);
     }

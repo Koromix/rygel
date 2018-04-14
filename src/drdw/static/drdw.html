@@ -3,18 +3,34 @@
     <head>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
         <title>drdw</title>
         <base href="/"/>
-        <script type="text/javascript" src="static/chart.min.js"></script>
+
         <link rel="stylesheet" href="static/drdw.css"/>
+        <!-- Libraries -->
+        <script type="text/javascript" src="static/chart.min.js"></script>
+        <!-- Modules -->
         <script type="text/javascript" src="static/drdw.js"></script>
     </head>
+
     <body>
         <div id="side_bar">
             <a class="deploy" href="#" onclick="switchMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
                 <img id="logo" src="static/logo.png" alt="drdw logo"/>
                 <ul>
+                    <li><a class="category" href="pricing/table">Tarifs</a></li>
+                    <li><a href="pricing/table">Table</a></li>
+                    <li><a href="pricing/chart">Graphique</a></li>
+
+                    <li><a class="category" href="lists/ghm_tree">Listes</a></li>
+                    <li><a href="lists/ghm_tree">Arbre de groupage</a></li>
+                    <li><a href="lists/ghm_roots">Racines de GHM</a></li>
+                    <li><a href="lists/ghs">GHS</a></li>
+                    <li><a href="lists/diagnoses">Diagnostics</a></li>
+                    <li><a href="lists/exclusions">Exclusions</a></li>
+                    <li><a href="lists/procedures">Actes</a></li>
                 </ul>
             </nav>
         </div>

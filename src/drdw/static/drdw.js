@@ -416,11 +416,11 @@ document.addEventListener('DOMContentLoaded', function(e) {
 });
 
 // ------------------------------------------------------------------------
-// Pages
+// Navigation
 // ------------------------------------------------------------------------
 
 var url_base;
-var url_name;
+var url_page;
 
 function switchMenu(selector, enable)
 {
@@ -441,9 +441,8 @@ function switchPage(page_url, mark_history)
     if (mark_history === undefined)
         mark_history = true;
 
-    removeClass(document.querySelectorAll('.page'), 'active');
-
     var page_url_parts = page_url.split('/');
+    removeClass(document.querySelectorAll('.page'), 'active');
     for (var i = 0; i < page_url_parts.length; i++) {
         var css_selector = '.page_' + page_url_parts.slice(0, i + 1).join('_');
         addClass(document.querySelectorAll(css_selector), 'active');
@@ -455,12 +454,12 @@ function switchPage(page_url, mark_history)
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (menu_anchors[i].getAttribute('href') == page_url &&
+        var active = (menu_anchors[i].getAttribute('href') === page_url &&
                       !menu_anchors[i].classList.contains('category'));
         menu_anchors[i].classList.toggle('active', active);
     }
 
-    if (mark_history && page_url != url_page) {
+    if (mark_history && page_url !== url_page) {
         url_page = page_url;
         window.history.pushState(null, null, url_base + url_page);
     }
@@ -469,57 +468,26 @@ function switchPage(page_url, mark_history)
 }
 
 document.addEventListener('DOMContentLoaded', function(e) {
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        menu_anchors[i].addEventListener('click', (function(e) {
+            switchPage(this.getAttribute('href'));
+            e.preventDefault();
+        }).bind(menu_anchors[i]));
+    }
+
     url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
                document.querySelector('base').getAttribute('href');
     url_page = window.location.pathname.substr(url_base.length);
+    if (url_page == '') {
+        url_page = document.querySelector('#side_menu a').getAttribute('href');
+        window.history.replaceState(null, null, url_base + url_page);
+    }
 
-    downloadJson('get', 'api/pages.json', {}, function(categories) {
-        if (url_page == '') {
-            url_page = categories[0].pages[0].url;
-            window.history.replaceState(null, null, url_base + url_page);
-        }
+    switchPage(url_page);
 
-        var ul = document.querySelector('#side_menu ul');
-        function addMenuItem(name, url)
-        {
-            var li =
-                createElement('li', {},
-                    createElement('a', {href: url, class: url == url_page ? 'active' : null}, name)
-                );
-            ul.appendChild(li);
-        }
-
-        for (var i = 0; i < categories.length; i++) {
-            var pages = categories[i].pages;
-
-            var li =
-                createElement('li', {},
-                    createElement('a', {href: pages[0].url,
-                                        onclick: 'switchPage("' + pages[0].url + '"); return false;',
-                                        class: 'category'},
-                                  categories[i].category)
-                );
-            ul.appendChild(li);
-
-            for (var j = 0; j < pages.length; j++) {
-                var li =
-                    createElement('li', {},
-                        createElement('a', {href: pages[j].url,
-                                            onclick: 'switchPage("' + pages[j].url + '"); return false;'},
-                                      pages[j].name)
-                    );
-                ul.appendChild(li);
-            }
-        }
-
-        switchPage(url_page);
+    window.addEventListener('popstate', function(e) {
+        url_page = window.location.pathname.substr(url_base.length);
+        switchPage(url_page, false);
     });
-});
-
-window.addEventListener('popstate', function(e) {
-    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
-               document.querySelector('base').getAttribute('href');
-    url_name = window.location.pathname.substr(url_base.length);
-
-    switchPage(url_name, false);
 });
