@@ -34,36 +34,40 @@
                     <li><a href="lists/procedures">Actes</a></li>
                 </ul>
             </nav>
+
+            <div id="flash_box"></div>
         </div>
 
         <main>
             <div id="pricing" class="page page_pricing">
                 <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu">
-                    <label>
-                        Date
-                        <input id="pricing_date" type="date" onchange="pricing.updateAndRefresh();"/>
-                    </label>
+                    <svg id="pricing_indexes" width="100%" height="20"></svg>
+
                     <label>
                         Racine de GHM
-                        <select id="pricing_ghm_roots" onchange="pricing.updateAndRefresh();"
+                        <select id="pricing_ghm_roots" onchange="pricing.run();"
                                 style="width: 7em;"></select>
                     </label>
                     <label>
                         Durée maximale
-                        <input id="pricing_max_duration" type="number" onchange="pricing.updateAndRefresh();"
+                        <input id="pricing_max_duration" type="number" onchange="pricing.run();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
                     <label>
-                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.updateAndRefresh();" checked/>
-                        Fusionner les cellules
+                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.run();" checked/>
+                        Fusionner
                     </label>
 
                     <h1></h1>
                 </nav>
 
-                <table class="page page_pricing_table" id="pricing_table"></table>
-                <canvas class="page page_pricing_chart" id="pricing_chart" width="400" height="300"></canvas>
+                <div id="pricing_view">
+                    <div class="log" style="display: none;"></div>
+
+                    <table class="page page_pricing_table" id="pricing_table"></table>
+                    <canvas class="page page_pricing_chart" id="pricing_chart" width="400" height="300"></canvas>
+                </div>
             </div>
         </main>
     </body>

@@ -78,14 +78,36 @@ function downloadJson(method, url, arguments, func)
     var xhr = new XMLHttpRequest();
     xhr.open(method, url, true);
     xhr.responseType = 'json';
-    xhr.onload = function(e) {
-        if (this.status === 200) {
-            func(xhr.response);
-        } else {
-            console.log("Statut de la réponse: %d (%s)", this.status, this.statusText);
-        }
-    };
+    xhr.timeout = 4000;
+    xhr.onload = function(e) { func(this.status, xhr.response); };
+    xhr.onerror = function(e) { func(503); };
+    xhr.ontimeout = function(e) { func(504); };
     xhr.send();
+}
+
+// ------------------------------------------------------------------------
+// Progression and errors
+// ------------------------------------------------------------------------
+
+function flashMessage(message)
+{
+    var flash_box = document.querySelector('#flash_box');
+
+    flash_box.textContent = message;
+
+    flash_box.classList.remove('flash');
+    flash_box.classList.add('flash');
+    if (flashMessage.current_timeout !== undefined)
+        window.clearTimeout(flashMessage.current_timeout);
+    flashMessage.current_timeout = setTimeout(function() { flash_box.classList.remove('flash'); }, 6000);
+}
+
+function markOutdated(selector, mark)
+{
+    var elements = document.querySelectorAll(selector);
+    for (var i = 0; i < elements.length; i++) {
+        elements[i].classList.toggle('outdated', mark);
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -122,8 +144,8 @@ function switchPage(page_url, mark_history)
     }
 
     var page_module = window[page_url_parts[0]];
-    if (page_module !== undefined && page_module.updateAndRefresh !== undefined)
-        page_module.updateAndRefresh();
+    if (page_module !== undefined && page_module.run !== undefined)
+        page_module.run();
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
@@ -140,7 +162,8 @@ function switchPage(page_url, mark_history)
     switchMenu('#side_menu', false);
 }
 
-document.addEventListener('DOMContentLoaded', function(e) {
+function initNavigation()
+{
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
         menu_anchors[i].addEventListener('click', (function(e) {
@@ -163,4 +186,10 @@ document.addEventListener('DOMContentLoaded', function(e) {
         url_page = window.location.pathname.substr(url_base.length);
         switchPage(url_page, false);
     });
-});
+}
+
+if (document.readyState === 'complete') {
+    initNavigation();
+} else {
+    document.addEventListener('DOMContentLoaded', initNavigation);
+}
