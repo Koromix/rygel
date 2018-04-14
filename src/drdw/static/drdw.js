@@ -89,7 +89,82 @@ function downloadJson(method, url, arguments, func)
     xhr.send();
 }
 
-var modules = {};
+// ------------------------------------------------------------------------
+// Navigation
+// ------------------------------------------------------------------------
+
+var url_base;
+var url_page;
+
+function switchMenu(selector, enable)
+{
+    var el = document.querySelector(selector);
+    if (enable === undefined)
+        enable = !el.classList.contains('active');
+    if (enable) {
+        var els = document.querySelectorAll('nav');
+        for (var i = 0; i < els.length; i++)
+            els[i].classList.toggle('active', els[i] == el);
+    } else {
+        el.classList.remove('active');
+    }
+}
+
+function switchPage(page_url, mark_history)
+{
+    if (mark_history === undefined)
+        mark_history = true;
+
+    var page_url_parts = page_url.split('/');
+    removeClass(document.querySelectorAll('.page'), 'active');
+    for (var i = 0; i < page_url_parts.length; i++) {
+        var css_selector = '.page_' + page_url_parts.slice(0, i + 1).join('_');
+        addClass(document.querySelectorAll(css_selector), 'active');
+    }
+
+    var page_module = window[page_url_parts[0]];
+    if (page_module !== undefined && page_module.updateAndRefresh !== undefined)
+        page_module.updateAndRefresh();
+
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        var active = (menu_anchors[i].getAttribute('href') === page_url &&
+                      !menu_anchors[i].classList.contains('category'));
+        menu_anchors[i].classList.toggle('active', active);
+    }
+
+    if (mark_history && page_url !== url_page) {
+        url_page = page_url;
+        window.history.pushState(null, null, url_base + url_page);
+    }
+
+    switchMenu('#side_menu', false);
+}
+
+document.addEventListener('DOMContentLoaded', function(e) {
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        menu_anchors[i].addEventListener('click', (function(e) {
+            switchPage(this.getAttribute('href'));
+            e.preventDefault();
+        }).bind(menu_anchors[i]));
+    }
+
+    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
+               document.querySelector('base').getAttribute('href');
+    url_page = window.location.pathname.substr(url_base.length);
+    if (url_page == '') {
+        url_page = document.querySelector('#side_menu a').getAttribute('href');
+        window.history.replaceState(null, null, url_base + url_page);
+    }
+
+    switchPage(url_page);
+
+    window.addEventListener('popstate', function(e) {
+        url_page = window.location.pathname.substr(url_base.length);
+        switchPage(url_page, false);
+    });
+});
 
 // ------------------------------------------------------------------------
 // Pricing
@@ -101,55 +176,21 @@ var pricing = {};
     var ghm_roots = [];
     var ghm_roots_map = {};
     var chart = null;
-    var table_ready = false;
-    var chart_ready = false;
 
-    function updateAndRefresh(force)
+    function updateAndRefresh()
     {
-        if (force === undefined)
-            force = true;
-
         var date = document.querySelector('#pricing_date').value;
-
-        if (force || date !== database_date) {
-            table_ready = false;
-            chart_ready = false;
-        }
 
         if (date !== database_date) {
             update(date, function() {
                 refreshGhmRoots();
-                refreshView();
+                refresh();
             });
         } else {
-            refreshView();
+            refresh();
         }
     }
     this.updateAndRefresh = updateAndRefresh;
-
-    function refreshView()
-    {
-        var ghm_root_info = ghm_roots_map[document.querySelector('#pricing_ghm_roots').value];
-        var merge_cells = document.querySelector('#pricing_merge_cells').checked;
-        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
-
-        var h1 = document.querySelector('#pricing_menu > h1');
-        h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
-
-        if (document.querySelector('.page_pricing_table').classList.contains('active') && !table_ready) {
-            var old_table = document.querySelector('#pricing_table');
-            var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
-            cloneAttributes(old_table, table);
-            old_table.parentNode.replaceChild(table, old_table);
-            table_ready = true;
-        }
-
-        if (document.querySelector('.page_pricing_chart').classList.contains('active') && !chart_ready) {
-            var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
-            chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
-            chart_ready = true;
-        }
-    }
 
     function update(date, func)
     {
@@ -166,6 +207,28 @@ var pricing = {};
             if (func !== undefined)
                 func();
         });
+    }
+
+    function refresh()
+    {
+        var ghm_root_info = ghm_roots_map[document.querySelector('#pricing_ghm_roots').value];
+        var merge_cells = document.querySelector('#pricing_merge_cells').checked;
+        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
+
+        var h1 = document.querySelector('#pricing_menu > h1');
+        h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
+
+        if (document.querySelector('.page_pricing_table').classList.contains('active')) {
+            var old_table = document.querySelector('#pricing_table');
+            var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
+            cloneAttributes(old_table, table);
+            old_table.parentNode.replaceChild(table, old_table);
+        }
+
+        if (document.querySelector('.page_pricing_chart').classList.contains('active')) {
+            var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
+            chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
+        }
     }
 
     function refreshGhmRoots()
@@ -406,88 +469,10 @@ var pricing = {};
         }
     }
 }).call(pricing);
-modules['pricing'] = pricing;
 
 document.addEventListener('DOMContentLoaded', function(e) {
     var date_input = document.querySelector('#pricing_date');
     if (!date_input.value) {
         date_input.valueAsDate = new Date();
     }
-});
-
-// ------------------------------------------------------------------------
-// Navigation
-// ------------------------------------------------------------------------
-
-var url_base;
-var url_page;
-
-function switchMenu(selector, enable)
-{
-    var el = document.querySelector(selector);
-    if (enable === undefined)
-        enable = !el.classList.contains('active');
-    if (enable) {
-        var els = document.querySelectorAll('nav');
-        for (var i = 0; i < els.length; i++)
-            els[i].classList.toggle('active', els[i] == el);
-    } else {
-        el.classList.remove('active');
-    }
-}
-
-function switchPage(page_url, mark_history)
-{
-    if (mark_history === undefined)
-        mark_history = true;
-
-    var page_url_parts = page_url.split('/');
-    removeClass(document.querySelectorAll('.page'), 'active');
-    for (var i = 0; i < page_url_parts.length; i++) {
-        var css_selector = '.page_' + page_url_parts.slice(0, i + 1).join('_');
-        addClass(document.querySelectorAll(css_selector), 'active');
-    }
-
-    var page_module = modules[page_url_parts[0]];
-    if (page_module !== undefined)
-        page_module.updateAndRefresh(false);
-
-    var menu_anchors = document.querySelectorAll('#side_menu a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (menu_anchors[i].getAttribute('href') === page_url &&
-                      !menu_anchors[i].classList.contains('category'));
-        menu_anchors[i].classList.toggle('active', active);
-    }
-
-    if (mark_history && page_url !== url_page) {
-        url_page = page_url;
-        window.history.pushState(null, null, url_base + url_page);
-    }
-
-    switchMenu('#side_menu', false);
-}
-
-document.addEventListener('DOMContentLoaded', function(e) {
-    var menu_anchors = document.querySelectorAll('#side_menu a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        menu_anchors[i].addEventListener('click', (function(e) {
-            switchPage(this.getAttribute('href'));
-            e.preventDefault();
-        }).bind(menu_anchors[i]));
-    }
-
-    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
-               document.querySelector('base').getAttribute('href');
-    url_page = window.location.pathname.substr(url_base.length);
-    if (url_page == '') {
-        url_page = document.querySelector('#side_menu a').getAttribute('href');
-        window.history.replaceState(null, null, url_base + url_page);
-    }
-
-    switchPage(url_page);
-
-    window.addEventListener('popstate', function(e) {
-        url_page = window.location.pathname.substr(url_base.length);
-        switchPage(url_page, false);
-    });
 });
