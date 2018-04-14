@@ -2546,10 +2546,8 @@ overflow:
 
 #ifdef _WIN32
     #define PATH_SEPARATORS "\\/"
-    #define FOPEN_COMMON_FLAGS
 #else
     #define PATH_SEPARATORS "/"
-    #define FOPEN_COMMON_FLAGS "e"
 #endif
 
 CompressionType GetPathCompression(const char *filename);
@@ -2581,6 +2579,14 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator 
 
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
+
+enum class OpenFileMode {
+    Read = 1 << 0,
+    Write = 1 << 1,
+    Append = 1 << 2
+};
+
+FILE *OpenFile(const char *path, OpenFileMode mode);
 
 // ------------------------------------------------------------------------
 // Tasks

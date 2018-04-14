@@ -1283,6 +1283,26 @@ Size GetPathExtension(const char *filename, Span<char> out_buf,
     return copy_len;
 }
 
+FILE *OpenFile(const char *path, OpenFileMode mode)
+{
+    char mode_str[8] = {};
+    switch (mode) {
+        case OpenFileMode::Read: { strcpy(mode_str, "rb"); } break;
+        case OpenFileMode::Write: { strcpy(mode_str, "wb"); } break;
+        case OpenFileMode::Append: { strcpy(mode_str, "ab"); } break;
+    }
+#ifndef _WIN32
+    // Set the O_CLOEXEC flag
+    strcat(mode_str, "e");
+#endif
+
+    FILE *fp = fopen(path, mode_str);
+    if (!fp) {
+        LogError("Cannot open '%1': %2", path, strerror(errno));
+    }
+    return fp;
+}
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------
@@ -1502,6 +1522,8 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
     Close();
+    if (!fp)
+        return false;
 
     DEFER_N(error_guard) {
         ReleaseResources();
@@ -1535,7 +1557,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     if (!InitDecompressor(compression_type))
         return false;
     source.type = SourceType::File;
-    source.u.fp = fopen(filename, "rb" FOPEN_COMMON_FLAGS);
+    source.u.fp = OpenFile(filename, OpenFileMode::Read);
     if (!source.u.fp) {
         LogError("Cannot open file '%1': %2", filename, strerror(errno));
         error = true;
@@ -2004,6 +2026,8 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
     Close();
+    if (!fp)
+        return false;
 
     DEFER_N(error_guard) {
         ReleaseResources();
@@ -2038,7 +2062,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     if (!InitCompressor(compression_type))
         return false;
     dest.type = DestinationType::File;
-    dest.u.fp = fopen(filename, "wb" FOPEN_COMMON_FLAGS);
+    dest.u.fp = OpenFile(filename, OpenFileMode::Write);
     if (!dest.u.fp) {
         LogError("Cannot open file '%1': %2", filename, strerror(errno));
         return false;
