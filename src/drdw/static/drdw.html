@@ -42,7 +42,12 @@
             <div id="pricing" class="page page_pricing">
                 <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu">
-                    <svg id="pricing_indexes" width="100%" height="50"></svg>
+                    <svg id="pricing_indexes">
+                        <text x="0" y="25" text-anchor="start" onclick="pricing.prevIndex();" style="cursor: pointer; font-size: 1.5em;">≪</text>
+                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
+                        <g></g>
+                        <text x="100%" y="25" text-anchor="end" onclick="pricing.nextIndex();" style="cursor: pointer; font-size: 1.5em;">≫</text>
+                    </svg>
 
                     <label>
                         Racine de GHM

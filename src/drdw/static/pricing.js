@@ -24,26 +24,28 @@ var pricing = {};
             } break;
 
             case 'view': {
-                if (current_index !== target_index) {
-                    refreshIndexes(target_index);
+                var index = target_index;
+                if (current_index !== index) {
+                    refreshIndexes(index);
 
-                    if (!indexes[target_index].loaded) {
+                    markOutdated('#pricing_view', true);
+                    if (!indexes[index].loaded) {
                         update_state = 'busy';
-                        markOutdated('#pricing_view', true);
-                        updatePriceMap(target_index, function() {
-                            current_index = target_index;
+                        updatePriceMap(index, function() {
+                            current_index = index;
                             refreshGhmRoots();
-                            refreshView();
                             update_state = 'view';
-                            markOutdated('#pricing_view', false);
+
+                            run();
                         });
                     } else {
-                        current_index = target_index;
+                        current_index = index;
                         refreshGhmRoots();
-                        refreshView();
+                        run();
                     }
                 } else {
                     refreshView();
+                    markOutdated('#pricing_view', false);
                 }
             } break;
 
@@ -51,6 +53,24 @@ var pricing = {};
         }
     }
     this.run = run;
+
+    function prevIndex()
+    {
+        if (target_index <= 0)
+            return;
+        target_index--;
+        run();
+    }
+    this.prevIndex = prevIndex;
+
+    function nextIndex()
+    {
+        if (target_index >= indexes.length - 1)
+            return;
+        target_index++;
+        run();
+    }
+    this.nextIndex = nextIndex;
 
     function updateIndexes(func)
     {
@@ -156,10 +176,7 @@ var pricing = {};
 
     function refreshIndexes(view_index)
     {
-        var svg = createElementNS('svg', 'svg', {},
-            createElementNS('svg', 'line', {x1: '2%', y1: 20, x2: '98%', y2: 20,
-                                            style: 'stroke: #888; stroke-width: 1'})
-        );
+        var g = createElementNS('svg', 'g', {});
 
         if (indexes.length >= 2) {
             var first_date = new Date(indexes[0].begin_date);
@@ -170,7 +187,7 @@ var pricing = {};
             for (var i = 0; i < indexes.length; i++) {
                 var date = new Date(indexes[i].begin_date);
 
-                var x = (6.0 + (date - first_date) / max_delta * 88.0).toFixed(1) + '%';
+                var x = (9.0 + (date - first_date) / max_delta * 82.0).toFixed(1) + '%';
                 var radius = indexes[i].changed_prices ? 5 : 4;
                 if (i == view_index) {
                     var color = '#ff8900';
@@ -193,7 +210,7 @@ var pricing = {};
                     createElementNS('svg', 'title', {}, indexes[i].begin_date)
                 );
                 node.addEventListener('click', click_function);
-                svg.appendChild(node);
+                g.appendChild(node);
 
                 if (indexes[i].changed_prices) {
                     var text_y = text_above ? 10 : 40;
@@ -203,14 +220,13 @@ var pricing = {};
                                                {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
                                                 style: 'cursor: pointer;'}, indexes[i].begin_date);
                     text.addEventListener('click', click_function);
-                    svg.appendChild(text);
+                    g.appendChild(text);
                 }
             }
         }
 
-        var old_svg = document.querySelector('#pricing_indexes');
-        cloneAttributes(old_svg, svg);
-        old_svg.parentNode.replaceChild(svg, old_svg);
+        var old_g = document.querySelector('#pricing_indexes > g');
+        old_g.parentNode.replaceChild(g, old_g);
     }
 
     function refreshGhmRoots()
