@@ -275,22 +275,11 @@ var pricing = {};
                 data: data,
                 options: {
                     responsive: true,
-                    tooltips: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    hover: {
-                        mode: 'x',
-                        intersect: true
-                    },
+                    tooltips: {mode: 'index', intersect: false},
+                    hover: {mode: 'x', intersect: true},
                     elements: {
-                        line: {
-                            tension: 0
-                        },
-                        point: {
-                            radius: 0,
-                            hitRadius: 0
-                        }
+                        line: {tension: 0},
+                        point: {radius: 0, hitRadius: 0}
                     }
                 },
             });
