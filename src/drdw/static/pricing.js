@@ -175,7 +175,7 @@ var pricing = {};
                 if (i == view_index) {
                     var color = '#ff8900';
                 } else if (indexes[i].changed_prices) {
-                    var color = '#004165';
+                    var color = '#000';
                 } else {
                     var color = '#888';
                 }
