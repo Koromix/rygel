@@ -81,6 +81,7 @@ var pricing = {};
         ghm_roots = [];
 
         downloadJson('get', 'api/indexes.json', {}, function(status, json) {
+            data_error = null;
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
@@ -107,6 +108,7 @@ var pricing = {};
         downloadJson('get', 'api/price_map.json?date=' + begin_date, {}, function(status, json) {
             ghm_roots = [];
 
+            data_error = null;
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
