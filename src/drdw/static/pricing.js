@@ -138,39 +138,55 @@ var pricing = {};
     function refreshIndexes(view_date)
     {
         var svg = createElementNS('svg', 'svg', {},
-            createElementNS('svg', 'line', {x1: '0%', y1: 5, x2: '100%', y2: 5,
+            createElementNS('svg', 'line', {x1: '2%', y1: 20, x2: '98%', y2: 20,
                                             style: 'stroke: #888; stroke-width: 1'})
         );
 
         if (indexes.length >= 2) {
             var start_date = new Date(indexes[0].begin_date);
             var end_date = new Date(indexes[indexes.length - 1].begin_date);
-            end_date.setDate(end_date.getDate() + 182);
             var max_delta = end_date - start_date;
 
+            var text_above = true;
             for (var i = 0; i < indexes.length; i++) {
                 var date = new Date(indexes[i].begin_date);
 
-                var x = (2.0 + (date - start_date) / max_delta * 96.0).toFixed(1) + '%';
+                var x = (6.0 + (date - start_date) / max_delta * 88.0).toFixed(1) + '%';
                 var radius = indexes[i].changed_prices ? 5 : 4;
                 if (view_date === indexes[i].begin_date) {
-                    var color = '#FF0000';
+                    var color = '#ff8900';
                 } else if (indexes[i].changed_prices) {
                     var color = '#004165';
                 } else {
                     var color = '#888';
                 }
-
-                var node = createElementNS('svg', 'circle',
-                                           {cx: x, cy: 5, r: radius, fill: color},
-                    createElementNS('svg', 'title', {}, indexes[i].begin_date)
-                );
-                node.addEventListener('click', (function(e) {
+                var click_function = (function(e) {
                     target_date = this.querySelector('title').textContent;
                     run();
-                }).bind(node));
+                }).bind(node);
 
+                var node = createElementNS('svg', 'circle',
+                                           {cx: x, cy: 20, r: radius, fill: color,
+                                            style: 'cursor: pointer;'},
+                    createElementNS('svg', 'title', {}, indexes[i].begin_date)
+                );
+                var click_function = (function(e) {
+                    target_date = this.querySelector('title').textContent;
+                    run();
+                }).bind(node);
+                node.addEventListener('click', click_function);
                 svg.appendChild(node);
+
+                if (indexes[i].changed_prices) {
+                    var text_y = text_above ? 10 : 40;
+                    text_above = !text_above;
+
+                    var text = createElementNS('svg', 'text',
+                                               {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
+                                                style: 'cursor: pointer;'}, indexes[i].begin_date);
+                    text.addEventListener('click', click_function);
+                    svg.appendChild(text);
+                }
             }
         }
 
