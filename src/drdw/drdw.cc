@@ -356,7 +356,8 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
 
     Span<const uint8_t> resource_data = routes.FindValue(url, {});
     if (!resource_data.IsValid())
-        return CreateErrorPage(404);
+        resource_data = routes.FindValue("/", {});
+        // return CreateErrorPage(404);
 
     MHD_Response *response;
     if (compression_type != CompressionType::None) {

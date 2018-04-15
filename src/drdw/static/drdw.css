@@ -32,6 +32,7 @@ body {
     margin: 1em auto;
 }
 
+.hide:not(.active) { display: none !important; }
 .log { color: red; }
 #flash_box {
     display: none;

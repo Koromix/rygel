@@ -22,8 +22,8 @@
                 <img id="logo" src="static/logo.png" alt="drdw logo"/>
                 <ul>
                     <li><a class="category" href="pricing/table">Tarifs</a></li>
-                    <li><a href="pricing/table">Table</a></li>
-                    <li><a href="pricing/chart">Graphique</a></li>
+                    <li><a href="pricing/table" onclick="pricing.route({mode: 'table'}); return false;">Table</a></li>
+                    <li><a href="pricing/chart" onclick="pricing.route({mode: 'chart'}); return false;">Graphique</a></li>
 
                     <li><a class="category" href="lists/ghm_tree">Listes</a></li>
                     <li><a href="lists/ghm_tree">Arbre de groupage</a></li>
@@ -43,24 +43,24 @@
                 <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu">
                     <svg id="pricing_indexes">
-                        <text x="0" y="25" text-anchor="start" onclick="pricing.prevIndex();" style="cursor: pointer; font-size: 1.5em;">≪</text>
+                        <text x="0" y="25" text-anchor="start" onclick="pricing.moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
                         <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
                         <g></g>
-                        <text x="100%" y="25" text-anchor="end" onclick="pricing.nextIndex();" style="cursor: pointer; font-size: 1.5em;">≫</text>
+                        <text x="100%" y="25" text-anchor="end" onclick="pricing.moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
                     </svg>
 
                     <label>
                         Racine de GHM
-                        <select id="pricing_ghm_roots" onchange="pricing.run();"
+                        <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
                                 style="width: 7em;"></select>
                     </label>
                     <label>
                         Durée maximale
-                        <input id="pricing_max_duration" type="number" onchange="pricing.run();"
+                        <input id="pricing_max_duration" type="number" onchange="pricing.route();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
                     <label>
-                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.run();" checked/>
+                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.route();" checked/>
                         Fusionner
                     </label>
 
@@ -70,8 +70,8 @@
                 <div id="pricing_view">
                     <div class="log" style="display: none;"></div>
 
-                    <table class="page page_pricing_table" id="pricing_table"></table>
-                    <canvas class="page page_pricing_chart" id="pricing_chart" width="400" height="300"></canvas>
+                    <table id="pricing_table" class="hide" ></table>
+                    <canvas id="pricing_chart" class="hide" width="400" height="300"></canvas>
                 </div>
             </div>
         </main>

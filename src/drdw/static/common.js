@@ -136,47 +136,36 @@ function switchPage(page_url, mark_history)
     if (mark_history === undefined)
         mark_history = true;
 
-    var page_url_parts = page_url.split('/');
-    removeClass(document.querySelectorAll('.page'), 'active');
-    for (var i = 0; i < page_url_parts.length; i++) {
-        var css_selector = '.page_' + page_url_parts.slice(0, i + 1).join('_');
-        addClass(document.querySelectorAll(css_selector), 'active');
-    }
-
-    var page_module = window[page_url_parts[0]];
-    if (page_module !== undefined && page_module.run !== undefined)
-        page_module.run();
-
-    var menu_anchors = document.querySelectorAll('#side_menu a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (menu_anchors[i].getAttribute('href') === page_url &&
-                      !menu_anchors[i].classList.contains('category'));
-        menu_anchors[i].classList.toggle('active', active);
-    }
-
     if (mark_history && page_url !== url_page) {
         url_page = page_url;
         window.history.pushState(null, null, url_base + url_page);
     }
 
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        var active = (page_url.startsWith(menu_anchors[i].getAttribute('href')) &&
+                      !menu_anchors[i].classList.contains('category'));
+        menu_anchors[i].classList.toggle('active', active);
+    }
     switchMenu('#side_menu', false);
+
+    var module_name = page_url.split('/')[0];
+    removeClass(document.querySelectorAll('.page'), 'active');
+    addClass(document.querySelectorAll('.page_' + module_name), 'active');
+
+    var module = window[module_name];
+    if (module !== undefined && module.run !== undefined)
+        module.run();
 }
 
 function initNavigation()
 {
-    var menu_anchors = document.querySelectorAll('#side_menu a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        menu_anchors[i].addEventListener('click', (function(e) {
-            switchPage(this.getAttribute('href'));
-            e.preventDefault();
-        }).bind(menu_anchors[i]));
-    }
-
     url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
                document.querySelector('base').getAttribute('href');
     url_page = window.location.pathname.substr(url_base.length);
     if (url_page === '') {
-        url_page = menu_anchors[0].getAttribute('href');
+        var first_anchor = document.querySelector('#side_menu a');
+        url_page = first_anchor.getAttribute('href');
         window.history.replaceState(null, null, url_base + url_page);
     }
 
