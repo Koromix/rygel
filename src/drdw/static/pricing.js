@@ -3,11 +3,11 @@ var pricing = {};
     var update_state = 'indexes';
     var data_error = null;
 
-    var indexes = null;
-    var target_date = null;
-    var database_date = null;
-    var ghm_roots = [];
-    var ghm_roots_map = {};
+    // Reset in updateIndexes()
+    var indexes;
+    var target_index;
+    var current_index;
+    var ghm_roots_map;
 
     var chart = null;
 
@@ -17,25 +17,31 @@ var pricing = {};
             case 'indexes': {
                 update_state = 'busy';
                 updateIndexes(function() {
-                    target_date = indexes[indexes.length - 1].begin_date;
+                    target_index = indexes.length - 1;
                     update_state = 'view';
                     run();
                 });
             } break;
 
             case 'view': {
-                if (database_date !== target_date) {
-                    refreshIndexes(target_date);
+                if (current_index !== target_index) {
+                    refreshIndexes(target_index);
 
-                    update_state = 'busy';
-                    markOutdated('#pricing_view', true);
-                    updatePriceMap(target_date, function() {
-                        database_date = target_date;
+                    if (!indexes[target_index].loaded) {
+                        update_state = 'busy';
+                        markOutdated('#pricing_view', true);
+                        updatePriceMap(target_index, function() {
+                            current_index = target_index;
+                            refreshGhmRoots();
+                            refreshView();
+                            update_state = 'view';
+                            markOutdated('#pricing_view', false);
+                        });
+                    } else {
+                        current_index = target_index;
                         refreshGhmRoots();
                         refreshView();
-                        markOutdated('#pricing_view', false);
-                        update_state = 'view';
-                    });
+                    }
                 } else {
                     refreshView();
                 }
@@ -48,11 +54,19 @@ var pricing = {};
 
     function updateIndexes(func)
     {
+        indexes = [];
+        target_index = -1;
+        current_index = -1;
+        ghm_roots_map = {};
+        ghm_roots = [];
+
         downloadJson('get', 'api/indexes.json', {}, function(status, json) {
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
                         indexes = json;
+                        for (var i = 0; i < indexes.length; i++)
+                            indexes[i].loaded = false;
                     } else {
                         data_error = 'Aucune table disponible';
                     }
@@ -67,19 +81,24 @@ var pricing = {};
         });
     }
 
-    function updatePriceMap(date, func)
+    function updatePriceMap(index, func)
     {
-        downloadJson('get', 'api/price_map.json?date=' + date, {}, function(status, json) {
+        var begin_date = indexes[index].begin_date;
+        downloadJson('get', 'api/price_map.json?date=' + begin_date, {}, function(status, json) {
             ghm_roots = [];
-            ghm_roots_map = {};
 
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
                         for (var i = 0; i < json.length; i++) {
-                            ghm_roots.push(json[i].ghm_root);
-                            ghm_roots_map[json[i].ghm_root] = json[i];
+                            var ghm_root_info = ghm_roots_map[json[i].ghm_root];
+                            if (ghm_root_info === undefined) {
+                                ghm_root_info = Array.apply(null, Array(indexes.length));
+                                ghm_roots_map[json[i].ghm_root] = ghm_root_info;
+                            }
+                            ghm_root_info[index] = json[i];
                         }
+                        indexes[index].loaded = true;
                     } else {
                         data_error = 'Aucune racine de GHM dans cette table';
                     }
@@ -106,18 +125,18 @@ var pricing = {};
         var old_table = document.querySelector('#pricing_table');
         var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
 
-        if (ghm_root_info !== undefined) {
+        if (ghm_root_info[current_index]) {
             log.style.display = 'none';
-            h1.innerText = ghm_root_info.ghm_root + ' : ' + ghm_root_info.ghm_root_desc;
+            h1.innerText = ghm_root_info[current_index].ghm_root + ' : ' + ghm_root_info[current_index].ghm_root_desc;
 
             if (document.querySelector('.page_pricing_table').classList.contains('active')) {
-                var table = createTable(ghm_root_info.ghs, merge_cells, max_duration);
+                var table = createTable(ghm_root_info, current_index, merge_cells, max_duration);
                 cloneAttributes(old_table, table);
                 old_table.parentNode.replaceChild(table, old_table);
             }
 
             if (document.querySelector('.page_pricing_chart').classList.contains('active')) {
-                chart = refreshChart(chart, chart_ctx, ghm_root_info.ghs, max_duration);
+                chart = refreshChart(chart, chart_ctx, ghm_root_info, current_index, max_duration);
             }
         } else {
             log.style.display = 'block';
@@ -135,7 +154,7 @@ var pricing = {};
         }
     }
 
-    function refreshIndexes(view_date)
+    function refreshIndexes(view_index)
     {
         var svg = createElementNS('svg', 'svg', {},
             createElementNS('svg', 'line', {x1: '2%', y1: 20, x2: '98%', y2: 20,
@@ -143,37 +162,36 @@ var pricing = {};
         );
 
         if (indexes.length >= 2) {
-            var start_date = new Date(indexes[0].begin_date);
-            var end_date = new Date(indexes[indexes.length - 1].begin_date);
-            var max_delta = end_date - start_date;
+            var first_date = new Date(indexes[0].begin_date);
+            var last_date = new Date(indexes[indexes.length - 1].begin_date);
+            var max_delta = last_date - first_date;
 
             var text_above = true;
             for (var i = 0; i < indexes.length; i++) {
                 var date = new Date(indexes[i].begin_date);
 
-                var x = (6.0 + (date - start_date) / max_delta * 88.0).toFixed(1) + '%';
+                var x = (6.0 + (date - first_date) / max_delta * 88.0).toFixed(1) + '%';
                 var radius = indexes[i].changed_prices ? 5 : 4;
-                if (view_date === indexes[i].begin_date) {
+                if (i == view_index) {
                     var color = '#ff8900';
                 } else if (indexes[i].changed_prices) {
                     var color = '#004165';
                 } else {
                     var color = '#888';
                 }
-                var click_function = (function(e) {
-                    target_date = this.querySelector('title').textContent;
-                    run();
-                }).bind(node);
+                var click_function = (function() {
+                    var index = i;
+                    return (function(e) {
+                        target_index = index;
+                        run();
+                    });
+                })();
 
                 var node = createElementNS('svg', 'circle',
                                            {cx: x, cy: 20, r: radius, fill: color,
                                             style: 'cursor: pointer;'},
                     createElementNS('svg', 'title', {}, indexes[i].begin_date)
                 );
-                var click_function = (function(e) {
-                    target_date = this.querySelector('title').textContent;
-                    run();
-                }).bind(node);
                 node.addEventListener('click', click_function);
                 svg.appendChild(node);
 
@@ -200,18 +218,22 @@ var pricing = {};
         var el = document.querySelector('#pricing_ghm_roots');
         var previous_value = el.value;
         el.innerHTML = '';
+
+        var ghm_roots = Object.keys(ghm_roots_map).sort();
         for (var i = 0; i < ghm_roots.length; i++) {
             var opt = document.createElement('option');
             opt.setAttribute('value', ghm_roots[i]);
-            opt.textContent = ghm_roots[i];
+            opt.textContent = ghm_roots[i] + (ghm_roots_map[ghm_roots[i]][current_index] ? '' : ' (?)');
             el.appendChild(opt);
         }
         if (previous_value)
             el.value = previous_value;
     }
 
-    function refreshChart(chart, chart_ctx, ghs, max_duration)
+    function refreshChart(chart, chart_ctx, ghm_root_info, index, max_duration)
     {
+        var ghs = ghm_root_info[index].ghs;
+
         function ghsLabel(ghs)
         {
             return '' + ghs.ghs + (ghs.conditions.length ? '*' : '') + ' (' + ghs.ghm + ')';
@@ -266,8 +288,24 @@ var pricing = {};
             data.datasets.push(dataset);
         }
 
+        // Calculate maximum price across all (loaded) indexes to stabilize Y axis
+        var max_price = 0.0;
+        for (var i = 0; i < ghm_root_info.length; i++) {
+            if (!ghm_root_info[i])
+                continue;
+
+            for (var j = 0; j < ghm_root_info[i].ghs.length; j++) {
+                p = computePrice(ghm_root_info[i].ghs[j], max_duration - 1);
+                if (p && p[0] > max_price)
+                    max_price = p[0];
+            }
+        }
+        max_price /= 100;
+
         if (chart) {
             chart.data = data;
+            chart.options.scales.yAxes[0].ticks.suggestedMin = 0;
+            chart.options.scales.yAxes[0].ticks.suggestedMax = max_price;
             chart.update({duration: 0});
         } else {
             chart = new Chart(chart_ctx, {
@@ -280,6 +318,11 @@ var pricing = {};
                     elements: {
                         line: {tension: 0},
                         point: {radius: 0, hitRadius: 0}
+                    },
+                    scales: {
+                        yAxes: [
+                            {ticks: {suggestedMin: 0, suggestedMax: max_price}}
+                        ]
                     }
                 },
             });
@@ -288,8 +331,10 @@ var pricing = {};
         return chart;
     }
 
-    function createTable(ghs, merge_cells, max_duration)
+    function createTable(ghm_root_info, index, merge_cells, max_duration)
     {
+        var ghs = ghm_root_info[index].ghs;
+
         if (merge_cells === undefined)
             merge_cells = true;
         if (max_duration === undefined)
