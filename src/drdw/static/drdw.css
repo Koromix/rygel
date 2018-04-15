@@ -56,7 +56,6 @@ body {
     100% { filter: grayscale(100%) opacity(50%); }
 }
 
-
 .page:not(.active) { display: none !important; }
 
 #pricing_menu {
@@ -98,18 +97,18 @@ body {
     background: #969696;
     text-align: right;
 }
-#pricing_table td.desc, #pricing_table tr.desc td { background: #ffc634; }
-#pricing_table td.conditions, #pricing_table tr.conditions td {
+#pricing_table .desc { background: #ffc634; }
+#pricing_table .conditions {
     background: #b70202;
     color: white;
 }
-#pricing_table td.price, #pricing_table tr.price td { background: #68dc33; }
-#pricing_table td.exb, #pricing_table tr.exb td { background: #ff8900; }
-#pricing_table td.exh, #pricing_table tr.exh td {
+#pricing_table .price { background: #68dc33; }
+#pricing_table .exb { background: #ff8900; }
+#pricing_table .exh {
     background: #6b1b6a;
     color: #b4cdff;
 }
-#pricing_table td.age, #pricing_table tr.age td { background: #99ffff; }
+#pricing_table .age { background: #99ffff; }
 
 @media screen and (min-width: 801px) {
     a.deploy { display: none; }
@@ -121,8 +120,8 @@ body {
         min-height: 100%;
         width: 200px;
     }
-    #side_menu a { padding: 0.5em; }
-    #side_menu a:not(.category) { padding-left: 2em; }
+    #side_menu a { padding: 0.5em 0.5em 0.5em 2em; }
+    #side_menu a.category { padding-left: 0.5em; }
     #flash_box {
         border-top: 1px solid #000;
         padding: 0.5em;
@@ -142,7 +141,7 @@ body {
         filter: invert(10%);
         -webkit-filter: invert(10%);
     }
-    #pricing_table tr:first-child th:first-child { width: 90px; }
+    #pricing_table tr th:first-child { width: 90px; }
 }
 
 @media screen and (max-width: 800px) {
@@ -175,13 +174,19 @@ body {
         z-index: 10;
     }
     #side_menu a {
+        display: none;
         height: 40px;
         padding: 10px 10px 10px 52px;
         color: white;
+        font-style: italic;
         font-size: 16px;
     }
-    #side_menu a:not(.active) { font-style: italic; }
-    #side_menu:not(.active) a:not(.active) { display: none; }
+    #side_menu a.category { font-style: normal; }
+    #side_menu a.active {
+        display: block;
+        font-style: normal;
+    }
+    #side_menu.active a { display: block; }
     #flash_box {
         position: fixed;
         top: 45px;
@@ -196,6 +201,7 @@ body {
     main { padding-top: 40px; }
 
     #pricing_menu {
+        display: none;
         position: fixed;
         left: 0;
         top: 40px;
@@ -206,13 +212,13 @@ body {
         background: #eeeeee;
         z-index: 1;
     }
+    #pricing_menu.active { display: block; }
     #pricing a.deploy {
         position: fixed;
         top: 0;
         left: calc(100vw - 42px);
         z-index: 20;
     }
-    #pricing_menu:not(.active) { display: none; }
     #pricing_menu input, #pricing_menu select { float: right; }
     #pricing_menu label {
         display: block;
@@ -220,7 +226,9 @@ body {
         text-align: left;
     }
 
-    #pricing_table tr:first-child th:first-child { width: 80px; }
-    #pricing_table tr *:first-child { border-left: 0; }
-    #pricing_table tr *:last-child { border-right: 0; }
+    #pricing_table tr th:first-child {
+        border-left: 0;
+        width: 80px;
+    }
+    #pricing_table tr td:last-child { border-right: 0; }
 }
