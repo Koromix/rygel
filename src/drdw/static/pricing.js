@@ -424,7 +424,7 @@ var pricing = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
-        appendRow(thead, 'GHS', function(col) { return ['GHS ' + col.ghs, 'desc', true]; });
+        appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, 'desc', true]; });
         appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc', true]; });
         appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc', true]; });
         appendRow(thead, 'Conditions', function(col) {

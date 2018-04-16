@@ -82,7 +82,7 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 68px;
+    min-width: 64px;
 }
 #pricing_table th {
     background: white;
