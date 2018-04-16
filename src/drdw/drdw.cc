@@ -51,6 +51,12 @@ static void InitRoutes()
     for (const Resource &res: static_resources) {
         routes.Set(res.url, res.data);
     }
+
+    // Special cases
+    Span<const uint8_t> *favicon = routes.Find("/static/favicon.ico");
+    if (favicon) {
+        routes.Set("/favicon.ico", *favicon);
+    }
 }
 
 #if !defined(NDEBUG) && defined(_WIN32)
