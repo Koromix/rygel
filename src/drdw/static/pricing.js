@@ -227,11 +227,15 @@ var pricing = {};
                 var x = (9.0 + (date - first_date) / max_delta * 82.0).toFixed(1) + '%';
                 var radius = indexes[i].changed_prices ? 5 : 4;
                 if (i == view_index) {
+                    radius++;
                     var color = '#ff8900';
+                    var weight = 'bold';
                 } else if (indexes[i].changed_prices) {
                     var color = '#000';
+                    var weight = 'normal';
                 } else {
                     var color = '#888';
+                    var weight = 'normal';
                 }
                 var click_function = (function() {
                     var index = i;
@@ -252,7 +256,8 @@ var pricing = {};
 
                     var text = createElementNS('svg', 'text',
                                                {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
-                                                style: 'cursor: pointer;'}, indexes[i].begin_date);
+                                                style: 'cursor: pointer; font-weight: ' + weight},
+                                               indexes[i].begin_date);
                     text.addEventListener('click', click_function);
                     g.appendChild(text);
                 }
