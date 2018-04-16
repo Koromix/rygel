@@ -85,6 +85,12 @@ function downloadJson(method, url, arguments, func)
     xhr.send();
 }
 
+const RunState = Object.freeze({
+    Uninitialized: 0,
+    Okay: 1,
+    Error: 2
+});
+
 // ------------------------------------------------------------------------
 // Progression and errors
 // ------------------------------------------------------------------------

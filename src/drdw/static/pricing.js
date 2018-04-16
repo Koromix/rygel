@@ -1,29 +1,28 @@
 var pricing = {};
 (function() {
-    var errors;
-
     // URL settings (routing)
     var target_mode = 'table';
     var target_date = null;
     var target_ghm_root = null;
 
-    var indexes_init = false;
+    var indexes_state = RunState.Uninitialized;
     var indexes = [];
     var ghm_roots_map;
     var ghm_roots = [];
 
-    var view_index = -1;
     var chart = null;
 
-    function run()
+    function run(errors)
     {
-        errors = [];
+        if (errors === undefined)
+            errors = [];
 
         // Init indexes
-        if (!indexes_init) {
-            indexes_init = true;
+        if (indexes_state === RunState.Uninitialized) {
             updateIndexes(run);
             return;
+        } else if (indexes_state === RunState.Error) {
+            indexes_state = RunState.Uninitialized;
         }
 
         // Routing (model: pricing/<mode>/<date>/<ghm_root>)
@@ -57,17 +56,17 @@ var pricing = {};
         // Refresh settings
         document.querySelector('#pricing_ghm_roots').value = target_ghm_root;
         refreshIndexes(index);
-        if (index >= 0 && index !== view_index) {
-            markOutdated('#pricing_view', true);
-            if (!indexes[index].loaded) {
-                updatePriceMap(index, function() {
+        if (index >= 0) {
+            if (indexes[index].state === RunState.Uninitialized) {
+                markOutdated('#pricing_view', true);
+                updatePriceMap(index, function(errors) {
                     refreshGhmRoots(index, target_ghm_root);
-                    run();
+                    run(errors);
                 });
                 return;
+            } else if (indexes[index].state === RunState.Error) {
+                indexes[index].state = RunState.Uninitialized;
             }
-
-            view_index = index;
             refreshGhmRoots(index, target_ghm_root);
         }
 
@@ -115,23 +114,28 @@ var pricing = {};
         ghm_roots = [];
 
         downloadJson('get', 'api/indexes.json', {}, function(status, json) {
+            var errors = [];
+
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
                         indexes = json;
                         for (var i = 0; i < indexes.length; i++)
-                            indexes[i].loaded = false;
+                            indexes[i].state = RunState.Uninitialized;
                     } else {
                         errors.push('Aucune table disponible');
                     }
                 } break;
 
+                case 404: { errors.push('Liste des indexes introuvable'); } break;
+                case 502:
                 case 503: { errors.push('Service non accessible'); } break;
                 case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
                 default: { errors.push('Erreur inconnue ' + status); } break;
             }
 
-            func();
+            indexes_state = errors.length ? RunState.Error : RunState.Okay;
+            func(errors);
         });
     }
 
@@ -139,6 +143,8 @@ var pricing = {};
     {
         var begin_date = indexes[index].begin_date;
         downloadJson('get', 'api/price_map.json?date=' + begin_date, {}, function(status, json) {
+            var errors = [];
+
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
@@ -151,19 +157,20 @@ var pricing = {};
                             ghm_root_info[index] = json[i];
                         }
                         ghm_roots = Object.keys(ghm_roots_map).sort();
-                        indexes[index].loaded = true;
                     } else {
                         errors.push('Aucune racine de GHM dans cette table');
                     }
                 } break;
 
                 case 404: { errors.push('Aucune table disponible à cette date'); } break;
+                case 502:
                 case 503: { errors.push('Service non accessible'); } break;
                 case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
                 default: { errors.push('Erreur inconnue ' + status); } break;
             }
 
-            func();
+            indexes[index].state = errors.length ? RunState.Error : RunState.Okay;
+            func(errors);
         });
     }
 
