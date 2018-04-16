@@ -428,7 +428,7 @@ check_nonce_nc (struct MHD_Connection *connection,
        (0 == ((1LLU << (nn->nc - nc - 1)) & nn->nmask)) )
     {
       /* Out-of-order nonce, but within 64-bit bitmask, set bit */
-      nn->nmask |= (1LLU < (nn->nc - nc - 1));
+      nn->nmask |= (1LLU << (nn->nc - nc - 1));
       MHD_mutex_unlock_chk_ (&daemon->nnc_lock);
       return MHD_YES;
     }

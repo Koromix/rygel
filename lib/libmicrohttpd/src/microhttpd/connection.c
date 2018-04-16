@@ -1155,6 +1155,7 @@ try_ready_chunked_body (struct MHD_Connection *connection)
           size /= 2;
           if (size < 128)
             {
+              MHD_mutex_unlock_chk_ (&response->mutex);
               /* not enough memory */
               CONNECTION_CLOSE_ERROR (connection,
 				      _("Closing connection (out of memory)\n"));
@@ -1200,6 +1201,7 @@ try_ready_chunked_body (struct MHD_Connection *connection)
     {
       /* error, close socket! */
       response->total_size = connection->response_write_position;
+      MHD_mutex_unlock_chk_ (&response->mutex);
       CONNECTION_CLOSE_ERROR (connection,
 			      _("Closing connection (application error generating response)\n"));
       return MHD_NO;
@@ -1218,6 +1220,7 @@ try_ready_chunked_body (struct MHD_Connection *connection)
   if (0 == ret)
     {
       connection->state = MHD_CONNECTION_CHUNKED_BODY_UNREADY;
+      MHD_mutex_unlock_chk_ (&response->mutex);
       return MHD_NO;
     }
   if (ret > 0xFFFFFF)
@@ -2854,13 +2857,13 @@ MHD_connection_handle_read (struct MHD_Connection *connection)
            CONNECTION_CLOSE_ERROR (connection,
                                    (MHD_CONNECTION_INIT == connection->state) ?
                                      NULL :
-                                     _("Socket is unexpectedly disconnected when reading request.\n"));
+                                     _("Socket disconnected while reading request.\n"));
            return;
         }
       CONNECTION_CLOSE_ERROR (connection,
                               (MHD_CONNECTION_INIT == connection->state) ?
                                 NULL :
-                                _("Connection socket is closed due to unexpected error when reading request.\n"));
+                                _("Connection socket is closed due to error when reading request.\n"));
       return;
     }
 
@@ -3593,7 +3596,7 @@ MHD_connection_handle_idle (struct MHD_Connection *connection)
                 socket_start_no_buffering (connection);
               continue;
             }
-          MHD_mutex_unlock_chk_ (&connection->response->mutex);
+          /* mutex was already unlocked by try_ready_chunked_body */
           break;
         case MHD_CONNECTION_BODY_SENT:
           if (MHD_NO == build_header_response (connection))

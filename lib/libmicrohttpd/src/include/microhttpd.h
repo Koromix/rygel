@@ -126,7 +126,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00095800
+#define MHD_VERSION 0x00095900
 
 /**
  * MHD-internal return code for "YES".
@@ -212,8 +212,8 @@ typedef SOCKET MHD_socket;
 #elif defined(__clang__) || defined (__GNUC_PATCHLEVEL__)
 /* clang or GCC since 3.0 */
 #define _MHD_GCC_PRAG(x) _Pragma (#x)
-#if __clang_major__+0 >= 5 || \
-  (!defined(__apple_build_version__) && (__clang_major__+0  > 3 || (__clang_major__+0 == 3 && __clang_minor__ >= 3))) || \
+#if (defined(__clang__) && (__clang_major__+0 >= 5 ||			\
+			    (!defined(__apple_build_version__) && (__clang_major__+0  > 3 || (__clang_major__+0 == 3 && __clang_minor__ >= 3))))) || \
   __GNUC__+0 > 4 || (__GNUC__+0 == 4 && __GNUC_MINOR__+0 >= 8)
 /* clang >= 3.3 (or XCode's clang >= 5.0) or
    GCC >= 4.8 */
@@ -222,7 +222,7 @@ typedef SOCKET MHD_socket;
 #else /* older clang or GCC */
 /* clang < 3.3, XCode's clang < 5.0, 3.0 <= GCC < 4.8 */
 #define _MHD_DEPR_MACRO(msg) _MHD_GCC_PRAG(message msg)
-#if (__clang_major__+0  > 2 || (__clang_major__+0 == 2 && __clang_minor__ >= 9)) /* FIXME: clang >= 2.9, earlier versions not tested */
+#if (defined(__clang__) && (__clang_major__+0  > 2 || (__clang_major__+0 == 2 && __clang_minor__ >= 9))) /* FIXME: clang >= 2.9, earlier versions not tested */
 /* clang handles inline pragmas better than GCC */
 #define _MHD_DEPR_IN_MACRO(msg) _MHD_DEPR_MACRO(msg)
 #endif /* clang >= 2.9 */
@@ -2227,8 +2227,8 @@ MHD_add_connection (struct MHD_Daemon *daemon,
  * to be platform's default.
  *
  * This function should only be called in when MHD is configured to
- * use external select with @code{select()} or with @code{epoll()}.
- * In the latter case, it will only add the single @code{epoll()} file
+ * use external select with 'select()' or with 'epoll'.
+ * In the latter case, it will only add the single 'epoll()' file
  * descriptor used by MHD to the sets.
  * It's necessary to use #MHD_get_timeout() in combination with
  * this function.
@@ -2266,8 +2266,8 @@ MHD_get_fdset (struct MHD_Daemon *daemon,
  * larger/smaller than platform's default fd_sets.
  *
  * This function should only be called in when MHD is configured to
- * use external select with @code{select()} or with @code{epoll()}.
- * In the latter case, it will only add the single @code{epoll()} file
+ * use external select with 'select()' or with 'epoll'.
+ * In the latter case, it will only add the single 'epoll' file
  * descriptor used by MHD to the sets.
  * It's necessary to use #MHD_get_timeout() in combination with
  * this function.

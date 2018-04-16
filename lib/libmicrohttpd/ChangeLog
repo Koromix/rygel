@@ -1,3 +1,22 @@
+Thu Feb  1 10:12:22 CET 2018
+	Releasing GNU libicrohttpd 0.9.59. -CG
+
+Thu Feb  1 08:39:50 CET 2018
+	Fix masking operation. -CG/silvioprog
+
+Mon Jan 29 17:33:54 CET 2018
+	Fix deadlock when failing to prepare chunked response
+	(#5260). -CG/ghaderer
+
+Thu Jan  4 12:24:33 CET 2018
+	Fix __clang_major__ related warnings for non-clang
+	compilers reported by Tim on the mailinglist. -CG
+
+Mon Dec 11 17:11:00 MSK 2017
+	Fixed tests on platforms with huge number of CPUs.
+	Doxygen configuration was updated.
+	Various doxygen fixes. -EG
+
 Mon Dec 07 21:08:00 MSK 2017
 	Releasing GNU libmicrohttpd 0.9.58. -EG
 

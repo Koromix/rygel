@@ -36,7 +36,7 @@ BASE64Decode(const char* src)
       return NULL;
     }
   result = dest = malloc(in_len / 4 * 3 + 1);
-  if (result == NULL)
+  if (NULL == result)
     return NULL; /* out of memory */
   while (*src) {
     char a = base64_digits[(unsigned char)*(src++)];

@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: GNU libmicrohttpd 0.9.58\n"
+"Project-Id-Version: GNU libmicrohttpd 0.9.59\n"
 "Report-Msgid-Bugs-To: libmicrohttpd@gnu.org\n"
-"POT-Creation-Date: 2017-12-07 21:18+0300\n"
+"POT-Creation-Date: 2018-02-01 20:17+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,150 +17,70 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../src/microhttpd/connection.c:989 ../src/microhttpd/connection.c:1008
-#: ../src/microhttpd/daemon.c:2606 ../src/microhttpd/daemon.c:3081
-#: ../src/microhttpd/daemon.c:6089
-msgid "Failed to remove FD from epoll set\n"
+#: ../src/microhttpd/connection_https.c:174
+msgid "Error: received handshake message out of context\n"
 msgstr ""
 
-#: ../src/microhttpd/connection.c:1112
-msgid "Closing connection (application reported error generating data)\n"
+#: ../src/microhttpd/mhd_locks.h:120
+msgid "Failed to destroy mutex.\n"
 msgstr ""
 
-#: ../src/microhttpd/connection.c:1160
-msgid "Closing connection (out of memory)\n"
+#: ../src/microhttpd/mhd_locks.h:153
+msgid "Failed to lock mutex.\n"
 msgstr ""
 
-#: ../src/microhttpd/connection.c:1204
-msgid "Closing connection (application error generating response)\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:1761
-#, c-format
-msgid ""
-"Error processing request (HTTP response code is %u (`%s')). Closing "
-"connection.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:1784 ../src/microhttpd/connection.c:3492
-#: ../src/microhttpd/connection.c:3603
-msgid "Closing connection (failed to create response header)\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:1830 ../src/microhttpd/connection.c:2878
-#: ../src/microhttpd/connection.c:2946 ../src/microhttpd/connection.c:3257
-#, c-format
-msgid "In function %s handling connection at state: %s\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2045
-msgid "Not enough memory in pool to allocate header record!\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2087
-msgid "Not enough memory in pool to parse cookies!\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2292 ../src/microhttpd/connection.c:2477
-msgid "Application reported internal error, closing connection.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2345 ../src/microhttpd/connection.c:2422
-msgid ""
-"Received malformed HTTP request (bad chunked encoding). Closing connection.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2485
-msgid "libmicrohttpd API violation"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2500
-msgid ""
-"WARNING: incomplete upload processing and connection not suspended may "
-"result in hung connection.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2570
-msgid "Received malformed line (no colon). Closing connection.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2722
-msgid "Received HTTP 1.1 request without `Host' header.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2857
-msgid "Socket is unexpectedly disconnected when reading request.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2863
-msgid ""
-"Connection socket is closed due to unexpected error when reading request.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2972
-#, c-format
-msgid "Failed to send data in request for %s.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:2981
-#, c-format
-msgid "Sent 100 continue response: `%.*s'\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3005
-msgid "Connection was closed while sending response headers.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3044
-msgid "Data offset exceeds limit"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3053
-#, c-format
-msgid "Sent %d-byte DATA response: `%.*s'\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3068
-#, c-format
-msgid "Failed to send data in request for `%s'.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3096 ../src/microhttpd/connection.c:3124
-msgid "Connection was closed while sending response body.\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3150
-msgid "Internal error\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3219
-msgid ""
-"Failed to signal end of connection via inter-thread communication channel"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3769 ../src/microhttpd/daemon.c:2484
-#: ../src/microhttpd/daemon.c:4064 ../src/microhttpd/daemon.c:4095
-#: ../src/microhttpd/daemon.c:5188 ../src/microhttpd/daemon.c:5205
-#: ../src/microhttpd/response.c:912 ../src/microhttpd/response.c:938
-#, c-format
-msgid "Call to epoll_ctl failed: %s\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3952
-msgid "Attempted to queue response on wrong thread!\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3962
-msgid ""
-"Attempted 'upgrade' connection on daemon without MHD_ALLOW_UPGRADE option!\n"
-msgstr ""
-
-#: ../src/microhttpd/connection.c:3971
-msgid "Application used invalid status code for 'upgrade' response!\n"
+#: ../src/microhttpd/mhd_locks.h:179
+msgid "Failed to unlock mutex.\n"
 msgstr ""
 
 #: ../src/microhttpd/internal.h:80
 msgid "Failed to close FD.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:444
+msgid ""
+"Stale nonce received.  If this happens a lot, you should probably increase "
+"the size of the nonce array.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:632
+msgid "Failed to allocate memory for copy of URI arguments\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:761
+msgid "Authentication failed, invalid timestamp format.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:822
+msgid "Authentication failed, invalid format.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:832
+msgid "Authentication failed, invalid nc format.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:858
+msgid "Failed to allocate memory for auth header processing\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:898
+msgid "Authentication failed, URI does not match.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:918
+msgid "Authentication failed, arguments do not match.\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:973
+msgid "Could not register nonce (is the nonce array size zero?).\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:996
+msgid "Failed to allocate memory for auth response header\n"
+msgstr ""
+
+#: ../src/microhttpd/digestauth.c:1030
+msgid "Failed to add Digest auth header\n"
 msgstr ""
 
 #: ../src/microhttpd/daemon.c:136
@@ -277,8 +197,22 @@ msgstr ""
 msgid "Unknown credential type"
 msgstr ""
 
+#: ../src/microhttpd/daemon.c:2484 ../src/microhttpd/daemon.c:4064
+#: ../src/microhttpd/daemon.c:4095 ../src/microhttpd/daemon.c:5188
+#: ../src/microhttpd/daemon.c:5205 ../src/microhttpd/connection.c:3772
+#: ../src/microhttpd/response.c:912 ../src/microhttpd/response.c:938
+#, c-format
+msgid "Call to epoll_ctl failed: %s\n"
+msgstr ""
+
 #: ../src/microhttpd/daemon.c:2509
 msgid "Failed to signal new connection via inter-thread communication channel."
+msgstr ""
+
+#: ../src/microhttpd/daemon.c:2606 ../src/microhttpd/daemon.c:3081
+#: ../src/microhttpd/daemon.c:6089 ../src/microhttpd/connection.c:989
+#: ../src/microhttpd/connection.c:1008
+msgid "Failed to remove FD from epoll set\n"
 msgstr ""
 
 #: ../src/microhttpd/daemon.c:2653
@@ -641,28 +575,131 @@ msgstr ""
 msgid "Close socket failed.\n"
 msgstr ""
 
-#: ../src/microhttpd/connection_https.c:174
-msgid "Error: received handshake message out of context\n"
+#: ../src/microhttpd/connection.c:1112
+msgid "Closing connection (application reported error generating data)\n"
 msgstr ""
 
-#: ../src/microhttpd/mhd_itc.h:347
-msgid "Failed to destroy ITC.\n"
+#: ../src/microhttpd/connection.c:1161
+msgid "Closing connection (out of memory)\n"
 msgstr ""
 
-#: ../src/microhttpd/basicauth.c:67
-msgid "Error decoding basic authentication\n"
+#: ../src/microhttpd/connection.c:1206
+msgid "Closing connection (application error generating response)\n"
 msgstr ""
 
-#: ../src/microhttpd/basicauth.c:77
-msgid "Basic authentication doesn't contain ':' separator\n"
+#: ../src/microhttpd/connection.c:1764
+#, c-format
+msgid ""
+"Error processing request (HTTP response code is %u (`%s')). Closing "
+"connection.\n"
 msgstr ""
 
-#: ../src/microhttpd/basicauth.c:95
-msgid "Failed to allocate memory for password\n"
+#: ../src/microhttpd/connection.c:1787 ../src/microhttpd/connection.c:3495
+#: ../src/microhttpd/connection.c:3606
+msgid "Closing connection (failed to create response header)\n"
 msgstr ""
 
-#: ../src/microhttpd/basicauth.c:158
-msgid "Failed to add Basic auth header\n"
+#: ../src/microhttpd/connection.c:1833 ../src/microhttpd/connection.c:2881
+#: ../src/microhttpd/connection.c:2949 ../src/microhttpd/connection.c:3260
+#, c-format
+msgid "In function %s handling connection at state: %s\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2048
+msgid "Not enough memory in pool to allocate header record!\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2090
+msgid "Not enough memory in pool to parse cookies!\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2295 ../src/microhttpd/connection.c:2480
+msgid "Application reported internal error, closing connection.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2348 ../src/microhttpd/connection.c:2425
+msgid ""
+"Received malformed HTTP request (bad chunked encoding). Closing connection.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2488
+msgid "libmicrohttpd API violation"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2503
+msgid ""
+"WARNING: incomplete upload processing and connection not suspended may "
+"result in hung connection.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2573
+msgid "Received malformed line (no colon). Closing connection.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2725
+msgid "Received HTTP 1.1 request without `Host' header.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2860
+msgid "Socket disconnected while reading request.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2866
+msgid "Connection socket is closed due to error when reading request.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2975
+#, c-format
+msgid "Failed to send data in request for %s.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:2984
+#, c-format
+msgid "Sent 100 continue response: `%.*s'\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3008
+msgid "Connection was closed while sending response headers.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3047
+msgid "Data offset exceeds limit"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3056
+#, c-format
+msgid "Sent %d-byte DATA response: `%.*s'\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3071
+#, c-format
+msgid "Failed to send data in request for `%s'.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3099 ../src/microhttpd/connection.c:3127
+msgid "Connection was closed while sending response body.\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3153
+msgid "Internal error\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3222
+msgid ""
+"Failed to signal end of connection via inter-thread communication channel"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3955
+msgid "Attempted to queue response on wrong thread!\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3965
+msgid ""
+"Attempted 'upgrade' connection on daemon without MHD_ALLOW_UPGRADE option!\n"
+msgstr ""
+
+#: ../src/microhttpd/connection.c:3974
+msgid "Application used invalid status code for 'upgrade' response!\n"
 msgstr ""
 
 #: ../src/microhttpd/response.c:774
@@ -688,60 +725,22 @@ msgstr ""
 msgid "Error cleaning up while handling epoll error"
 msgstr ""
 
-#: ../src/microhttpd/digestauth.c:444
-msgid ""
-"Stale nonce received.  If this happens a lot, you should probably increase "
-"the size of the nonce array.\n"
+#: ../src/microhttpd/mhd_itc.h:347
+msgid "Failed to destroy ITC.\n"
 msgstr ""
 
-#: ../src/microhttpd/digestauth.c:632
-msgid "Failed to allocate memory for copy of URI arguments\n"
+#: ../src/microhttpd/basicauth.c:67
+msgid "Error decoding basic authentication\n"
 msgstr ""
 
-#: ../src/microhttpd/digestauth.c:761
-msgid "Authentication failed, invalid timestamp format.\n"
+#: ../src/microhttpd/basicauth.c:77
+msgid "Basic authentication doesn't contain ':' separator\n"
 msgstr ""
 
-#: ../src/microhttpd/digestauth.c:822
-msgid "Authentication failed, invalid format.\n"
+#: ../src/microhttpd/basicauth.c:95
+msgid "Failed to allocate memory for password\n"
 msgstr ""
 
-#: ../src/microhttpd/digestauth.c:832
-msgid "Authentication failed, invalid nc format.\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:858
-msgid "Failed to allocate memory for auth header processing\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:898
-msgid "Authentication failed, URI does not match.\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:918
-msgid "Authentication failed, arguments do not match.\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:973
-msgid "Could not register nonce (is the nonce array size zero?).\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:996
-msgid "Failed to allocate memory for auth response header\n"
-msgstr ""
-
-#: ../src/microhttpd/digestauth.c:1030
-msgid "Failed to add Digest auth header\n"
-msgstr ""
-
-#: ../src/microhttpd/mhd_locks.h:120
-msgid "Failed to destroy mutex.\n"
-msgstr ""
-
-#: ../src/microhttpd/mhd_locks.h:153
-msgid "Failed to lock mutex.\n"
-msgstr ""
-
-#: ../src/microhttpd/mhd_locks.h:179
-msgid "Failed to unlock mutex.\n"
+#: ../src/microhttpd/basicauth.c:158
+msgid "Failed to add Basic auth header\n"
 msgstr ""

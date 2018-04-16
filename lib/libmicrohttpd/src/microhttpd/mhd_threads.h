@@ -190,7 +190,7 @@ typedef MHD_THRD_RTRN_TYPE_
 /**
  * Create a thread and set the attributes according to our options.
  *
- * If thread is created, thread handle must be freed by #MHD_join_thread_().
+ * If thread is created, thread handle must be freed by MHD_join_thread_().
  *
  * @param thread        handle to initialize
  * @param stack_size    size of stack for new thread, 0 for default
