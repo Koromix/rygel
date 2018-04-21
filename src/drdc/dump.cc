@@ -157,39 +157,39 @@ void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots)
     }
 }
 
-void mco_DumpGhsAccessTable(Span<const mco_GhsAccessInfo> ghs)
+void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs)
 {
     mco_GhmCode previous_ghm = {};
-    for (const mco_GhsAccessInfo &ghs_access_info: ghs) {
-        if (ghs_access_info.ghm != previous_ghm) {
-            PrintLn("      GHM %1:", ghs_access_info.ghm);
-            previous_ghm = ghs_access_info.ghm;
+    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: ghs) {
+        if (ghm_to_ghs_info.ghm != previous_ghm) {
+            PrintLn("      GHM %1:", ghm_to_ghs_info.ghm);
+            previous_ghm = ghm_to_ghs_info.ghm;
         }
         PrintLn("        GHS %1 (public) / GHS %2 (private)",
-                ghs_access_info.Ghs(Sector::Public), ghs_access_info.Ghs(Sector::Private));
+                ghm_to_ghs_info.Ghs(Sector::Public), ghm_to_ghs_info.Ghs(Sector::Private));
 
-        if (ghs_access_info.unit_authorization) {
-            PrintLn("          Requires unit authorization %1", ghs_access_info.unit_authorization);
+        if (ghm_to_ghs_info.unit_authorization) {
+            PrintLn("          Requires unit authorization %1", ghm_to_ghs_info.unit_authorization);
         }
-        if (ghs_access_info.bed_authorization) {
-            PrintLn("          Requires bed authorization %1", ghs_access_info.bed_authorization);
+        if (ghm_to_ghs_info.bed_authorization) {
+            PrintLn("          Requires bed authorization %1", ghm_to_ghs_info.bed_authorization);
         }
-        if (ghs_access_info.minimal_duration) {
-            PrintLn("          Requires duration >= %1 days", ghs_access_info.minimal_duration);
+        if (ghm_to_ghs_info.minimal_duration) {
+            PrintLn("          Requires duration >= %1 days", ghm_to_ghs_info.minimal_duration);
         }
-        if (ghs_access_info.minimal_age) {
-            PrintLn("          Requires age >= %1 years", ghs_access_info.minimal_age);
+        if (ghm_to_ghs_info.minimal_age) {
+            PrintLn("          Requires age >= %1 years", ghm_to_ghs_info.minimal_age);
         }
-        if (ghs_access_info.main_diagnosis_mask.value) {
+        if (ghm_to_ghs_info.main_diagnosis_mask.value) {
             PrintLn("          Main Diagnosis List D$%1.%2",
-                    ghs_access_info.main_diagnosis_mask.offset,
-                    ghs_access_info.main_diagnosis_mask.value);
+                    ghm_to_ghs_info.main_diagnosis_mask.offset,
+                    ghm_to_ghs_info.main_diagnosis_mask.value);
         }
-        if (ghs_access_info.diagnosis_mask.value) {
+        if (ghm_to_ghs_info.diagnosis_mask.value) {
             PrintLn("          Diagnosis List D$%1.%2",
-                    ghs_access_info.diagnosis_mask.offset, ghs_access_info.diagnosis_mask.value);
+                    ghm_to_ghs_info.diagnosis_mask.offset, ghm_to_ghs_info.diagnosis_mask.value);
         }
-        for (const ListMask &mask: ghs_access_info.procedure_masks) {
+        for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
             PrintLn("          Procedure List A$%1.%2", mask.offset, mask.value);
         }
     }
@@ -307,9 +307,9 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
                     }
                 } break;
 
-                case mco_TableType::GhsAccessTable: {
-                    PrintLn("    GHS Access Table:");
-                    mco_DumpGhsAccessTable(index.ghs);
+                case mco_TableType::GhmToGhsTable: {
+                    PrintLn("    GHM To GHS Table:");
+                    mco_DumpGhmToGhsTable(index.ghs);
                 } break;
                 case mco_TableType::PriceTable: {
                     PrintLn("    Price Table:");

@@ -14,7 +14,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures);
 void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots);
 void mco_DumpSeverityTable(Span<const mco_ValueRangeCell<2>> cells);
 
-void mco_DumpGhsAccessTable(Span<const mco_GhsAccessInfo> ghs);
+void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs);
 void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices);
 void mco_DumpAuthorizationTable(Span<const mco_AuthorizationInfo> authorizations);
 void mco_DumpSupplementPairTable(Span<const mco_SrcPair> pairs);

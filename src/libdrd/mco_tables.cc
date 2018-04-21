@@ -189,7 +189,7 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
         } else if (TestStr(table.raw_type, "RGHMINFO")) {
             table.type = mco_TableType::GhmRootTable;
         } else if (TestStr(table.raw_type, "GHSINFO")) {
-            table.type = mco_TableType::GhsAccessTable;
+            table.type = mco_TableType::GhmToGhsTable;
         } else if (TestStr(table.raw_type, "TABCOMBI")) {
             table.type = mco_TableType::SeverityTable;
         } else if (TestStr(table.raw_type, "CCAMDESC")) {
@@ -718,8 +718,8 @@ bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table
     return true;
 }
 
-bool mco_ParseGhsAccessTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_GhsAccessInfo> *out_ghs)
+bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table,
+                            HeapArray<mco_GhmToGhsInfo> *out_ghs)
 {
     Size start_ghs_len = out_ghs->len;
     DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
@@ -740,13 +740,13 @@ bool mco_ParseGhsAccessTable(const uint8_t *file_data, const mco_TableInfo &tabl
             uint16_t low_duration_treshold;
         } sectors[2];
 	};
-    StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(mco_GhsAccessInfo().ghs));
+    StaticAssert(ARRAY_SIZE(PackedGhsNode().sectors) == ARRAY_SIZE(mco_GhmToGhsInfo().ghs));
 #pragma pack(pop)
 
     FAIL_PARSE_IF(table.filename, table.sections.len != 1);
     FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(PackedGhsNode));
 
-    mco_GhsAccessInfo current_ghs = {};
+    mco_GhmToGhsInfo current_ghs = {};
     for (Size i = 0; i < table.sections[0].values_count; i++) {
         PackedGhsNode raw_ghs_node;
         memcpy(&raw_ghs_node, file_data + table.sections[0].raw_offset +
@@ -837,7 +837,7 @@ bool mco_ParseGhsAccessTable(const uint8_t *file_data, const mco_TableInfo &tabl
     }
 
     std::stable_sort(out_ghs->begin() + start_ghs_len, out_ghs->end(),
-                     [](const mco_GhsAccessInfo &ghs_info1, const mco_GhsAccessInfo &ghs_info2) {
+                     [](const mco_GhmToGhsInfo &ghs_info1, const mco_GhmToGhsInfo &ghs_info2) {
         int root_cmp = MultiCmp(ghs_info1.ghm.parts.cmd - ghs_info2.ghm.parts.cmd,
                                 ghs_info1.ghm.parts.type - ghs_info2.ghm.parts.type,
                                 ghs_info1.ghm.parts.seq - ghs_info2.ghm.parts.seq);
@@ -1410,7 +1410,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         CHECK_PIECE(mco_TableType::DiagnosisTable);
         CHECK_PIECE(mco_TableType::ProcedureTable);
         CHECK_PIECE(mco_TableType::GhmRootTable);
-        CHECK_PIECE(mco_TableType::GhsAccessTable);
+        CHECK_PIECE(mco_TableType::GhmToGhsTable);
 
         if (pieces.len) {
             LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
@@ -1515,8 +1515,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                            load_info->u.raw_data.ptr, table_info, 3);
             } break;
 
-            case mco_TableType::GhsAccessTable: {
-                LOAD_TABLE(ghs, mco_ParseGhsAccessTable, load_info->u.raw_data.ptr, table_info);
+            case mco_TableType::GhmToGhsTable: {
+                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->u.raw_data.ptr, table_info);
 
                 BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs);
                 BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs);
@@ -1628,14 +1628,14 @@ const mco_GhmRootInfo *mco_TableIndex::FindGhmRoot(mco_GhmRootCode ghm_root) con
     return ghm_roots_map->FindValue(ghm_root, nullptr);
 }
 
-Span<const mco_GhsAccessInfo> mco_TableIndex::FindCompatibleGhs(mco_GhmRootCode ghm_root) const
-{
-    return FindSpan(ghs, ghm_root_to_ghs_map, ghm_root);
-}
-
-Span<const mco_GhsAccessInfo> mco_TableIndex::FindCompatibleGhs(mco_GhmCode ghm) const
+Span<const mco_GhmToGhsInfo> mco_TableIndex::FindCompatibleGhs(mco_GhmCode ghm) const
 {
     return FindSpan(ghs, ghm_to_ghs_map, ghm);
+}
+
+Span<const mco_GhmToGhsInfo> mco_TableIndex::FindCompatibleGhs(mco_GhmRootCode ghm_root) const
+{
+    return FindSpan(ghs, ghm_root_to_ghs_map, ghm_root);
 }
 
 const mco_AuthorizationInfo *mco_TableIndex::FindAuthorization(mco_AuthorizationScope scope, int8_t type) const

@@ -435,13 +435,13 @@ Constraints options:
         return false;
 
     LogInfo("Export");
-    for (const mco_GhsAccessInfo &ghs_access_info: index->ghs)  {
-        const mco_GhmConstraint *constraint = ghm_constraints.Find(ghs_access_info.ghm);
+    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs)  {
+        const mco_GhmConstraint *constraint = ghm_constraints.Find(ghm_to_ghs_info.ghm);
         if (constraint) {
-            PrintLn("Constraint for %1", ghs_access_info.ghm);
+            PrintLn("Constraint for %1", ghm_to_ghs_info.ghm);
             PrintLn("  Duration = %1", FmtHex(constraint->duration_mask));
         } else {
-            PrintLn("%1 unreached!", ghs_access_info.ghm);
+            PrintLn("%1 unreached!", ghm_to_ghs_info.ghm);
         }
     }
 

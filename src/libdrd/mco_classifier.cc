@@ -1555,18 +1555,18 @@ static bool TestAuthorization(const mco_AuthorizationSet &authorization_set,
 }
 
 static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                    const mco_GhsAccessInfo &ghs_access_info)
+                    const mco_GhmToGhsInfo &ghm_to_ghs_info)
 {
-    if (ghs_access_info.minimal_age && agg.age < ghs_access_info.minimal_age)
+    if (ghm_to_ghs_info.minimal_age && agg.age < ghm_to_ghs_info.minimal_age)
         return false;
 
     int duration;
-    if (ghs_access_info.unit_authorization) {
+    if (ghm_to_ghs_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
         for (const mco_Stay &stay: agg.stays) {
             if (TestAuthorization(authorization_set, stay.unit, stay.exit.date,
-                                  ghs_access_info.unit_authorization)) {
+                                  ghm_to_ghs_info.unit_authorization)) {
                 if (stay.exit.date != stay.entry.date) {
                     duration += stay.exit.date - stay.entry.date;
                 } else {
@@ -1580,31 +1580,31 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
     } else {
         duration = agg.duration;
     }
-    if (ghs_access_info.bed_authorization) {
+    if (ghm_to_ghs_info.bed_authorization) {
         bool test = std::any_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const mco_Stay &stay) {
-            return stay.bed_authorization == ghs_access_info.bed_authorization;
+            return stay.bed_authorization == ghm_to_ghs_info.bed_authorization;
         });
         if (!test)
             return false;
     }
-    if (ghs_access_info.minimal_duration && duration < ghs_access_info.minimal_duration)
+    if (ghm_to_ghs_info.minimal_duration && duration < ghm_to_ghs_info.minimal_duration)
         return false;
 
-    if (ghs_access_info.main_diagnosis_mask.value) {
+    if (ghm_to_ghs_info.main_diagnosis_mask.value) {
         if (!TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis,
-                           ghs_access_info.main_diagnosis_mask))
+                           ghm_to_ghs_info.main_diagnosis_mask))
             return false;
     }
-    if (ghs_access_info.diagnosis_mask.value) {
+    if (ghm_to_ghs_info.diagnosis_mask.value) {
         bool test = std::any_of(agg.diagnoses.begin(), agg.diagnoses.end(),
                                 [&](const mco_DiagnosisInfo *diag_info) {
-            return TestDiagnosis(agg.stay.sex, *diag_info, ghs_access_info.diagnosis_mask);
+            return TestDiagnosis(agg.stay.sex, *diag_info, ghm_to_ghs_info.diagnosis_mask);
         });
         if (!test)
             return false;
     }
-    for (const ListMask &mask: ghs_access_info.procedure_masks) {
+    for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
         bool test = std::any_of(agg.procedures.begin(), agg.procedures.end(),
                                 [&](const mco_ProcedureInfo *proc_info) {
             return TestProcedure(*proc_info, mask);
@@ -1644,11 +1644,11 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
         }
     }
 
-    Span<const mco_GhsAccessInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+    Span<const mco_GhmToGhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
 
-    for (const mco_GhsAccessInfo &ghs_access_info: compatible_ghs) {
-        if (TestGhs(agg, authorization_set, ghs_access_info))
-            return ghs_access_info.Ghs(Sector::Public);
+    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+        if (TestGhs(agg, authorization_set, ghm_to_ghs_info))
+            return ghm_to_ghs_info.Ghs(Sector::Public);
     }
     return mco_GhsCode(9999);
 }

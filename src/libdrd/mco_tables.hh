@@ -17,7 +17,7 @@ enum class mco_TableType: uint32_t {
     GhmRootTable,
     SeverityTable,
 
-    GhsAccessTable,
+    GhmToGhsTable,
     AuthorizationTable,
     SrcPairTable,
 
@@ -33,7 +33,7 @@ static const char *const mco_TableTypeNames[] = {
     "GHM Root Table",
     "Severity Table",
 
-    "GHS Access Table",
+    "GHM To GHS Table",
     "Authorization Table",
     "SRC Pair Table",
 
@@ -168,7 +168,7 @@ struct mco_GhmRootInfo {
     HASH_TABLE_HANDLER(mco_GhmRootInfo, ghm_root);
 };
 
-struct mco_GhsAccessInfo {
+struct mco_GhmToGhsInfo {
     mco_GhmCode ghm;
     mco_GhsCode ghs[2]; // 0 for public, 1 for private
 
@@ -188,8 +188,8 @@ struct mco_GhsAccessInfo {
         return ghs[(int)sector];
     }
 
-    HASH_TABLE_HANDLER_N(GhmHandler, mco_GhsAccessInfo, ghm);
-    HASH_TABLE_HANDLER_N(GhmRootHandler, mco_GhsAccessInfo, ghm.Root());
+    HASH_TABLE_HANDLER(mco_GhmToGhsInfo, ghm);
+    HASH_TABLE_HANDLER_N(GhmRootHandler, mco_GhmToGhsInfo, ghm.Root());
 };
 
 struct mco_GhsPriceInfo {
@@ -266,8 +266,8 @@ bool mco_ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
 bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
                             HeapArray<mco_ValueRangeCell<2>> *out_cells);
 
-bool mco_ParseGhsAccessTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_GhsAccessInfo> *out_nodes);
+bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table,
+                            HeapArray<mco_GhmToGhsInfo> *out_nodes);
 bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &table,
                                  HeapArray<mco_AuthorizationInfo> *out_auths);
 bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
@@ -289,7 +289,7 @@ struct mco_TableIndex {
     Span<const mco_ValueRangeCell<2>> gnn_cells;
     Span<const mco_ValueRangeCell<2>> cma_cells[3];
 
-    Span<const mco_GhsAccessInfo> ghs;
+    Span<const mco_GhmToGhsInfo> ghs;
     Span<const mco_AuthorizationInfo> authorizations;
     Span<const mco_SrcPair> src_pairs[2];
 
@@ -300,8 +300,8 @@ struct mco_TableIndex {
     const HashTable<ProcedureCode, const mco_ProcedureInfo *> *procedures_map;
     const HashTable<mco_GhmRootCode, const mco_GhmRootInfo *> *ghm_roots_map;
 
-    const HashTable<mco_GhmCode, const mco_GhsAccessInfo *, mco_GhsAccessInfo::GhmHandler> *ghm_to_ghs_map;
-    const HashTable<mco_GhmRootCode, const mco_GhsAccessInfo *, mco_GhsAccessInfo::GhmRootHandler> *ghm_root_to_ghs_map;
+    const HashTable<mco_GhmCode, const mco_GhmToGhsInfo *> *ghm_to_ghs_map;
+    const HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *, mco_GhmToGhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
     const HashTable<int16_t, const mco_AuthorizationInfo *> *authorizations_map;
 
     const HashTable<mco_GhsCode, const mco_GhsPriceInfo *> *ghs_prices_map[2];
@@ -311,8 +311,8 @@ struct mco_TableIndex {
     const mco_ProcedureInfo *FindProcedure(ProcedureCode proc, int8_t phase, Date date) const;
     const mco_GhmRootInfo *FindGhmRoot(mco_GhmRootCode ghm_root) const;
 
-    Span<const mco_GhsAccessInfo> FindCompatibleGhs(mco_GhmRootCode ghm_root) const;
-    Span<const mco_GhsAccessInfo> FindCompatibleGhs(mco_GhmCode ghm) const;
+    Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmCode ghm) const;
+    Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmRootCode ghm_root) const;
     const mco_AuthorizationInfo *FindAuthorization(mco_AuthorizationScope scope, int8_t type) const;
 
     const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, Sector sector) const;
@@ -333,7 +333,7 @@ public:
         HeapArray<HeapArray<mco_ValueRangeCell<2>>> gnn_cells;
         HeapArray<HeapArray<mco_ValueRangeCell<2>>> cma_cells[3];
 
-        HeapArray<HeapArray<mco_GhsAccessInfo>> ghs;
+        HeapArray<HeapArray<mco_GhmToGhsInfo>> ghs;
         HeapArray<HeapArray<mco_GhsPriceInfo>> ghs_prices[2];
         HeapArray<mco_SupplementCounters<int32_t>> supplement_prices[2];
         HeapArray<HeapArray<mco_AuthorizationInfo>> authorizations;
@@ -345,8 +345,8 @@ public:
         HeapArray<HashTable<ProcedureCode, const mco_ProcedureInfo *>> procedures;
         HeapArray<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>> ghm_roots;
 
-        HeapArray<HashTable<mco_GhmCode, const mco_GhsAccessInfo *, mco_GhsAccessInfo::GhmHandler>> ghm_to_ghs;
-        HeapArray<HashTable<mco_GhmRootCode, const mco_GhsAccessInfo *, mco_GhsAccessInfo::GhmRootHandler>> ghm_root_to_ghs;
+        HeapArray<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>> ghm_to_ghs;
+        HeapArray<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *, mco_GhmToGhsInfo::GhmRootHandler>> ghm_root_to_ghs;
         HeapArray<HashTable<int16_t, const mco_AuthorizationInfo *>> authorizations;
 
         HeapArray<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>> ghs_prices[2];
