@@ -500,6 +500,7 @@ R"(Usage: drdc info [options] name ...
     }
 
     for (const char *name: names) {
+        // Diagnosis?
         {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
@@ -512,6 +513,7 @@ R"(Usage: drdc info [options] name ...
             }
         }
 
+        // Procedure?
         {
             ProcedureCode proc =
                 ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
@@ -524,6 +526,7 @@ R"(Usage: drdc info [options] name ...
             }
         }
 
+        // GHM root?
         {
             mco_GhmRootCode ghm_root =
                 mco_GhmRootCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
@@ -531,6 +534,29 @@ R"(Usage: drdc info [options] name ...
                 const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
                     mco_DumpGhmRootTable(*ghm_root_info);
+                    PrintLn();
+
+                    Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root);
+                    mco_DumpGhmToGhsTable(compatible_ghs);
+
+                    continue;
+                }
+            }
+        }
+
+        // GHS?
+        {
+            mco_GhsCode ghs = mco_GhsCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            if (ghs.IsValid()) {
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, Sector::Public);
+                if (ghs_price_info) {
+                    mco_DumpGhsPriceTable(*ghs_price_info);
+                    PrintLn();
+                    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs) {
+                        if (ghm_to_ghs_info.Ghs(Sector::Public) != ghs)
+                            continue;
+                        mco_DumpGhmToGhsTable(ghm_to_ghs_info);
+                    }
                     continue;
                 }
             }

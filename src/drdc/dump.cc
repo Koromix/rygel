@@ -127,7 +127,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures)
 void mco_DumpGhmRootTable(Span<const mco_GhmRootInfo> ghm_roots)
 {
     for (const mco_GhmRootInfo &ghm_root: ghm_roots) {
-        PrintLn("      %1:", ghm_root.ghm_root);
+        PrintLn("      GHM root %1:", ghm_root.ghm_root);
 
         if (ghm_root.confirm_duration_treshold) {
             PrintLn("        Confirm if < %1 days (except for deaths and MCO transfers)",
@@ -198,7 +198,7 @@ void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs)
 void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices)
 {
     for (const mco_GhsPriceInfo &price_info: ghs_prices) {
-        PrintLn("        GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
+        PrintLn("      GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
                 FmtDouble(price_info.price_cents / 100.0, 2),
                 FmtDouble(price_info.exh_cents / 100.0, 2),
                 FmtDouble(price_info.exb_cents / 100.0, 2));
