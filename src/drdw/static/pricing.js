@@ -4,7 +4,9 @@ var pricing = {};
     var target_mode = 'table';
     var target_date = null;
     var target_ghm_root = null;
+    var target_diff = null;
 
+    var download_queue_length = 0;
     var indexes_state = RunState.Uninitialized;
     var indexes = [];
     var ghm_roots_map;
@@ -17,26 +19,42 @@ var pricing = {};
         if (errors === undefined)
             errors = [];
 
-        // Init indexes
-        if (indexes_state === RunState.Uninitialized) {
-            updateIndexes(run);
-            return;
-        } else if (indexes_state === RunState.Error) {
-            indexes_state = RunState.Uninitialized;
-        }
-
-        // Routing (model: pricing/<mode>/<date>/<ghm_root>)
+        // Parse route (model: pricing/<mode>/[<diff>..]<date>/<ghm_root>)
         var parts = url_page.split('/');
         target_mode = parts[1] || target_mode;
         if (target_mode !== 'chart' && target_mode !== 'table')
             errors.push('Mode d\'affichage incorrect');
-        target_date = parts[2] || target_date;
-        var index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
-        if (target_date !== null && indexes.length && index < 0)
-            errors.push('Date incorrecte');
+        if (parts[2]) {
+            var date_parts = parts[2].split('..', 2);
+            if (date_parts.length == 2) {
+                target_date = date_parts[1];
+                target_diff = date_parts[0];
+            } else {
+                target_date = date_parts[0];
+                target_diff = null;
+            }
+        }
         target_ghm_root = parts[3] || target_ghm_root;
-        if (target_ghm_root !== null && ghm_roots.length && !ghm_roots_map[target_ghm_root])
-            errors.push('Racine de GHM inconnue');
+
+        // Validate
+        var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
+        if (target_date !== null && indexes.length && main_index < 0)
+            errors.push('Date incorrecte');
+        var diff_index = indexes.findIndex(function(info) { return info.begin_date === target_diff; });
+        if (target_diff !== null && indexes.length && diff_index < 0)
+            errors.push('Date de comparaison incorrecte');
+        if (target_ghm_root !== null && ghm_roots.length) {
+            if (!ghm_roots_map[target_ghm_root]) {
+                errors.push('Racine de GHM inconnue');
+            } else {
+                if (main_index >= 0 && indexes[main_index].state === RunState.Okay &&
+                        !ghm_roots_map[target_ghm_root][main_index])
+                    errors.push('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
+                if (diff_index >= 0 && indexes[diff_index].state === RunState.Okay &&
+                        !ghm_roots_map[target_ghm_root][diff_index])
+                    errors.push('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
+            }
+        }
 
         // Redirection (stable URLs)
         if (target_date === null && indexes.length) {
@@ -49,30 +67,39 @@ var pricing = {};
             return;
         }
 
-        // Sync UI mode
-        document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
-        document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
-
-        // Refresh settings
-        document.querySelector('#pricing_ghm_roots').value = target_ghm_root;
-        refreshIndexes(index);
-        if (index >= 0) {
-            if (indexes[index].state === RunState.Uninitialized) {
+        // Resources
+        if (indexes_state === RunState.Uninitialized) {
+            updateIndexes(run);
+        } else if (indexes_state === RunState.Error) {
+            indexes_state = RunState.Uninitialized;
+        }
+        if (main_index >= 0) {
+            if (indexes[main_index].state === RunState.Uninitialized) {
                 markOutdated('#pricing_view', true);
-                updatePriceMap(index, function(errors) {
-                    refreshGhmRoots(index, target_ghm_root);
-                    run(errors);
-                });
-                return;
-            } else if (indexes[index].state === RunState.Error) {
-                indexes[index].state = RunState.Uninitialized;
+                updatePriceMap(main_index, run);
+            } else if (indexes[main_index].state === RunState.Error) {
+                indexes[main_index].state = RunState.Uninitialized;
             }
-            refreshGhmRoots(index, target_ghm_root);
+        }
+        if (diff_index >= 0) {
+            if (indexes[diff_index].state === RunState.Uninitialized) {
+                markOutdated('#pricing_view', true);
+                updatePriceMap(diff_index, run);
+            } else if (indexes[diff_index].state === RunState.Error) {
+                indexes[diff_index].state = RunState.Uninitialized;
+            }
         }
 
-        // Refresh main view (table or chart)
-        refreshView(index, target_ghm_root, errors);
-        markOutdated('#pricing_view', false);
+        // Refresh display
+        if (!download_queue_length) {
+            document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
+            document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
+
+            refreshIndexesLine(main_index);
+            refreshGhmRoots(main_index, target_ghm_root);
+            refreshIndexesDiff(diff_index, target_ghm_root);
+            refreshView(main_index, diff_index, target_ghm_root, errors);
+        }
     }
     this.run = run;
 
@@ -82,10 +109,17 @@ var pricing = {};
             target_mode = args.mode || target_mode;
             target_date = args.date || target_date;
             target_ghm_root = args.ghm_root || target_ghm_root;
+            if (args.diff === '')
+                args.diff = null;
+            target_diff = (args.diff !== undefined) ? args.diff : target_diff;
         }
 
         if (target_mode !== null && target_date !== null && target_ghm_root !== null) {
-            switchPage('pricing/' + target_mode + '/' + target_date + '/' + target_ghm_root);
+            if (target_diff !== null) {
+                switchPage('pricing/' + target_mode + '/' + target_diff + '..' + target_date + '/' + target_ghm_root);
+            } else {
+                switchPage('pricing/' + target_mode + '/' + target_date + '/' + target_ghm_root);
+            }
         } else {
             switchPage('pricing/' + target_mode);
         }
@@ -109,6 +143,9 @@ var pricing = {};
 
     function updateIndexes(func)
     {
+        indexes_state = RunState.Loading;
+        download_queue_length++;
+
         indexes = [];
         ghm_roots_map = {};
         ghm_roots = [];
@@ -135,12 +172,18 @@ var pricing = {};
             }
 
             indexes_state = errors.length ? RunState.Error : RunState.Okay;
-            func(errors);
+            download_queue_length--;
+
+            if (!download_queue_length)
+                func(errors);
         });
     }
 
     function updatePriceMap(index, func)
     {
+        indexes[index].state = RunState.Loading;
+        download_queue_length++;
+
         var begin_date = indexes[index].begin_date;
         downloadJson('get', 'api/price_map.json?date=' + begin_date, {}, function(status, json) {
             var errors = [];
@@ -155,6 +198,11 @@ var pricing = {};
                                 ghm_roots_map[json[i].ghm_root] = ghm_root_info;
                             }
                             ghm_root_info[index] = json[i];
+                            ghm_root_info[index].ghs_map = {};
+                            for (var j = 0; j < ghm_root_info[index].ghs.length; j++) {
+                                var ghs = ghm_root_info[index].ghs[j];
+                                ghm_root_info[index].ghs_map[ghs.ghs] = ghs;
+                            }
                         }
                         ghm_roots = Object.keys(ghm_roots_map).sort();
                     } else {
@@ -170,11 +218,14 @@ var pricing = {};
             }
 
             indexes[index].state = errors.length ? RunState.Error : RunState.Okay;
-            func(errors);
+            download_queue_length--;
+
+            if (!download_queue_length)
+                func(errors);
         });
     }
 
-    function refreshView(index, ghm_root, errors)
+    function refreshView(main_index, diff_index, ghm_root, errors)
     {
         var ghm_root_info = ghm_roots_map[ghm_root];
         var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
@@ -191,17 +242,19 @@ var pricing = {};
             log.style.display = 'none';
         }
 
-        if (ghm_root_info && ghm_root_info[index]) {
-            h1.innerText = ghm_root_info[index].ghm_root + ' : ' + ghm_root_info[index].ghm_root_desc;
+        if (ghm_root_info && ghm_root_info[main_index] && (diff_index < 0 || ghm_root_info[diff_index])) {
+            h1.innerText = ghm_root_info[main_index].ghm_root + ' : ' +
+                           ghm_root_info[main_index].ghm_root_desc;
 
             if (document.querySelector('#pricing_table').classList.contains('active')) {
-                var table = createTable(ghm_root_info, index, true, max_duration);
+                var table = createTable(ghm_root_info, main_index, diff_index, max_duration, true);
                 cloneAttributes(old_table, table);
                 old_table.parentNode.replaceChild(table, old_table);
             }
 
             if (document.querySelector('#pricing_chart').classList.contains('active')) {
-                chart = refreshChart(chart, chart_ctx, ghm_root_info, index, max_duration);
+                chart = refreshChart(chart, chart_ctx, ghm_root_info, main_index,
+                                     diff_index, max_duration);
             }
         } else {
             h1.innerText = '';
@@ -215,9 +268,10 @@ var pricing = {};
                 chart = null;
             }
         }
+        markOutdated('#pricing_view', false);
     }
 
-    function refreshIndexes(view_index)
+    function refreshIndexesLine(main_index)
     {
         var g = createElementNS('svg', 'g', {});
 
@@ -232,7 +286,7 @@ var pricing = {};
 
                 var x = (9.0 + (date - first_date) / max_delta * 82.0).toFixed(1) + '%';
                 var radius = indexes[i].changed_prices ? 5 : 4;
-                if (i == view_index) {
+                if (i == main_index) {
                     radius++;
                     var color = '#ff8900';
                     var weight = 'bold';
@@ -274,24 +328,45 @@ var pricing = {};
         old_g.parentNode.replaceChild(g, old_g);
     }
 
+    function refreshIndexesDiff(diff_index, ghm_root)
+    {
+        var el = document.querySelector("#pricing_diff_indexes");
+        el.innerHTML = '';
+
+        el.appendChild(createElement('option', {value: ''}, 'Désactiver'));
+        for (var i = 0; i < indexes.length; i++) {
+            var opt = createElement('option', {value: indexes[i].begin_date},
+                                    indexes[i].begin_date);
+            if (i === diff_index)
+                opt.setAttribute('selected', '');
+            if (indexes[i].state === RunState.Okay && !ghm_roots_map[ghm_root][i]) {
+                opt.setAttribute('disabled', '');
+                opt.text += '*';
+            }
+            el.appendChild(opt);
+        }
+    }
+
     function refreshGhmRoots(index, ghm_root)
     {
         var el = document.querySelector('#pricing_ghm_roots');
         el.innerHTML = '';
 
         for (var i = 0; i < ghm_roots.length; i++) {
-            var opt = document.createElement('option');
-            opt.setAttribute('value', ghm_roots[i]);
-            opt.textContent = ghm_roots[i] + (ghm_roots_map[ghm_roots[i]][index] ? '' : ' (?)');
+            var opt = createElement('option', {value: ghm_roots[i]}, ghm_roots[i]);
+            if (indexes[index].state === RunState.Okay && !ghm_roots_map[ghm_roots[i]][index]) {
+                opt.setAttribute('disabled', '');
+                opt.text += '*';
+            }
             el.appendChild(opt);
         }
         if (ghm_root)
             el.value = ghm_root;
     }
 
-    function refreshChart(chart, chart_ctx, ghm_root_info, index, max_duration)
+    function refreshChart(chart, chart_ctx, ghm_root_info, main_index, diff_index, max_duration)
     {
-        var ghs = ghm_root_info[index].ghs;
+        var ghs = ghm_root_info[main_index].ghs;
 
         function ghsLabel(ghs)
         {
@@ -316,14 +391,14 @@ var pricing = {};
             }[mode] || "black";
         }
 
-        data = {
+        var data = {
             labels: [],
             datasets: []
         };
-
         for (var i = 0; i < max_duration; i++)
             data.labels.push(durationText(i));
 
+        var max_price = 0.0;
         for (var i = 0; i < ghs.length; i++) {
             var dataset = {
                 label: ghsLabel(ghs[i]),
@@ -334,12 +409,18 @@ var pricing = {};
                 fill: false
             };
             for (var duration = 0; duration < max_duration; duration++) {
-                p = computePrice(ghs[i], duration);
-                if (p !== null) {
+                if (diff_index < 0) {
+                    var info = computePrice(ghs[i], duration);
+                } else {
+                    var info = computePriceDelta(ghs[i], ghm_root_info[diff_index].ghs_map[ghs[i].ghs], duration);
+                }
+
+                if (info !== null) {
                     dataset.data.push({
                         x: durationText(duration),
-                        y: p[0] / 100
+                        y: info[0] / 100
                     });
+                    max_price = Math.max(max_price, Math.abs(info[0]));
                 } else {
                     dataset.data.push(null);
                 }
@@ -347,23 +428,30 @@ var pricing = {};
             data.datasets.push(dataset);
         }
 
-        // Calculate maximum price across all (loaded) indexes to stabilize Y axis
-        var max_price = 0.0;
-        for (var i = 0; i < ghm_root_info.length; i++) {
-            if (!ghm_root_info[i])
-                continue;
+        var min_price;
+        if (diff_index < 0) {
+            min_price = 0.0;
 
-            for (var j = 0; j < ghm_root_info[i].ghs.length; j++) {
-                p = computePrice(ghm_root_info[i].ghs[j], max_duration - 1);
-                if (p && p[0] > max_price)
-                    max_price = p[0];
+            // Recalculate maximum price across all (loaded) indexes to stabilize Y axis
+            for (var i = 0; i < ghm_root_info.length; i++) {
+                if (i === main_index || !ghm_root_info[i])
+                    continue;
+
+                for (var j = 0; j < ghm_root_info[i].ghs.length; j++) {
+                    p = computePrice(ghm_root_info[i].ghs[j], max_duration - 1);
+                    if (p && p[0] > max_price)
+                        max_price = p[0];
+                }
             }
+            max_price /= 100.0;
+        } else {
+            max_price /= 100.0;
+            min_price = -max_price;
         }
-        max_price /= 100;
 
         if (chart) {
             chart.data = data;
-            chart.options.scales.yAxes[0].ticks.suggestedMin = 0;
+            chart.options.scales.yAxes[0].ticks.suggestedMin = min_price;
             chart.options.scales.yAxes[0].ticks.suggestedMax = max_price;
             chart.update({duration: 0});
         } else {
@@ -380,7 +468,7 @@ var pricing = {};
                     },
                     scales: {
                         yAxes: [
-                            {ticks: {suggestedMin: 0, suggestedMax: max_price}}
+                            {ticks: {suggestedMin: min_price, suggestedMax: max_price}}
                         ]
                     }
                 },
@@ -390,14 +478,14 @@ var pricing = {};
         return chart;
     }
 
-    function createTable(ghm_root_info, index, merge_cells, max_duration)
+    function createTable(ghm_root_info, main_index, diff_index, max_duration, merge_cells)
     {
-        var ghs = ghm_root_info[index].ghs;
+        var ghs = ghm_root_info[main_index].ghs;
 
-        if (merge_cells === undefined)
-            merge_cells = true;
         if (max_duration === undefined)
             max_duration = 200;
+        if (merge_cells === undefined)
+            merge_cells = true;
 
         function appendRow(parent, name, func)
         {
@@ -409,7 +497,7 @@ var pricing = {};
             var prev_cell = [document.createTextNode(''), null, false];
             var prev_td = null;
             for (var i = 0; i < ghs.length; i++) {
-                var cell = func(ghs[i]) || [null, null, false];
+                var cell = func(ghs[i], i) || [null, null, false];
                 if (cell[0] === null) {
                     cell[0] = document.createTextNode('');
                 } else if (typeof cell[0] === 'string') {
@@ -467,10 +555,15 @@ var pricing = {};
         });
 
         for (var duration = 0; duration < max_duration; duration++) {
-            appendRow(tbody, durationText(duration), function(col) {
-                info = computePrice(col, duration);
+            appendRow(tbody, durationText(duration), function(col, i) {
+                if (diff_index < 0) {
+                    var info = computePrice(col, duration);
+                } else {
+                    var info = computePriceDelta(col, ghm_root_info[diff_index].ghs_map[col.ghs], duration);
+                }
                 if (info === null)
                     return null;
+
                 info[0] = priceText(info[0]);
                 info.push(false);
                 return info;
@@ -480,7 +573,7 @@ var pricing = {};
         return table;
     }
 
-    function computePrice(col, duration)
+    function computePrice(ghs, duration)
     {
         var duration_mask_test;
         if (duration < 32) {
@@ -488,23 +581,46 @@ var pricing = {};
         } else {
             duration_mask_test = 1 << 31;
         }
-        if (!(col.duration_mask & duration_mask_test))
+        if (!(ghs.duration_mask & duration_mask_test))
             return null;
 
-        if (col.exb_treshold && duration < col.exb_treshold) {
-            var price = col.price_cents;
-            if (col.exb_once) {
-                price -= col.exb_cents;
+        if (ghs.exb_treshold && duration < ghs.exb_treshold) {
+            var price = ghs.price_cents;
+            if (ghs.exb_once) {
+                price -= ghs.exb_cents;
             } else {
-                price -= (col.exb_treshold - duration) * col.exb_cents;
+                price -= (ghs.exb_treshold - duration) * ghs.exb_cents;
             }
             return [price, 'exb'];
         }
-        if (col.exh_treshold && duration >= col.exh_treshold) {
-            var price = col.price_cents + (duration - col.exh_treshold + 1) * col.exh_cents;
+        if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
+            var price = ghs.price_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
             return [price, 'exh'];
         }
-        return [col.price_cents, 'price'];
+        return [ghs.price_cents, 'price'];
+    }
+
+    function computePriceDelta(ghs, prev_ghs, duration)
+    {
+        var p1 = ghs ? computePrice(ghs, duration) : null;
+        var p2 = prev_ghs ? computePrice(prev_ghs, duration) : null;
+
+        if (p1 !== null && p2 !== null) {
+            var delta = p1[0] - p2[0];
+            if (delta < 0) {
+                return [delta, 'lower'];
+            } else if (delta > 0) {
+                return [delta, 'higher'];
+            } else {
+                return [0, 'neutral'];
+            }
+        } else if (p1 !== null) {
+            return [p1[0], 'added'];
+        } else if (p2 !== null) {
+            return [-p2[0], 'removed'];
+        } else {
+            return null;
+        }
     }
 
     function durationText(duration)

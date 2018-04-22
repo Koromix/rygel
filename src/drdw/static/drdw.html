@@ -60,6 +60,11 @@
                         <input id="pricing_max_duration" type="number" onchange="pricing.route();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
+                    <label>
+                        Comparer
+                        <select id="pricing_diff_indexes" onchange="pricing.route({diff: this.value});"
+                                style="width: 12em;"></select>
+                    </label>
 
                     <h1></h1>
                 </nav>

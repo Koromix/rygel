@@ -109,6 +109,13 @@ body {
     background: #6b1b6a;
     color: #b4cdff;
 }
+#pricing_table .lower { background: #ff8888; }
+#pricing_table .higher { background: #a2d4b6; }
+#pricing_table .neutral { background: #d7d7d7; }
+#pricing_table .removed { background: #ff8888; }
+#pricing_table .removed:after { content: '*'; }
+#pricing_table .added { background: #a2d4b6; }
+#pricing_table .added:after { content: '*'; }
 #pricing_table .age { background: #99ffff; }
 
 @media screen and (min-width: 801px) {

@@ -87,8 +87,9 @@ function downloadJson(method, url, arguments, func)
 
 const RunState = Object.freeze({
     Uninitialized: 0,
-    Okay: 1,
-    Error: 2
+    Loading: 1,
+    Okay: 2,
+    Error: 3
 });
 
 // ------------------------------------------------------------------------
