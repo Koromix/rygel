@@ -5,7 +5,11 @@
 #include "../libdrd/libdrd.hh"
 #include "../common/json.hh"
 #ifndef _WIN32
+    #include <dlfcn.h>
     #include <signal.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
 #endif
 #include "resources.hh"
 
@@ -31,7 +35,7 @@ static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
 static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> index_to_constraints;
 static const mco_CatalogSet *catalog_set;
 
-#if !defined(NDEBUG) && defined(_WIN32)
+#ifndef NDEBUG
 static HeapArray<Resource> static_resources;
 static LinkedAllocator static_alloc;
 #else
@@ -59,13 +63,16 @@ static void InitRoutes()
     }
 }
 
-#if !defined(NDEBUG) && defined(_WIN32)
+#ifndef NDEBUG
 static bool UpdateStaticResources()
 {
     LinkedAllocator temp_alloc;
 
+    const char *filename = nullptr;
+    const Span<const Resource> *lib_resources = nullptr;
+#ifdef _WIN32
     Assert(GetApplicationDirectory());
-    const char *filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
+    filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
     {
         static FILETIME last_time;
 
@@ -78,7 +85,6 @@ static bool UpdateStaticResources()
         if (attr.ftLastWriteTime.dwHighDateTime == last_time.dwHighDateTime &&
                 attr.ftLastWriteTime.dwLowDateTime == last_time.dwLowDateTime)
             return true;
-
         last_time = attr.ftLastWriteTime;
     }
 
@@ -89,16 +95,42 @@ static bool UpdateStaticResources()
     }
     DEFER { FreeLibrary(h); };
 
-    const Span<const Resource> *dll_resources =
-        (const Span<const Resource> *)GetProcAddress(h, "static_resources");
-    if (!dll_resources) {
+    lib_resources = (const Span<const Resource> *)GetProcAddress(h, "static_resources");
+#else
+    Assert(GetApplicationDirectory());
+    filename = Fmt(&temp_alloc, "%1%/drdw_res.so", GetApplicationDirectory()).ptr;
+    {
+        static struct timespec last_time;
+
+        struct stat sb;
+        if (stat(filename, &sb) < 0) {
+            LogError("Cannot stat file '%1'", filename);
+            return false;
+        }
+
+        if (sb.st_mtim.tv_sec == last_time.tv_sec &&
+                sb.st_mtim.tv_nsec == last_time.tv_nsec)
+            return true;
+        last_time = sb.st_mtim;
+    }
+
+    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    if (!h) {
+        LogError("Cannot load library '%1': %2", filename, dlerror());
+        return false;
+    }
+    DEFER { dlclose(h); };
+
+    lib_resources = (const Span<const Resource> *)dlsym(h, "static_resources");
+#endif
+    if (!lib_resources) {
         LogError("Cannot find symbol 'static_resources' in library '%1'", filename);
         return false;
     }
 
     static_resources.Clear();
     static_alloc.ReleaseAll();
-    for (const Resource &res: *dll_resources) {
+    for (const Resource &res: *lib_resources) {
         Resource new_res;
         new_res.url = DuplicateString(&static_alloc, res.url).ptr;
         uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&static_alloc, res.data.len);
@@ -358,7 +390,7 @@ static Response ProduceGhmRoots(MHD_Connection *, const char *,
 static Response ProduceStaticResource(MHD_Connection *, const char *url,
                                       CompressionType compression_type)
 {
-#if !defined(NDEBUG) && defined(_WIN32)
+#ifndef NDEBUG
     UpdateStaticResources();
 #endif
 
@@ -501,7 +533,7 @@ Options:
     if (!async.Sync())
         return 1;
 
-#if !defined(NDEBUG) && defined(_WIN32)
+#ifndef NDEBUG
     if (!UpdateStaticResources())
         return false;
 #endif

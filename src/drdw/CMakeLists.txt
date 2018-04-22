@@ -43,7 +43,7 @@ add_custom_command(
     ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${DRDW_RESOURCES}"
          -P "${CMAKE_CURRENT_BINARY_DIR}/build_drdw_resources.cmake"
     DEPENDS ${DRDW_RESOURCES})
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND WIN32)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_library(drdw_res SHARED "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")
     set_target_properties(drdw_res PROPERTIES PREFIX "")
 else()
@@ -51,5 +51,8 @@ else()
 endif()
 
 add_executable(drdw ${DRDW_SRC} ${DRDW_RESOURCES})
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
+    target_link_libraries(drdw PRIVATE dl)
+endif()
 target_include_directories(drdw PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(drdw PUBLIC drd microhttpd)
