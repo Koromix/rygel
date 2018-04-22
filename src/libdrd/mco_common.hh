@@ -10,9 +10,15 @@
 union mco_GhmRootCode {
     int32_t value;
     struct {
+#ifdef ARCH_LITTLE_ENDIAN
+        int8_t seq;
+        char type;
+        int8_t cmd;
+#else
         int8_t cmd;
         char type;
         int8_t seq;
+#endif
     } parts;
 
     mco_GhmRootCode() = default;
@@ -46,8 +52,8 @@ union mco_GhmRootCode {
     bool IsValid() const { return value; }
     bool IsError() const { return parts.cmd == 90; }
 
-    bool operator==(mco_GhmRootCode other) const { return value == other.value; }
-    bool operator!=(mco_GhmRootCode other) const { return value != other.value; }
+    bool operator==(const mco_GhmRootCode &other) const { return value == other.value; }
+    bool operator!=(const mco_GhmRootCode &other) const { return value != other.value; }
 
     operator FmtArg() const
     {
@@ -70,10 +76,17 @@ static inline bool DefaultCompare(mco_GhmRootCode code1, mco_GhmRootCode code2)
 union mco_GhmCode {
     int32_t value;
     struct {
+#ifdef ARCH_LITTLE_ENDIAN
+        char mode;
+        int8_t seq;
+        char type;
+        int8_t cmd;
+#else
         int8_t cmd;
         char type;
         int8_t seq;
         char mode;
+#endif
     } parts;
 
     mco_GhmCode() = default;
@@ -122,8 +135,8 @@ union mco_GhmCode {
         }
     }
 
-    bool operator==(mco_GhmCode other) const { return value == other.value; }
-    bool operator!=(mco_GhmCode other) const { return value != other.value; }
+    bool operator==(const mco_GhmCode &other) const { return value == other.value; }
+    bool operator!=(const mco_GhmCode &other) const { return value != other.value; }
 
     operator FmtArg() const
     {
