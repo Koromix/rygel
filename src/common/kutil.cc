@@ -208,6 +208,7 @@ void LinkedAllocator::Release(void *ptr, Size size)
 // Date
 // ------------------------------------------------------------------------
 
+// TODO: Rewrite the ugly parsing part
 Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *out_remaining)
 {
     Date date;
@@ -218,7 +219,7 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
     for (int i = 0; i < 3; i++) {
         int mult = 1;
         while (offset < date_str.len) {
-            char c = date_str[offset++];
+            char c = date_str[offset];
             int digit = c - '0';
             if ((unsigned int)digit < 10) {
                 parts[i] = (parts[i] * 10) + digit;
@@ -226,11 +227,15 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
                     goto malformed;
             } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
                 mult = -1;
+            } else if (UNLIKELY(i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-')) {
+                break;
             } else if (UNLIKELY(!lengths[i] || (c != '/' && c != '-'))) {
                 goto malformed;
             } else {
+                offset++;
                 break;
             }
+            offset++;
         }
         parts[i] *= mult;
     }
