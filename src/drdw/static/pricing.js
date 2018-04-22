@@ -177,7 +177,6 @@ var pricing = {};
     function refreshView(index, ghm_root, errors)
     {
         var ghm_root_info = ghm_roots_map[ghm_root];
-        var merge_cells = document.querySelector('#pricing_merge_cells').checked;
         var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
 
         var h1 = document.querySelector('#pricing_menu > h1');
@@ -196,7 +195,7 @@ var pricing = {};
             h1.innerText = ghm_root_info[index].ghm_root + ' : ' + ghm_root_info[index].ghm_root_desc;
 
             if (document.querySelector('#pricing_table').classList.contains('active')) {
-                var table = createTable(ghm_root_info, index, merge_cells, max_duration);
+                var table = createTable(ghm_root_info, index, true, max_duration);
                 cloneAttributes(old_table, table);
                 old_table.parentNode.replaceChild(table, old_table);
             }

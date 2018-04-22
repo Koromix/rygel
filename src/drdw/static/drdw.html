@@ -51,18 +51,14 @@
                     </svg>
 
                     <label>
-                        Racine de GHM
+                        Racine
                         <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
                                 style="width: 7em;"></select>
                     </label>
                     <label>
-                        Durée maximale
+                        Durée
                         <input id="pricing_max_duration" type="number" onchange="pricing.route();"
                                value="200" min="0" max="500" step="5"/>
-                    </label>
-                    <label>
-                        <input id="pricing_merge_cells" type="checkbox" onchange="pricing.route();" checked/>
-                        Fusionner
                     </label>
 
                     <h1></h1>
