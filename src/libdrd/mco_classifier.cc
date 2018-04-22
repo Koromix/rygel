@@ -914,6 +914,9 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
 {
     DebugAssert(stays.len > 0);
 
+    // Reset aggregation
+    *out_agg = {};
+
     // These errors are too serious to continue (broken data, etc.)
     if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion)) {
         DebugAssert(stays.len == 1);
@@ -934,9 +937,6 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
-    out_agg->duration = 0;
-    out_agg->flags = 0;
-    out_agg->stay.last_menstrual_period = {};
     for (const mco_Stay &stay: stays) {
         if (stay.gestational_age > 0) {
             out_agg->stay.gestational_age = stay.gestational_age;
@@ -1940,6 +1940,7 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
             result.ghm = mco_Prepare(table_set, result.stays, flags,
                                      &agg, &diagnoses, &procedures, &errors);
+            result.duration = agg.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.main_stay_idx = agg.main_stay - agg.stays.ptr;

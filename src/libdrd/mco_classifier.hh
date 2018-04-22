@@ -56,6 +56,7 @@ struct mco_ErrorSet {
 struct mco_Result {
     Span<const mco_Stay> stays;
     Size main_stay_idx;
+    int duration;
 
     mco_GhmCode ghm;
     int16_t main_error;
