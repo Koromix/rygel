@@ -59,11 +59,11 @@ body {
 
 .page:not(.active) { display: none !important; }
 
-#pricing_menu {
+.page_menu {
     margin: 0 1em 1em 1em;
     text-align: center;
 }
-#pricing_menu h1 {
+.page_menu h1 {
     margin: 0.5em 3px 0 3px;
     font-size: 1.1em;
 }
@@ -118,6 +118,60 @@ body {
 #pricing_table .added:after { content: '*'; }
 #pricing_table .age { background: #99ffff; }
 
+#casemix_cmds {
+    width: 100%;
+    border: 1px solid #a4a4a4;
+    border-collapse: collapse;
+}
+#casemix_cmds td {
+    text-align: center;
+    color: #ccc;
+}
+#casemix_cmds a {
+    color: black;
+    text-decoration: none;
+}
+
+#casemix_roots {
+    margin-top: 1em;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+#casemix_roots th, #casemix_roots td {
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 64px;
+}
+#casemix_roots th {
+    text-align: center;
+    font-weight: bold;
+}
+#casemix_roots tbody td { text-align: center; }
+
+#casemix_ghs {
+    margin-top: 1em;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+#casemix_ghs th, #casemix_ghs td {
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 64px;
+}
+#casemix_ghs th {
+    text-align: center;
+    font-weight: bold;
+}
+#casemix_ghs tbody td { text-align: center; }
+
 @media screen and (min-width: 801px) {
     a.deploy { display: none; }
 
@@ -140,6 +194,8 @@ body {
         margin-left: 200px;
         padding: 1em;
     }
+
+    .page_menu { line-height: 2em; };
 
     #pricing_table tr:hover th {
         filter: invert(100%);
@@ -208,7 +264,7 @@ body {
 
     main { padding-top: 40px; }
 
-    #pricing_menu {
+    .page_menu {
         display: none;
         position: fixed;
         left: 0;
@@ -220,15 +276,15 @@ body {
         background: #eeeeee;
         z-index: 1;
     }
-    #pricing_menu.active { display: block; }
-    #pricing a.deploy {
+    .page_menu.active { display: block; }
+    a.page_deploy {
         position: fixed;
         top: 0;
         left: calc(100vw - 42px);
         z-index: 20;
     }
-    #pricing_menu input, #pricing_menu select { float: right; }
-    #pricing_menu label {
+    .page_menu input, .page_menu select { float: right; }
+    .page_menu label {
         display: block;
         height: 30px;
         text-align: left;

@@ -12,6 +12,7 @@ set(DRDW_RESOURCES static/drdw.html
                    static/common.js
                    static/favicon.ico
                    static/pricing.js
+                   static/casemix.js
                    static/logo.png
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc

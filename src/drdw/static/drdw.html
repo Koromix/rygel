@@ -14,6 +14,7 @@
         <!-- Modules -->
         <script type="text/javascript" src="static/common.js"></script>
         <script type="text/javascript" src="static/pricing.js"></script>
+        <script type="text/javascript" src="static/casemix.js"></script>
     </head>
 
     <body>
@@ -25,6 +26,10 @@
                     <li><a class="category" href="pricing/table" onclick="pricing.route({mode: 'table'}); return false;">Tarifs</a></li>
                     <li><a href="pricing/table" onclick="pricing.route({mode: 'table'}); return false;">Table</a></li>
                     <li><a href="pricing/chart" onclick="pricing.route({mode: 'chart'}); return false;">Graphique</a></li>
+
+                    <li><a class="category" href="casemix/grid" onclick="casemix.route({mode: 'roots'}); return false;">Casemix</a></li>
+                    <li><a href="casemix/roots" onclick="casemix.route({mode: 'roots'}); return false;">Racines</a></li>
+                    <li><a href="casemix/ghs" onclick="casemix.route({mode: 'ghs'}); return false;">GHS</a></li>
 
                     <!--<li><a class="category" href="lists/ghm_tree">Listes</a></li>
                     <li><a href="lists/ghm_tree">Arbre de groupage</a></li>
@@ -41,8 +46,8 @@
 
         <main>
             <div id="pricing" class="page page_pricing">
-                <a class="deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
-                <nav id="pricing_menu">
+                <a class="deploy page_deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
+                <nav id="pricing_menu" class="page_menu">
                     <svg id="pricing_indexes">
                         <text x="0" y="25" text-anchor="start" onclick="pricing.moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
                         <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
@@ -56,14 +61,14 @@
                                 style="width: 7em;"></select>
                     </label>
                     <label>
-                        Durée
-                        <input id="pricing_max_duration" type="number" onchange="pricing.route();"
-                               value="200" min="0" max="500" step="5"/>
-                    </label>
-                    <label>
                         Comparer
                         <select id="pricing_diff_indexes" onchange="pricing.route({diff: this.value});"
                                 style="width: 12em;"></select>
+                    </label>
+                    <label>
+                        Durée
+                        <input id="pricing_max_duration" type="number" onchange="pricing.route();"
+                               value="200" min="0" max="500" step="5"/>
                     </label>
 
                     <h1></h1>
@@ -74,6 +79,39 @@
 
                     <table id="pricing_table" class="hide" ></table>
                     <canvas id="pricing_chart" class="hide" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div id="casemix" class="page page_casemix">
+                <a class="deploy page_deploy" href="#" onclick="switchMenu('#casemix_menu'); return false;"></a>
+                <nav id="casemix_menu" class="page_menu">
+                    <label>
+                        Unités fonctionnelles
+                        <input id="casemix_units" type="text" size="40" value=""/>
+                    </label><br/>
+
+                    <label>
+                        Dates
+                        <input id="casemix_start" type="date" value=""/>
+                        <input id="casemix_end" type="date" value=""/>
+                    </label>
+                    <label>
+                        Comparer
+                        <input id="casemix_diff_start" type="date" value=""/>
+                        <input id="casemix_diff_end" type="date" value=""/>
+                    </label><br/>
+
+                    <button onclick="casemix.route({start: document.querySelector('#casemix_start').value,
+                                                    end: document.querySelector('#casemix_end').value,
+                                                    diff_start: document.querySelector('#casemix_diff_start').value,
+                                                    diff_end: document.querySelector('#casemix_diff_end').value,
+                                                    units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
+                </nav>
+
+                <div id="casemix_view">
+                    <table id="casemix_cmds" class="hide"></table>
+                    <table id="casemix_roots" class="hide"></table>
+                    <table id="casemix_ghs" class="hide"></table>
                 </div>
             </div>
         </main>

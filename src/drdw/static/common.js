@@ -42,8 +42,13 @@ function createElementNS(ns, tag, attr)
     if (attr) {
         for (var key in attr) {
             value = attr[key];
-            if (value !== null)
-                el.setAttribute(key, attr[key]);
+            if (value !== null) {
+                if (typeof value === 'function') {
+                    el.addEventListener(key, value);
+                } else {
+                    el.setAttribute(key, value);
+                }
+            }
         }
     }
     for (var i = 3; i < arguments.length; i++) {
@@ -69,8 +74,11 @@ function downloadJson(method, url, arguments, func)
     if (keys.length) {
         var query_arguments = [];
         for (var i = 0; i < keys.length; i++) {
-            var arg = escape(keys[i]) + '=' + escape(arguments[keys[i]]);
-            query_arguments.push(arg);
+            var value = arguments[keys[i]];
+            if (value !== null) {
+                var arg = escape(keys[i]) + '=' + escape(arguments[keys[i]]);
+                query_arguments.push(arg);
+            }
         }
         url += '?' + query_arguments.join('&');
     }
@@ -158,7 +166,7 @@ function switchPage(page_url, mark_history)
 
     var module_name = page_url.split('/')[0];
     removeClass(document.querySelectorAll('.page'), 'active');
-    addClass(document.querySelectorAll('.page_' + module_name), 'active');
+    addClass(document.querySelectorAll('.page.page_' + module_name), 'active');
 
     var module = window[module_name];
     if (module !== undefined && module.run !== undefined)

@@ -22,8 +22,6 @@ var pricing = {};
         // Parse route (model: pricing/<mode>/[<diff>..]<date>/<ghm_root>)
         var parts = url_page.split('/');
         target_mode = parts[1] || target_mode;
-        if (target_mode !== 'chart' && target_mode !== 'table')
-            errors.push('Mode d\'affichage incorrect');
         if (parts[2]) {
             var date_parts = parts[2].split('..', 2);
             if (date_parts.length == 2) {
@@ -37,6 +35,8 @@ var pricing = {};
         target_ghm_root = parts[3] || target_ghm_root;
 
         // Validate
+        if (target_mode !== 'chart' && target_mode !== 'table')
+            errors.push('Mode d\'affichage incorrect');
         var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
         if (target_date !== null && indexes.length && main_index < 0)
             errors.push('Date incorrecte');
@@ -91,6 +91,7 @@ var pricing = {};
         }
 
         // Refresh display
+        // TODO: Use something like '!update_queue_length && view_route_id != route_id)
         if (!download_queue_length) {
             document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
             document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
@@ -225,6 +226,7 @@ var pricing = {};
         });
     }
 
+    // TODO: Split refreshHeader(), remove this function
     function refreshView(main_index, diff_index, ghm_root, errors)
     {
         var ghm_root_info = ghm_roots_map[ghm_root];
@@ -304,10 +306,10 @@ var pricing = {};
 
                 var node = createElementNS('svg', 'circle',
                                            {cx: x, cy: 20, r: radius, fill: color,
-                                            style: 'cursor: pointer;'},
+                                            style: 'cursor: pointer;',
+                                            click: click_function},
                     createElementNS('svg', 'title', {}, indexes[i].begin_date)
                 );
-                node.addEventListener('click', click_function);
                 g.appendChild(node);
 
                 if (indexes[i].changed_prices) {
@@ -316,9 +318,9 @@ var pricing = {};
 
                     var text = createElementNS('svg', 'text',
                                                {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
-                                                style: 'cursor: pointer; font-weight: ' + weight},
+                                                style: 'cursor: pointer; font-weight: ' + weight,
+                                                click: click_function},
                                                indexes[i].begin_date);
-                    text.addEventListener('click', click_function);
                     g.appendChild(text);
                 }
             }
@@ -631,6 +633,7 @@ var pricing = {};
             return '';
         }
     }
+    this.durationText = durationText;
 
     function priceText(price_cents)
     {
@@ -641,4 +644,5 @@ var pricing = {};
             return '';
         }
     }
+    this.priceText = priceText;
 }).call(pricing);
