@@ -1160,6 +1160,10 @@ public:
                     // Not supported yet
                 } else if (TestStr(key, "sdc_cents")) {
                     // Not supported yet
+                } else if (TestStr(key, "tde_cents")) {
+                    // Not supported yet
+                } else if (TestStr(key, "tse_cents")) {
+                    // Not supported yet
                 } else {
                     return UnknownAttribute(key);
                 }
