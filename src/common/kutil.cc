@@ -18,6 +18,13 @@
     #include <sys/types.h>
     #include <unistd.h>
 #endif
+#ifdef __APPLE__
+    #include <mach-o/dyld.h>
+
+    #define off64_t off_t
+    #define fseeko64 fseeko
+    #define ftello64 ftello
+#endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
 #endif
@@ -1209,14 +1216,27 @@ const char *GetApplicationExecutable()
     }
 
     return executable_path;
+#elif defined(__APPLE__)
+    static char executable_path[4096];
+
+    if (!executable_path[0]) {
+        uint32_t buffer_size = SIZE(executable_path);
+        Assert(!_NSGetExecutablePath(executable_path, &buffer_size));
+        char *path_buf = realpath(executable_path, nullptr);
+        Assert(path_buf);
+        Assert(strlen(path_buf) < SIZE(executable_path));
+        strcpy(executable_path, path_buf);
+        free(path_buf);
+    }
+
+    return executable_path;
 #elif defined(__linux__)
     static char executable_path[4096];
 
     if (!executable_path[0]) {
         char *path_buf = realpath("/proc/self/exe", nullptr);
         Assert(path_buf);
-        Size path_len = (Size)strlen(path_buf);
-        Assert(path_len < SIZE(executable_path));
+        Assert(strlen(path_buf) < SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -1231,7 +1251,7 @@ const char *GetApplicationExecutable()
 
 const char *GetApplicationDirectory()
 {
-#if defined(_WIN32) || defined(__linux__)
+#if defined(_WIN32) || defined(__APPLE__) || defined(__linux__)
     static char executable_dir[4096];
 
     if (!executable_dir[0]) {

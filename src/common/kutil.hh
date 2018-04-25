@@ -1234,7 +1234,7 @@ public:
                 bits = bitset->data[++offset];
             }
 
-            ctz = CountTrailingZeros(bits);
+            ctz = CountTrailingZeros((uint64_t)bits);
             bits ^= (size_t)1 << ctz;
 
             return *this;
