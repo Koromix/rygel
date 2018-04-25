@@ -106,11 +106,15 @@ if(R_FOUND)
             list(APPEND rcpp_depends ${src_dest})
         endforeach()
 
-        add_library(${TARGET} SHARED ${sources}
+        add_library(${TARGET} MODULE ${sources}
                     "${pkg_directory}/DESCRIPTION" "${pkg_directory}/NAMESPACE")
         set_target_properties(${TARGET} PROPERTIES PREFIX ""
-                                                   COMPILE_FLAGS "-frtti -fexceptions"
-                                                   LINK_FLAGS "-static-libgcc -Wl,-allow-multiple-definition")
+                                                   COMPILE_FLAGS "-frtti -fexceptions -fvisibility=default")
+        if (CMAKE_COMPILER_IS_GNUCC)
+            set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "-fvisibility=default -static-libgcc")
+        else()
+            set_target_properties(${TARGET} PROPERTIES LINK_FLAGS "-fvisibility=default")
+        endif()
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
 
@@ -118,7 +122,7 @@ if(R_FOUND)
         add_custom_command(
             TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${TARGET}>"
-                                             "${pkg_directory}/src/${TARGET}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+                                             "${pkg_directory}/src/${TARGET}${CMAKE_SHARED_MODULE_SUFFIX}")
 
         file(WRITE "${CMAKE_BINARY_DIR}/RunRCmdInstall.cmake" "\
 if(WIN32)\n\
@@ -162,5 +166,6 @@ set \"f=%1\"\n\
         file(WRITE "${CMAKE_BINARY_DIR}/Rscript" "\
 export \"LD_LIBRARY_PATH=${CMAKE_BINARY_DIR}\"\n\
 \"${R_BINARY_RSCRIPT}\" -e \".libPaths(c('${install_directory}',.libPaths()));source('$1')\"\n")
+        execute_process(COMMAND chmod +x "${CMAKE_BINARY_DIR}/Rscript")
     endif()
 endif()
