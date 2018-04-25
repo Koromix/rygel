@@ -25,8 +25,7 @@ file(WRITE ${RESOURCES_CC_FILENAME} "\
 #include \"${SRC_DIR}/../libdrd/libdrd.hh\"\n\
 #include \"${SRC_DIR}/resources.hh\"\n\
 \n\
-EXPORT extern const Span<const Resource> static_resources;
-const Span<const Resource> static_resources = {\n")
+static const Resource resources[] = {\n")
 separate_arguments(RESOURCES)
 foreach(res ${RESOURCES})
     get_filename_component(name ${res} NAME)
@@ -36,7 +35,10 @@ foreach(res ${RESOURCES})
 
     file(APPEND ${RESOURCES_CC_FILENAME} "    {\"/static/${name}\", {${data}}},\n")
 endforeach()
-file(APPEND ${RESOURCES_CC_FILENAME} "};\n")
+file(APPEND ${RESOURCES_CC_FILENAME} "};\n\
+\n\
+EXPORT extern const Span<const Resource> static_resources;\n\
+const Span<const Resource> static_resources = resources;\n")
 ]=])
 add_custom_command(
     OUTPUT resources.cc
@@ -45,7 +47,7 @@ add_custom_command(
          -P "${CMAKE_CURRENT_BINARY_DIR}/build_drdw_resources.cmake"
     DEPENDS ${DRDW_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_library(drdw_res SHARED "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")
+    add_library(drdw_res MODULE "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")
     set_target_properties(drdw_res PROPERTIES PREFIX "")
 else()
     list(APPEND DRDW_SRC "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")

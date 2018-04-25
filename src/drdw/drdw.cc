@@ -110,10 +110,17 @@ static bool UpdateStaticResources()
             return false;
         }
 
+#ifdef __APPLE__
+        if (sb.st_mtimespec.tv_sec == last_time.tv_sec &&
+                sb.st_mtimespec.tv_nsec == last_time.tv_nsec)
+            return true;
+        last_time = sb.st_mtimespec;
+#else
         if (sb.st_mtim.tv_sec == last_time.tv_sec &&
                 sb.st_mtim.tv_nsec == last_time.tv_nsec)
             return true;
         last_time = sb.st_mtim;
+#endif
     }
 
     void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
