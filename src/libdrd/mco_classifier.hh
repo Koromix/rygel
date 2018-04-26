@@ -35,8 +35,8 @@ struct mco_Aggregate {
     mco_Stay stay;
     const mco_DiagnosisInfo *main_diag_info;
     const mco_DiagnosisInfo *linked_diag_info;
-    Span<const mco_DiagnosisInfo *> diagnoses;
-    Span<const mco_ProcedureInfo *> procedures;
+    HeapArray<const mco_DiagnosisInfo *> diagnoses;
+    HeapArray<const mco_ProcedureInfo *> procedures;
     uint8_t proc_activities;
 
     uint16_t flags;
@@ -103,10 +103,7 @@ Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays,
                                Span<const mco_Stay> *out_remainder = nullptr);
 
 mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stays,
-                        unsigned int flags, mco_Aggregate *out_agg,
-                        HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
-                        HeapArray<const mco_ProcedureInfo *> *out_procedures,
-                        mco_ErrorSet *out_errors);
+                        unsigned int flags, mco_Aggregate *out_agg, mco_ErrorSet *out_errors);
 
 int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverityWithDuration(int severity, int duration);

@@ -297,7 +297,6 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
 }
 
 static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
-                                 HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
                                  mco_ErrorSet *out_errors)
 {
     bool valid = true;
@@ -325,7 +324,7 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
         // Main diagnosis is valid (checks are done in CheckMainError)
         const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
         if (LIKELY(diag_info)) {
-            out_diagnoses->Append(diag_info);
+            out_agg->diagnoses.Append(diag_info);
             valid &= CheckDiagnosisErrors(*out_agg, *diag_info, main_diagnosis_errors, out_errors);
         } else {
             valid &= SetError(out_errors, 67);
@@ -334,7 +333,7 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
         if (stay.linked_diagnosis.IsValid()) {
             const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
             if (LIKELY(diag_info)) {
-                out_diagnoses->Append(diag_info);
+                out_agg->diagnoses.Append(diag_info);
                 valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
                                               linked_diagnosis_errors, out_errors);
             } else {
@@ -357,7 +356,7 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
 
             const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
             if (LIKELY(diag_info)) {
-                out_diagnoses->Append(diag_info);
+                out_agg->diagnoses.Append(diag_info);
                 valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
                                               associate_diagnosis_errors, out_errors);
             } else {
@@ -367,9 +366,9 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
     }
 
     // Deduplicate diagnoses
-    std::sort(out_diagnoses->begin(), out_diagnoses->end());
-    if (out_diagnoses->len) {
-        Span<const mco_DiagnosisInfo *> diagnoses = *out_diagnoses;
+    std::sort(out_agg->diagnoses.begin(), out_agg->diagnoses.end());
+    if (out_agg->diagnoses.len) {
+        Span<const mco_DiagnosisInfo *> diagnoses = out_agg->diagnoses;
 
         Size j = 0;
         for (Size i = 1; i < diagnoses.len; i++) {
@@ -377,15 +376,13 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
                 diagnoses[++j] = diagnoses[i];
             }
         }
-        out_diagnoses->RemoveFrom(j + 1);
+        out_agg->diagnoses.RemoveFrom(j + 1);
     }
-    out_agg->diagnoses = *out_diagnoses;
 
     return valid;
 }
 
 static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
-                                  HeapArray<const mco_ProcedureInfo *> *out_procedures,
                                   mco_ErrorSet *out_errors)
 {
     bool valid = true;
@@ -475,7 +472,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
-                out_procedures->Append(proc_info);
+                out_agg->procedures.Append(proc_info);
                 out_agg->proc_activities |= proc.activities;
             } else {
                 Span <const mco_ProcedureInfo> compatible_procs =
@@ -502,9 +499,9 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // Deduplicate procedures
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
-    std::sort(out_procedures->begin(), out_procedures->end());
-    if (out_procedures->len) {
-        Span<const mco_ProcedureInfo *> procedures = *out_procedures;
+    std::sort(out_agg->procedures.begin(), out_agg->procedures.end());
+    if (out_agg->procedures.len) {
+        Span<const mco_ProcedureInfo *> procedures = out_agg->procedures;
 
         Size j = 0;
         for (Size i = 0; i < procedures.len; i++) {
@@ -519,9 +516,8 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                 procedures[++j] = procedures[i];
             }
         }
-        out_procedures->RemoveFrom(j + 1);
+        out_agg->procedures.RemoveFrom(j + 1);
     }
-    out_agg->procedures = *out_procedures;
 
     return valid;
 }
@@ -907,15 +903,9 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
 }
 
 mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stays,
-                        unsigned int flags, mco_Aggregate *out_agg,
-                        HeapArray<const mco_DiagnosisInfo *> *out_diagnoses,
-                        HeapArray<const mco_ProcedureInfo *> *out_procedures,
-                        mco_ErrorSet *out_errors)
+                        unsigned int flags, mco_Aggregate *out_agg, mco_ErrorSet *out_errors)
 {
     DebugAssert(stays.len > 0);
-
-    // Reset aggregation
-    *out_agg = {};
 
     // These errors are too serious to continue (broken data, etc.)
     if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion)) {
@@ -937,6 +927,8 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
+    out_agg->duration = 0;
+    out_agg->flags = 0;
     for (const mco_Stay &stay: stays) {
         if (stay.gestational_age > 0) {
             out_agg->stay.gestational_age = stay.gestational_age;
@@ -960,8 +952,10 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     bool valid = true;
 
     // Aggregate diagnoses and procedures
-    valid &= AppendValidDiagnoses(out_agg, flags, out_diagnoses, out_errors);
-    valid &= AppendValidProcedures(out_agg, flags, out_procedures, out_errors);
+    out_agg->diagnoses.Clear(256);
+    out_agg->procedures.Clear(512);
+    valid &= AppendValidDiagnoses(out_agg, flags, out_errors);
+    valid &= AppendValidProcedures(out_agg, flags, out_errors);
 
     // Pick main stay
     if (stays.len > 1) {
@@ -1631,7 +1625,10 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
             return (auth_type == 7);
         });
         if (uhcd) {
-            mco_Aggregate agg0 = agg;
+            // Use memcpy to avoid deep copy of arrays (diagnoses, procedures, etc.)
+            mco_Aggregate agg0;
+            memcpy(&agg0, &agg, SIZE(agg0));
+            DEFER { memset(&agg0, 0, SIZE(agg0)); };
             agg0.duration = 0;
 
             // Don't run ClassifyGhm() because that would test the confirmation flag,
@@ -1922,28 +1919,27 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
+    mco_Aggregate agg;
     mco_ErrorSet errors;
-    HeapArray<const mco_DiagnosisInfo *> diagnoses;
-    HeapArray<const mco_ProcedureInfo *> procedures;
 
     Size i;
     for (i = 0; stays.len; i++) {
         mco_Result result = {};
-        mco_Aggregate agg;
 
-        errors.main_error = 0;
-        diagnoses.Clear(256);
-        procedures.Clear(512);
 
         do {
+            // Reset critical values
+            agg.duration = 0;
+            errors.main_error = 0;
+
             result.stays = mco_Split(stays, &stays);
 
-            result.ghm = mco_Prepare(table_set, result.stays, flags,
-                                     &agg, &diagnoses, &procedures, &errors);
+            result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
             result.duration = agg.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
             result.main_stay_idx = agg.main_stay - agg.stays.ptr;
+
             result.ghm = mco_ClassifyGhm(agg, flags, &errors);
             if (UNLIKELY(result.ghm.IsError()))
                 break;
