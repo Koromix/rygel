@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "mco_main.hh"
+#include "mco_init.hh"
 
 HeapArray<const char *> mco_data_directories;
 HeapArray<const char *> mco_table_directories;

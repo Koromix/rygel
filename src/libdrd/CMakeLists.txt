@@ -9,13 +9,13 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_authorizations.hh
                mco_classifier.cc
                mco_classifier.hh
-               mco_constraints.cc
-               mco_constraints.hh
                mco_common.hh
                mco_catalogs.cc
                mco_catalogs.hh
-               mco_main.cc
-               mco_main.hh
+               mco_init.cc
+               mco_init.hh
+               mco_mapper.cc
+               mco_mapper.hh
                mco_stays.cc
                mco_stays.hh
                mco_tables.cc

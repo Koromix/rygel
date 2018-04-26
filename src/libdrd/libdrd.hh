@@ -12,8 +12,8 @@
 #include "mco_tables.hh"
 #include "mco_stays.hh"
 #include "mco_classifier.hh"
-#include "mco_constraints.hh"
-#include "mco_main.hh"
+#include "mco_mapper.hh"
+#include "mco_init.hh"
 
 #ifdef DRD_IMPLEMENTATION
     #include "../common/kutil.cc"
@@ -22,6 +22,6 @@
     #include "mco_tables.cc"
     #include "mco_stays.cc"
     #include "mco_classifier.cc"
-    #include "mco_constraints.cc"
-    #include "mco_main.cc"
+    #include "mco_mapper.cc"
+    #include "mco_init.cc"
 #endif

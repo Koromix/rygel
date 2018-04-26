@@ -4,7 +4,7 @@
 
 #include "../common/kutil.hh"
 #include "mco_classifier.hh"
-#include "mco_constraints.hh"
+#include "mco_mapper.hh"
 
 static bool MergeConstraint(const mco_TableIndex &index,
                             const mco_GhmCode ghm, mco_GhmConstraint constraint,
