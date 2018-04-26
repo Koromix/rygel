@@ -796,8 +796,25 @@ public:
         memset(&other, 0, SIZE(other));
         return *this;
     }
-    HeapArray(HeapArray &) = delete;
-    HeapArray &operator=(const HeapArray &) = delete;
+    HeapArray(const HeapArray &other) { *this = other; }
+    HeapArray &operator=(const HeapArray &other)
+    {
+        RemoveFrom(0);
+        Grow(other.capacity);
+#if __cplusplus >= 201703L
+        if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
+            for (Size i = 0; i < other.len; i++) {
+                ptr[i] = other.ptr[i];
+            }
+        } else {
+            memcpy(ptr, other.ptr, (size_t)(other.len * SIZE(*ptr)));
+        }
+        len = other.len;
+        return *this;
+    }
 
     void Clear(Size reserve_capacity = 0)
     {
