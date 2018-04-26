@@ -746,9 +746,9 @@ Options:
 
         mco_StaySetBuilder stay_set_builder;
         if (!stay_set_builder.LoadFiles(stays_filenames))
-            return false;
+            return 1;
         if (!stay_set_builder.Finish(&stay_set))
-            return false;
+            return 1;
     }
 
     LogInfo("Computing constraints");
@@ -770,7 +770,7 @@ Options:
 
 #ifndef NDEBUG
     if (!UpdateStaticResources())
-        return false;
+        return 1;
 #endif
     InitRoutes();
 
