@@ -1086,7 +1086,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
                 (dent->d_name[0] == '.' && dent->d_name[1] == '.' && !dent->d_name[2]))
             continue;
 
-        if (!fnmatch(filter, dent->d_name, FNM_PERIOD)) {
+        if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
             FileInfo file_info;
 
 #ifdef _DIRENT_HAVE_D_TYPE
