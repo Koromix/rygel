@@ -29,6 +29,14 @@ struct DescSet {
     LinkedAllocator alloc;
 };
 
+struct Route {
+    const char *url;
+    Span<const uint8_t> data;
+    const char *mime_type;
+
+    HASH_TABLE_HANDLER(Route, url);
+};
+
 static const char *const pages[] = {
     "/pricing/table",
     "/pricing/chart",
@@ -48,14 +56,42 @@ static DescSet desc_set;
 static mco_StaySet stay_set;
 
 #ifndef NDEBUG
-static HeapArray<Resource> static_resources;
+static HeapArray<StaticResource> static_resources;
 static LinkedAllocator static_alloc;
 #else
-extern const Span<const Resource> static_resources;
+extern const Span<const StaticResource> static_resources;
 #endif
 
-static HashMap<const char *, Span<const uint8_t>> routes;
+static HashTable<const char *, Route> routes;
 static LinkedAllocator routes_alloc;
+
+static const char *GetMimeType(Span<const char> path)
+{
+    Span<const char> ext;
+    {
+        Size pos = path.len;
+        while (pos > 0 && path[--pos] != '.');
+        ext = path.Take(pos, path.len - pos);
+
+    }
+
+    if (ext == ".css") {
+        return "text/css";
+    } else if (ext == ".html") {
+        return "text/html";
+    } else if (ext == ".ico") {
+        return "image/vnd.microsoft.icon";
+    } else if (ext == ".js") {
+        return "application/javascript";
+    } else if (ext == ".json") {
+        return "application/json";
+    } else if (ext == ".png") {
+        return "image/png";
+    } else {
+        LogError("Unknown MIME type for path '%1'", path);
+        return "application/octet-stream";
+    }
+}
 
 static bool InitDescSet(Span<const char *const> data_directories,
                         Span<const char *const> desc_directories,
@@ -115,22 +151,23 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     Assert(static_resources.len > 0);
-    routes.Set("/", static_resources[0].data);
+    routes.Set({"/", static_resources[0].data, GetMimeType(static_resources[0].url)});
     for (const char *page: pages) {
-        routes.Set(page, static_resources[0].data);
+        routes.Set({page, static_resources[0].data, GetMimeType(static_resources[0].url)});
     }
-    for (const Resource &res: static_resources) {
-        routes.Set(res.url, res.data);
+    for (const StaticResource &res: static_resources) {
+        routes.Set({res.url, res.data, GetMimeType(res.url)});
     }
     for (const Desc &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/desc/%1", desc.name).ptr;
-        routes.Set(url, desc.data);
+        routes.Set({url, desc.data, GetMimeType(url)});
     }
 
     // Special cases
-    Span<const uint8_t> *favicon = routes.Find("/static/favicon.ico");
-    if (favicon) {
-        routes.Set("/favicon.ico", *favicon);
+    Route favicon = routes.FindValue("/static/favicon.ico", {});
+    if (favicon.url) {
+        favicon.url = "/favicon.ico";
+        routes.Set(favicon);
     }
 }
 
@@ -140,7 +177,7 @@ static bool UpdateStaticResources()
     LinkedAllocator temp_alloc;
 
     const char *filename = nullptr;
-    const Span<const Resource> *lib_resources = nullptr;
+    const Span<const StaticResource> *lib_resources = nullptr;
 #ifdef _WIN32
     Assert(GetApplicationDirectory());
     filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
@@ -166,7 +203,7 @@ static bool UpdateStaticResources()
     }
     DEFER { FreeLibrary(h); };
 
-    lib_resources = (const Span<const Resource> *)GetProcAddress(h, "static_resources");
+    lib_resources = (const Span<const StaticResource> *)GetProcAddress(h, "static_resources");
 #else
     Assert(GetApplicationDirectory());
     filename = Fmt(&temp_alloc, "%1%/drdw_res.so", GetApplicationDirectory()).ptr;
@@ -199,7 +236,7 @@ static bool UpdateStaticResources()
     }
     DEFER { dlclose(h); };
 
-    lib_resources = (const Span<const Resource> *)dlsym(h, "static_resources");
+    lib_resources = (const Span<const StaticResource> *)dlsym(h, "static_resources");
 #endif
     if (!lib_resources) {
         LogError("Cannot find symbol 'static_resources' in library '%1'", filename);
@@ -208,8 +245,8 @@ static bool UpdateStaticResources()
 
     static_resources.Clear();
     static_alloc.ReleaseAll();
-    for (const Resource &res: *lib_resources) {
-        Resource new_res;
+    for (const StaticResource &res: *lib_resources) {
+        StaticResource new_res;
         new_res.url = DuplicateString(&static_alloc, res.url).ptr;
         uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&static_alloc, res.data.len);
         memcpy(data_ptr, res.data.ptr, (size_t)res.data.len);
@@ -641,16 +678,17 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
     UpdateStaticResources();
 #endif
 
-    Span<const uint8_t> resource_data = routes.FindValue(url, {});
-    if (!resource_data.IsValid())
-        resource_data = routes.FindValue("/", {});
+    const Route *route = routes.Find(url);
+    if (!route) {
+        route = routes.Find("/");
         // return CreateErrorPage(404);
+    }
 
     MHD_Response *response;
     if (compression_type != CompressionType::None) {
         HeapArray<uint8_t> buffer;
         StreamWriter st(&buffer, nullptr, compression_type);
-        st.Write(resource_data);
+        st.Write(route->data);
         if (!st.Close())
             return CreateErrorPage(500);
 
@@ -660,9 +698,11 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
 
         AddContentEncodingHeader(response, compression_type);
     } else {
-        response = MHD_create_response_from_buffer((size_t)resource_data.len,
-                                                   (void *)resource_data.ptr,
+        response = MHD_create_response_from_buffer((size_t)route->data.len, (void *)route->data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
+    }
+    if (route->mime_type) {
+        MHD_add_response_header(response, "Content-Type", route->mime_type);
     }
 
     return {200, response};

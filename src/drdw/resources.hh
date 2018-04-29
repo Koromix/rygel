@@ -6,7 +6,7 @@
 
 #include "../libdrd/libdrd.hh"
 
-struct Resource {
+struct StaticResource {
     const char *url;
     Span<const uint8_t> data;
 };

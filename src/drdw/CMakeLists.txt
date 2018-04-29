@@ -25,7 +25,7 @@ file(WRITE ${RESOURCES_CC_FILENAME} "\
 #include \"${SRC_DIR}/../libdrd/libdrd.hh\"\n\
 #include \"${SRC_DIR}/resources.hh\"\n\
 \n\
-static const Resource resources[] = {\n")
+static const StaticResource resources[] = {\n")
 separate_arguments(RESOURCES)
 foreach(res ${RESOURCES})
     get_filename_component(name ${res} NAME)
@@ -37,8 +37,8 @@ foreach(res ${RESOURCES})
 endforeach()
 file(APPEND ${RESOURCES_CC_FILENAME} "};\n\
 \n\
-EXPORT extern const Span<const Resource> static_resources;\n\
-const Span<const Resource> static_resources = resources;\n")
+EXPORT extern const Span<const StaticResource> static_resources;\n\
+const Span<const StaticResource> static_resources = resources;\n")
 ]=])
 add_custom_command(
     OUTPUT resources.cc
