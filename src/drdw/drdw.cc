@@ -716,7 +716,7 @@ Options:
         --desc-dir <dir>         Add descriptions directory
                                  (default: <data_dir>%/desc)
 
-    -s, --stays <file>           Stays
+    -s, --stays <path>           Add stays to casemix
 )");
         PrintLn(fp, mco_options_usage);
     };
