@@ -286,7 +286,8 @@ body {
     .page_menu input, .page_menu select { float: right; }
     .page_menu label {
         display: block;
-        height: 30px;
+        clear: both;
+        padding-top: 5px;
         text-align: left;
     }
 
