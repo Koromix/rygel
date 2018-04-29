@@ -55,11 +55,8 @@
                         <text x="100%" y="25" text-anchor="end" onclick="pricing.moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
                     </svg>
 
-                    <label>
-                        Racine
-                        <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
-                                style="width: 7em;"></select>
-                    </label>
+                    <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
+                            style="width: 96%;"></select><br/>
                     <label>
                         Comparer
                         <select id="pricing_diff_indexes" onchange="pricing.route({diff: this.value});"
@@ -70,8 +67,6 @@
                         <input id="pricing_max_duration" type="number" onchange="pricing.route();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
-
-                    <h1></h1>
                 </nav>
 
                 <div id="pricing_view">

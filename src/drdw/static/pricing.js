@@ -203,6 +203,16 @@ var pricing = {};
                             ghm_roots_map[ghm_root_info.ghm_root] = ghm_root_info;
                         }
                     }
+
+                    ghm_roots = ghm_roots.sort(function(ghm_root_info1, ghm_root_info2) {
+                        if (ghm_root_info1.da !== ghm_root_info2.da) {
+                            return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
+                        } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
+                            return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+                        } else {
+                            return 0;
+                        }
+                    });
                 } break;
 
                 case 404: { errors.push('Liste des racines de GHM introuvable'); } break;
@@ -272,22 +282,18 @@ var pricing = {};
         var pricing_info = pricings_map[ghm_root];
         var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
 
-        var h1 = document.querySelector('#pricing_menu > h1');
         var log = document.querySelector('#pricing .log');
         var old_table = document.querySelector('#pricing_table');
         var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
 
         if (errors.length) {
             log.style.display = 'block';
-            log.innerHTML = errors.join('<br>');
+            log.innerHTML = errors.join('<br/>');
         } else {
             log.style.display = 'none';
         }
 
         if (pricing_info && pricing_info[main_index] && (diff_index < 0 || pricing_info[diff_index])) {
-            h1.innerText = pricing_info[main_index].ghm_root +
-                           (ghm_root_info ? ' : ' + ghm_root_info.desc : '');
-
             if (document.querySelector('#pricing_table').classList.contains('active')) {
                 var table = createTable(pricing_info, main_index, diff_index, max_duration, true);
                 cloneAttributes(old_table, table);
@@ -299,8 +305,6 @@ var pricing = {};
                                      diff_index, max_duration);
             }
         } else {
-            h1.innerText = '';
-
             var table = createElement('table');
             cloneAttributes(old_table, table);
             old_table.parentNode.replaceChild(table, old_table);
@@ -395,16 +399,24 @@ var pricing = {};
         var el = document.querySelector('#pricing_ghm_roots');
         el.innerHTML = '';
 
-        for (var i = 0; i < ghm_roots.length; i++) {
-            var ghm_root = ghm_roots[i].ghm_root;
+        for (var i = 0; i < ghm_roots.length;) {
+            var da = ghm_roots[i].da;
 
-            var opt = createElement('option', {value: ghm_root}, ghm_root);
-            if (indexes[index].state === RunState.Okay &&
-                    (!pricings_map[ghm_root] || !pricings_map[ghm_root][index])) {
-                opt.setAttribute('disabled', '');
-                opt.text += '*';
+            var optgroup = createElement('optgroup', {label: da + ' – ' + ghm_roots[i].da_desc});
+            for (; i < ghm_roots.length && ghm_roots[i].da === da; i++) {
+                var ghm_root_info = ghm_roots[i];
+
+                var opt = createElement('option', {value: ghm_root_info.ghm_root},
+                                        ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
+                if (indexes[index].state === RunState.Okay &&
+                        (!pricings_map[ghm_root_info.ghm_root] ||
+                         !pricings_map[ghm_root_info.ghm_root][index])) {
+                    opt.setAttribute('disabled', '');
+                    opt.text += '*';
+                }
+                optgroup.appendChild(opt);
             }
-            el.appendChild(opt);
+            el.appendChild(optgroup);
         }
         if (select_ghm_root)
             el.value = select_ghm_root;
