@@ -64,6 +64,7 @@ extern const Span<const StaticResource> static_resources;
 
 static HashTable<const char *, Route> routes;
 static LinkedAllocator routes_alloc;
+static char etag[64];
 
 static const char *GetMimeType(Span<const char> path)
 {
@@ -168,6 +169,13 @@ static void InitRoutes()
     if (favicon.url) {
         favicon.url = "/favicon.ico";
         routes.Set(favicon);
+    }
+
+    // We can use a global ETag because everything is in the binary
+    {
+        time_t now;
+        time(&now);
+        Fmt(etag, "%1", now);
     }
 }
 
@@ -714,6 +722,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
                                 const char *, const char *,
                                 size_t *, void **)
 {
+    // Handle server-side cache control (ETag)
+    {
+        const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
+        if (client_etag && TestStr(client_etag, etag)) {
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            DEFER { MHD_destroy_response(response); };
+
+            return MHD_queue_response(conn, 304, response);
+        }
+    }
+
     CompressionType compression_type = CompressionType::None;
     {
         Span<const char> encodings = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
@@ -740,6 +759,15 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         response = ProduceStaticResource(conn, url, compression_type);
     }
     DEFER { MHD_destroy_response(response.response); };
+
+#ifdef NDEBUG
+    MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
+#else
+    MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
+#endif
+    if (etag[0]) {
+        MHD_add_response_header(response.response, "ETag", etag);
+    }
 
     return MHD_queue_response(conn, (unsigned int)response.code, response.response);
 }
