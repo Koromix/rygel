@@ -19,6 +19,16 @@ GCC_PUSH_IGNORE(-Wsign-conversion)
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 
+struct Desc {
+    const char *name;
+    Span<const uint8_t> data;
+};
+
+struct DescSet {
+    HeapArray<Desc> descs;
+    LinkedAllocator alloc;
+};
+
 static const char *const pages[] = {
     "/pricing/table",
     "/pricing/chart",
@@ -33,8 +43,8 @@ static const char *const pages[] = {
 static const mco_TableSet *table_set;
 static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> constraints_set;
 static HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> index_to_constraints;
-static const mco_CatalogSet *catalog_set;
 static const mco_AuthorizationSet *authorization_set;
+static DescSet desc_set;
 static mco_StaySet stay_set;
 
 #ifndef NDEBUG
@@ -45,17 +55,76 @@ extern const Span<const Resource> static_resources;
 #endif
 
 static HashMap<const char *, Span<const uint8_t>> routes;
+static LinkedAllocator routes_alloc;
+
+static bool InitDescSet(Span<const char *const> data_directories,
+                        Span<const char *const> desc_directories,
+                        DescSet *out_set)
+{
+    LinkedAllocator temp_alloc;
+
+    HeapArray<const char *> filenames;
+    {
+        bool success = true;
+        for (const char *data_dir: data_directories) {
+            const char *desc_dir = Fmt(&temp_alloc, "%1%/desc", data_dir).ptr;
+            if (TestPath(desc_dir, FileType::Directory)) {
+                success &= EnumerateDirectoryFiles(desc_dir, "*.json", &temp_alloc, &filenames, 1024);
+            }
+        }
+        for (const char *dir: desc_directories) {
+            success &= EnumerateDirectoryFiles(dir, "*.json", &temp_alloc, &filenames, 1024);
+        }
+        if (!success)
+            return false;
+    }
+
+    if (!filenames.len) {
+        LogError("No desc file specified or found");
+    }
+
+    for (const char *filename: filenames) {
+        Desc desc = {};
+
+        HeapArray<uint8_t> buf(&out_set->alloc);
+        if (!ReadFile(filename, Megabytes(4), GetPathCompression(filename), &buf))
+            return false;
+
+        // TODO: Add reverse string split functions to kutil
+        const char *name = filename;
+        for (Size i = 0; name[i]; i++) {
+            if (strchr(PATH_SEPARATORS, name[i])) {
+                name += i + 1;
+                i = 0;
+            }
+        }
+        Assert(name[0]);
+
+        desc.name = DuplicateString(&out_set->alloc, name).ptr;
+        desc.data = buf.Leak();
+
+        out_set->descs.Append(desc);
+    }
+
+    return true;
+}
 
 static void InitRoutes()
 {
+    routes.Clear();
+    routes_alloc.ReleaseAll();
+
     Assert(static_resources.len > 0);
     routes.Set("/", static_resources[0].data);
     for (const char *page: pages) {
         routes.Set(page, static_resources[0].data);
     }
-
     for (const Resource &res: static_resources) {
         routes.Set(res.url, res.data);
+    }
+    for (const Desc &desc: desc_set.descs) {
+        const char *url = Fmt(&routes_alloc, "/desc/%1", desc.name).ptr;
+        routes.Set(url, desc.data);
     }
 
     // Special cases
@@ -148,7 +217,6 @@ static bool UpdateStaticResources()
         static_resources.Append(new_res);
     }
 
-    routes.Clear();
     InitRoutes();
 
     LogInfo("Loaded resources from '%1'", filename);
@@ -275,13 +343,8 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
 
         writer.StartArray();
         for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
-            const mco_GhmRootDesc *ghm_root_desc = catalog_set->ghm_roots_map.Find(ghm_root_info.ghm_root);
-
             writer.StartObject();
             writer.Key("ghm_root"); writer.String(Fmt(buf, "%1", ghm_root_info.ghm_root).ptr);
-            if (ghm_root_desc) {
-                writer.Key("ghm_root_desc"); writer.String(ghm_root_desc->ghm_root_desc);
-            }
             writer.Key("ghs"); writer.StartArray();
 
             Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
@@ -360,32 +423,6 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
                 writer.EndObject();
             }
             writer.EndArray();
-            writer.EndObject();
-        }
-        writer.EndArray();
-
-        return true;
-    });
-
-    return {200, response};
-}
-
-static Response ProduceGhmRoots(MHD_Connection *, const char *,
-                                CompressionType compression_type)
-{
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        char buf[32];
-
-        writer.StartArray();
-        for (const mco_GhmRootDesc &desc: catalog_set->ghm_roots) {
-            writer.StartObject();
-            writer.Key("ghm_root"); writer.String(Fmt(buf, "%1", desc.ghm_root).ptr);
-            writer.Key("ghm_root_desc"); writer.String(desc.ghm_root_desc);
-            writer.Key("da"); writer.String(desc.da);
-            writer.Key("da_desc"); writer.String(desc.da_desc);
-            writer.Key("ga"); writer.String(desc.ga);
-            writer.Key("ga_desc"); writer.String(desc.ga_desc);
             writer.EndObject();
         }
         writer.EndArray();
@@ -657,8 +694,6 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         response = ProduceIndexes(conn, url, compression_type);
     } else if (TestStr(url, "/api/price_map.json")) {
         response = ProducePriceMap(conn, url, compression_type);
-    } else if (TestStr(url, "/api/ghm_roots.json")) {
-        response = ProduceGhmRoots(conn, url, compression_type);
     } else if (TestStr(url, "/api/casemix.json")) {
         response = ProduceCaseMix(conn, url, compression_type);
     } else {
@@ -678,6 +713,8 @@ R"(Usage: drdw [options]
 Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
+        --desc-dir <dir>         Add descriptions directory
+                                 (default: <data_dir>%/desc)
 
     -s, --stays <file>           Stays
 )");
@@ -695,6 +732,7 @@ Options:
         }
     }
 
+    HeapArray<const char *> desc_directories;
     uint16_t port = 8888;
     HeapArray<const char *> stays_filenames;
     {
@@ -717,6 +755,11 @@ Options:
                     return 1;
                 }
                 port = (uint16_t)new_port;
+            } else if (TestOption(opt, "--desc-dir")) {
+                if (!opt_parser.RequireOptionValue(PrintUsage))
+                    return 1;
+
+                desc_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-s", "--stays")) {
                 if (!opt_parser.RequireOptionValue(PrintUsage))
                     return 1;
@@ -737,8 +780,7 @@ Options:
         if (!authorization_set)
             return 1;
     }
-    catalog_set = mco_GetMainCatalogSet();
-    if (!catalog_set || !catalog_set->ghm_roots.len)
+    if (!InitDescSet(mco_data_directories, desc_directories, &desc_set))
         return 1;
 
     if (stays_filenames.len) {

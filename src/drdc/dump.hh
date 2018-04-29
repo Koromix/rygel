@@ -21,6 +21,3 @@ void mco_DumpSupplementPairTable(Span<const mco_SrcPair> pairs);
 
 void mco_DumpTableSetHeaders(const mco_TableSet &table_set);
 void mco_DumpTableSetContent(const mco_TableSet &table_set);
-
-void mco_DumpGhmRootCatalog(Span<const mco_GhmRootDesc> ghm_roots);
-void mco_DumpCatalogSet(const mco_CatalogSet &catalog_set);

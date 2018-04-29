@@ -21,7 +21,7 @@ ghm_roots <- local({
              c('racine', 'libelle', 'DA', 'libellé domaine d\'activité', 'GA', 'libellé Groupes d\'Activité'),
              c('root', 'root_desc', 'da', 'da_desc', 'ga', 'ga_desc'))
 
-    keep_columns <- c('root', 'root_desc', 'da', 'da_desc', 'ga', 'ga_desc', 'version')
+    keep_columns <- c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc', 'version')
     ghm_roots <- ghm_roots[, intersect(colnames(ghm_roots), keep_columns), with = FALSE]
 })
 

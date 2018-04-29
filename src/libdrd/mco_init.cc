@@ -9,7 +9,6 @@ HeapArray<const char *> mco_data_directories;
 HeapArray<const char *> mco_table_directories;
 HeapArray<const char *> mco_price_filenames;
 const char *mco_authorization_filename;
-HeapArray<const char *> mco_catalog_directories;
 
 bool mco_InitTableSet(Span<const char *const> data_directories,
                       Span<const char *const> table_directories,
@@ -93,41 +92,6 @@ bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
     return true;
 }
 
-bool mco_InitCatalogSet(Span<const char *const> data_directories,
-                        Span<const char *const> catalog_directories,
-                        mco_CatalogSet *out_set)
-{
-    LinkedAllocator temp_alloc;
-
-    HeapArray<const char *> directories;
-    {
-        for (const char *data_dir: data_directories) {
-            const char *dir = Fmt(&temp_alloc, "%1%/catalogs", data_dir).ptr;
-            directories.Append(dir);
-        }
-        directories.Append(catalog_directories);
-    }
-
-    bool success = true;
-    for (Size i = directories.len - 1; i >= 0; i--) {
-        if (!out_set->ghm_roots.len) {
-            const char *filename = Fmt(&temp_alloc, "%1%/ghm_roots.json", directories[i]).ptr;
-            if (TestPath(filename, FileType::File)) {
-                success &= mco_LoadGhmRootCatalog(filename, &out_set->str_alloc, &out_set->ghm_roots,
-                                              &out_set->ghm_roots_map);
-            }
-        }
-    }
-    if (!success)
-        return false;
-
-    if (!out_set->ghm_roots.len) {
-        LogError("No catalog specified or found");
-    }
-
-    return true;
-}
-
 const mco_TableSet *mco_GetMainTableSet()
 {
     static mco_TableSet table_set;
@@ -156,21 +120,6 @@ const mco_AuthorizationSet *mco_GetMainAuthorizationSet()
     }
 
     return &authorization_set;
-}
-
-const mco_CatalogSet *mco_GetMainCatalogSet()
-{
-    static mco_CatalogSet catalog_set;
-    static bool loaded = false;
-
-    if (!loaded) {
-        if (!mco_InitCatalogSet(mco_data_directories, mco_catalog_directories,
-                            &catalog_set))
-            return nullptr;
-        loaded = true;
-    }
-
-    return &catalog_set;
 }
 
 bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
@@ -208,12 +157,6 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
             return false;
 
         mco_authorization_filename = opt_parser.current_value;
-        return true;
-    } else if (opt_parser.TestOption("--catalog-dir")) {
-        if (!opt_parser.RequireOptionValue(usage_func))
-            return false;
-
-        mco_catalog_directories.Append(opt_parser.current_value);
         return true;
     } else {
         PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);

@@ -8,7 +8,6 @@
 #include "common.hh"
 #include "mco_common.hh"
 #include "mco_authorizations.hh"
-#include "mco_catalogs.hh"
 #include "mco_tables.hh"
 #include "mco_stays.hh"
 #include "mco_classifier.hh"
@@ -18,7 +17,6 @@
 #ifdef DRD_IMPLEMENTATION
     #include "../common/kutil.cc"
     #include "mco_authorizations.cc"
-    #include "mco_catalogs.cc"
     #include "mco_tables.cc"
     #include "mco_stays.cc"
     #include "mco_classifier.cc"

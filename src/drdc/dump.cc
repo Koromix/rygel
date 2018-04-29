@@ -337,19 +337,3 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
         PrintLn();
     }
 }
-
-void mco_DumpGhmRootCatalog(Span<const mco_GhmRootDesc> ghm_roots)
-{
-    for (const mco_GhmRootDesc &desc: ghm_roots) {
-        PrintLn("  %1:", desc.ghm_root);
-        PrintLn("    Description: %1", desc.ghm_root_desc);
-        PrintLn("    DA: %1 -- %2", desc.da, desc.da_desc);
-        PrintLn("    GA: %1 -- %2", desc.ga, desc.ga_desc);
-    }
-}
-
-void mco_DumpCatalogSet(const mco_CatalogSet &catalog_set)
-{
-    PrintLn("GHM Roots:");
-    mco_DumpGhmRootCatalog(catalog_set.ghm_roots);
-}

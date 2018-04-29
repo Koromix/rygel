@@ -105,37 +105,6 @@ error:
     }
 };
 
-static bool RunCatalogs(Span<const char *> arguments)
-{
-    static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc catalogs [options]
-)");
-        PrintLn(fp, mco_options_usage);
-    };
-
-    OptionParser opt_parser(arguments);
-
-    {
-        const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
-            if (TestOption(opt, "--help")) {
-                PrintUsage(stdout);
-                return true;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
-                return false;
-            }
-        }
-    }
-
-    const mco_CatalogSet *catalog_set = mco_GetMainCatalogSet();
-    if (!catalog_set)
-        return false;
-    mco_DumpCatalogSet(*catalog_set);
-
-    return true;
-}
-
 static void PrintSummary(const mco_Summary &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
@@ -816,7 +785,6 @@ Commands:
             } \
         } while (false)
 
-    HANDLE_COMMAND(catalogs, RunCatalogs);
     HANDLE_COMMAND(classify, RunClassify);
     HANDLE_COMMAND(constraints, RunConstraints);
     HANDLE_COMMAND(info, RunInfo);
