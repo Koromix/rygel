@@ -7,6 +7,7 @@ project(Rygel C CXX)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build/cmake" ${CMAKE_MODULE_PATH})
 include("build/cmake/Utility.cmake")
+find_package(Threads)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
