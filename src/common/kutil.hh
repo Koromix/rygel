@@ -2338,8 +2338,6 @@ static inline bool TestStr(Span<const char> str1, Span<const char> str2)
     }
     return true;
 }
-inline bool Span<const char>::operator==(Span<const char> other) const
-    { return TestStr(*this, other); }
 static inline bool TestStr(Span<const char> str1, const char *str2)
 {
     Size i;
@@ -2349,10 +2347,44 @@ static inline bool TestStr(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
-inline bool Span<const char>::operator==(const char *other) const
-    { return TestStr(*this, other); }
 static inline bool TestStr(const char *str1, const char *str2)
     { return !strcmp(str1, str2); }
+
+// Allow direct Span<const char> equality comparison
+inline bool Span<const char>::operator==(Span<const char> other) const
+    { return TestStr(*this, other); }
+inline bool Span<const char>::operator==(const char *other) const
+    { return TestStr(*this, other); }
+
+// Case insensitive (ASCII) versions
+static inline bool TestStrI(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len != str2.len)
+        return false;
+    for (Size i = 0; i < str1.len; i++) {
+        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
+            return false;
+    }
+    return true;
+}
+static inline bool TestStrI(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
+            return false;
+    }
+    return (i == str1.len) && !str2[i];
+}
+static inline bool TestStrI(const char *str1, const char *str2)
+{
+    Size i = 0;
+    int delta;
+    do {
+        delta = LowerAscii(str1[i]) - LowerAscii(str2[i]);
+    } while (str1[i++] && !delta);
+    return !delta;
+}
 
 static inline int CmpStr(Span<const char> str1, Span<const char> str2)
 {
