@@ -2357,8 +2357,9 @@ static inline bool TestStr(const char *str1, const char *str2)
 static inline int CmpStr(Span<const char> str1, Span<const char> str2)
 {
     for (Size i = 0; i < str1.len && i < str2.len; i++) {
-        if (str1[i] != str2[i])
-            return str1[i] - str2[i];
+        int delta = str1[i] - str2[i];
+        if (delta)
+            return delta;
     }
     if (str1.len < str2.len) {
         return -str2[str1.len];
@@ -2372,8 +2373,9 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
-        if (str1[i] != str2[i])
-            return str1[i] - str2[i];
+        int delta = str1[i] - str2[i];
+        if (delta)
+            return delta;
     }
     if (str1.len == i) {
         return -str2[i];
