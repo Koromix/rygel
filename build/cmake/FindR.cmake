@@ -54,7 +54,7 @@ if(R_FOUND)
         if(NOT EXISTS "${CMAKE_BINARY_DIR}/R_fake_make.c")
             file(WRITE "${CMAKE_BINARY_DIR}/R_fake_make.c" "int main() { return 0; }")
         endif()
-        add_executable(R_fake_make "${CMAKE_BINARY_DIR}/R_fake_make.c")
+        add_executable(R_fake_make EXCLUDE_FROM_ALL "${CMAKE_BINARY_DIR}/R_fake_make.c")
         set_target_properties(R_fake_make PROPERTIES OUTPUT_NAME make)
     endif()
 
@@ -117,6 +117,7 @@ if(R_FOUND)
         endif()
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
+        add_dependencies(${TARGET} R_fake_make)
 
         file(MAKE_DIRECTORY "${install_directory}")
         add_custom_command(
