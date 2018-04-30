@@ -2141,8 +2141,7 @@ bool StreamWriter::Close()
 #ifdef _WIN32
                 if (fflush(dest.u.fp) != 0) {
 #else
-                if (fflush(dest.u.fp) != 0 ||
-                        fsync(fileno(dest.u.fp)) < 0) {
+                if ((fflush(dest.u.fp) != 0 || fsync(fileno(dest.u.fp)) < 0) && errno != EINVAL) {
 #endif
                     LogError("Failed to finalize writing to '%1': %2", filename, strerror(errno));
                     success = false;
