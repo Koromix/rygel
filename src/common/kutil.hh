@@ -1917,6 +1917,11 @@ enum class CompressionType {
     Zlib,
     Gzip
 };
+static const char *const CompressionTypeNames[] = {
+    "None",
+    "Zlib",
+    "Gzip"
+};
 
 class StreamReader {
 public:
