@@ -2078,6 +2078,8 @@ private:
     bool WriteRaw(Span<const uint8_t> buf);
 };
 
+bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer);
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------

@@ -2300,6 +2300,31 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
     DebugAssert(false);
 }
 
+bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
+{
+    if (reader->error)
+        return false;
+
+    Size len = 0;
+    while (!reader->eof) {
+        char buf[128 * 1024];
+        Size read_len = reader->Read(SIZE(buf), buf);
+        if (read_len < 0)
+            return false;
+
+        len += read_len;
+        if (len > max_len) {
+            LogError("File '%1' is too large (limit = %2)", reader->filename, FmtDiskSize(max_len));
+            return false;
+        }
+
+        if (!writer->Write(buf, read_len))
+            return false;
+    }
+
+    return true;
+}
+
 // ------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------
