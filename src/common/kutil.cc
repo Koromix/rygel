@@ -1319,6 +1319,9 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
 #ifndef _WIN32
     // Set the O_CLOEXEC flag
     strcat(mode_str, "e");
+#else
+    // Set commit flag (_commit when fflush is called)
+    strcat(mode_str, "c");
 #endif
 
     FILE *fp = fopen(path, mode_str);
@@ -2136,8 +2139,7 @@ bool StreamWriter::Close()
         switch (dest.type) {
             case DestinationType::File: {
 #ifdef _WIN32
-                if (fflush(dest.u.fp) != 0 ||
-                        _commit(_fileno(dest.u.fp)) < 0) {
+                if (fflush(dest.u.fp) != 0) {
 #else
                 if (fflush(dest.u.fp) != 0 ||
                         fsync(fileno(dest.u.fp)) < 0) {
