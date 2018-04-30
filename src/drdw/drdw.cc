@@ -24,24 +24,49 @@ struct DescSet {
     LinkedAllocator alloc;
 };
 
-struct Route {
-    const char *url;
-    Span<const uint8_t> data;
-    CompressionType compression_type;
-    const char *mime_type;
-
-    HASH_TABLE_HANDLER(Route, url);
+struct Response {
+    int code;
+    MHD_Response *response;
 };
 
-static const char *const pages[] = {
-    "/pricing/table",
-    "/pricing/chart",
-    "/lists/ghm_tree",
-    "/lists/ghm_roots",
-    "/lists/ghs",
-    "/lists/diagnoses",
-    "/lists/exclusions",
-    "/lists/procedures"
+struct Route {
+    enum class Type {
+        Static,
+        Function
+    };
+    enum class Matching {
+        Exact,
+        Walk
+    };
+
+    Span<const char> url;
+    Matching matching;
+
+    Type type;
+    union {
+        struct {
+            PackerAsset asset;
+            const char *mime_type;
+        } st;
+
+        Response (*func)(MHD_Connection *conn, const char *url, CompressionType compression_type);
+    } u;
+
+    Route() = default;
+    Route(const char *url, Matching matching, const PackerAsset &asset, const char *mime_type)
+        : url(url), matching(matching), type(Type::Static)
+    {
+        u.st.asset = asset;
+        u.st.mime_type = mime_type;
+    }
+    Route(const char *url, Matching matching,
+          Response (*func)(MHD_Connection *conn, const char *url, CompressionType compression_type))
+        : url(url), matching(matching), type(Type::Function)
+    {
+        u.func = func;
+    }
+
+    HASH_TABLE_HANDLER(Route, url);
 };
 
 static const mco_TableSet *table_set;
@@ -58,7 +83,7 @@ static LinkedAllocator packer_alloc;
 extern const Span<const PackerAsset> packer_assets;
 #endif
 
-static HashTable<const char *, Route> routes;
+static HashTable<Span<const char>, Route> routes;
 static LinkedAllocator routes_alloc;
 static char etag[64];
 
@@ -149,133 +174,6 @@ static bool InitDescSet(Span<const char *const> data_directories,
     return true;
 }
 
-static void InitRoutes()
-{
-    routes.Clear();
-    routes_alloc.ReleaseAll();
-
-    Assert(packer_assets.len > 0);
-    routes.Set({"/", packer_assets[0].data, packer_assets[0].compression_type,
-                GetMimeType(packer_assets[0].name)});
-    for (const char *page: pages) {
-        routes.Set({page, packer_assets[0].data, packer_assets[0].compression_type,
-                    GetMimeType(packer_assets[0].name)});
-    }
-    for (const PackerAsset &asset: packer_assets) {
-        const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        routes.Set({url, asset.data, asset.compression_type, GetMimeType(asset.name)});
-    }
-    for (const PackerAsset &desc: desc_set.descs) {
-        const char *url = Fmt(&routes_alloc, "/desc/%1", desc.name).ptr;
-        routes.Set({url, desc.data, desc.compression_type, GetMimeType(url)});
-    }
-
-    // Special cases
-    Route favicon = routes.FindValue("/static/favicon.ico", {});
-    if (favicon.url) {
-        favicon.url = "/favicon.ico";
-        routes.Set(favicon);
-    }
-
-    // We can use a global ETag because everything is in the binary
-    {
-        time_t now;
-        time(&now);
-        Fmt(etag, "%1", now);
-    }
-}
-
-#ifndef NDEBUG
-static bool UpdateStaticResources()
-{
-    LinkedAllocator temp_alloc;
-
-    const char *filename = nullptr;
-    const Span<const PackerAsset> *lib_assets = nullptr;
-#ifdef _WIN32
-    Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_assets.dll", GetApplicationDirectory()).ptr;
-    {
-        static FILETIME last_time;
-
-        WIN32_FILE_ATTRIBUTE_DATA attr;
-        if (!GetFileAttributesEx(filename, GetFileExInfoStandard, &attr)) {
-            LogError("Cannot stat file '%1'", filename);
-            return false;
-        }
-
-        if (attr.ftLastWriteTime.dwHighDateTime == last_time.dwHighDateTime &&
-                attr.ftLastWriteTime.dwLowDateTime == last_time.dwLowDateTime)
-            return true;
-        last_time = attr.ftLastWriteTime;
-    }
-
-    HMODULE h = LoadLibrary(filename);
-    if (!h) {
-        LogError("Cannot load library '%1'", filename);
-        return false;
-    }
-    DEFER { FreeLibrary(h); };
-
-    lib_assets = (const Span<const PackerAsset> *)GetProcAddress(h, "packer_assets");
-#else
-    Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_assets.so", GetApplicationDirectory()).ptr;
-    {
-        static struct timespec last_time;
-
-        struct stat sb;
-        if (stat(filename, &sb) < 0) {
-            LogError("Cannot stat file '%1'", filename);
-            return false;
-        }
-
-#ifdef __APPLE__
-        if (sb.st_mtimespec.tv_sec == last_time.tv_sec &&
-                sb.st_mtimespec.tv_nsec == last_time.tv_nsec)
-            return true;
-        last_time = sb.st_mtimespec;
-#else
-        if (sb.st_mtim.tv_sec == last_time.tv_sec &&
-                sb.st_mtim.tv_nsec == last_time.tv_nsec)
-            return true;
-        last_time = sb.st_mtim;
-#endif
-    }
-
-    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
-    if (!h) {
-        LogError("Cannot load library '%1': %2", filename, dlerror());
-        return false;
-    }
-    DEFER { dlclose(h); };
-
-    lib_assets = (const Span<const PackerAsset> *)dlsym(h, "packer_assets");
-#endif
-    if (!lib_assets) {
-        LogError("Cannot find symbol 'packer_assets' in library '%1'", filename);
-        return false;
-    }
-
-    packer_assets.Clear();
-    packer_alloc.ReleaseAll();
-    for (const PackerAsset &asset: *lib_assets) {
-        PackerAsset asset_copy;
-        asset_copy.name = DuplicateString(&packer_alloc, asset.name).ptr;
-        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&packer_alloc, asset.data.len);
-        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
-        asset_copy.data = {data_ptr, asset.data.len};
-        asset_copy.compression_type = asset.compression_type;
-        packer_assets.Append(asset_copy);
-    }
-
-    InitRoutes();
-
-    LogInfo("Loaded resources from '%1'", filename);
-    return true;
-}
-#endif
-
 static void ReleaseCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -292,14 +190,10 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
     }
 }
 
-struct Response {
-    int code;
-    MHD_Response *response;
-};
-
 static Response CreateErrorPage(int code)
 {
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1", code);
+    Span<char> page = Fmt((Allocator *)nullptr, "Error %1 : %2", code,
+                          MHD_get_reason_phrase_for((unsigned int)code));
     MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
                                                            ReleaseCallback);
     return {code, response};
@@ -365,7 +259,7 @@ static Response ProducePriceMap(MHD_Connection *conn, const char *,
             date = Date::FromString(date_str);
         }
         if (!date.value)
-            return CreateErrorPage(404);
+            return CreateErrorPage(422);
     }
 
     const mco_TableIndex *index = table_set->FindIndex(date);
@@ -545,10 +439,10 @@ static Response ProduceCaseMix(MHD_Connection *conn, const char *,
     {
         if (!ParseDateRange(MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "dates"),
                             &dates[0], &dates[1]))
-            return CreateErrorPage(404);
+            return CreateErrorPage(422);
         if (!ParseDateRange(MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "diff"),
                             &diff_dates[0], &diff_dates[1]))
-            return CreateErrorPage(404);
+            return CreateErrorPage(422);
 
         Span<const char> units_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "units");
         while (units_str.len) {
@@ -557,7 +451,7 @@ static Response ProduceCaseMix(MHD_Connection *conn, const char *,
             UnitCode unit;
             unit.number = ParseDec<int16_t>(unit_str).first;
             if (!unit.IsValid())
-                return CreateErrorPage(404);
+                return CreateErrorPage(422);
 
             units.Append(unit);
         }
@@ -570,19 +464,19 @@ static Response ProduceCaseMix(MHD_Connection *conn, const char *,
                 duration_mode = DurationMode::Full;
             } else if (!TestStr(durations_str, "0")) {
                 LogError("Invalid 'duration_mode' parameter value '%1'", durations_str);
-                return CreateErrorPage(404);
+                return CreateErrorPage(422);
             }
         }
     }
 
     if (diff_dates[0].value && !dates[0].value) {
         LogError("Parameter 'diff' specified but 'dates' is missing");
-        return CreateErrorPage(404);
+        return CreateErrorPage(422);
     }
     if (dates[0].value && diff_dates[0].value &&
                dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
         LogError("Parameters 'dates' and 'diff' must not overlap");
-        return CreateErrorPage(404);
+        return CreateErrorPage(422);
     }
 
     HeapArray<mco_Result> results;
@@ -686,24 +580,15 @@ static Response ProduceCaseMix(MHD_Connection *conn, const char *,
     return {200, response};
 }
 
-static Response ProduceStaticResource(MHD_Connection *, const char *url,
-                                      CompressionType compression_type)
+static Response ProduceStaticResource(const Route &route, CompressionType compression_type)
 {
-#ifndef NDEBUG
-    UpdateStaticResources();
-#endif
-
-    const Route *route = routes.Find(url);
-    if (!route) {
-        route = routes.Find("/");
-        // return CreateErrorPage(404);
-    }
+    DebugAssert(route.type == Route::Type::Static);
 
     MHD_Response *response;
-    if (compression_type != route->compression_type) {
+    if (compression_type != route.u.st.asset.compression_type) {
         HeapArray<uint8_t> buf;
         {
-            StreamReader reader(route->data, nullptr, route->compression_type);
+            StreamReader reader(route.u.st.asset.data, nullptr, route.u.st.asset.compression_type);
             StreamWriter writer(&buf, nullptr, compression_type);
             if (!SpliceStream(&reader, Megabytes(8), &writer))
                 return CreateErrorPage(500);
@@ -714,13 +599,14 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
         response = MHD_create_response_from_heap((size_t)buf.len, (void *)buf.ptr, ReleaseCallback);
         buf.Leak();
     } else {
-        response = MHD_create_response_from_buffer((size_t)route->data.len, (void *)route->data.ptr,
+        response = MHD_create_response_from_buffer((size_t)route.u.st.asset.data.len,
+                                                   (void *)route.u.st.asset.data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
 
     AddContentEncodingHeader(response, compression_type);
-    if (route->mime_type) {
-        MHD_add_response_header(response, "Content-Type", route->mime_type);
+    if (route.u.st.mime_type) {
+        MHD_add_response_header(response, "Content-Type", route.u.st.mime_type);
     }
 
     return {200, response};
@@ -764,13 +650,144 @@ static uint32_t ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
-// TODO: Deny if URL too long (MHD option?)
-static int HandleHttpConnection(void *, MHD_Connection *conn,
-                                const char *url, const char *,
-                                const char *, const char *,
-                                size_t *, void **)
+static void InitRoutes()
 {
-    // Handle server-side cache control (ETag)
+    routes.Clear();
+    routes_alloc.ReleaseAll();
+
+    // Static assets
+    Assert(packer_assets.len > 0);
+    routes.Set({"/", Route::Matching::Exact, packer_assets[0], GetMimeType(packer_assets[0].name)});
+    routes.Set({"/pricing", Route::Matching::Walk, packer_assets[0], GetMimeType(packer_assets[0].name)});
+    routes.Set({"/casemix", Route::Matching::Walk, packer_assets[0], GetMimeType(packer_assets[0].name)});
+    for (Size i = 1; i < packer_assets.len; i++) {
+        const PackerAsset &asset = packer_assets[i];
+
+        const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+        routes.Set({url, Route::Matching::Exact, asset, GetMimeType(asset.name)});
+    }
+
+    // Special cases
+    {
+        Route favicon = routes.FindValue("/static/favicon.ico", {});
+        if (favicon.url.len) {
+            favicon.url = "/favicon.ico";
+            routes.Set(favicon);
+        }
+    }
+
+    // API
+    routes.Set({"/api/indexes.json", Route::Matching::Exact, ProduceIndexes});
+    routes.Set({"/api/price_map.json", Route::Matching::Exact, ProducePriceMap});
+    routes.Set({"/api/casemix.json", Route::Matching::Exact, ProduceCaseMix});
+    for (const PackerAsset &desc: desc_set.descs) {
+        const char *url = Fmt(&routes_alloc, "/api/%1", desc.name).ptr;
+        routes.Set({url, Route::Matching::Exact, desc, GetMimeType(url)});
+    }
+
+    // We can use a global ETag because everything is in the binary
+    {
+        time_t now;
+        time(&now);
+        Fmt(etag, "%1", now);
+    }
+}
+
+#ifndef NDEBUG
+static bool UpdateStaticResources()
+{
+    LinkedAllocator temp_alloc;
+
+    const char *filename = nullptr;
+    const Span<const PackerAsset> *lib_assets = nullptr;
+#ifdef _WIN32
+    Assert(GetApplicationDirectory());
+    filename = Fmt(&temp_alloc, "%1%/drdw_assets.dll", GetApplicationDirectory()).ptr;
+    {
+        static FILETIME last_time;
+
+        WIN32_FILE_ATTRIBUTE_DATA attr;
+        if (!GetFileAttributesEx(filename, GetFileExInfoStandard, &attr)) {
+            LogError("Cannot stat file '%1'", filename);
+            return false;
+        }
+
+        if (attr.ftLastWriteTime.dwHighDateTime == last_time.dwHighDateTime &&
+                attr.ftLastWriteTime.dwLowDateTime == last_time.dwLowDateTime)
+            return true;
+        last_time = attr.ftLastWriteTime;
+    }
+
+    HMODULE h = LoadLibrary(filename);
+    if (!h) {
+        LogError("Cannot load library '%1'", filename);
+        return false;
+    }
+    DEFER { FreeLibrary(h); };
+
+    lib_assets = (const Span<const PackerAsset> *)GetProcAddress(h, "packer_assets");
+#else
+    Assert(GetApplicationDirectory());
+    filename = Fmt(&temp_alloc, "%1%/drdw_assets.so", GetApplicationDirectory()).ptr;
+    {
+        static struct timespec last_time;
+
+        struct stat sb;
+        if (stat(filename, &sb) < 0) {
+            LogError("Cannot stat file '%1'", filename);
+            return false;
+        }
+
+#ifdef __APPLE__
+        if (sb.st_mtimespec.tv_sec == last_time.tv_sec &&
+                sb.st_mtimespec.tv_nsec == last_time.tv_nsec)
+            return true;
+        last_time = sb.st_mtimespec;
+#else
+        if (sb.st_mtim.tv_sec == last_time.tv_sec &&
+                sb.st_mtim.tv_nsec == last_time.tv_nsec)
+            return true;
+        last_time = sb.st_mtim;
+#endif
+    }
+
+    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
+    if (!h) {
+        LogError("Cannot load library '%1': %2", filename, dlerror());
+        return false;
+    }
+    DEFER { dlclose(h); };
+
+    lib_assets = (const Span<const PackerAsset> *)dlsym(h, "packer_assets");
+#endif
+    if (!lib_assets) {
+        LogError("Cannot find symbol 'packer_assets' in library '%1'", filename);
+        return false;
+    }
+
+    packer_assets.Clear();
+    packer_alloc.ReleaseAll();
+    for (const PackerAsset &asset: *lib_assets) {
+        PackerAsset asset_copy;
+        asset_copy.name = DuplicateString(&packer_alloc, asset.name).ptr;
+        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&packer_alloc, asset.data.len);
+        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
+        asset_copy.data = {data_ptr, asset.data.len};
+        asset_copy.compression_type = asset.compression_type;
+        packer_assets.Append(asset_copy);
+    }
+
+    InitRoutes();
+
+    LogInfo("Loaded resources from '%1'", filename);
+    return true;
+}
+#endif
+
+static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, const char *,
+                                const char *, const char *, size_t *, void **)
+{
+    // Handle server-side cache validation (ETag)
     {
         const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
@@ -781,7 +798,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         }
     }
 
-    // Content encoding
+    // Negociate content encoding
     CompressionType compression_type;
     {
         uint32_t acceptable_encodings =
@@ -798,18 +815,49 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         }
     }
 
-    Response response;
-    if (TestStr(url, "/api/indexes.json")) {
-        response = ProduceIndexes(conn, url, compression_type);
-    } else if (TestStr(url, "/api/price_map.json")) {
-        response = ProducePriceMap(conn, url, compression_type);
-    } else if (TestStr(url, "/api/casemix.json")) {
-        response = ProduceCaseMix(conn, url, compression_type);
-    } else {
-        response = ProduceStaticResource(conn, url, compression_type);
+#ifndef NDEBUG
+    UpdateStaticResources();
+#endif
+
+    // Find appropriate route
+    Route *route;
+    {
+        Span<const char> url2 = url;
+
+        route = routes.Find(url2);
+        if (!route) {
+            while (url2.len > 1) {
+                if (url2.ptr[--url2.len] == '/') {
+                    Route *walk_route = routes.Find(url2);
+                    if (walk_route && walk_route->matching == Route::Matching::Walk) {
+                        route = walk_route;
+                        break;
+                    }
+                }
+            }
+            if (!route) {
+                MHD_Response *response = CreateErrorPage(404).response;
+                DEFER { MHD_destroy_response(response); };
+                return MHD_queue_response(conn, 404, response);
+            }
+        }
     }
+
+    // Execute route
+    Response response = {};
+    switch (route->type) {
+        case Route::Type::Static: {
+            response = ProduceStaticResource(*route, compression_type);
+        } break;
+
+        case Route::Type::Function: {
+            response = route->u.func(conn, url, compression_type);
+        } break;
+    }
+    DebugAssert(response.response);
     DEFER { MHD_destroy_response(response.response); };
 
+    // Add caching information
 #ifdef NDEBUG
     MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
 #else
@@ -931,13 +979,13 @@ Options:
 #ifndef NDEBUG
     if (!UpdateStaticResources())
         return 1;
-#endif
+#else
     InitRoutes();
+#endif
 
     MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
-        nullptr, nullptr, HandleHttpConnection, nullptr,
-        MHD_OPTION_CONNECTION_MEMORY_LIMIT, Megabytes(1), MHD_OPTION_END);
+        nullptr, nullptr, HandleHttpConnection, nullptr, MHD_OPTION_END);
     if (!daemon)
         return 1;
     DEFER { MHD_stop_daemon(daemon); };

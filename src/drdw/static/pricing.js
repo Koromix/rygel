@@ -191,7 +191,7 @@ var pricing = {};
         ghm_roots = [];
         ghm_roots_map = {};
 
-        downloadJson('get', 'desc/ghm_roots.json', {}, function(status, json) {
+        downloadJson('get', 'api/ghm_roots.json', {}, function(status, json) {
             var errors = [];
 
             switch (status) {
