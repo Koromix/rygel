@@ -1972,6 +1972,9 @@ public:
         { Open(filename, compression_type); }
     ~StreamReader() { Close(); }
 
+    StreamReader(const StreamReader &other) = delete;
+    StreamReader &operator=(const StreamReader &other) = delete;
+
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename = nullptr,
@@ -2029,6 +2032,9 @@ public:
         filename = st->filename;
     }
 
+    LineReader(const LineReader &other) = delete;
+    LineReader &operator=(const LineReader &other) = delete;
+
     Span<char> GetLine();
 
     void PushLogHandler();
@@ -2073,6 +2079,9 @@ public:
                  CompressionType compression_type = CompressionType::None)
         { Open(filename, compression_type); }
     ~StreamWriter() { Close(); }
+
+    StreamWriter(const StreamWriter &other) = delete;
+    StreamWriter &operator=(const StreamWriter &other) = delete;
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
