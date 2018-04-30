@@ -455,6 +455,16 @@ T MultiCmp(T cmp_value, Args... other_args)
     }
 }
 
+template <typename T, typename U>
+T ApplyMask(T value, U mask, bool enable)
+{
+    if (enable) {
+        return value | (T)mask;
+    } else {
+        return value & (T)~mask;
+    }
+}
+
 enum class ParseFlag {
     Log = 1 << 0,
     Validate = 1 << 1,

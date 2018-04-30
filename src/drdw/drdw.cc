@@ -716,6 +716,44 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
     return {200, response};
 }
 
+// Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
+// caller is free to choose a preferred encoding among acceptable ones.
+static uint32_t ParseAcceptableEncodings(Span<const char> encodings)
+{
+    encodings = TrimStr(encodings);
+
+    uint32_t acceptable_encodings;
+    if (encodings.len) {
+        uint32_t low_priority = 1 << (int)CompressionType::None;
+        uint32_t high_priority = 0;
+        while (encodings.len) {
+            Span<const char> quality;
+            Span<const char> encoding = TrimStr(SplitStr(encodings, ',', &encodings));
+            encoding = TrimStr(SplitStr(encoding, ';', &quality));
+            quality = TrimStr(quality);
+
+            if (encoding == "identity") {
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
+                low_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
+            } else if (encoding == "gzip") {
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
+            } else if (encoding == "deflate") {
+                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
+                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
+            } else if (encoding == "*") {
+                low_priority = ApplyMask(low_priority, UINT32_MAX, quality != "q=0");
+            }
+        }
+
+        acceptable_encodings = high_priority | low_priority;
+    } else {
+        acceptable_encodings = UINT32_MAX;
+    }
+
+    return acceptable_encodings;
+}
+
 // TODO: Deny if URL too long (MHD option?)
 static int HandleHttpConnection(void *, MHD_Connection *conn,
                                 const char *url, const char *,
@@ -733,18 +771,20 @@ static int HandleHttpConnection(void *, MHD_Connection *conn,
         }
     }
 
-    CompressionType compression_type = CompressionType::None;
+    // Content encoding
+    CompressionType compression_type;
     {
-        Span<const char> encodings = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
-        while (encodings.len) {
-            Span<const char> encoding = TrimStr(SplitStr(encodings, ',', &encodings));
-            if (encoding == "gzip") {
-                compression_type = CompressionType::Gzip;
-                break;
-            } else if (encoding == "deflate") {
-                compression_type = CompressionType::Zlib;
-                break;
-            }
+        uint32_t acceptable_encodings =
+            ParseAcceptableEncodings(MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding"));
+
+        if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
+            compression_type = CompressionType::Gzip;
+        } else if (acceptable_encodings) {
+            compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        } else {
+            MHD_Response *response = CreateErrorPage(406).response;
+            DEFER { MHD_destroy_response(response); };
+            return MHD_queue_response(conn, 406, response);
         }
     }
 
