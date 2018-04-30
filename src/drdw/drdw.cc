@@ -4,6 +4,7 @@
 
 #include "../libdrd/libdrd.hh"
 #include "../common/json.hh"
+#include "../packer/packer.hh"
 #ifndef _WIN32
     #include <dlfcn.h>
     #include <signal.h>
@@ -11,7 +12,6 @@
     #include <sys/stat.h>
     #include <unistd.h>
 #endif
-#include "resources.hh"
 
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
@@ -19,19 +19,15 @@ GCC_PUSH_IGNORE(-Wsign-conversion)
 GCC_POP_IGNORE()
 GCC_POP_IGNORE()
 
-struct Desc {
-    const char *name;
-    Span<const uint8_t> data;
-};
-
 struct DescSet {
-    HeapArray<Desc> descs;
+    HeapArray<PackerAsset> descs;
     LinkedAllocator alloc;
 };
 
 struct Route {
     const char *url;
     Span<const uint8_t> data;
+    CompressionType compression_type;
     const char *mime_type;
 
     HASH_TABLE_HANDLER(Route, url);
@@ -56,10 +52,10 @@ static DescSet desc_set;
 static mco_StaySet stay_set;
 
 #ifndef NDEBUG
-static HeapArray<StaticResource> static_resources;
-static LinkedAllocator static_alloc;
+static HeapArray<PackerAsset> packer_assets;
+static LinkedAllocator packer_alloc;
 #else
-extern const Span<const StaticResource> static_resources;
+extern const Span<const PackerAsset> packer_assets;
 #endif
 
 static HashTable<const char *, Route> routes;
@@ -121,11 +117,7 @@ static bool InitDescSet(Span<const char *const> data_directories,
     }
 
     for (const char *filename: filenames) {
-        Desc desc = {};
-
-        HeapArray<uint8_t> buf(&out_set->alloc);
-        if (!ReadFile(filename, Megabytes(4), GetPathCompression(filename), &buf))
-            return false;
+        PackerAsset desc = {};
 
         // TODO: Add reverse string split functions to kutil
         const char *name = filename;
@@ -137,8 +129,19 @@ static bool InitDescSet(Span<const char *const> data_directories,
         }
         Assert(name[0]);
 
+        HeapArray<uint8_t> buf(&out_set->alloc);
+        {
+            StreamReader reader(filename);
+            StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
+            if (!SpliceStream(&reader, Megabytes(8), &writer))
+                return false;
+            if (!writer.Close())
+                return false;
+        }
+
         desc.name = DuplicateString(&out_set->alloc, name).ptr;
         desc.data = buf.Leak();
+        desc.compression_type = CompressionType::Gzip;
 
         out_set->descs.Append(desc);
     }
@@ -151,17 +154,20 @@ static void InitRoutes()
     routes.Clear();
     routes_alloc.ReleaseAll();
 
-    Assert(static_resources.len > 0);
-    routes.Set({"/", static_resources[0].data, GetMimeType(static_resources[0].url)});
+    Assert(packer_assets.len > 0);
+    routes.Set({"/", packer_assets[0].data, packer_assets[0].compression_type,
+                GetMimeType(packer_assets[0].name)});
     for (const char *page: pages) {
-        routes.Set({page, static_resources[0].data, GetMimeType(static_resources[0].url)});
+        routes.Set({page, packer_assets[0].data, packer_assets[0].compression_type,
+                    GetMimeType(packer_assets[0].name)});
     }
-    for (const StaticResource &res: static_resources) {
-        routes.Set({res.url, res.data, GetMimeType(res.url)});
+    for (const PackerAsset &asset: packer_assets) {
+        const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+        routes.Set({url, asset.data, asset.compression_type, GetMimeType(asset.name)});
     }
-    for (const Desc &desc: desc_set.descs) {
+    for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/desc/%1", desc.name).ptr;
-        routes.Set({url, desc.data, GetMimeType(url)});
+        routes.Set({url, desc.data, desc.compression_type, GetMimeType(url)});
     }
 
     // Special cases
@@ -185,10 +191,10 @@ static bool UpdateStaticResources()
     LinkedAllocator temp_alloc;
 
     const char *filename = nullptr;
-    const Span<const StaticResource> *lib_resources = nullptr;
+    const Span<const PackerAsset> *lib_assets = nullptr;
 #ifdef _WIN32
     Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_res.dll", GetApplicationDirectory()).ptr;
+    filename = Fmt(&temp_alloc, "%1%/drdw_assets.dll", GetApplicationDirectory()).ptr;
     {
         static FILETIME last_time;
 
@@ -211,10 +217,10 @@ static bool UpdateStaticResources()
     }
     DEFER { FreeLibrary(h); };
 
-    lib_resources = (const Span<const StaticResource> *)GetProcAddress(h, "static_resources");
+    lib_assets = (const Span<const PackerAsset> *)GetProcAddress(h, "packer_assets");
 #else
     Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_res.so", GetApplicationDirectory()).ptr;
+    filename = Fmt(&temp_alloc, "%1%/drdw_assets.so", GetApplicationDirectory()).ptr;
     {
         static struct timespec last_time;
 
@@ -244,22 +250,23 @@ static bool UpdateStaticResources()
     }
     DEFER { dlclose(h); };
 
-    lib_resources = (const Span<const StaticResource> *)dlsym(h, "static_resources");
+    lib_assets = (const Span<const PackerAsset> *)dlsym(h, "packer_assets");
 #endif
-    if (!lib_resources) {
-        LogError("Cannot find symbol 'static_resources' in library '%1'", filename);
+    if (!lib_assets) {
+        LogError("Cannot find symbol 'packer_assets' in library '%1'", filename);
         return false;
     }
 
-    static_resources.Clear();
-    static_alloc.ReleaseAll();
-    for (const StaticResource &res: *lib_resources) {
-        StaticResource new_res;
-        new_res.url = DuplicateString(&static_alloc, res.url).ptr;
-        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&static_alloc, res.data.len);
-        memcpy(data_ptr, res.data.ptr, (size_t)res.data.len);
-        new_res.data = {data_ptr, res.data.len};
-        static_resources.Append(new_res);
+    packer_assets.Clear();
+    packer_alloc.ReleaseAll();
+    for (const PackerAsset &asset: *lib_assets) {
+        PackerAsset asset_copy;
+        asset_copy.name = DuplicateString(&packer_alloc, asset.name).ptr;
+        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&packer_alloc, asset.data.len);
+        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
+        asset_copy.data = {data_ptr, asset.data.len};
+        asset_copy.compression_type = asset.compression_type;
+        packer_assets.Append(asset_copy);
     }
 
     InitRoutes();
@@ -693,22 +700,25 @@ static Response ProduceStaticResource(MHD_Connection *, const char *url,
     }
 
     MHD_Response *response;
-    if (compression_type != CompressionType::None) {
-        HeapArray<uint8_t> buffer;
-        StreamWriter st(&buffer, nullptr, compression_type);
-        st.Write(route->data);
-        if (!st.Close())
-            return CreateErrorPage(500);
+    if (compression_type != route->compression_type) {
+        HeapArray<uint8_t> buf;
+        {
+            StreamReader reader(route->data, nullptr, route->compression_type);
+            StreamWriter writer(&buf, nullptr, compression_type);
+            if (!SpliceStream(&reader, Megabytes(8), &writer))
+                return CreateErrorPage(500);
+            if (!writer.Close())
+                return CreateErrorPage(500);
+        }
 
-        response = MHD_create_response_from_heap((size_t)buffer.len, (void *)buffer.ptr,
-                                                 ReleaseCallback);
-        buffer.Leak();
-
-        AddContentEncodingHeader(response, compression_type);
+        response = MHD_create_response_from_heap((size_t)buf.len, (void *)buf.ptr, ReleaseCallback);
+        buf.Leak();
     } else {
         response = MHD_create_response_from_buffer((size_t)route->data.len, (void *)route->data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
+
+    AddContentEncodingHeader(response, compression_type);
     if (route->mime_type) {
         MHD_add_response_header(response, "Content-Type", route->mime_type);
     }

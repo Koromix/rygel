@@ -15,42 +15,18 @@ set(DRDW_RESOURCES static/drdw.html
                    static/casemix.js
                    static/logo.png
                    ../../lib/chartjs/chart.min.js)
-set(DRDW_SRC drdw.cc
-             resources.hh)
+set(DRDW_SRC drdw.cc)
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/build_drdw_resources.cmake" [=[
-set(RESOURCES_CC_FILENAME "${BIN_DIR}/resources.cc")
-
-file(WRITE ${RESOURCES_CC_FILENAME} "\
-#include \"${SRC_DIR}/../libdrd/libdrd.hh\"\n\
-#include \"${SRC_DIR}/resources.hh\"\n\
-\n\
-static const StaticResource resources[] = {\n")
-separate_arguments(RESOURCES)
-foreach(res ${RESOURCES})
-    get_filename_component(name ${res} NAME)
-
-    file(READ "${SRC_DIR}/${res}" data HEX)
-    string(REGEX REPLACE "([a-fA-F0-9][a-fA-F0-9])" "0x\\1," data ${data})
-
-    file(APPEND ${RESOURCES_CC_FILENAME} "    {\"/static/${name}\", {${data}}},\n")
-endforeach()
-file(APPEND ${RESOURCES_CC_FILENAME} "};\n\
-\n\
-EXPORT extern const Span<const StaticResource> static_resources;\n\
-const Span<const StaticResource> static_resources = resources;\n")
-]=])
-add_custom_command(
-    OUTPUT resources.cc
-    COMMAND ${CMAKE_COMMAND}
-    ARGS -DSRC_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DBIN_DIR=${CMAKE_CURRENT_BINARY_DIR} -DRESOURCES="${DRDW_RESOURCES}"
-         -P "${CMAKE_CURRENT_BINARY_DIR}/build_drdw_resources.cmake"
-    DEPENDS ${DRDW_RESOURCES})
+add_custom_command(OUTPUT assets.cc
+                   COMMAND $<TARGET_FILE:packer>
+                   ARGS -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${DRDW_RESOURCES}
+                   WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                   DEPENDS packer ${DRDW_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_library(drdw_res MODULE "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")
-    set_target_properties(drdw_res PROPERTIES PREFIX "")
+    add_library(drdw_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
+    set_target_properties(drdw_assets PROPERTIES PREFIX "")
 else()
-    list(APPEND DRDW_SRC "${CMAKE_CURRENT_BINARY_DIR}/resources.cc")
+    list(APPEND DRDW_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
 endif()
 
 add_executable(drdw ${DRDW_SRC} ${DRDW_RESOURCES})
