@@ -46,14 +46,12 @@ var pricing = {};
         if (target_diff !== null && indexes.length && diff_index < 0)
             errors.push('Date de comparaison incorrecte');
         if (target_ghm_root !== null && ghm_roots.length) {
-            if (!pricings_map[target_ghm_root]) {
+            if (!ghm_roots_map[target_ghm_root]) {
                 errors.push('Racine de GHM inconnue');
             } else {
-                if (main_index >= 0 && indexes[main_index].state === RunState.Okay &&
-                        !pricings_map[target_ghm_root][main_index])
+                if (!checkIndexGhmRoot(main_index, target_ghm_root))
                     errors.push('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
-                if (diff_index >= 0 && indexes[diff_index].state === RunState.Okay &&
-                        !pricings_map[target_ghm_root][diff_index])
+                if (!checkIndexGhmRoot(diff_index, target_ghm_root))
                     errors.push('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
@@ -146,6 +144,14 @@ var pricing = {};
         route();
     }
     this.moveIndex = moveIndex;
+
+    // A true result actually means maybe (if we haven't download the relevant index yet)
+    function checkIndexGhmRoot(index, ghm_root)
+    {
+        return index < 0 ||
+               indexes[index].state !== RunState.Okay ||
+               (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
+    }
 
     function updateIndexes(func)
     {
@@ -385,8 +391,7 @@ var pricing = {};
                                     indexes[i].begin_date);
             if (i === diff_index)
                 opt.setAttribute('selected', '');
-            if (indexes[i].state === RunState.Okay &&
-                    (!pricings_map[test_ghm_root] || !pricings_map[test_ghm_root][i])) {
+            if (!checkIndexGhmRoot(i, test_ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
@@ -408,9 +413,7 @@ var pricing = {};
 
                 var opt = createElement('option', {value: ghm_root_info.ghm_root},
                                         ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-                if (indexes[index].state === RunState.Okay &&
-                        (!pricings_map[ghm_root_info.ghm_root] ||
-                         !pricings_map[ghm_root_info.ghm_root][index])) {
+                if (!checkIndexGhmRoot(index, ghm_root_info.ghm_root)) {
                     opt.setAttribute('disabled', '');
                     opt.text += '*';
                 }
