@@ -1,0 +1,33 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#pragma once
+
+#include "../libdrd/libdrd.hh"
+#include "../common/json.hh"
+
+GCC_PUSH_IGNORE(-Wconversion)
+GCC_PUSH_IGNORE(-Wsign-conversion)
+#include "../../lib/libmicrohttpd/src/include/microhttpd.h"
+GCC_POP_IGNORE()
+GCC_POP_IGNORE()
+
+struct Response {
+    int code;
+    MHD_Response *response;
+};
+
+extern const mco_TableSet *drdw_table_set;
+extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> drdw_constraints_set;
+extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> drdw_index_to_constraints;
+extern const mco_AuthorizationSet *drdw_authorization_set;
+extern mco_StaySet drdw_stay_set;
+
+Response CreateErrorPage(int code);
+MHD_Response *BuildJson(CompressionType compression_type,
+                        std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
+
+Response ProduceCaseMix(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceIndexes(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProducePriceMap(MHD_Connection *conn, const char *url, CompressionType compression_type);

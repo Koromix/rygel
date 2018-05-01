@@ -15,7 +15,9 @@ set(DRDW_RESOURCES static/drdw.html
                    static/casemix.js
                    static/logo.png
                    ../../lib/chartjs/chart.min.js)
-set(DRDW_SRC drdw.cc)
+set(DRDW_SRC drdw.cc
+             casemix.cc
+             pricing.cc)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
