@@ -6,27 +6,25 @@ var pricing = {};
     var target_ghm_root = null;
     var target_diff = null;
 
-    var download_queue_length = 0;
-    var indexes_state = RunState.Uninitialized;
+    var errors = new Set();
+
+    var indexes_init = false;
     var indexes = [];
-    var ghm_roots_state = RunState.Uninitialized;
+    var ghm_roots_init = false;
     var ghm_roots = [];
     var ghm_roots_map = {};
     var pricings_map = {};
 
     var chart = null;
 
-    function run(errors)
+    function run()
     {
-        if (errors === undefined)
-            errors = [];
-
         // Parse route (model: pricing/<mode>/[<diff>..]<date>/<ghm_root>)
         var parts = url_page.split('/');
         target_mode = parts[1] || target_mode;
         if (parts[2]) {
             var date_parts = parts[2].split('..', 2);
-            if (date_parts.length == 2) {
+            if (date_parts.length === 2) {
                 target_date = date_parts[1];
                 target_diff = date_parts[0];
             } else {
@@ -38,21 +36,21 @@ var pricing = {};
 
         // Validate
         if (target_mode !== 'chart' && target_mode !== 'table')
-            errors.push('Mode d\'affichage incorrect');
+            errors.add('Mode d\'affichage incorrect');
         var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
         if (target_date !== null && indexes.length && main_index < 0)
-            errors.push('Date incorrecte');
+            errors.add('Date incorrecte');
         var diff_index = indexes.findIndex(function(info) { return info.begin_date === target_diff; });
         if (target_diff !== null && indexes.length && diff_index < 0)
-            errors.push('Date de comparaison incorrecte');
+            errors.add('Date de comparaison incorrecte');
         if (target_ghm_root !== null && ghm_roots.length) {
             if (!ghm_roots_map[target_ghm_root]) {
-                errors.push('Racine de GHM inconnue');
+                errors.add('Racine de GHM inconnue');
             } else {
                 if (!checkIndexGhmRoot(main_index, target_ghm_root))
-                    errors.push('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
+                    errors.add('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
                 if (!checkIndexGhmRoot(diff_index, target_ghm_root))
-                    errors.push('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
+                    errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
 
@@ -66,43 +64,26 @@ var pricing = {};
         }
 
         // Resources
-        if (indexes_state === RunState.Uninitialized) {
-            updateIndexes(run);
-        } else if (indexes_state === RunState.Error) {
-            indexes_state = RunState.Uninitialized;
+        updateIndexes(run);
+        updateGhmRoots(run);
+        if (main_index >= 0 && !indexes[main_index].init) {
+            markOutdated('#pricing_view', true);
+            updatePriceMap(main_index, run);
         }
-        if (ghm_roots_state === RunState.Uninitialized) {
-            updateGhmRoots(run);
-        } else if (ghm_roots_state === RunState.Error) {
-            ghm_roots_state = RunState.Uninitialized;
-        }
-        if (main_index >= 0) {
-            if (indexes[main_index].state === RunState.Uninitialized) {
-                markOutdated('#pricing_view', true);
-                updatePriceMap(main_index, run);
-            } else if (indexes[main_index].state === RunState.Error) {
-                indexes[main_index].state = RunState.Uninitialized;
-            }
-        }
-        if (diff_index >= 0) {
-            if (indexes[diff_index].state === RunState.Uninitialized) {
-                markOutdated('#pricing_view', true);
-                updatePriceMap(diff_index, run);
-            } else if (indexes[diff_index].state === RunState.Error) {
-                indexes[diff_index].state = RunState.Uninitialized;
-            }
+        if (diff_index >= 0 && !indexes[diff_index].init) {
+            markOutdated('#pricing_view', true);
+            updatePriceMap(diff_index, run);
         }
 
         // Refresh display
-        // TODO: Use something like '!update_queue_length && view_route_id != route_id)
-        if (!download_queue_length) {
-            document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
-            document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
-
-            refreshIndexesLine(main_index);
-            refreshGhmRoots(main_index, target_ghm_root);
-            refreshIndexesDiff(diff_index, target_ghm_root);
-            refreshView(main_index, diff_index, target_ghm_root, errors);
+        document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
+        document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
+        refreshIndexesLine(main_index);
+        refreshGhmRoots(main_index, target_ghm_root);
+        refreshIndexesDiff(diff_index, target_ghm_root);
+        if (!downloadJson.run_lock) {
+            refreshView(main_index, diff_index, target_ghm_root, Array.from(errors));
+            errors.clear();
         }
     }
     this.run = run;
@@ -149,56 +130,51 @@ var pricing = {};
     function checkIndexGhmRoot(index, ghm_root)
     {
         return index < 0 ||
-               indexes[index].state !== RunState.Okay ||
+               !indexes[index].init ||
                (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
     }
 
     function updateIndexes(func)
     {
-        indexes_state = RunState.Loading;
-        download_queue_length++;
+        if (indexes_init)
+            return;
 
-        indexes = [];
-
-        downloadJson('get', 'api/indexes.json', {}, function(status, json) {
-            var errors = [];
+        downloadJson('api/indexes.json', {}, function(status, json) {
+            var error = null;
 
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
                         indexes = json;
                         for (var i = 0; i < indexes.length; i++)
-                            indexes[i].state = RunState.Uninitialized;
+                            indexes[i].init = false;
                     } else {
-                        errors.push('Aucune table disponible');
+                        error = 'Aucune table disponible';
                     }
                 } break;
 
-                case 404: { errors.push('Liste des indexes introuvable'); } break;
+                case 404: { error = 'Liste des indexes introuvable'; } break;
                 case 502:
-                case 503: { errors.push('Service non accessible'); } break;
-                case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
-                default: { errors.push('Erreur inconnue ' + status); } break;
+                case 503: { error = 'Service non accessible'; } break;
+                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+                default: { error = 'Erreur inconnue ' + status; } break;
             }
 
-            indexes_state = errors.length ? RunState.Error : RunState.Okay;
-            download_queue_length--;
-
-            if (!download_queue_length)
-                func(errors);
+            indexes_init = !error;
+            if (error)
+                errors.add(error);
+            if (!downloadJson.run_lock)
+                func();
         });
     }
 
     function updateGhmRoots(func)
     {
-        ghm_roots_state = RunState.Loading;
-        download_queue_length++;
+        if (ghm_roots_init)
+            return;
 
-        ghm_roots = [];
-        ghm_roots_map = {};
-
-        downloadJson('get', 'api/ghm_roots.json', {}, function(status, json) {
-            var errors = [];
+        downloadJson('api/ghm_roots.json', {}, function(status, json) {
+            var error = null;
 
             switch (status) {
                 case 200: {
@@ -221,29 +197,29 @@ var pricing = {};
                     });
                 } break;
 
-                case 404: { errors.push('Liste des racines de GHM introuvable'); } break;
+                case 404: { error = 'Liste des racines de GHM introuvable'; } break;
                 case 502:
-                case 503: { errors.push('Service non accessible'); } break;
-                case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
-                default: { errors.push('Erreur inconnue ' + status); } break;
+                case 503: { error = 'Service non accessible'; } break;
+                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+                default: { error = 'Erreur inconnue ' + status; } break;
             }
 
-            ghm_roots_ = errors.length ? RunState.Error : RunState.Okay;
-            download_queue_length--;
-
-            if (!download_queue_length)
-                func(errors);
+            ghm_roots_init = !error;
+            if (error)
+                errors.add(error);
+            if (!downloadJson.run_lock)
+                func();
         });
     }
 
     function updatePriceMap(index, func)
     {
-        indexes[index].state = RunState.Loading;
-        download_queue_length++;
+        if (indexes[index].init)
+            return;
 
         var begin_date = indexes[index].begin_date;
-        downloadJson('get', 'api/price_map.json?date=' + begin_date, {}, function(status, json) {
-            var errors = [];
+        downloadJson('api/price_map.json', {date: begin_date}, function(status, json) {
+            var error = null;
 
             switch (status) {
                 case 200: {
@@ -262,22 +238,22 @@ var pricing = {};
                             }
                         }
                     } else {
-                        errors.push('Aucune racine de GHM dans cette table');
+                        error = 'Aucune racine de GHM dans cette table';
                     }
                 } break;
 
-                case 404: { errors.push('Aucune table disponible à cette date'); } break;
+                case 404: { error = 'Aucune table disponible à cette date'; } break;
                 case 502:
-                case 503: { errors.push('Service non accessible'); } break;
-                case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
-                default: { errors.push('Erreur inconnue ' + status); } break;
+                case 503: { error = 'Service non accessible'; } break;
+                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+                default: { error = 'Erreur inconnue ' + status; } break;
             }
 
-            indexes[index].state = errors.length ? RunState.Error : RunState.Okay;
-            download_queue_length--;
-
-            if (!download_queue_length)
-                func(errors);
+            indexes[index].init = !error;
+            if (error)
+                errors.add(error);
+            if (!downloadJson.run_lock)
+                func();
         });
     }
 

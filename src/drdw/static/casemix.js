@@ -11,8 +11,7 @@ var casemix = {};
     var target_ghm_root = null;
 
     // Casemix
-    var download_queue_length = 0;
-    var mix_state = RunState.Loading;
+    var mix_init = false;
     var mix_cmds = [];
     var mix_cmds_map = {};
     var mix_ghm_roots = [];
@@ -50,16 +49,14 @@ var casemix = {};
         */
 
         // Resources
-        if (mix_state === RunState.Unitialized) {
+        if (!mix_init) {
             markOutdated('#casemix_view', true);
             updateCaseMix(target_start, target_end, target_units, target_diff_start,
                           target_diff_end, run);
-        } else if (mix_state === RunState.Error) {
-            mix_state = RunState.Unitialized;
         }
 
         // Refresh view
-        if (!download_queue_length) {
+        if (!downloadJson.queue.size) {
             if (target_start)
                 document.querySelector('#casemix_start').value = target_start;
             if (target_end)
@@ -95,7 +92,7 @@ var casemix = {};
             // FIXME: This will not behave correctly if an update is already running
             if (args.start !== undefined || args.end !== undefined || args.units !== undefined ||
                     args.diff_start !== undefined || args.diff_end !== undefined)
-                mix_state = RunState.Unitialized;
+                mix_init = false;
         }
 
         switchPage('casemix/' + target_mode);
@@ -104,13 +101,13 @@ var casemix = {};
 
     function updateCaseMix(start, end, units, diff_start, diff_end, func)
     {
-        mix_state = RunState.Loading;
-        download_queue_length++;
+        if (mix_init)
+            return;
+        mix_init = true;
 
         var dates = (start && end) ? (start + '..' + end) : null;
         var diff = (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null;
-        downloadJson('get', 'api/casemix.json',
-                     {dates: dates, units: units, diff: diff, duration_mode: 'full'},
+        downloadJson('api/casemix.json', {dates: dates, units: units, diff: diff, duration_mode: 'full'},
                      function(status, json) {
             var errors = [];
 
@@ -211,10 +208,9 @@ var casemix = {};
                 default: { errors.push('Erreur inconnue ' + status); } break;
             }
 
-            mix_state = errors.length ? RunState.Error : RunState.Okay;
-            download_queue_length--;
-
-            func(errors);
+            mix_init = !errors.length;
+            if (!downloadJson.queue.length)
+                func(errors);
         });
     }
 

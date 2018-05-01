@@ -68,7 +68,7 @@ function cloneAttributes(src_node, element) {
     }
 }
 
-function downloadJson(method, url, arguments, func)
+function downloadJson(url, arguments, func)
 {
     var keys = Object.keys(arguments);
     if (keys.length) {
@@ -80,25 +80,37 @@ function downloadJson(method, url, arguments, func)
                 query_arguments.push(arg);
             }
         }
-        url += '?' + query_arguments.join('&');
+        url += '?' + query_arguments.sort().join('&');
     }
 
+    if (downloadJson.queue.has(url))
+        return;
+    downloadJson.queue.add(url);
+    downloadJson.run_lock++;
+
     var xhr = new XMLHttpRequest();
-    xhr.open(method, url, true);
+    xhr.open('get', url, true);
     xhr.responseType = 'json';
     xhr.timeout = 4000;
-    xhr.onload = function(e) { func(this.status, xhr.response); };
-    xhr.onerror = function(e) { func(503); };
-    xhr.ontimeout = function(e) { func(504); };
+    xhr.onload = function(e) {
+        downloadJson.run_lock--;
+        func(this.status, xhr.response);
+        downloadJson.queue.delete(url);
+    };
+    xhr.onerror = function(e) {
+        downloadJson.run_lock--;
+        func(503);
+        downloadJson.queue.delete(url);
+    };
+    xhr.ontimeout = function(e) {
+        downloadJson.run_lock--;
+        func(504);
+        downloadJson.queue.delete(url);
+    };
     xhr.send();
 }
-
-const RunState = Object.freeze({
-    Uninitialized: 0,
-    Loading: 1,
-    Okay: 2,
-    Error: 3
-});
+downloadJson.queue = new Set();
+downloadJson.run_lock = 0;
 
 // ------------------------------------------------------------------------
 // Progression and errors
