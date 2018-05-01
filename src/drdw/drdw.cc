@@ -996,11 +996,9 @@ Options:
 #else
     {
         static volatile bool run = true;
-        const auto do_exit = [](int) {
-            run = false;
-        };
-        signal(SIGINT, do_exit);
-        signal(SIGTERM, do_exit);
+
+        signal(SIGINT, [](int) { run = false; });
+        signal(SIGTERM, [](int) { run = false; });
 
         while (run) {
             pause();
