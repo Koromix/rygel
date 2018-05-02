@@ -91,7 +91,7 @@ function downloadJson(url, arguments, func)
     var xhr = new XMLHttpRequest();
     xhr.open('get', url, true);
     xhr.responseType = 'json';
-    xhr.timeout = 4000;
+    xhr.timeout = 10000;
     xhr.onload = function(e) {
         downloadJson.run_lock--;
         func(this.status, xhr.response);
