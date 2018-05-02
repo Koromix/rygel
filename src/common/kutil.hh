@@ -2552,6 +2552,57 @@ Span<T> SplitStrAny(T *str, const char *split_chars, T **out_remainder = nullptr
 }
 
 template <typename T>
+Span<T> SplitStrReverse(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
+{
+    Size remainder_len = str.len - 1;
+    while (remainder_len > 0) {
+        if (str[remainder_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str.Take(0, remainder_len);
+            }
+            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
+        }
+        remainder_len--;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(0, 0);
+    }
+    return str;
+}
+template <typename T>
+Span<T> SplitStrReverse(T *str, char split_char, Span<T> *out_remainder = nullptr)
+    { return SplitStrReverse(Span<T>(str), split_char, out_remainder); }
+
+template <typename T>
+Span<T> SplitStrReverseAny(Span<T> str, const char *split_chars, Span<T> *out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        split_mask.Set(split_chars[i]);
+    }
+
+    Size remainder_len = str.len - 1;
+    while (remainder_len > 0) {
+        if (split_mask.Test(str[remainder_len])) {
+            if (out_remainder) {
+                *out_remainder = str.Take(0, remainder_len);
+            }
+            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
+        }
+        remainder_len--;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(0, 0);
+    }
+    return str;
+}
+template <typename T>
+Span<T> SplitStrReverseAny(T *str, const char *split_chars, Span<T> *out_remainder = nullptr)
+    { return SplitStrReverseAny(Span<T>(str), split_chars, out_remainder); }
+
+template <typename T>
 Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[0])) {

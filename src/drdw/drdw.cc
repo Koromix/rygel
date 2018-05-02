@@ -133,14 +133,7 @@ static bool InitDescSet(Span<const char *const> data_directories,
     for (const char *filename: filenames) {
         PackerAsset desc = {};
 
-        // TODO: Add reverse string split functions to kutil
-        const char *name = filename;
-        for (Size i = 0; name[i]; i++) {
-            if (strchr(PATH_SEPARATORS, name[i])) {
-                name += i + 1;
-                i = 0;
-            }
-        }
+        const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
         Assert(name[0]);
 
         HeapArray<uint8_t> buf(&out_set->alloc);
@@ -458,12 +451,12 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         route = routes.Find(url2);
         if (!route) {
             while (url2.len > 1) {
-                if (url2.ptr[--url2.len] == '/') {
-                    Route *walk_route = routes.Find(url2);
-                    if (walk_route && walk_route->matching == Route::Matching::Walk) {
-                        route = walk_route;
-                        break;
-                    }
+                SplitStrReverse(url2, '/', &url2);
+
+                Route *walk_route = routes.Find(url2);
+                if (walk_route && walk_route->matching == Route::Matching::Walk) {
+                    route = walk_route;
+                    break;
                 }
             }
             if (!route) {
