@@ -2445,7 +2445,7 @@ static inline int CmpStr(const char *str1, const char *str2)
     { return strcmp(str1, str2); }
 
 template <typename T>
-static inline Span<T> SplitStr(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
+Span<T> SplitStr(Span<T> str, char split_char, Span<T> *out_remainder = nullptr)
 {
     Size part_len = 0;
     while (part_len < str.len) {
@@ -2524,7 +2524,7 @@ Span<T> SplitStrAny(Span<T> str, const char *split_chars, Span<T> *out_remainder
     if (out_remainder) {
         *out_remainder = str.Take(str.len, 0);
     }
-    return str.Take(0, str.len);
+    return str;
 }
 template <typename T>
 Span<T> SplitStrAny(T *str, const char *split_chars, T **out_remainder = nullptr)
