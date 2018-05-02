@@ -5,6 +5,7 @@
 #pragma once
 
 #include "kutil.hh"
+
 #include <Rcpp.h>
 
 extern std::mutex rcc_log_mutex;

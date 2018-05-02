@@ -5,6 +5,7 @@
 #pragma once
 
 #include "kutil.hh"
+
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
 #include "../../lib/rapidjson/reader.h"
