@@ -11,26 +11,35 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-static bool PackFile(const char *filename, CompressionType compression_type, StreamWriter *out_st)
+static Size PackFile(const char *filename, CompressionType compression_type, StreamWriter *out_st)
 {
-    HeapArray<uint8_t> buf;
-    StreamWriter writer(&buf, nullptr, compression_type);
+    PrintLn(out_st, "    // %1", filename);
+    Print(out_st, "    ");
 
-    StreamReader reader(filename);
-    while (!reader.eof) {
-        uint8_t read_buf[128 * 1024];
-        Size read_len = reader.Read(SIZE(read_buf), read_buf);
-        if (read_len < 0)
-            return false;
+    Size written_len = 0;
+    {
+        HeapArray<uint8_t> buf;
+        StreamWriter writer(&buf, nullptr, compression_type);
 
-        writer.Write(read_buf, read_len);
+        StreamReader reader(filename);
+        while (!reader.eof) {
+            uint8_t read_buf[128 * 1024];
+            Size read_len = reader.Read(SIZE(read_buf), read_buf);
+            if (read_len < 0)
+                return false;
+
+            writer.Write(read_buf, read_len);
+            written_len += buf.len;
+            PrintAsHexArray(buf, out_st);
+            buf.RemoveFrom(0);
+        }
+        writer.Close();
+        written_len += buf.len;
         PrintAsHexArray(buf, out_st);
-        buf.RemoveFrom(0);
     }
-    writer.Close();
-    PrintAsHexArray(buf, out_st);
+    PrintLn(out_st);
 
-    return true;
+    return written_len;
 }
 
 int main(int argc, char **argv)
@@ -156,7 +165,7 @@ struct Span {
     Size len;
 
     Span() = default;
-    constexpr Span(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
+    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
     template <Size N>
     constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
 };
@@ -167,28 +176,36 @@ struct PackerAsset {
     Span<const uint8_t> data;
 };
 
+static const uint8_t raw_data[] = {)");
+
+    HeapArray<Size> lengths;
+    for (const char *filename: filenames) {
+        Size file_len = PackFile(filename, compression_type, &st);
+        if (file_len < 0)
+            return 1;
+        lengths.Append(file_len);
+    }
+
+    PrintLn(&st,
+R"(};
+
 static PackerAsset assets[] = {)");
 
-    for (const char *filename: filenames) {
-        const char *name;
-        if (depth >= 0) {
-            name = filename + strlen(filename);
+    for (Size i = 0, cumulative_len = 0; i < filenames.len; i++) {
+        Span<const char> filename = filenames[i];
 
-            int i = 0;
-            while (name > filename) {
-                i += !!strchr(PATH_SEPARATORS, name[-1]);
-                if (i >= depth)
-                    break;
-                name--;
+        Span<const char> name = filename;
+        {
+            Span<const char> remainder = filename;
+            for (Size j = 0; remainder.len && j < depth; j++) {
+                name = SplitStrReverseAny(remainder, PATH_SEPARATORS, &remainder);
             }
-        } else {
-            name = filename;
+            name.len = filename.end() - name.ptr;
         }
 
-        Print(&st, "    {\"%1\", %2, {", name, (int)compression_type);
-        if (!PackFile(filename, compression_type, &st))
-            return 1;
-        PrintLn(&st, "}},");
+        PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}},",
+                name, (int)compression_type, cumulative_len, lengths[i]);
+        cumulative_len += lengths[i];
     }
 
     PrintLn(&st,
