@@ -78,25 +78,19 @@ static char etag[64];
 
 static const char *GetMimeType(Span<const char> path)
 {
-    Span<const char> ext;
-    {
-        Size pos = path.len;
-        while (pos > 0 && path[--pos] != '.');
-        ext = path.Take(pos, path.len - pos);
+    Span<const char> extension = GetPathExtension(path);
 
-    }
-
-    if (ext == ".css") {
+    if (extension == ".css") {
         return "text/css";
-    } else if (ext == ".html") {
+    } else if (extension == ".html") {
         return "text/html";
-    } else if (ext == ".ico") {
+    } else if (extension == ".ico") {
         return "image/vnd.microsoft.icon";
-    } else if (ext == ".js") {
+    } else if (extension == ".js") {
         return "application/javascript";
-    } else if (ext == ".json") {
+    } else if (extension == ".json") {
         return "application/json";
-    } else if (ext == ".png") {
+    } else if (extension == ".png") {
         return "image/png";
     } else {
         LogError("Unknown MIME type for path '%1'", path);
