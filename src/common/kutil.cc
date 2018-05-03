@@ -1270,42 +1270,40 @@ const char *GetApplicationDirectory()
 #endif
 }
 
-CompressionType GetPathCompression(const char *filename)
+CompressionType GetPathCompression(Span<const char> filename)
 {
     CompressionType compression_type;
-    GetPathExtension(filename, Span<char>(nullptr, 0), &compression_type);
+    GetPathExtension(filename, &compression_type);
     return compression_type;
 }
 
-Size GetPathExtension(const char *filename, Span<char> out_buf,
-                      CompressionType *out_compression_type)
+// Names starting with a dot are not considered to be an extension (POSIX hidden files)
+Span<const char> GetPathExtension(Span<const char> filename, CompressionType *out_compression_type)
 {
-    Size len = (Size)strlen(filename);
-    DebugAssert(len >= 0);
+    filename = SplitStrReverseAny(filename, PATH_SEPARATORS);
 
-    Size ext_offset = len;
-    const auto SkipOneExt = [&]() {
-        len = ext_offset;
-        while (ext_offset && filename[--ext_offset] != '.');
+    Span<const char> extension = {};
+    const auto GetNextExtension = [&]() {
+        extension = SplitStrReverse(filename, '.', &filename);
+        if (extension.ptr > filename.ptr) {
+            extension.ptr--;
+            extension.len++;
+        } else {
+            extension = {};
+        }
     };
 
-    SkipOneExt();
+    GetNextExtension();
     if (out_compression_type) {
-        if (TestStr(filename + ext_offset, ".gz")) {
+        if (TestStr(extension, ".gz")) {
             *out_compression_type = CompressionType::Gzip;
-            SkipOneExt();
+            GetNextExtension();
         } else {
             *out_compression_type = CompressionType::None;
         }
     }
 
-    Size copy_len = len - ext_offset;
-    if (copy_len > out_buf.len) {
-        copy_len = out_buf.len;
-    }
-    memcpy(out_buf.ptr, filename + ext_offset, (size_t)copy_len);
-
-    return copy_len;
+    return extension;
 }
 
 FILE *OpenFile(const char *path, OpenFileMode mode)

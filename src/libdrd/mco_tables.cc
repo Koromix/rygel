@@ -1264,9 +1264,8 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> tab_filenames,
     bool success = true;
 
     for (const char *filename: tab_filenames) {
-        LocalArray<char, 16> extension;
         CompressionType compression_type;
-        extension.len = GetPathExtension(filename, extension.data, &compression_type);
+        Span<const char> extension = GetPathExtension(filename, &compression_type);
 
         if (!TestStr(extension, ".tab")) {
             LogError("Cannot load table file '%1' with unknown extension '%2'",
@@ -1284,9 +1283,8 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> tab_filenames,
     }
 
     for (const char *filename: price_filenames) {
-        LocalArray<char, 16> extension;
         CompressionType compression_type;
-        extension.len = GetPathExtension(filename, extension.data, &compression_type);
+        Span<const char> extension = GetPathExtension(filename, &compression_type);
 
         if (!TestStr(extension, ".json")) {
             LogError("Cannot load price file '%1' with unknown extension '%2'",

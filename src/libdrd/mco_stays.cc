@@ -76,10 +76,8 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
 
 bool mco_StaySet::SavePack(const char *filename) const
 {
-    LocalArray<char, 16> extension;
     CompressionType compression_type;
-
-    extension.len = GetPathExtension(filename, extension.data, &compression_type);
+    Span<const char> extension = GetPathExtension(filename, &compression_type);
 
     if (!TestStr(extension, ".dspak")) {
         LogError("Unknown packing extension '%1', prefer '.dspak'", extension);
@@ -480,9 +478,8 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
                                    HashTable<int32_t, mco_StayTest> *out_tests)
 {
     for (const char *filename: filenames) {
-        LocalArray<char, 16> extension;
         CompressionType compression_type;
-        extension.len = GetPathExtension(filename, extension.data, &compression_type);
+        Span<const char> extension = GetPathExtension(filename, &compression_type);
 
         bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
                                           HashTable<int32_t, mco_StayTest> *out_tests);

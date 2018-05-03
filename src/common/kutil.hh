@@ -2678,9 +2678,9 @@ overflow:
     #define PATH_SEPARATORS "/"
 #endif
 
-CompressionType GetPathCompression(const char *filename);
-Size GetPathExtension(const char *filename, Span<char> out_buf,
-                      CompressionType *out_compression_type = nullptr);
+CompressionType GetPathCompression(Span<const char> filename);
+Span<const char> GetPathExtension(Span<const char> filename,
+                                  CompressionType *out_compression_type = nullptr);
 
 enum class FileType {
     Directory,
