@@ -2793,16 +2793,6 @@ struct OptionDesc {
     const char *help;
 };
 
-template <typename T>
-const OptionDesc *FindOption(Span<const OptionDesc> options, T name)
-{
-    for (const OptionDesc &opt: options) {
-        if (TestStr(opt.name, name))
-            return &opt;
-    }
-    return nullptr;
-}
-
 class OptionParser {
     Size limit;
     Size smallopt_offset = 0;

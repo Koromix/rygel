@@ -341,7 +341,9 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
 
     unsigned int flags = 0;
     for (const char *opt: options) {
-        const OptionDesc *desc = FindOption(mco_ClassifyFlagOptions, opt);
+        const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
+                                              std::end(mco_ClassifyFlagOptions),
+                                              [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
         if (!desc)
             Rcpp::stop("Unknown classifier option '%1'", opt);
         flags |= 1u << (desc - mco_ClassifyFlagOptions);

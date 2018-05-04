@@ -163,7 +163,9 @@ Classifier flags:)");
 
                 while (flags_str[0]) {
                     Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
-                    const OptionDesc *desc = FindOption(mco_ClassifyFlagOptions, flag);
+                    const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
+                                                          std::end(mco_ClassifyFlagOptions),
+                                                          [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
                     if (!desc) {
                         LogError("Unknown classifier flag '%1'", flag);
                         return false;
