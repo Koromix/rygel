@@ -115,7 +115,7 @@ Available compression types:)", CompressionTypeNames[0]);
 
                 compression_type = (CompressionType)i;
             } else {
-                PrintLn(stderr, "Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt);
                 return 1;
             }
         }

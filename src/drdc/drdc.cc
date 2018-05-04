@@ -181,7 +181,7 @@ Classifier flags:)");
 
         opt_parser.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
-            PrintLn(stderr, "No filename provided");
+            LogError("No filename provided");
             PrintUsage(stderr);
             return false;
         }
@@ -449,7 +449,7 @@ R"(Usage: drdc info [options] name ...
 
         opt_parser.ConsumeNonOptions(&names);
         if (!names.len) {
-            PrintLn(stderr, "No element name provided");
+            LogError("No element name provided");
             PrintUsage(stderr);
             return false;
         }
@@ -531,7 +531,7 @@ R"(Usage: drdc info [options] name ...
             }
         }
 
-        PrintLn(stderr, "Unknown element '%1'", name);
+        LogError("Unknown element '%1'", name);
     }
 
     return true;
@@ -573,7 +573,7 @@ List options:
 
         opt_parser.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
-            PrintLn(stderr, "No specifier provided");
+            LogError("No specifier provided");
             PrintUsage(stderr);
             return false;
         }
@@ -660,12 +660,12 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
 
         opt_parser.ConsumeNonOptions(&filenames);
         if (!dest_filename) {
-            PrintLn(stderr, "A destination file must be provided (--output)");
+            LogError("A destination file must be provided (--output)");
             PrintUsage(stderr);
             return false;
         }
         if (!filenames.len) {
-            PrintLn(stderr, "No stay file provided");
+            LogError("No stay file provided");
             PrintUsage(stderr);
             return false;
         }
@@ -794,7 +794,7 @@ Commands:
 
 #undef HANDLE_COMMAND
 
-    PrintLn(stderr, "Unknown command '%1'", cmd);
+    LogError("Unknown command '%1'", cmd);
     PrintUsage(stderr);
     return 1;
 }

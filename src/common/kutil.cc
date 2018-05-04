@@ -2477,7 +2477,7 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
 const char *OptionParser::RequireOptionValue(void (*usage_func)(FILE *fp))
 {
     if (!ConsumeOptionValue()) {
-        PrintLn(stderr, "Option '%1' needs an argument", current_option);
+        LogError("Option '%1' needs an argument", current_option);
         if (usage_func) {
             usage_func(stderr);
         }

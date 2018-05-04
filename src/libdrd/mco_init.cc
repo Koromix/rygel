@@ -159,7 +159,7 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
         mco_authorization_filename = opt_parser.current_value;
         return true;
     } else {
-        PrintLn(stderr, "Unknown option '%1'", opt_parser.current_option);
+        LogError("Unknown option '%1'", opt_parser.current_option);
         usage_func(stderr);
         return false;
     }
