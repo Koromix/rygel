@@ -1584,11 +1584,8 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
         return false;
     source.type = SourceType::File;
     source.u.fp = OpenFile(filename, OpenFileMode::Read);
-    if (!source.u.fp) {
-        LogError("Cannot open file '%1': %2", filename, strerror(errno));
-        error = true;
+    if (!source.u.fp)
         return false;
-    }
     source.owned = true;
 
     error_guard.disable();
@@ -2089,10 +2086,8 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         return false;
     dest.type = DestinationType::File;
     dest.u.fp = OpenFile(filename, OpenFileMode::Write);
-    if (!dest.u.fp) {
-        LogError("Cannot open file '%1': %2", filename, strerror(errno));
+    if (!dest.u.fp)
         return false;
-    }
     dest.owned = true;
 
     open = true;
