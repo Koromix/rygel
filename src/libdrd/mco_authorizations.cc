@@ -130,7 +130,7 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
             return false;
 
         JsonAuthorizationHandler json_handler(&out_set->authorizations);
-        if (!ParseJsonFile(st, &json_handler))
+        if (!LoadJson(st, &json_handler))
             return false;
     }
 

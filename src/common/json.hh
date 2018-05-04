@@ -84,7 +84,7 @@ private:
 };
 
 template <typename T>
-bool ParseJsonFile(StreamReader &st, T *json_handler)
+bool LoadJson(StreamReader &st, T *json_handler)
 {
     JsonStreamReader json_stream(&st);
     PushLogHandler([&](LogLevel level, const char *ctx,

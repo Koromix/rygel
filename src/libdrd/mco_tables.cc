@@ -1182,7 +1182,7 @@ bool mco_ParsePricesJson(StreamReader &st, HeapArray<mco_PriceTable> *out_tables
 
     {
         JsonPricesHandler json_handler(out_tables);
-        if (!ParseJsonFile(st, &json_handler))
+        if (!LoadJson(st, &json_handler))
             return false;
     }
 
