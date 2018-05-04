@@ -6,7 +6,6 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-# Application HTML must be kept first
 set(DRDW_RESOURCES static/drdw.html
                    static/drdw.css
                    static/common.js

@@ -275,22 +275,25 @@ static void InitRoutes()
 
     // Static assets
     Assert(packer_assets.len > 0);
-    routes.Set({"/", Route::Matching::Exact, packer_assets[0], GetMimeType(packer_assets[0].name)});
-    routes.Set({"/pricing", Route::Matching::Walk, packer_assets[0], GetMimeType(packer_assets[0].name)});
-    routes.Set({"/casemix", Route::Matching::Walk, packer_assets[0], GetMimeType(packer_assets[0].name)});
-    for (Size i = 1; i < packer_assets.len; i++) {
-        const PackerAsset &asset = packer_assets[i];
-
+    for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
         routes.Set({url, Route::Matching::Exact, asset, GetMimeType(asset.name)});
     }
 
     // Special cases
     {
-        Route favicon = routes.FindValue("/static/favicon.ico", {});
-        if (favicon.url.len) {
-            favicon.url = "/favicon.ico";
-            routes.Set(favicon);
+        Route *html = routes.Find("/static/drdw.html");
+        Assert(html);
+        routes.Set({"/", Route::Matching::Exact, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/pricing", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/casemix", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
+        routes.Remove(html);
+
+        Route *favicon = routes.Find("/static/favicon.ico");
+        if (favicon) {
+            routes.Set({"/favicon.ico", Route::Matching::Exact, favicon->u.st.asset,
+                        favicon->u.st.mime_type});
+            routes.Remove(favicon);
         }
     }
 
