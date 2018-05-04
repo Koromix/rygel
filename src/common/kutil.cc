@@ -903,7 +903,6 @@ void DefaultLogHandler(LogLevel level, const char *ctx,
     StartConsoleLog(level);
     Print(stderr, ctx);
     PrintFmt(fmt, args, stderr);
-    PrintLn(stderr);
     EndConsoleLog();
 }
 
@@ -921,10 +920,10 @@ void StartConsoleLog(LogLevel level)
 
 void EndConsoleLog()
 {
-    if (!ConfigLogTerminalOutput())
-        return;
-
-    fputs("\x1B[0m", stderr);
+    fputs("\n", stderr);
+    if (ConfigLogTerminalOutput()) {
+        fputs("\x1B[0m", stderr);
+    }
 }
 
 void PushLogHandler(std::function<LogHandlerFunc> handler)
@@ -2004,10 +2003,8 @@ void LineReader::PushLogHandler()
     ::PushLogHandler([=](LogLevel level, const char *ctx,
                          const char *fmt, Span<const FmtArg> args) {
         StartConsoleLog(level);
-        Print(stderr, ctx);
-        Print(stderr, "%1(%2): ", filename, line_number);
+        Print(stderr, "%1%2(%3): ", ctx, filename, line_number);
         PrintFmt(fmt, args, stderr);
-        PrintLn(stderr);
         EndConsoleLog();
     });
 }

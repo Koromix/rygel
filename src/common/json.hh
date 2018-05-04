@@ -90,10 +90,8 @@ bool LoadJson(StreamReader &st, T *json_handler)
     PushLogHandler([&](LogLevel level, const char *ctx,
                        const char *fmt, Span<const FmtArg> args) {
         StartConsoleLog(level);
-        Print(stderr, ctx);
-        Print(stderr, "%1(%2:%3): ", st.filename, json_stream.line_number, json_stream.line_offset);
+        Print(stderr, "%1%2(%3:%4): ", ctx, st.filename, json_stream.line_number, json_stream.line_offset);
         PrintFmt(fmt, args, stderr);
-        PrintLn(stderr);
         EndConsoleLog();
     });
     DEFER { PopLogHandler(); };
