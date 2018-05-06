@@ -526,12 +526,12 @@ Options:
         OptionParser opt_parser(argc, argv);
 
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return 0;
             } else if (TestOption(opt, "-p", "--port")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 char *end_ptr;
@@ -543,12 +543,12 @@ Options:
                 }
                 port = (uint16_t)new_port;
             } else if (TestOption(opt, "--desc-dir")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 desc_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-s", "--stays")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 stays_filenames.Append(opt_parser.current_value);

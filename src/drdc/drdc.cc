@@ -152,12 +152,12 @@ Classifier flags:)");
     bool test = false;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-f", "--flag")) {
-                const char *flags_str = opt_parser.RequireOptionValue();
+                const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
                     return false;
 
@@ -371,12 +371,12 @@ Constraints options:
     Date index_date = {};
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
@@ -434,12 +434,12 @@ R"(Usage: drdc info [options] name ...
     HeapArray<const char *> names;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
@@ -558,12 +558,12 @@ List options:
     HeapArray<const char *> spec_strings;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
@@ -647,12 +647,12 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
     const char *dest_filename = nullptr;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-O", "--output")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 dest_filename = opt_parser.current_value;
             } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
@@ -709,7 +709,7 @@ Dump options:
     HeapArray<const char *> filenames;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;

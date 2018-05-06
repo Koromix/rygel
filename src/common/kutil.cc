@@ -2350,7 +2350,7 @@ static void RotateArgs(const char **args, Size start, Size mid, Size end)
     ReverseArgs(args, start, end);
 }
 
-const char *OptionParser::ConsumeOption()
+const char *OptionParser::Next()
 {
     Size next_index;
     const char *opt;
@@ -2425,7 +2425,7 @@ const char *OptionParser::ConsumeOption()
     return current_option;
 }
 
-const char *OptionParser::ConsumeOptionValue()
+const char *OptionParser::ConsumeValue()
 {
     if (current_value)
         return current_value;
@@ -2467,9 +2467,9 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
     }
 }
 
-const char *OptionParser::RequireOptionValue(void (*usage_func)(FILE *fp))
+const char *OptionParser::RequireValue(void (*usage_func)(FILE *fp))
 {
-    if (!ConsumeOptionValue()) {
+    if (!ConsumeValue()) {
         LogError("Option '%1' needs an argument", current_option);
         if (usage_func) {
             usage_func(stderr);

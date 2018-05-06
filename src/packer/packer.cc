@@ -73,12 +73,12 @@ Available compression types:)", CompressionTypeNames[0]);
     HeapArray<const char *> filenames;
     {
         const char *opt;
-        while ((opt = opt_parser.ConsumeOption())) {
+        while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return 0;
             } else if (TestOption(opt, "-d", "--depth")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 std::pair<int, bool> ret = ParseDec<int>(opt_parser.current_value);
@@ -90,17 +90,17 @@ Available compression types:)", CompressionTypeNames[0]);
                 }
                 depth = ret.first;
             } else if (TestOption(opt, "--span_name")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 span_name = opt_parser.current_value;
             } else if (TestOption(opt, "-O")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 output_path = opt_parser.current_value;
             } else if (TestOption(opt, "-c", "--compress")) {
-                if (!opt_parser.RequireOptionValue(PrintUsage))
+                if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
                 Size i = 0;

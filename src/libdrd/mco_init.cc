@@ -125,7 +125,7 @@ const mco_AuthorizationSet *mco_GetMainAuthorizationSet()
 bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
 {
     if (opt_parser.TestOption("-O", "--output")) {
-        const char *filename = opt_parser.RequireOptionValue(usage_func);
+        const char *filename = opt_parser.RequireValue(usage_func);
         if (!filename)
             return false;
 
@@ -135,25 +135,25 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
         }
         return true;
     } else if (opt_parser.TestOption("-D", "--data-dir")) {
-        if (!opt_parser.RequireOptionValue(usage_func))
+        if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_data_directories.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--table-dir")) {
-        if (!opt_parser.RequireOptionValue(usage_func))
+        if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_table_directories.Append(opt_parser.current_value);
         return true;
     }  else if (opt_parser.TestOption("--price-file")) {
-        if (!opt_parser.RequireOptionValue(usage_func))
+        if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_price_filenames.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--auth-file")) {
-        if (!opt_parser.RequireOptionValue(usage_func))
+        if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_authorization_filename = opt_parser.current_value;

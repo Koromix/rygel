@@ -2803,12 +2803,12 @@ public:
         : limit(argc > 0 ? argc - 1 : 0),
           args(limit ? (const char **)(argv + 1) : nullptr, limit) {}
 
-    const char *ConsumeOption();
-    const char *ConsumeOptionValue();
+    const char *Next();
+    const char *ConsumeValue();
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
 
-    const char *RequireOptionValue(void (*usage_func)(FILE *fp) = nullptr);
+    const char *RequireValue(void (*usage_func)(FILE *fp) = nullptr);
 
     bool TestOption(const char *test1, const char *test2 = nullptr) const
         { return ::TestOption(current_option, test1, test2); }
