@@ -2313,6 +2313,74 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 }
 
 // ------------------------------------------------------------------------
+// INI
+// ------------------------------------------------------------------------
+
+static inline bool IsAsciiIdChar(char c)
+{
+    return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.';
+}
+
+bool IniParser::Next(Span<const char> *out_section, Span<const char> *out_key,
+                     Span<const char> *out_value)
+{
+    if (UNLIKELY(error))
+        return false;
+
+    DEFER_N(error_guard) { error = true; };
+
+    Span<const char> line;
+    while (reader.Next(&line)) {
+        line = TrimStr(line);
+
+        if (!line.len || line[0] == ';' || line[0] == '#') {
+            // Ignore this line (empty or comment)
+        } else if (line[0] == '[') {
+            if (line.len < 2 || line[line.len - 1] != ']') {
+                LogError("%1(%2): Malformed section line", reader.st->filename, reader.line_number);
+                return false;
+            }
+            section.RemoveFrom(0);
+            section.Append(TrimStr(line.Take(1, line.len - 2)));
+            if (!section.len) {
+                LogError("%1(%2): Empty section name", reader.st->filename, reader.line_number);
+                return false;
+            }
+            if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
+                LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-' or '.'",
+                         reader.st->filename, reader.line_number);
+                return false;
+            }
+        } else {
+            Span<const char> value;
+            Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+            if (!key.len || key.end() == line.end()) {
+                LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
+                return false;
+            }
+            if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
+                LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
+                         reader.st->filename, reader.line_number);
+                return false;
+            }
+            value = TrimStr(value);
+
+            error_guard.disable();
+            *out_section = section;
+            *out_key = key;
+            *out_value = value;
+            return true;
+        }
+    }
+    if (reader.error)
+        return false;
+
+    error_guard.disable();
+    eof = true;
+    return false;
+}
+
+// ------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------
 

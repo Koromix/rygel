@@ -2771,6 +2771,27 @@ public:
     AsyncHelper Name = [&, __VA_ARGS__]()
 
 // ------------------------------------------------------------------------
+// INI
+// ------------------------------------------------------------------------
+
+class IniParser {
+    HeapArray<char> section;
+
+public:
+    LineReader reader;
+    bool eof = false;
+    bool error = false;
+
+    IniParser(StreamReader *st) : reader(st) {}
+
+    IniParser(const IniParser &other) = delete;
+    IniParser &operator=(const IniParser &other) = delete;
+
+    bool Next(Span<const char> *out_section, Span<const char> *out_key,
+              Span<const char> *out_value);
+};
+
+// ------------------------------------------------------------------------
 // Options
 // ------------------------------------------------------------------------
 
