@@ -1961,24 +1961,19 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 }
 
 // TODO: Maximum line length
-Span<char> LineReader::GetLine()
+bool LineReader::Next(Span<char> *out_line)
 {
-    if (UNLIKELY(error))
-        return {buf.ptr, 0};
-    if (eof) {
-        line = line.Take(line.len, 0);
-        return line;
-    }
+    if (UNLIKELY(error || eof))
+        return false;
 
     for (;;) {
         if (!view.len) {
             buf.Grow(LINE_READER_STEP_SIZE + 1);
 
-            Size read_len = read(LINE_READER_STEP_SIZE, buf.end());
+            Size read_len = st->Read(LINE_READER_STEP_SIZE, buf.end());
             if (read_len < 0) {
                 error = true;
-                buf.ptr[0] = 0;
-                return {buf.ptr, 0};
+                return false;
             }
             buf.len += read_len;
             eof = !read_len;
@@ -1990,7 +1985,8 @@ Span<char> LineReader::GetLine()
         if (view.len || eof) {
             line.ptr[line.len] = 0;
             line_number++;
-            return line;
+            *out_line = line;
+            return true;
         }
 
         buf.len = view.ptr - line.ptr;
@@ -2003,7 +1999,7 @@ void LineReader::PushLogHandler()
     ::PushLogHandler([=](LogLevel level, const char *ctx,
                          const char *fmt, Span<const FmtArg> args) {
         StartConsoleLog(level);
-        Print(stderr, "%1%2(%3): ", ctx, filename, line_number);
+        Print(stderr, "%1%2(%3): ", ctx, st->filename, line_number);
         PrintFmt(fmt, args, stderr);
         EndConsoleLog();
     });

@@ -255,11 +255,8 @@ bool mco_StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
     {
         LineReader reader(&st);
 
-        while (!reader.eof) {
-            Span<const char> line = reader.GetLine();
-            if (reader.error)
-                return false;
-
+        Span<const char> line;
+        while (reader.Next(&line)) {
             Size offset = grp ? 24 : 9;
             if (UNLIKELY(line.len < offset + 168)) {
                 LogError("Truncated RUM line %1 in '%2'", reader.line_number, st.filename);
@@ -454,6 +451,8 @@ bool mco_StaySetBuilder::LoadRssOrGrp(StreamReader &st, bool grp,
 
             set.stays.Append(stay);
         }
+        if (reader.error)
+            return false;
     }
     if (errors && set.stays.len == stays_len)
         return false;
