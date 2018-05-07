@@ -2775,7 +2775,8 @@ public:
 // ------------------------------------------------------------------------
 
 class IniParser {
-    HeapArray<char> section;
+    HeapArray<char> current_section;
+    HeapArray<char> current_key;
 
 public:
     LineReader reader;

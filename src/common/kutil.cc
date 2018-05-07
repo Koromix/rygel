@@ -2340,8 +2340,8 @@ bool IniParser::Next(Span<const char> *out_section, Span<const char> *out_key,
                 LogError("%1(%2): Malformed section line", reader.st->filename, reader.line_number);
                 return false;
             }
-            section.RemoveFrom(0);
-            section.Append(TrimStr(line.Take(1, line.len - 2)));
+
+            Span<const char> section = TrimStr(line.Take(1, line.len - 2));
             if (!section.len) {
                 LogError("%1(%2): Empty section name", reader.st->filename, reader.line_number);
                 return false;
@@ -2351,23 +2351,34 @@ bool IniParser::Next(Span<const char> *out_section, Span<const char> *out_key,
                          reader.st->filename, reader.line_number);
                 return false;
             }
+
+            current_section.Clear(128);
+            current_section.Append(section);
+            current_key.Clear(128);
         } else {
             Span<const char> value;
-            Span<const char> key = TrimStr(SplitStr(line, '=', &value));
-            if (!key.len || key.end() == line.end()) {
-                LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
-                return false;
+            if (line.ptr == reader.line.ptr || !current_key.len) {
+                Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+                if (!key.len || key.end() == line.end()) {
+                    LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
+                    return false;
+                }
+                if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
+                    LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
+                             reader.st->filename, reader.line_number);
+                    return false;
+                }
+                value = TrimStr(value);
+
+                current_key.Clear(128);
+                current_key.Append(key);
+            } else {
+                value = TrimStr(line);
             }
-            if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
-                LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
-                         reader.st->filename, reader.line_number);
-                return false;
-            }
-            value = TrimStr(value);
 
             error_guard.disable();
-            *out_section = section;
-            *out_key = key;
+            *out_section = current_section;
+            *out_key = current_key;
             *out_value = value;
             return true;
         }
