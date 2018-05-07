@@ -53,10 +53,10 @@ static const char *imgui_fragment_src = R"!(
 static void ReleaseImGui();
 static bool InitImGui()
 {
+    ImGui::CreateContext();
     DEFER_N(imgui_guard) { ReleaseImGui(); };
 
     ImGuiIO *io = &ImGui::GetIO();
-
     io->IniFilename = nullptr;
 
     {
@@ -135,7 +135,7 @@ static bool InitImGui()
 
 static void ReleaseImGui()
 {
-    ImGui::Shutdown();
+    ImGui::DestroyContext();
 
     if (font_texture) {
         glDeleteTextures(1, &font_texture);

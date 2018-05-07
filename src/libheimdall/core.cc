@@ -377,8 +377,8 @@ static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
             DEFER { ImGui::PopStyleColor(1); };
 
             if (!line.leaf) {
-                ImGui::RenderTriangle(ImVec2(bb.Min.x + (float)line.depth * 12.0f, y - 9.0f),
-                                      line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
+                ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 12.0f, y - 9.0f),
+                                   line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
             }
 
             ImVec4 text_rect {
