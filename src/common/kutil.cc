@@ -448,6 +448,10 @@ static inline Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[
 static inline Span<const char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
 {
     Size msb = 64 - (Size)CountLeadingZeros(value);
+    if (!msb) {
+        msb = 1;
+    }
+
     for (Size i = 0; i < msb; i++) {
         bool bit = (value >> (msb - i - 1)) & 0x1;
         out_buf[i] = bit ? '1' : '0';
@@ -507,22 +511,10 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = FormatDouble(arg.value.d.value, arg.value.d.precision, num_buf);
             } break;
             case FmtArg::Type::Binary: {
-                if (arg.value.u) {
-                    out_buf.Append("0b");
-                    out_buf.Append(FormatUnsignedToBinary(arg.value.u, num_buf));
-                    out = out_buf;
-                } else {
-                    out = "0";
-                }
+                out = FormatUnsignedToBinary(arg.value.u, num_buf);
             } break;
             case FmtArg::Type::Hexadecimal: {
-                if (arg.value.u) {
-                    out_buf.Append("0x");
-                    out_buf.Append(FormatUnsignedToHex(arg.value.u, num_buf));
-                    out = out_buf;
-                } else {
-                    out = "0";
-                }
+                out = FormatUnsignedToHex(arg.value.u, num_buf);
             } break;
 
             case FmtArg::Type::MemorySize: {

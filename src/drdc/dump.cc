@@ -49,7 +49,7 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
     for (const mco_DiagnosisInfo &diag: diagnoses) {
         const auto DumpMask = [&](int8_t sex) {
             for (Size i = 0; i < ARRAY_SIZE(diag.Attributes(sex).raw); i++) {
-                Print(" %1", FmtBin(diag.Attributes(sex).raw[i]));
+                Print(" 0b%1", FmtBin(diag.Attributes(sex).raw[i]).Pad0(-8));
             }
             PrintLn();
         };
@@ -73,7 +73,7 @@ void mco_DumpDiagnosisTable(Span<const mco_DiagnosisInfo> diagnoses,
             Print("        Mask:");
             DumpMask(1);
         }
-        PrintLn("        Warnings: %1", FmtBin(diag.warnings));
+        PrintLn("        Warnings: 0b%1", FmtBin(diag.warnings).Pad0(-8 * SIZE(diag.warnings)));
 
         if (exclusions.len) {
             Assert(diag.exclusion_set_idx <= exclusions.len);
@@ -118,7 +118,7 @@ void mco_DumpProcedureTable(Span<const mco_ProcedureInfo> procedures)
         }
         Print("        Mask: ");
         for (Size i = 0; i < ARRAY_SIZE(proc.bytes); i++) {
-            Print(" %1", FmtBin(proc.bytes[i]));
+            Print(" 0b%1", FmtBin(proc.bytes[i]).Pad0(-8));
         }
         PrintLn();
     }
@@ -240,7 +240,7 @@ void mco_DumpTableSetHeaders(const mco_TableSet &table_set)
         PrintLn("    Validity: %1 to %2", table.limit_dates[0], table.limit_dates[1]);
         PrintLn("    Sections:");
         for (Size i = 0; i < table.sections.len; i++) {
-            PrintLn("      %1. %2 -- %3 bytes -- %4 elements (%5 bytes / element)",
+            PrintLn("      %1. 0x%2 -- %3 bytes -- %4 elements (%5 bytes / element)",
                     i, FmtHex((uint64_t)table.sections[i].raw_offset), table.sections[i].raw_len,
                     table.sections[i].values_count, table.sections[i].value_len);
         }

@@ -7,7 +7,7 @@
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
     for (uint8_t byte: bytes) {
-        Print(out_st, "%1, ", FmtHex(byte));
+        Print(out_st, "0x%1, ", FmtHex(byte).Pad0(-2));
     }
 }
 
