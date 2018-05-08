@@ -291,6 +291,7 @@ Classifier flags:)");
                                     stay_test->bill_id, result.stays[0].exit.date,
                                     result.stays.len, stay_test->cluster_len);
                         }
+                        continue;
                     }
                 }
 
@@ -304,6 +305,7 @@ Classifier flags:)");
                                     result.ghm, FmtArg(result.main_error).Pad(-3),
                                     stay_test->ghm, FmtArg(stay_test->error).Pad(-3));
                         }
+                        continue;
                     }
                 }
 
@@ -329,6 +331,7 @@ Classifier flags:)");
                             }
                         }
                     }
+                    continue;
                 }
             }
             if (verbosity >= 1 && (failed_clusters || failed_ghm || failed_ghs)) {
