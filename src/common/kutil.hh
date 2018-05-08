@@ -2774,6 +2774,12 @@ public:
 // INI
 // ------------------------------------------------------------------------
 
+struct IniProperty {
+    Span<const char> section;
+    Span<const char> key;
+    Span<const char> value;
+};
+
 class IniParser {
     HeapArray<char> current_section;
     HeapArray<char> current_key;
@@ -2788,8 +2794,7 @@ public:
     IniParser(const IniParser &other) = delete;
     IniParser &operator=(const IniParser &other) = delete;
 
-    bool Next(Span<const char> *out_section, Span<const char> *out_key,
-              Span<const char> *out_value);
+    bool Next(IniProperty *out_prop);
 };
 
 // ------------------------------------------------------------------------

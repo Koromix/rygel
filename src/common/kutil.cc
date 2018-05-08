@@ -2321,8 +2321,7 @@ static inline bool IsAsciiIdChar(char c)
     return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.';
 }
 
-bool IniParser::Next(Span<const char> *out_section, Span<const char> *out_key,
-                     Span<const char> *out_value)
+bool IniParser::Next(IniProperty *out_prop)
 {
     if (UNLIKELY(error))
         return false;
@@ -2377,9 +2376,9 @@ bool IniParser::Next(Span<const char> *out_section, Span<const char> *out_key,
             }
 
             error_guard.disable();
-            *out_section = current_section;
-            *out_key = current_key;
-            *out_value = value;
+            out_prop->section = current_section;
+            out_prop->key = current_key;
+            out_prop->value = value;
             return true;
         }
     }
