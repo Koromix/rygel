@@ -121,10 +121,7 @@ class mco_StaySetBuilder {
 
 public:
     bool LoadPack(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
-    bool LoadGrp(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr)
-        { return LoadRssOrGrp(st, true, out_tests); }
-    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr)
-        { return LoadRssOrGrp(st, false, out_tests); }
+    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
     bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
@@ -133,5 +130,8 @@ public:
     bool Finish(mco_StaySet *out_set);
 
 private:
-    bool LoadRssOrGrp(StreamReader &st, bool grp, HashTable<int32_t, mco_StayTest> *out_tests);
+    bool LoadAtih(StreamReader &st,
+                  bool (*parse_func)(Span<const char> line, mco_StaySet *out_set,
+                                     HashTable<int32_t, mco_StayTest> *out_tests),
+                  HashTable<int32_t, mco_StayTest> *out_tests);
 };
