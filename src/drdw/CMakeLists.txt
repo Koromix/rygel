@@ -6,13 +6,15 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(DRDW_RESOURCES static/drdw.html
-                   static/drdw.css
-                   static/common.js
-                   static/favicon.ico
-                   static/pricing.js
-                   static/casemix.js
-                   static/logo.png
+set(DRDW_RESOURCES drdw.html
+                   common.css
+                   common.js
+                   casemix.css
+                   casemix.js
+                   pricing.css
+                   pricing.js
+                   images/favicon.ico
+                   images/logo.png
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc
              casemix.cc

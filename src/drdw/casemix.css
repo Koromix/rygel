@@ -1,0 +1,53 @@
+#casemix_cmds {
+    width: 100%;
+    border: 1px solid #a4a4a4;
+    border-collapse: collapse;
+}
+#casemix_cmds td {
+    text-align: center;
+    color: #ccc;
+}
+#casemix_cmds a {
+    color: black;
+    text-decoration: none;
+}
+
+#casemix_roots {
+    margin-top: 1em;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+#casemix_roots th, #casemix_roots td {
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 64px;
+}
+#casemix_roots th {
+    text-align: center;
+    font-weight: bold;
+}
+#casemix_roots tbody td { text-align: center; }
+
+#casemix_ghs {
+    margin-top: 1em;
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+#casemix_ghs th, #casemix_ghs td {
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 64px;
+}
+#casemix_ghs th {
+    text-align: center;
+    font-weight: bold;
+}
+#casemix_ghs tbody td { text-align: center; }

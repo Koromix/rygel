@@ -1,3 +1,4 @@
+/* Global */
 body {
     margin: 0;
     padding: 0;
@@ -6,6 +7,7 @@ body {
 }
 #side_bar { background: #eeeeee; }
 
+/* Side bar */
 #side_menu ul {
     margin: 0;
     padding: 0;
@@ -32,6 +34,18 @@ body {
     margin: 1em auto;
 }
 
+/* Top page-specific menu */
+.page_menu {
+    margin: 0 1em 1em 1em;
+    text-align: center;
+}
+.page_menu h1 {
+    margin: 0.5em 3px 0 3px;
+    font-size: 1.1em;
+}
+
+/* Utility */
+.page:not(.active) { display: none !important; }
 .hide:not(.active) { display: none !important; }
 .log { color: red; }
 #flash_box {
@@ -57,124 +71,18 @@ body {
     100% { filter: grayscale(100%) opacity(50%); }
 }
 
-.page:not(.active) { display: none !important; }
-
-.page_menu {
-    margin: 0 1em 1em 1em;
-    text-align: center;
-}
-.page_menu h1 {
-    margin: 0.5em 3px 0 3px;
-    font-size: 1.1em;
-}
-#pricing_indexes {
-    width: 100%;
-    height: 50px;
-}
-
-#pricing_table {
-    width: 100%;
-    border-collapse: collapse;
-}
-#pricing_table th, #pricing_table td {
-    border: 1px solid #a4a4a4;
-    padding: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 64px;
-}
-#pricing_table th {
-    background: white;
-    text-align: left;
-    font-style: italic;
-    font-weight: normal;
-}
-#pricing_table thead td {
-    text-align: center;
-    font-weight: bold;
-}
-#pricing_table tbody td {
-    background: #969696;
-    text-align: right;
-}
-#pricing_table .desc { background: #ffc634; }
-#pricing_table .conditions {
-    background: #b70202;
-    color: white;
-}
-#pricing_table .price { background: #68dc33; }
-#pricing_table .exb { background: #ff8900; }
-#pricing_table .exh {
-    background: #6b1b6a;
-    color: #b4cdff;
-}
-#pricing_table .lower { background: #ff8888; }
-#pricing_table .higher { background: #a2d4b6; }
-#pricing_table .neutral { background: #d7d7d7; }
-#pricing_table .removed { background: #ff8888; }
-#pricing_table .removed:after { content: '*'; }
-#pricing_table .added { background: #a2d4b6; }
-#pricing_table .added:after { content: '*'; }
-#pricing_table .age { background: #99ffff; }
-
-#casemix_cmds {
-    width: 100%;
-    border: 1px solid #a4a4a4;
-    border-collapse: collapse;
-}
-#casemix_cmds td {
-    text-align: center;
-    color: #ccc;
-}
-#casemix_cmds a {
-    color: black;
-    text-decoration: none;
-}
-
-#casemix_roots {
-    margin-top: 1em;
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-}
-#casemix_roots th, #casemix_roots td {
-    border: 1px solid #a4a4a4;
-    padding: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 64px;
-}
-#casemix_roots th {
-    text-align: center;
-    font-weight: bold;
-}
-#casemix_roots tbody td { text-align: center; }
-
-#casemix_ghs {
-    margin-top: 1em;
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-}
-#casemix_ghs th, #casemix_ghs td {
-    border: 1px solid #a4a4a4;
-    padding: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 64px;
-}
-#casemix_ghs th {
-    text-align: center;
-    font-weight: bold;
-}
-#casemix_ghs tbody td { text-align: center; }
-
 @media screen and (min-width: 801px) {
+    /* Global */
+    main {
+        max-width: 800px;
+        margin-left: 200px;
+        padding: 1em;
+    }
+
+    /* Utility */
     a.deploy { display: none; }
 
+    /* Side bar */
     #side_bar {
         position: fixed;
         left: 0;
@@ -189,31 +97,19 @@ body {
         padding: 0.5em;
     }
 
-    main {
-        max-width: 800px;
-        margin-left: 200px;
-        padding: 1em;
-    }
-
+    /* Top page-specific menu */
     .page_menu { line-height: 2em; };
-
-    #pricing_table tr:hover th {
-        filter: invert(100%);
-        -webkit-filter: invert(100%);
-    }
-    #pricing_table tr:hover td {
-        filter: invert(10%);
-        -webkit-filter: invert(10%);
-    }
-    #pricing_table tr th:first-child { width: 90px; }
 }
 
 @media screen and (max-width: 800px) {
+    /* Global */
     body {
         padding: 0;
         margin: 0;
     }
+    main { padding-top: 40px; }
 
+    /* Utility */
     a.deploy {
         display: block;
         float: left;
@@ -227,6 +123,7 @@ body {
         background-position: center;
     }
 
+    /* Side bar */
     #logo { display: none; }
     #side_bar {
         position: fixed;
@@ -262,8 +159,7 @@ body {
         padding: 0.5em;
     }
 
-    main { padding-top: 40px; }
-
+    /* Top page-specific menu */
     .page_menu {
         display: none;
         position: fixed;
@@ -290,10 +186,4 @@ body {
         padding-top: 5px;
         text-align: left;
     }
-
-    #pricing_table tr th:first-child {
-        border-left: 0;
-        width: 80px;
-    }
-    #pricing_table tr td:last-child { border-right: 0; }
 }
