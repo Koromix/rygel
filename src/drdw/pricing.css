@@ -40,6 +40,11 @@
     background: #6b1b6a;
     color: #b4cdff;
 }
+#pricing_table .warn {
+    filter: grayscale(90%) !important;
+    color: #555;
+}
+#pricing_table .warn:before { content: "⚠ "; }
 #pricing_table .lower { background: #ff8888; }
 #pricing_table .higher { background: #a2d4b6; }
 #pricing_table .neutral { background: #d7d7d7; }

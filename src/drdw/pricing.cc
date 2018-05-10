@@ -80,18 +80,20 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
                     index->FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
                 if (!ghs_price_info)
                     continue;
-
                 const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
                 if (!constraint)
                     continue;
 
+                uint32_t combined_durations = constraint->durations;
+                combined_durations &= ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+
                 writer.StartObject();
                 writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_to_ghs_info.ghm).ptr);
                 writer.Key("ghm_mode"); writer.String(&ghm_to_ghs_info.ghm.parts.mode, 1);
-                {
-                    uint32_t combined_durations = constraint->durations;
-                    combined_durations &= ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
-                    writer.Key("durations"); writer.Uint(combined_durations);
+                writer.Key("durations"); writer.Uint(combined_durations);
+                if ((combined_durations & 1) &&
+                        (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
+                    writer.Key("warn_cmd28"); writer.Bool(true);
                 }
                 if (ghm_root_info.young_severity_limit) {
                     writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);

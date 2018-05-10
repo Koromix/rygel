@@ -532,20 +532,21 @@ var pricing = {};
                     createElement('th', {}, name)
                 );
 
-            var prev_cell = [document.createTextNode(''), null, false];
+            var prev_cell = [document.createTextNode(''), {}, false];
             var prev_td = null;
             for (var i = 0; i < ghs.length; i++) {
-                var cell = func(ghs[i], i) || [null, null, false];
+                var cell = func(ghs[i], i) || [null, {}, false];
                 if (cell[0] === null) {
                     cell[0] = document.createTextNode('');
                 } else if (typeof cell[0] === 'string') {
                     cell[0] = document.createTextNode(cell[0]);
                 }
-                if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) && cell[1] == prev_cell[1]) {
+                if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
+                        cell[1].class === prev_cell[1].class) {
                     var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                     prev_td.setAttribute('colspan', colspan + 1);
                 } else {
-                    prev_td = tr.appendChild(createElement('td', {class: cell[1]}, cell[0]));
+                    prev_td = tr.appendChild(createElement('td', cell[1], cell[0]));
                 }
                 prev_cell = cell;
             }
@@ -561,25 +562,25 @@ var pricing = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
-        appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, 'desc', true]; });
-        appendRow(thead, 'GHM', function(col) { return [col.ghm, 'desc', true]; });
-        appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, 'desc', true]; });
+        appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, true]; });
+        appendRow(thead, 'GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
+        appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, {class: 'desc'}, true]; });
         appendRow(thead, 'Conditions', function(col) {
             var el =
                 createElement('div', {title: col.conditions.join('\n')},
                     col.conditions.length ? col.conditions.length.toString() : ''
                 );
-            return [el, 'conditions', true];
+            return [el, {class: 'conditions'}, true];
         });
-        appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), 'exb', true]; });
+        appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
         appendRow(thead, 'Borne haute',
-                  function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), 'exh', true]; });
-        appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), 'price', true]; });
+                  function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+        appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), {class: 'price'}, true]; });
         appendRow(thead, 'Forfait EXB €',
-                  function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', 'exb', true]; });
+                  function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', {class: 'exb'}, true]; });
         appendRow(thead, 'Tarif EXB €',
-                  function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', 'exb', true]; });
-        appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), 'exh', true]; });
+                  function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', {class: 'exb'}, true]; });
+        appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), {class: 'exh'}, true]; });
         appendRow(thead, 'Age', function(col) {
             var texts = [];
             if (col.ghm_mode >= '1' && col.ghm_mode < '5') {
@@ -589,7 +590,7 @@ var pricing = {};
                 if (severity < col.old_severity_limit)
                     texts.push('≥ ' + col.old_age_treshold.toString());
             }
-            return [texts.join(', '), 'age', true];
+            return [texts.join(', '), {class: 'age'}, true];
         });
 
         for (var duration = 0; duration < max_duration; duration++) {
@@ -602,9 +603,12 @@ var pricing = {};
                 if (info === null)
                     return null;
 
-                info[0] = priceText(info[0]);
-                info.push(false);
-                return info;
+                var props = [priceText(info[0]), {class: info[1]}, false];
+                if (duration == 0 && col.warn_cmd28) {
+                    props[1].class += ' warn';
+                    props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
+                }
+                return props;
             });
         }
 
