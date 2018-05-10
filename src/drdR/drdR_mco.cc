@@ -93,7 +93,7 @@ struct StaysProxy {
     Rcc_Vector<const char *> main_diagnosis;
     Rcc_Vector<const char *> linked_diagnosis;
 
-    Rcc_Vector<bool> confirm;
+    Rcc_Vector<int> confirm;
 };
 
 struct DiagnosesProxy {
@@ -178,7 +178,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.gestational_age = (int16_t)stays.gestational_age[i];
         stay.newborn_weight = (int16_t)stays.newborn_weight[i];
         stay.last_menstrual_period = stays.last_menstrual_period[i];
-        if (stays.confirm.Len() && stays.confirm[i] == TRUE) {
+        if (stays.confirm.Len() && stays.confirm[i] && stays.confirm[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::Confirmed;
         }
 
@@ -728,7 +728,7 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
         Rcc_Vector<int> stays_newborn_weight = stays_builder.Add<int>("newborn_weight");
         Rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
         Rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
-        Rcc_Vector<bool> stays_confirm = stays_builder.Add<bool>("confirm");
+        Rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
 
         Rcc_DataFrameBuilder diagnoses_builder(stay_set.store.diagnoses.len);
         Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
@@ -751,8 +751,8 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
             const mco_Stay &stay = stay_set.stays[i];
 
             stays_id[i] = (int)(i + 1);
-            stays_admin_id[i] = stay.admin_id;
-            stays_bill_id[i] = stay.bill_id;
+            stays_admin_id[i] = LIKELY(stay.admin_id) ? stay.admin_id : NA_INTEGER;
+            stays_bill_id[i] = LIKELY(stay.bill_id) ? stay.bill_id : NA_INTEGER;
             stays_sex[i] = LIKELY(stay.sex) ? stay.sex : NA_INTEGER;
             stays_birthdate.Set(i, stay.birthdate);
             stays_entry_date.Set(i, stay.entry.date);
@@ -782,7 +782,7 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
             } else {
                 stays_linked_diagnosis.Set(i, nullptr);
             }
-            stays_confirm.Set(i, stay.flags & (int)mco_Stay::Flag::Confirmed);
+            stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
 
             for (DiagnosisCode diag: stay.diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);
