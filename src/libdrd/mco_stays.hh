@@ -52,7 +52,7 @@ struct mco_Stay {
     };
 
     uint32_t flags;
-    uint32_t error_mask;
+    uint32_t errors;
 
     int32_t admin_id;
     int32_t bill_id;

@@ -143,17 +143,17 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
         stay.birthdate = stays.birthdate[i];
         if (UNLIKELY(stay.birthdate.value && !stay.birthdate.IsValid())) {
-            stay.error_mask |= (int)mco_Stay::Error::MalformedBirthdate;
+            stay.errors |= (int)mco_Stay::Error::MalformedBirthdate;
         }
         if (stays.sex[i] != NA_INTEGER) {
             stay.sex = (int8_t)stays.sex[i];
             if (UNLIKELY(stay.sex != stays.sex[i])) {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedSex;
+                stay.errors |= (int)mco_Stay::Error::MalformedSex;
             }
         }
         stay.entry.date = stays.entry_date[i];
         if (UNLIKELY(stay.entry.date.value && !stay.entry.date.IsValid())) {
-            stay.error_mask |= (int)mco_Stay::Error::MalformedEntryDate;
+            stay.errors |= (int)mco_Stay::Error::MalformedEntryDate;
         }
         stay.entry.mode = (char)('0' + stays.entry_mode[i]);
         {
@@ -161,12 +161,12 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             if (origin_str[0] && !origin_str[1]) {
                 stay.entry.origin = UpperAscii(origin_str[0]);
             } else if (origin_str != CHAR(NA_STRING)) {
-                stay.error_mask |= (uint32_t)mco_Stay::Error::MalformedEntryOrigin;
+                stay.errors |= (uint32_t)mco_Stay::Error::MalformedEntryOrigin;
             }
         }
         stay.exit.date = stays.exit_date[i];
         if (UNLIKELY(stay.exit.date.value && !stay.exit.date.IsValid())) {
-            stay.error_mask |= (int)mco_Stay::Error::MalformedExitDate;
+            stay.errors |= (int)mco_Stay::Error::MalformedExitDate;
         }
         stay.exit.mode = (char)('0' + stays.exit_mode[i]);
         stay.exit.destination = (char)('0' + Rcc_GetOptional(stays.exit_destination, i, -'0'));
@@ -200,14 +200,14 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                         case 'P': {
                             stay.main_diagnosis = diag;
                             if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-                                stay.error_mask |= (int)mco_Stay::Error::MalformedMainDiagnosis;
+                                stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                             }
                         } break;
                         case 'r':
                         case 'R': {
                             stay.linked_diagnosis = diag;
                             if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
-                                stay.error_mask |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
+                                stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                             }
                         } break;
                         case 's':
@@ -215,7 +215,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                             if (LIKELY(diag.IsValid())) {
                                 out_stay_set->store.diagnoses.Append(diag);
                             } else {
-                                stay.error_mask |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
+                                stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                             }
                         } break;
                         case 'd':
@@ -234,14 +234,14 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 stay.main_diagnosis =
                     DiagnosisCode::FromString(stays.main_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-                    stay.error_mask |= (int)mco_Stay::Error::MalformedMainDiagnosis;
+                    stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                 }
             }
             if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
                 stay.linked_diagnosis =
                     DiagnosisCode::FromString(stays.linked_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
-                    stay.error_mask |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
+                    stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                 }
             }
 
@@ -254,7 +254,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 DiagnosisCode diag =
                     DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 if (UNLIKELY(!diag.IsValid())) {
-                    stay.error_mask |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
+                    stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
 
                 out_stay_set->store.diagnoses.Append(diag);
@@ -283,7 +283,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 if (LIKELY(extension >= 0 && extension < 100)) {
                     proc.extension = (int8_t)extension;
                 } else {
-                    stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureExtension;
+                    stay.errors |= (int)mco_Stay::Error::MalformedProcedureExtension;
                 }
             }
             proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
@@ -310,7 +310,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             if (LIKELY(proc.proc.IsValid())) {
                 out_stay_set->store.procedures.Append(proc);
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureCode;
+                stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
         stay.procedures.len = out_stay_set->store.procedures.end() - stay.procedures.ptr;

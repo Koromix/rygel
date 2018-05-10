@@ -98,7 +98,7 @@ Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> 
     DebugAssert(stays.len > 0);
 
     Size agg_len = 1;
-    if (LIKELY(!(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
+    if (LIKELY(!(stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
         while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
             agg_len++;
         }
@@ -541,7 +541,7 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
     bool valid = true;
 
     // Bill id
-    if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::MalformedBillId)) {
+    if (UNLIKELY(stays[0].errors & (int)mco_Stay::Error::MalformedBillId)) {
         static bool warned = false;
         if (!warned) {
             LogError("Non-numeric RSS identifiers are not supported");
@@ -554,7 +554,7 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
 
     for (const mco_Stay &stay: stays) {
         // Sex
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedSex)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 17);
         } else if (UNLIKELY(stay.sex != 1 && stay.sex != 2)) {
             valid &= SetError(out_errors, stay.sex ? 17 : 16);
@@ -567,11 +567,11 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
             static const int16_t entry_date_errors[3] = {20, 19, 21};
             static const int16_t exit_date_errors[3] = {29, 28, 30};
 
-            bool birthdate_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedBirthdate,
+            bool birthdate_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedBirthdate,
                                                    stay.birthdate, birthdate_errors, out_errors);
-            bool entry_date_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedEntryDate,
+            bool entry_date_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedEntryDate,
                                                     stay.entry.date, entry_date_errors, out_errors);
-            bool exit_date_valid = CheckDateErrors(stay.error_mask & (int)mco_Stay::Error::MalformedExitDate,
+            bool exit_date_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedExitDate,
                                                    stay.exit.date, exit_date_errors, out_errors);
 
             if (UNLIKELY(birthdate_valid && entry_date_valid &&
@@ -588,29 +588,29 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
         }
 
         // Entry mode and origin
-        if (UNLIKELY(stay.error_mask & ((int)mco_Stay::Error::MalformedEntryMode |
+        if (UNLIKELY(stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
                                         (int)mco_Stay::Error::MalformedEntryOrigin))) {
             valid &= SetError(out_errors, 25);
         }
 
         // Exit mode and destination
-        if (UNLIKELY(stay.error_mask & ((int)mco_Stay::Error::MalformedExitMode |
+        if (UNLIKELY(stay.errors & ((int)mco_Stay::Error::MalformedExitMode |
                                         (int)mco_Stay::Error::MalformedExitDestination))) {
             valid &= SetError(out_errors, 34);
         }
 
         // Sessions
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedSessionCount)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedSessionCount)) {
             valid &= SetError(out_errors, 36);
         }
 
         // Gestational age
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedGestationalAge)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedGestationalAge)) {
             valid &= SetError(out_errors, 125);
         }
 
         // Menstrual period
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
             valid &= SetError(out_errors, 160);
         } else if (UNLIKELY(stay.last_menstrual_period.value &&
                             !stay.last_menstrual_period.IsValid())) {
@@ -618,43 +618,43 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
         }
 
         // IGS2
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedIgs2)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedIgs2)) {
             valid &= SetError(out_errors, 169);
         }
 
         // Confirmation code
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedConfirmation)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
             SetError(out_errors, 121, -1);
         }
 
         // Diagnoses
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
         } else if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 40);
         }
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 55);
-        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
+        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 56);
-        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
+        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
 
         // Procedures
-        if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MissingProceduresCount)) {
+        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MissingProceduresCount)) {
             valid &= SetError(out_errors, 57);
-        } else if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProceduresCount)) {
+        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedProceduresCount)) {
             valid &= SetError(out_errors, 58);
         } else {
-            if (UNLIKELY(stay.error_mask & (int)mco_Stay::Error::MalformedProcedureCode)) {
+            if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
                 valid &= SetError(out_errors, 43);
             }
             if (UNLIKELY(stays[stays.len - 1].exit.date >= Date(2016, 3, 1) &&
-                         stay.error_mask & (int)mco_Stay::Error::MalformedProcedureExtension)) {
+                         stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
                 valid &= SetError(out_errors, 185);
             }
         }
@@ -864,7 +864,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
                   agg.stay.birthdate == agg.stay.entry.date))) {
         valid &= SetError(out_errors, 126);
     }
-    if (UNLIKELY(agg.stay.error_mask & (int)mco_Stay::Error::MalformedNewbornWeight)) {
+    if (UNLIKELY(agg.stay.errors & (int)mco_Stay::Error::MalformedNewbornWeight)) {
         valid &= SetError(out_errors, 82);
     } else {
         if (UNLIKELY(agg.age_days < 29 && !agg.stay.newborn_weight)) {
@@ -908,7 +908,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     DebugAssert(stays.len > 0);
 
     // These errors are too serious to continue (broken data, etc.)
-    if (UNLIKELY(stays[0].error_mask & (int)mco_Stay::Error::UnknownRumVersion)) {
+    if (UNLIKELY(stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
         DebugAssert(stays.len == 1);
         SetError(out_errors, 59);
         return mco_GhmCode::FromString("90Z00Z");

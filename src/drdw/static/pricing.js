@@ -612,13 +612,13 @@ var pricing = {};
 
     function computePrice(ghs, duration)
     {
-        var duration_mask_test;
+        var duration_mask;
         if (duration < 32) {
-            duration_mask_test = 1 << duration;
+            duration_mask = 1 << duration;
         } else {
-            duration_mask_test = 1 << 31;
+            duration_mask = 1 << 31;
         }
-        if (!(ghs.duration_mask & duration_mask_test))
+        if (!(ghs.durations & duration_mask))
             return null;
 
         if (ghs.exb_treshold && duration < ghs.exb_treshold) {

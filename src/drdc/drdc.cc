@@ -414,7 +414,7 @@ Constraints options:
         if (constraint) {
             PrintLn("Constraint for %1", ghm_to_ghs_info.ghm);
             PrintLn("  Duration = 0x%1",
-                    FmtHex(constraint->duration_mask).Pad0(-2 * SIZE(constraint->duration_mask)));
+                    FmtHex(constraint->durations).Pad0(-2 * SIZE(constraint->durations)));
         } else {
             PrintLn("%1 unreached!", ghm_to_ghs_info.ghm);
         }

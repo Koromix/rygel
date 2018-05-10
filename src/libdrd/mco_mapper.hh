@@ -11,7 +11,7 @@
 struct mco_GhmConstraint {
     mco_GhmCode ghm;
 
-    uint32_t duration_mask;
+    uint32_t durations;
 
     HASH_TABLE_HANDLER(mco_GhmConstraint, ghm);
 };

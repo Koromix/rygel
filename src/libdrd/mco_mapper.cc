@@ -14,11 +14,11 @@ static bool MergeConstraint(const mco_TableIndex &index,
         do { \
             mco_GhmConstraint new_constraint = constraint; \
             new_constraint.ghm.parts.mode = (char)(ModeChar); \
-            new_constraint.duration_mask &= (DurationMask); \
-            if (new_constraint.duration_mask) { \
+            new_constraint.durations &= (DurationMask); \
+            if (new_constraint.durations) { \
                 std::pair<mco_GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
                 if (!ret.second) { \
-                    ret.first->duration_mask |= new_constraint.duration_mask; \
+                    ret.first->durations |= new_constraint.durations; \
                 } \
             } \
         } while (false)
@@ -34,12 +34,12 @@ static bool MergeConstraint(const mco_TableIndex &index,
     if (ghm_root_info->allow_ambulatory) {
         MERGE_CONSTRAINT('J', 0x1);
         // Update base mask so that following GHM can't overlap with this one
-        constraint.duration_mask &= ~(uint32_t)0x1;
+        constraint.durations &= ~(uint32_t)0x1;
     }
     if (ghm_root_info->short_duration_treshold) {
         uint32_t short_mask = (uint32_t)(1 << ghm_root_info->short_duration_treshold) - 1;
         MERGE_CONSTRAINT('T', short_mask);
-        constraint.duration_mask &= ~short_mask;
+        constraint.durations &= ~short_mask;
     }
 
     if (ghm.parts.mode != 'J' && ghm.parts.mode != 'T') {
@@ -95,8 +95,8 @@ static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_nod
                     }
 
                     uint32_t test_mask = ((uint32_t)1 << param) - 1;
-                    RUN_TREE_SUB(0, duration_mask &= ~test_mask);
-                    RUN_TREE_SUB(1, duration_mask &= test_mask);
+                    RUN_TREE_SUB(0, durations &= ~test_mask);
+                    RUN_TREE_SUB(1, durations &= test_mask);
 
                     return success;
                 } break;
@@ -110,8 +110,8 @@ static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_nod
                     }
 
                     uint32_t test_mask = (uint32_t)1 << param;
-                    RUN_TREE_SUB(0, duration_mask &= ~test_mask);
-                    RUN_TREE_SUB(1, duration_mask &= test_mask);
+                    RUN_TREE_SUB(0, durations &= ~test_mask);
+                    RUN_TREE_SUB(1, durations &= test_mask);
 
                     return success;
                 } break;
@@ -124,8 +124,8 @@ static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_nod
                         break;
                     }
 
-                    RUN_TREE_SUB(0, duration_mask &= 0x1);
-                    RUN_TREE_SUB(1, duration_mask &= UINT32_MAX);
+                    RUN_TREE_SUB(0, durations &= 0x1);
+                    RUN_TREE_SUB(1, durations &= UINT32_MAX);
 
                     return success;
                 } break;
@@ -154,7 +154,7 @@ bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
     Assert(!out_constraints->count);
 
     mco_GhmConstraint null_constraint = {};
-    null_constraint.duration_mask = UINT32_MAX;
+    null_constraint.durations = UINT32_MAX;
 
     return RecurseGhmTree(index, 0, 0, null_constraint, out_constraints);
 }

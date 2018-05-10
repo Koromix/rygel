@@ -89,9 +89,9 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
                 writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_to_ghs_info.ghm).ptr);
                 writer.Key("ghm_mode"); writer.String(&ghm_to_ghs_info.ghm.parts.mode, 1);
                 {
-                    uint32_t combined_duration_mask = constraint->duration_mask;
-                    combined_duration_mask &= ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
-                    writer.Key("duration_mask"); writer.Uint(combined_duration_mask);
+                    uint32_t combined_durations = constraint->durations;
+                    combined_durations &= ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                    writer.Key("durations"); writer.Uint(combined_durations);
                 }
                 if (ghm_root_info.young_severity_limit) {
                     writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);

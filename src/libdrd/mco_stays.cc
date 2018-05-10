@@ -272,7 +272,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         return frag;
     };
     const auto SetErrorFlag = [&stay](mco_Stay::Error flag) {
-        stay.error_mask |= (uint32_t)flag;
+        stay.errors |= (uint32_t)flag;
         return true;
     };
 
@@ -285,7 +285,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         offset += 15;
     }
     if (UNLIKELY(version < 16 || version > 18)) {
-        stay.error_mask |= (int)mco_Stay::Error::UnknownRumVersion;
+        stay.errors |= (int)mco_Stay::Error::UnknownRumVersion;
         out_set->stays.Append(stay);
         return true;
     }
@@ -337,7 +337,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         stay.main_diagnosis =
             DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
         if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-            stay.error_mask |= (int)mco_Stay::Error::MalformedMainDiagnosis;
+            stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
         }
     }
     offset += 8;
@@ -345,7 +345,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         stay.linked_diagnosis =
             DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
         if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
-            stay.error_mask |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
+            stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
         }
     }
     offset += 8;
@@ -355,7 +355,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     } else if (UNLIKELY(line[offset] != ' ')) {
         // According to the GenRSA manual and what the official FG does, confirmation
         // code '2' is supposed to be okay... but why? I don't accept it here.
-        stay.error_mask |= (int)mco_Stay::Error::MalformedConfirmation;
+        stay.errors |= (int)mco_Stay::Error::MalformedConfirmation;
     }
     offset += 33; // Skip a bunch of fields
 
@@ -379,7 +379,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             if (LIKELY(diag.IsValid())) {
                 out_set->store.diagnoses.Append(diag);
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
+                stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
         }
         stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
@@ -416,7 +416,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             if (LIKELY(proc.proc.IsValid())) {
                 out_set->store.procedures.Append(proc);
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureCode;
+                stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
         stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
@@ -469,7 +469,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         return frag;
     };
     const auto SetErrorFlag = [&rsa](mco_Stay::Error flag) {
-        rsa.error_mask |= (uint32_t)flag;
+        rsa.errors |= (uint32_t)flag;
         return true;
     };
 
@@ -587,7 +587,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             stay.main_diagnosis =
                 DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
             if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedMainDiagnosis;
+                stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
             }
         }
         offset += 6;
@@ -595,7 +595,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             stay.linked_diagnosis =
                 DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
             if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
+                stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
             }
         }
         offset += 6;
@@ -615,7 +615,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             if (ParsePmsiInt(ReadFragment(4), &duration)) {
                 stay.exit.date = stay.entry.date + duration;
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedExitDate;
+                stay.errors |= (int)mco_Stay::Error::MalformedExitDate;
             }
         }
         if (i < test.cluster_len - 1) {
@@ -649,7 +649,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             if (LIKELY(diag.IsValid())) {
                 out_set->store.diagnoses.Append(diag);
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
+                stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
         }
         if (LIKELY(stay.main_diagnosis.IsValid())) {
@@ -697,7 +697,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             if (LIKELY(proc.proc.IsValid())) {
                 out_set->store.procedures.Append(proc);
             } else {
-                stay.error_mask |= (int)mco_Stay::Error::MalformedProcedureCode;
+                stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
     }
