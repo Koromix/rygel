@@ -159,10 +159,9 @@ function switchPage(page_url, mark_history)
     }
     switchMenu('#side_menu', false);
 
-    var module_name = page_url.split('/')[0];
     removeClass(document.querySelectorAll('.page'), 'active');
-    addClass(document.querySelectorAll('.page.page_' + module_name), 'active');
 
+    var module_name = page_url.split('/')[0];
     var module = window[module_name];
     if (module !== undefined && module.run !== undefined)
         module.run();

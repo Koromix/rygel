@@ -46,6 +46,7 @@ body {
 
 /* Utility */
 .hide:not(.active) { display: none !important; }
+.page:not(.active) { display: none !important; }
 .log { color: red; }
 .outdated {
     animation: outdated 1s 1;

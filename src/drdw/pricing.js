@@ -76,6 +76,7 @@ var pricing = {};
         }
 
         // Refresh display
+        document.querySelector('#pricing').classList.add('active');
         document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
         document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
         refreshIndexesLine(main_index);

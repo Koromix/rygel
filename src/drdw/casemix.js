@@ -56,6 +56,7 @@ var casemix = {};
         }
 
         // Refresh view
+        document.querySelector('#casemix').classList.add('active');
         if (!downloadJson.queue.size) {
             if (target_start)
                 document.querySelector('#casemix_start').value = target_start;
