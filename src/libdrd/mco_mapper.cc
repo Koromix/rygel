@@ -6,6 +6,12 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 
+struct MapperContext {
+    const mco_TableIndex *index;
+
+    HashMap<Size, uint64_t> warn_cmd28_jumps_cache;
+};
+
 static bool MergeConstraint(const mco_TableIndex &index,
                             const mco_GhmCode ghm, mco_GhmConstraint constraint,
                             HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
@@ -18,7 +24,9 @@ static bool MergeConstraint(const mco_TableIndex &index,
             if (new_constraint.durations) { \
                 std::pair<mco_GhmConstraint *, bool> ret = out_constraints->Append(new_constraint); \
                 if (!ret.second) { \
+                    ret.first->cmds |= new_constraint.cmds; \
                     ret.first->durations |= new_constraint.durations; \
+                    ret.first->warnings &= new_constraint.warnings; \
                 } \
             } \
         } while (false)
@@ -62,7 +70,7 @@ static bool MergeConstraint(const mco_TableIndex &index,
     return true;
 }
 
-static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_node_idx,
+static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                            mco_GhmConstraint constraint,
                            HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
@@ -75,17 +83,59 @@ static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_nod
         do { \
             mco_GhmConstraint constraint_copy = constraint; \
             constraint_copy.ChangeCode; \
-            success &= RecurseGhmTree(index, depth + 1, ghm_node.u.test.children_idx + (ChildIdx), \
+            success &= RecurseGhmTree(ctx, depth + 1, ghm_node.u.test.children_idx + (ChildIdx), \
                                       constraint_copy, out_constraints); \
         } while (false)
 
-    Assert(ghm_node_idx < index.ghm_nodes.len);
-    const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
+    Assert(ghm_node_idx < ctx.index->ghm_nodes.len);
+    const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[ghm_node_idx];
 
     bool success = true;
     switch (ghm_node.type) {
         case mco_GhmDecisionNode::Type::Test: {
             switch (ghm_node.u.test.function) {
+                case 0:
+                case 1: {
+                    if (ghm_node.u.test.params[0] == 0) {
+                        for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
+                            uint32_t cmd_mask = 1u << i;
+                            RUN_TREE_SUB(i, cmds &= cmd_mask);
+                        }
+
+                        return true;
+                    } else if (ghm_node.u.test.params[0] == 1) {
+                        uint64_t warn_cmd28_jumps;
+                        {
+                            std::pair<uint64_t *, bool> ret =
+                                ctx.warn_cmd28_jumps_cache.Append(ghm_node_idx, 0);
+                            if (ret.second) {
+                                warn_cmd28_jumps = UINT64_MAX;
+                                Assert(ghm_node.u.test.children_count <= 64);
+                                for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
+                                    if (constraint.cmds & (1u << diag_info.attributes[0].cmd) &&
+                                            !(diag_info.attributes[0].raw[8] & 0x2)) {
+                                        warn_cmd28_jumps &= ~(1ull << diag_info.attributes[0].raw[1]);
+                                    }
+                                }
+
+                                *ret.first = warn_cmd28_jumps;
+                            } else {
+                                warn_cmd28_jumps = *ret.first;
+                            }
+                        }
+
+                        for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
+                            uint32_t warning_mask = 0;
+                            if (warn_cmd28_jumps & (1ull << i)) {
+                                warning_mask |= (int)mco_GhmConstraint::Warning::PreferCmd28;
+                            }
+                            RUN_TREE_SUB(i, warnings |= warning_mask);
+                        }
+
+                        return true;
+                    }
+                } break;
+
                 case 22: {
                     uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
                     if (param >= 31) {
@@ -133,13 +183,13 @@ static bool RecurseGhmTree(const mco_TableIndex &index, Size depth, Size ghm_nod
 
             // Default case, for most functions and in case of error
             for (Size i = 0; i < ghm_node.u.test.children_count; i++) {
-                success &= RecurseGhmTree(index, depth + 1, ghm_node.u.test.children_idx + i,
+                success &= RecurseGhmTree(ctx, depth + 1, ghm_node.u.test.children_idx + i,
                                           constraint, out_constraints);
             }
         } break;
 
         case mco_GhmDecisionNode::Type::Ghm: {
-            success &= MergeConstraint(index, ghm_node.u.ghm.ghm, constraint, out_constraints);
+            success &= MergeConstraint(*ctx.index, ghm_node.u.ghm.ghm, constraint, out_constraints);
         } break;
     }
 
@@ -153,8 +203,12 @@ bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
 {
     Assert(!out_constraints->count);
 
+    MapperContext ctx;
+    ctx.index = &index;
+
     mco_GhmConstraint null_constraint = {};
+    null_constraint.cmds = UINT32_MAX;
     null_constraint.durations = UINT32_MAX;
 
-    return RecurseGhmTree(index, 0, 0, null_constraint, out_constraints);
+    return RecurseGhmTree(ctx, 0, 0, null_constraint, out_constraints);
 }

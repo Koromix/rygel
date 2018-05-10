@@ -9,9 +9,15 @@
 #include "mco_tables.hh"
 
 struct mco_GhmConstraint {
+    enum class Warning {
+        PreferCmd28 = 1 << 0
+    };
+
     mco_GhmCode ghm;
 
+    uint32_t cmds;
     uint32_t durations;
+    uint32_t warnings;
 
     HASH_TABLE_HANDLER(mco_GhmConstraint, ghm);
 };

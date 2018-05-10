@@ -415,6 +415,8 @@ Constraints options:
             PrintLn("Constraint for %1", ghm_to_ghs_info.ghm);
             PrintLn("  Duration = 0x%1",
                     FmtHex(constraint->durations).Pad0(-2 * SIZE(constraint->durations)));
+            PrintLn("  Warnings = 0x%1",
+                    FmtHex(constraint->warnings).Pad0(-2 * SIZE(constraint->warnings)));
         } else {
             PrintLn("%1 unreached!", ghm_to_ghs_info.ghm);
         }
