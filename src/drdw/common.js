@@ -112,23 +112,6 @@ function downloadJson(url, arguments, func)
 downloadJson.queue = new Set();
 downloadJson.run_lock = 0;
 
-// ------------------------------------------------------------------------
-// Progression and errors
-// ------------------------------------------------------------------------
-
-function flashMessage(message)
-{
-    var flash_box = document.querySelector('#flash_box');
-
-    flash_box.textContent = message;
-
-    flash_box.classList.remove('flash');
-    flash_box.classList.add('flash');
-    if (flashMessage.current_timeout !== undefined)
-        window.clearTimeout(flashMessage.current_timeout);
-    flashMessage.current_timeout = setTimeout(function() { flash_box.classList.remove('flash'); }, 6000);
-}
-
 function markOutdated(selector, mark)
 {
     var elements = document.querySelectorAll(selector);
