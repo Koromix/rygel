@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "../common/json.hh"
 #include "mco_tables.hh"
 
 #define FAIL_PARSE_IF(Filename, Cond) \
@@ -947,246 +946,98 @@ bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
     return true;
 }
 
-class JsonPricesHandler: public BaseJsonHandler<JsonPricesHandler> {
-    enum class State {
-        Default,
-        TableArray,
-        TableObject,
-        GhsPriceArray,
-        GhsPriceObject,
-        GhsPriceSectorObject,
-        SupplementPriceObject,
-        SupplementPriceSectorObject
-    };
-
-    State state = State::Default;
-
-    mco_PriceTable price_table;
-    int sector;
-    mco_GhsCode ghs = {};
-    mco_GhsPriceInfo price_info[2] = {};
-
-public:
-    HeapArray<mco_PriceTable> *out_price_tables;
-
-    JsonPricesHandler(HeapArray<mco_PriceTable> *out_price_tables = nullptr)
-        : out_price_tables(out_price_tables) {}
-
-    bool Branch(JsonBranchType type, const char *key)
-    {
-        switch (state) {
-            case State::Default: {
-                switch (type) {
-                    case JsonBranchType::Array: { state = State::TableArray; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::TableArray: {
-                switch (type) {
-                    case JsonBranchType::Object: { state = State::TableObject; } break;
-                    case JsonBranchType::EndArray: { state = State::Default; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::TableObject: {
-                switch (type) {
-                    case JsonBranchType::Array: {
-                        if (TestStr(key, "ghs")) {
-                            state = State::GhsPriceArray;
-                        } else {
-                            return UnexpectedBranch(type);
-                        }
-                    } break;
-                    case JsonBranchType::Object: {
-                        if (TestStr(key, "supplements")) {
-                            state = State::SupplementPriceObject;
-                        } else {
-                            return UnexpectedBranch(type);
-                        }
-                    } break;
-                    case JsonBranchType::EndObject: {
-                        if (price_table.date.value) {
-                            mco_PriceTable *table_it = out_price_tables->AppendDefault();
-                            memmove(table_it, &price_table, SIZE(price_table));
-                            memset(&price_table, 0, SIZE(price_table));
-                        } else {
-                            LogError("Missing date attribute");
-                        }
-                        state = State::TableArray;
-                    } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::GhsPriceArray: {
-                switch (type) {
-                    case JsonBranchType::Object: { state = State::GhsPriceObject; } break;
-                    case JsonBranchType::EndArray: { state = State::TableObject; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::GhsPriceObject: {
-                switch (type) {
-                    case JsonBranchType::Object: {
-                        if (TestStr(key, "public")) {
-                            state = State::GhsPriceSectorObject;
-                            sector = 0;
-                        } else if (TestStr(key, "private")) {
-                            state = State::GhsPriceSectorObject;
-                            sector = 1;
-                        } else {
-                            return UnexpectedBranch(type);
-                        }
-                    } break;
-                    case JsonBranchType::EndObject: {
-                        if (ghs.IsValid()) {
-                            for (int i = 0; i < 2; i++) {
-                                if (price_info[i].price_cents) {
-                                    price_info[i].ghs = ghs;
-                                    price_table.ghs_prices[i].Append(price_info[i]);
-                                    price_info[i] = {};
-                                }
-                            }
-                        } else {
-                            LogError("Invalid or unspecified GHS");
-                        }
-                        ghs = {};
-
-                        state = State::GhsPriceArray;
-                    } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::GhsPriceSectorObject: {
-                switch (type) {
-                    case JsonBranchType::EndObject: { state = State::GhsPriceObject; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::SupplementPriceObject: {
-                switch (type) {
-                    case JsonBranchType::Object: {
-                        if (TestStr(key, "public")) {
-                            state = State::SupplementPriceSectorObject;
-                            sector = 0;
-                        } else if (TestStr(key, "private")) {
-                            state = State::SupplementPriceSectorObject;
-                            sector = 1;
-                        } else {
-                            return UnexpectedBranch(type);
-                        }
-                    } break;
-                    case JsonBranchType::EndObject: { state = State::TableObject; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::SupplementPriceSectorObject: {
-                switch (type) {
-                    case JsonBranchType::EndObject: { state = State::SupplementPriceObject; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-        }
-
-        return true;
-    }
-
-    bool Value(const char *key, const JsonValue &value)
-    {
-        switch (state) {
-            case State::TableObject: {
-                if (TestStr(key, "build_date")) {
-                    SetDate(value, &price_table.build_date);
-                } else if (TestStr(key, "date")) {
-                    SetDate(value, &price_table.date);
-                } else {
-                    return UnknownAttribute(key);
-                }
-            } break;
-
-            case State::GhsPriceObject: {
-                if (TestStr(key, "ghs")) {
-                    SetInt(value, &ghs.number);
-                } else {
-                    return UnknownAttribute(key);
-                }
-            } break;
-
-            case State::GhsPriceSectorObject: {
-                if (TestStr(key, "price_cents")) {
-                    SetInt(value, &price_info[sector].price_cents);
-                } else if (TestStr(key, "exh_treshold")) {
-                    SetInt(value, &price_info[sector].exh_treshold);
-                } else if (TestStr(key, "exh_cents")) {
-                    SetInt(value, &price_info[sector].exh_cents);
-                } else if (TestStr(key, "exb_treshold")) {
-                    SetInt(value, &price_info[sector].exb_treshold);
-                } else if (TestStr(key, "exb_cents")) {
-                    SetInt(value, &price_info[sector].exb_cents);
-                } else if (TestStr(key, "exb_once")) {
-                    SetFlag(value, &price_info[sector].flags, (int)mco_GhsPriceInfo::Flag::ExbOnce);
-                } else {
-                    return UnknownAttribute(key);
-                }
-            } break;
-
-            case State::SupplementPriceSectorObject: {
-                if (TestStr(key, "rea_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.rea);
-                } else if (TestStr(key, "stf_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.reasi);
-                    SetInt(value, &price_table.supplement_cents[sector].st.si);
-                } else if (TestStr(key, "src_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.src);
-                } else if (TestStr(key, "nn1_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.nn1);
-                } else if (TestStr(key, "nn2_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.nn2);
-                } else if (TestStr(key, "nn3_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.nn3);
-                } else if (TestStr(key, "rep_cents")) {
-                    SetInt(value, &price_table.supplement_cents[sector].st.rep);
-                } else if (TestStr(key, "ant_cents")) {
-                    // Not supported yet
-                } else if (TestStr(key, "dip_cents")) {
-                    // Not supported yet
-                } else if (TestStr(key, "rap_cents")) {
-                    // Not supported yet
-                } else if (TestStr(key, "sdc_cents")) {
-                    // Not supported yet
-                } else if (TestStr(key, "tde_cents")) {
-                    // Not supported yet
-                } else if (TestStr(key, "tse_cents")) {
-                    // Not supported yet
-                } else {
-                    return UnknownAttribute(key);
-                }
-            } break;
-
-            default: { return UnexpectedValue(); } break;
-        }
-
-        return true;
-    }
-};
-
-bool mco_ParsePricesJson(StreamReader &st, HeapArray<mco_PriceTable> *out_tables)
+bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
+                         HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
+                         mco_SupplementCounters<int32_t> *out_supplement_prices)
 {
-    DEFER_NC(out_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
+    DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
+    mco_SupplementCounters<int32_t> supplement_prices;
+
+    StreamReader st(file_data, table.filename);
+    if (st.error)
+        return false;
+
+    IniParser ini(&st);
+    ini.reader.PushLogHandler();
+    DEFER { PopLogHandler(); };
 
     {
-        JsonPricesHandler json_handler(out_tables);
-        if (!LoadJson(st, &json_handler))
+        mco_GhsPriceInfo *price_info = nullptr;
+        IniProperty prop;
+        bool valid = true;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len)
+                continue;
+
+            if (prop.section == "Supplements") {
+                if (prop.key == "REA") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.rea);
+                } else if (prop.key == "STF") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.reasi);
+                    supplement_prices.st.si = supplement_prices.st.reasi;
+                } else if (prop.key == "SRC") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.src);
+                } else if (prop.key == "NN1") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.nn1);
+                } else if (prop.key == "NN2") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.nn2);
+                } else if (prop.key == "NN3") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.nn3);
+                } else if (prop.key == "REP") {
+                    valid &= ParseDec(prop.value, &supplement_prices.st.rep);
+                } else if (prop.key == "DIP" || prop.key == "RAP" || prop.key == "ANT" ||
+                           prop.key == "SDC" || prop.key == "TDE" || prop.key == "TSE") {
+                    // Unsupported (for now)
+                } else {
+                    LogError("Unknown supplement '%1'", prop.key);
+                    valid = false;
+                }
+            } else {
+                if (prop.flags & (int)IniProperty::Flag::NewSection) {
+                    mco_GhsCode ghs = mco_GhsCode::FromString(prop.section);
+                    if (ghs.IsValid()) {
+                        price_info = out_ghs_prices->AppendDefault();
+                        *price_info = {};
+                        price_info->ghs = ghs;
+                    } else {
+                        price_info = nullptr;
+                        valid = false;
+                    }
+                }
+
+                if (LIKELY(price_info)) {
+                    if (prop.key == "PriceCents") {
+                        valid &= ParseDec(prop.value, &price_info->price_cents);
+                    } else if (prop.key == "ExbTreshold") {
+                        valid &= ParseDec(prop.value, &price_info->exb_treshold);
+                    } else if (prop.key == "ExbCents") {
+                        valid &= ParseDec(prop.value, &price_info->exb_cents);
+                    } else if (prop.key == "ExbType") {
+                        if (prop.value == "Daily") {
+                            price_info->flags &= (uint16_t)~(int)mco_GhsPriceInfo::Flag::ExbOnce;
+                        } else if (prop.value == "Once") {
+                            price_info->flags |= (uint16_t)mco_GhsPriceInfo::Flag::ExbOnce;
+                        } else {
+                            LogError("Invalid ExbType value '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else if (prop.key == "ExhTreshold") {
+                        valid &= ParseDec(prop.value, &price_info->exh_treshold);
+                    } else if (prop.key == "ExhCents") {
+                        valid &= ParseDec(prop.value, &price_info->exh_cents);
+                    } else {
+                        LogError("Unknown GHS price attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                }
+            }
+        }
+        if (ini.error || !valid)
             return false;
     }
 
     out_guard.disable();
+    *out_supplement_prices = supplement_prices;
     return true;
 }
 
@@ -1203,71 +1054,101 @@ const mco_TableIndex *mco_TableSet::FindIndex(Date date) const
     return nullptr;
 }
 
-bool mco_TableSetBuilder::LoadAtihTab(StreamReader &st)
+bool mco_TableSetBuilder::LoadTab(StreamReader &st)
 {
-    Span<uint8_t> raw_data;
-    {
-        HeapArray<uint8_t> raw_buf(&file_alloc);
-        if (st.ReadAll(Megabytes(8), &raw_buf) < 0)
-            return false;
-        raw_data = raw_buf.Leak();
-    }
-
-    Size start_len = set.tables.len;
-    if (!mco_ParseTableHeaders(raw_data, st.filename, &set.str_alloc, &set.tables))
+    HeapArray<uint8_t> raw_buf(&file_alloc);
+    if (st.ReadAll(Megabytes(8), &raw_buf) < 0)
         return false;
 
+    Size start_len = set.tables.len;
+    if (!mco_ParseTableHeaders(raw_buf, st.filename, &set.str_alloc, &set.tables))
+        return false;
+
+    Span<uint8_t> raw_data = raw_buf.Leak();
     for (Size i = start_len; i < set.tables.len; i++) {
         if (set.tables[i].type == mco_TableType::UnknownTable)
-            return true;
+            continue;
 
         TableLoadInfo load_info = {};
         load_info.table_idx = i;
-        load_info.u.raw_data = raw_data;
+        load_info.raw_data = raw_data;
         table_loads.Append(load_info);
     }
 
     return true;
 }
 
-bool mco_TableSetBuilder::LoadPriceJson(StreamReader &st)
+bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
 {
-    Size start_len = price_tables.len;
-
-    if (!mco_ParsePricesJson(st, &price_tables))
+    HeapArray<uint8_t> raw_buf(&file_alloc);
+    if (st.ReadAll(Megabytes(2), &raw_buf) < 0)
         return false;
 
-    for (Size i = start_len; i < price_tables.len; i++) {
-        const mco_PriceTable &price_table = price_tables[i];
+    mco_TableInfo table_info = {};
+    TableLoadInfo load_info = {};
+    {
+        StreamReader mem_st(raw_buf, st.filename);
+        IniParser ini(&mem_st);
 
-        TableLoadInfo load_info = {};
-        load_info.table_idx = set.tables.len;
-        load_info.u.price_table_idx = i;
-        table_loads.Append(load_info);
+        IniProperty prop;
+        bool valid = true;
+        while (ini.Next(&prop) && !prop.section.len) {
+            if (prop.key == "Date") {
+                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
 
-        mco_TableInfo table_info = {};
-        table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
-        table_info.build_date = price_table.build_date;
-        table_info.limit_dates[0] = price_table.date;
-        table_info.limit_dates[1] = mco_ConvertDate1980(UINT16_MAX);
-        strcpy(table_info.raw_type, "PRICESJS");
-        table_info.type = mco_TableType::PriceTable;
-        set.tables.Append(table_info);
+                table_info.limit_dates[0] = Date::FromString(prop.value);
+                table_info.limit_dates[1] = default_end_date;
+                valid &= !!table_info.limit_dates[0].value;
+            } else if (prop.key == "Build") {
+                Date build_date = Date::FromString(prop.value);
+                valid &= build_date.IsValid();
+                table_info.build_date = build_date;
+            } else if (prop.key == "Sector") {
+                if (prop.value == "Public") {
+                    table_info.type = mco_TableType::PriceTablePublic;
+                    strcpy(table_info.raw_type, "PRICEPUB");
+                } else if (prop.value == "Private") {
+                    table_info.type = mco_TableType::PriceTablePrivate;
+                    strcpy(table_info.raw_type, "PRICEPRI");
+                } else {
+                    LogError("Unknown sector type '%1'", prop.value);
+                    valid = false;
+                }
+            }
+        }
+        if (ini.error || !valid)
+            return false;
+
+        if (!table_info.limit_dates[1].value || !(int)table_info.type) {
+            LogError("Missing mandatory header attributes");
+            return false;
+        }
     }
+
+    load_info.raw_data = raw_buf.Leak();
+    load_info.table_idx = set.tables.len;
+    table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
+
+    set.tables.Append(table_info);
+    table_loads.Append(load_info);
 
     return true;
 }
 
-bool mco_TableSetBuilder::LoadFiles(Span<const char *const> tab_filenames,
-                                    Span<const char *const> price_filenames)
+bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
 {
     bool success = true;
 
-    for (const char *filename: tab_filenames) {
+    for (const char *filename: filenames) {
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-        if (!TestStr(extension, ".tab")) {
+        bool (mco_TableSetBuilder::*load_func)(StreamReader &st);
+        if (extension == ".tab") {
+            load_func = &mco_TableSetBuilder::LoadTab;
+        } else if (extension == ".dpri") {
+            load_func = &mco_TableSetBuilder::LoadPrices;
+        } else {
             LogError("Cannot load table file '%1' with unknown extension '%2'",
                      filename, extension);
             success = false;
@@ -1279,26 +1160,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> tab_filenames,
             success = false;
             continue;
         }
-        success &= LoadAtihTab(st);
-    }
-
-    for (const char *filename: price_filenames) {
-        CompressionType compression_type;
-        Span<const char> extension = GetPathExtension(filename, &compression_type);
-
-        if (!TestStr(extension, ".json")) {
-            LogError("Cannot load price file '%1' with unknown extension '%2'",
-                     filename, extension);
-            success = false;
-            continue;
-        }
-
-        StreamReader st(filename, compression_type);
-        if (st.error) {
-            success = false;
-            continue;
-        }
-        success &= LoadPriceJson(st);
+        success &= (this->*load_func)(st);
     }
 
     return success;
@@ -1464,26 +1326,24 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
         switch ((mco_TableType)i) {
             case mco_TableType::GhmDecisionTree: {
-                LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree, load_info->u.raw_data.ptr, table_info);
+                LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree, load_info->raw_data.ptr, table_info);
             } break;
 
             case mco_TableType::DiagnosisTable: {
-                LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable, load_info->u.raw_data.ptr, table_info);
-                LOAD_TABLE(exclusions, mco_ParseExclusionTable, load_info->u.raw_data.ptr, table_info);
-
+                LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(exclusions, mco_ParseExclusionTable, load_info->raw_data.ptr, table_info);
                 BUILD_MAP(diagnoses, diagnoses_map, diagnoses);
             } break;
 
             case mco_TableType::ProcedureTable: {
-                LOAD_TABLE(procedures, mco_ParseProcedureTable, load_info->u.raw_data.ptr, table_info);
-
+                LOAD_TABLE(procedures, mco_ParseProcedureTable, load_info->raw_data.ptr, table_info);
                 BUILD_MAP(procedures, procedures_map, procedures);
             } break;
             case mco_TableType::ProcedureExtensionTable: {
                 StaticAssert((int)mco_TableType::ProcedureExtensionTable > (int)mco_TableType::ProcedureTable);
 
                 HeapArray<mco_ProcedureExtensionInfo> extensions;
-                success &= mco_ParseProcedureExtensionTable(load_info->u.raw_data.ptr, table_info,
+                success &= mco_ParseProcedureExtensionTable(load_info->raw_data.ptr, table_info,
                                                             &extensions);
 
                 for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
@@ -1501,65 +1361,55 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
             } break;
 
             case mco_TableType::GhmRootTable: {
-                LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable, load_info->u.raw_data.ptr, table_info);
-
+                LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable, load_info->raw_data.ptr, table_info);
                 BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots);
             } break;
 
             case mco_TableType::SeverityTable: {
                 LOAD_TABLE(gnn_cells, mco_ParseSeverityTable,
-                           load_info->u.raw_data.ptr, table_info, 0);
+                           load_info->raw_data.ptr, table_info, 0);
                 LOAD_TABLE(cma_cells[0], mco_ParseSeverityTable,
-                           load_info->u.raw_data.ptr, table_info, 1);
+                           load_info->raw_data.ptr, table_info, 1);
                 LOAD_TABLE(cma_cells[1], mco_ParseSeverityTable,
-                           load_info->u.raw_data.ptr, table_info, 2);
+                           load_info->raw_data.ptr, table_info, 2);
                 LOAD_TABLE(cma_cells[2], mco_ParseSeverityTable,
-                           load_info->u.raw_data.ptr, table_info, 3);
+                           load_info->raw_data.ptr, table_info, 3);
             } break;
 
             case mco_TableType::GhmToGhsTable: {
-                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->u.raw_data.ptr, table_info);
-
+                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->raw_data.ptr, table_info);
                 BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs);
                 BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs);
             } break;
 
             case mco_TableType::AuthorizationTable: {
                 LOAD_TABLE(authorizations, mco_ParseAuthorizationTable,
-                           load_info->u.raw_data.ptr, table_info);
-
+                           load_info->raw_data.ptr, table_info);
                 BUILD_MAP(authorizations, authorizations_map, authorizations);
             } break;
 
             case mco_TableType::SrcPairTable: {
                 LOAD_TABLE(src_pairs[0], mco_ParseSrcPairTable,
-                           load_info->u.raw_data.ptr, table_info, 0);
+                           load_info->raw_data.ptr, table_info, 0);
                 LOAD_TABLE(src_pairs[1], mco_ParseSrcPairTable,
-                           load_info->u.raw_data.ptr, table_info, 1);
+                           load_info->raw_data.ptr, table_info, 1);
             } break;
 
-            case mco_TableType::PriceTable: {
+            case mco_TableType::PriceTablePublic:
+            case mco_TableType::PriceTablePrivate: {
+                Size table_idx = i - (int)mco_TableType::PriceTablePublic;
                 if (!load_info->loaded) {
-                    mco_PriceTable &price_table = price_tables[load_info->u.price_table_idx];
-
-                    for (int j = 0; j < 2; j++) {
-                        SwapMemory(set.store.ghs_prices[j].AppendDefault(),
-                                   &price_table.ghs_prices[j], SIZE(price_table.ghs_prices[j]));
-                        index.ghs_prices[j] = set.store.ghs_prices[j][set.store.ghs_prices[j].len - 1];
-
-                        set.store.supplement_prices[j].Append(price_table.supplement_cents[j]);
-                        index.supplement_prices[j] = &set.store.supplement_prices[j][set.store.supplement_prices[j].len - 1];
-                    }
+                    auto array = set.store.ghs_prices[table_idx].AppendDefault();
+                    success &= mco_ParsePriceTable(load_info->raw_data, table_info, array,
+                                                   &index.supplement_prices[table_idx]);
+                    index.ghs_prices[table_idx] = *array;
                     index.changed_tables |= (uint32_t)(1 << i);
                 } else {
-                    for (int j = 0; j < 2; j++) {
-                        index.ghs_prices[j] = set.indexes[set.indexes.len - 1].ghs_prices[j];
-                        index.supplement_prices[j] = set.indexes[set.indexes.len - 1].supplement_prices[j];
-                    }
+                    index.ghs_prices[table_idx] = set.indexes[set.indexes.len - 1].ghs_prices[table_idx];
+                    index.supplement_prices[table_idx] = set.indexes[set.indexes.len - 1].supplement_prices[table_idx];
                 }
 
-                BUILD_MAP(ghs_prices[0], ghs_prices_map[0], ghs_prices[0]);
-                BUILD_MAP(ghs_prices[1], ghs_prices_map[1], ghs_prices[1]);
+                BUILD_MAP(ghs_prices[table_idx], ghs_prices_map[table_idx], ghs_prices[table_idx]);
             } break;
 
             case mco_TableType::UnknownTable: {} break;
@@ -1654,7 +1504,7 @@ const mco_GhsPriceInfo *mco_TableIndex::FindGhsPrice(mco_GhsCode ghs, Sector sec
     return ghs_prices_map[(int)sector]->FindValue(ghs, nullptr);
 }
 
-const mco_SupplementCounters<int32_t> *mco_TableIndex::SupplementPrices(Sector sector) const
+const mco_SupplementCounters<int32_t> &mco_TableIndex::SupplementPrices(Sector sector) const
 {
     return supplement_prices[(int)sector];
 }

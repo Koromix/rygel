@@ -16,12 +16,12 @@ enum class mco_TableType: uint32_t {
     ProcedureExtensionTable,
     GhmRootTable,
     SeverityTable,
-
     GhmToGhsTable,
     AuthorizationTable,
     SrcPairTable,
 
-    PriceTable
+    PriceTablePublic,
+    PriceTablePrivate
 };
 static const char *const mco_TableTypeNames[] = {
     "Unknown Table",
@@ -32,12 +32,12 @@ static const char *const mco_TableTypeNames[] = {
     "Procedure Extension Table",
     "GHM Root Table",
     "Severity Table",
-
     "GHM To GHS Table",
     "Authorization Table",
     "SRC Pair Table",
 
-    "Price Table"
+    "Price Table (public)",
+    "Price Table (private)"
 };
 
 struct mco_TableInfo {
@@ -237,15 +237,6 @@ struct mco_SrcPair {
     ProcedureCode proc;
 };
 
-struct mco_PriceTable {
-    Date date;
-    Date build_date;
-
-    // 0 for public, 1 for private
-    HeapArray<mco_GhsPriceInfo> ghs_prices[2];
-    mco_SupplementCounters<int32_t> supplement_cents[2];
-};
-
 Date mco_ConvertDate1980(uint16_t days);
 
 bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
@@ -273,7 +264,9 @@ bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &
 bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
                            HeapArray<mco_SrcPair> *out_pairs);
 
-bool mco_ParsePricesJson(StreamReader &st, HeapArray<mco_PriceTable> *out_tables);
+bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
+                         HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
+                         mco_SupplementCounters<int32_t> *out_supplement_prices);
 
 struct mco_TableIndex {
     Date limit_dates[2];
@@ -294,7 +287,7 @@ struct mco_TableIndex {
     Span<const mco_SrcPair> src_pairs[2];
 
     Span<const mco_GhsPriceInfo> ghs_prices[2];
-    const mco_SupplementCounters<int32_t> *supplement_prices[2];
+    mco_SupplementCounters<int32_t> supplement_prices[2];
 
     const HashTable<DiagnosisCode, const mco_DiagnosisInfo *> *diagnoses_map;
     const HashTable<ProcedureCode, const mco_ProcedureInfo *> *procedures_map;
@@ -316,7 +309,7 @@ struct mco_TableIndex {
     const mco_AuthorizationInfo *FindAuthorization(mco_AuthorizationScope scope, int8_t type) const;
 
     const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, Sector sector) const;
-    const mco_SupplementCounters<int32_t> *SupplementPrices(Sector sector) const;
+    const mco_SupplementCounters<int32_t> &SupplementPrices(Sector sector) const;
 };
 
 class mco_TableSet {
@@ -335,7 +328,6 @@ public:
 
         HeapArray<HeapArray<mco_GhmToGhsInfo>> ghs;
         HeapArray<HeapArray<mco_GhsPriceInfo>> ghs_prices[2];
-        HeapArray<mco_SupplementCounters<int32_t>> supplement_prices[2];
         HeapArray<HeapArray<mco_AuthorizationInfo>> authorizations;
         HeapArray<HeapArray<mco_SrcPair>> src_pairs[2];
     } store;
@@ -362,24 +354,19 @@ public:
 class mco_TableSetBuilder {
     struct TableLoadInfo {
         Size table_idx;
-        union {
-            Size price_table_idx;
-            Span<uint8_t> raw_data;
-        } u;
+        Span<uint8_t> raw_data;
         bool loaded;
     };
 
     LinkedAllocator file_alloc;
-
     HeapArray<TableLoadInfo> table_loads;
-    HeapArray<mco_PriceTable> price_tables;
 
     mco_TableSet set;
 
 public:
-    bool LoadAtihTab(StreamReader &st);
-    bool LoadPriceJson(StreamReader &st);
-    bool LoadFiles(Span<const char *const> tab_filenames, Span<const char *const> price_filenames);
+    bool LoadTab(StreamReader &st);
+    bool LoadPrices(StreamReader &st);
+    bool LoadFiles(Span<const char *const> filenames);
 
     bool Finish(mco_TableSet *out_set);
 

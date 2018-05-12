@@ -15,10 +15,10 @@ Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compress
             writer.StartObject();
             writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
             writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTable)) {
+            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
                 writer.Key("changed_tables"); writer.Bool(true);
             }
-            if (index.changed_tables & MaskEnum(mco_TableType::PriceTable)) {
+            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
                 writer.Key("changed_prices"); writer.Bool(true);
             }
             writer.EndObject();

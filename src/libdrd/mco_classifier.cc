@@ -1901,14 +1901,12 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs)
 int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices)
 {
-    const mco_SupplementCounters<int32_t> *prices = index.SupplementPrices(Sector::Public);
-    if (UNLIKELY(!prices))
-        return 0;
+    const mco_SupplementCounters<int32_t> &prices = index.SupplementPrices(Sector::Public);
 
     int total_cents = 0;
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        out_prices->values[i] += days.values[i] * prices->values[i];
-        total_cents += days.values[i] * prices->values[i];
+        out_prices->values[i] += days.values[i] * prices.values[i];
+        total_cents += days.values[i] * prices.values[i];
     }
 
     return total_cents;

@@ -14,8 +14,6 @@ R"(Common options:
                                  (default: <executable_dir>%/data)
         --table-dir <dir>        Add table directory
                                  (default: <data_dir>%/tables)
-        --price-file <path>      Set price file
-                                 (default: <data_dir>%/tables%/prices.json)
         --auth-file <path>       Set authorization file
                                  (default: <data_dir>%/authorizations.json)
 
@@ -24,12 +22,10 @@ R"(Common options:
 
 extern HeapArray<const char *> mco_data_directories;
 extern HeapArray<const char *> mco_table_directories;
-extern HeapArray<const char *> mco_price_filenames;
 extern const char *mco_authorization_filename;
 
 bool mco_InitTableSet(Span<const char *const> data_directories,
                       Span<const char *const> table_directories,
-                      Span<const char * const> price_filenames,
                       mco_TableSet *out_set);
 bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
                               const char *authorization_filename,

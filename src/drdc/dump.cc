@@ -311,13 +311,6 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
                     PrintLn("    GHM To GHS Table:");
                     mco_DumpGhmToGhsTable(index.ghs);
                 } break;
-                case mco_TableType::PriceTable: {
-                    PrintLn("    Price Table:");
-                    PrintLn("      Public:");
-                    mco_DumpGhsPriceTable(index.ghs_prices[0]);
-                    PrintLn("      Private:");
-                    mco_DumpGhsPriceTable(index.ghs_prices[1]);
-                } break;
                 case mco_TableType::AuthorizationTable: {
                     PrintLn("    Authorization Types:");
                     mco_DumpAuthorizationTable(index.authorizations);
@@ -328,6 +321,13 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
                         DumpSupplementPairTable(index.src_pairs[j]);
                         PrintLn();
                     }
+                } break;
+
+                case mco_TableType::PriceTablePublic:
+                case mco_TableType::PriceTablePrivate: {
+                    PrintLn("    %1:", mco_TableTypeNames[i]);
+                    Size sector_idx = i - (int)mco_TableType::PriceTablePublic;
+                    mco_DumpGhsPriceTable(index.ghs_prices[sector_idx]);
                 } break;
 
                 case mco_TableType::UnknownTable:

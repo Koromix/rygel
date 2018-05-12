@@ -25,7 +25,6 @@ SEXP drdR_Options(SEXP debug = R_NilValue)
 // [[Rcpp::export(name = 'mco_init')]]
 SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
                    Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
-                   Rcpp::CharacterVector price_filenames = Rcpp::CharacterVector::create(),
                    Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
 {
     RCC_SETUP_LOG_HANDLER();
@@ -43,18 +42,15 @@ SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::crea
     for (const char *str: table_dirs) {
         table_dirs2.Append(str);
     }
-    for (const char *str: price_filenames) {
-        table_filenames2.Append(str);
-    }
     if (authorization_filename.isNotNull()) {
         authorization_filename2 = authorization_filename.as().get_cstring();
     }
 
-    if (!mco_InitTableSet(data_dirs2, table_dirs2, table_filenames2, &classifier->table_set) ||
+    if (!mco_InitTableSet(data_dirs2, table_dirs2, &classifier->table_set) ||
             !classifier->table_set.indexes.len)
         Rcc_StopWithLastError();
     if (!mco_InitAuthorizationSet(data_dirs2, authorization_filename2,
-                              &classifier->authorization_set))
+                                  &classifier->authorization_set))
         Rcc_StopWithLastError();
 
     SEXP classifier_xp = R_MakeExternalPtr(classifier, R_NilValue, R_NilValue);
