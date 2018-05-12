@@ -8,7 +8,7 @@ library(stringr)
 library(jsonlite)
 
 ghm_roots <- local({
-    files <- list.files('../data/catalogs/xlsx', pattern = 'regroup*.xlsx', full.names = TRUE)
+    files <- list.files('../resources/catalogs/xlsx', pattern = 'regroup*.xlsx', full.names = TRUE)
 
     ghm_roots <- rbindlist(lapply(files, function(filename) {
         dt <- as.data.table(read_xlsx(filename, sheet = 1))

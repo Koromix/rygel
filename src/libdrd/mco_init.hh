@@ -10,24 +10,24 @@
 
 static const char *const mco_options_usage =
 R"(Common options:
-    -D, --data-dir <dir>         Add data directory
-                                 (default: <executable_dir>%/data)
+    -D, --resource-dir <dir>     Add resource directory
+                                 (default: <executable_dir>%/resources)
         --table-dir <dir>        Add table directory
-                                 (default: <data_dir>%/tables)
+                                 (default: <resource_dir>%/tables)
         --auth-file <path>       Set authorization file
-                                 (default: <data_dir>%/authorizations.json)
+                                 (default: <resource_dir>%/config/authorizations.json)
 
     -O, --output <path>          Dump information to file
                                  (default: stdout))";
 
-extern HeapArray<const char *> mco_data_directories;
+extern HeapArray<const char *> mco_resource_directories;
 extern HeapArray<const char *> mco_table_directories;
 extern const char *mco_authorization_filename;
 
-bool mco_InitTableSet(Span<const char *const> data_directories,
+bool mco_InitTableSet(Span<const char *const> resource_directories,
                       Span<const char *const> table_directories,
                       mco_TableSet *out_set);
-bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
+bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set);
 

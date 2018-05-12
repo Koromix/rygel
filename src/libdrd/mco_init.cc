@@ -5,11 +5,11 @@
 #include "../common/kutil.hh"
 #include "mco_init.hh"
 
-HeapArray<const char *> mco_data_directories;
+HeapArray<const char *> mco_resource_directories;
 HeapArray<const char *> mco_table_directories;
 const char *mco_authorization_filename;
 
-bool mco_InitTableSet(Span<const char *const> data_directories,
+bool mco_InitTableSet(Span<const char *const> resource_directories,
                       Span<const char *const> table_directories,
                       mco_TableSet *out_set)
 {
@@ -18,8 +18,8 @@ bool mco_InitTableSet(Span<const char *const> data_directories,
     HeapArray<const char *> filenames2;
     {
         bool success = true;
-        for (const char *data_dir: data_directories) {
-            const char *tab_dir = Fmt(&temp_alloc, "%1%/tables", data_dir).ptr;
+        for (const char *resource_dir: resource_directories) {
+            const char *tab_dir = Fmt(&temp_alloc, "%1%/tables", resource_dir).ptr;
             if (TestPath(tab_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(tab_dir, "*.tab*", &temp_alloc,
                                                    &filenames2, 1024);
@@ -50,7 +50,7 @@ bool mco_InitTableSet(Span<const char *const> data_directories,
     return true;
 }
 
-bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
+bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set)
 {
@@ -61,10 +61,11 @@ bool mco_InitAuthorizationSet(Span<const char *const> data_directories,
         if (authorization_filename) {
             filename = authorization_filename;
         } else {
-            for (Size i = data_directories.len; i-- > 0;) {
-                const char *data_dir = data_directories[i];
+            for (Size i = resource_directories.len; i-- > 0;) {
+                const char *resource_dir = resource_directories[i];
 
-                const char *test_filename = Fmt(&temp_alloc, "%1%/authorizations.json", data_dir).ptr;
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config/authorizations.json",
+                                                resource_dir).ptr;
                 if (TestPath(test_filename, FileType::File)) {
                     filename = test_filename;
                     break;
@@ -89,7 +90,7 @@ const mco_TableSet *mco_GetMainTableSet()
     static bool loaded = false;
 
     if (!loaded) {
-        if (!mco_InitTableSet(mco_data_directories, mco_table_directories, &table_set))
+        if (!mco_InitTableSet(mco_resource_directories, mco_table_directories, &table_set))
             return nullptr;
         loaded = true;
     }
@@ -103,7 +104,7 @@ const mco_AuthorizationSet *mco_GetMainAuthorizationSet()
     static bool loaded = false;
 
     if (!loaded) {
-        if (!mco_InitAuthorizationSet(mco_data_directories, mco_authorization_filename,
+        if (!mco_InitAuthorizationSet(mco_resource_directories, mco_authorization_filename,
                                       &authorization_set))
             return nullptr;
         loaded = true;
@@ -124,11 +125,11 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
             return false;
         }
         return true;
-    } else if (opt_parser.TestOption("-D", "--data-dir")) {
+    } else if (opt_parser.TestOption("-D", "--resource-dir")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
-        mco_data_directories.Append(opt_parser.current_value);
+        mco_resource_directories.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--table-dir")) {
         if (!opt_parser.RequireValue(usage_func))

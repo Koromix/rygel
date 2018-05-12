@@ -98,7 +98,7 @@ static const char *GetMimeType(Span<const char> path)
     }
 }
 
-static bool InitDescSet(Span<const char *const> data_directories,
+static bool InitDescSet(Span<const char *const> resource_directories,
                         Span<const char *const> desc_directories,
                         DescSet *out_set)
 {
@@ -107,8 +107,8 @@ static bool InitDescSet(Span<const char *const> data_directories,
     HeapArray<const char *> filenames;
     {
         bool success = true;
-        for (const char *data_dir: data_directories) {
-            const char *desc_dir = Fmt(&temp_alloc, "%1%/desc", data_dir).ptr;
+        for (const char *resource_dir: resource_directories) {
+            const char *desc_dir = Fmt(&temp_alloc, "%1%/desc", resource_dir).ptr;
             if (TestPath(desc_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(desc_dir, "*.json", &temp_alloc, &filenames, 1024);
             }
@@ -198,7 +198,7 @@ MHD_Response *BuildJson(CompressionType compression_type,
     return response;
 }
 
-static Response ProduceStaticResource(const Route &route, CompressionType compression_type)
+static Response ProduceStaticAsset(const Route &route, CompressionType compression_type)
 {
     DebugAssert(route.type == Route::Type::Static);
 
@@ -315,7 +315,7 @@ static void InitRoutes()
 }
 
 #ifndef NDEBUG
-static bool UpdateStaticResources()
+static bool UpdateStaticAssets()
 {
     LinkedAllocator temp_alloc;
 
@@ -400,7 +400,7 @@ static bool UpdateStaticResources()
 
     InitRoutes();
 
-    LogInfo("Loaded resources from '%1'", filename);
+    LogInfo("Loaded assets from '%1'", filename);
     return true;
 }
 #endif
@@ -437,7 +437,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
     }
 
 #ifndef NDEBUG
-    UpdateStaticResources();
+    UpdateStaticAssets();
 #endif
 
     // Find appropriate route
@@ -468,7 +468,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
     Response response = {};
     switch (route->type) {
         case Route::Type::Static: {
-            response = ProduceStaticResource(*route, compression_type);
+            response = ProduceStaticAsset(*route, compression_type);
         } break;
 
         case Route::Type::Function: {
@@ -501,7 +501,7 @@ Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
         --desc-dir <dir>         Add descriptions directory
-                                 (default: <data_dir>%/desc)
+                                 (default: <resource_dir>%/desc)
 
     -s, --stays <path>           Add stays to casemix
 )");
@@ -510,12 +510,12 @@ Options:
 
     LinkedAllocator temp_alloc;
 
-    // Add default data directory
+    // Add default resource directory
     {
         const char *app_dir = GetApplicationDirectory();
         if (app_dir) {
-            const char *default_data_dir = Fmt(&temp_alloc, "%1%/data", app_dir).ptr;
-            mco_data_directories.Append(default_data_dir);
+            const char *default_resource_dir = Fmt(&temp_alloc, "%1%/resources", app_dir).ptr;
+            mco_resource_directories.Append(default_resource_dir);
         }
     }
 
@@ -567,7 +567,7 @@ Options:
         if (!drdw_authorization_set)
             return 1;
     }
-    if (!InitDescSet(mco_data_directories, desc_directories, &desc_set))
+    if (!InitDescSet(mco_resource_directories, desc_directories, &desc_set))
         return 1;
 
     if (stays_filenames.len) {
@@ -598,7 +598,7 @@ Options:
         return 1;
 
 #ifndef NDEBUG
-    if (!UpdateStaticResources())
+    if (!UpdateStaticAssets())
         return 1;
 #else
     InitRoutes();
