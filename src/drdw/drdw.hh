@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libdrd/libdrd.hh"
-#include "../common/json.hh"
+#include "json.hh"
 
 GCC_PUSH_IGNORE(-Wconversion)
 GCC_PUSH_IGNORE(-Wsign-conversion)
