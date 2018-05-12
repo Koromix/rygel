@@ -2609,8 +2609,8 @@ Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
 }
 
 template <typename T>
-std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                            Span<const char> *out_remaining = nullptr)
+bool ParseDec(Span<const char> str, T *out_value, int flags = DEFAULT_PARSE_FLAGS,
+              Span<const char> *out_remaining = nullptr)
 {
     uint64_t value = 0;
 
@@ -2632,7 +2632,7 @@ std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAG
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed integer number '%1'", str);
                 }
-                return {0, false};
+                return false;
             } else {
                 break;
             }
@@ -2650,14 +2650,27 @@ std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAG
     if (out_remaining) {
         *out_remaining = str.Take(pos, str.len - pos);
     }
-    return {(T)value, true};
+    *out_value = (T)value;
+    return true;
 
 overflow:
     if (flags & (int)ParseFlag::Log) {
         LogError("Integer overflow for number '%1' (max = %2)", str,
                 std::numeric_limits<T>::max());
     }
-    return {0, false};
+    return false;
+}
+
+template <typename T>
+std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                            Span<const char> *out_remaining = nullptr)
+{
+    T value;
+    if (ParseDec(str, &value, flags, out_remaining)) {
+        return {value, true};
+    } else {
+        return {0, false};
+    }
 }
 
 // ------------------------------------------------------------------------
