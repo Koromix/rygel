@@ -198,7 +198,7 @@ void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs)
 void mco_DumpGhsPriceTable(Span<const mco_GhsPriceInfo> ghs_prices)
 {
     for (const mco_GhsPriceInfo &price_info: ghs_prices) {
-        PrintLn("      GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
+        PrintLn("        GHS %1: %2 [exh = %3, exb = %4]", price_info.ghs,
                 FmtDouble(price_info.price_cents / 100.0, 2),
                 FmtDouble(price_info.exh_cents / 100.0, 2),
                 FmtDouble(price_info.exb_cents / 100.0, 2));
