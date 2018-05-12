@@ -558,7 +558,6 @@ Options:
         }
     }
 
-    LogInfo("Loading tables");
     drdw_table_set = mco_GetMainTableSet();
     if (!drdw_table_set || !drdw_table_set->indexes.len)
         return 1;

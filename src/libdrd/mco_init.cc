@@ -15,6 +15,8 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
                       Span<const char *const> table_filenames,
                       mco_TableSet *out_set)
 {
+    LogInfo("Loading tables");
+
     LinkedAllocator temp_alloc;
 
     HeapArray<const char *> filenames2;
@@ -57,6 +59,8 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set)
 {
+    LogInfo("Loading authorizations");
+
     LinkedAllocator temp_alloc;
 
     const char *filename = nullptr;

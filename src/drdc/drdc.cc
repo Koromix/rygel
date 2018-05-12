@@ -679,7 +679,7 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
         }
     }
 
-    LogInfo("Load");
+    LogInfo("Loading stays");
     mco_StaySet stay_set;
     {
         mco_StaySetBuilder stay_set_builder;
@@ -690,7 +690,7 @@ R"(Usage: drdc pack [options] stay_file ... -O output_file
             return false;
     }
 
-    LogInfo("Pack");
+    LogInfo("Packing stays");
     if (!stay_set.SavePack(dest_filename))
         return false;
 
