@@ -21,6 +21,9 @@ struct mco_AuthorizationSet {
 
     Span<const mco_Authorization> FindUnit(UnitCode unit) const;
     const mco_Authorization *FindUnit(UnitCode unit, Date date) const;
+
+    int8_t GetAuthorizationType(UnitCode unit, Date date) const;
+    bool TestAuthorization(UnitCode unit, Date date, int8_t authorization) const;
 };
 
 bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set);

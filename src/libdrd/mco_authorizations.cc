@@ -174,3 +174,33 @@ const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date
 
     return nullptr;
 }
+
+int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) const
+{
+    if (unit.number >= 10000) {
+        return (int8_t)(unit.number % 100);
+    } else if (unit.number) {
+        const mco_Authorization *auth = FindUnit(unit, date);
+        if (UNLIKELY(!auth)) {
+            LogDebug("Unit %1 is missing from authorization set", unit);
+            return 0;
+        }
+        return auth->type;
+    } else {
+        return 0;
+    }
+}
+
+bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t authorization) const
+{
+    if (GetAuthorizationType(unit, date) == authorization)
+        return true;
+
+    Span<const mco_Authorization> facility_auths = FindUnit(UnitCode(INT16_MAX));
+    for (const mco_Authorization &auth: facility_auths) {
+        if (auth.type == authorization && date >= auth.dates[0] && date < auth.dates[1])
+            return true;
+    }
+
+    return false;
+}

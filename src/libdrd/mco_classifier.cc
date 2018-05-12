@@ -1516,38 +1516,6 @@ mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_Er
     return ghm;
 }
 
-static int8_t GetAuthorizationType(const mco_AuthorizationSet &authorization_set,
-                                   UnitCode unit, Date date)
-{
-    if (unit.number >= 10000) {
-        return (int8_t)(unit.number % 100);
-    } else if (unit.number) {
-        const mco_Authorization *auth = authorization_set.FindUnit(unit, date);
-        if (UNLIKELY(!auth)) {
-            LogDebug("Unit %1 is missing from authorization set", unit);
-            return 0;
-        }
-        return auth->type;
-    } else {
-        return 0;
-    }
-}
-
-static bool TestAuthorization(const mco_AuthorizationSet &authorization_set,
-                              UnitCode unit, Date date, int8_t authorization)
-{
-    if (GetAuthorizationType(authorization_set, unit, date) == authorization)
-        return true;
-
-    Span<const mco_Authorization> facility_auths = authorization_set.FindUnit(UnitCode(INT16_MAX));
-    for (const mco_Authorization &auth: facility_auths) {
-        if (auth.type == authorization && date >= auth.dates[0] && date < auth.dates[1])
-            return true;
-    }
-
-    return false;
-}
-
 static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                     const mco_GhmToGhsInfo &ghm_to_ghs_info)
 {
@@ -1559,8 +1527,8 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
         duration = 0;
         bool authorized = false;
         for (const mco_Stay &stay: agg.stays) {
-            if (TestAuthorization(authorization_set, stay.unit, stay.exit.date,
-                                  ghm_to_ghs_info.unit_authorization)) {
+            if (authorization_set.TestAuthorization(stay.unit, stay.exit.date,
+                                                   ghm_to_ghs_info.unit_authorization)) {
                 if (stay.exit.date != stay.entry.date) {
                     duration += stay.exit.date - stay.entry.date;
                 } else {
@@ -1621,7 +1589,7 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
             agg.stays[agg.stays.len - 1].exit.mode == '8') {
         bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const mco_Stay &stay) {
-            int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
+            int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
             return (auth_type == 7);
         });
         if (uhcd) {
@@ -1755,7 +1723,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     int16_t *ambu_counter = nullptr;
 
     for (const mco_Stay &stay: agg.stays) {
-        int8_t auth_type = GetAuthorizationType(authorization_set, stay.unit, stay.exit.date);
+        int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
         const mco_AuthorizationInfo *auth_info = agg.index->FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
         if (!auth_info)
             continue;
