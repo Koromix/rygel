@@ -2775,14 +2775,21 @@ public:
 // ------------------------------------------------------------------------
 
 struct IniProperty {
+    enum class Flag {
+        NewSection = 1 << 0,
+        Continuation = 1 << 1
+    };
+
     Span<const char> section;
     Span<const char> key;
     Span<const char> value;
+    unsigned int flags;
 };
 
 class IniParser {
     HeapArray<char> current_section;
     HeapArray<char> current_key;
+    unsigned int flags = (int)IniProperty::Flag::NewSection;
 
 public:
     LineReader reader;

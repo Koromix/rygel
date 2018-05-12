@@ -2343,6 +2343,7 @@ bool IniParser::Next(IniProperty *out_prop)
                 return false;
             }
 
+            flags |= (int)IniProperty::Flag::NewSection;
             current_section.Clear(128);
             current_section.Append(section);
             current_key.Clear(128);
@@ -2365,12 +2366,15 @@ bool IniParser::Next(IniProperty *out_prop)
                 current_key.Append(key);
             } else {
                 value = TrimStr(line);
+                flags |= (int)IniProperty::Flag::Continuation;
             }
 
             error_guard.disable();
             out_prop->section = current_section;
             out_prop->key = current_key;
             out_prop->value = value;
+            out_prop->flags = flags;
+            flags = 0;
             return true;
         }
     }
