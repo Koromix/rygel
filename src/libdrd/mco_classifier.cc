@@ -1924,7 +1924,6 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
     for (i = 0; stays.len; i++) {
         mco_Result result = {};
 
-
         do {
             // Reset critical values
             agg.duration = 0;
