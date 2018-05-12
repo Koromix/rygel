@@ -768,12 +768,14 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTe
 bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
                                    HashTable<int32_t, mco_StayTest> *out_tests)
 {
+    bool success = true;
+
     for (const char *filename: filenames) {
         CompressionType compression_type;
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
         bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
-                                          HashTable<int32_t, mco_StayTest> *out_tests);
+                                              HashTable<int32_t, mco_StayTest> *out_tests);
         if (extension == ".dspak") {
             load_func = &mco_StaySetBuilder::LoadPack;
         } else if (extension == ".grp" || extension == ".rss") {
@@ -783,17 +785,19 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
-            return false;
+            success = false;
+            continue;
         }
 
         StreamReader st(filename, compression_type);
-        if (st.error)
-            return false;
-        if (!(this->*load_func)(st, out_tests))
-            return false;
+        if (st.error) {
+            success = false;
+            continue;
+        }
+        success &= (this->*load_func)(st, out_tests);
     }
 
-    return true;
+    return success;
 }
 
 bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
