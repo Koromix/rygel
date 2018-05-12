@@ -1043,13 +1043,10 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
 const mco_TableIndex *mco_TableSet::FindIndex(Date date) const
 {
-    if (date.value) {
-        for (Size i = indexes.len; i-- > 0;) {
-            if (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])
-                return &indexes[i];
-        }
-    } else if (indexes.len) {
-        return &indexes[indexes.len - 1];
+    for (Size i = indexes.len; i-- > 0;) {
+        if (indexes[i].valid && (!date.value ||
+                                 (date >= indexes[i].limit_dates[0] && date < indexes[i].limit_dates[1])))
+            return &indexes[i];
     }
     return nullptr;
 }
@@ -1234,6 +1231,9 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 template <typename... Args>
 void mco_TableSetBuilder::HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args)
 {
+    if (!main_table)
+        return;
+
     TableLoadInfo *secondary_tables[] = {secondary_args...};
     for (TableLoadInfo *secondary_table: secondary_tables) {
         if (secondary_table && !secondary_table->loaded) {
@@ -1258,32 +1258,6 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
     index.limit_dates[0] = start_date;
     index.limit_dates[1] = end_date;
-
-#define CHECK_PIECE(TableType) \
-            do { \
-                if (!current_tables[(int)(TableType)]) { \
-                    pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
-                } \
-            } while (false)
-
-    // FIXME: Validate all tables (some were not always needed)
-    {
-        LocalArray<FmtArg, ARRAY_SIZE(mco_TableTypeNames)> pieces;
-
-        CHECK_PIECE(mco_TableType::GhmDecisionTree);
-        CHECK_PIECE(mco_TableType::DiagnosisTable);
-        CHECK_PIECE(mco_TableType::ProcedureTable);
-        CHECK_PIECE(mco_TableType::GhmRootTable);
-        CHECK_PIECE(mco_TableType::GhmToGhsTable);
-
-        if (pieces.len) {
-            LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
-                     pieces);
-            return true;
-        }
-    }
-
-#undef CHECK_PIECE
 
     // Some tables are used to modify existing tables (e.g. procedure extensions from
     // ccamdesc.tab are added to the ProcedureInfo table). Two consequences:
@@ -1349,7 +1323,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
                     mco_ProcedureInfo *proc_info =
                         (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
-                    if (proc_info) {
+                    if (LIKELY(proc_info)) {
                         do {
                             if (proc_info->phase == ext_info.phase) {
                                 proc_info->extensions |= (uint16_t)(1u << ext_info.extension);
@@ -1421,6 +1395,30 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     }
 
     if (active_count) {
+#define CHECK_PIECE(TableType) \
+            do { \
+                if (!current_tables[(int)(TableType)]) { \
+                    pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
+                } \
+            } while (false)
+
+        // FIXME: Validate all tables (some were not always needed)
+        LocalArray<FmtArg, ARRAY_SIZE(mco_TableTypeNames)> pieces;
+
+        CHECK_PIECE(mco_TableType::GhmDecisionTree);
+        CHECK_PIECE(mco_TableType::DiagnosisTable);
+        CHECK_PIECE(mco_TableType::ProcedureTable);
+        CHECK_PIECE(mco_TableType::GhmRootTable);
+        CHECK_PIECE(mco_TableType::GhmToGhsTable);
+
+#undef CHECK_PIECE
+
+        index.valid = !pieces.len;
+        if (pieces.len) {
+            LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
+                     pieces);
+        }
+
         set.indexes.Append(index);
     }
 

@@ -14,6 +14,7 @@ R"(Common options:
                                  (default: <executable_dir>%/resources)
         --table-dir <dir>        Add table directory
                                  (default: <resource_dir>%/tables)
+        --table-file <path>      Add table file
         --auth-file <path>       Set authorization file
                                  (default: <resource_dir>%/config/authorizations.json)
 
@@ -22,10 +23,12 @@ R"(Common options:
 
 extern HeapArray<const char *> mco_resource_directories;
 extern HeapArray<const char *> mco_table_directories;
+extern HeapArray<const char *> mco_table_filenames;
 extern const char *mco_authorization_filename;
 
 bool mco_InitTableSet(Span<const char *const> resource_directories,
                       Span<const char *const> table_directories,
+                      Span<const char *const> table_filenames,
                       mco_TableSet *out_set);
 bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
                               const char *authorization_filename,

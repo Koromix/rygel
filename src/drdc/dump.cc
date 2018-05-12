@@ -249,7 +249,8 @@ void mco_DumpTableSetHeaders(const mco_TableSet &table_set)
 
     PrintLn("Index:");
     for (const mco_TableIndex &index: table_set.indexes) {
-        PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+        PrintLn("  %1 to %2%3:", index.limit_dates[0], index.limit_dates[1],
+                                 index.valid ? "" : " (incomplete)");
         for (const mco_TableInfo *table: index.tables) {
             if (!table)
                 continue;
@@ -266,7 +267,8 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
 {
     PrintLn("Content:");
     for (const mco_TableIndex &index: table_set.indexes) {
-        PrintLn("  %1 to %2:", index.limit_dates[0], index.limit_dates[1]);
+        PrintLn("  %1 to %2%3:", index.limit_dates[0], index.limit_dates[1],
+                                 index.valid ? "" : " (incomplete)");
         // We don't really need to loop here, but we want the switch to get
         // warnings when we introduce new table types.
         for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {

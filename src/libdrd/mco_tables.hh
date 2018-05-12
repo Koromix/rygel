@@ -270,6 +270,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
 struct mco_TableIndex {
     Date limit_dates[2];
+    bool valid;
 
     const mco_TableInfo *tables[ARRAY_SIZE(mco_TableTypeNames)];
     uint32_t changed_tables;

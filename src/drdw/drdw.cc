@@ -583,16 +583,19 @@ Options:
     LogInfo("Computing constraints");
     Async async;
     for (Size i = 0; i < drdw_table_set->indexes.len; i++) {
-
-        // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-        if (drdw_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree)) {
-            HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = drdw_constraints_set.AppendDefault();
-            async.AddTask([=]() {
-                return mco_ComputeGhmConstraints(drdw_table_set->indexes[i], constraints);
-            });
+        if (drdw_table_set->indexes[i].valid) {
+            // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
+            if (drdw_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
+                    !drdw_index_to_constraints[drdw_index_to_constraints.len - 1]) {
+                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = drdw_constraints_set.AppendDefault();
+                async.AddTask([=]() {
+                    return mco_ComputeGhmConstraints(drdw_table_set->indexes[i], constraints);
+                });
+            }
+            drdw_index_to_constraints.Append(&drdw_constraints_set[drdw_constraints_set.len - 1]);
+        } else {
+            drdw_index_to_constraints.Append(nullptr);
         }
-
-        drdw_index_to_constraints.Append(&drdw_constraints_set[drdw_constraints_set.len - 1]);
     }
     if (!async.Sync())
         return 1;

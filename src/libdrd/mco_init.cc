@@ -7,10 +7,12 @@
 
 HeapArray<const char *> mco_resource_directories;
 HeapArray<const char *> mco_table_directories;
+HeapArray<const char *> mco_table_filenames;
 const char *mco_authorization_filename;
 
 bool mco_InitTableSet(Span<const char *const> resource_directories,
                       Span<const char *const> table_directories,
+                      Span<const char *const> table_filenames,
                       mco_TableSet *out_set)
 {
     LinkedAllocator temp_alloc;
@@ -31,6 +33,7 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
             success &= EnumerateDirectoryFiles(dir, "*.tab*", &temp_alloc, &filenames2, 1024);
             success &= EnumerateDirectoryFiles(dir, "*.dpri*", &temp_alloc, &filenames2, 1024);
         }
+        filenames2.Append(table_filenames);
         if (!success)
             return false;
     }
@@ -90,7 +93,8 @@ const mco_TableSet *mco_GetMainTableSet()
     static bool loaded = false;
 
     if (!loaded) {
-        if (!mco_InitTableSet(mco_resource_directories, mco_table_directories, &table_set))
+        if (!mco_InitTableSet(mco_resource_directories, mco_table_directories,
+                              mco_table_filenames, &table_set))
             return nullptr;
         loaded = true;
     }
@@ -136,6 +140,12 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
             return false;
 
         mco_table_directories.Append(opt_parser.current_value);
+        return true;
+    } else if (opt_parser.TestOption("--table-file")) {
+        if (!opt_parser.RequireValue(usage_func))
+            return false;
+
+        mco_table_filenames.Append(opt_parser.current_value);
         return true;
     } else if (opt_parser.TestOption("--auth-file")) {
         if (!opt_parser.RequireValue(usage_func))
