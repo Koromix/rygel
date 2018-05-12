@@ -9,8 +9,8 @@
 
 struct mco_Authorization {
     UnitCode unit;
-    Date dates[2];
     int8_t type;
+    Date dates[2];
 
     HASH_TABLE_HANDLER(mco_Authorization, unit);
 };
@@ -18,12 +18,13 @@ struct mco_Authorization {
 struct mco_AuthorizationSet {
     HeapArray<mco_Authorization> authorizations;
     HashTable<UnitCode, const mco_Authorization *> authorizations_map;
+    HeapArray<mco_Authorization> facility_authorizations;
 
     Span<const mco_Authorization> FindUnit(UnitCode unit) const;
     const mco_Authorization *FindUnit(UnitCode unit, Date date) const;
 
     int8_t GetAuthorizationType(UnitCode unit, Date date) const;
-    bool TestAuthorization(UnitCode unit, Date date, int8_t authorization) const;
+    bool TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const;
 };
 
 bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set);

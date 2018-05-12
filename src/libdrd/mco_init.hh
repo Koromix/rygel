@@ -16,7 +16,7 @@ R"(Common options:
                                  (default: <resource_dir>%/tables)
         --table_file <path>      Add table file
         --auth_file <path>       Set authorization file
-                                 (default: <resource_dir>%/config/authorizations.json)
+                                 (default: <resource_dir>%/config/authorizations.ini)
 
     -O, --output <path>          Dump information to file
                                  (default: stdout))";

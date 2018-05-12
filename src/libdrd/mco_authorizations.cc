@@ -7,134 +7,80 @@
 #include "mco_authorizations.hh"
 #include "mco_tables.hh"
 
-class JsonAuthorizationHandler: public BaseJsonHandler<JsonAuthorizationHandler> {
-    enum class State {
-        Default,
-        AuthArray,
-        AuthObject
-    };
-
-    State state = State::Default;
-
-    mco_Authorization auth = {};
-
-public:
-    HeapArray<mco_Authorization> *out_authorizations;
-
-    JsonAuthorizationHandler(HeapArray<mco_Authorization> *out_authorizations = nullptr)
-        : out_authorizations(out_authorizations) {}
-
-    bool Branch(JsonBranchType type, const char *)
-    {
-        switch (state) {
-            case State::Default: {
-                switch (type) {
-                    case JsonBranchType::Array: { state = State::AuthArray; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::AuthArray: {
-                switch (type) {
-                    case JsonBranchType::Object: { state = State::AuthObject; } break;
-                    case JsonBranchType::EndArray: { state = State::Default; } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-
-            case State::AuthObject: {
-                switch (type) {
-                    case JsonBranchType::EndObject: {
-                        if (!auth.dates[1].value) {
-                            static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
-                            auth.dates[1] = default_end_date;
-                        }
-
-                        out_authorizations->Append(auth);
-                        auth = {};
-
-                        state = State::AuthArray;
-                    } break;
-                    default: { return UnexpectedBranch(type); } break;
-                }
-            } break;
-        }
-
-        return true;
-    }
-
-    bool Value(const char *key, const JsonValue &value)
-    {
-        if (state == State::AuthObject) {
-            if (TestStr(key, "authorization")) {
-                if (value.type == JsonValue::Type::Int) {
-                    if (value.u.i >= 0 && value.u.i < 100) {
-                        auth.type = (int8_t)value.u.i;
-                    } else {
-                        LogError("Invalid authorization type %1", value.u.i);
-                    }
-                } else if (value.type == JsonValue::Type::String) {
-                    int8_t type;
-                    if (sscanf(value.u.str.ptr, "%" SCNd8, &type) == 1 &&
-                            type >= 0 && type < 100) {
-                        auth.type = type;
-                    } else {
-                        LogError("Invalid authorization type '%1'", value.u.str);
-                    }
-                } else {
-                    UnexpectedType(value.type);
-                }
-            } else if (TestStr(key, "begin_date")) {
-                SetDate(value, &auth.dates[0]);
-            } else if (TestStr(key, "end_date")) {
-                SetDate(value, &auth.dates[1]);
-            } else if (TestStr(key, "unit")) {
-                if (value.type == JsonValue::Type::Int) {
-                    if (value.u.i >= 0 && value.u.i < 10000) {
-                        auth.unit.number = (int16_t)value.u.i;
-                    } else {
-                        LogError("Invalid unit code %1", value.u.i);
-                    }
-                } else if (value.type == JsonValue::Type::String) {
-                    int16_t unit;
-                    if (TestStr(value.u.str, "facility")) {
-                        auth.unit.number = INT16_MAX;
-                    } else if (sscanf(value.u.str.ptr, "%" SCNd16, &unit) == 1 &&
-                               unit >= 0 && unit < 10000) {
-                        auth.unit.number = unit;
-                    } else {
-                        LogError("Invalid unit code '%1'", value.u.str);
-                    }
-                } else {
-                    UnexpectedType(value.type);
-                }
-            } else {
-                return UnknownAttribute(key);
-            }
-        } else {
-            return UnexpectedValue();
-        }
-
-        return true;
-    }
-};
-
 bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set)
 {
-    DEFER_NC(out_guard, len = out_set->authorizations.len)
-        { out_set->authorizations.RemoveFrom(len); };
+    Size authorizations_len = out_set->authorizations.len;
+    DEFER_NC(out_guard, facility_authorizations_len = out_set->facility_authorizations.len) {
+        out_set->authorizations.RemoveFrom(authorizations_len);
+        out_set->facility_authorizations.RemoveFrom(facility_authorizations_len);
+    };
 
+    // Parse
     {
         StreamReader st(filename);
         if (st.error)
             return false;
 
-        JsonAuthorizationHandler json_handler(&out_set->authorizations);
-        if (!LoadJson(st, &json_handler))
+        IniParser ini(&st);
+        ini.reader.PushLogHandler();
+        DEFER { PopLogHandler(); };
+
+        IniProperty prop;
+        bool valid = true;
+        mco_Authorization *auth = nullptr;
+        while (ini.Next(&prop)) {
+            if (prop.flags & (int)IniProperty::Flag::NewSection) {
+                if (prop.section == "Facility") {
+                    auth = out_set->facility_authorizations.AppendDefault();
+                    *auth = {};
+                    auth->unit.number = INT16_MAX;
+                } else {
+                    auth = out_set->authorizations.AppendDefault();
+                    *auth = {};
+                    // FIXME: Use UnitCode::FromString() instead
+                    valid &= ParseDec(prop.section, &auth->unit.number);
+                    if (auth->unit.number > 9999) {
+                        LogError("Invalid Unit number %1", auth->unit.number);
+                        valid = false;
+                    }
+                }
+            }
+
+            if (prop.key == "Authorization") {
+                valid &= ParseDec(prop.value, &auth->type, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+            } else if (prop.key == "Date") {
+                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
+
+                auth->dates[0] = Date::FromString(prop.value);
+                auth->dates[1] = default_end_date;
+                valid &= !!auth->dates[0].value;
+            } else {
+                LogError("Unknown attribute '%1'", prop.key);
+                valid = false;
+            }
+        }
+        if (ini.error || !valid)
             return false;
+
+        // FIXME: Avoid incomplete authorizations (date errors can even crash)
     }
 
-    for (const mco_Authorization &auth: out_set->authorizations) {
+    Span<mco_Authorization> authorizations =
+        out_set->authorizations.Take(authorizations_len, out_set->authorizations.len - authorizations_len);
+
+    std::sort(authorizations.begin(), authorizations.end(),
+              [](const mco_Authorization &auth1, const mco_Authorization &auth2) {
+        return MultiCmp(auth1.unit.number - auth2.unit.number,
+                        auth1.dates[0] - auth2.dates[0]) < 0;
+    });
+
+    // Fix end dates and map
+    for (Size i = 0; i < out_set->authorizations.len; i++) {
+        const mco_Authorization &auth = authorizations[i];
+
+        if (i && authorizations[i - 1].unit == auth.unit) {
+            authorizations[i - 1].dates[1] = auth.dates[0];
+        }
         out_set->authorizations_map.Append(&auth);
     }
 
@@ -191,14 +137,12 @@ int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) cons
     }
 }
 
-bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t authorization) const
+bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const
 {
-    if (GetAuthorizationType(unit, date) == authorization)
+    if (GetAuthorizationType(unit, date) == auth_type)
         return true;
-
-    Span<const mco_Authorization> facility_auths = FindUnit(UnitCode(INT16_MAX));
-    for (const mco_Authorization &auth: facility_auths) {
-        if (auth.type == authorization && date >= auth.dates[0] && date < auth.dates[1])
+    for (const mco_Authorization &auth: facility_authorizations) {
+        if (auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1])
             return true;
     }
 

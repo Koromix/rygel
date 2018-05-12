@@ -67,7 +67,7 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
             for (Size i = resource_directories.len; i-- > 0;) {
                 const char *resource_dir = resource_directories[i];
 
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config/authorizations.json",
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config/authorizations.ini",
                                                 resource_dir).ptr;
                 if (TestPath(test_filename, FileType::File)) {
                     filename = test_filename;
