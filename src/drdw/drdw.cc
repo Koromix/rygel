@@ -500,7 +500,7 @@ R"(Usage: drdw [options]
 Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
-        --desc-dir <dir>         Add descriptions directory
+        --desc_dir <dir>         Add descriptions directory
                                  (default: <resource_dir>%/desc)
 
     -s, --stays <path>           Add stays to casemix
@@ -542,7 +542,7 @@ Options:
                     return 1;
                 }
                 port = (uint16_t)new_port;
-            } else if (TestOption(opt, "--desc-dir")) {
+            } else if (TestOption(opt, "--desc_dir")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 

@@ -129,25 +129,25 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
             return false;
         }
         return true;
-    } else if (opt_parser.TestOption("-D", "--resource-dir")) {
+    } else if (opt_parser.TestOption("-D", "--resource_dir")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_resource_directories.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("--table-dir")) {
+    } else if (opt_parser.TestOption("--table_dir")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_table_directories.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("--table-file")) {
+    } else if (opt_parser.TestOption("--table_file")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_table_filenames.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("--auth-file")) {
+    } else if (opt_parser.TestOption("--auth_file")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
