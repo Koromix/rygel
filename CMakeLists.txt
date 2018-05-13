@@ -20,7 +20,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     foreach(lang C CXX)
         set(CMAKE_${lang}_FLAGS_DEBUG "-O0 -g")
         set(CMAKE_${lang}_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
-        set(CMAKE_${lang}_FLAGS_RELEASE "-O2 -DNDEBUG")
+        set(CMAKE_${lang}_FLAGS_RELEASE "-O2 -DNDEBUG -flto")
     endforeach()
 
     if(MINGW)
