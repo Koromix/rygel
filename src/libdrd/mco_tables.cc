@@ -1067,9 +1067,10 @@ bool mco_TableSetBuilder::LoadTab(StreamReader &st)
         if (set.tables[i].type == mco_TableType::UnknownTable)
             continue;
 
-        TableLoadInfo load_info = {};
+        TableLoadInfo load_info;
         load_info.table_idx = i;
         load_info.raw_data = raw_data;
+        load_info.prev_index_idx = -1;
         table_loads.Append(load_info);
     }
 
@@ -1123,12 +1124,13 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
         }
     }
 
-    load_info.raw_data = raw_buf.Leak();
     load_info.table_idx = set.tables.len;
-    table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
-
-    set.tables.Append(table_info);
+    load_info.raw_data = raw_buf.Leak();
+    load_info.prev_index_idx = -1;
     table_loads.Append(load_info);
+
+    table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
+    set.tables.Append(table_info);
 
     return true;
 }
@@ -1179,8 +1181,16 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
                         table_info1.build_date - table_info2.build_date) < 0;
     });
 
-    TableLoadInfo *active_tables[ARRAY_SIZE(mco_TableTypeNames)] = {};
-    Date start_date = {}, end_date = {};
+    TableLoadInfo *active_tables[ARRAY_SIZE(mco_TableTypeNames)];
+    TableLoadInfo dummy_loads[ARRAY_SIZE(mco_TableTypeNames)];
+    for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
+        dummy_loads[i].table_idx = -1;
+        dummy_loads[i].prev_index_idx = -1;
+        active_tables[i] = &dummy_loads[i];
+    }
+
+    Date start_date = {};
+    Date end_date = {};
     for (TableLoadInfo &load_info: table_loads) {
         const mco_TableInfo &table_info = set.tables[load_info.table_idx];
 
@@ -1190,13 +1200,13 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
             start_date = {};
             Date next_end_date = {};
             for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
-                if (!active_tables[i])
+                if (active_tables[i]->table_idx < 0)
                     continue;
 
                 const mco_TableInfo &active_info = set.tables[active_tables[i]->table_idx];
 
                 if (active_info.limit_dates[1] == end_date) {
-                    active_tables[i] = nullptr;
+                    active_tables[i] = &dummy_loads[i];
                 } else if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
                     next_end_date = active_info.limit_dates[1];
                 }
@@ -1229,27 +1239,6 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     return true;
 }
 
-template <typename... Args>
-void mco_TableSetBuilder::HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args)
-{
-    if (!main_table)
-        return;
-
-    TableLoadInfo *secondary_tables[] = {secondary_args...};
-    for (TableLoadInfo *secondary_table: secondary_tables) {
-        if (secondary_table && !secondary_table->loaded) {
-            main_table->loaded = false;
-        }
-    }
-    if (!main_table->loaded) {
-        for (TableLoadInfo *secondary_table: secondary_tables) {
-            if (secondary_table) {
-                secondary_table->loaded = false;
-            }
-        }
-    }
-}
-
 bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                       mco_TableSetBuilder::TableLoadInfo *current_tables[])
 {
@@ -1269,119 +1258,127 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
-            if (!load_info->loaded) { \
+            if (load_info->prev_index_idx < 0) { \
                 auto array = set.store.MemberName.AppendDefault(); \
-                success &= LoadFunc(__VA_ARGS__, array); \
+                if (table_info) { \
+                    success &= LoadFunc(__VA_ARGS__, array); \
+                } \
                 index.MemberName = *array; \
-                index.changed_tables |= (uint32_t)(1 << i); \
             } else { \
-                index.MemberName = set.indexes[set.indexes.len - 1].MemberName; \
+                index.MemberName = set.indexes[load_info->prev_index_idx].MemberName; \
             } \
         } while (false)
 #define BUILD_MAP(IndexName, MapPtrName, MapName) \
-            do { \
-                if (!load_info->loaded) { \
-                    auto map = set.maps.MapName.AppendDefault(); \
-                    for (auto &value: index.IndexName) { \
-                        map->Append(&value); \
-                    } \
-                    index.MapPtrName = map; \
-                } else { \
-                    index.MapPtrName = &set.maps.MapName[set.maps.MapName.len - 1]; \
+        do { \
+            if (load_info->prev_index_idx < 0) { \
+                auto map = set.maps.MapName.AppendDefault(); \
+                for (auto &value: index.IndexName) { \
+                    map->Append(&value); \
                 } \
-            } while (false)
+                index.MapPtrName = map; \
+            } else { \
+                index.MapPtrName = set.indexes[load_info->prev_index_idx].MapPtrName; \
+            } \
+        } while (false)
 
-    Size active_count = 0;
+    // Load tables and build index
     for (Size i = 0; i < ARRAY_SIZE(index.tables); i++) {
-        if (!current_tables[i])
-            continue;
-
         TableLoadInfo *load_info = current_tables[i];
-        const mco_TableInfo &table_info = set.tables[load_info->table_idx];
+        const mco_TableInfo *table_info = (load_info->table_idx >= 0) ?
+                                          &set.tables[load_info->table_idx] : nullptr;
 
         switch ((mco_TableType)i) {
             case mco_TableType::GhmDecisionTree: {
-                LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree,
+                           load_info->raw_data.ptr, *table_info);
             } break;
 
             case mco_TableType::DiagnosisTable: {
-                LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable, load_info->raw_data.ptr, table_info);
-                LOAD_TABLE(exclusions, mco_ParseExclusionTable, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable,
+                           load_info->raw_data.ptr, *table_info);
+                LOAD_TABLE(exclusions, mco_ParseExclusionTable,
+                           load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(diagnoses, diagnoses_map, diagnoses);
             } break;
 
             case mco_TableType::ProcedureTable: {
-                LOAD_TABLE(procedures, mco_ParseProcedureTable, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(procedures, mco_ParseProcedureTable,
+                           load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(procedures, procedures_map, procedures);
             } break;
             case mco_TableType::ProcedureExtensionTable: {
                 StaticAssert((int)mco_TableType::ProcedureExtensionTable > (int)mco_TableType::ProcedureTable);
 
-                HeapArray<mco_ProcedureExtensionInfo> extensions;
-                success &= mco_ParseProcedureExtensionTable(load_info->raw_data.ptr, table_info,
-                                                            &extensions);
+                if (table_info) {
+                    HeapArray<mco_ProcedureExtensionInfo> extensions;
+                    success &= mco_ParseProcedureExtensionTable(load_info->raw_data.ptr,
+                                                                *table_info, &extensions);
 
-                for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
-                    mco_ProcedureInfo *proc_info =
-                        (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
-                    if (LIKELY(proc_info)) {
-                        do {
-                            if (proc_info->phase == ext_info.phase) {
-                                proc_info->extensions |= (uint16_t)(1u << ext_info.extension);
-                            }
-                        } while (++proc_info < index.procedures.end() &&
-                                 proc_info->proc == ext_info.proc);
+                    for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
+                        mco_ProcedureInfo *proc_info =
+                            (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
+                        if (LIKELY(proc_info)) {
+                            do {
+                                if (proc_info->phase == ext_info.phase) {
+                                    proc_info->extensions |= (uint16_t)(1u << ext_info.extension);
+                                }
+                            } while (++proc_info < index.procedures.end() &&
+                                     proc_info->proc == ext_info.proc);
+                        }
                     }
                 }
             } break;
 
             case mco_TableType::GhmRootTable: {
-                LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable,
+                           load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots);
             } break;
 
             case mco_TableType::SeverityTable: {
                 LOAD_TABLE(gnn_cells, mco_ParseSeverityTable,
-                           load_info->raw_data.ptr, table_info, 0);
+                           load_info->raw_data.ptr, *table_info, 0);
                 LOAD_TABLE(cma_cells[0], mco_ParseSeverityTable,
-                           load_info->raw_data.ptr, table_info, 1);
+                           load_info->raw_data.ptr, *table_info, 1);
                 LOAD_TABLE(cma_cells[1], mco_ParseSeverityTable,
-                           load_info->raw_data.ptr, table_info, 2);
+                           load_info->raw_data.ptr, *table_info, 2);
                 LOAD_TABLE(cma_cells[2], mco_ParseSeverityTable,
-                           load_info->raw_data.ptr, table_info, 3);
+                           load_info->raw_data.ptr, *table_info, 3);
             } break;
 
             case mco_TableType::GhmToGhsTable: {
-                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->raw_data.ptr, table_info);
+                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs);
                 BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs);
             } break;
 
             case mco_TableType::AuthorizationTable: {
                 LOAD_TABLE(authorizations, mco_ParseAuthorizationTable,
-                           load_info->raw_data.ptr, table_info);
+                           load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(authorizations, authorizations_map, authorizations);
             } break;
 
             case mco_TableType::SrcPairTable: {
                 LOAD_TABLE(src_pairs[0], mco_ParseSrcPairTable,
-                           load_info->raw_data.ptr, table_info, 0);
+                           load_info->raw_data.ptr, *table_info, 0);
                 LOAD_TABLE(src_pairs[1], mco_ParseSrcPairTable,
-                           load_info->raw_data.ptr, table_info, 1);
+                           load_info->raw_data.ptr, *table_info, 1);
             } break;
 
             case mco_TableType::PriceTablePublic:
             case mco_TableType::PriceTablePrivate: {
                 Size table_idx = i - (int)mco_TableType::PriceTablePublic;
-                if (!load_info->loaded) {
-                    auto array = set.store.ghs_prices[table_idx].AppendDefault();
-                    success &= mco_ParsePriceTable(load_info->raw_data, table_info, array,
-                                                   &index.supplement_prices[table_idx]);
-                    index.ghs_prices[table_idx] = *array;
-                    index.changed_tables |= (uint32_t)(1 << i);
-                } else {
-                    index.ghs_prices[table_idx] = set.indexes[set.indexes.len - 1].ghs_prices[table_idx];
-                    index.supplement_prices[table_idx] = set.indexes[set.indexes.len - 1].supplement_prices[table_idx];
+
+                if (table_info) {
+                    if (load_info->prev_index_idx < 0) {
+                        auto array = set.store.ghs_prices[table_idx].AppendDefault();
+                        success &= mco_ParsePriceTable(load_info->raw_data, *table_info, array,
+                                                       &index.supplement_prices[table_idx]);
+                        index.ghs_prices[table_idx] = *array;
+                    } else {
+                        index.ghs_prices[table_idx] = set.indexes[load_info->prev_index_idx].ghs_prices[table_idx];
+                        index.supplement_prices[table_idx] = set.indexes[load_info->prev_index_idx].supplement_prices[table_idx];
+                    }
                 }
 
                 BUILD_MAP(ghs_prices[table_idx], ghs_prices_map[table_idx], ghs_prices[table_idx]);
@@ -1389,16 +1386,20 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
             case mco_TableType::UnknownTable: {} break;
         }
-        load_info->loaded = true;
-        index.tables[i] = &table_info;
 
-        active_count++;
+        if (!set.indexes.len || load_info->prev_index_idx != set.indexes.len - 1) {
+            index.changed_tables |= (uint32_t)(1 << i);
+        }
+
+        load_info->prev_index_idx = set.indexes.len;
+        index.tables[i] = table_info;
     }
 
-    if (active_count) {
+    // Check index validity
+    {
 #define CHECK_PIECE(TableType) \
             do { \
-                if (!current_tables[(int)(TableType)]) { \
+                if (!index.tables[(int)(TableType)]) { \
                     pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
                 } \
             } while (false)
@@ -1427,6 +1428,32 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 #undef LOAD_TABLE
 
     return success;
+}
+
+template <typename... Args>
+void mco_TableSetBuilder::HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args)
+{
+    TableLoadInfo *secondary_tables[] = {secondary_args...};
+
+    if (main_table) {
+        for (TableLoadInfo *secondary_table: secondary_tables) {
+            if (secondary_table->table_idx >= 0 && secondary_table->prev_index_idx < 0) {
+                main_table->prev_index_idx = -1;
+            }
+        }
+
+        if (main_table->prev_index_idx < 0) {
+            for (TableLoadInfo *secondary_table: secondary_tables) {
+                if (secondary_table->table_idx >= 0) {
+                    secondary_table->prev_index_idx = -1;
+                }
+            }
+        }
+    } else {
+        for (TableLoadInfo *secondary_table: secondary_tables) {
+            secondary_table->table_idx = -1;
+        }
+    }
 }
 
 template <typename T, typename U, typename Handler>
