@@ -1103,6 +1103,9 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
             if (prop.key == "Date") {
                 table_info.limit_dates[0] = Date::FromString(prop.value);
                 valid &= !!table_info.limit_dates[0].value;
+            } else if (prop.key == "End") {
+                table_info.limit_dates[1] = Date::FromString(prop.value);
+                valid &= !!table_info.limit_dates[1].value;
             } else if (prop.key == "Build") {
                 Date build_date = Date::FromString(prop.value);
                 valid &= build_date.IsValid();
