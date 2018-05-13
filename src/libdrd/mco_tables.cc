@@ -163,18 +163,6 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
             table.filename = DuplicateString(str_alloc, filename).ptr;
         }
 
-        // Parse header information
-        sscanf(raw_main_header.date, "%2" SCNd8 "%2" SCNd8 "%4" SCNd16,
-               &table.build_date.st.day, &table.build_date.st.month,
-               &table.build_date.st.year);
-        table.build_date.st.year = (int16_t)(table.build_date.st.year + 2000);
-        FAIL_PARSE_IF(filename, !table.build_date.IsValid());
-        sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
-               &table.version[0], &table.version[1]);
-        table.limit_dates[0] = mco_ConvertDate1980(raw_table_ptr.date_range[0]);
-        table.limit_dates[1] = mco_ConvertDate1980(raw_table_ptr.date_range[1]);
-        FAIL_PARSE_IF(filename, table.limit_dates[1] <= table.limit_dates[0]);
-
         // Table type
         strncpy(table.raw_type, raw_table_header.name, SIZE(raw_table_header.name));
         table.raw_type[SIZE(table.raw_type) - 1] = '\0';
@@ -200,6 +188,26 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
         } else {
             table.type = mco_TableType::UnknownTable;
         }
+
+        // Other metadata
+        sscanf(raw_main_header.date, "%2" SCNd8 "%2" SCNd8 "%4" SCNd16,
+               &table.build_date.st.day, &table.build_date.st.month,
+               &table.build_date.st.year);
+        table.build_date.st.year = (int16_t)(table.build_date.st.year + 2000);
+        FAIL_PARSE_IF(filename, !table.build_date.IsValid());
+        sscanf(raw_table_header.version, "%2" SCNd16 "%2" SCNd16,
+               &table.version[0], &table.version[1]);
+        table.limit_dates[0] = mco_ConvertDate1980(raw_table_ptr.date_range[0]);
+        if (table.type == mco_TableType::GhmDecisionTree &&
+                raw_table_ptr.date_range[1] == UINT16_MAX) {
+            // Most tab files use UINT16_MAX, but it's dangerous because it means we can
+            // continue to use old tables forever without warning. Don't obey for key table,
+            // but not all of them because a few remain in use for several versions.
+            table.limit_dates[1] = Date((int16_t)(table.limit_dates[0].st.year + 1), 3, 1);
+        } else {
+            table.limit_dates[1] = mco_ConvertDate1980(raw_table_ptr.date_range[1]);
+        }
+        FAIL_PARSE_IF(filename, table.limit_dates[1] <= table.limit_dates[0]);
 
         // Parse table sections
         table.sections.len = raw_table_header.sections_count;
@@ -1093,10 +1101,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
         bool valid = true;
         while (ini.Next(&prop) && !prop.section.len) {
             if (prop.key == "Date") {
-                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
-
                 table_info.limit_dates[0] = Date::FromString(prop.value);
-                table_info.limit_dates[1] = default_end_date;
                 valid &= !!table_info.limit_dates[0].value;
             } else if (prop.key == "Build") {
                 Date build_date = Date::FromString(prop.value);
@@ -1118,9 +1123,13 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
         if (ini.error || !valid)
             return false;
 
-        if (!table_info.limit_dates[1].value || !(int)table_info.type) {
+        if (!table_info.limit_dates[0].value || !(int)table_info.type) {
             LogError("Missing mandatory header attributes");
             return false;
+        }
+        if (!table_info.limit_dates[1].value) {
+            table_info.limit_dates[1] =
+                Date((int16_t)(table_info.limit_dates[0].st.year + 1), 3, 1);
         }
     }
 
@@ -1402,22 +1411,23 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     }
 
     // Check index validity
+    // FIXME: Validate all tables (some were not always needed)
     {
-#define CHECK_PIECE(TableType) \
+        LocalArray<FmtArg, ARRAY_SIZE(mco_TableTypeNames)> pieces;
+
+#define CHECK_PIECE(Test, TableType) \
             do { \
-                if (!index.tables[(int)(TableType)]) { \
+                if (!(Test)) { \
                     pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
                 } \
             } while (false)
 
-        // FIXME: Validate all tables (some were not always needed)
-        LocalArray<FmtArg, ARRAY_SIZE(mco_TableTypeNames)> pieces;
-
-        CHECK_PIECE(mco_TableType::GhmDecisionTree);
-        CHECK_PIECE(mco_TableType::DiagnosisTable);
-        CHECK_PIECE(mco_TableType::ProcedureTable);
-        CHECK_PIECE(mco_TableType::GhmRootTable);
-        CHECK_PIECE(mco_TableType::GhmToGhsTable);
+        // Hard errors, check lengths to avoid problems with existing but empty tables
+        CHECK_PIECE(index.ghm_nodes.len, mco_TableType::GhmDecisionTree);
+        CHECK_PIECE(index.diagnoses.len, mco_TableType::DiagnosisTable);
+        CHECK_PIECE(index.procedures.len, mco_TableType::ProcedureTable);
+        CHECK_PIECE(index.ghm_roots.len, mco_TableType::GhmRootTable);
+        CHECK_PIECE(index.ghs.len, mco_TableType::GhmToGhsTable);
 
 #undef CHECK_PIECE
 
@@ -1425,6 +1435,11 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         if (pieces.len) {
             LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
                      pieces);
+        } else {
+            // Warnings
+            if (!index.ghs_prices[0].len || !index.ghs_prices[1].len) {
+                LogError("Missing prices from %1 to %2", start_date, end_date);
+            }
         }
 
         set.indexes.Append(index);
