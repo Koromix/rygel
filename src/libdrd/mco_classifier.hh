@@ -28,23 +28,35 @@ struct mco_Aggregate {
         ChildbirthType = 1 << 2
     };
 
-    Span<const mco_Stay> stays;
+    struct StayInfo {
+        const mco_Stay *stay;
+        int duration;
+
+        const mco_DiagnosisInfo *main_diag_info;
+        const mco_DiagnosisInfo *linked_diag_info;
+        Span<const mco_DiagnosisInfo *> diagnoses;
+
+        Span<const mco_ProcedureInfo *> procedures;
+        uint8_t proc_activities;
+    };
 
     const mco_TableIndex *index;
 
+    Span<const mco_Stay> stays;
     mco_Stay stay;
-    const mco_DiagnosisInfo *main_diag_info;
-    const mco_DiagnosisInfo *linked_diag_info;
-    HeapArray<const mco_DiagnosisInfo *> diagnoses;
-    HeapArray<const mco_ProcedureInfo *> procedures;
-    uint8_t proc_activities;
+
+    StayInfo info;
+    HeapArray<StayInfo> stays_info;
+    const StayInfo *main_stay_info;
 
     uint16_t flags;
     int age;
     int age_days;
-    int duration;
 
-    const mco_Stay *main_stay;
+    struct {
+        HeapArray<const mco_DiagnosisInfo *> diagnoses;
+        HeapArray<const mco_ProcedureInfo *> procedures;
+    } store;
 };
 
 struct mco_ErrorSet {

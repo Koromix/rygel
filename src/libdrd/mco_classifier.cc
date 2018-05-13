@@ -27,15 +27,6 @@ static inline uint8_t GetDiagnosisByte(int8_t sex, const mco_DiagnosisInfo &diag
     Assert(byte_idx < SIZE(mco_DiagnosisInfo::attributes[0].raw));
     return diag_info.Attributes(sex).raw[byte_idx];
 }
-static inline uint8_t GetDiagnosisByte(const mco_TableIndex &index, int8_t sex,
-                                       DiagnosisCode diag, uint8_t byte_idx)
-{
-    const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
-    if (UNLIKELY(!diag_info))
-        return 0;
-
-    return GetDiagnosisByte(sex, *diag_info, byte_idx);
-}
 
 static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info, ListMask mask)
 {
@@ -47,31 +38,11 @@ static inline bool TestDiagnosis(int8_t sex, const mco_DiagnosisInfo &diag_info,
 {
     return GetDiagnosisByte(sex, diag_info, offset) & value;
 }
-static inline bool TestDiagnosis(const mco_TableIndex &index, int8_t sex,
-                                 DiagnosisCode diag, ListMask mask)
-{
-    DebugAssert(mask.offset >= 0 && mask.offset <= UINT8_MAX);
-    return GetDiagnosisByte(index, sex, diag, (uint8_t)mask.offset) & mask.value;
-}
-static inline bool TestDiagnosis(const mco_TableIndex &index, int8_t sex,
-                                 DiagnosisCode diag, uint8_t offset, uint8_t value)
-{
-    return GetDiagnosisByte(index, sex, diag, offset) & value;
-}
 
 static inline uint8_t GetProcedureByte(const mco_ProcedureInfo &proc_info, int16_t byte_idx)
 {
     Assert(byte_idx >= 0 && byte_idx < SIZE(mco_ProcedureInfo::bytes));
     return proc_info.bytes[byte_idx];
-}
-static inline uint8_t GetProcedureByte(const mco_TableIndex &index, Date exit_date,
-                                       const mco_ProcedureRealisation &proc, int16_t byte_idx)
-{
-    const mco_ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase, exit_date);
-    if (UNLIKELY(!proc_info))
-        return 0;
-
-    return GetProcedureByte(*proc_info, byte_idx);
 }
 
 static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, ListMask mask)
@@ -81,16 +52,6 @@ static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, ListMask ma
 static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t offset, uint8_t value)
 {
     return GetProcedureByte(proc_info, offset) & value;
-}
-static inline bool TestProcedure(const mco_TableIndex &index, Date exit_date,
-                                 const mco_ProcedureRealisation &proc, ListMask mask)
-{
-    return GetProcedureByte(index, exit_date, proc, mask.offset) & mask.value;
-}
-static inline bool TestProcedure(const mco_TableIndex &index, Date exit_date,
-                                 const mco_ProcedureRealisation &proc, int16_t offset, uint8_t value)
-{
-    return GetProcedureByte(index, exit_date, proc, offset) & value;
 }
 
 Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> *out_remainder)
@@ -109,35 +70,31 @@ Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> 
     return stays.Take(0, agg_len);
 }
 
-static const mco_Stay *FindMainStay(const mco_TableIndex &index, Span<const mco_Stay> stays,
-                                    int duration)
+static const mco_Aggregate::StayInfo *FindMainStay(Span<const mco_Aggregate::StayInfo> stays,
+                                                   int duration)
 {
     DebugAssert(duration >= 0);
 
     int max_duration = -1;
-    const mco_Stay *zx_stay = nullptr;
+    const mco_Aggregate::StayInfo *zx_stay_info = nullptr;
     int zx_duration = -1;
     int proc_priority = 0;
-    const mco_Stay *trauma_stay = nullptr;
-    const mco_Stay *last_trauma_stay = nullptr;
+    const mco_Aggregate::StayInfo *trauma_stay_info = nullptr;
+    const mco_Aggregate::StayInfo *last_trauma_stay_info = nullptr;
     bool ignore_trauma = false;
-    const mco_Stay *score_stay = nullptr;
+    const mco_Aggregate::StayInfo *score_stay_info = nullptr;
     int base_score = 0;
     int min_score = INT_MAX;
 
-    for (const mco_Stay &stay: stays) {
-        int stay_duration = stay.exit.date - stay.entry.date;
+    for (const mco_Aggregate::StayInfo &stay_info: stays) {
+        const mco_Stay &stay = *stay_info.stay;
+
         int stay_score = base_score;
 
         proc_priority = 0;
-        for (const mco_ProcedureRealisation &proc: stay.procedures) {
-            const mco_ProcedureInfo *proc_info =
-                index.FindProcedure(proc.proc, proc.phase, stay.exit.date);
-            if (UNLIKELY(!proc_info))
-                continue;
-
+        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
             if (proc_info->bytes[0] & 0x80 && !(proc_info->bytes[23] & 0x80))
-                return &stay;
+                return &stay_info;
 
             if (proc_priority < 3 && proc_info->bytes[38] & 0x2) {
                 proc_priority = 3;
@@ -155,57 +112,57 @@ static const mco_Stay *FindMainStay(const mco_TableIndex &index, Span<const mco_
             stay_score -= 9999;
         }
 
-        if (stay_duration > zx_duration && stay_duration >= max_duration) {
+        if (stay_info.duration > zx_duration && stay_info.duration >= max_duration) {
             if (stay.main_diagnosis.Matches("Z515") ||
                     stay.main_diagnosis.Matches("Z502") ||
                     stay.main_diagnosis.Matches("Z503")) {
-                zx_stay = &stay;
-                zx_duration = stay_duration;
+                zx_stay_info = &stay_info;
+                zx_duration = stay_info.duration;
             } else {
-                zx_stay = nullptr;
+                zx_stay_info = nullptr;
             }
         }
 
         if (!ignore_trauma) {
-            if (TestDiagnosis(index, stay.sex, stay.main_diagnosis, 21, 0x4)) {
-                last_trauma_stay = &stay;
-                if (stay_duration > max_duration) {
-                    trauma_stay = &stay;
+            if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x4) {
+                last_trauma_stay_info = &stay_info;
+                if (stay_info.duration > max_duration) {
+                    trauma_stay_info = &stay_info;
                 }
             } else {
                 ignore_trauma = true;
             }
         }
 
-        if (TestDiagnosis(index, stay.sex, stay.main_diagnosis, 21, 0x20)) {
+        if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x20) {
             stay_score += 150;
-        } else if (stay_duration >= 2) {
+        } else if (stay_info.duration >= 2) {
             base_score += 100;
         }
-        if (stay_duration == 0) {
+        if (stay_info.duration == 0) {
             stay_score += 2;
-        } else if (stay_duration == 1) {
+        } else if (stay_info.duration == 1) {
             stay_score++;
         }
-        if (TestDiagnosis(index, stay.sex, stay.main_diagnosis, 21, 0x2)) {
+        if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x2) {
             stay_score += 201;
         }
 
         if (stay_score < min_score) {
-            score_stay = &stay;
+            score_stay_info = &stay_info;
             min_score = stay_score;
         }
 
-        if (stay_duration > max_duration) {
-            max_duration = stay_duration;
+        if (stay_info.duration > max_duration) {
+            max_duration = stay_info.duration;
         }
     }
 
-    if (zx_stay)
-        return zx_stay;
-    if (last_trauma_stay >= score_stay)
-        return trauma_stay;
-    return score_stay;
+    if (zx_stay_info)
+        return zx_stay_info;
+    if (last_trauma_stay_info >= score_stay_info)
+        return trauma_stay_info;
+    return score_stay_info;
 }
 
 static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
@@ -319,27 +276,21 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
         0, 90, 93, 92, 91
     };
 
-    for (const mco_Stay &stay: out_agg->stays) {
-        // Main diagnosis is valid (checks are done in CheckMainError)
-        const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
-        if (LIKELY(diag_info)) {
-            out_agg->diagnoses.Append(diag_info);
-            valid &= CheckDiagnosisErrors(*out_agg, *diag_info, main_diagnosis_errors, out_errors);
-        } else {
-            valid &= SetError(out_errors, 67);
+    // We cannot allow the HeapArray to move
+    {
+        Size diagnoses_count = 0;
+        for (const mco_Stay &stay: out_agg->stays) {
+            diagnoses_count += stay.diagnoses.len;
         }
 
-        if (stay.linked_diagnosis.IsValid()) {
-            const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
-            if (LIKELY(diag_info)) {
-                out_agg->diagnoses.Append(diag_info);
-                valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
-                                              linked_diagnosis_errors, out_errors);
-            } else {
-                valid &= SetError(out_errors, 94);
-            }
-        }
+        out_agg->store.diagnoses.Clear(512);
+        out_agg->store.diagnoses.Grow(2 * diagnoses_count);
+    }
 
+    for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
+        const mco_Stay &stay = *stay_info.stay;
+
+        stay_info.diagnoses.ptr = out_agg->store.diagnoses.end();
         for (DiagnosisCode diag: stay.diagnoses) {
             if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
                 continue;
@@ -355,19 +306,51 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
 
             const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
             if (LIKELY(diag_info)) {
-                out_agg->diagnoses.Append(diag_info);
+                out_agg->store.diagnoses.Append(diag_info);
+                stay_info.diagnoses.len++;
+
                 valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
                                               associate_diagnosis_errors, out_errors);
             } else {
                 valid &= SetError(out_errors, 70);
             }
         }
+
+        // Main diagnosis is valid (checks are done in CheckMainError)
+        stay_info.main_diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
+        if (LIKELY(stay_info.main_diag_info)) {
+            out_agg->store.diagnoses.Append(stay_info.main_diag_info);
+            stay_info.diagnoses.len++;
+
+            valid &= CheckDiagnosisErrors(*out_agg, *stay_info.main_diag_info,
+                                          main_diagnosis_errors, out_errors);
+        } else {
+            valid &= SetError(out_errors, 67);
+        }
+
+        if (stay.linked_diagnosis.IsValid()) {
+            stay_info.linked_diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
+            if (LIKELY(stay_info.linked_diag_info)) {
+                out_agg->store.diagnoses.Append(stay_info.linked_diag_info);
+                stay_info.diagnoses.len++;
+
+                valid &= CheckDiagnosisErrors(*out_agg, *stay_info.linked_diag_info,
+                                              linked_diagnosis_errors, out_errors);
+            } else {
+                valid &= SetError(out_errors, 94);
+            }
+        }
     }
 
     // Deduplicate diagnoses
-    std::sort(out_agg->diagnoses.begin(), out_agg->diagnoses.end());
-    if (out_agg->diagnoses.len) {
-        Span<const mco_DiagnosisInfo *> diagnoses = out_agg->diagnoses;
+    if (out_agg->store.diagnoses.len) {
+        Span<const mco_DiagnosisInfo *> diagnoses = MakeSpan(out_agg->store.diagnoses.end(),
+                                                             out_agg->store.diagnoses.len);
+        memcpy(diagnoses.ptr, out_agg->store.diagnoses.ptr,
+               (size_t)out_agg->store.diagnoses.len * SIZE(*out_agg->store.diagnoses.ptr));
+        out_agg->store.diagnoses.len *= 2;
+
+        std::sort(diagnoses.begin(), diagnoses.end());
 
         Size j = 0;
         for (Size i = 1; i < diagnoses.len; i++) {
@@ -375,7 +358,10 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
                 diagnoses[++j] = diagnoses[i];
             }
         }
-        out_agg->diagnoses.RemoveFrom(j + 1);
+
+        out_agg->info.diagnoses = diagnoses.Take(0, j + 1);
+    } else {
+        out_agg->info.diagnoses = {};
     }
 
     return valid;
@@ -386,8 +372,21 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
 {
     bool valid = true;
 
-    out_agg->proc_activities = 0;
-    for (const mco_Stay &stay: out_agg->stays) {
+    // We cannot allow the HeapArray to move
+    {
+        Size procedures_count = 0;
+        for (const mco_Stay &stay: out_agg->stays) {
+            procedures_count += stay.procedures.len;
+        }
+
+        out_agg->store.procedures.Clear(1024);
+        out_agg->store.procedures.Grow(2 * procedures_count);
+    }
+
+    for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
+        const mco_Stay &stay = *stay_info.stay;
+
+        stay_info.procedures.ptr = out_agg->store.procedures.end();
         for (const mco_ProcedureRealisation &proc: stay.procedures) {
             if (UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
@@ -471,8 +470,10 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
-                out_agg->procedures.Append(proc_info);
-                out_agg->proc_activities |= proc.activities;
+                out_agg->store.procedures.Append(proc_info);
+                stay_info.procedures.len++;
+                stay_info.proc_activities |= proc.activities;
+                out_agg->info.proc_activities |= proc.activities;
             } else {
                 Span <const mco_ProcedureInfo> compatible_procs =
                     out_agg->index->FindProcedure(proc.proc);
@@ -498,9 +499,14 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // Deduplicate procedures
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
-    std::sort(out_agg->procedures.begin(), out_agg->procedures.end());
-    if (out_agg->procedures.len) {
-        Span<const mco_ProcedureInfo *> procedures = out_agg->procedures;
+    if (out_agg->store.procedures.len) {
+        Span<const mco_ProcedureInfo *> procedures = MakeSpan(out_agg->store.procedures.end(),
+                                                              out_agg->store.procedures.len);
+        memcpy(procedures.ptr, out_agg->store.procedures.ptr,
+               (size_t)out_agg->store.procedures.len * SIZE(*out_agg->store.procedures.ptr));
+        out_agg->store.procedures.len *= 2;
+
+        std::sort(procedures.begin(), procedures.end());
 
         Size j = 0;
         for (Size i = 0; i < procedures.len; i++) {
@@ -515,7 +521,10 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                 procedures[++j] = procedures[i];
             }
         }
-        out_agg->procedures.RemoveFrom(j + 1);
+
+        out_agg->info.procedures = procedures.Take(0, j + 1);
+    } else {
+        out_agg->info.procedures = {};
     }
 
     return valid;
@@ -683,7 +692,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
         if (UNLIKELY(agg.stay.exit.mode != agg.stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
             SetError(out_errors, 35);
-        } else if (UNLIKELY(agg.duration > 1)) {
+        } else if (UNLIKELY(agg.info.duration > 1)) {
             valid &= SetError(out_errors, 50);
         }
     } else {
@@ -841,9 +850,9 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
     }
 
     // Sessions
-    if (TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis, 8, 0x2)) {
-        if (UNLIKELY(!agg.duration && !agg.stay.session_count)) {
-            bool tolerate = std::any_of(agg.procedures.begin(), agg.procedures.end(),
+    if (agg.info.main_diag_info->Attributes(agg.stay.sex).raw[8] & 0x2) {
+        if (UNLIKELY(!agg.info.duration && !agg.stay.session_count)) {
+            bool tolerate = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
                 return (proc_info->bytes[44] & 0x40);
             });
@@ -852,7 +861,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
                 // official classifier does not actually enforce it.
                 SetError(out_errors, 145, 0);
             }
-        } else if (UNLIKELY(agg.stay.session_count > agg.duration + 1)) {
+        } else if (UNLIKELY(agg.stay.session_count > agg.info.duration + 1)) {
             SetError(out_errors, 146, -1);
         }
     }
@@ -926,7 +935,6 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     out_agg->stay = stays[0];
     out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
     out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
-    out_agg->duration = 0;
     out_agg->flags = 0;
     for (const mco_Stay &stay: stays) {
         if (stay.gestational_age > 0) {
@@ -938,7 +946,6 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
         if (stay.igs2 > out_agg->stay.igs2) {
             out_agg->stay.igs2 = stay.igs2;
         }
-        out_agg->duration += stay.exit.date - stay.entry.date;
     }
     out_agg->stay.exit = stays[stays.len - 1].exit;
     out_agg->stay.flags = 0;
@@ -948,35 +955,51 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
     out_agg->stay.diagnoses = {};
     out_agg->stay.procedures = {};
 
+    // Prepare cache
+    out_agg->info = {};
+    out_agg->info.stay = &out_agg->stay;
+    out_agg->stays_info.Clear(64);
+    for (const mco_Stay &stay: stays) {
+        mco_Aggregate::StayInfo info = {};
+
+        info.stay = &stay;
+        info.duration = stay.exit.date - stay.entry.date;
+        out_agg->info.duration += info.duration;
+
+        out_agg->stays_info.Append(info);
+    }
+
     bool valid = true;
 
     // Aggregate diagnoses and procedures
-    out_agg->diagnoses.Clear(256);
-    out_agg->procedures.Clear(512);
     valid &= AppendValidDiagnoses(out_agg, flags, out_errors);
     valid &= AppendValidProcedures(out_agg, flags, out_errors);
 
     // Pick main stay
-    if (stays.len > 1) {
-        out_agg->main_stay = FindMainStay(*out_agg->index, stays, out_agg->duration);
+    {
+        const mco_Aggregate::StayInfo *main_stay_info;
+        if (stays.len > 1) {
+            main_stay_info = FindMainStay(out_agg->stays_info, out_agg->info.duration);
 
-        out_agg->stay.main_diagnosis = out_agg->main_stay->main_diagnosis;
-        out_agg->stay.linked_diagnosis = out_agg->main_stay->linked_diagnosis;
-    } else {
-        out_agg->main_stay = &stays[0];
+            out_agg->stay.main_diagnosis = main_stay_info->main_diag_info->diag;
+            if (main_stay_info->linked_diag_info) {
+                out_agg->stay.linked_diagnosis = main_stay_info->linked_diag_info->diag;
+            } else {
+                out_agg->stay.linked_diagnosis = {};
+            }
+        } else {
+            main_stay_info = &out_agg->stays_info[0];
+        }
+
+        out_agg->main_stay_info = main_stay_info;
+        out_agg->info.main_diag_info = main_stay_info->main_diag_info;
+        out_agg->info.linked_diag_info = main_stay_info->linked_diag_info;
     }
 
     // Check remaining stay errors
     valid &= CheckAggregateErrors(*out_agg, out_errors);
     if (UNLIKELY(!valid))
         return mco_GhmCode::FromString("90Z00Z");
-
-    out_agg->main_diag_info = out_agg->index->FindDiagnosis(out_agg->stay.main_diagnosis);
-    if (out_agg->stay.linked_diagnosis.IsValid()) {
-        out_agg->linked_diag_info = out_agg->index->FindDiagnosis(out_agg->stay.linked_diagnosis);
-    } else {
-        out_agg->linked_diag_info = nullptr;
-    }
 
     return {};
 }
@@ -1006,7 +1029,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 2: {
-            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->info.procedures) {
                 if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
@@ -1029,7 +1052,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 if (diag_info == ctx.main_diag_info || diag_info == ctx.linked_diag_info)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
@@ -1040,7 +1063,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 7: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
@@ -1050,8 +1073,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 9: {
             int result = 0;
-            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
-                if (TestProcedure(*proc_info, 0, 0x80)) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->info.procedures) {
+                if (proc_info->bytes[0] & 0x80) {
                     if (TestProcedure(*proc_info,
                                       ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                         result = 1;
@@ -1065,7 +1088,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 10: {
             Size matches = 0;
-            for (const mco_ProcedureInfo *proc_info: ctx.agg->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.agg->info.procedures) {
                 if (TestProcedure(*proc_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                     matches++;
@@ -1088,7 +1111,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 18: {
             Size matches = 0, special_matches = 0;
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
                     matches++;
@@ -1125,12 +1148,16 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 22: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.agg->duration < param);
+            return (ctx.agg->info.duration < param);
         } break;
 
         case 26: {
-            return TestDiagnosis(*ctx.agg->index, ctx.agg->stay.sex, ctx.agg->stay.linked_diagnosis,
-                                 ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            if (ctx.agg->info.linked_diag_info) {
+                return TestDiagnosis(ctx.agg->stay.sex, *ctx.linked_diag_info,
+                                     ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
+            } else {
+                return 0;
+            }
         } break;
 
         case 28: {
@@ -1140,7 +1167,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 29: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.agg->duration == param);
+            return (ctx.agg->info.duration == param);
         } break;
 
         case 30: {
@@ -1149,12 +1176,11 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 33: {
-            return !!(ctx.agg->proc_activities & (1 << ghm_node.u.test.params[0]));
+            return !!(ctx.agg->info.proc_activities & (1 << ghm_node.u.test.params[0]));
         } break;
 
         case 34: {
-            if (ctx.linked_diag_info &&
-                    ctx.linked_diag_info->diag == ctx.agg->stay.linked_diagnosis) {
+            if (ctx.linked_diag_info && ctx.linked_diag_info == ctx.agg->info.linked_diag_info) {
                 uint8_t cmd = ctx.linked_diag_info->Attributes(ctx.agg->stay.sex).cmd;
                 uint8_t jump = ctx.linked_diag_info->Attributes(ctx.agg->stay.sex).jump;
                 if (cmd || jump != 3) {
@@ -1166,11 +1192,11 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 35: {
-            return (ctx.main_diag_info->diag != ctx.agg->stay.main_diagnosis);
+            return (ctx.main_diag_info != ctx.agg->info.main_diag_info);
         } break;
 
         case 36: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 if (diag_info == ctx.linked_diag_info)
                     continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
@@ -1205,7 +1231,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 41: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
                 uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
@@ -1221,7 +1247,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 43: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.agg->diagnoses) {
+            for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
                 if (diag_info == ctx.linked_diag_info)
                     continue;
 
@@ -1245,9 +1271,9 @@ static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
     bool valid = true;
 
     bool confirm = false;
-    if (UNLIKELY(agg.duration >= 365)) {
+    if (UNLIKELY(agg.info.duration >= 365)) {
         confirm = true;
-    } else if (agg.duration < ghm_root_info.confirm_duration_treshold &&
+    } else if (agg.info.duration < ghm_root_info.confirm_duration_treshold &&
                agg.stay.exit.mode != '9' && agg.stay.exit.mode != '0' &&
                (agg.stay.exit.mode != '7' || agg.stay.exit.destination != '1')) {
         confirm = true;
@@ -1295,7 +1321,7 @@ static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
     if (agg.stay.flags & (int)mco_Stay::Flag::Confirmed) {
         if (confirm) {
             SetError(out_errors, 223, 0);
-        } else if (agg.duration >= ghm_root_info.confirm_duration_treshold) {
+        } else if (agg.info.duration >= ghm_root_info.confirm_duration_treshold) {
             valid &= SetError(out_errors, 124);
         }
     } else if (confirm) {
@@ -1335,7 +1361,7 @@ static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorS
     {
         static mco_GhmRootCode ghm_root_14Z08 = mco_GhmRootCode::FromString("14Z08");
         if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
-            bool type_present = std::any_of(agg.procedures.begin(), agg.procedures.end(),
+            bool type_present = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
                                             [](const mco_ProcedureInfo *proc_info) {
                 static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
                 static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
@@ -1357,8 +1383,8 @@ static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, mco_ErrorSet *out_errors
 
     RunGhmTreeContext ctx = {};
     ctx.agg = &agg;
-    ctx.main_diag_info = agg.main_diag_info;
-    ctx.linked_diag_info = agg.linked_diag_info;
+    ctx.main_diag_info = agg.info.main_diag_info;
+    ctx.linked_diag_info = agg.info.linked_diag_info;
 
     Size ghm_node_idx = 0;
     for (Size i = 0; !ghm.IsValid(); i++) {
@@ -1439,10 +1465,10 @@ static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, mco_GhmCode ghm,
                                   const mco_GhmRootInfo &ghm_root_info)
 {
     // Ambulatory and / or short duration GHM
-    if (ghm_root_info.allow_ambulatory && agg.duration == 0) {
+    if (ghm_root_info.allow_ambulatory && agg.info.duration == 0) {
         ghm.parts.mode = 'J';
     } else if (ghm_root_info.short_duration_treshold &&
-               agg.duration < ghm_root_info.short_duration_treshold) {
+               agg.info.duration < ghm_root_info.short_duration_treshold) {
         ghm.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
@@ -1458,20 +1484,23 @@ static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, mco_GhmCode ghm,
             }
         }
 
-        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, agg.duration));
+        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, agg.info.duration));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
-        for (const mco_DiagnosisInfo *diag_info: agg.diagnoses) {
+        for (const mco_DiagnosisInfo *diag_info: agg.info.diagnoses) {
             if (diag_info->diag == agg.stay.main_diagnosis ||
                     diag_info->diag == agg.stay.linked_diagnosis)
                 continue;
 
             // We wouldn't have gotten here if main_diagnosis was missing from the index
             int new_severity = diag_info->Attributes(agg.stay.sex).severity;
-            if (new_severity > severity && !TestExclusion(agg, ghm_root_info, *diag_info,
-                                                          *agg.main_diag_info, agg.linked_diag_info)) {
-                severity = new_severity;
+            if (new_severity > severity) {
+                bool excluded = TestExclusion(agg, ghm_root_info, *diag_info,
+                                              *agg.info.main_diag_info, agg.info.linked_diag_info);
+                if (!excluded) {
+                    severity = new_severity;
+                }
             }
         }
 
@@ -1485,7 +1514,7 @@ static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, mco_GhmCode ghm,
             severity = 1;
         }
 
-        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, agg.duration));
+        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, agg.info.duration));
     }
 
     return ghm;
@@ -1525,21 +1554,17 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
     if (ghm_to_ghs_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
-        for (const mco_Stay &stay: agg.stays) {
-            if (authorization_set.TestAuthorization(stay.unit, stay.exit.date,
-                                                   ghm_to_ghs_info.unit_authorization)) {
-                if (stay.exit.date != stay.entry.date) {
-                    duration += stay.exit.date - stay.entry.date;
-                } else {
-                    duration++;
-                }
+        for (const mco_Aggregate::StayInfo &stay_info: agg.stays_info) {
+            if (authorization_set.TestAuthorization(stay_info.stay->unit, stay_info.stay->exit.date,
+                                                    ghm_to_ghs_info.unit_authorization)) {
+                duration += std::max(1, stay_info.duration);
                 authorized = true;
             }
         }
         if (!authorized)
             return false;
     } else {
-        duration = agg.duration;
+        duration = agg.info.duration;
     }
     if (ghm_to_ghs_info.bed_authorization) {
         bool test = std::any_of(agg.stays.begin(), agg.stays.end(),
@@ -1553,12 +1578,12 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
         return false;
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {
-        if (!TestDiagnosis(*agg.index, agg.stay.sex, agg.stay.main_diagnosis,
+        if (!TestDiagnosis(agg.stay.sex, *agg.info.main_diag_info,
                            ghm_to_ghs_info.main_diagnosis_mask))
             return false;
     }
     if (ghm_to_ghs_info.diagnosis_mask.value) {
-        bool test = std::any_of(agg.diagnoses.begin(), agg.diagnoses.end(),
+        bool test = std::any_of(agg.info.diagnoses.begin(), agg.info.diagnoses.end(),
                                 [&](const mco_DiagnosisInfo *diag_info) {
             return TestDiagnosis(agg.stay.sex, *diag_info, ghm_to_ghs_info.diagnosis_mask);
         });
@@ -1566,7 +1591,7 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
             return false;
     }
     for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-        bool test = std::any_of(agg.procedures.begin(), agg.procedures.end(),
+        bool test = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
                                 [&](const mco_ProcedureInfo *proc_info) {
             return TestProcedure(*proc_info, mask);
         });
@@ -1584,7 +1609,7 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
         return mco_GhsCode(9999);
 
     // Deal with UHCD-only stays
-    if (agg.duration > 0 && agg.stays[0].entry.mode == '8' &&
+    if (agg.info.duration > 0 && agg.stays[0].entry.mode == '8' &&
             agg.stays[agg.stays.len - 1].exit.mode == '8') {
         bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
                                 [&](const mco_Stay &stay) {
@@ -1596,7 +1621,7 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
             mco_Aggregate agg0;
             memcpy(&agg0, &agg, SIZE(agg0));
             DEFER { memset(&agg0, 0, SIZE(agg0)); };
-            agg0.duration = 0;
+            agg0.info.duration = 0;
 
             // Don't run ClassifyGhm() because that would test the confirmation flag,
             // which makes no sense when duration is forced to 0.
@@ -1617,15 +1642,15 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
     return mco_GhsCode(9999);
 }
 
-static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Stay &stay,
+static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
                               Size list2_treshold)
 {
-    if (stay.igs2 >= 15 || agg.age < 18) {
+    if (stay_info.stay->igs2 >= 15 || agg.age < 18) {
         Size list2_matches = 0;
-        for (const mco_ProcedureRealisation &proc: stay.procedures) {
-            if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x10))
+        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+            if (proc_info->bytes[27] & 0x10)
                 return true;
-            if (TestProcedure(*agg.index, stay.exit.date, proc, 27, 0x8)) {
+            if (proc_info->bytes[27] & 0x8) {
                 list2_matches++;
                 if (list2_matches >= list2_treshold)
                     return true;
@@ -1636,24 +1661,24 @@ static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Stay &stay,
     return false;
 }
 
-static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Stay &stay,
+static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
                               int16_t igs2_src_adjust, bool prev_reanimation)
 {
     if (prev_reanimation)
         return true;
-    if (agg.age >= 18 && stay.igs2 - igs2_src_adjust >= 15)
+    if (agg.age >= 18 && stay_info.stay->igs2 - igs2_src_adjust >= 15)
         return true;
 
     HeapArray<ProcedureCode> src_procedures;
 
-    if (stay.igs2 - igs2_src_adjust >= 7 || agg.age < 18) {
-        for (DiagnosisCode diag: stay.diagnoses) {
-            if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 21, 0x10))
+    if (stay_info.stay->igs2 - igs2_src_adjust >= 7 || agg.age < 18) {
+        for (const mco_DiagnosisInfo *diag_info: stay_info.diagnoses) {
+            if (diag_info->Attributes(agg.stay.sex).raw[21] & 0x10)
                 return true;
-            if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 21, 0x8)) {
+            if (diag_info->Attributes(agg.stay.sex).raw[21] & 0x8) {
                 // TODO: HashSet for SrcPair on diagnoses to accelerate this
                 for (const mco_SrcPair &pair: agg.index->src_pairs[0]) {
-                    if (pair.diag == diag) {
+                    if (pair.diag == diag_info->diag) {
                         src_procedures.Append(pair.proc);
                     }
                 }
@@ -1661,32 +1686,32 @@ static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Stay &stay,
         }
     }
     if (agg.age < 18) {
-        for (DiagnosisCode diag: stay.diagnoses) {
-            if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 22, 0x80))
+        for (const mco_DiagnosisInfo *diag_info: stay_info.diagnoses) {
+            if (diag_info->Attributes(agg.stay.sex).raw[22] & 0x80)
                 return true;
-            if (TestDiagnosis(*agg.index, agg.stay.sex, diag, 22, 0x40)) {
+            if (diag_info->Attributes(agg.stay.sex).raw[22] & 0x40) {
                 for (const mco_SrcPair &pair: agg.index->src_pairs[1]) {
-                    if (pair.diag == diag) {
+                    if (pair.diag == diag_info->diag) {
                         src_procedures.Append(pair.proc);
                     }
                 }
             }
         }
     }
-    for (const mco_ProcedureRealisation &proc: stay.procedures) {
+    for (const mco_ProcedureRealisation &proc: stay_info.stay->procedures) {
         for (ProcedureCode diag_proc: src_procedures) {
             if (diag_proc == proc.proc)
                 return true;
         }
     }
 
-    for (const mco_ProcedureRealisation &proc: stay.procedures) {
-        if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
+    for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+        if (proc_info->bytes[38] & 0x1)
             return true;
     }
-    if (&stay > &agg.stays[0]) {
-        for (const mco_ProcedureRealisation &proc: (&stay - 1)->procedures) {
-            if (TestProcedure(*agg.index, stay.exit.date, proc, 38, 0x1))
+    if (&stay_info > &agg.stays_info[0]) {
+        for (const mco_ProcedureInfo *proc_info: (&stay_info - 1)->procedures) {
+            if (proc_info->bytes[38] & 0x1)
                 return true;
         }
     }
@@ -1721,8 +1746,9 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     int ambu_priority = 0;
     int16_t *ambu_counter = nullptr;
 
-    for (const mco_Stay &stay: agg.stays) {
-        int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
+    for (const mco_Aggregate::StayInfo &stay_info: agg.stays_info) {
+        int8_t auth_type = authorization_set.GetAuthorizationType(stay_info.stay->unit,
+                                                                  stay_info.stay->exit.date);
         const mco_AuthorizationInfo *auth_info = agg.index->FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
         if (!auth_info)
             continue;
@@ -1748,7 +1774,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
             case 3: {
                 if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
-                    if (TestSupplementRea(agg, stay, 1)) {
+                    if (TestSupplementRea(agg, stay_info, 1)) {
                         counter = &out_counters->st.nn3;
                         priority = 6;
                         reanimation = true;
@@ -1760,7 +1786,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             } break;
 
             case 4: {
-                if (TestSupplementRea(agg, stay, 3)) {
+                if (TestSupplementRea(agg, stay_info, 3)) {
                     counter = &out_counters->st.rea;
                     priority = 7;
                     reanimation = true;
@@ -1771,7 +1797,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             } break;
 
             case 6: {
-                if (TestSupplementSrc(agg, stay, igs2_src_adjust, prev_reanimation)) {
+                if (TestSupplementSrc(agg, stay_info, igs2_src_adjust, prev_reanimation)) {
                     counter = &out_counters->st.src;
                     priority = 2;
                 }
@@ -1785,7 +1811,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             case 9: {
                 if (ghs != mco_GhsCode(5903)) {
                     if (agg.age < 18) {
-                        if (TestSupplementRea(agg, stay, 1)) {
+                        if (TestSupplementRea(agg, stay_info, 1)) {
                             counter = &out_counters->st.rep;
                             priority = 8;
                             reanimation = true;
@@ -1794,7 +1820,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
                             priority = 5;
                         }
                     } else {
-                        if (TestSupplementRea(agg, stay, 3)) {
+                        if (TestSupplementRea(agg, stay_info, 3)) {
                             counter = &out_counters->st.rea;
                             priority = 7;
                             reanimation = true;
@@ -1809,21 +1835,21 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
         prev_reanimation = reanimation;
 
-        if (stay.exit.date != stay.entry.date) {
+        if (stay_info.duration) {
             if (ambu_stay && ambu_priority >= priority) {
                 if (counter) {
-                    *counter = (int16_t)(*counter + (stay.exit.date - stay.entry.date) +
-                                         (stay.exit.mode == '9') - 1);
+                    *counter = (int16_t)(*counter + stay_info.duration +
+                                         (stay_info.stay->exit.mode == '9') - 1);
                 }
                 (*ambu_counter)++;
             } else if (counter) {
-                *counter = (int16_t)(*counter + (stay.exit.date - stay.entry.date) +
-                                     (stay.exit.mode == '9'));
+                *counter = (int16_t)(*counter + stay_info.duration +
+                                     (stay_info.stay->exit.mode == '9'));
             }
             ambu_stay = nullptr;
             ambu_priority = 0;
         } else if (priority > ambu_priority) {
-            ambu_stay = &stay;
+            ambu_stay = stay_info.stay;
             ambu_priority = priority;
             ambu_counter = counter;
         }
@@ -1862,7 +1888,7 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs)
         return 0;
     }
 
-    return mco_PriceGhs(*price_info, agg.duration, agg.stay.exit.mode == '9');
+    return mco_PriceGhs(*price_info, agg.info.duration, agg.stay.exit.mode == '9');
 }
 
 int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounters<int16_t> &days,
@@ -1893,16 +1919,15 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
         do {
             // Reset critical values
-            agg.duration = 0;
             errors.main_error = 0;
 
             result.stays = mco_Split(stays, &stays);
 
             result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
-            result.duration = agg.duration;
+            result.duration = agg.info.duration;
             if (UNLIKELY(result.ghm.IsError()))
                 break;
-            result.main_stay_idx = agg.main_stay - agg.stays.ptr;
+            result.main_stay_idx = agg.main_stay_info - agg.stays_info.ptr;
 
             result.ghm = mco_ClassifyGhm(agg, flags, &errors);
             if (UNLIKELY(result.ghm.IsError()))
