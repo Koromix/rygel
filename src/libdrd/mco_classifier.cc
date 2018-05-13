@@ -1958,7 +1958,7 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
                         mco_ClassifyRaw(table_set, authorization_set, task_stays, flags,
-                                    out_results->ptr + results_offset);
+                                        out_results->ptr + results_offset);
                         return true;
                     });
                     results_offset += task_size;
@@ -1970,7 +1970,7 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
         }
         async.AddTask([&, task_stays, results_offset]() mutable {
             mco_ClassifyRaw(table_set, authorization_set, task_stays, flags,
-                        out_results->ptr + results_offset);
+                            out_results->ptr + results_offset);
             return true;
         });
     }
