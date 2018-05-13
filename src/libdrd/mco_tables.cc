@@ -1441,13 +1441,12 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
             LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
                      pieces);
         }
-
-        set.indexes.Append(index);
     }
 
 #undef BUILD_MAP
 #undef LOAD_TABLE
 
+    set.indexes.Append(index);
     return success;
 }
 

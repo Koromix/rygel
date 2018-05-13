@@ -319,30 +319,30 @@ public:
     HeapArray<mco_TableIndex> indexes;
 
     struct {
-        HeapArray<HeapArray<mco_GhmDecisionNode>> ghm_nodes;
-        HeapArray<HeapArray<mco_DiagnosisInfo>> diagnoses;
-        HeapArray<HeapArray<mco_ExclusionInfo>> exclusions;
-        HeapArray<HeapArray<mco_ProcedureInfo>> procedures;
-        HeapArray<HeapArray<mco_GhmRootInfo>> ghm_roots;
-        HeapArray<HeapArray<mco_ValueRangeCell<2>>> gnn_cells;
-        HeapArray<HeapArray<mco_ValueRangeCell<2>>> cma_cells[3];
+        DynamicQueue<HeapArray<mco_GhmDecisionNode>, 16> ghm_nodes;
+        DynamicQueue<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
+        DynamicQueue<HeapArray<mco_ExclusionInfo>, 16> exclusions;
+        DynamicQueue<HeapArray<mco_ProcedureInfo>, 16> procedures;
+        DynamicQueue<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
+        DynamicQueue<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
+        DynamicQueue<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];
+        DynamicQueue<HeapArray<mco_GhmToGhsInfo>, 16> ghs;
+        DynamicQueue<HeapArray<mco_AuthorizationInfo>, 16> authorizations;
+        DynamicQueue<HeapArray<mco_SrcPair>, 16> src_pairs[2];
 
-        HeapArray<HeapArray<mco_GhmToGhsInfo>> ghs;
-        HeapArray<HeapArray<mco_GhsPriceInfo>> ghs_prices[2];
-        HeapArray<HeapArray<mco_AuthorizationInfo>> authorizations;
-        HeapArray<HeapArray<mco_SrcPair>> src_pairs[2];
+        DynamicQueue<HeapArray<mco_GhsPriceInfo>, 16> ghs_prices[2];
     } store;
 
     struct {
-        HeapArray<HashTable<DiagnosisCode, const mco_DiagnosisInfo *>> diagnoses;
-        HeapArray<HashTable<ProcedureCode, const mco_ProcedureInfo *>> procedures;
-        HeapArray<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>> ghm_roots;
+        DynamicQueue<HashTable<DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
+        DynamicQueue<HashTable<ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
+        DynamicQueue<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
+        DynamicQueue<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
+        DynamicQueue<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
+                               mco_GhmToGhsInfo::GhmRootHandler>, 16> ghm_root_to_ghs;
+        DynamicQueue<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
 
-        HeapArray<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>> ghm_to_ghs;
-        HeapArray<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *, mco_GhmToGhsInfo::GhmRootHandler>> ghm_root_to_ghs;
-        HeapArray<HashTable<int16_t, const mco_AuthorizationInfo *>> authorizations;
-
-        HeapArray<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>> ghs_prices[2];
+        DynamicQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;
 
     LinkedAllocator str_alloc;
