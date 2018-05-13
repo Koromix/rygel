@@ -40,10 +40,7 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
                 if (prop.key == "Authorization") {
                     valid &= ParseDec(prop.value, &auth.type, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 } else if (prop.key == "Date") {
-                    static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
-
                     auth.dates[0] = Date::FromString(prop.value);
-                    auth.dates[1] = default_end_date;
                     valid &= !!auth.dates[0].value;
                 } else if (prop.key == "End") {
                     auth.dates[1] = Date::FromString(prop.value);
@@ -57,6 +54,10 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
             if (!auth.unit.number || !auth.dates[0].value) {
                 LogError("Missing authorization attributes");
                 valid = false;
+            }
+            if (!auth.dates[1].value) {
+                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
+                auth.dates[1] = default_end_date;
             }
 
             authorizations->Append(auth);
