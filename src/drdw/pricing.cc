@@ -10,7 +10,7 @@ Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compress
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
         for (const mco_TableIndex &index: drdw_table_set->indexes) {
-            if (!index.valid || !index.tables[(int)mco_TableType::PriceTablePublic])
+            if (!index.valid)
                 continue;
 
             char buf[32];

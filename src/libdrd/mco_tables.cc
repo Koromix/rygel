@@ -1431,6 +1431,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         CHECK_PIECE(index.procedures.len, mco_TableType::ProcedureTable);
         CHECK_PIECE(index.ghm_roots.len, mco_TableType::GhmRootTable);
         CHECK_PIECE(index.ghs.len, mco_TableType::GhmToGhsTable);
+        CHECK_PIECE(index.ghs_prices[0].len && index.ghs_prices[1].len,
+                    mco_TableType::GhmToGhsTable);
 
 #undef CHECK_PIECE
 
@@ -1438,11 +1440,6 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         if (pieces.len) {
             LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
                      pieces);
-        } else {
-            // Warnings
-            if (!index.ghs_prices[0].len || !index.ghs_prices[1].len) {
-                LogError("Missing prices from %1 to %2", start_date, end_date);
-            }
         }
 
         set.indexes.Append(index);
