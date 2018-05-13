@@ -170,9 +170,15 @@ struct Span {
     constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
 };
 
+enum class CompressionType {
+    None,
+    Zlib,
+    Gzip
+};
+
 struct PackerAsset {
     const char *name;
-    int compression_type; // CompressionType
+    CompressionType compression_type;
     Span<const uint8_t> data;
 };
 
@@ -203,7 +209,7 @@ static PackerAsset assets[] = {)");
             name.len = filename.end() - name.ptr;
         }
 
-        PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}},",
+        PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
                 name, (int)compression_type, cumulative_len, lengths[i]);
         cumulative_len += lengths[i];
     }
