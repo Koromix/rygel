@@ -136,7 +136,23 @@ struct UnitCode {
     UnitCode() = default;
     explicit UnitCode(int16_t code) : number(code) {}
 
-    bool IsValid() const { return number; }
+    static UnitCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                  Span<const char> *out_remaining = nullptr)
+    {
+        UnitCode code = {};
+
+        if (!ParseDec(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
+                ((flags & (int)ParseFlag::Validate) && !code.IsValid())) {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Malformed Unit code '%1'", str);
+            }
+            code.number = 0;
+        }
+
+        return code;
+    }
+
+    bool IsValid() const { return number > 0 && number <= 9999; }
 
     bool operator==(const UnitCode &other) const { return number == other.number; }
     bool operator!=(const UnitCode &other) const { return number != other.number; }

@@ -31,12 +31,8 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
                 auth.unit.number = INT16_MAX;
                 authorizations = &out_set->facility_authorizations;
             } else {
-                // FIXME: Use UnitCode::FromString() instead
-                valid &= ParseDec(prop.section, &auth.unit.number);
-                if (auth.unit.number > 9999) {
-                    LogError("Invalid Unit number %1", auth.unit.number);
-                    valid = false;
-                }
+                auth.unit = UnitCode::FromString(prop.section);
+                valid &= auth.unit.IsValid();
                 authorizations = &out_set->authorizations;
             }
 
