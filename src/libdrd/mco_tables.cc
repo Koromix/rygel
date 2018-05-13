@@ -953,83 +953,84 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
     DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
     mco_SupplementCounters<int32_t> supplement_prices;
 
-    StreamReader st(file_data, table.filename);
-    if (st.error)
-        return false;
-
-    IniParser ini(&st);
-    ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
-
     {
-        mco_GhsPriceInfo *price_info = nullptr;
-        IniProperty prop;
+        StreamReader st(file_data, table.filename);
+        IniParser ini(&st);
         bool valid = true;
+
+        ini.reader.PushLogHandler();
+        DEFER { PopLogHandler(); };
+
+        IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len)
                 continue;
 
             if (prop.section == "Supplements") {
-                if (prop.key == "REA") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.rea);
-                } else if (prop.key == "STF") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.reasi);
-                    supplement_prices.st.si = supplement_prices.st.reasi;
-                } else if (prop.key == "SRC") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.src);
-                } else if (prop.key == "NN1") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.nn1);
-                } else if (prop.key == "NN2") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.nn2);
-                } else if (prop.key == "NN3") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.nn3);
-                } else if (prop.key == "REP") {
-                    valid &= ParseDec(prop.value, &supplement_prices.st.rep);
-                } else if (prop.key == "DIP" || prop.key == "RAP" || prop.key == "ANT" ||
-                           prop.key == "SDC" || prop.key == "TDE" || prop.key == "TSE") {
-                    // Unsupported (for now)
-                } else {
-                    LogError("Unknown supplement '%1'", prop.key);
-                    valid = false;
-                }
-            } else {
-                if (prop.flags & (int)IniProperty::Flag::NewSection) {
-                    mco_GhsCode ghs = mco_GhsCode::FromString(prop.section);
-                    if (ghs.IsValid()) {
-                        price_info = out_ghs_prices->AppendDefault();
-                        *price_info = {};
-                        price_info->ghs = ghs;
+                do {
+                    if (prop.key == "REA") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.rea);
+                    } else if (prop.key == "STF") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.reasi);
+                        supplement_prices.st.si = supplement_prices.st.reasi;
+                    } else if (prop.key == "SRC") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.src);
+                    } else if (prop.key == "NN1") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.nn1);
+                    } else if (prop.key == "NN2") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.nn2);
+                    } else if (prop.key == "NN3") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.nn3);
+                    } else if (prop.key == "REP") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.rep);
+                    } else if (prop.key == "DIP" || prop.key == "RAP" || prop.key == "ANT" ||
+                               prop.key == "SDC" || prop.key == "TDE" || prop.key == "TSE") {
+                        // Unsupported (for now)
                     } else {
-                        price_info = nullptr;
+                        LogError("Unknown supplement '%1'", prop.key);
                         valid = false;
                     }
-                }
+                } while (ini.NextInSection(&prop));
+            } else {
+                mco_GhsPriceInfo price_info = {};
 
-                if (LIKELY(price_info)) {
+                price_info.ghs = mco_GhsCode::FromString(prop.section);
+                valid &= price_info.ghs.IsValid();
+
+                do {
                     if (prop.key == "PriceCents") {
-                        valid &= ParseDec(prop.value, &price_info->price_cents);
+                        valid &= ParseDec(prop.value, &price_info.price_cents);
                     } else if (prop.key == "ExbTreshold") {
-                        valid &= ParseDec(prop.value, &price_info->exb_treshold);
+                        valid &= ParseDec(prop.value, &price_info.exb_treshold);
                     } else if (prop.key == "ExbCents") {
-                        valid &= ParseDec(prop.value, &price_info->exb_cents);
+                        valid &= ParseDec(prop.value, &price_info.exb_cents);
                     } else if (prop.key == "ExbType") {
                         if (prop.value == "Daily") {
-                            price_info->flags &= (uint16_t)~(int)mco_GhsPriceInfo::Flag::ExbOnce;
+                            price_info.flags &= (uint16_t)~(int)mco_GhsPriceInfo::Flag::ExbOnce;
                         } else if (prop.value == "Once") {
-                            price_info->flags |= (uint16_t)mco_GhsPriceInfo::Flag::ExbOnce;
+                            price_info.flags |= (uint16_t)mco_GhsPriceInfo::Flag::ExbOnce;
                         } else {
                             LogError("Invalid ExbType value '%1'", prop.value);
                             valid = false;
                         }
                     } else if (prop.key == "ExhTreshold") {
-                        valid &= ParseDec(prop.value, &price_info->exh_treshold);
+                        valid &= ParseDec(prop.value, &price_info.exh_treshold);
                     } else if (prop.key == "ExhCents") {
-                        valid &= ParseDec(prop.value, &price_info->exh_cents);
+                        valid &= ParseDec(prop.value, &price_info.exh_cents);
                     } else {
                         LogError("Unknown GHS price attribute '%1'", prop.key);
                         valid = false;
                     }
+                } while (ini.NextInSection(&prop));
+
+                if (!price_info.price_cents ||
+                        (!price_info.exb_treshold != !price_info.exb_cents) ||
+                        (!price_info.exh_treshold != !price_info.exh_cents)) {
+                    LogError("Missing GHS price attributes");
+                    valid = false;
                 }
+
+                out_ghs_prices->Append(price_info);
             }
         }
         if (ini.error || !valid)

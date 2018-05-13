@@ -2788,21 +2788,19 @@ public:
 // ------------------------------------------------------------------------
 
 struct IniProperty {
-    enum class Flag {
-        NewSection = 1 << 0,
-        Continuation = 1 << 1
-    };
-
     Span<const char> section;
     Span<const char> key;
     Span<const char> value;
-    unsigned int flags;
 };
 
 class IniParser {
     HeapArray<char> current_section;
-    HeapArray<char> current_key;
-    unsigned int flags = (int)IniProperty::Flag::NewSection;
+
+    enum class LineType {
+        Section,
+        KeyValue,
+        Exit
+    };
 
 public:
     LineReader reader;
@@ -2815,6 +2813,10 @@ public:
     IniParser &operator=(const IniParser &other) = delete;
 
     bool Next(IniProperty *out_prop);
+    bool NextInSection(IniProperty *out_prop);
+
+private:
+    LineType FindNextLine(IniProperty *out_prop);
 };
 
 // ------------------------------------------------------------------------

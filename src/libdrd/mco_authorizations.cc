@@ -14,54 +14,59 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
         out_set->facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
-    // Parse
     {
         StreamReader st(filename);
-        if (st.error)
-            return false;
-
         IniParser ini(&st);
+        bool valid = true;
+
         ini.reader.PushLogHandler();
         DEFER { PopLogHandler(); };
 
         IniProperty prop;
-        bool valid = true;
-        mco_Authorization *auth = nullptr;
         while (ini.Next(&prop)) {
-            if (prop.flags & (int)IniProperty::Flag::NewSection) {
-                if (prop.section == "Facility") {
-                    auth = out_set->facility_authorizations.AppendDefault();
-                    *auth = {};
-                    auth->unit.number = INT16_MAX;
-                } else {
-                    auth = out_set->authorizations.AppendDefault();
-                    *auth = {};
-                    // FIXME: Use UnitCode::FromString() instead
-                    valid &= ParseDec(prop.section, &auth->unit.number);
-                    if (auth->unit.number > 9999) {
-                        LogError("Invalid Unit number %1", auth->unit.number);
-                        valid = false;
-                    }
+            mco_Authorization auth = {};
+
+            HeapArray<mco_Authorization> *authorizations;
+            if (prop.section == "Facility") {
+                auth.unit.number = INT16_MAX;
+                authorizations = &out_set->facility_authorizations;
+            } else {
+                // FIXME: Use UnitCode::FromString() instead
+                valid &= ParseDec(prop.section, &auth.unit.number);
+                if (auth.unit.number > 9999) {
+                    LogError("Invalid Unit number %1", auth.unit.number);
+                    valid = false;
                 }
+                authorizations = &out_set->authorizations;
             }
 
-            if (prop.key == "Authorization") {
-                valid &= ParseDec(prop.value, &auth->type, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
-            } else if (prop.key == "Date") {
-                static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
+            do {
+                if (prop.key == "Authorization") {
+                    valid &= ParseDec(prop.value, &auth.type, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                } else if (prop.key == "Date") {
+                    static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
 
-                auth->dates[0] = Date::FromString(prop.value);
-                auth->dates[1] = default_end_date;
-                valid &= !!auth->dates[0].value;
-            } else {
-                LogError("Unknown attribute '%1'", prop.key);
+                    auth.dates[0] = Date::FromString(prop.value);
+                    auth.dates[1] = default_end_date;
+                    valid &= !!auth.dates[0].value;
+                } else if (prop.key == "End") {
+                    auth.dates[1] = Date::FromString(prop.value);
+                    valid &= !!auth.dates[1].value;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } while (ini.NextInSection(&prop));
+
+            if (!auth.unit.number || !auth.dates[0].value) {
+                LogError("Missing authorization attributes");
                 valid = false;
             }
+
+            authorizations->Append(auth);
         }
         if (ini.error || !valid)
             return false;
-
-        // FIXME: Avoid incomplete authorizations (date errors can even crash)
     }
 
     Span<mco_Authorization> authorizations =

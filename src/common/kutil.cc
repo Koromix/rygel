@@ -2313,10 +2313,10 @@ static inline bool IsAsciiIdChar(char c)
     return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.';
 }
 
-bool IniParser::Next(IniProperty *out_prop)
+IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
 {
     if (UNLIKELY(error))
-        return false;
+        return LineType::Exit;
 
     DEFER_N(error_guard) { error = true; };
 
@@ -2329,61 +2329,64 @@ bool IniParser::Next(IniProperty *out_prop)
         } else if (line[0] == '[') {
             if (line.len < 2 || line[line.len - 1] != ']') {
                 LogError("%1(%2): Malformed section line", reader.st->filename, reader.line_number);
-                return false;
+                return LineType::Exit;
             }
 
             Span<const char> section = TrimStr(line.Take(1, line.len - 2));
             if (!section.len) {
                 LogError("%1(%2): Empty section name", reader.st->filename, reader.line_number);
-                return false;
+                return LineType::Exit;
             }
             if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
                 LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-' or '.'",
                          reader.st->filename, reader.line_number);
-                return false;
-            }
-
-            flags |= (int)IniProperty::Flag::NewSection;
-            current_section.Clear(128);
-            current_section.Append(section);
-            current_key.Clear(128);
-        } else {
-            Span<const char> value;
-            if (line.ptr == reader.line.ptr || !current_key.len) {
-                Span<const char> key = TrimStr(SplitStr(line, '=', &value));
-                if (!key.len || key.end() == line.end()) {
-                    LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
-                    return false;
-                }
-                if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
-                    LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
-                             reader.st->filename, reader.line_number);
-                    return false;
-                }
-                value = TrimStr(value);
-
-                current_key.Clear(128);
-                current_key.Append(key);
-            } else {
-                value = TrimStr(line);
-                flags |= (int)IniProperty::Flag::Continuation;
+                return LineType::Exit;
             }
 
             error_guard.disable();
+            current_section.Clear(128);
+            current_section.Append(section);
+            return LineType::Section;
+        } else {
+            Span<const char> value;
+            Span<const char> key = TrimStr(SplitStr(line, '=', &value));
+            if (!key.len || key.end() == line.end()) {
+                LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
+                return LineType::Exit;
+            }
+            if (!std::all_of(key.begin(), key.end(), IsAsciiIdChar)) {
+                LogError("%1(%2): Key names can only contain alphanumeric characters, '_', '-' or '.'",
+                         reader.st->filename, reader.line_number);
+                return LineType::Exit;
+            }
+            value = TrimStr(value);
+
+            error_guard.disable();
             out_prop->section = current_section;
-            out_prop->key = current_key;
+            out_prop->key = key;
             out_prop->value = value;
-            out_prop->flags = flags;
-            flags = 0;
-            return true;
+            return LineType::KeyValue;
         }
     }
     if (reader.error)
-        return false;
+        return LineType::Exit;
 
     error_guard.disable();
     eof = true;
-    return false;
+    return LineType::Exit;
+}
+
+bool IniParser::Next(IniProperty *out_prop)
+{
+    LineType type;
+    while ((type = FindNextLine(out_prop)) == LineType::Section);
+    return type == LineType::KeyValue;
+}
+
+bool IniParser::NextInSection(IniProperty *out_prop)
+{
+    LineType type = FindNextLine(out_prop);
+    return type == LineType::KeyValue;
 }
 
 // ------------------------------------------------------------------------
