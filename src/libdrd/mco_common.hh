@@ -177,38 +177,18 @@ struct mco_GhsCode {
     {
         mco_GhsCode code = {};
 
-        Size end;
-        {
-            int value = 0;
-            for (end = 0; end < str.len; end++) {
-                int digit = str[end] - '0';
-                if ((unsigned int)digit > 9) {
-                    if (flags & (int)ParseFlag::End || !end) {
-                        if (flags & (int)ParseFlag::Log) {
-                            LogError("Malformed GHS code '%1'", str);
-                        }
-                        return code;
-                    }
-                    break;
-                }
-                value = (value * 10) + digit;
-                if (value > INT16_MAX) {
-                    if (flags & (int)ParseFlag::Log) {
-                        LogError("GHS code '%1' is too big", str);
-                    }
-                    return code;
-                }
+        if (!ParseDec(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
+                ((flags & (int)ParseFlag::Validate) && !code.IsValid())) {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Malformed GHS code '%1'", str);
             }
-            code.number = (int16_t)value;
+            code.number = 0;
         }
 
-        if (out_remaining) {
-            *out_remaining = str.Take(end, str.len - end);
-        }
         return code;
     }
 
-    bool IsValid() const { return number; }
+    bool IsValid() const { return number > 0 && number <= 9999; }
 
     bool operator==(mco_GhsCode other) const { return number == other.number; }
     bool operator!=(mco_GhsCode other) const { return number != other.number; }
