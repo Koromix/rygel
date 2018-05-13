@@ -51,8 +51,12 @@ add_subdirectory(lib)
 
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wconversion")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wconversion -Wno-class-memaccess \
-                                            -Wno-missing-field-initializers -Wno-old-style-cast -Wno-strict-overflow")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wconversion \
+                                            -Wno-class-memaccess -Wno-missing-field-initializers \
+                                            -Wno-old-style-cast -Wno-strict-overflow")
+    if (CMAKE_COMPILER_IS_CLANG)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
+    endif()
 endif()
 
 add_projects("src/lib*" EXCLUDE_FROM_ALL)
