@@ -98,10 +98,9 @@ Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> 
     DebugAssert(stays.len > 0);
 
     Size agg_len = 1;
-    if (LIKELY(!(stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion) && stays[0].bill_id)) {
-        while (agg_len < stays.len && stays[agg_len].bill_id == stays[agg_len - 1].bill_id) {
-            agg_len++;
-        }
+    while (agg_len < stays.len &&
+           mco_StaysAreCompatible(stays[agg_len - 1].bill_id, stays[agg_len].bill_id)) {
+        agg_len++;
     }
 
     if (out_remainder) {
@@ -1955,7 +1954,7 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
         Size results_offset = out_results->len;
         Span<const mco_Stay> task_stays = stays[0];
         for (Size i = 1; i < stays.len; i++) {
-            if (stays[i].bill_id != stays[i - 1 ].bill_id) {
+            if (!mco_StaysAreCompatible(stays[i - 1].bill_id, stays[i].bill_id)) {
                 if (results_count % task_size == 0) {
                     async.AddTask([&, task_stays, results_offset]() mutable {
                         mco_ClassifyRaw(table_set, authorization_set, task_stays, flags,

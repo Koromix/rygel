@@ -435,7 +435,7 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         while (stays_offset < stays.nrow) {
             Size stays_end = std::min(stays.nrow, stays_offset + task_size);
             while (stays_end < stays.nrow &&
-                   stays.bill_id[stays_end] == stays.bill_id[stays_end - 1]) {
+                   mco_StaysAreCompatible(stays.bill_id[stays_end - 1], stays.bill_id[stays_end])) {
                 stays_end++;
             }
 

@@ -90,6 +90,12 @@ struct mco_Stay {
 #endif
 };
 
+// Some paths (e.g. drdR) need to test for this before building Stay
+static inline bool mco_StaysAreCompatible(int32_t bill_id1, int32_t bill_id2)
+{
+    return bill_id1 && bill_id1 == bill_id2;
+}
+
 struct mco_StayTest {
     int32_t bill_id;
 
