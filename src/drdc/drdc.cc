@@ -134,6 +134,8 @@ Classify options:
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
+        --torture [N]            Run classifier N times
+                                 (default = 10)
 
 Classifier flags:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
@@ -150,6 +152,7 @@ Classifier flags:)");
     int verbosity = 0;
     unsigned int flags = 0;
     bool test = false;
+    int torture = 1;
     {
         const char *opt;
         while ((opt = opt_parser.Next())) {
@@ -176,6 +179,11 @@ Classifier flags:)");
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
                 test = true;
+            } else if (TestOption(opt, "--torture")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+                if (!ParseDec(opt_parser.current_value, &torture))
+                    return false;
             } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
                 return false;
             }
@@ -219,8 +227,11 @@ Classifier flags:)");
                 return false;
 
             LogInfo("Classify '%1'", filenames[i]);
-            mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                             flags, &classify_set->results);
+            for (int j = 0; j < torture; j++) {
+                classify_set->results.RemoveFrom(0);
+                mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
+                                     flags, &classify_set->results);
+            }
 
             LogInfo("Summarize '%1'", filenames[i]);
             mco_Summarize(classify_set->results, &classify_set->summary);
