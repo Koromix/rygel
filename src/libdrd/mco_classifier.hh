@@ -134,11 +134,14 @@ int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounte
                          mco_SupplementCounters<int32_t> *out_prices);
 
 Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                     Span<const mco_Stay> stays, unsigned int flags, mco_Result out_results[]);
+                     Span<const mco_Stay> stays, unsigned int flags, mco_Result out_results[],
+                     mco_Result out_mono_results[] = nullptr);
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                  Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results);
+                  Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
+                  HeapArray<mco_Result> *out_mono_results = nullptr);
 void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                           Span<const mco_Stay> stays, unsigned int flags,
-                          HeapArray<mco_Result> *out_results);
+                          HeapArray<mco_Result> *out_results,
+                          HeapArray<mco_Result> *out_mono_results = nullptr);
 
 void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary);

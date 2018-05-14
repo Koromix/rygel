@@ -123,6 +123,55 @@ static void PrintSummary(const mco_Summary &summary)
     PrintLn();
 };
 
+static void ExportResults(Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                          bool verbose)
+{
+    const auto ExportResult = [&](int depth, const mco_Result &result) {
+        FmtArg padding = FmtArg("").Pad(-2 * depth);
+
+        PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
+                padding, result.stays[0].bill_id, result.duration,
+                result.stays[result.stays.len - 1].exit.date, result.ghm, result.main_error,
+                result.ghs);
+
+        if (verbose) {
+            PrintLn("      %1GHS: %2 €",
+                    padding, FmtDouble((double)result.ghs_price_cents / 100.0, 2));
+            if (result.price_cents > result.ghs_price_cents) {
+                PrintLn("      %1Supplements:", padding);
+                for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
+                    if (result.supplement_cents.values[j]) {
+                        PrintLn("        %1%2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
+                                FmtDouble((double)result.supplement_cents.values[j] / 100.0, 2),
+                                result.supplement_days.values[j]);
+                    }
+                }
+            }
+            PrintLn("      %1Price: %2 €",
+                    padding, FmtDouble((double)result.price_cents / 100.0, 2));
+            PrintLn();
+        }
+    };
+
+    PrintLn("  Details:");
+    Size j = 0;
+    for (const mco_Result &result: results) {
+        ExportResult(0, result);
+
+        if (mono_results.len && result.stays.len > 1) {
+            for (Size k = j; k < j + result.stays.len; k++) {
+                const mco_Result &mono_result = mono_results[k];
+                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                ExportResult(1, mono_result);
+            }
+            j += result.stays.len;
+        } else {
+            j++;
+        }
+    }
+    PrintLn();
+}
+
 static bool RunClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -130,7 +179,9 @@ static bool RunClassify(Span<const char *> arguments)
 R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
+    -m, --mono                   Compute mono-stay results
     -f, --flag <flags>           Classifier flags (see below)
+
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
@@ -149,8 +200,9 @@ Classifier flags:)");
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
-    int verbosity = 0;
+    bool mono = false;
     unsigned int flags = 0;
+    int verbosity = 0;
     bool test = false;
     int torture = 1;
     {
@@ -159,6 +211,8 @@ Classifier flags:)");
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-m", "--mono")) {
+                mono = true;
             } else if (TestOption(opt, "-f", "--flag")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
@@ -209,6 +263,7 @@ Classifier flags:)");
         HashTable<int32_t, mco_StayTest> tests;
 
         HeapArray<mco_Result> results;
+        HeapArray<mco_Result> mono_results;
         mco_Summary summary;
     };
     HeapArray<ClassifySet> classify_sets;
@@ -229,8 +284,10 @@ Classifier flags:)");
             LogInfo("Classify '%1'", filenames[i]);
             for (int j = 0; j < torture; j++) {
                 classify_set->results.RemoveFrom(0);
+                classify_set->mono_results.RemoveFrom(0);
                 mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                                     flags, &classify_set->results);
+                                     flags, &classify_set->results,
+                                     mono ? &classify_set->mono_results : nullptr);
             }
 
             LogInfo("Summarize '%1'", filenames[i]);
@@ -255,28 +312,8 @@ Classifier flags:)");
         PrintLn("%1:", filenames[i]);
 
         if (verbosity - test >= 1) {
-            PrintLn("  Detailed results:");
-            for (const mco_Result &result: classify_set.results) {
-                PrintLn("    %1 [%2 -- %3 (%4)] = GHM %5 [%6] / GHS %7", result.stays[0].bill_id,
-                        result.stays[0].entry.date, result.stays[result.stays.len - 1].exit.date,
-                        result.stays.len, result.ghm, result.main_error, result.ghs);
-
-                if (verbosity - test >= 2) {
-                    PrintLn("      GHS: %1 €", FmtDouble((double)result.ghs_price_cents / 100.0, 2));
-                    if (result.price_cents > result.ghs_price_cents) {
-                        PrintLn("      Supplements:");
-                        for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                            if (result.supplement_cents.values[j]) {
-                                PrintLn("        %1: %2 € [%3]", mco_SupplementTypeNames[j],
-                                        FmtDouble((double)result.supplement_cents.values[j], 2),
-                                        result.supplement_days.values[j]);
-                            }
-                        }
-                    }
-                    PrintLn("      Price: %1 €", FmtDouble((double)result.price_cents / 100.0, 2));
-                }
-            }
-            PrintLn();
+            ExportResults(classify_set.results, classify_set.mono_results,
+                          verbosity - test >= 2);
         }
 
         PrintSummary(classify_set.summary);
