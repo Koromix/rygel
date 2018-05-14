@@ -1056,10 +1056,9 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
             for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
-                if (diag_info == ctx.main_diag_info || diag_info == ctx.linked_diag_info)
-                    continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
+                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                        diag_info != ctx.main_diag_info && diag_info != ctx.linked_diag_info)
                     return 1;
             }
             return 0;
@@ -1200,10 +1199,9 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 36: {
             for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
-                if (diag_info == ctx.linked_diag_info)
-                    continue;
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
+                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                        diag_info != ctx.linked_diag_info)
                     return 1;
             }
             return 0;
@@ -1251,12 +1249,10 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 43: {
             for (const mco_DiagnosisInfo *diag_info: ctx.agg->info.diagnoses) {
-                if (diag_info == ctx.linked_diag_info)
-                    continue;
-
                 uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
                 uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
-                if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
+                if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1] &&
+                        diag_info != ctx.linked_diag_info)
                     return 1;
             }
 
