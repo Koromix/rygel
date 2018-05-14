@@ -725,6 +725,7 @@ public:
         DebugAssert(len <= N - count);
 
         T *it = data + len;
+        *it = {};
         len += count;
 
         return it;
@@ -910,7 +911,7 @@ public:
 
         T *first = ptr + len;
         for (Size i = 0; i < count; i++) {
-            new (ptr + len) T;
+            new (ptr + len) T();
             len++;
         }
         return first;
@@ -1104,13 +1105,7 @@ public:
         Size bucket_offset = (offset + len) % BucketSize;
 
         T *first = buckets[bucket_idx]->values + bucket_offset;
-#if __cplusplus >= 201703L
-        if constexpr(!std::is_trivial<T>::value) {
-#else
-        if (true) {
-#endif
-            new (first) T;
-        }
+        new (first) T();
 
         len++;
         if (bucket_offset == BucketSize - 1) {
