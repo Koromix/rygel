@@ -386,6 +386,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
         const mco_Stay &stay = *stay_info.stay;
 
+        uint8_t proc_activities = 0;
         stay_info.procedures.ptr = out_agg->store.procedures.end();
         for (const mco_ProcedureRealisation &proc: stay.procedures) {
             if (UNLIKELY(!proc.count)) {
@@ -472,8 +473,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
 
                 out_agg->store.procedures.Append(proc_info);
                 stay_info.procedures.len++;
-                stay_info.proc_activities |= proc.activities;
-                out_agg->info.proc_activities |= proc.activities;
+                proc_activities |= proc.activities;
             } else {
                 Span <const mco_ProcedureInfo> compatible_procs =
                     out_agg->index->FindProcedure(proc.proc);
@@ -494,6 +494,9 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                 }
             }
         }
+
+        stay_info.proc_activities = proc_activities;
+        out_agg->info.proc_activities |= proc_activities;
     }
 
     // Deduplicate procedures
