@@ -1194,6 +1194,8 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     int failures = 0;
     {
         TableLoadInfo *active_tables[ARRAY_SIZE(mco_TableTypeNames)];
+        Size active_count = 0;
+
         TableLoadInfo dummy_loads[ARRAY_SIZE(mco_TableTypeNames)];
         for (Size i = 0; i < ARRAY_SIZE(active_tables); i++) {
             dummy_loads[i].table_idx = -1;
@@ -1219,6 +1221,7 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
 
                     if (active_info.limit_dates[1] == end_date) {
                         active_tables[i] = &dummy_loads[i];
+                        active_count--;
                     } else if (!next_end_date.value || active_info.limit_dates[1] < next_end_date) {
                         next_end_date = active_info.limit_dates[1];
                     }
@@ -1241,8 +1244,12 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
             }
 
             active_tables[(int)table_info.type] = &load_info;
+            active_count++;
         }
-        failures += !CommitIndex(start_date, end_date, active_tables);
+
+        if (active_count) {
+            failures += !CommitIndex(start_date, end_date, active_tables);
+        }
     }
 
     if (failures && !set.indexes.len)
