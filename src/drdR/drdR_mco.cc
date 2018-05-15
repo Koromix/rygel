@@ -123,7 +123,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
-                          unsigned int flags, mco_StaySet *out_stay_set, HeapArray<mco_Result> *out_results)
+                          unsigned int flags, mco_StaySet *out_stay_set,
+                          HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
     out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
@@ -321,9 +322,87 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     // We're already running in parallel, using ClassifyParallel would slow us down,
     // because it has some overhead caused by multi-stays.
     mco_Classify(classifier.table_set, classifier.authorization_set,
-             out_stay_set->stays, flags, out_results);
+                 out_stay_set->stays, flags, out_results, out_mono_results);
 
     return true;
+}
+
+static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets)
+{
+    Size results_count = 0;
+    for (const HeapArray<mco_Result> &results: result_sets) {
+        results_count += results.len;
+    }
+
+    Rcc_DataFrameBuilder df_builder(results_count);
+    Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
+    Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
+    Rcc_Vector<int> stays_count = df_builder.Add<int>("stays_count");
+    Rcc_Vector<int> duration = df_builder.Add<int>("duration");
+    Rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
+    Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
+    Rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
+    Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+    Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
+    Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
+    Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
+    Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
+    Rcc_Vector<double> rea_cents = df_builder.Add<double>("rea_cents");
+    Rcc_Vector<double> reasi_cents = df_builder.Add<double>("reasi_cents");
+    Rcc_Vector<double> si_cents = df_builder.Add<double>("si_cents");
+    Rcc_Vector<double> src_cents = df_builder.Add<double>("src_cents");
+    Rcc_Vector<double> nn1_cents = df_builder.Add<double>("nn1_cents");
+    Rcc_Vector<double> nn2_cents = df_builder.Add<double>("nn2_cents");
+    Rcc_Vector<double> nn3_cents = df_builder.Add<double>("nn3_cents");
+    Rcc_Vector<double> rep_cents = df_builder.Add<double>("rep_cents");
+    Rcc_Vector<int> rea_days = df_builder.Add<int>("rea_days");
+    Rcc_Vector<int> reasi_days = df_builder.Add<int>("reasi_days");
+    Rcc_Vector<int> si_days = df_builder.Add<int>("si_days");
+    Rcc_Vector<int> src_days = df_builder.Add<int>("src_days");
+    Rcc_Vector<int> nn1_days = df_builder.Add<int>("nn1_days");
+    Rcc_Vector<int> nn2_days = df_builder.Add<int>("nn2_days");
+    Rcc_Vector<int> nn3_days = df_builder.Add<int>("nn3_days");
+    Rcc_Vector<int> rep_days = df_builder.Add<int>("rep_days");
+
+    Size i = 0;
+    for (const HeapArray<mco_Result> &results: result_sets) {
+        for (const mco_Result &result: results) {
+            char buf[32];
+
+            bill_id[i] = result.stays[0].bill_id;
+            exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
+            stays_count[i] = (int)result.stays.len;
+            duration[i] = result.duration;
+            main_stay[i] = (int)result.main_stay_idx + 1;
+            ghm.Set(i, Fmt(buf, "%1", result.ghm));
+            main_error[i] = result.main_error;
+            ghs[i] = result.ghs.number;
+            total_cents[i] = result.total_cents;
+            price_cents[i] = result.price_cents;
+            ghs_cents[i] = (double)result.ghs_cents;
+            exb_exh[i] = result.exb_exh;
+            rea_cents[i] = result.supplement_cents.st.rea;
+            reasi_cents[i] = result.supplement_cents.st.reasi;
+            si_cents[i] = result.supplement_cents.st.si;
+            src_cents[i] = result.supplement_cents.st.src;
+            nn1_cents[i] = result.supplement_cents.st.nn1;
+            nn2_cents[i] = result.supplement_cents.st.nn2;
+            nn3_cents[i] = result.supplement_cents.st.nn3;
+            rep_cents[i] = result.supplement_cents.st.rep;
+            rea_days[i] = result.supplement_days.st.rea;
+            reasi_days[i] = result.supplement_days.st.reasi;
+            si_days[i] = result.supplement_days.st.si;
+            src_days[i] = result.supplement_days.st.src;
+            nn1_days[i] = result.supplement_days.st.nn1;
+            nn2_days[i] = result.supplement_days.st.nn2;
+            nn3_days[i] = result.supplement_days.st.nn3;
+            rep_days[i] = result.supplement_days.st.rep;
+
+            i++;
+        }
+    }
+
+    return df_builder.Build();
 }
 
 // [[Rcpp::export(name = '.mco_classify')]]
@@ -418,14 +497,14 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
 
     LogDebug("Classify");
 
-    struct ClassifySet {
-        mco_StaySet stay_set;
-
-        HeapArray<mco_Result> results;
-        mco_Summary summary;
-    };
-    HeapArray<ClassifySet> classify_sets;
-    classify_sets.Reserve((stays.nrow - 1) / task_size + 1);
+    Size sets_count = (stays.nrow - 1) / task_size + 1;
+    HeapArray<mco_StaySet> stay_sets(sets_count);
+    HeapArray<HeapArray<mco_Result>> result_sets(sets_count);
+    HeapArray<HeapArray<mco_Result>> mono_result_sets;
+    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        mono_result_sets.Reserve(sets_count);
+    }
+    HeapArray<mco_Summary> summaries(sets_count);
 
     Async async;
     {
@@ -450,15 +529,22 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
                 procedures_end++;
             }
 
-            ClassifySet *classify_set = classify_sets.AppendDefault();
+            mco_StaySet *task_stay_set = stay_sets.AppendDefault();
+            HeapArray<mco_Result> *task_results = result_sets.AppendDefault();
+            HeapArray<mco_Result> *task_mono_results = nullptr;
+            if (flags & (int)mco_ClassifyFlag::MonoResults) {
+                task_mono_results = mono_result_sets.AppendDefault();
+            }
+            mco_Summary *task_summary = summaries.AppendDefault();
 
             async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
                 if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
                                    diagnoses, diagnoses_offset, diagnoses_end,
                                    procedures, procedures_offset, procedures_end,
-                                   flags, &classify_set->stay_set, &classify_set->results))
+                                   flags, task_stay_set, task_results, task_mono_results))
                     return false;
-                mco_Summarize(classify_set->results, &classify_set->summary);
+
+                mco_Summarize(*task_results, task_summary);
                 return true;
             });
 
@@ -474,8 +560,8 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     LogDebug("Export");
 
     mco_Summary summary = {};
-    for (const ClassifySet &classify_set: classify_sets) {
-        summary += classify_set.summary;
+    for (const mco_Summary &task_summary: summaries) {
+        summary += task_summary;
     }
 
     Rcc_AutoSexp summary_df;
@@ -505,79 +591,14 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         summary_df = df_builder.BuildDataFrame();
     }
 
-    Rcc_AutoSexp results_df;
+    Rcc_AutoSexp results_df = R_NilValue;
     if (details) {
-        char buf[32];
+        results_df = ExportResultsDataFrame(result_sets);
+    }
 
-        Rcc_DataFrameBuilder df_builder(summary.results_count);
-        Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
-        Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
-        Rcc_Vector<int> stays_count = df_builder.Add<int>("stays_count");
-        Rcc_Vector<int> duration = df_builder.Add<int>("duration");
-        Rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
-        Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
-        Rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
-        Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
-        Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
-        Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
-        Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
-        Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
-        Rcc_Vector<double> rea_cents = df_builder.Add<double>("rea_cents");
-        Rcc_Vector<double> reasi_cents = df_builder.Add<double>("reasi_cents");
-        Rcc_Vector<double> si_cents = df_builder.Add<double>("si_cents");
-        Rcc_Vector<double> src_cents = df_builder.Add<double>("src_cents");
-        Rcc_Vector<double> nn1_cents = df_builder.Add<double>("nn1_cents");
-        Rcc_Vector<double> nn2_cents = df_builder.Add<double>("nn2_cents");
-        Rcc_Vector<double> nn3_cents = df_builder.Add<double>("nn3_cents");
-        Rcc_Vector<double> rep_cents = df_builder.Add<double>("rep_cents");
-        Rcc_Vector<int> rea_days = df_builder.Add<int>("rea_days");
-        Rcc_Vector<int> reasi_days = df_builder.Add<int>("reasi_days");
-        Rcc_Vector<int> si_days = df_builder.Add<int>("si_days");
-        Rcc_Vector<int> src_days = df_builder.Add<int>("src_days");
-        Rcc_Vector<int> nn1_days = df_builder.Add<int>("nn1_days");
-        Rcc_Vector<int> nn2_days = df_builder.Add<int>("nn2_days");
-        Rcc_Vector<int> nn3_days = df_builder.Add<int>("nn3_days");
-        Rcc_Vector<int> rep_days = df_builder.Add<int>("rep_days");
-
-        Size i = 0;
-        for (const ClassifySet &classify_set: classify_sets) {
-            for (const mco_Result &result: classify_set.results) {
-                bill_id[i] = result.stays[0].bill_id;
-                exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
-                stays_count[i] = (int)result.stays.len;
-                duration[i] = result.duration;
-                main_stay[i] = (int)result.main_stay_idx + 1;
-                ghm.Set(i, Fmt(buf, "%1", result.ghm));
-                main_error[i] = result.main_error;
-                ghs[i] = result.ghs.number;
-                total_cents[i] = result.total_cents;
-                price_cents[i] = result.price_cents;
-                ghs_cents[i] = (double)result.ghs_cents;
-                exb_exh[i] = result.exb_exh;
-                rea_cents[i] = result.supplement_cents.st.rea;
-                reasi_cents[i] = result.supplement_cents.st.reasi;
-                si_cents[i] = result.supplement_cents.st.si;
-                src_cents[i] = result.supplement_cents.st.src;
-                nn1_cents[i] = result.supplement_cents.st.nn1;
-                nn2_cents[i] = result.supplement_cents.st.nn2;
-                nn3_cents[i] = result.supplement_cents.st.nn3;
-                rep_cents[i] = result.supplement_cents.st.rep;
-                rea_days[i] = result.supplement_days.st.rea;
-                reasi_days[i] = result.supplement_days.st.reasi;
-                si_days[i] = result.supplement_days.st.si;
-                src_days[i] = result.supplement_days.st.src;
-                nn1_days[i] = result.supplement_days.st.nn1;
-                nn2_days[i] = result.supplement_days.st.nn2;
-                nn3_days[i] = result.supplement_days.st.nn3;
-                rep_days[i] = result.supplement_days.st.rep;
-
-                i++;
-            }
-        }
-
-        results_df = df_builder.Build();
-    } else {
-        results_df = R_NilValue;
+    Rcc_AutoSexp mono_results_df = R_NilValue;
+    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        mono_results_df = ExportResultsDataFrame(mono_result_sets);
     }
 
     Rcc_AutoSexp ret_list;
@@ -585,6 +606,7 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         Rcc_ListBuilder ret_builder;
         ret_builder.Add("summary", summary_df);
         ret_builder.Add("results", results_df);
+        ret_builder.Add("mono_results", mono_results_df);
         ret_list = ret_builder.BuildList();
     }
 

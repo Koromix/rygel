@@ -9,7 +9,7 @@ mco_summary_columns <- c('results', 'stays', 'failures',
                          'nn3_days', 'rep_days')
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
-                         sorted = FALSE, options = character(0), details = TRUE) {
+                         sorted = FALSE, options = character(0), details = TRUE, mono = FALSE) {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
         diagnoses <- stays$diagnoses
         procedures <- stays$procedures
@@ -29,6 +29,9 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
         diagnoses <- sort_by_id(diagnoses)
         procedures <- sort_by_id(procedures)
     }
+    if (mono) {
+        options = c(options, 'mono')
+    }
 
     result_set <- .mco_classify(classifier, stays, diagnoses, procedures,
                                 options = options, details = details)
@@ -37,6 +40,9 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     if (details) {
         setDT(result_set$results)
         class(result_set$results) <- c('mco_results', class(result_set$results))
+    }
+    if ('mono' %in% options) {
+        setDT(result_set$mono_results)
     }
     class(result_set) <- c('mco_result_set', class(result_set))
 
