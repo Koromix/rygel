@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 mco_summary_columns <- c('results', 'stays', 'failures',
-                         'ghs_cents', 'rea_cents', 'reasi_cents', 'si_cents', 'src_cents',
-                         'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents', 'price_cents',
+                         'total_cents', 'price_cents', 'rea_cents', 'reasi_cents', 'si_cents',
+                         'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
                          'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                          'nn3_days', 'rep_days')
 

@@ -484,7 +484,8 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         df_builder.Set("results", (int)summary.results_count);
         df_builder.Set("stays", (int)summary.stays_count);
         df_builder.Set("failures", (int)summary.failures_count);
-        df_builder.Set("ghs_cents", (double)summary.ghs_total_cents);
+        df_builder.Set("total_cents", (double)summary.total_cents);
+        df_builder.Set("price_cents", (double)summary.price_cents);
         df_builder.Set("rea_cents", (double)summary.supplement_cents.st.rea);
         df_builder.Set("reasi_cents", (double)summary.supplement_cents.st.reasi);
         df_builder.Set("si_cents", (double)summary.supplement_cents.st.si);
@@ -493,7 +494,6 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         df_builder.Set("nn2_cents", (double)summary.supplement_cents.st.nn2);
         df_builder.Set("nn3_cents", (double)summary.supplement_cents.st.nn3);
         df_builder.Set("rep_cents", (double)summary.supplement_cents.st.rep);
-        df_builder.Set("price_cents", (double)summary.total_cents);
         df_builder.Set("rea_days", summary.supplement_days.st.rea);
         df_builder.Set("reasi_days", summary.supplement_days.st.reasi);
         df_builder.Set("si_days", summary.supplement_days.st.si);
@@ -518,7 +518,10 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
         Rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
         Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+        Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
+        Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
         Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
+        Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
         Rcc_Vector<double> rea_cents = df_builder.Add<double>("rea_cents");
         Rcc_Vector<double> reasi_cents = df_builder.Add<double>("reasi_cents");
         Rcc_Vector<double> si_cents = df_builder.Add<double>("si_cents");
@@ -527,7 +530,6 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         Rcc_Vector<double> nn2_cents = df_builder.Add<double>("nn2_cents");
         Rcc_Vector<double> nn3_cents = df_builder.Add<double>("nn3_cents");
         Rcc_Vector<double> rep_cents = df_builder.Add<double>("rep_cents");
-        Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
         Rcc_Vector<int> rea_days = df_builder.Add<int>("rea_days");
         Rcc_Vector<int> reasi_days = df_builder.Add<int>("reasi_days");
         Rcc_Vector<int> si_days = df_builder.Add<int>("si_days");
@@ -548,7 +550,10 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
                 ghm.Set(i, Fmt(buf, "%1", result.ghm));
                 main_error[i] = result.main_error;
                 ghs[i] = result.ghs.number;
-                ghs_cents[i] = (double)result.ghs_price_cents;
+                total_cents[i] = result.total_cents;
+                price_cents[i] = result.price_cents;
+                ghs_cents[i] = (double)result.ghs_cents;
+                exb_exh[i] = result.exb_exh;
                 rea_cents[i] = result.supplement_cents.st.rea;
                 reasi_cents[i] = result.supplement_cents.st.reasi;
                 si_cents[i] = result.supplement_cents.st.si;
@@ -557,7 +562,6 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
                 nn2_cents[i] = result.supplement_cents.st.nn2;
                 nn3_cents[i] = result.supplement_cents.st.nn3;
                 rep_cents[i] = result.supplement_cents.st.rep;
-                price_cents[i] = result.price_cents;
                 rea_days[i] = result.supplement_days.st.rea;
                 reasi_days[i] = result.supplement_days.st.reasi;
                 si_days[i] = result.supplement_days.st.si;

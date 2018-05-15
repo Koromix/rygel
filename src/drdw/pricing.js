@@ -575,7 +575,7 @@ var pricing = {};
         appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
         appendRow(thead, 'Borne haute',
                   function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
-        appendRow(thead, 'Tarif €', function(col) { return [priceText(col.price_cents), {class: 'price'}, true]; });
+        appendRow(thead, 'Tarif €', function(col) { return [priceText(col.ghs_cents), {class: 'price'}, true]; });
         appendRow(thead, 'Forfait EXB €',
                   function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', {class: 'exb'}, true]; });
         appendRow(thead, 'Tarif EXB €',
@@ -627,19 +627,19 @@ var pricing = {};
             return null;
 
         if (ghs.exb_treshold && duration < ghs.exb_treshold) {
-            var price = ghs.price_cents;
+            var price_cents = ghs.ghs_cents;
             if (ghs.exb_once) {
-                price -= ghs.exb_cents;
+                price_cents -= ghs.exb_cents;
             } else {
-                price -= (ghs.exb_treshold - duration) * ghs.exb_cents;
+                price_cents -= (ghs.exb_treshold - duration) * ghs.exb_cents;
             }
-            return [price, 'exb'];
+            return [price_cents, 'exb'];
+        } else if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
+            var price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
+            return [price_cents, 'exh'];
+        } else {
+            return [ghs.ghs_cents, 'price'];
         }
-        if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
-            var price = ghs.price_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
-            return [price, 'exh'];
-        }
-        return [ghs.price_cents, 'price'];
     }
 
     function computePriceDelta(ghs, prev_ghs, duration)

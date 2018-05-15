@@ -111,7 +111,7 @@ static void PrintSummary(const mco_Summary &summary)
     PrintLn("  Stays: %1", summary.stays_count);
     PrintLn("  Failures: %1", summary.failures_count);
     PrintLn();
-    PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_total_cents / 100.0, 2));
+    PrintLn("  GHS: %1 €", FmtDouble((double)summary.price_cents / 100.0, 2));
     PrintLn("  Supplements:");
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         PrintLn("    %1: %2 € [%3]",
@@ -135,9 +135,10 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                 result.ghs);
 
         if (verbose) {
-            PrintLn("      %1GHS: %2 €",
-                    padding, FmtDouble((double)result.ghs_price_cents / 100.0, 2));
-            if (result.price_cents > result.ghs_price_cents) {
+            PrintLn("      %1GHS: %2 € [%3 € %4]",
+                    padding, FmtDouble((double)result.price_cents / 100.0, 2),
+                    FmtDouble((double)result.ghs_cents / 100.0, 2), result.exb_exh);
+            if (result.total_cents > result.price_cents) {
                 PrintLn("      %1Supplements:", padding);
                 for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                     if (result.supplement_cents.values[j]) {
@@ -148,7 +149,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                 }
             }
             PrintLn("      %1Price: %2 €",
-                    padding, FmtDouble((double)result.price_cents / 100.0, 2));
+                    padding, FmtDouble((double)result.total_cents / 100.0, 2));
             PrintLn();
         }
     };

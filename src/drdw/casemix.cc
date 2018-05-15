@@ -143,11 +143,11 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                     continue;
 
                 int stay_duration = stay.exit.date - stay.entry.date;
-                int stay_ghs_cents = result.ghs_price_cents * (stay_duration ? stay_duration : 1) / full_duration;
+                int stay_ghs_cents = result.price_cents * (stay_duration ? stay_duration : 1) / full_duration;
                 result_total += stay_ghs_cents;
                 // FIXME: Hack for rounding errors
                 if (i == result.stays.len - 1) {
-                    stay_ghs_cents += result.ghs_price_cents - result_total;
+                    stay_ghs_cents += result.price_cents - result_total;
                 }
 
                 // TODO: Careful with duration overflow

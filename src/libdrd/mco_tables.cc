@@ -1007,7 +1007,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
                 do {
                     if (prop.key == "PriceCents") {
-                        valid &= ParseDec(prop.value, &price_info.price_cents);
+                        valid &= ParseDec(prop.value, &price_info.ghs_cents);
                     } else if (prop.key == "ExbTreshold") {
                         valid &= ParseDec(prop.value, &price_info.exb_treshold);
                     } else if (prop.key == "ExbCents") {
@@ -1031,7 +1031,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                     }
                 } while (ini.NextInSection(&prop));
 
-                if (!price_info.price_cents ||
+                if (!price_info.ghs_cents ||
                         (!price_info.exb_treshold != !price_info.exb_cents) ||
                         (!price_info.exh_treshold != !price_info.exh_cents)) {
                     LogError("Missing GHS price attributes");
