@@ -373,16 +373,14 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
 {
     bool valid = true;
 
-    // We cannot allow the HeapArray to move
-    {
-        Size procedures_count = 0;
-        for (const mco_Stay &stay: out_agg->stays) {
-            procedures_count += stay.procedures.len;
-        }
-
-        out_agg->store.procedures.Clear(1024);
-        out_agg->store.procedures.Grow(2 * procedures_count);
+    Size procedures_count = 0;
+    for (const mco_Stay &stay: out_agg->stays) {
+        procedures_count += stay.procedures.len;
     }
+
+    // We cannot allow the HeapArray to move
+    out_agg->store.procedures.Clear(1024);
+    out_agg->store.procedures.Grow(2 * procedures_count);
 
     for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
         const mco_Stay &stay = *stay_info.stay;
@@ -441,6 +439,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
+                uintptr_t proc_info_mask = 0;
                 if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
                     uint8_t extra_activities = (uint8_t)(proc.activities & ~proc_info->activities);
                     if (UNLIKELY(extra_activities)) {
@@ -468,11 +467,14 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     // in the deduplication phase below (error 167).
                     StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 2);
                     if (!(proc.activities & (1 << 1)) && !(proc_info->bytes[42] & 0x2)) {
-                        proc_info = (const mco_ProcedureInfo *)((uintptr_t)proc_info | 0x1);
+                        proc_info_mask = 0x1;
                     }
                 }
 
+                out_agg->store.procedures[procedures_count + out_agg->store.procedures.len] =
+                    (const mco_ProcedureInfo *)((uintptr_t)proc_info | proc_info_mask);
                 out_agg->store.procedures.Append(proc_info);
+
                 stay_info.procedures.len++;
                 proc_activities |= proc.activities;
             } else {
@@ -504,10 +506,8 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
     if (out_agg->store.procedures.len) {
-        Span<const mco_ProcedureInfo *> procedures = MakeSpan(out_agg->store.procedures.end(),
-                                                              out_agg->store.procedures.len);
-        memcpy(procedures.ptr, out_agg->store.procedures.ptr,
-               (size_t)out_agg->store.procedures.len * SIZE(*out_agg->store.procedures.ptr));
+        Span<const mco_ProcedureInfo *> procedures =
+            MakeSpan(out_agg->store.procedures.ptr + procedures_count, out_agg->store.procedures.len);
         out_agg->store.procedures.len *= 2;
 
         std::sort(procedures.begin(), procedures.end());
