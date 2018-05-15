@@ -179,7 +179,7 @@ static bool RunClassify(Span<const char *> arguments)
 R"(Usage: drdc classify [options] stay_file ...
 
 Classify options:
-    -m, --mono                   Compute mono-stay results
+    -m, --mono                   Compute mono-stay results (same as -fmono)
     -f, --flag <flags>           Classifier flags (see below)
 
     -v, --verbose                Show more classification details (cumulative)
@@ -200,7 +200,6 @@ Classifier flags:)");
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> filenames;
-    bool mono = false;
     unsigned int flags = 0;
     int verbosity = 0;
     bool test = false;
@@ -212,7 +211,7 @@ Classifier flags:)");
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-m", "--mono")) {
-                mono = true;
+                flags |= (int)mco_ClassifyFlag::MonoResults;
             } else if (TestOption(opt, "-f", "--flag")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
@@ -286,8 +285,7 @@ Classifier flags:)");
                 classify_set->results.RemoveFrom(0);
                 classify_set->mono_results.RemoveFrom(0);
                 mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                                     flags, &classify_set->results,
-                                     mono ? &classify_set->mono_results : nullptr);
+                                     flags, &classify_set->results, &classify_set->mono_results);
             }
 
             LogInfo("Summarize '%1'", filenames[i]);

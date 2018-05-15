@@ -10,11 +10,13 @@
 #include "mco_tables.hh"
 
 enum class mco_ClassifyFlag {
-    IgnoreConfirmation = 1 << 0,
-    IgnoreProcedureDoc = 1 << 1,
-    IgnoreProcedureExtension = 1 << 2
+    MonoResults = 1 << 0,
+    IgnoreConfirmation = 1 << 1,
+    IgnoreProcedureDoc = 1 << 2,
+    IgnoreProcedureExtension = 1 << 3
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
+    {"mono", "Perform mono-stay classification"},
     {"ignore_confirm", "Ignore RSS confirmation flag"},
     {"ignore_proc_doc", "Ignore procedure documentation check"},
     {"ignore_proc_ext", "Ignore ATIH procedure extension check"}

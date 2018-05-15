@@ -253,7 +253,7 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
     return true;
 }
 
-static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
+static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
                                  mco_ErrorSet *out_errors)
 {
     bool valid = true;
@@ -342,13 +342,13 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
             }
         }
 
-        // TODO: Skip if not needed (no mono-stay classification), do the same
-        // in AppendValidProcedures()
-        std::sort(stay_info.diagnoses.begin(), stay_info.diagnoses.end());
+        if (flags & (int)mco_ClassifyFlag::MonoResults) {
+            std::sort(stay_info.diagnoses.begin(), stay_info.diagnoses.end());
+        }
     }
 
     // Deduplicate diagnoses
-    if (out_agg->store.diagnoses.len) {
+    if (out_agg->store.diagnoses.len > 1) {
         Span<const mco_DiagnosisInfo *> diagnoses = MakeSpan(out_agg->store.diagnoses.end(),
                                                              out_agg->store.diagnoses.len);
         memcpy(diagnoses.ptr, out_agg->store.diagnoses.ptr,
@@ -366,7 +366,7 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
 
         out_agg->info.diagnoses = diagnoses.Take(0, j + 1);
     } else {
-        out_agg->info.diagnoses = {};
+        out_agg->info.diagnoses = out_agg->store.diagnoses;
     }
 
     return valid;
@@ -502,7 +502,9 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
             }
         }
 
-        std::sort(stay_info.procedures.begin(), stay_info.procedures.end());
+        if (flags & (int)mco_ClassifyFlag::MonoResults) {
+            std::sort(stay_info.procedures.begin(), stay_info.procedures.end());
+        }
 
         stay_info.proc_activities = proc_activities;
         out_agg->info.proc_activities |= proc_activities;
@@ -2007,6 +2009,12 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
                   Span<const mco_Stay> stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
+    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        DebugAssert(out_mono_results);
+    } else {
+        out_mono_results = nullptr;
+    }
+
     // Pessimistic assumption (no multi-stay)
     out_results->Grow(stays.len);
     if (out_mono_results) {
@@ -2024,6 +2032,12 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
                           Span<const mco_Stay> stays, unsigned int flags,
                           HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
+    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        DebugAssert(out_mono_results);
+    } else {
+        out_mono_results = nullptr;
+    }
+
     if (!stays.len)
         return;
 
