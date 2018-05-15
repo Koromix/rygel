@@ -1982,7 +1982,15 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                 } else {
                     mono_errors.main_error = 0;
 
-                    mono_result.ghm = mco_ClassifyGhm(agg, stay_info, flags, &mono_errors);
+                    mono_result.ghm = RunGhmTree(agg, stay_info, &mono_errors);
+                    {
+                        const mco_GhmRootInfo *ghm_root_info =
+                            agg.index->FindGhmRoot(mono_result.ghm.Root());
+                        if (LIKELY(ghm_root_info)) {
+                            mono_result.ghm = RunGhmSeverity(agg, stay_info, mono_result.ghm,
+                                                             *ghm_root_info);
+                        }
+                    }
                     mono_result.main_error = mono_errors.main_error;
                     mono_result.ghs = mco_ClassifyGhs(agg, authorization_set, mono_result.ghm, flags);
                     mono_result.ghs_price_cents = mco_PriceGhs(agg, mono_result.ghs);
