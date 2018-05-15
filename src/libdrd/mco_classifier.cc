@@ -1964,6 +1964,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
         // Perform mono-stay classifications (if necessary)
         if (out_mono_results) {
+            mco_ErrorSet mono_errors = {};
+
             for (const mco_Aggregate::StayInfo &stay_info: agg.stays_info) {
                 mco_Result mono_result = {};
 
@@ -1978,12 +1980,13 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     mono_result.ghs_price_cents = result.ghs_price_cents;
                     mono_result.price_cents = result.price_cents;
                 } else {
-                    mono_result.ghm = mco_ClassifyGhm(agg, stay_info, flags, nullptr);
+                    mono_errors.main_error = 0;
+
+                    mono_result.ghm = mco_ClassifyGhm(agg, stay_info, flags, &mono_errors);
+                    mono_result.main_error = mono_errors.main_error;
                     mono_result.ghs = mco_ClassifyGhs(agg, authorization_set, mono_result.ghm, flags);
-                    if (mono_result.ghs != mco_GhsCode(9999)) {
-                        mono_result.ghs_price_cents = mco_PriceGhs(agg, mono_result.ghs);
-                        mono_result.price_cents = mono_result.ghs_price_cents;
-                    }
+                    mono_result.ghs_price_cents = mco_PriceGhs(agg, mono_result.ghs);
+                    mono_result.price_cents = mono_result.ghs_price_cents;
                 }
 
                 out_mono_results[j++] = mono_result;
