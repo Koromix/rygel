@@ -140,7 +140,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             return false;
 
         stay.admin_id = Rcc_GetOptional(stays.admin_id, i, 0);
-        stay.bill_id = Rcc_GetOptional(stays.bill_id, i, 0);
+        stay.bill_id = stays.bill_id[i];
         stay.birthdate = stays.birthdate[i];
         if (UNLIKELY(stay.birthdate.value && !stay.birthdate.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedBirthdate;
@@ -362,7 +362,7 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     stays.nrow = stays_df.nrow();
     stays.id = stays_df["id"];
     LOAD_OPTIONAL_COLUMN(stays, admin_id);
-    LOAD_OPTIONAL_COLUMN(stays, bill_id);
+    stays.bill_id = stays_df["bill_id"];
     stays.birthdate = stays_df["birthdate"];
     stays.sex = stays_df["sex"];
     stays.entry_date = stays_df["entry_date"];
