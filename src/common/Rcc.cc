@@ -34,6 +34,18 @@ void Rcc_StopWithLastError()
     }
 }
 
+void *Rcc_GetPointerSafe(SEXP xp)
+{
+    if (TYPEOF(xp) != EXTPTRSXP)
+        Rcpp::stop("Argument is not an object instance");
+
+    void *ptr = R_ExternalPtrAddr(xp);
+    if (!ptr)
+        Rcpp::stop("Object instance is not valid");
+
+    return ptr;
+}
+
 Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
     : xp(xp)
 {

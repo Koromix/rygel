@@ -416,7 +416,7 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     static const int task_size = 2048;
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
 
     unsigned int flags = 0;
     for (const char *opt: options) {
@@ -619,7 +619,7 @@ SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
 
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
@@ -659,7 +659,7 @@ SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
 
     Date date = Rcc_Vector<Date>(date_xp).Value();
     if (!date.value)

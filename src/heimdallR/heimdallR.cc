@@ -111,7 +111,7 @@ void R_HeimdallAddEvents(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame valu
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     AddElements(inst, source, values_df, keys, [&](Element &elmt, Size) {
         elmt.type = Element::Type::Event;
@@ -124,7 +124,7 @@ void R_HeimdallAddMeasures(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame va
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     struct {
         Rcpp::NumericVector value;
@@ -156,7 +156,7 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     struct {
         Rcpp::NumericVector duration;
@@ -176,7 +176,7 @@ void R_HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame conce
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     struct {
         Rcpp::CharacterVector name;
@@ -228,7 +228,7 @@ void R_HeimdallRun(SEXP inst_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     if (!inst->run) {
         if (inst->run_thread.joinable()) {
@@ -248,7 +248,7 @@ void R_HeimdallRunSync(SEXP inst_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
 
     if (inst->run)
         Rcpp::stop("Async run in progress");
@@ -270,6 +270,6 @@ void R_HeimdallStop(SEXP inst_xp)
 {
     RCC_SETUP_LOG_HANDLER();
 
-    Instance *inst = Rcpp::XPtr<Instance>(inst_xp).get();
+    Instance *inst = (Instance *)Rcc_GetPointerSafe(inst_xp);
     StopInstance(inst);
 }

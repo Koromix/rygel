@@ -42,6 +42,8 @@ extern bool rcc_log_missing_messages;
 void Rcc_DumpWarnings();
 void Rcc_StopWithLastError() __attribute__((noreturn));
 
+void *Rcc_GetPointerSafe(SEXP xp);
+
 class Rcc_AutoSexp {
     SEXP xp = nullptr;
 
