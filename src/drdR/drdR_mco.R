@@ -8,8 +8,13 @@ mco_summary_columns <- c('results', 'stays', 'failures',
                          'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                          'nn3_days', 'rep_days')
 
-mco_classify <- function(classifier, stays, diagnoses, procedures,
+mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                          sorted = FALSE, options = character(0), details = TRUE) {
+    if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
+        diagnoses <- stays$diagnoses
+        procedures <- stays$procedures
+        stays <- stays$stays
+    }
     if (!sorted) {
         sort_by_id <- function(df) {
             if (is.data.table(df)) {
