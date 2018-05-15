@@ -341,6 +341,10 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int /*flags*/,
                 valid &= SetError(out_errors, 94);
             }
         }
+
+        // TODO: Skip if not needed (no mono-stay classification), do the same
+        // in AppendValidProcedures()
+        std::sort(stay_info.diagnoses.begin(), stay_info.diagnoses.end());
     }
 
     // Deduplicate diagnoses
@@ -498,6 +502,8 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
             }
         }
 
+        std::sort(stay_info.procedures.begin(), stay_info.procedures.end());
+
         stay_info.proc_activities = proc_activities;
         out_agg->info.proc_activities |= proc_activities;
     }
@@ -505,7 +511,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // Deduplicate procedures
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
-    if (out_agg->store.procedures.len) {
+    if (procedures_count) {
         Span<const mco_ProcedureInfo *> procedures =
             MakeSpan(out_agg->store.procedures.ptr + procedures_count, out_agg->store.procedures.len);
         out_agg->store.procedures.len *= 2;
@@ -1094,13 +1100,19 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 10: {
             Size matches = 0;
+            // ctx.info->procedures is always sorted (when RunGhmTree() is expected
+            // to run on it) but not always deduplicated, that's why we need to check
+            // against prev_proc_info.
+            const mco_ProcedureInfo *prev_proc_info = nullptr;
             for (const mco_ProcedureInfo *proc_info: ctx.info->procedures) {
                 if (TestProcedure(*proc_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
+                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                        proc_info != prev_proc_info) {
                     matches++;
                     if (matches >= 2)
                         return 1;
                 }
+                prev_proc_info = proc_info;
             }
             return 0;
         } break;
@@ -1117,9 +1129,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 18: {
             Size matches = 0, special_matches = 0;
+            // See test 10 for why that's needed
+            const mco_DiagnosisInfo *prev_diag_info = nullptr;
             for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
                 if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
-                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
+                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
+                        diag_info != prev_diag_info) {
                     matches++;
                     if (diag_info == ctx.main_diag_info || diag_info == ctx.linked_diag_info) {
                         special_matches++;
@@ -1127,6 +1142,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
                     if (matches >= 2 && matches > special_matches)
                         return 1;
                 }
+                prev_diag_info = diag_info;
             }
             return 0;
         } break;
