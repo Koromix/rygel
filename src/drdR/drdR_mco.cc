@@ -374,7 +374,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             stays_count[i] = (int)result.stays.len;
             duration[i] = result.duration;
             main_stay[i] = (int)result.main_stay_idx + 1;
-            ghm.Set(i, Fmt(buf, "%1", result.ghm));
+            ghm.Set(i, result.ghm.ToString(buf));
             main_error[i] = result.main_error;
             ghs[i] = result.ghs.number;
             total_cents[i] = result.total_cents;
@@ -640,9 +640,8 @@ SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 
         for (Size i = 0; i < index->diagnoses.len; i++) {
             const mco_DiagnosisInfo &info = index->diagnoses[i];
-            char buf[32];
 
-            diag.Set(i, Fmt(buf, "%1", info.diag));
+            diag.Set(i, info.diag.str);
             cmd_m[i] = info.Attributes(1).cmd;
             cmd_f[i] = info.Attributes(2).cmd;
         }
@@ -682,9 +681,8 @@ SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const mco_ProcedureInfo &info = index->procedures[i];
-            char buf[32];
 
-            proc.Set(i, Fmt(buf, "%1", info.proc));
+            proc.Set(i, info.proc.str);
             phase[i] = info.phase;
             {
                 int activities_dec = 0;
@@ -772,8 +770,6 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
 
         Size j = 0, k = 0;
         for (Size i = 0; i < stay_set.stays.len; i++) {
-            char buf[32];
-
             const mco_Stay &stay = stay_set.stays[i];
 
             stays_id[i] = (int)(i + 1);
@@ -799,12 +795,12 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
             stays_gestational_age[i] = stay.gestational_age ? stay.gestational_age : NA_INTEGER;
             stays_newborn_weight[i] = stay.newborn_weight ? stay.newborn_weight : NA_INTEGER;
             if (LIKELY(stay.main_diagnosis.IsValid())) {
-                stays_main_diagnosis.Set(i, Fmt(buf, "%1", stay.main_diagnosis));
+                stays_main_diagnosis.Set(i, stay.main_diagnosis.str);
             } else {
                 stays_main_diagnosis.Set(i, nullptr);
             }
             if (stay.linked_diagnosis.IsValid()) {
-                stays_linked_diagnosis.Set(i, Fmt(buf, "%1", stay.linked_diagnosis));
+                stays_linked_diagnosis.Set(i, stay.linked_diagnosis.str);
             } else {
                 stays_linked_diagnosis.Set(i, nullptr);
             }
@@ -812,13 +808,13 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
 
             for (DiagnosisCode diag: stay.diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);
-                diagnoses_diag.Set(j, Fmt(buf, "%1", diag));
+                diagnoses_diag.Set(j, diag.str);
                 j++;
             }
 
             for (const mco_ProcedureRealisation &proc: stay.procedures) {
                 procedures_id[k] = (int)(i + 1);
-                procedures_proc.Set(k, Fmt(buf, "%1", proc.proc));
+                procedures_proc.Set(k, proc.proc.str);
                 procedures_extension[k] = proc.extension ? proc.extension : NA_INTEGER;
                 procedures_phase[k] = proc.phase;
                 {

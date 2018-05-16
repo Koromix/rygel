@@ -55,17 +55,27 @@ union mco_GhmRootCode {
     bool operator==(const mco_GhmRootCode &other) const { return value == other.value; }
     bool operator!=(const mco_GhmRootCode &other) const { return value != other.value; }
 
+    template <Size N>
+    Span<char> ToString(char (&buf)[N]) const
+    {
+        StaticAssert(N >= 6);
+
+        // We need to be fast here (at least for drdR), sprintf is too slow
+        buf[0] = (char)('0' + (parts.cmd / 10));
+        buf[1] = (char)('0' + (parts.cmd % 10));
+        buf[2] = parts.type;
+        buf[3] = (char)('0' + (parts.seq / 10));
+        buf[4] = (char)('0' + (parts.seq % 10));
+        buf[5] = 0;
+
+        return MakeSpan(buf, 5);
+    }
+
     operator FmtArg() const
     {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
-        // We need to be fast here (at least for drdR), sprintf is too slow
-        arg.value.str_buf[0] = (char)('0' + (parts.cmd / 10));
-        arg.value.str_buf[1] = (char)('0' + (parts.cmd % 10));
-        arg.value.str_buf[2] = parts.type;
-        arg.value.str_buf[3] = (char)('0' + (parts.seq / 10));
-        arg.value.str_buf[4] = (char)('0' + (parts.seq % 10));
-        arg.value.str_buf[5] = 0;
+        ToString(arg.value.str_buf);
         return arg;
     }
 };
@@ -138,18 +148,28 @@ union mco_GhmCode {
     bool operator==(const mco_GhmCode &other) const { return value == other.value; }
     bool operator!=(const mco_GhmCode &other) const { return value != other.value; }
 
+    template <Size N>
+    Span<char> ToString(char (&buf)[N]) const
+    {
+        StaticAssert(N >= 6);
+
+        // We need to be fast here (at least for drdR), sprintf is too slow
+        buf[0] = (char)('0' + (parts.cmd / 10));
+        buf[1] = (char)('0' + (parts.cmd % 10));
+        buf[2] = parts.type;
+        buf[3] = (char)('0' + (parts.seq / 10));
+        buf[4] = (char)('0' + (parts.seq % 10));
+        buf[5] = parts.mode;
+        buf[6] = 0;
+
+        return MakeSpan(buf, 6);
+    }
+
     operator FmtArg() const
     {
         FmtArg arg;
         arg.type = FmtArg::Type::StrBuf;
-        // We need to be fast here (at least for drdR), sprintf is too slow
-        arg.value.str_buf[0] = (char)('0' + (parts.cmd / 10));
-        arg.value.str_buf[1] = (char)('0' + (parts.cmd % 10));
-        arg.value.str_buf[2] = parts.type;
-        arg.value.str_buf[3] = (char)('0' + (parts.seq / 10));
-        arg.value.str_buf[4] = (char)('0' + (parts.seq % 10));
-        arg.value.str_buf[5] = parts.mode;
-        arg.value.str_buf[6] = 0;
+        ToString(arg.value.str_buf);
         return arg;
     }
 
