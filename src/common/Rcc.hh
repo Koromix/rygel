@@ -44,6 +44,17 @@ void Rcc_StopWithLastError() __attribute__((noreturn));
 
 void *Rcc_GetPointerSafe(SEXP xp);
 
+template <typename T, typename U>
+U Rcc_GetOptional(T &vec, Size idx, U default_value)
+{
+    if (UNLIKELY(idx >= vec.Len()))
+        return default_value;
+    auto value = vec[idx];
+    if (vec.IsNA(value))
+        return default_value;
+    return value;
+}
+
 class Rcc_AutoSexp {
     SEXP xp = nullptr;
 
@@ -93,12 +104,10 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (xp) {
-            if (TYPEOF(xp) != REALSXP) {
-                Rcpp::stop("Expected numeric vector");
-            }
-            span = MakeSpan(REAL(xp), Rf_xlength(xp));
+        if (TYPEOF(xp) != REALSXP) {
+            Rcpp::stop("Expected numeric vector");
         }
+        span = MakeSpan(REAL(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -128,12 +137,10 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (xp) {
-            if (TYPEOF(xp) != INTSXP) {
-                Rcpp::stop("Expected integer vector");
-            }
-            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        if (TYPEOF(xp) != INTSXP) {
+            Rcpp::stop("Expected integer vector");
         }
+        span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -163,12 +170,10 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (xp) {
-            if (TYPEOF(xp) != LGLSXP) {
-                Rcpp::stop("Expected logical vector");
-            }
-            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        if (TYPEOF(xp) != LGLSXP) {
+            Rcpp::stop("Expected logical vector");
         }
+        span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -198,12 +203,10 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (xp) {
-            if (TYPEOF(xp) != STRSXP) {
-                Rcpp::stop("Expected character vector");
-            }
-            span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+        if (TYPEOF(xp) != STRSXP) {
+            Rcpp::stop("Expected character vector");
         }
+        span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len) : Rcc_Vector(Rf_allocVector(STRSXP, len)) {}
 
@@ -241,14 +244,14 @@ class Rcc_Vector<Date> {
     };
 
     Rcc_AutoSexp xp;
-    Type type;
+    Type type = Type::Date;
     union {
         Span<SEXP> chr;
         Span<double> num;
     } u;
 
 public:
-    Rcc_Vector() { u.chr = {}; }
+    Rcc_Vector() : type(Type::Date) { u.chr = {}; }
     Rcc_Vector(SEXP xp);
     Rcc_Vector(Size len)
     {
@@ -271,17 +274,6 @@ public:
 
     void Set(Size idx, Date date);
 };
-
-template <typename T, typename U>
-U Rcc_GetOptional(T &vec, Size idx, U default_value)
-{
-    if (UNLIKELY(idx >= vec.Len()))
-        return default_value;
-    auto value = vec[idx];
-    if (vec.IsNA(value))
-        return default_value;
-    return value;
-}
 
 class Rcc_ListBuilder {
     struct Variable {
