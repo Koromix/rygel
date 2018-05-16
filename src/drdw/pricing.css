@@ -13,7 +13,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 64px;
+    min-width: 60px;
+    height: 1em;
 }
 #pricing_table th {
     background: white;
@@ -63,13 +64,17 @@
         filter: invert(10%);
         -webkit-filter: invert(10%);
     }
-    #pricing_table tr th:first-child { width: 90px; }
+    #pricing_table th:first-child { width: 90px; }
+    #pricing th.repeat { display: none; }
 }
 
 @media screen and (max-width: 800px) {
-    #pricing_table tr th:first-child {
-        border-left: 0;
-        width: 80px;
+    #pricing_table th, #pricing_table td { border: 0; }
+
+    #pricing th:not(.repeat) { display: none; }
+    #pricing th.repeat {
+        text-align: center;
+        font-size: 0.8em;
+        padding: 1px 0;
     }
-    #pricing_table tr td:last-child { border-right: 0; }
 }

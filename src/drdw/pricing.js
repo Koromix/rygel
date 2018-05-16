@@ -594,6 +594,14 @@ var pricing = {};
         });
 
         for (var duration = 0; duration < max_duration; duration++) {
+            if (duration && duration % 10 == 0) {
+                var tr = createElement('tr', {},
+                    createElement('th', {class: 'repeat',
+                                         colspan: 1 + ghs.length}, durationText(duration))
+                );
+                tbody.appendChild(tr);
+            }
+
             appendRow(tbody, durationText(duration), function(col, i) {
                 if (diff_index < 0) {
                     var info = computePrice(col, duration);
