@@ -591,12 +591,12 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
         summary_df = df_builder.BuildDataFrame();
     }
 
-    Rcc_AutoSexp results_df = R_NilValue;
+    Rcc_AutoSexp results_df;
     if (details) {
         results_df = ExportResultsDataFrame(result_sets);
     }
 
-    Rcc_AutoSexp mono_results_df = R_NilValue;
+    Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
         mono_results_df = ExportResultsDataFrame(mono_result_sets);
     }
@@ -605,8 +605,12 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     {
         Rcc_ListBuilder ret_builder;
         ret_builder.Add("summary", summary_df);
-        ret_builder.Add("results", results_df);
-        ret_builder.Add("mono_results", mono_results_df);
+        if (results_df) {
+            ret_builder.Add("results", results_df);
+        }
+        if (mono_results_df) {
+            ret_builder.Add("mono_results", mono_results_df);
+        }
         ret_list = ret_builder.BuildList();
     }
 
