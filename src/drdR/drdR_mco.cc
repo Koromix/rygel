@@ -70,36 +70,36 @@ SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::crea
 struct StaysProxy {
     Size nrow;
 
-    Rcc_Vector<int> id;
+    Rcc_NumericVector<int> id;
 
-    Rcc_Vector<int> admin_id;
-    Rcc_Vector<int> bill_id;
+    Rcc_NumericVector<int> admin_id;
+    Rcc_NumericVector<int> bill_id;
     Rcc_Vector<Date> birthdate;
-    Rcc_Vector<int> sex;
+    Rcc_NumericVector<int> sex;
     Rcc_Vector<Date> entry_date;
-    Rcc_Vector<int> entry_mode;
+    Rcc_NumericVector<int> entry_mode;
     Rcc_Vector<const char *> entry_origin;
     Rcc_Vector<Date> exit_date;
-    Rcc_Vector<int> exit_mode;
-    Rcc_Vector<int> exit_destination;
-    Rcc_Vector<int> unit;
-    Rcc_Vector<int> bed_authorization;
-    Rcc_Vector<int> session_count;
-    Rcc_Vector<int> igs2;
-    Rcc_Vector<int> gestational_age;
-    Rcc_Vector<int> newborn_weight;
+    Rcc_NumericVector<int> exit_mode;
+    Rcc_NumericVector<int> exit_destination;
+    Rcc_NumericVector<int> unit;
+    Rcc_NumericVector<int> bed_authorization;
+    Rcc_NumericVector<int> session_count;
+    Rcc_NumericVector<int> igs2;
+    Rcc_NumericVector<int> gestational_age;
+    Rcc_NumericVector<int> newborn_weight;
     Rcc_Vector<Date> last_menstrual_period;
 
     Rcc_Vector<const char *> main_diagnosis;
     Rcc_Vector<const char *> linked_diagnosis;
 
-    Rcc_Vector<int> confirm;
+    Rcc_NumericVector<int> confirm;
 };
 
 struct DiagnosesProxy {
     Size nrow;
 
-    Rcc_Vector<int> id;
+    Rcc_NumericVector<int> id;
 
     Rcc_Vector<const char *> diag;
     Rcc_Vector<const char *> type;
@@ -108,13 +108,13 @@ struct DiagnosesProxy {
 struct ProceduresProxy {
     Size nrow;
 
-    Rcc_Vector<int> id;
+    Rcc_NumericVector<int> id;
 
     Rcc_Vector<const char *> proc;
-    Rcc_Vector<int> extension;
-    Rcc_Vector<int> phase;
-    Rcc_Vector<int> activity;
-    Rcc_Vector<int> count;
+    Rcc_NumericVector<int> extension;
+    Rcc_NumericVector<int> phase;
+    Rcc_NumericVector<int> activity;
+    Rcc_NumericVector<int> count;
     Rcc_Vector<Date> date;
     Rcc_Vector<const char *> doc;
 };

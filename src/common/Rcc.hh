@@ -275,6 +275,52 @@ public:
     void Set(Size idx, Date date);
 };
 
+template <typename T>
+class Rcc_NumericVector {
+    enum class Type {
+        Int,
+        Double
+    };
+
+    Rcc_AutoSexp xp;
+    Type type;
+    union {
+        Span<int> i;
+        Span<double> d;
+    } u;
+
+public:
+    Rcc_NumericVector() : type(Type::Int) { u.i = {}; }
+    Rcc_NumericVector(SEXP xp)
+        : xp(xp)
+    {
+        if (Rf_isInteger(xp)) {
+            type = Type::Int;
+            u.i = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        } else if (Rf_isReal(xp)) {
+            type = Type::Double;
+            u.d = MakeSpan(REAL(xp), Rf_xlength(xp));
+        } else {
+            Rcpp::stop("Expected numeric or integer vector");
+        }
+    }
+
+    operator SEXP() const { return xp; }
+
+    Size Len() const { return u.i.len; }
+
+    static bool IsNA(T value) { return Rcc_Vector<T>::IsNA(value); }
+
+    T operator[](Size idx) const
+    {
+        switch (type) {
+            case Type::Int: { return (T)u.i[idx]; } break;
+            case Type::Double: { return (T)u.d[idx]; } break;
+        }
+        DebugAssert(false);
+    }
+};
+
 class Rcc_ListBuilder {
     struct Variable {
         const char *name;
