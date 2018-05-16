@@ -408,6 +408,10 @@ static bool UpdateStaticAssets()
 static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, const char *,
                                 const char *, const char *, size_t *, void **)
 {
+#ifndef NDEBUG
+    UpdateStaticAssets();
+#endif
+
     // Handle server-side cache validation (ETag)
     {
         const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
@@ -435,10 +439,6 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
             return MHD_queue_response(conn, 406, response);
         }
     }
-
-#ifndef NDEBUG
-    UpdateStaticAssets();
-#endif
 
     // Find appropriate route
     Route *route;
