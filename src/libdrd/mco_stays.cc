@@ -42,7 +42,7 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
 #ifdef ARCH_64
     st.Write(stays.ptr, stays.len * SIZE(*stays.ptr));
 #else
-    for (const Stay &stay: stays) {
+    for (const mco_Stay &stay: stays) {
         mco_Stay stay2;
         memcpy(&stay2, &stay, SIZE(stay));
 

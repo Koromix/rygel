@@ -160,7 +160,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                     case DurationMode::Full: { key.st.duration = (int16_t)result.duration; } break;
                 }
 
-                std::pair<int64_t *, bool> ret = summary_map.Append(key.value, summary.len);
+                std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
                 if (ret.second) {
                     CellSummary cell_summary = {};
                     cell_summary.ghm = result.ghm;
