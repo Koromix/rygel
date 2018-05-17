@@ -9,7 +9,7 @@ mco_summary_columns <- c('results', 'stays', 'failures',
                          'nn3_days', 'rep_days')
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
-                         sorted = FALSE, options = character(0), details = TRUE, mono = FALSE) {
+                         sorted = TRUE, options = character(0), details = TRUE, mono = FALSE) {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
         diagnoses <- stays$diagnoses
         procedures <- stays$procedures
