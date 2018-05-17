@@ -6,22 +6,80 @@
 #include "mco_authorizations.hh"
 #include "mco_tables.hh"
 
-bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set)
+bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
 {
-    Size authorizations_len = out_set->authorizations.len;
-    DEFER_NC(out_guard, facility_authorizations_len = out_set->facility_authorizations.len) {
-        out_set->authorizations.RemoveFrom(authorizations_len);
-        out_set->facility_authorizations.RemoveFrom(facility_authorizations_len);
+    static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
+
+    Size authorizations_len = set.authorizations.len;
+    DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+        set.authorizations.RemoveFrom(authorizations_len);
+        set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
+    LineReader reader(&st);
+    reader.PushLogHandler();
+    DEFER { PopLogHandler(); };
+
+    bool valid = true;
     {
-        StreamReader st(filename);
-        IniParser ini(&st);
-        bool valid = true;
+        Span<const char> line;
+        while (reader.Next(&line)) {
+            if (line.len < 28) {
+                LogError("Truncated FICUM line");
+                valid = false;
+                continue;
+            }
 
-        ini.reader.PushLogHandler();
-        DEFER { PopLogHandler(); };
+            mco_Authorization auth = {};
+            HeapArray<mco_Authorization> *authorizations;
 
+            if (line.Take(0, 3) == "$$$") {
+                auth.unit.number = INT16_MAX;
+                authorizations = &set.facility_authorizations;
+            } else {
+                auth.unit = UnitCode::FromString(line.Take(0, 4));
+                valid &= auth.unit.IsValid();
+                authorizations = &set.authorizations;
+            }
+            valid &= ParseDec(line.Take(13, 3), &auth.type,
+                              DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+            ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
+                    DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
+                     DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
+                     DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            auth.dates[1] = default_end_date;
+
+            if (!auth.unit.number || !auth.dates[0].IsValid()) {
+                LogError("Invalid authorization attributes");
+                valid = false;
+            }
+
+            authorizations->Append(auth);
+        }
+    }
+    if (reader.error || !valid)
+        return false;
+
+    out_guard.disable();
+    return true;
+}
+
+bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
+{
+    Size authorizations_len = set.authorizations.len;
+    DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+        set.authorizations.RemoveFrom(authorizations_len);
+        set.facility_authorizations.RemoveFrom(facility_authorizations_len);
+    };
+
+    IniParser ini(&st);
+    ini.reader.PushLogHandler();
+    DEFER { PopLogHandler(); };
+
+    bool valid = true;
+    {
         IniProperty prop;
         while (ini.Next(&prop)) {
             mco_Authorization auth = {};
@@ -29,11 +87,11 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
             HeapArray<mco_Authorization> *authorizations;
             if (prop.section == "Facility") {
                 auth.unit.number = INT16_MAX;
-                authorizations = &out_set->facility_authorizations;
+                authorizations = &set.facility_authorizations;
             } else {
                 auth.unit = UnitCode::FromString(prop.section);
                 valid &= auth.unit.IsValid();
-                authorizations = &out_set->authorizations;
+                authorizations = &set.authorizations;
             }
 
             do {
@@ -62,31 +120,64 @@ bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_s
 
             authorizations->Append(auth);
         }
-        if (ini.error || !valid)
-            return false;
+    }
+    if (ini.error || !valid)
+        return false;
+
+    out_guard.disable();
+    return true;
+}
+
+bool mco_AuthorizationSetBuilder::LoadFiles(Span<const char *const> filenames)
+{
+    bool success = true;
+
+    for (const char *filename: filenames) {
+        CompressionType compression_type;
+        Span<const char> extension = GetPathExtension(filename, &compression_type);
+
+        bool (mco_AuthorizationSetBuilder::*load_func)(StreamReader &st);
+        if (extension == ".ini") {
+            load_func = &mco_AuthorizationSetBuilder::LoadIni;
+        } else if (extension == ".txt" || extension == ".ficum") {
+            load_func = &mco_AuthorizationSetBuilder::LoadFicum;
+        } else {
+            LogError("Cannot load authorizations from file '%1' with unknown extension '%2'",
+                     filename, extension);
+            success = false;
+            continue;
+        }
+
+        StreamReader st(filename, compression_type);
+        if (st.error) {
+            success = false;
+            continue;
+        }
+        success &= (this->*load_func)(st);
     }
 
-    Span<mco_Authorization> authorizations =
-        out_set->authorizations.Take(authorizations_len, out_set->authorizations.len - authorizations_len);
+    return success;
+}
 
-    std::sort(authorizations.begin(), authorizations.end(),
+void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
+{
+    std::sort(set.authorizations.begin(), set.authorizations.end(),
               [](const mco_Authorization &auth1, const mco_Authorization &auth2) {
         return MultiCmp(auth1.unit.number - auth2.unit.number,
                         auth1.dates[0] - auth2.dates[0]) < 0;
     });
 
     // Fix end dates and map
-    for (Size i = 0; i < out_set->authorizations.len; i++) {
-        const mco_Authorization &auth = authorizations[i];
+    for (Size i = 0; i < set.authorizations.len; i++) {
+        const mco_Authorization &auth = set.authorizations[i];
 
-        if (i && authorizations[i - 1].unit == auth.unit) {
-            authorizations[i - 1].dates[1] = auth.dates[0];
+        if (i && set.authorizations[i - 1].unit == auth.unit) {
+            set.authorizations[i - 1].dates[1] = auth.dates[0];
         }
-        out_set->authorizations_map.Append(&auth);
+        set.authorizations_map.Append(&auth);
     }
 
-    out_guard.disable();
-    return true;
+    SwapMemory(out_set, &set, SIZE(set));
 }
 
 Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) const

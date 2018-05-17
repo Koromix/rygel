@@ -61,6 +61,11 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
 {
     LogInfo("Loading authorizations");
 
+    static const char *const default_names[] = {
+        "authorizations.ini",
+        "authorizations.txt"
+    };
+
     LinkedAllocator temp_alloc;
 
     const char *filename = nullptr;
@@ -68,22 +73,26 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
         if (authorization_filename) {
             filename = authorization_filename;
         } else {
-            for (Size i = resource_directories.len; i-- > 0;) {
+            for (Size i = resource_directories.len; i-- > 0 && !filename;) {
                 const char *resource_dir = resource_directories[i];
 
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config/authorizations.ini",
-                                                resource_dir).ptr;
-                if (TestPath(test_filename, FileType::File)) {
-                    filename = test_filename;
-                    break;
+                for (const char *default_name: default_names) {
+                    const char *test_filename = Fmt(&temp_alloc, "%1%/config/%2",
+                                                    resource_dir, default_name).ptr;
+                    if (TestPath(test_filename, FileType::File)) {
+                        filename = test_filename;
+                        break;
+                    }
                 }
             }
         }
     }
 
     if (filename && filename[0]) {
-        if (!mco_LoadAuthorizationFile(filename, out_set))
+        mco_AuthorizationSetBuilder authorization_set_builder;
+        if (!authorization_set_builder.LoadFiles(filename))
             return false;
+        authorization_set_builder.Finish(out_set);
     } else {
         LogError("No authorization file specified or found");
     }

@@ -27,4 +27,13 @@ struct mco_AuthorizationSet {
     bool TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const;
 };
 
-bool mco_LoadAuthorizationFile(const char *filename, mco_AuthorizationSet *out_set);
+class mco_AuthorizationSetBuilder {
+    mco_AuthorizationSet set;
+
+public:
+    bool LoadFicum(StreamReader &stt);
+    bool LoadIni(StreamReader &st);
+    bool LoadFiles(Span<const char *const> filenames);
+
+    void Finish(mco_AuthorizationSet *out_set);
+};
