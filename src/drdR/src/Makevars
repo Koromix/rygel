@@ -1,0 +1,22 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+PKG_CPPFLAGS += -D_FILE_OFFSET_BITS=64
+PKG_CFLAGS += -std=gnu99
+PKG_CXXFLAGS += -std=gnu++14
+
+all:
+	@mkdir -p ../R
+	cp ../drdR_mco.R ../R/drdR_mco.R
+
+override OBJECTS = miniz.c.o drdR_mco.cc.o libdrd.cc.o Rcc.cc.o
+
+drdR_mco.cc.o: ../drdR_mco.cc
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+Rcc.cc.o: ../../common/Rcc.cc
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+libdrd.cc.o: ../../libdrd/libdrd.cc
+	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+miniz.c.o: ../../../lib/miniz/miniz.c
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c -o $@ $<
