@@ -13,13 +13,3 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 #include "mco_init.hh"
-
-#ifdef DRD_IMPLEMENTATION
-    #include "../common/kutil.cc"
-    #include "mco_authorizations.cc"
-    #include "mco_tables.cc"
-    #include "mco_stays.cc"
-    #include "mco_classifier.cc"
-    #include "mco_mapper.cc"
-    #include "mco_init.cc"
-#endif

@@ -23,7 +23,7 @@ get_filename_component(src_dir "${SRC}" DIRECTORY)
 file(STRINGS "${SRC}" lines ENCODING "UTF-8")
 
 foreach(line IN LISTS lines)
-    if(line MATCHES "#include \"([a-zA-Z0-9_\\-\\/]+\\.[a-zA-Z]+)\"")
+    if(line MATCHES "#include \"([^\"]+)\"")
         set(include_file "${CMAKE_MATCH_1}")
         list(FIND EXCLUDE "${include_file}" exclude_index)
         if(exclude_index EQUAL -1)
@@ -50,7 +50,7 @@ foreach(line IN LISTS lines)
                 set(offset ${offset_include})
             endif()
             string(SUBSTRING "${include_content}" ${offset} -1 include_content)
-            string(REGEX REPLACE "(#include \"[a-zA-Z0-9_\\-\\/]+\\.[a-zA-Z]+\")" "// \\1" include_content "${include_content}")
+            string(REGEX REPLACE "(#include \"([^\"]+)\")" "// \\1" include_content "${include_content}")
 
             file(APPEND "${DEST}" "\
 // ${include_file}\n\
