@@ -24,11 +24,7 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if (details) {
-        setDT(result_set$results)
         class(result_set$results) <- c('mco_results', class(result_set$results))
-    }
-    if ('mono' %in% options) {
-        setDT(result_set$mono_results)
     }
     class(result_set) <- c('mco_result_set', class(result_set))
 
@@ -61,7 +57,7 @@ mco_compare <- function(summary1, summary2, ...) {
 }
 
 summary.mco_results <- function(results, by = NULL) {
-    agg <- setDF(results[, c(
+    agg <- setDF(setDT(results)[, c(
         list(
             results = .N,
             stays = sum(stays_count),
@@ -86,6 +82,7 @@ summary.mco_results <- function(results, by = NULL) {
             rep_days = sum(rep_days)
         )
     ), keyby = by])
+    setDF(results)
 
     class(agg) <- c('mco_summary', class(agg))
     return (agg)
