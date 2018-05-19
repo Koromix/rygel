@@ -1014,7 +1014,7 @@ public:
             idx++;
             return *this;
         }
-        Iterator operator++(int) const
+        Iterator operator++(int)
         {
             Iterator ret = *this;
             ++(*this);
@@ -1026,7 +1026,7 @@ public:
             idx--;
             return *this;
         }
-        Iterator operator--(int) const
+        Iterator operator--(int)
         {
             Iterator ret = *this;
             --(*this);

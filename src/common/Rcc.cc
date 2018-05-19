@@ -55,6 +55,9 @@ Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
     } else if (Rf_isReal(xp) && Rf_inherits(xp, "Date")) {
         type = Type::Date;
         u.num = MakeSpan(REAL(xp), Rf_xlength(xp));
+    } else if (xp == R_NilValue) {
+        type = Type::Date;
+        u.num = {};
     } else {
         Rcpp::stop("Date vector uses unsupported type (must be Date or date-like string)");
     }

@@ -13,6 +13,7 @@ if(R_FOUND)
                       heimdallR.cc
                       heimdallR.R)
 
-    R_add_package(heimdallR DESCRIPTION NAMESPACE RCPP ${HEIMDALLR_SRC})
+    R_add_package(heimdallR DESCRIPTION NAMESPACE RCPP_EXPORT RCPP_INCLUDE
+                  ${HEIMDALLR_SRC})
     target_link_libraries(heimdallR PRIVATE heimdall miniz)
 endif()

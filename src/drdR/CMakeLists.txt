@@ -9,6 +9,7 @@ if(R_FOUND)
                  drdR_mco.cc
                  drdR_mco.R)
 
-    R_add_package(drdR DESCRIPTION NAMESPACE RCPP ${DRDR_SRC})
+    R_add_package(drdR DESCRIPTION NAMESPACE RCPP_INCLUDE
+                  ${DRDR_SRC})
     target_link_libraries(drdR PRIVATE drd miniz)
 endif()

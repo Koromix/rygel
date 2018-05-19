@@ -59,7 +59,7 @@ if(R_FOUND)
     endif()
 
     function(R_add_package TARGET DESCRIPTION NAMESPACE)
-        cmake_parse_arguments("OPT" "RCPP" "" "" ${ARGN})
+        cmake_parse_arguments("OPT" "RCPP_INCLUDE;RCPP_EXPORT" "" "" ${ARGN})
         set(sources ${OPT_UNPARSED_ARGUMENTS})
 
         if(NOT IS_ABSOLUTE ${DESCRIPTION})
@@ -143,8 +143,10 @@ execute_process(
                                      -P "${CMAKE_BINARY_DIR}/RunRCmdInstall.cmake"
             WORKING_DIRECTORY ${pkg_directory})
 
-        if(OPT_RCPP)
+        if(OPT_RCPP_INCLUDE)
             target_include_directories(${TARGET} SYSTEM PRIVATE ${R_RCPP_INCLUDE_DIRS})
+        endif()
+        if(OPT_RCPP_EXPORT)
             add_custom_command(
                 OUTPUT "${pkg_directory}/src/RcppExports.cpp"
                 COMMAND ${R_BINARY_RSCRIPT} -e "library(Rcpp);Rcpp::compileAttributes('${pkg_directory}')"

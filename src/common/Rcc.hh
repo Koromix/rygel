@@ -104,10 +104,13 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (TYPEOF(xp) != REALSXP) {
+        if (TYPEOF(xp) == REALSXP) {
+            span = MakeSpan(REAL(xp), Rf_xlength(xp));
+        } else if (xp == R_NilValue) {
+            span = {};
+        } else {
             Rcpp::stop("Expected numeric vector");
         }
-        span = MakeSpan(REAL(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -116,6 +119,9 @@ public:
     }
 
     operator SEXP() const { return xp; }
+
+    double *begin() const { return span.begin(); }
+    double *end() const { return span.end(); }
 
     Size Len() const { return span.len; }
 
@@ -137,10 +143,13 @@ public:
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (TYPEOF(xp) != INTSXP) {
+        if (TYPEOF(xp) == INTSXP) {
+            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        } else if (xp == R_NilValue) {
+            span = {};
+        } else {
             Rcpp::stop("Expected integer vector");
         }
-        span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -149,6 +158,9 @@ public:
     }
 
     operator SEXP() const { return xp; }
+
+    int *begin() const { return span.begin(); }
+    int *end() const { return span.end(); }
 
     Size Len() const { return span.len; }
 
@@ -166,14 +178,34 @@ class Rcc_Vector<bool> {
     Span<int> span = {};
 
 public:
+    class Iterator {
+        int *ptr;
+
+    public:
+        Iterator(int *ptr) : ptr(ptr) {}
+
+        bool operator*() { return *ptr; }
+
+        Iterator &operator++() { ptr++; return *this; }
+        Iterator operator++(int) { Iterator ret = *this; ++(*this); return ret; }
+        Iterator &operator--() { ptr--; return *this; }
+        Iterator operator--(int) { Iterator ret = *this; --(*this); return ret; }
+
+        bool operator==(const Iterator &other) const { return ptr == other.ptr; }
+        bool operator!=(const Iterator &other) const { return ptr != other.ptr; }
+    };
+
     Rcc_Vector() = default;
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (TYPEOF(xp) != LGLSXP) {
+        if (TYPEOF(xp) == LGLSXP) {
+            span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
+        } else if (xp == R_NilValue) {
+            span = {};
+        } else {
             Rcpp::stop("Expected logical vector");
         }
-        span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len)
     {
@@ -182,6 +214,9 @@ public:
     }
 
     operator SEXP() const { return xp; }
+
+    Iterator begin() const { return Iterator(span.begin()); }
+    Iterator end() const { return Iterator(span.end()); }
 
     Size Len() const { return span.len; }
 
@@ -199,18 +234,41 @@ class Rcc_Vector<const char *> {
     Span<SEXP> span = {};
 
 public:
+    class Iterator {
+        SEXP *xp;
+
+    public:
+        Iterator(SEXP *xp) : xp(xp) {}
+
+        const char *operator*() { return CHAR(*xp); }
+
+        Iterator &operator++() { xp++; return *this; }
+        Iterator operator++(int) { Iterator ret = *this; ++(*this); return ret; }
+        Iterator &operator--() { xp--; return *this; }
+        Iterator operator--(int) { Iterator ret = *this; --(*this); return ret; }
+
+        bool operator==(const Iterator &other) const { return xp == other.xp; }
+        bool operator!=(const Iterator &other) const { return xp != other.xp; }
+    };
+
     Rcc_Vector() = default;
     Rcc_Vector(SEXP xp)
         : xp(xp)
     {
-        if (TYPEOF(xp) != STRSXP) {
+        if (TYPEOF(xp) == STRSXP) {
+            span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
+        } else if (xp == R_NilValue) {
+            span = {};
+        } else {
             Rcpp::stop("Expected character vector");
         }
-        span = MakeSpan(STRING_PTR(xp), Rf_xlength(xp));
     }
     Rcc_Vector(Size len) : Rcc_Vector(Rf_allocVector(STRSXP, len)) {}
 
     operator SEXP() const { return xp; }
+
+    Iterator begin() const { return Iterator(span.begin()); }
+    Iterator end() const { return Iterator(span.end()); }
 
     Size Len() const { return span.len; }
 

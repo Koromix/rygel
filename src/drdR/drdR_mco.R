@@ -8,6 +8,11 @@ mco_summary_columns <- c('results', 'stays', 'failures',
                          'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                          'nn3_days', 'rep_days')
 
+mco_init <- function(data_dirs = character(0), table_dirs = character(0),
+                     table_filenames = character(0), authorization_filename = NULL) {
+    .Call(`drdR_mco_Init`, data_dirs, table_dirs, table_filenames, authorization_filename)
+}
+
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                          sorted = TRUE, options = character(0), details = TRUE, mono = FALSE) {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
@@ -19,8 +24,8 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
         options = c(options, 'mono')
     }
 
-    result_set <- .mco_classify(classifier, stays, diagnoses, procedures,
-                                options = options, details = details)
+    result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
+                        options, details)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if (details) {
@@ -28,7 +33,23 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     }
     class(result_set) <- c('mco_result_set', class(result_set))
 
-    return (result_set)
+    return(result_set)
+}
+
+drd_options <- function(debug = NULL) {
+    .Call(`drdR_Options`, debug)
+}
+
+mco_diagnoses <- function(classifier, date) {
+    .Call(`drdR_mco_Diagnoses`, classifier, date)
+}
+
+mco_procedures <- function(classifier, date) {
+    .Call(`drdR_mco_Procedures`, classifier, date)
+}
+
+mco_load_stays <- function(filenames) {
+    .Call(`drdR_mco_LoadStays`, filenames)
 }
 
 mco_compare <- function(summary1, summary2, ...) {
@@ -85,7 +106,7 @@ summary.mco_results <- function(results, by = NULL) {
     setDF(results)
 
     class(agg) <- c('mco_summary', class(agg))
-    return (agg)
+    return(agg)
 }
 summary.mco_result_set <- function(result_set, by = NULL) {
     if (is.null(by)) {

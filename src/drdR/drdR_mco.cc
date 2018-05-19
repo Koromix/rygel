@@ -10,8 +10,7 @@ struct ClassifierInstance {
     mco_AuthorizationSet authorization_set;
 };
 
-// [[Rcpp::export(name = 'drdR')]]
-SEXP drdR_Options(SEXP debug = R_NilValue)
+RcppExport SEXP drdR_Options(SEXP debug = R_NilValue)
 {
     if (!Rf_isNull(debug)) {
         enable_debug = Rcpp::as<bool>(debug);
@@ -22,13 +21,18 @@ SEXP drdR_Options(SEXP debug = R_NilValue)
     );
 }
 
-// [[Rcpp::export(name = 'mco_init')]]
-SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::create(),
-                   Rcpp::CharacterVector table_dirs = Rcpp::CharacterVector::create(),
-                   Rcpp::CharacterVector table_filenames = Rcpp::CharacterVector::create(),
-                   Rcpp::Nullable<Rcpp::String> authorization_filename = R_NilValue)
+RcppExport SEXP drdR_mco_Init(SEXP data_dirs_xp, SEXP table_dirs_xp, SEXP table_filenames_xp,
+                              SEXP authorization_filename_xp)
 {
+    BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
+
+    Rcc_Vector<const char *> data_dirs(data_dirs_xp);
+    Rcc_Vector<const char *> table_dirs(table_dirs_xp);
+    Rcc_Vector<const char *> table_filenames(table_filenames_xp);
+    Rcc_Vector<const char *> authorization_filename(authorization_filename_xp);
+    if (authorization_filename.Len() > 1)
+        Rcpp::stop("Cannot load more than one authorization file");
 
     ClassifierInstance *classifier = new ClassifierInstance;
     DEFER_N(classifier_guard) { delete classifier; };
@@ -46,8 +50,8 @@ SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::crea
     for (const char *str: table_filenames) {
         table_filenames2.Append(str);
     }
-    if (authorization_filename.isNotNull()) {
-        authorization_filename2 = authorization_filename.as().get_cstring();
+    if (authorization_filename.Len()) {
+        authorization_filename2 = authorization_filename[0].ptr;
     }
 
     if (!mco_InitTableSet(data_dirs2, table_dirs2, table_filenames2, &classifier->table_set) ||
@@ -65,6 +69,8 @@ SEXP drdR_mco_Init(Rcpp::CharacterVector data_dirs = Rcpp::CharacterVector::crea
     classifier_guard.disable();
 
     return classifier_xp;
+
+    END_RCPP
 }
 
 struct StaysProxy {
@@ -405,18 +411,21 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     return df_builder.Build();
 }
 
-// [[Rcpp::export(name = '.mco_classify')]]
-SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
-                       Rcpp::DataFrame diagnoses_df, Rcpp::DataFrame procedures_df,
-                       Rcpp::CharacterVector options = Rcpp::CharacterVector::create(),
-                       bool details = true)
+RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
+                                  SEXP procedures_xp, SEXP options_xp, SEXP details_xp)
 {
+    BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
     static const int task_size = 2048;
 
     const ClassifierInstance *classifier =
         (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+    Rcpp::DataFrame stays_df(stays_xp);
+    Rcpp::DataFrame diagnoses_df(diagnoses_xp);
+    Rcpp::DataFrame procedures_df(procedures_xp);
+    Rcpp::CharacterVector options(options_xp);
+    bool details(details_xp);
 
     unsigned int flags = 0;
     for (const char *opt: options) {
@@ -615,11 +624,13 @@ SEXP drdR_mco_Classify(SEXP classifier_xp, Rcpp::DataFrame stays_df,
     }
 
     return ret_list;
+
+    END_RCPP
 }
 
-// [[Rcpp::export(name = 'mco_diagnoses')]]
-SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
+RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
+    BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
@@ -654,11 +665,13 @@ SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     }
 
     return diagnoses_df;
+
+    END_RCPP
 }
 
-// [[Rcpp::export(name = 'mco_procedures')]]
-SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
+RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 {
+    BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
@@ -706,12 +719,16 @@ SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     }
 
     return procedures_df;
+
+    END_RCPP
 }
 
-// [[Rcpp::export(name = 'mco_load_stays')]]
-SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
+RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 {
+    BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
+
+    Rcc_Vector<const char *> filenames(filenames_xp);
 
     mco_StaySet stay_set;
     {
@@ -856,4 +873,21 @@ SEXP drdR_mco_LoadStays(Rcpp::CharacterVector filenames)
     }
 
     return list;
+
+    END_RCPP
+}
+
+RcppExport void R_init_drdR(DllInfo *dll) {
+    static const R_CallMethodDef call_entries[] = {
+        {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
+        {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
+        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 6},
+        {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
+        {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},
+        {"drdR_mco_LoadStays", (DL_FUNC)&drdR_mco_LoadStays, 1},
+        {}
+    };
+
+    R_registerRoutines(dll, nullptr, call_entries, nullptr, nullptr);
+    R_useDynamicSymbols(dll, FALSE);
 }
