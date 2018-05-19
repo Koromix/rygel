@@ -61,17 +61,31 @@ mco_compare <- function(summary1, summary2, ...) {
 }
 
 summary.mco_results <- function(results, by = NULL) {
-    agg_columns <- setdiff(mco_summary_columns, c('results', 'stays', 'failures'))
-
-    agg <- results[, c(
+    agg <- setDF(results[, c(
         list(
             results = .N,
             stays = sum(stays_count),
-            failures = sum(startsWith(ghm, '90'))
-        ),
-        as.list(colSums(.SD[, ..agg_columns]))
-    ), keyby = by]
-    agg <- setDF(agg)
+            failures = sum(startsWith('90Z', ghm)),
+            total_cents = sum(total_cents),
+            price_cents = sum(price_cents),
+            rea_cents = sum(rea_cents),
+            reasi_cents = sum(reasi_cents),
+            si_cents = sum(si_cents),
+            src_cents = sum(src_cents),
+            nn1_cents = sum(nn1_cents),
+            nn2_cents = sum(nn2_cents),
+            nn3_cents = sum(nn3_cents),
+            rep_cents = sum(rep_cents),
+            rea_days = sum(rea_days),
+            reasi_days = sum(reasi_days),
+            si_days = sum(si_days),
+            src_days = sum(src_days),
+            nn1_days = sum(nn1_days),
+            nn2_days = sum(nn2_days),
+            nn3_days = sum(nn3_days),
+            rep_days = sum(rep_days)
+        )
+    ), keyby = by])
 
     class(agg) <- c('mco_summary', class(agg))
     return (agg)
