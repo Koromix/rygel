@@ -15,20 +15,6 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
         procedures <- stays$procedures
         stays <- stays$stays
     }
-    if (!sorted) {
-        sort_by_id <- function(df) {
-            if (is.data.table(df)) {
-                df <- setorder(data.table(df), id)
-            } else {
-                df <- df[order(df$id),]
-            }
-            return (df)
-        }
-
-        stays <- sort_by_id(stays)
-        diagnoses <- sort_by_id(diagnoses)
-        procedures <- sort_by_id(procedures)
-    }
     if (mono) {
         options = c(options, 'mono')
     }
