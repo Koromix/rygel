@@ -1895,8 +1895,8 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death, i
         } else {
             price_cents += price_info.exb_cents * exb_exh;
         }
-    } else if (duration + death > price_info.exh_treshold) {
-        exb_exh = !!price_info.exh_treshold * (duration + death - price_info.exh_treshold);
+    } else if (price_info.exh_treshold && duration + death >= price_info.exh_treshold) {
+        exb_exh = duration + death + 1 - price_info.exh_treshold;
         price_cents += price_info.exh_cents * exb_exh;
     } else {
         exb_exh = 0;
