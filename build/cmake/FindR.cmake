@@ -84,7 +84,7 @@ if(R_FOUND)
             DEPENDS ${NAMESPACE}
             VERBATIM)
 
-        set(rcpp_depends)
+        set(copy_dependencies)
         foreach(src ${sources})
             get_filename_component(src_ext ${src} EXT)
             get_filename_component(src_name ${src} NAME)
@@ -103,8 +103,9 @@ if(R_FOUND)
                 COMMAND ${CMAKE_COMMAND} -E copy "${src_path}" "${src_dest}"
                 DEPENDS "${src_path}"
                 VERBATIM)
-            list(APPEND rcpp_depends ${src_dest})
+            list(APPEND copy_dependencies ${src_dest})
         endforeach()
+        add_custom_target(${TARGET}_copy DEPENDS ${copy_dependencies})
 
         add_library(${TARGET} MODULE ${sources}
                     "${pkg_directory}/DESCRIPTION" "${pkg_directory}/NAMESPACE")
@@ -117,7 +118,7 @@ if(R_FOUND)
         endif()
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
-        add_dependencies(${TARGET} R_fake_make)
+        add_dependencies(${TARGET} ${TARGET}_copy R_fake_make)
 
         file(MAKE_DIRECTORY "${install_directory}")
         add_custom_command(
@@ -150,7 +151,7 @@ execute_process(
             add_custom_command(
                 OUTPUT "${pkg_directory}/src/RcppExports.cpp"
                 COMMAND ${R_BINARY_RSCRIPT} -e "library(Rcpp);Rcpp::compileAttributes('${pkg_directory}')"
-                DEPENDS ${rcpp_depends}
+                DEPENDS ${TARGET}_copy
                 VERBATIM)
             target_sources(${TARGET} PRIVATE "${pkg_directory}/src/RcppExports.cpp")
             set_source_files_properties("${pkg_directory}/src/RcppExports.cpp"
