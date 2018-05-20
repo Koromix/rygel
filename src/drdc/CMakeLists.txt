@@ -3,8 +3,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 set(DRDC_SRC drdc.cc
-             dump.cc
-             dump.hh)
+             drdc_mco.cc
+             drdc_mco_dump.cc
+             drdc_mco_dump.hh)
 
 add_executable(drdc ${DRDC_SRC})
 target_link_libraries(drdc PUBLIC drd)

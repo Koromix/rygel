@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libdrd/libdrd.hh"
-#include "dump.hh"
+#include "drdc_mco_dump.hh"
 
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                          Size node_idx, int depth)
