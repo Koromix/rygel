@@ -127,14 +127,14 @@ int mco_LimitSeverityWithDuration(int severity, int duration);
 mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors);
 
 mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                            mco_GhmCode ghm, unsigned int flags);
+                            mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
 void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                           mco_GhsCode ghs, unsigned int flags,
                           mco_SupplementCounters<int16_t> *out_counters);
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death,
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
                  int *out_exb_exh = nullptr);
-int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs,
+int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
                  int *out_ghs_cents = nullptr, int *out_exb_exh = nullptr);
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
                          const mco_SupplementCounters<int16_t> &days,

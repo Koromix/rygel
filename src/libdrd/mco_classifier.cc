@@ -1626,43 +1626,55 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
 }
 
 mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                            mco_GhmCode ghm, unsigned int /*flags*/)
+                            mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
 {
-    if (UNLIKELY(!ghm.IsValid() || ghm.IsError()))
-        return mco_GhsCode(9999);
+    mco_GhsCode ghs = mco_GhsCode(9999);
+    int ghs_duration = agg.info.duration;
 
-    // Deal with UHCD-only stays
-    if (agg.info.duration > 0 && agg.stays[0].entry.mode == '8' &&
-            agg.stays[agg.stays.len - 1].exit.mode == '8') {
-        bool uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
-                                [&](const mco_Stay &stay) {
-            int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
-            return (auth_type == 7);
-        });
-        if (uhcd) {
-            // Use memcpy to avoid deep copy of arrays (diagnoses, procedures, etc.)
-            mco_Aggregate agg0;
-            memcpy(&agg0, &agg, SIZE(agg0));
-            DEFER { memset(&agg0, 0, SIZE(agg0)); };
-            agg0.info.duration = 0;
+    if (LIKELY(ghm.IsValid() && !ghm.IsError())) {
+        // Deal with UHCD-only stays
+        bool uhcd = false;
+        if (agg.info.duration > 0 && agg.stays[0].entry.mode == '8' &&
+                agg.stays[agg.stays.len - 1].exit.mode == '8') {
+            uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
+                                    [&](const mco_Stay &stay) {
+                int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
+                return (auth_type == 7);
+            });
 
-            // Don't run ClassifyGhm() because that would test the confirmation flag,
-            // which makes no sense when duration is forced to 0.
-            ghm = RunGhmTree(agg0, agg0.info, nullptr);
-            const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
-            if (LIKELY(ghm_root_info)) {
-                ghm = RunGhmSeverity(agg0, agg0.info, ghm, *ghm_root_info);
+            if (uhcd) {
+                ghs_duration = 0;
+
+                // Use memcpy to avoid deep copy of arrays (diagnoses, procedures, etc.)
+                mco_Aggregate agg0;
+                memcpy(&agg0, &agg, SIZE(agg0));
+                DEFER { memset(&agg0, 0, SIZE(agg0)); };
+                agg0.info.duration = 0;
+
+                // Don't run ClassifyGhm() because that would test the confirmation flag,
+                // which makes no sense when duration is forced to 0.
+                ghm = RunGhmTree(agg0, agg0.info, nullptr);
+                const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+                if (LIKELY(ghm_root_info)) {
+                    ghm = RunGhmSeverity(agg0, agg0.info, ghm, *ghm_root_info);
+                }
+            }
+        }
+
+        Span<const mco_GhmToGhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+
+        for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+            if (TestGhs(agg, authorization_set, ghm_to_ghs_info)) {
+                ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+                break;
             }
         }
     }
 
-    Span<const mco_GhmToGhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
-
-    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-        if (TestGhs(agg, authorization_set, ghm_to_ghs_info))
-            return ghm_to_ghs_info.Ghs(Sector::Public);
+    if (out_ghs_duration) {
+        *out_ghs_duration = ghs_duration;
     }
-    return mco_GhsCode(9999);
+    return ghs;
 }
 
 static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
@@ -1883,20 +1895,20 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     }
 }
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death, int *out_exb_exh)
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death, int *out_exb_exh)
 {
     int price_cents = price_info.ghs_cents;
 
     int exb_exh;
-    if (duration < price_info.exb_treshold && !death) {
-        exb_exh = -(price_info.exb_treshold - duration);
+    if (ghs_duration < price_info.exb_treshold && !death) {
+        exb_exh = -(price_info.exb_treshold - ghs_duration);
         if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
             price_cents -= price_info.exb_cents;
         } else {
             price_cents += price_info.exb_cents * exb_exh;
         }
-    } else if (price_info.exh_treshold && duration + death >= price_info.exh_treshold) {
-        exb_exh = duration + death + 1 - price_info.exh_treshold;
+    } else if (price_info.exh_treshold && ghs_duration + death >= price_info.exh_treshold) {
+        exb_exh = ghs_duration + death + 1 - price_info.exh_treshold;
         price_cents += price_info.exh_cents * exb_exh;
     } else {
         exb_exh = 0;
@@ -1908,7 +1920,8 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death, i
     return price_cents;
 }
 
-int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int *out_ghs_cents, int *out_exb_exh)
+int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
+                 int *out_ghs_cents, int *out_exb_exh)
 {
     if (ghs == mco_GhsCode(9999))
         return 0;
@@ -1924,7 +1937,7 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int *out_ghs_cents, 
     if (out_ghs_cents) {
         *out_ghs_cents = price_info->ghs_cents;
     }
-    return mco_PriceGhs(*price_info, agg.info.duration, agg.stay.exit.mode == '9', out_exb_exh);
+    return mco_PriceGhs(*price_info, ghs_duration, agg.stay.exit.mode == '9', out_exb_exh);
 }
 
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
@@ -1975,7 +1988,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags);
+        int ghs_duration;
+        result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
 
         // Perform mono-stay classifications (if necessary)
         if (out_mono_results) {
@@ -2009,9 +2023,9 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     }
                     mono_result.main_error = mono_errors.main_error;
                     mono_result.ghs = mco_ClassifyGhs(agg, authorization_set, mono_result.ghm, flags);
-                    mono_result.price_cents = mco_PriceGhs(agg, mono_result.ghs,
-                                                           &mono_result.ghs_cents,
-                                                           &mono_result.exb_exh);
+                    mono_result.price_cents =
+                        mco_PriceGhs(agg, mono_result.ghs, mono_result.duration,
+                                     &mono_result.ghs_cents, &mono_result.exb_exh);
                     mono_result.total_cents = mono_result.price_cents;
                 }
 
@@ -2023,7 +2037,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
         mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
 
         // Compute prices
-        result.price_cents = mco_PriceGhs(agg, result.ghs, &result.ghs_cents, &result.exb_exh);
+        result.price_cents = mco_PriceGhs(agg, result.ghs, ghs_duration,
+                                          &result.ghs_cents, &result.exb_exh);
         int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
         result.total_cents = result.price_cents + supplement_cents;
