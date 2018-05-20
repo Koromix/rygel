@@ -106,6 +106,7 @@ struct mco_StayTest {
 
     mco_GhsCode ghs;
     mco_SupplementCounters<int16_t> supplement_days;
+    int exb_exh;
 
     HASH_TABLE_HANDLER(mco_StayTest, bill_id);
 };

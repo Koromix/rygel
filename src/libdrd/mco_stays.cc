@@ -535,7 +535,15 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     offset += 3;
     ParsePmsiInt(ReadFragment(2), &rsa.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
     ParsePmsiInt(ReadFragment(4), &test.ghs.number);
-    offset += 13; // Skip many fields
+    {
+        int exh = 0;
+        int exb = 0;
+        ParsePmsiInt(ReadFragment(4), &exh);
+        offset += 1;
+        ParsePmsiInt(ReadFragment(2), &exb);
+        test.exb_exh = exh - exb;
+    }
+    offset += 6; // Skip dialysis, UHCD
     if (line[offset] == '1') {
         rsa.flags |= (int)mco_Stay::Flag::Confirmed;
     } else if (UNLIKELY(line[offset] != ' ')) {

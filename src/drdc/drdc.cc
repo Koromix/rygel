@@ -324,6 +324,7 @@ Classifier flags:)");
             Size tested_clusters = 0, failed_clusters = 0;
             Size tested_ghm = 0, failed_ghm = 0;
             Size tested_ghs = 0, failed_ghs = 0;
+            Size tested_exb_exh = 0, failed_exb_exh = 0;
             for (const mco_Result &result: classify_set.results) {
                 const mco_StayTest *stay_test = classify_set.tests.Find(result.stays[0].bill_id);
                 if (!stay_test)
@@ -358,6 +359,8 @@ Classifier flags:)");
 
                 if (stay_test->ghs.number) {
                     tested_ghs++;
+                    tested_exb_exh++;
+
                     if (stay_test->ghs != result.ghs ||
                             stay_test->supplement_days != result.supplement_days) {
                         failed_ghs++;
@@ -377,8 +380,17 @@ Classifier flags:)");
                                 }
                             }
                         }
+                        continue;
                     }
-                    continue;
+
+                    if (stay_test->exb_exh != result.exb_exh) {
+                        failed_exb_exh++;
+                        if (verbosity >= 1) {
+                            PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
+                                    stay_test->bill_id, result.stays[0].exit.date,
+                                    result.exb_exh, stay_test->exb_exh);
+                        }
+                    }
                 }
             }
             if (verbosity >= 1 && (failed_clusters || failed_ghm || failed_ghs)) {
@@ -391,6 +403,8 @@ Classifier flags:)");
                     failed_ghm, tested_ghm, classify_set.results.len - tested_ghm);
             PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
                     failed_ghs, tested_ghs, classify_set.results.len - tested_ghs);
+            PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
+                    failed_exb_exh, tested_exb_exh, classify_set.results.len - tested_exb_exh);
             PrintLn();
         }
     }
