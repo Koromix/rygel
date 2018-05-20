@@ -1927,10 +1927,14 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int *out_ghs_cents, 
     return mco_PriceGhs(*price_info, agg.info.duration, agg.stay.exit.mode == '9', out_exb_exh);
 }
 
-int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounters<int16_t> &days,
+int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
+                         const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices)
 {
-    const mco_SupplementCounters<int32_t> &prices = index.SupplementPrices(Sector::Public);
+    if (ghs == mco_GhsCode(9999))
+        return 0;
+
+    const mco_SupplementCounters<int32_t> &prices = agg.index->SupplementPrices(Sector::Public);
 
     int total_cents = 0;
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
@@ -2020,7 +2024,7 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
         // Compute prices
         result.price_cents = mco_PriceGhs(agg, result.ghs, &result.ghs_cents, &result.exb_exh);
-        int supplement_cents = mco_PriceSupplements(*agg.index, result.supplement_days,
+        int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
         result.total_cents = result.price_cents + supplement_cents;
 

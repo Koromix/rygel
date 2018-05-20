@@ -136,7 +136,8 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int duration, bool death,
                  int *out_exb_exh = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs,
                  int *out_ghs_cents = nullptr, int *out_exb_exh = nullptr);
-int mco_PriceSupplements(const mco_TableIndex &index, const mco_SupplementCounters<int16_t> &days,
+int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
+                         const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices);
 
 Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
