@@ -475,7 +475,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
-                out_agg->store.procedures[procedures_count + out_agg->store.procedures.len] =
+                out_agg->store.procedures.ptr[procedures_count + out_agg->store.procedures.len] =
                     (const mco_ProcedureInfo *)((uintptr_t)proc_info | proc_info_mask);
                 out_agg->store.procedures.Append(proc_info);
 
@@ -513,7 +513,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // Deduplicate procedures
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
-    if (procedures_count) {
+    if (out_agg->store.procedures.len) {
         Span<const mco_ProcedureInfo *> procedures =
             MakeSpan(out_agg->store.procedures.ptr + procedures_count, out_agg->store.procedures.len);
         out_agg->store.procedures.len *= 2;
