@@ -140,6 +140,7 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
                 writer.EndArray();
 
                 writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
+                writer.Key("ghs_coefficient"); writer.Double(ghs_price_info->ghs_coefficient);
                 if (ghs_price_info->exh_treshold) {
                     writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
                     writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);

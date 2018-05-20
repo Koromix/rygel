@@ -5,6 +5,7 @@ var pricing = {};
     var target_date = null;
     var target_ghm_root = null;
     var target_diff = null;
+    var target_coeff = false;
 
     var errors = new Set();
 
@@ -33,6 +34,7 @@ var pricing = {};
             }
         }
         target_ghm_root = parts[3] || target_ghm_root;
+        target_coeff = parts[3] ? (parts[4] && parts[4] === 'coeff') : target_coeff;
 
         // Validate
         if (target_mode !== 'chart' && target_mode !== 'table')
@@ -82,8 +84,9 @@ var pricing = {};
         refreshIndexesLine(main_index);
         refreshGhmRoots(main_index, target_ghm_root);
         refreshIndexesDiff(diff_index, target_ghm_root);
+        document.querySelector('#pricing_coeff').checked = target_coeff;
         if (!downloadJson.run_lock) {
-            refreshView(main_index, diff_index, target_ghm_root, Array.from(errors));
+            refreshView(main_index, diff_index, target_ghm_root, target_coeff, Array.from(errors));
             errors.clear();
         }
     }
@@ -98,14 +101,13 @@ var pricing = {};
             if (args.diff === '')
                 args.diff = null;
             target_diff = (args.diff !== undefined) ? args.diff : target_diff;
+            target_coeff = (args.coeff !== undefined) ? args.coeff : target_coeff;
         }
 
         if (target_mode !== null && target_date !== null && target_ghm_root !== null) {
-            if (target_diff !== null) {
-                switchPage('pricing/' + target_mode + '/' + target_diff + '..' + target_date + '/' + target_ghm_root);
-            } else {
-                switchPage('pricing/' + target_mode + '/' + target_date + '/' + target_ghm_root);
-            }
+            var diff_date = (target_diff !== null ? target_diff + '..' : '') + target_date;
+            switchPage('pricing/' + target_mode + '/' + diff_date + '/' + target_ghm_root +
+                       (target_coeff ? '/coeff' : ''));
         } else {
             switchPage('pricing/' + target_mode);
         }
@@ -259,7 +261,7 @@ var pricing = {};
     }
 
     // TODO: Split refreshHeader(), remove this function
-    function refreshView(main_index, diff_index, ghm_root, errors)
+    function refreshView(main_index, diff_index, ghm_root, apply_coeff, errors)
     {
         var ghm_root_info = ghm_roots_map[ghm_root];
         var pricing_info = pricings_map[ghm_root];
@@ -278,14 +280,15 @@ var pricing = {};
 
         if (pricing_info && pricing_info[main_index] && (diff_index < 0 || pricing_info[diff_index])) {
             if (document.querySelector('#pricing_table').classList.contains('active')) {
-                var table = createTable(pricing_info, main_index, diff_index, max_duration, true);
+                var table = createTable(pricing_info, main_index, diff_index, max_duration,
+                                        apply_coeff, true);
                 cloneAttributes(old_table, table);
                 old_table.parentNode.replaceChild(table, old_table);
             }
 
             if (document.querySelector('#pricing_chart').classList.contains('active')) {
                 chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
-                                     diff_index, max_duration);
+                                     diff_index, max_duration, apply_coeff);
             }
         } else {
             var table = createElement('table');
@@ -402,7 +405,8 @@ var pricing = {};
             el.value = select_ghm_root;
     }
 
-    function refreshChart(chart, chart_ctx, pricing_info, main_index, diff_index, max_duration)
+    function refreshChart(chart, chart_ctx, pricing_info, main_index, diff_index,
+                          max_duration, apply_coeff)
     {
         var ghs = pricing_info[main_index].ghs;
 
@@ -448,9 +452,10 @@ var pricing = {};
             };
             for (var duration = 0; duration < max_duration; duration++) {
                 if (diff_index < 0) {
-                    var info = computePrice(ghs[i], duration);
+                    var info = computePrice(ghs[i], duration, apply_coeff);
                 } else {
-                    var info = computePriceDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs], duration);
+                    var info = computePriceDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
+                                                 duration, apply_coeff);
                 }
 
                 if (info !== null) {
@@ -476,7 +481,7 @@ var pricing = {};
                     continue;
 
                 for (var j = 0; j < pricing_info[i].ghs.length; j++) {
-                    p = computePrice(pricing_info[i].ghs[j], max_duration - 1);
+                    p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
                     if (p && p[0] > max_price)
                         max_price = p[0];
                 }
@@ -516,7 +521,8 @@ var pricing = {};
         return chart;
     }
 
-    function createTable(pricing_info, main_index, diff_index, max_duration, merge_cells)
+    function createTable(pricing_info, main_index, diff_index, max_duration,
+                         apply_coeff, merge_cells)
     {
         var ghs = pricing_info[main_index].ghs;
 
@@ -575,12 +581,22 @@ var pricing = {};
         appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
         appendRow(thead, 'Borne haute',
                   function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
-        appendRow(thead, 'Tarif €', function(col) { return [priceText(col.ghs_cents), {class: 'price'}, true]; });
-        appendRow(thead, 'Forfait EXB €',
-                  function(col) { return [col.exb_once ? priceText(col.exb_cents) : '', {class: 'exb'}, true]; });
-        appendRow(thead, 'Tarif EXB €',
-                  function(col) { return [!col.exb_once ? priceText(col.exb_cents) : '', {class: 'exb'}, true]; });
-        appendRow(thead, 'Tarif EXH €', function(col) { return [priceText(col.exh_cents), {class: 'exh'}, true]; });
+        appendRow(thead, 'Tarif €', function(col) {
+            var cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
+            return [priceText(cents), {class: 'price'}, true];
+        });
+        appendRow(thead, 'Forfait EXB €', function(col) {
+            var cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+        });
+        appendRow(thead, 'Tarif EXB €', function(col) {
+            var cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+        });
+        appendRow(thead, 'Tarif EXH €', function(col) {
+            var cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
+            return [priceText(cents), {class: 'exh'}, true];
+        });
         appendRow(thead, 'Age', function(col) {
             var texts = [];
             if (col.ghm_mode >= '1' && col.ghm_mode < '5') {
@@ -604,9 +620,10 @@ var pricing = {};
 
             appendRow(tbody, durationText(duration), function(col, i) {
                 if (diff_index < 0) {
-                    var info = computePrice(col, duration);
+                    var info = computePrice(col, duration, apply_coeff);
                 } else {
-                    var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs], duration);
+                    var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
+                                                 duration, apply_coeff);
                 }
                 if (info === null)
                     return null;
@@ -623,7 +640,7 @@ var pricing = {};
         return table;
     }
 
-    function computePrice(ghs, duration)
+    function computePrice(ghs, duration, apply_coeff)
     {
         var duration_mask;
         if (duration < 32) {
@@ -641,19 +658,23 @@ var pricing = {};
             } else {
                 price_cents -= (ghs.exb_treshold - duration) * ghs.exb_cents;
             }
-            return [price_cents, 'exb'];
+            var mode = 'exb';
         } else if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
             var price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
-            return [price_cents, 'exh'];
+            var mode = 'exh';
         } else {
-            return [ghs.ghs_cents, 'price'];
+            var price_cents = ghs.ghs_cents;
+            var mode = 'price';
         }
+
+        price_cents = applyGhsCoefficient(ghs, ghs.ghs_cents, apply_coeff);
+        return [price_cents, mode];
     }
 
-    function computePriceDelta(ghs, prev_ghs, duration)
+    function computePriceDelta(ghs, prev_ghs, duration, apply_coeff)
     {
-        var p1 = ghs ? computePrice(ghs, duration) : null;
-        var p2 = prev_ghs ? computePrice(prev_ghs, duration) : null;
+        var p1 = ghs ? computePrice(ghs, duration, apply_coeff) : null;
+        var p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
 
         if (p1 !== null && p2 !== null) {
             var delta = p1[0] - p2[0];
@@ -671,6 +692,11 @@ var pricing = {};
         } else {
             return null;
         }
+    }
+
+    function applyGhsCoefficient(ghs, cents, apply_coeff)
+    {
+        return apply_coeff && cents ? (ghs.ghs_coefficient * cents) : cents;
     }
 
     function durationText(duration)

@@ -58,6 +58,11 @@
                         <input id="pricing_max_duration" type="number" onchange="pricing.route();"
                                value="200" min="0" max="500" step="5"/>
                     </label>
+                    <label>
+                        <span>Coefficient prudentiel</span>
+                        <input id="pricing_coeff" type="checkbox"
+                               onchange="pricing.route({coeff: this.checked});"/>
+                    </label>
                 </nav>
 
                 <div id="pricing_view">
