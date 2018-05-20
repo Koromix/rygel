@@ -200,6 +200,7 @@ struct mco_GhsPriceInfo {
     mco_GhsCode ghs;
 
     int32_t ghs_cents;
+    float ghs_coefficient;
     int16_t exh_treshold;
     int16_t exb_treshold;
     int32_t exh_cents;

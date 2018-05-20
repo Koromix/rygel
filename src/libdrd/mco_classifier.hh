@@ -78,6 +78,7 @@ struct mco_Result {
     mco_GhsCode ghs;
     int exb_exh;
     int ghs_cents;
+    float ghs_coefficient;
     int price_cents;
     mco_SupplementCounters<int16_t> supplement_days;
     mco_SupplementCounters<int32_t> supplement_cents;
@@ -135,7 +136,8 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
                  int *out_exb_exh = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 int *out_ghs_cents = nullptr, int *out_exb_exh = nullptr);
+                 int *out_ghs_cents = nullptr, float *out_ghs_coefficient = nullptr,
+                 int *out_exb_exh = nullptr);
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
                          const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices);

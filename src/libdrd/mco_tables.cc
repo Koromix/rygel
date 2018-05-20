@@ -969,12 +969,20 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
         ini.reader.PushLogHandler();
         DEFER { PopLogHandler(); };
 
+        float ghs_coefficient = 0.0f;
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (!prop.section.len)
-                continue;
-
-            if (prop.section == "Supplements") {
+            if (!prop.section.len) {
+                if (prop.key == "GhsCoefficient") {
+                    char *end_ptr;
+                    ghs_coefficient = strtof(prop.value.ptr, &end_ptr);
+                    if (end_ptr == prop.value.ptr || end_ptr[0] ||
+                            ghs_coefficient < 0.0f || ghs_coefficient > 1.0f) {
+                        LogError("Invalid GHS coefficient value %1", ghs_coefficient);
+                        valid = false;
+                    }
+                }
+            } else if (prop.section == "Supplements") {
                 do {
                     if (prop.key == "REA") {
                         valid &= ParseDec(prop.value, &supplement_prices.st.rea);
@@ -1004,6 +1012,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
                 price_info.ghs = mco_GhsCode::FromString(prop.section);
                 valid &= price_info.ghs.IsValid();
+                price_info.ghs_coefficient = ghs_coefficient;
 
                 do {
                     if (prop.key == "PriceCents") {
@@ -1043,6 +1052,10 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
         }
         if (ini.error || !valid)
             return false;
+
+        if (ghs_coefficient == 0.0f) {
+            LogError("GhsCoefficient is not set or equal to 0");
+        }
     }
 
     out_guard.disable();

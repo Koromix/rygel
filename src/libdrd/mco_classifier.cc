@@ -1917,11 +1917,11 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool deat
     if (out_exb_exh) {
         *out_exb_exh = exb_exh;
     }
-    return price_cents;
+    return (int)(price_info.ghs_coefficient * (float)price_cents);
 }
 
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 int *out_ghs_cents, int *out_exb_exh)
+                 int *out_ghs_cents, float *out_ghs_coefficient, int *out_exb_exh)
 {
     if (ghs == mco_GhsCode(9999))
         return 0;
@@ -1935,7 +1935,10 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
     }
 
     if (out_ghs_cents) {
-        *out_ghs_cents = price_info->ghs_cents;
+        *out_ghs_cents = (int)(price_info->ghs_coefficient * (float)price_info->ghs_cents);
+    }
+    if (out_ghs_coefficient) {
+        *out_ghs_coefficient = price_info->ghs_coefficient;
     }
     return mco_PriceGhs(*price_info, ghs_duration, agg.stay.exit.mode == '9', out_exb_exh);
 }
@@ -2025,7 +2028,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     mono_result.ghs = mco_ClassifyGhs(agg, authorization_set, mono_result.ghm, flags);
                     mono_result.price_cents =
                         mco_PriceGhs(agg, mono_result.ghs, mono_result.duration,
-                                     &mono_result.ghs_cents, &mono_result.exb_exh);
+                                     &mono_result.ghs_cents, &mono_result.ghs_coefficient,
+                                     &mono_result.exb_exh);
                     mono_result.total_cents = mono_result.price_cents;
                 }
 
@@ -2038,7 +2042,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
         // Compute prices
         result.price_cents = mco_PriceGhs(agg, result.ghs, ghs_duration,
-                                          &result.ghs_cents, &result.exb_exh);
+                                          &result.ghs_cents, &result.ghs_coefficient,
+                                          &result.exb_exh);
         int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
         result.total_cents = result.price_cents + supplement_cents;
