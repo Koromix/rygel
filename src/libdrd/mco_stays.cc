@@ -524,14 +524,15 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     offset += 5; // Skip geography code
     ParsePmsiInt(ReadFragment(4), &rsa.newborn_weight) || SetErrorFlag(mco_Stay::Error::MalformedNewbornWeight);
     ParsePmsiInt(ReadFragment(2), &rsa.gestational_age) || SetErrorFlag(mco_Stay::Error::MalformedGestationalAge);
-    {
+    if (line[offset] != ' ') {
         int last_period_delay;
-        if (ParsePmsiInt(ReadFragment(3), &last_period_delay) && rsa.entry.date.IsValid()) {
+        if (ParsePmsiInt(line.Take(offset, 3), &last_period_delay) && rsa.entry.date.IsValid()) {
             rsa.last_menstrual_period = rsa.entry.date - last_period_delay;
         } else {
             SetErrorFlag(mco_Stay::Error::MalformedLastMenstrualPeriod);
         }
     }
+    offset += 3;
     ParsePmsiInt(ReadFragment(2), &rsa.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
     ParsePmsiInt(ReadFragment(4), &test.ghs.number);
     offset += 13; // Skip many fields
