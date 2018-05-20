@@ -135,9 +135,11 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                 result.ghs);
 
         if (verbose) {
-            PrintLn("      %1GHS: %2 € [%3 € %4]",
-                    padding, FmtDouble((double)result.price_cents / 100.0, 2),
-                    FmtDouble((double)result.ghs_cents / 100.0, 2), result.exb_exh);
+            PrintLn("      %1GHS: %2 € [coefficient = %3]",
+                    padding, FmtDouble((double)result.ghs_cents / 100.0, 2),
+                    FmtDouble(result.ghs_coefficient, 4));
+            PrintLn("      %1GHS-EXB+EXH: %2 € [%3]",
+                    padding, FmtDouble((double)result.price_cents / 100.0, 2), result.exb_exh);
             if (result.total_cents > result.price_cents) {
                 PrintLn("      %1Supplements:", padding);
                 for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
@@ -148,7 +150,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                     }
                 }
             }
-            PrintLn("      %1Price: %2 €",
+            PrintLn("      %1Total: %2 €",
                     padding, FmtDouble((double)result.total_cents / 100.0, 2));
             PrintLn();
         }

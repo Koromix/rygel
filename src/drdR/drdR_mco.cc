@@ -352,6 +352,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
     Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
     Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
+    Rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
     Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
     Rcc_Vector<double> rea_cents = df_builder.Add<double>("rea_cents");
     Rcc_Vector<double> reasi_cents = df_builder.Add<double>("reasi_cents");
@@ -386,6 +387,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             total_cents[i] = result.total_cents;
             price_cents[i] = result.price_cents;
             ghs_cents[i] = (double)result.ghs_cents;
+            ghs_coefficient[i] = (double)result.ghs_coefficient;
             exb_exh[i] = result.exb_exh;
             rea_cents[i] = result.supplement_cents.st.rea;
             reasi_cents[i] = result.supplement_cents.st.reasi;

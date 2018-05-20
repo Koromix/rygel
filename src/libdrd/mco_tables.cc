@@ -969,15 +969,15 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
         ini.reader.PushLogHandler();
         DEFER { PopLogHandler(); };
 
-        float ghs_coefficient = 0.0f;
+        double ghs_coefficient = 0.0;
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
                 if (prop.key == "GhsCoefficient") {
                     char *end_ptr;
-                    ghs_coefficient = strtof(prop.value.ptr, &end_ptr);
+                    ghs_coefficient = strtod(prop.value.ptr, &end_ptr);
                     if (end_ptr == prop.value.ptr || end_ptr[0] ||
-                            ghs_coefficient < 0.0f || ghs_coefficient > 1.0f) {
+                            ghs_coefficient < 0.0 || ghs_coefficient > 1.0) {
                         LogError("Invalid GHS coefficient value %1", ghs_coefficient);
                         valid = false;
                     }

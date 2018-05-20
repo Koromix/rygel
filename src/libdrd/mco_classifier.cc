@@ -1917,11 +1917,11 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool deat
     if (out_exb_exh) {
         *out_exb_exh = exb_exh;
     }
-    return (int)(price_info.ghs_coefficient * (float)price_cents);
+    return (int)(price_info.ghs_coefficient * (double)price_cents);
 }
 
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 int *out_ghs_cents, float *out_ghs_coefficient, int *out_exb_exh)
+                 int *out_ghs_cents, double *out_ghs_coefficient, int *out_exb_exh)
 {
     if (ghs == mco_GhsCode(9999))
         return 0;
@@ -1935,7 +1935,7 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
     }
 
     if (out_ghs_cents) {
-        *out_ghs_cents = (int)(price_info->ghs_coefficient * (float)price_info->ghs_cents);
+        *out_ghs_cents = (int)(price_info->ghs_coefficient * (double)price_info->ghs_cents);
     }
     if (out_ghs_coefficient) {
         *out_ghs_coefficient = price_info->ghs_coefficient;
