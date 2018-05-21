@@ -5,6 +5,7 @@ var casemix = {};
     var target_start = null;
     var target_end = null;
     var target_units = null;
+    var target_mode = 'exj2';
     var target_diff_start = null;
     var target_diff_end = null;
     var target_cmd = null;
@@ -51,7 +52,7 @@ var casemix = {};
         // Resources
         if (!mix_init) {
             markOutdated('#casemix_view', true);
-            updateCaseMix(target_start, target_end, target_units, 'j',
+            updateCaseMix(target_start, target_end, target_units, target_mode,
                           target_diff_start, target_diff_end, run);
         }
 
@@ -85,6 +86,7 @@ var casemix = {};
             if (args.units === '')
                 args.units = null;
             target_units = (args.units !== undefined) ? args.units : target_units;
+            target_mode = args.mode || target_mode;
             target_diff_start = (args.diff_start !== undefined) ? args.diff_start : target_diff_start;
             target_diff_end = (args.diff_end !== undefined) ? args.diff_end : target_diff_end;
             target_cmd = args.cmd || target_cmd;

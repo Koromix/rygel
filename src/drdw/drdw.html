@@ -90,10 +90,22 @@
                         Comparer
                         <input id="casemix_diff_start" type="date" value=""/>
                         <input id="casemix_diff_end" type="date" value=""/>
+                    </label>
+                    <label>
+                        Algorithme
+                        <select id="casemix_mode">
+                            <option value="e">Algorithme E</option>
+                            <option value="ex">Algorithme Ex</option>
+                            <option value="ex2">Algorithme Ex'</option>
+                            <option value="j">Algorithme J</option>
+                            <option value="exj">Algorithme ExJ</option>
+                            <option value="exj2">Algorithme Ex'J</option>
+                        </select>
                     </label><br/>
 
                     <button onclick="casemix.route({start: document.querySelector('#casemix_start').value,
                                                     end: document.querySelector('#casemix_end').value,
+                                                    mode: document.querySelector('#casemix_mode').value,
                                                     diff_start: document.querySelector('#casemix_diff_start').value,
                                                     diff_end: document.querySelector('#casemix_diff_end').value,
                                                     units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
