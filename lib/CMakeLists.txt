@@ -45,6 +45,9 @@ target_compile_definitions(miniz PRIVATE -DMINIZ_NO_STDIO
                                          -DMINIZ_NO_ARCHIVE_WRITING_APIS
                                          -DMINIZ_NO_ZLIB_APIS
                                          -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
+    target_compile_options(miniz PRIVATE -fno-strict-aliasing)
+endif()
 
 set(IMGUI_SRC imgui/imgui.cpp
               imgui/imgui_draw.cpp
