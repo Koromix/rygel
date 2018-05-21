@@ -3,8 +3,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 mco_summary_columns <- c('results', 'stays', 'failures',
-                         'total_cents', 'price_cents', 'rea_cents', 'reasi_cents', 'si_cents',
-                         'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
+                         'total_cents', 'price_cents', 'ghs_cents', 'rea_cents', 'reasi_cents',
+                         'si_cents', 'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
                          'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
                          'nn3_days', 'rep_days')
 
@@ -85,6 +85,7 @@ summary.mco_results <- function(results, by = NULL) {
             failures = sum(startsWith('90Z', ghm)),
             total_cents = sum(total_cents),
             price_cents = sum(price_cents),
+            ghs_cents = sum(ghs_cents),
             rea_cents = sum(rea_cents),
             reasi_cents = sum(reasi_cents),
             si_cents = sum(si_cents),

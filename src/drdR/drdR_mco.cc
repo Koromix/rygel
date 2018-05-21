@@ -583,6 +583,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         df_builder.Set("failures", (int)summary.failures_count);
         df_builder.Set("total_cents", (double)summary.total_cents);
         df_builder.Set("price_cents", (double)summary.price_cents);
+        df_builder.Set("ghs_cents", (double)summary.ghs_cents);
         df_builder.Set("rea_cents", (double)summary.supplement_cents.st.rea);
         df_builder.Set("reasi_cents", (double)summary.supplement_cents.st.reasi);
         df_builder.Set("si_cents", (double)summary.supplement_cents.st.si);

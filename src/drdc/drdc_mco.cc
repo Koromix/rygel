@@ -111,7 +111,8 @@ static void PrintSummary(const mco_Summary &summary)
     PrintLn("  Stays: %1", summary.stays_count);
     PrintLn("  Failures: %1", summary.failures_count);
     PrintLn();
-    PrintLn("  GHS: %1 €", FmtDouble((double)summary.price_cents / 100.0, 2));
+    PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_cents / 100.0, 2));
+    PrintLn("  GHS-EXB+EXH: %1 €", FmtDouble((double)summary.price_cents / 100.0, 2));
     PrintLn("  Supplements:");
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         PrintLn("    %1: %2 € [%3]",

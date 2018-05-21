@@ -2147,6 +2147,7 @@ void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
     for (const mco_Result &result: results) {
         out_summary->stays_count += result.stays.len;
         out_summary->failures_count += result.ghm.IsError();
+        out_summary->ghs_cents += result.ghs_cents;
         out_summary->price_cents += result.price_cents;
         out_summary->supplement_days += result.supplement_days;
         out_summary->supplement_cents += result.supplement_cents;

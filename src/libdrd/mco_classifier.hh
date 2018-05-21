@@ -90,6 +90,7 @@ struct mco_Summary {
     Size stays_count = 0;
     Size failures_count = 0;
 
+    int64_t ghs_cents = 0;
     int64_t price_cents = 0;
     mco_SupplementCounters<int32_t> supplement_days;
     mco_SupplementCounters<int64_t> supplement_cents;
@@ -101,6 +102,7 @@ struct mco_Summary {
         stays_count += other.stays_count;
         failures_count += other.failures_count;
 
+        ghs_cents += other.ghs_cents;
         price_cents += other.price_cents;
         supplement_days += other.supplement_days;
         supplement_cents += other.supplement_cents;
