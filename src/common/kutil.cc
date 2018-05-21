@@ -852,7 +852,8 @@ static bool ConfigLogTerminalOutput()
         output_is_terminal = isatty(fileno(stderr));
         if (output_is_terminal) {
             atexit([]() {
-                write(fileno(stderr), "\x1B[0m", strlen("\x1B[0m"));
+                size_t ret = write(fileno(stderr), "\x1B[0m", strlen("\x1B[0m"));
+                (void)ret;
             });
         }
 #endif
