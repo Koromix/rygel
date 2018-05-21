@@ -1,7 +1,7 @@
 var pricing = {};
 (function() {
     // URL settings (routing)
-    var target_mode = 'table';
+    var target_view = 'table';
     var target_date = null;
     var target_ghm_root = null;
     var target_diff = null;
@@ -20,9 +20,9 @@ var pricing = {};
 
     function run()
     {
-        // Parse route (model: pricing/<mode>/[<diff>..]<date>/<ghm_root>)
+        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>)
         var parts = url_page.split('/');
-        target_mode = parts[1] || target_mode;
+        target_view = parts[1] || target_view;
         if (parts[2]) {
             var date_parts = parts[2].split('..', 2);
             if (date_parts.length === 2) {
@@ -37,7 +37,7 @@ var pricing = {};
         target_coeff = parts[3] ? (parts[4] && parts[4] === 'coeff') : target_coeff;
 
         // Validate
-        if (target_mode !== 'chart' && target_mode !== 'table')
+        if (target_view !== 'chart' && target_view !== 'table')
             errors.add('Mode d\'affichage incorrect');
         var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
         if (target_date !== null && indexes.length && main_index < 0)
@@ -79,8 +79,8 @@ var pricing = {};
 
         // Refresh display
         document.querySelector('#pricing').classList.add('active');
-        document.querySelector('#pricing_table').classList.toggle('active', target_mode === 'table');
-        document.querySelector('#pricing_chart').classList.toggle('active', target_mode === 'chart');
+        document.querySelector('#pricing_table').classList.toggle('active', target_view === 'table');
+        document.querySelector('#pricing_chart').classList.toggle('active', target_view === 'chart');
         refreshIndexesLine(main_index);
         refreshGhmRoots(main_index, target_ghm_root);
         refreshIndexesDiff(diff_index, target_ghm_root);
@@ -95,7 +95,7 @@ var pricing = {};
     function route(args)
     {
         if (args !== undefined) {
-            target_mode = args.mode || target_mode;
+            target_view = args.view || target_view;
             target_date = args.date || target_date;
             target_ghm_root = args.ghm_root || target_ghm_root;
             if (args.diff === '')
@@ -104,12 +104,12 @@ var pricing = {};
             target_coeff = (args.coeff !== undefined) ? args.coeff : target_coeff;
         }
 
-        if (target_mode !== null && target_date !== null && target_ghm_root !== null) {
+        if (target_view !== null && target_date !== null && target_ghm_root !== null) {
             var diff_date = (target_diff !== null ? target_diff + '..' : '') + target_date;
-            switchPage('pricing/' + target_mode + '/' + diff_date + '/' + target_ghm_root +
+            switchPage('pricing/' + target_view + '/' + diff_date + '/' + target_ghm_root +
                        (target_coeff ? '/coeff' : ''));
         } else {
-            switchPage('pricing/' + target_mode);
+            switchPage('pricing/' + target_view);
         }
     }
     this.route = route;

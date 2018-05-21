@@ -1,7 +1,7 @@
 var casemix = {};
 (function() {
     // URL settings (routing)
-    var target_mode = 'roots';
+    var target_view = 'roots';
     var target_start = null;
     var target_end = null;
     var target_units = null;
@@ -23,9 +23,9 @@ var casemix = {};
         if (errors === undefined)
             errors = [];
 
-        // Parse route (model: casemix/<mode>/<start>..<end>/<units>/<cmd>)
+        // Parse route (model: casemix/<view>/<start>..<end>/<units>/<cmd>)
         var parts = url_page.split('/');
-        target_mode = parts[1] || target_mode;
+        target_view = parts[1] || target_view;
         /*
         if (parts[2]) {
             var date_parts = parts[2].split('..', 2);
@@ -37,7 +37,7 @@ var casemix = {};
 
         // Validate
         // TODO: Enforce date format (yyyy-mm-dd)
-        if (target_mode !== 'roots' || target_mode !== 'ghs')
+        if (target_view !== 'roots' || target_view !== 'ghs')
             errors.push('Mode d\'affichage incorrect');
         if (target_start === undefined || target_end === undefined) {
             errors.push('Dates incorrectes');
@@ -63,9 +63,9 @@ var casemix = {};
             if (target_end)
                 document.querySelector('#casemix_end').value = target_end;
 
-            document.querySelector('#casemix_cmds').classList.toggle('active', target_mode == 'roots');
-            document.querySelector('#casemix_roots').classList.toggle('active', target_mode == 'roots');
-            document.querySelector('#casemix_ghs').classList.toggle('active', target_mode == 'ghs');
+            document.querySelector('#casemix_cmds').classList.toggle('active', target_view == 'roots');
+            document.querySelector('#casemix_roots').classList.toggle('active', target_view == 'roots');
+            document.querySelector('#casemix_ghs').classList.toggle('active', target_view == 'ghs');
 
             refreshCmds(target_cmd);
             refreshRoots(target_cmd);
@@ -79,7 +79,7 @@ var casemix = {};
     function route(args)
     {
         if (args !== undefined) {
-            target_mode = args.mode || target_mode;
+            target_view = args.view || target_view;
             target_start = (args.start !== undefined) ? args.start : target_start;
             target_end = (args.end !== undefined) ? args.end : target_end;
             if (args.units === '')
@@ -96,7 +96,7 @@ var casemix = {};
                 mix_init = false;
         }
 
-        switchPage('casemix/' + target_mode);
+        switchPage('casemix/' + target_view);
     }
     this.route = route;
 
@@ -299,7 +299,7 @@ var casemix = {};
                     if (ghm_root_info !== undefined) {
                         var click_function = (function() {
                             var ghm_root = ghm_root_info.ghm_root;
-                            return function(e) { route({mode: 'ghs',
+                            return function(e) { route({view: 'ghs',
                                                         ghm_root: ghm_root}); e.preventDefault(); };
                         })();
                         var text = ghm_root_info.ghm_root + ' = ' +
