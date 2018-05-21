@@ -6,12 +6,10 @@
 
 #include "../common/kutil.hh"
 
-GCC_PUSH_IGNORE(-Wconversion)
-GCC_PUSH_IGNORE(-Wsign-conversion)
+PUSH_NO_WARNINGS()
 #include "../../lib/rapidjson/writer.h"
 #include "../../lib/rapidjson/error/en.h"
-GCC_POP_IGNORE()
-GCC_POP_IGNORE()
+POP_NO_WARNINGS()
 
 class JsonStreamWriter {
     StreamWriter *st;

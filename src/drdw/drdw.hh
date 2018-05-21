@@ -7,11 +7,9 @@
 #include "../libdrd/libdrd.hh"
 #include "json.hh"
 
-GCC_PUSH_IGNORE(-Wconversion)
-GCC_PUSH_IGNORE(-Wsign-conversion)
+PUSH_NO_WARNINGS()
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
-GCC_POP_IGNORE()
-GCC_POP_IGNORE()
+POP_NO_WARNINGS()
 
 struct Response {
     int code;

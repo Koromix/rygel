@@ -2,6 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+if((CMAKE_COMPILER_IS_GNUCC AND CMAKE_C_COMPILER_VERSION VERSION_GREATER 7) OR
+        CMAKE_COMPILER_IS_CLANG)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstringop-overflow=0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wstringop-overflow=0")
+endif()
+
 set(LIBMICROHTTPD_SRC libmicrohttpd/src/microhttpd/base64.c
                       libmicrohttpd/src/microhttpd/basicauth.c
                       libmicrohttpd/src/microhttpd/connection.c

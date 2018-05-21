@@ -92,13 +92,14 @@ enum class Endianness {
 #define FORCE_EXPAND(x) x
 
 #if defined(__GNUC__)
-    #define GCC_PRAGMA(Pragma) \
-        _Pragma(STRINGIFY(Pragma))
-    #define GCC_PUSH_IGNORE(Option) \
-        GCC_PRAGMA(GCC diagnostic push) \
-        GCC_PRAGMA(GCC diagnostic ignored STRINGIFY(Option))
-    #define GCC_POP_IGNORE() \
-        GCC_PRAGMA(GCC diagnostic pop)
+    #define PUSH_NO_WARNINGS() \
+        _Pragma("GCC diagnostic push") \
+        _Pragma("GCC diagnostic ignored \"-Wall\"")
+        _Pragma("GCC diagnostic ignored \"-Wextra\"")
+        _Pragma("GCC diagnostic ignored \"-Wconversion\"")
+        _Pragma("GCC diagnostic ignored \"-Wsign-conversion\"")
+    #define POP_NO_WARNINGS() \
+        _Pragma("GCC diagnostic pop")
 
     // thread_local has many bugs with MinGW (Windows):
     // - Destructors are run after the memory is freed
@@ -121,9 +122,8 @@ enum class Endianness {
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
-    #define GCC_PRAGMA(Pragma)
-    #define GCC_PUSH_IGNORE(Option)
-    #define GCC_POP_IGNORE()
+    #define PUSH_NO_WARNINGS()
+    #define POP_NO_WARNINGS()
 
     #define THREAD_LOCAL thread_local
     #define MAYBE_UNUSED

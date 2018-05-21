@@ -6,10 +6,10 @@
 
 #include "../common/kutil.hh"
 
-GCC_PUSH_IGNORE(-Wconversion)
+PUSH_NO_WARNINGS()
 #include "../../lib/imgui/imgui.h"
 #include "../../lib/imgui/imgui_internal.h"
-GCC_POP_IGNORE()
+POP_NO_WARNINGS()
 
 bool StartRender();
 void Render();
