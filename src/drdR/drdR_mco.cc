@@ -434,7 +434,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
                                               std::end(mco_ClassifyFlagOptions),
                                               [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
-        if (!desc)
+        if (desc == std::end(mco_ClassifyFlagOptions))
             Rcpp::stop("Unknown classifier option '%1'", opt);
         flags |= 1u << (desc - mco_ClassifyFlagOptions);
     }

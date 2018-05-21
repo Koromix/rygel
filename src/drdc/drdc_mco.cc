@@ -227,7 +227,7 @@ Classifier flags:)");
                     const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
                                                           std::end(mco_ClassifyFlagOptions),
                                                           [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
-                    if (!desc) {
+                    if (desc == std::end(mco_ClassifyFlagOptions)) {
                         LogError("Unknown classifier flag '%1'", flag);
                         return false;
                     }
