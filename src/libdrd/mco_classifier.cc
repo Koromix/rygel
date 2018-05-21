@@ -1895,7 +1895,8 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     }
 }
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death, int *out_exb_exh)
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
+                 mco_GhsPricingResult *out_result)
 {
     int price_cents = price_info.ghs_cents;
 
@@ -1914,14 +1915,19 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool deat
         exb_exh = 0;
     }
 
-    if (out_exb_exh) {
-        *out_exb_exh = exb_exh;
+    price_cents = (int)(price_info.ghs_coefficient * (double)price_cents);
+
+    if (out_result) {
+        out_result->exb_exh = exb_exh;
+        out_result->ghs_cents = (int)(price_info.ghs_coefficient * (double)price_info.ghs_cents);
+        out_result->ghs_coefficient = price_info.ghs_coefficient;
+        out_result->price_cents = price_cents;
     }
-    return (int)(price_info.ghs_coefficient * (double)price_cents);
+    return price_cents;
 }
 
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 int *out_ghs_cents, double *out_ghs_coefficient, int *out_exb_exh)
+                 mco_GhsPricingResult *out_result)
 {
     if (ghs == mco_GhsCode(9999))
         return 0;
@@ -1934,13 +1940,7 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
         return 0;
     }
 
-    if (out_ghs_cents) {
-        *out_ghs_cents = (int)(price_info->ghs_coefficient * (double)price_info->ghs_cents);
-    }
-    if (out_ghs_coefficient) {
-        *out_ghs_coefficient = price_info->ghs_coefficient;
-    }
-    return mco_PriceGhs(*price_info, ghs_duration, agg.stay.exit.mode == '9', out_exb_exh);
+    return mco_PriceGhs(*price_info, ghs_duration, agg.stay.exit.mode == '9', out_result);
 }
 
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
@@ -2009,8 +2009,7 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     mono_result.duration = stay_info.duration;
                     mono_result.main_error = result.main_error;
                     mono_result.ghs = result.ghs;
-                    mono_result.price_cents = result.price_cents;
-                    mono_result.ghs_cents = result.ghs_cents;
+                    mono_result.ghs_pricing = result.ghs_pricing;
                     mono_result.total_cents = result.total_cents;
                 } else {
                     mono_errors.main_error = 0;
@@ -2026,11 +2025,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     }
                     mono_result.main_error = mono_errors.main_error;
                     mono_result.ghs = mco_ClassifyGhs(agg, authorization_set, mono_result.ghm, flags);
-                    mono_result.price_cents =
-                        mco_PriceGhs(agg, mono_result.ghs, mono_result.duration,
-                                     &mono_result.ghs_cents, &mono_result.ghs_coefficient,
-                                     &mono_result.exb_exh);
-                    mono_result.total_cents = mono_result.price_cents;
+                    mco_PriceGhs(agg, mono_result.ghs, mono_result.duration, &mono_result.ghs_pricing);
+                    mono_result.total_cents = mono_result.ghs_pricing.price_cents;
                 }
 
                 out_mono_results[j++] = mono_result;
@@ -2041,12 +2037,10 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
         mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
 
         // Compute prices
-        result.price_cents = mco_PriceGhs(agg, result.ghs, ghs_duration,
-                                          &result.ghs_cents, &result.ghs_coefficient,
-                                          &result.exb_exh);
+        mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);
         int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
-        result.total_cents = result.price_cents + supplement_cents;
+        result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
 
         out_results[i] = result;
     }
@@ -2147,8 +2141,8 @@ void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
     for (const mco_Result &result: results) {
         out_summary->stays_count += result.stays.len;
         out_summary->failures_count += result.ghm.IsError();
-        out_summary->ghs_cents += result.ghs_cents;
-        out_summary->price_cents += result.price_cents;
+        out_summary->ghs_cents += result.ghs_pricing.ghs_cents;
+        out_summary->price_cents += result.ghs_pricing.price_cents;
         out_summary->supplement_days += result.supplement_days;
         out_summary->supplement_cents += result.supplement_cents;
         out_summary->total_cents += result.total_cents;

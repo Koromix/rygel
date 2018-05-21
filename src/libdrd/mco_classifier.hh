@@ -67,6 +67,13 @@ struct mco_ErrorSet {
     Bitset<512> errors;
 };
 
+struct mco_GhsPricingResult {
+    int exb_exh;
+    int ghs_cents;
+    double ghs_coefficient;
+    int price_cents;
+};
+
 struct mco_Result {
     Span<const mco_Stay> stays;
     Size main_stay_idx;
@@ -76,10 +83,7 @@ struct mco_Result {
     int16_t main_error;
 
     mco_GhsCode ghs;
-    int exb_exh;
-    int ghs_cents;
-    double ghs_coefficient;
-    int price_cents;
+    mco_GhsPricingResult ghs_pricing;
     mco_SupplementCounters<int16_t> supplement_days;
     mco_SupplementCounters<int32_t> supplement_cents;
     int total_cents;
@@ -136,10 +140,9 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
                           mco_SupplementCounters<int16_t> *out_counters);
 
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
-                 int *out_exb_exh = nullptr);
+                 mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 int *out_ghs_cents = nullptr, double *out_ghs_coefficient = nullptr,
-                 int *out_exb_exh = nullptr);
+                 mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
                          const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices);

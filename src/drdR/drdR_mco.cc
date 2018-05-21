@@ -385,10 +385,10 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             main_error[i] = result.main_error;
             ghs[i] = result.ghs.number;
             total_cents[i] = result.total_cents;
-            price_cents[i] = result.price_cents;
-            ghs_cents[i] = (double)result.ghs_cents;
-            ghs_coefficient[i] = (double)result.ghs_coefficient;
-            exb_exh[i] = result.exb_exh;
+            price_cents[i] = result.ghs_pricing.price_cents;
+            ghs_cents[i] = (double)result.ghs_pricing.ghs_cents;
+            ghs_coefficient[i] = (double)result.ghs_pricing.ghs_coefficient;
+            exb_exh[i] = result.ghs_pricing.exb_exh;
             rea_cents[i] = result.supplement_cents.st.rea;
             reasi_cents[i] = result.supplement_cents.st.reasi;
             si_cents[i] = result.supplement_cents.st.si;

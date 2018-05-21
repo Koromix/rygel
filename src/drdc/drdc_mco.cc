@@ -137,11 +137,12 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 
         if (verbose) {
             PrintLn("      %1GHS: %2 € [coefficient = %3]",
-                    padding, FmtDouble((double)result.ghs_cents / 100.0, 2),
-                    FmtDouble(result.ghs_coefficient, 4));
+                    padding, FmtDouble((double)result.ghs_pricing.ghs_cents / 100.0, 2),
+                    FmtDouble(result.ghs_pricing.ghs_coefficient, 4));
             PrintLn("      %1GHS-EXB+EXH: %2 € [%3]",
-                    padding, FmtDouble((double)result.price_cents / 100.0, 2), result.exb_exh);
-            if (result.total_cents > result.price_cents) {
+                    padding, FmtDouble((double)result.ghs_pricing.price_cents / 100.0, 2),
+                    result.ghs_pricing.exb_exh);
+            if (result.total_cents > result.ghs_pricing.price_cents) {
                 PrintLn("      %1Supplements:", padding);
                 for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                     if (result.supplement_cents.values[j]) {
@@ -386,12 +387,12 @@ Classifier flags:)");
                         continue;
                     }
 
-                    if (stay_test->exb_exh != result.exb_exh) {
+                    if (stay_test->exb_exh != result.ghs_pricing.exb_exh) {
                         failed_exb_exh++;
                         if (verbosity >= 1) {
                             PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
                                     stay_test->bill_id, result.stays[0].exit.date,
-                                    result.exb_exh, stay_test->exb_exh);
+                                    result.ghs_pricing.exb_exh, stay_test->exb_exh);
                         }
                     }
                 }
