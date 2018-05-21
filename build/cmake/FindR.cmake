@@ -50,14 +50,6 @@ mark_as_advanced(R_BINARY R_BINARY_RSCRIPT R_INCLUDE_DIRS R_LIBRARY R_RCPP_INCLU
 if(R_FOUND)
     set(install_directory "${CMAKE_BINARY_DIR}/R")
 
-    if(NOT TARGET R_fake_make)
-        if(NOT EXISTS "${CMAKE_BINARY_DIR}/R_fake_make.c")
-            file(WRITE "${CMAKE_BINARY_DIR}/R_fake_make.c" "int main() { return 0; }")
-        endif()
-        add_executable(R_fake_make EXCLUDE_FROM_ALL "${CMAKE_BINARY_DIR}/R_fake_make.c")
-        set_target_properties(R_fake_make PROPERTIES OUTPUT_NAME make)
-    endif()
-
     function(R_add_package TARGET DESCRIPTION NAMESPACE)
         cmake_parse_arguments("OPT" "RCPP_INCLUDE;RCPP_EXPORT" "" "" ${ARGN})
         set(sources ${OPT_UNPARSED_ARGUMENTS})
@@ -118,7 +110,6 @@ if(R_FOUND)
         endif()
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
-        add_dependencies(${TARGET} ${TARGET}_copy R_fake_make)
 
         file(MAKE_DIRECTORY "${install_directory}")
         add_custom_command(
@@ -127,19 +118,20 @@ if(R_FOUND)
                                              "${pkg_directory}/src/${TARGET}${CMAKE_SHARED_MODULE_SUFFIX}")
 
         file(WRITE "${CMAKE_BINARY_DIR}/RunRCmdInstall.cmake" "\
-if(WIN32)\n\
-    set(ENV{PATH} \"\${MAKE_PATH};\$ENV{PATH}\")\n\
-else()\n\
-    set(ENV{PATH} \"\${MAKE_PATH}:\$ENV{PATH}\")\n\
-endif()\n\
+if(WIN32)
+    file(WRITE make.bat \"@echo off\")
+    set(ENV{PATH} \"\${PKG};\$ENV{PATH}\")
+    file(WRITE src/Makefile.win \"all:\\nclean:\\n\")
+else()
+    file(WRITE src/Makefile \"all:\\nclean:\\n\")
+endif()
 execute_process(
     COMMAND \"${R_BINARY}\" CMD INSTALL -l \"\${LIB_PATH}\" --no-multiarch --no-test-load .\n\
     WORKING_DIRECTORY \"\${PKG}\"\n\
     OUTPUT_QUIET)\n")
         add_custom_command(
             TARGET ${TARGET} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -DMAKE_PATH="$<TARGET_FILE_DIR:R_fake_make>"
-                                     -DLIB_PATH="${install_directory}"
+            COMMAND ${CMAKE_COMMAND} -DLIB_PATH="${install_directory}"
                                      -DPKG="${pkg_directory}"
                                      -P "${CMAKE_BINARY_DIR}/RunRCmdInstall.cmake"
             WORKING_DIRECTORY ${pkg_directory})
