@@ -177,6 +177,106 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
     PrintLn();
 }
 
+static void ExportTests(Span<const mco_Result> results,
+                        const HashTable<int32_t, mco_StayTest> &tests, bool verbose)
+{
+    PrintLn("  Tests:");
+
+    Size tested_clusters = 0, failed_clusters = 0;
+    Size tested_ghm = 0, failed_ghm = 0;
+    Size tested_ghs = 0, failed_ghs = 0;
+    Size tested_exb_exh = 0, failed_exb_exh = 0;
+    for (const mco_Result &result: results) {
+        const mco_StayTest *stay_test = tests.Find(result.stays[0].bill_id);
+        if (!stay_test)
+            continue;
+
+        if (stay_test->cluster_len) {
+            tested_clusters++;
+            if (result.stays.len != stay_test->cluster_len) {
+                failed_clusters++;
+                if (verbose) {
+                    PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
+                            stay_test->bill_id, result.stays[0].exit.date,
+                            result.stays.len, stay_test->cluster_len);
+                }
+                continue;
+            }
+        }
+
+        if (stay_test->ghm.value) {
+            tested_ghm++;
+            if (stay_test->ghm != result.ghm) {
+                failed_ghm++;
+                if (verbose) {
+                    PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
+                            stay_test->bill_id, result.stays[0].exit.date,
+                            result.ghm, FmtArg(result.main_error).Pad(-3),
+                            stay_test->ghm, FmtArg(stay_test->error).Pad(-3));
+                }
+                continue;
+            }
+        }
+
+        if (stay_test->ghs.number) {
+            tested_ghs++;
+            tested_exb_exh++;
+
+            if (stay_test->ghs != result.ghs ||
+                    stay_test->supplement_days != result.supplement_days) {
+                failed_ghs++;
+                if (verbose) {
+                    if (result.ghs != stay_test->ghs) {
+                        PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
+                                stay_test->bill_id, result.stays[0].exit.date,
+                                result.ghs, stay_test->ghs);
+                    }
+                    for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
+                        if (result.supplement_days.values[j] !=
+                                stay_test->supplement_days.values[j]) {
+                            PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
+                                    stay_test->bill_id, result.stays[0].exit.date,
+                                    mco_SupplementTypeNames[j], result.supplement_days.values[j],
+                                    stay_test->supplement_days.values[j]);
+                        }
+                    }
+                }
+                continue;
+            }
+
+            if (stay_test->exb_exh != result.ghs_pricing.exb_exh) {
+                failed_exb_exh++;
+                if (verbose) {
+                    PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
+                            stay_test->bill_id, result.stays[0].exit.date,
+                            result.ghs_pricing.exb_exh, stay_test->exb_exh);
+                }
+            }
+        }
+    }
+    if (verbose && (failed_clusters || failed_ghm || failed_ghs)) {
+        PrintLn();
+    }
+
+    PrintLn("    Failed cluster tests: %1 / %2 (missing %3)",
+            failed_clusters, tested_clusters, results.len - tested_clusters);
+    PrintLn("    Failed GHM tests: %1 / %2 (missing %3)",
+            failed_ghm, tested_ghm, results.len - tested_ghm);
+    PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
+            failed_ghs, tested_ghs, results.len - tested_ghs);
+    PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
+            failed_exb_exh, tested_exb_exh, results.len - tested_exb_exh);
+    PrintLn();
+}
+
+static void ExportDues(Span<const mco_Due> dues, mco_DispenseMode dispense_mode)
+{
+    PrintLn("Dispensation (%1):", mco_DispenseModeOptions[(int)dispense_mode].help);
+    for (const mco_Due &due: dues) {
+        PrintLn("  %1 = %2 €", due.unit, FmtDouble((double)due.summary.price_cents / 100.0, 2));
+    }
+}
+
 bool RunMcoClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -330,6 +430,21 @@ Dispensation modes:)");
     if (!async.Sync())
         return false;
 
+    HeapArray<mco_Due> dues;
+    if (dispense_mode >= 0) {
+        LogInfo("Dispense");
+
+        HashMap<UnitCode, Size> dues_map;
+        for (const ClassifySet &classify_set: classify_sets) {
+            mco_Dispense(classify_set.results, classify_set.mono_results,
+                         (mco_DispenseMode)dispense_mode, &dues, &dues_map);
+        }
+
+        std::sort(dues.begin(), dues.end(), [](const mco_Due &due1, const mco_Due &due2) {
+            return due1.unit.number < due2.unit.number;
+        });
+    }
+
     LogInfo("Export");
     mco_Summary main_summary = {};
     for (Size i = 0; i < filenames.len; i++) {
@@ -346,93 +461,7 @@ Dispensation modes:)");
         main_summary += classify_set.summary;
 
         if (test) {
-            PrintLn("  Tests:");
-
-            Size tested_clusters = 0, failed_clusters = 0;
-            Size tested_ghm = 0, failed_ghm = 0;
-            Size tested_ghs = 0, failed_ghs = 0;
-            Size tested_exb_exh = 0, failed_exb_exh = 0;
-            for (const mco_Result &result: classify_set.results) {
-                const mco_StayTest *stay_test = classify_set.tests.Find(result.stays[0].bill_id);
-                if (!stay_test)
-                    continue;
-
-                if (stay_test->cluster_len) {
-                    tested_clusters++;
-                    if (result.stays.len != stay_test->cluster_len) {
-                        failed_clusters++;
-                        if (verbosity >= 1) {
-                            PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
-                                    stay_test->bill_id, result.stays[0].exit.date,
-                                    result.stays.len, stay_test->cluster_len);
-                        }
-                        continue;
-                    }
-                }
-
-                if (stay_test->ghm.value) {
-                    tested_ghm++;
-                    if (stay_test->ghm != result.ghm) {
-                        failed_ghm++;
-                        if (verbosity >= 1) {
-                            PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
-                                    stay_test->bill_id, result.stays[0].exit.date,
-                                    result.ghm, FmtArg(result.main_error).Pad(-3),
-                                    stay_test->ghm, FmtArg(stay_test->error).Pad(-3));
-                        }
-                        continue;
-                    }
-                }
-
-                if (stay_test->ghs.number) {
-                    tested_ghs++;
-                    tested_exb_exh++;
-
-                    if (stay_test->ghs != result.ghs ||
-                            stay_test->supplement_days != result.supplement_days) {
-                        failed_ghs++;
-                        if (verbosity >= 1) {
-                            if (result.ghs != stay_test->ghs) {
-                                PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
-                                        stay_test->bill_id, result.stays[0].exit.date,
-                                        result.ghs, stay_test->ghs);
-                            }
-                            for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                                if (result.supplement_days.values[j] !=
-                                        stay_test->supplement_days.values[j]) {
-                                    PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
-                                            stay_test->bill_id, result.stays[0].exit.date,
-                                            mco_SupplementTypeNames[j], result.supplement_days.values[j],
-                                            stay_test->supplement_days.values[j]);
-                                }
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (stay_test->exb_exh != result.ghs_pricing.exb_exh) {
-                        failed_exb_exh++;
-                        if (verbosity >= 1) {
-                            PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
-                                    stay_test->bill_id, result.stays[0].exit.date,
-                                    result.ghs_pricing.exb_exh, stay_test->exb_exh);
-                        }
-                    }
-                }
-            }
-            if (verbosity >= 1 && (failed_clusters || failed_ghm || failed_ghs)) {
-                PrintLn();
-            }
-
-            PrintLn("    Failed cluster tests: %1 / %2 (missing %3)",
-                    failed_clusters, tested_clusters, classify_set.results.len - tested_clusters);
-            PrintLn("    Failed GHM tests: %1 / %2 (missing %3)",
-                    failed_ghm, tested_ghm, classify_set.results.len - tested_ghm);
-            PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
-                    failed_ghs, tested_ghs, classify_set.results.len - tested_ghs);
-            PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
-                    failed_exb_exh, tested_exb_exh, classify_set.results.len - tested_exb_exh);
-            PrintLn();
+            ExportTests(classify_set.results, classify_set.tests, verbosity >= 1);
         }
     }
 
@@ -442,21 +471,7 @@ Dispensation modes:)");
     }
 
     if (dispense_mode >= 0) {
-        PrintLn("Dispensation (%1):", mco_DispenseModeOptions[dispense_mode].help);
-
-        HeapArray<mco_Due> dues;
-        HashMap<UnitCode, Size> dues_map;
-        for (const ClassifySet &classify_set: classify_sets) {
-            mco_Dispense(classify_set.results, classify_set.mono_results,
-                         (mco_DispenseMode)dispense_mode, &dues, &dues_map);
-        }
-        std::sort(dues.begin(), dues.end(), [](const mco_Due &due1, const mco_Due &due2) {
-            return due1.unit.number < due2.unit.number;
-        });
-
-        for (const mco_Due &due: dues) {
-            PrintLn("  %1 = %2 €", due.unit, FmtDouble((double)due.summary.price_cents / 100.0, 2));
-        }
+        ExportDues(dues, (mco_DispenseMode)dispense_mode);
     }
 
     return true;
