@@ -884,11 +884,14 @@ public:
 
     void Grow(Size reserve_capacity = 1)
     {
+        DebugAssert(capacity >= 0);
+        DebugAssert(reserve_capacity >= 0);
+        DebugAssert((size_t)capacity + (size_t)reserve_capacity <= LEN_MAX);
+
         if (reserve_capacity <= capacity - len)
             return;
 
         Size needed_capacity = capacity + reserve_capacity;
-        DebugAssert(needed_capacity >= capacity);
 
         Size new_capacity;
         if (!capacity) {
