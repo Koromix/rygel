@@ -1994,6 +1994,15 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
         int ghs_duration;
         result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
 
+        // Count supplement days
+        mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
+
+        // Compute prices
+        mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);
+        int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
+                                                    &result.supplement_cents);
+        result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
+
         // Perform mono-stay classifications (if necessary)
         if (out_mono_results) {
             mco_ErrorSet mono_errors = {};
@@ -2006,7 +2015,6 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
 
                 if (result.ghm.IsError() || result.stays.len == 1) {
                     mono_result.ghm = result.ghm;
-                    mono_result.duration = stay_info.duration;
                     mono_result.main_error = result.main_error;
                     mono_result.ghs = result.ghs;
                     mono_result.ghs_pricing = result.ghs_pricing;
@@ -2032,15 +2040,6 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
                 out_mono_results[j++] = mono_result;
             }
         }
-
-        // Count supplement days
-        mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
-
-        // Compute prices
-        mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);
-        int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
-                                                    &result.supplement_cents);
-        result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
 
         out_results[i] = result;
     }

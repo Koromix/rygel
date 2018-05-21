@@ -187,6 +187,8 @@ Classify options:
     -m, --mono                   Compute mono-stay results (same as -fmono)
     -f, --flag <flags>           Classifier flags (see below)
 
+    -d, --dispense <mode>        Run dispensation algorithm (see below)
+
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
@@ -199,6 +201,13 @@ Classifier flags:)");
         }
         PrintLn(fp);
 
+        PrintLn(fp,
+R"(Dispensation modes:)");
+        for (const OptionDesc &desc: mco_DispenseModeOptions) {
+            PrintLn(fp, "    %1  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
+        }
+        PrintLn(fp);
+
         PrintLn(fp, mco_options_usage);
     };
 
@@ -206,6 +215,7 @@ Classifier flags:)");
 
     HeapArray<const char *> filenames;
     unsigned int flags = 0;
+    int dispense_mode = -1;
     int verbosity = 0;
     bool test = false;
     int torture = 1;
@@ -233,6 +243,19 @@ Classifier flags:)");
                     }
                     flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
+            } else if (TestOption(opt, "-d", "--dispense")) {
+                const char *mode_str = opt_parser.RequireValue();
+                if (!mode_str)
+                    return false;
+
+                const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                                      std::end(mco_DispenseModeOptions),
+                                                      [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
+                if (desc == std::end(mco_DispenseModeOptions)) {
+                    LogError("Unknown dispensation mode '%1'", mode_str);
+                    return false;
+                }
+                dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
@@ -253,6 +276,9 @@ Classifier flags:)");
             PrintUsage(stderr);
             return false;
         }
+    }
+    if (dispense_mode >= 0) {
+        flags |= (int)mco_ClassifyFlag::MonoResults;
     }
 
     const mco_TableSet *table_set = mco_GetMainTableSet();
@@ -296,9 +322,10 @@ Classifier flags:)");
             LogInfo("Summarize '%1'", filenames[i]);
             mco_Summarize(classify_set->results, &classify_set->summary);
 
-            if (!verbosity && !test) {
-                classify_set->stay_set = mco_StaySet();
+            if (0 && !verbosity && !test) {
+                classify_set->stay_set = {};
                 classify_set->results.Clear();
+                classify_set->mono_results.Clear();
             }
 
             return true;
@@ -416,6 +443,24 @@ Classifier flags:)");
     if (filenames.len > 1) {
         PrintLn("Global summary:");
         PrintSummary(main_summary);
+    }
+
+    if (dispense_mode >= 0) {
+        PrintLn("Dispensation (%1):", mco_DispenseModeOptions[dispense_mode].help);
+
+        HeapArray<mco_Due> dues;
+        HashMap<UnitCode, Size> dues_map;
+        for (const ClassifySet &classify_set: classify_sets) {
+            mco_Dispense(classify_set.results, classify_set.mono_results,
+                         (mco_DispenseMode)dispense_mode, &dues, &dues_map);
+        }
+        std::sort(dues.begin(), dues.end(), [](const mco_Due &due1, const mco_Due &due2) {
+            return due1.unit.number < due2.unit.number;
+        });
+
+        for (const mco_Due &due: dues) {
+            PrintLn("  %1 = %2 €", due.unit, FmtDouble((double)due.summary.price_cents / 100.0, 2));
+        }
     }
 
     return true;

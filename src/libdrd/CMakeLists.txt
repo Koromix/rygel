@@ -10,6 +10,8 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_classifier.cc
                mco_classifier.hh
                mco_common.hh
+               mco_dispenser.cc
+               mco_dispenser.hh
                mco_init.cc
                mco_init.hh
                mco_mapper.cc

@@ -1698,7 +1698,7 @@ public:
     }
     std::pair<ValueType *, bool> AppendUninitialized(const KeyType &key)
     {
-        std::pair<Bucket *, bool> ret = table.Append(key);
+        std::pair<Bucket *, bool> ret = table.AppendUninitialized(key);
         if (ret.second) {
             ret.first->key = key;
         }
