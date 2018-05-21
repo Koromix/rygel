@@ -10,7 +10,7 @@ all:
 	@mkdir -p ../R
 	cp ../drdR_mco.R ../R/drdR_mco.R
 
-override OBJECTS = miniz.c.o drdR_mco.cc.o libdrd.cc.o Rcc.cc.o
+override OBJECTS = drdR_mco.cc.o Rcc.cc.o libdrd.cc.o miniz.c.o
 
 drdR_mco.cc.o: ../drdR_mco.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
@@ -18,5 +18,9 @@ Rcc.cc.o: ../../common/Rcc.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
 libdrd.cc.o: ../../libdrd/libdrd.cc
 	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -c -o $@ $<
+
+MINIZ_FLAGS = -DMINIZ_NO_MALLOC -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS\
+              -DMINIZ_NO_ARCHIVE_WRITING_APIS -DMINIZ_NO_ZLIB_APIS\
+              -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 miniz.c.o: ../../../lib/miniz/miniz.c
-	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) -c -o $@ $<
+	$(CC) $(ALL_CPPFLAGS) $(ALL_CFLAGS) $(MINIZ_FLAGS) -c -o $@ $<
