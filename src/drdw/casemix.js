@@ -51,8 +51,8 @@ var casemix = {};
         // Resources
         if (!mix_init) {
             markOutdated('#casemix_view', true);
-            updateCaseMix(target_start, target_end, target_units, target_diff_start,
-                          target_diff_end, run);
+            updateCaseMix(target_start, target_end, target_units, 'j',
+                          target_diff_start, target_diff_end, run);
         }
 
         // Refresh view
@@ -100,7 +100,7 @@ var casemix = {};
     }
     this.route = route;
 
-    function updateCaseMix(start, end, units, diff_start, diff_end, func)
+    function updateCaseMix(start, end, units, mode, diff_start, diff_end, func)
     {
         if (mix_init)
             return;
@@ -108,7 +108,8 @@ var casemix = {};
 
         var dates = (start && end) ? (start + '..' + end) : null;
         var diff = (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null;
-        downloadJson('api/casemix.json', {dates: dates, units: units, diff: diff, duration_mode: 'full'},
+        downloadJson('api/casemix.json', {dates: dates, units: units, mode: mode, diff: diff,
+                                          durations: 1},
                      function(status, json) {
             var errors = [];
 

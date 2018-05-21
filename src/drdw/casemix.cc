@@ -32,12 +32,6 @@ invalid:
 
 Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType compression_type)
 {
-    enum class DurationMode {
-        Disabled,
-        Partial,
-        Full
-    };
-
     struct CellSummary {
         mco_GhmCode ghm;
         int16_t ghs;
@@ -59,7 +53,8 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
     Date dates[2] = {};
     Date diff_dates[2] = {};
     HashSet<UnitCode> units;
-    DurationMode duration_mode = DurationMode::Disabled;
+    bool durations = false;
+    mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     {
         if (!ParseDateRange(MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "dates"),
                             &dates[0], &dates[1]))
@@ -80,16 +75,28 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             units.Append(unit);
         }
 
-        const char *durations_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "duration_mode");
+        const char *durations_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "durations");
         if (durations_str && durations_str[0]) {
-            if (TestStr(durations_str, "partial")) {
-                duration_mode = DurationMode::Partial;
-            } else if (TestStr(durations_str, "full")) {
-                duration_mode = DurationMode::Full;
-            } else if (!TestStr(durations_str, "0")) {
-                LogError("Invalid 'duration_mode' parameter value '%1'", durations_str);
+            if (TestStr(durations_str, "1")) {
+                durations = true;
+            } else if (TestStr(durations_str, "0")) {
+                durations = false;
+            } else {
+                LogError("Invalid 'durations' parameter value '%1'", durations_str);
                 return CreateErrorPage(422);
             }
+        }
+
+        const char *mode_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "mode");
+        if (mode_str && mode_str[0]) {
+            const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                                  std::end(mco_DispenseModeOptions),
+                                                  [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
+            if (desc == std::end(mco_DispenseModeOptions)) {
+                LogError("Invalid 'mode' parameter value '%1'", mode_str);
+                return CreateErrorPage(422);
+            }
+            dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
         }
     }
 
@@ -104,15 +111,15 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
     }
 
     HeapArray<mco_Result> results;
-    mco_ClassifyParallel(*drdw_table_set, *drdw_authorization_set, drdw_stay_set.stays, 0, &results);
+    HeapArray<mco_Result> mono_results;
+    mco_ClassifyParallel(*drdw_table_set, *drdw_authorization_set, drdw_stay_set.stays,
+                         (int)mco_ClassifyFlag::MonoResults, &results, &mono_results);
 
     HeapArray<CellSummary> summary;
     {
+        Size j = 0;
         HashMap<int64_t, Size> summary_map;
         for (const mco_Result &result: results) {
-            if (result.ghm.IsError())
-                continue;
-
             int multiplier;
             if (!dates[0].value ||
                     (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
@@ -126,51 +133,33 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                 continue;
             }
 
-            int full_duration = 0;
-            for (const mco_Stay &stay: result.stays) {
-                if (stay.exit.date != stay.entry.date) {
-                    full_duration += stay.exit.date - stay.entry.date;
-                } else {
-                    full_duration++;
+            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            j += result.stays.len;
+
+            HeapArray<mco_Due> dues;
+            mco_Dispense(result, sub_mono_results, dispense_mode, &dues);
+
+            for (const mco_Due &due: dues) {
+                if (!units.table.count || units.Find(due.unit)) {
+                    // TODO: Careful with duration overflow
+                    SummaryMapKey key = {};
+                    key.st.ghm = result.ghm;
+                    key.st.ghs = result.ghs;
+                    if (durations) {
+                        key.st.duration = (int16_t)result.duration;
+                    }
+
+                    std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
+                    if (ret.second) {
+                        CellSummary cell_summary = {};
+                        cell_summary.ghm = result.ghm;
+                        cell_summary.ghs = result.ghs.number;
+                        cell_summary.duration = key.st.duration;
+                        summary.Append(cell_summary);
+                    }
+                    summary[*ret.first].count += multiplier;
+                    summary[*ret.first].ghs_price_cents += multiplier * due.summary.price_cents;
                 }
-            }
-
-            int result_total = 0;
-            for (Size i = 0; i < result.stays.len; i++) {
-                const mco_Stay &stay = result.stays[i];
-
-                if (units.table.count && !units.Find(stay.unit))
-                    continue;
-
-                int stay_duration = stay.exit.date - stay.entry.date;
-                int stay_ghs_cents = result.ghs_pricing.price_cents *
-                                     (stay_duration ? stay_duration : 1) / full_duration;
-                result_total += stay_ghs_cents;
-                // FIXME: Hack for rounding errors
-                if (i == result.stays.len - 1) {
-                    stay_ghs_cents += result.ghs_pricing.price_cents - result_total;
-                }
-
-                // TODO: Careful with duration overflow
-                SummaryMapKey key;
-                key.st.ghm = result.ghm;
-                key.st.ghs = result.ghs;
-                switch (duration_mode) {
-                    case DurationMode::Disabled: { key.st.duration = 0; } break;
-                    case DurationMode::Partial: { key.st.duration = (int16_t)stay_duration; } break;
-                    case DurationMode::Full: { key.st.duration = (int16_t)result.duration; } break;
-                }
-
-                std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
-                if (ret.second) {
-                    CellSummary cell_summary = {};
-                    cell_summary.ghm = result.ghm;
-                    cell_summary.ghs = result.ghs.number;
-                    cell_summary.duration = key.st.duration;
-                    summary.Append(cell_summary);
-                }
-                summary[*ret.first].count += multiplier;
-                summary[*ret.first].ghs_price_cents += multiplier * stay_ghs_cents;
             }
         }
     }
@@ -190,7 +179,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(buf, "%1", cs.ghm).ptr);
             writer.Key("ghs"); writer.Int(cs.ghs);
-            if (duration_mode != DurationMode::Disabled) {
+            if (durations) {
                 writer.Key("duration"); writer.Int(cs.duration);
             }
             writer.Key("stays_count"); writer.Int(cs.count);
