@@ -79,10 +79,9 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
 
             Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                const mco_GhsPriceInfo *ghs_price_info =
-                    index->FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
-                if (!ghs_price_info)
-                    continue;
+                mco_GhsCode ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, Sector::Public);
                 const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
                 if (!constraint)
                     continue;
@@ -106,7 +105,7 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
                     writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
                     writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
                 }
-                writer.Key("ghs"); writer.Int(ghs_price_info->ghs.number);
+                writer.Key("ghs"); writer.Int(ghs.number);
 
                 writer.Key("conditions"); writer.StartArray();
                 if (ghm_to_ghs_info.bed_authorization) {
@@ -139,17 +138,19 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
                 }
                 writer.EndArray();
 
-                writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
-                writer.Key("ghs_coefficient"); writer.Double(ghs_price_info->ghs_coefficient);
-                if (ghs_price_info->exh_treshold) {
-                    writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
-                    writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
-                }
-                if (ghs_price_info->exb_treshold) {
-                    writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
-                    writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
-                    if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
-                        writer.Key("exb_once"); writer.Bool(true);
+                if (ghs_price_info) {
+                    writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
+                    writer.Key("ghs_coefficient"); writer.Double(ghs_price_info->ghs_coefficient);
+                    if (ghs_price_info->exh_treshold) {
+                        writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
+                        writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
+                    }
+                    if (ghs_price_info->exb_treshold) {
+                        writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
+                        writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
+                        if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
+                            writer.Key("exb_once"); writer.Bool(true);
+                        }
                     }
                 }
 

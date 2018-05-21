@@ -642,6 +642,9 @@ var pricing = {};
 
     function computePrice(ghs, duration, apply_coeff)
     {
+        if (!ghs.ghs_cents)
+            return null;
+
         var duration_mask;
         if (duration < 32) {
             duration_mask = 1 << duration;
