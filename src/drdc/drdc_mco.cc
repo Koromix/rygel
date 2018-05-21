@@ -180,9 +180,10 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 bool RunMcoClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_classify [options] stay_file ...
-
+        PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
+)");
+        PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(
 Classify options:
     -m, --mono                   Compute mono-stay results (same as -fmono)
     -f, --flag <flags>           Classifier flags (see below)
@@ -199,16 +200,11 @@ Classifier flags:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
             PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
-        PrintLn(fp);
-
-        PrintLn(fp,
-R"(Dispensation modes:)");
+        PrintLn(fp, R"(
+Dispensation modes:)");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
             PrintLn(fp, "    %1  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
         }
-        PrintLn(fp);
-
-        PrintLn(fp, mco_options_usage);
     };
 
     OptionParser opt_parser(arguments);
@@ -469,13 +465,12 @@ R"(Dispensation modes:)");
 bool RunMcoDump(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_dump [options] [filename] ...
-
-Dump options:
-    -d, --dump                   Dump content of (readable) tables
+        PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
 )");
         PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(
+Dump options:
+    -d, --dump                   Dump content of (readable) tables)");
     };
 
     OptionParser opt_parser(arguments);
@@ -512,14 +507,13 @@ Dump options:
 bool RunMcoList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_list [options] list_name ...
-
-List options:
-    -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables)
+        PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
 )");
         PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(
+List options:
+    -d, --date <date>            Use tables valid on specified date
+                                 (default: most recent tables))");
     };
 
     OptionParser opt_parser(arguments);
@@ -605,14 +599,13 @@ List options:
 bool RunMcoMap(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_map [options]
-
-Constraints options:
-    -d, --date <date>            Use tables valid on specified date
-                                 (default: most recent tables)
+        PrintLn(fp, R"(Usage: drdc mco_map [options]
 )");
         PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(
+Constraints options:
+    -d, --date <date>            Use tables valid on specified date
+                                 (default: most recent tables))");
     };
 
     OptionParser opt_parser(arguments);
@@ -674,8 +667,7 @@ Constraints options:
 bool RunMcoPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
+        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
 )");
         PrintLn(fp, mco_options_usage);
     };
@@ -733,8 +725,7 @@ R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
 bool RunMcoShow(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: drdc mco_show [options] name ...
+        PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
 )");
         PrintLn(fp, mco_options_usage);
     };
