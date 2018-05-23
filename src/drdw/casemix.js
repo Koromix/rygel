@@ -279,7 +279,7 @@ var casemix = {};
             var types_tr = createElement('tr');
             var ghm_roots = {};
             for (var i = 0; i < ghm_types.length; i++) {
-                types_tr.appendChild(createElement('th', {}, '' + ghm_types[i]));
+                types_tr.appendChild(createElement('th', {colspan: 3}, '' + ghm_types[i]));
                 ghm_roots[ghm_types[i]] = [];
             }
             thead.appendChild(types_tr);
@@ -308,15 +308,17 @@ var casemix = {};
                         var text = ghm_root_info.ghm_root + ' = ' +
                                    pricing.priceText(ghm_root_info.ghs_price_cents);
 
-                        var td = createElement('td', {},
+                        tr.appendChild(createElement('td', {'style': 'border-right: 0;'},
+                                                     '' + ghm_root_info.stays_count));
+                        tr.appendChild(createElement('td', {'style': 'border-left: 0; border-right: 0;'},
                             createElement('a', {href: '#',
-                                                title: '' + ghm_root_info.stays_count + ' RSS',
-                                                click: click_function}, text)
-                        );
+                                                click: click_function}, ghm_root_info.ghm_root)
+                        ));
+                        tr.appendChild(createElement('td', {'style': 'border-left: 0;'},
+                                                     pricing.priceText(ghm_root_info.ghs_price_cents)));
                     } else {
-                        var td = createElement('td');
+                        tr.appendChild(createElement('td', {colspan: 3}));
                     }
-                    tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
             }

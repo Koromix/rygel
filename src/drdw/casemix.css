@@ -15,7 +15,6 @@
 #casemix_roots {
     margin-top: 1em;
     width: 100%;
-    table-layout: fixed;
     border-collapse: collapse;
 }
 #casemix_roots th, #casemix_roots td {
