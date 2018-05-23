@@ -670,7 +670,7 @@ var pricing = {};
             var mode = 'price';
         }
 
-        price_cents = applyGhsCoefficient(ghs, ghs.ghs_cents, apply_coeff);
+        price_cents = applyGhsCoefficient(ghs, price_cents, apply_coeff);
         return [price_cents, mode];
     }
 
