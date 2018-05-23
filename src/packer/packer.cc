@@ -197,6 +197,7 @@ R"(};
 
 static PackerAsset assets[] = {)");
 
+    // FIXME: Bug with empty files?
     for (Size i = 0, cumulative_len = 0; i < filenames.len; i++) {
         Span<const char> filename = filenames[i];
 
