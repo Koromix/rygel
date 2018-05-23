@@ -35,6 +35,7 @@ var tables = {};
         if (main_index >= 0 && (table_index !== main_index || table_type !== target_table ||
                                 table_spec !== target_specs[target_table])) {
             items_init = false;
+
             markOutdated('#tables_view', true);
             updateTable(target_table, main_index, target_specs[target_table], run);
         }
@@ -44,14 +45,10 @@ var tables = {};
         document.querySelector('#tables_tree').classList.toggle('active', target_table === 'classifier_tree');
         document.querySelector('#tables_table').classList.toggle('active', target_table !== 'classifier_tree');
         refreshIndexesLine('#tables_indexes', main_index);
-        if (target_specs[target_table]) {
-            var h1 = document.querySelector('#tables_spec');
-            h1.innerText = 'Filtre : ' + target_specs[target_table];
-        } else {
-            var h1 = document.querySelector('#tables_spec');
-            h1.innerText = '';
-        }
         if (!downloadJson.run_lock) {
+            refreshHeader(Array.from(errors));
+            errors.clear();
+
             if (target_table === 'classifier_tree') {
                 refreshClassifierTree(items);
             } else {
@@ -62,6 +59,25 @@ var tables = {};
         }
     }
     this.run = run;
+
+    function refreshHeader(errors)
+    {
+        var log = document.querySelector('#tables .log');
+        var h1 = document.querySelector('#tables_spec');
+
+        if (errors.length) {
+            log.style.display = 'block';
+            log.innerHTML = errors.join('<br/>');
+        } else {
+            log.style.display = 'none';
+        }
+
+        if (target_specs[target_table]) {
+            h1.innerText = 'Filtre : ' + target_specs[target_table];
+        } else {
+            h1.innerText = '';
+        }
+    }
 
     function route(args)
     {
@@ -85,6 +101,8 @@ var tables = {};
     {
         if (items_init)
             return true;
+
+        items = [];
 
         var begin_date = indexes[index].begin_date;
         downloadJson('api/' + table + '.json', {date: begin_date, spec: spec},
