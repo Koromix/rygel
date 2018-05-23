@@ -244,7 +244,13 @@ var tables = {};
                     var column = columns[j];
 
                     if (item[column] !== null && item[column] !== undefined) {
-                        var td = createElement('td', {}, addSpecLinks('' + item[column]));
+                        // FIXME: Put this meta-info in TableColumns
+                        if (column === 'durations' || column === 'ages') {
+                            var content = maskToRanges(item[column]);
+                        } else {
+                            var content = addSpecLinks('' + item[column]);
+                        }
+                        var td = createElement('td', {}, content);
                     } else {
                         var td = createElement('td', {});
                     }
@@ -257,6 +263,35 @@ var tables = {};
         var old_table = document.querySelector('#tables_table');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
+    }
+
+    function maskToRanges(mask)
+    {
+        var ranges = [];
+
+        var i = 0;
+        for (;;) {
+            while (i < 32 && !(mask & (1 << i)))
+                i++;
+            if (i >= 32)
+                break;
+
+            var j = i + 1;
+            while (j < 32 && (mask & (1 << j)))
+                j++;
+            j--;
+
+            if (j == 31) {
+                ranges.push('≥ ' + i);
+            } else if (j > i) {
+                ranges.push('' + i + '-' + j);
+            } else {
+                ranges.push('' + i);
+            }
+
+            i = j + 1;
+        }
+        return ranges.join(', ');
     }
 
     function makeSpecLink(str)
