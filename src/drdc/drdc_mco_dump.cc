@@ -5,6 +5,7 @@
 #include "../libdrd/libdrd.hh"
 #include "drdc_mco_dump.hh"
 
+// FIXME: Protect against infinite loops
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                          Size node_idx, int depth)
 {
