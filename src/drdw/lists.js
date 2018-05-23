@@ -10,6 +10,39 @@ var tables = {};
     var items_init = false;
     var items = {};
 
+    const TableColumns = {
+        'ghm_ghs': [
+            'ghm',
+            'ghs',
+            'old_age_treshold',
+            'old_severity_limit',
+            'young_age_treshold',
+            'young_severity_limit',
+            'durations',
+            'ages',
+            'confirm_treshold',
+            'main_diagnosis',
+            'diagnoses',
+            'procedures',
+            'unit_authorization',
+            'bed_authorization'
+        ],
+        'diagnoses': [
+            'diag',
+            'sex',
+            'cmd',
+            'main_list'
+        ],
+        'procedures': [
+            'proc',
+            'begin_date',
+            'end_date',
+            'phase',
+            'activities',
+            'extensions'
+        ]
+    };
+
     function run()
     {
         // Parse route (model: tables/<table>/<date>[/<spec>])
@@ -54,10 +87,11 @@ var tables = {};
             if (target_table === 'classifier_tree') {
                 refreshClassifierTree(items);
             } else {
-                refreshTable(items);
+                refreshTable(items, TableColumns[target_table]);
             }
 
-            markOutdated('#tables_view', false);
+            if (!downloadJson.run_lock)
+                markOutdated('#tables_view', false);
         }
     }
     this.run = run;
@@ -185,16 +219,8 @@ var tables = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items)
+    function refreshTable(items, columns)
     {
-        // FIXME: Don't use automatic columns but explicit column lists
-        var columns = new Set();
-        for (var i = 0; i < items.length; i++) {
-            for (var name in items[i])
-                columns.add(name);
-        }
-        columns = Array.from(columns);
-
         var table = createElement('table', {},
             createElement('thead'),
             createElement('tbody')
