@@ -32,8 +32,10 @@ var tables = {};
 
         // Common resources
         updateIndexes(run);
+        var force_refresh = false;
         if (main_index >= 0 && (table_index !== main_index || table_type !== target_table ||
                                 table_spec !== target_specs[target_table])) {
+            force_refresh = (table_type !== target_table);
             items_init = false;
 
             markOutdated('#tables_view', true);
@@ -45,7 +47,7 @@ var tables = {};
         document.querySelector('#tables_tree').classList.toggle('active', target_table === 'classifier_tree');
         document.querySelector('#tables_table').classList.toggle('active', target_table !== 'classifier_tree');
         refreshIndexesLine('#tables_indexes', main_index);
-        if (!downloadJson.run_lock) {
+        if (!downloadJson.run_lock || force_refresh) {
             refreshHeader(Array.from(errors));
             errors.clear();
 
