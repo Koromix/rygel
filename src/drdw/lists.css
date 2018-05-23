@@ -4,6 +4,10 @@
 }
 
 #tables_tree li { list-style-type: disclosure-open; }
+#tables_tree ul {
+    margin-left: -10px;
+    border-left: 1px solid #ddd;
+}
 #tables_tree li.collapse { list-style-type: disclosure-closed; }
 #tables_tree li.collapse ul { display: hide !important; }
 
