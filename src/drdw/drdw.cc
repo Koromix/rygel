@@ -581,6 +581,7 @@ Options:
 
     LogInfo("Computing constraints");
     Async async;
+    drdw_constraints_set.Reserve(drdw_table_set->indexes.len);
     for (Size i = 0; i < drdw_table_set->indexes.len; i++) {
         if (drdw_table_set->indexes[i].valid) {
             // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
