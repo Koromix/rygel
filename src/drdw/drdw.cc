@@ -168,7 +168,7 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
 
 Response CreateErrorPage(int code)
 {
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1 : %2", code,
+    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2", code,
                           MHD_get_reason_phrase_for((unsigned int)code));
     MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
                                                            ReleaseCallback);
