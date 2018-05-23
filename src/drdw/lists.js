@@ -228,28 +228,30 @@ var tables = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
-        var tr = createElement('tr');
-        for (var i = 0; i < columns.length; i++) {
-            var th = createElement('th', {title: columns[i]}, columns[i]);
-            tr.appendChild(th);
-        }
-        thead.appendChild(tr);
-
-        for (var i = 0; i < items.length; i++) {
-            var item = items[i];
-
+        if (items.length) {
             var tr = createElement('tr');
-            for (var j = 0; j < columns.length; j++) {
-                var column = columns[j];
-
-                if (item[column] !== null && item[column] !== undefined) {
-                    var td = createElement('td', {}, addSpecLinks('' + item[column]));
-                } else {
-                    var td = createElement('td', {});
-                }
-                tr.appendChild(td);
+            for (var i = 0; i < columns.length; i++) {
+                var th = createElement('th', {title: columns[i]}, columns[i]);
+                tr.appendChild(th);
             }
-            tbody.appendChild(tr);
+            thead.appendChild(tr);
+
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+
+                var tr = createElement('tr');
+                for (var j = 0; j < columns.length; j++) {
+                    var column = columns[j];
+
+                    if (item[column] !== null && item[column] !== undefined) {
+                        var td = createElement('td', {}, addSpecLinks('' + item[column]));
+                    } else {
+                        var td = createElement('td', {});
+                    }
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
         }
 
         var old_table = document.querySelector('#tables_table');
