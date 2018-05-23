@@ -1575,4 +1575,58 @@ const mco_SupplementCounters<int32_t> &mco_TableIndex::SupplementPrices(Sector s
     return supplement_prices[(int)sector];
 }
 
+mco_ListSpecifier mco_ListSpecifier::FromString(const char *spec_str)
+{
+    mco_ListSpecifier spec;
+
+    if (!spec_str[0] || !spec_str[1])
+        goto error;
+
+    switch (spec_str[0]) {
+        case 'd': case 'D': { spec.table = mco_ListSpecifier::Table::Diagnoses; } break;
+        case 'a': case 'A': { spec.table = mco_ListSpecifier::Table::Procedures; } break;
+
+        default:
+            goto error;
+    }
+
+    switch (spec_str[1]) {
+        case '$': {
+            const char *mask_str = spec_str + 2;
+            if (mask_str[0] == '~') {
+                spec.type = mco_ListSpecifier::Type::ReverseMask;
+                mask_str++;
+            } else {
+                spec.type = mco_ListSpecifier::Type::Mask;
+            }
+            if (sscanf(mask_str, "%" SCNu8 ".%" SCNu8,
+                       &spec.u.mask.offset, &spec.u.mask.mask) != 2)
+                goto error;
+        } break;
+
+        case '-': {
+            spec.type = mco_ListSpecifier::Type::CmdJump;
+            int ret = sscanf(spec_str + 2, "%02" SCNu8 "%02" SCNu8,
+                             &spec.u.cmd_jump.cmd, &spec.u.cmd_jump.jump);
+            if (ret == 1) {
+                spec.type = mco_ListSpecifier::Type::Cmd;
+            } else if (ret == 2) {
+                spec.type = mco_ListSpecifier::Type::CmdJump;
+            } else {
+                goto error;
+            }
+        } break;
+
+        default:
+            goto error;
+    }
+
+    return spec;
+
+error:
+    LogError("Malformed list specifier '%1'", spec_str);
+    spec.table = Table::Invalid;
+    return spec;
+}
+
 #undef FAIL_PARSE_IF

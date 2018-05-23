@@ -377,3 +377,70 @@ private:
     template <typename... Args>
     void HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args);
 };
+
+class mco_ListSpecifier {
+public:
+    enum class Table {
+        Invalid,
+        Diagnoses,
+        Procedures
+    };
+    enum class Type {
+        All,
+        Mask,
+        ReverseMask,
+        Cmd,
+        CmdJump
+    };
+
+    Table table;
+
+    Type type = Type::All;
+    union {
+        struct {
+            uint8_t offset;
+            uint8_t mask;
+            bool reverse;
+        } mask;
+
+        int8_t cmd;
+
+        struct {
+            int8_t cmd;
+            int8_t jump;
+        } cmd_jump;
+    } u;
+
+    mco_ListSpecifier(Table table = Table::Invalid) : table(table) {}
+
+    static mco_ListSpecifier FromString(const char *spec_str);
+
+    bool IsValid() const { return table != Table::Invalid; }
+
+    bool Match(Span<const uint8_t> values) const
+    {
+        switch (type) {
+            case Type::All: { return true; } break;
+
+            case Type::Mask: {
+                return LIKELY(u.mask.offset < values.len) &&
+                       values[u.mask.offset] & u.mask.mask;
+            } break;
+
+            case Type::ReverseMask: {
+                return LIKELY(u.mask.offset < values.len) &&
+                       !(values[u.mask.offset] & u.mask.mask);
+            } break;
+
+            case Type::Cmd: {
+                return values[0] == u.cmd;
+            } break;
+
+            case Type::CmdJump: {
+                return values[0] == u.cmd_jump.cmd &&
+                       values[1] == u.cmd_jump.jump;
+            } break;
+        }
+        DebugAssert(false);
+    }
+};

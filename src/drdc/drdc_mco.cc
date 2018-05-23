@@ -5,106 +5,6 @@
 #include "../libdrd/libdrd.hh"
 #include "drdc_mco_dump.hh"
 
-struct ListSpecifier {
-    enum class Table {
-        Diagnoses,
-        Procedures
-    };
-    enum class Type {
-        Mask,
-        ReverseMask,
-        CmdJump
-    };
-
-    bool valid;
-
-    Table table;
-    Type type;
-    union {
-        struct {
-            uint8_t offset;
-            uint8_t mask;
-            bool reverse;
-        } mask;
-
-        struct {
-            uint8_t cmd;
-            uint8_t jump;
-        } cmd_jump;
-    } u;
-
-    static ListSpecifier FromString(const char *spec_str)
-    {
-        ListSpecifier spec = {};
-
-        if (!spec_str[0] || !spec_str[1])
-            goto error;
-
-        switch (spec_str[0]) {
-            case 'd': case 'D': { spec.table = ListSpecifier::Table::Diagnoses; } break;
-            case 'a': case 'A': { spec.table = ListSpecifier::Table::Procedures; } break;
-
-            default:
-                goto error;
-        }
-
-        switch (spec_str[1]) {
-            case '$': {
-                const char *mask_str = spec_str + 2;
-                if (mask_str[0] == '~') {
-                    spec.type = ListSpecifier::Type::ReverseMask;
-                    mask_str++;
-                } else {
-                    spec.type = ListSpecifier::Type::Mask;
-                }
-                if (sscanf(mask_str, "%" SCNu8 ".%" SCNu8,
-                           &spec.u.mask.offset, &spec.u.mask.mask) != 2)
-                    goto error;
-            } break;
-
-            case '-': {
-                spec.type = ListSpecifier::Type::CmdJump;
-                if (sscanf(spec_str + 2, "%02" SCNu8 "%02" SCNu8,
-                           &spec.u.cmd_jump.cmd, &spec.u.cmd_jump.jump) != 2)
-                    goto error;
-            } break;
-
-            default:
-                goto error;
-        }
-
-        spec.valid = true;
-        return spec;
-
-error:
-        LogError("Malformed list specifier '%1'", spec_str);
-        return spec;
-    }
-
-    bool IsValid() const { return valid; }
-
-    bool Match(Span<const uint8_t> values) const
-    {
-        switch (type) {
-            case Type::Mask: {
-                return LIKELY(u.mask.offset < values.len) &&
-                       values[u.mask.offset] & u.mask.mask;
-            } break;
-
-            case Type::ReverseMask: {
-                return LIKELY(u.mask.offset < values.len) &&
-                       !(values[u.mask.offset] & u.mask.mask);
-            } break;
-
-            case Type::CmdJump: {
-                return values[0] == u.cmd_jump.cmd &&
-                       values[1] == u.cmd_jump.jump;
-            } break;
-        }
-        DebugAssert(false);
-    }
-};
-
 static void PrintSummary(const mco_Summary &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
@@ -574,13 +474,15 @@ List options:
     }
 
     for (const char *spec_str: spec_strings) {
-        ListSpecifier spec = ListSpecifier::FromString(spec_str);
+        mco_ListSpecifier spec = mco_ListSpecifier::FromString(spec_str);
         if (!spec.IsValid())
             continue;
 
         PrintLn("%1:", spec_str);
         switch (spec.table) {
-            case ListSpecifier::Table::Diagnoses: {
+            case mco_ListSpecifier::Table::Invalid: { /* Handled above */ } break;
+
+            case mco_ListSpecifier::Table::Diagnoses: {
                 for (const mco_DiagnosisInfo &diag: index->diagnoses) {
                     if (diag.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
                         if (spec.Match(diag.Attributes(1).raw)) {
@@ -597,7 +499,7 @@ List options:
                 }
             } break;
 
-            case ListSpecifier::Table::Procedures: {
+            case mco_ListSpecifier::Table::Procedures: {
                 for (const mco_ProcedureInfo &proc: index->procedures) {
                     if (spec.Match(proc.bytes)) {
                         PrintLn("  %1", proc.proc);
