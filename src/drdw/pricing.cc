@@ -4,71 +4,19 @@
 
 #include "drdw.hh"
 
-Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compression_type)
-{
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        writer.StartArray();
-        for (const mco_TableIndex &index: drdw_table_set->indexes) {
-            if (!index.valid)
-                continue;
-
-            char buf[32];
-
-            writer.StartObject();
-            writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
-            writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_tables"); writer.Bool(true);
-            }
-            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_prices"); writer.Bool(true);
-            }
-            writer.EndObject();
-        }
-        writer.EndArray();
-
-        return true;
-    });
-
-    return {200, response};
-}
-
 Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType compression_type)
 {
-    Date date = {};
-    {
-        const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "date");
-        if (date_str) {
-            date = Date::FromString(date_str);
-        }
-        if (!date.value)
-            return CreateErrorPage(422);
-    }
+    Response response = {};
+    const mco_TableIndex *index = GetIndexFromQueryString(conn, "price_map.json", &response);
+    if (!index)
+        return response;
 
-    const mco_TableIndex *index = drdw_table_set->FindIndex(date);
-    if (!index) {
-        LogError("No table index available on '%1'", date);
-        return CreateErrorPage(404);
-    }
-
-    // Redirect to the canonical URL for this version, to improve client-side caching
-    if (date != index->limit_dates[0]) {
-        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-
-        {
-            char url_buf[64];
-            Fmt(url_buf, "price_map.json?date=%1", index->limit_dates[0]);
-            MHD_add_response_header(response, "Location", url_buf);
-        }
-
-        return {303, response};
-    }
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *drdw_index_to_constraints[index - drdw_table_set->indexes.ptr];
 
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    response.code = 200;
+    response.response = BuildJson(compression_type,
+                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -164,5 +112,5 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
         return true;
     });
 
-    return {200, response};
+    return response;
 }

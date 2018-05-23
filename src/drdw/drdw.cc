@@ -76,6 +76,47 @@ static HashTable<Span<const char>, Route> routes;
 static LinkedAllocator routes_alloc;
 static char etag[64];
 
+const mco_TableIndex *GetIndexFromQueryString(MHD_Connection *conn, const char *redirect_url,
+                                              Response *out_response)
+{
+    Date date = {};
+    {
+        const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "date");
+        if (date_str) {
+            date = Date::FromString(date_str);
+        } else {
+            LogError("Missing 'date' parameter");
+        }
+        if (!date.value) {
+            *out_response = CreateErrorPage(422);
+            return nullptr;
+        }
+    }
+
+    const mco_TableIndex *index = drdw_table_set->FindIndex(date);
+    if (!index) {
+        LogError("No table index available on '%1'", date);
+        *out_response = CreateErrorPage(404);
+        return nullptr;
+    }
+
+    // Redirect to the canonical URL for this version, to improve client-side caching
+    if (redirect_url && date != index->limit_dates[0]) {
+        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+
+        {
+            char url_buf[64];
+            Fmt(url_buf, "%1?date=%2", redirect_url, index->limit_dates[0]);
+            MHD_add_response_header(response, "Location", url_buf);
+        }
+
+        *out_response = {303, response};
+        return nullptr;
+    }
+
+    return index;
+}
+
 static const char *GetMimeType(Span<const char> path)
 {
     Span<const char> extension = GetPathExtension(path);
@@ -286,6 +327,7 @@ static void InitRoutes()
         Assert(html);
         routes.Set({"/", Route::Matching::Exact, html->u.st.asset, html->u.st.mime_type});
         routes.Set({"/pricing", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/tables", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
         routes.Set({"/casemix", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
         // routes.Remove(html);
 
@@ -301,6 +343,10 @@ static void InitRoutes()
     routes.Set({"/api/indexes.json", Route::Matching::Exact, ProduceIndexes});
     routes.Set({"/api/price_map.json", Route::Matching::Exact, ProducePriceMap});
     routes.Set({"/api/casemix.json", Route::Matching::Exact, ProduceCaseMix});
+    routes.Set({"/api/classifier_tree.json", Route::Matching::Exact, ProduceClassifierTree});
+    routes.Set({"/api/diagnoses.json", Route::Matching::Exact, ProduceDiagnoses});
+    routes.Set({"/api/procedures.json", Route::Matching::Exact, ProduceProcedures});
+    routes.Set({"/api/ghm_ghs.json", Route::Matching::Exact, ProduceGhmGhs});
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/api/%1", desc.name).ptr;
         routes.Set({url, Route::Matching::Exact, desc, GetMimeType(url)});

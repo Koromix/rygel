@@ -22,10 +22,19 @@ extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> drdw_index_to_cons
 extern const mco_AuthorizationSet *drdw_authorization_set;
 extern mco_StaySet drdw_stay_set;
 
+const mco_TableIndex *GetIndexFromQueryString(MHD_Connection *conn, const char *redirect_url,
+                                              Response *out_response);
+
 Response CreateErrorPage(int code);
 MHD_Response *BuildJson(CompressionType compression_type,
                         std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
 
-Response ProduceCaseMix(MHD_Connection *conn, const char *url, CompressionType compression_type);
 Response ProduceIndexes(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionType compression_type);
+Response ProduceDiagnoses(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceProcedures(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceGhmGhs(MHD_Connection *conn, const char *url, CompressionType compression_type);
+
 Response ProducePriceMap(MHD_Connection *conn, const char *url, CompressionType compression_type);
+
+Response ProduceCaseMix(MHD_Connection *conn, const char *url, CompressionType compression_type);
