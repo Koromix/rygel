@@ -14,10 +14,6 @@ var tables = {};
         'ghm_ghs': [
             'ghm',
             'ghs',
-            'old_age_treshold',
-            'old_severity_limit',
-            'young_age_treshold',
-            'young_severity_limit',
             'durations',
             'ages',
             'confirm_treshold',
@@ -25,7 +21,11 @@ var tables = {};
             'diagnoses',
             'procedures',
             'unit_authorization',
-            'bed_authorization'
+            'bed_authorization',
+            'old_age_treshold',
+            'old_severity_limit',
+            'young_age_treshold',
+            'young_severity_limit'
         ],
         'diagnoses': [
             'diag',

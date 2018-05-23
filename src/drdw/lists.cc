@@ -554,14 +554,6 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
                 } */
                 writer.Key("durations"); writer.Uint(combined_durations);
                 writer.Key("ages"); writer.Uint(combined_ages);
-                if (ghm_root_info.young_severity_limit) {
-                    writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
-                    writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
-                }
-                if (ghm_root_info.old_severity_limit) {
-                    writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
-                    writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
-                }
                 if (ghm_root_info.confirm_duration_treshold) {
                     writer.Key("confirm_treshold"); writer.Int(ghm_root_info.confirm_duration_treshold);
                 }
@@ -587,9 +579,17 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
                     // FIXME: Avoid stupid heap allocations here
                     HeapArray<char> buf;
                     for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-                        Fmt(&buf, "A$%1.%2", mask.offset, mask.value);
+                        Fmt(&buf, " A$%1.%2", mask.offset, mask.value);
                     }
-                    writer.Key("procedures"); writer.String(buf.ptr);
+                    writer.Key("procedures"); writer.String(buf.ptr + 1);
+                }
+                if (ghm_root_info.young_severity_limit) {
+                    writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
+                    writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
+                }
+                if (ghm_root_info.old_severity_limit) {
+                    writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
+                    writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
                 }
                 writer.EndObject();
             }
