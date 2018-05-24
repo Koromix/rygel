@@ -81,7 +81,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 }
 
 static void ExportTests(Span<const mco_Result> results,
-                        const HashTable<int32_t, mco_StayTest> &tests, bool verbose)
+                        const HashTable<int32_t, mco_Test> &tests, bool verbose)
 {
     PrintLn("  Tests:");
 
@@ -90,69 +90,69 @@ static void ExportTests(Span<const mco_Result> results,
     Size tested_ghs = 0, failed_ghs = 0;
     Size tested_exb_exh = 0, failed_exb_exh = 0;
     for (const mco_Result &result: results) {
-        const mco_StayTest *stay_test = tests.Find(result.stays[0].bill_id);
-        if (!stay_test)
+        const mco_Test *test = tests.Find(result.stays[0].bill_id);
+        if (!test)
             continue;
 
-        if (stay_test->cluster_len) {
+        if (test->cluster_len) {
             tested_clusters++;
-            if (result.stays.len != stay_test->cluster_len) {
+            if (result.stays.len != test->cluster_len) {
                 failed_clusters++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
-                            stay_test->bill_id, result.stays[0].exit.date,
-                            result.stays.len, stay_test->cluster_len);
+                            test->bill_id, result.stays[0].exit.date,
+                            result.stays.len, test->cluster_len);
                 }
                 continue;
             }
         }
 
-        if (stay_test->ghm.value) {
+        if (test->ghm.value) {
             tested_ghm++;
-            if (stay_test->ghm != result.ghm) {
+            if (test->ghm != result.ghm) {
                 failed_ghm++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
-                            stay_test->bill_id, result.stays[0].exit.date,
+                            test->bill_id, result.stays[0].exit.date,
                             result.ghm, FmtArg(result.main_error).Pad(-3),
-                            stay_test->ghm, FmtArg(stay_test->error).Pad(-3));
+                            test->ghm, FmtArg(test->error).Pad(-3));
                 }
                 continue;
             }
         }
 
-        if (stay_test->ghs.number) {
+        if (test->ghs.number) {
             tested_ghs++;
             tested_exb_exh++;
 
-            if (stay_test->ghs != result.ghs ||
-                    stay_test->supplement_days != result.supplement_days) {
+            if (test->ghs != result.ghs ||
+                    test->supplement_days != result.supplement_days) {
                 failed_ghs++;
                 if (verbose) {
-                    if (result.ghs != stay_test->ghs) {
+                    if (result.ghs != test->ghs) {
                         PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
-                                stay_test->bill_id, result.stays[0].exit.date,
-                                result.ghs, stay_test->ghs);
+                                test->bill_id, result.stays[0].exit.date,
+                                result.ghs, test->ghs);
                     }
                     for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                         if (result.supplement_days.values[j] !=
-                                stay_test->supplement_days.values[j]) {
+                                test->supplement_days.values[j]) {
                             PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
-                                    stay_test->bill_id, result.stays[0].exit.date,
+                                    test->bill_id, result.stays[0].exit.date,
                                     mco_SupplementTypeNames[j], result.supplement_days.values[j],
-                                    stay_test->supplement_days.values[j]);
+                                    test->supplement_days.values[j]);
                         }
                     }
                 }
                 continue;
             }
 
-            if (stay_test->exb_exh != result.ghs_pricing.exb_exh) {
+            if (test->exb_exh != result.ghs_pricing.exb_exh) {
                 failed_exb_exh++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
-                            stay_test->bill_id, result.stays[0].exit.date,
-                            result.ghs_pricing.exb_exh, stay_test->exb_exh);
+                            test->bill_id, result.stays[0].exit.date,
+                            result.ghs_pricing.exb_exh, test->exb_exh);
                 }
             }
         }
@@ -295,7 +295,7 @@ Dispensation modes:)");
 
     struct ClassifySet {
         mco_StaySet stay_set;
-        HashTable<int32_t, mco_StayTest> tests;
+        HashTable<int32_t, mco_Test> tests;
 
         HeapArray<mco_Result> results;
         HeapArray<mco_Result> mono_results;

@@ -96,7 +96,7 @@ static inline bool mco_StaysAreCompatible(int32_t bill_id1, int32_t bill_id2)
     return bill_id1 && bill_id1 == bill_id2;
 }
 
-struct mco_StayTest {
+struct mco_Test {
     int32_t bill_id;
 
     uint16_t cluster_len;
@@ -108,7 +108,7 @@ struct mco_StayTest {
     mco_SupplementCounters<int16_t> supplement_days;
     int exb_exh;
 
-    HASH_TABLE_HANDLER(mco_StayTest, bill_id);
+    HASH_TABLE_HANDLER(mco_Test, bill_id);
 };
 
 struct mco_StaySet {
@@ -127,18 +127,18 @@ class mco_StaySetBuilder {
     mco_StaySet set;
 
 public:
-    bool LoadPack(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
-    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
-    bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
+    bool LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
-                   HashTable<int32_t, mco_StayTest> *out_tests = nullptr);
+                   HashTable<int32_t, mco_Test> *out_tests = nullptr);
 
     bool Finish(mco_StaySet *out_set);
 
 private:
     bool LoadAtih(StreamReader &st,
                   bool (*parse_func)(Span<const char> line, mco_StaySet *out_set,
-                                     HashTable<int32_t, mco_StayTest> *out_tests),
-                  HashTable<int32_t, mco_StayTest> *out_tests);
+                                     HashTable<int32_t, mco_Test> *out_tests),
+                  HashTable<int32_t, mco_Test> *out_tests);
 };

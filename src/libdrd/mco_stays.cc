@@ -87,7 +87,7 @@ bool mco_StaySet::SavePack(const char *filename) const
     return SavePack(st);
 }
 
-bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
     const Size start_diagnoses_len = set.store.diagnoses.len;
@@ -252,7 +252,7 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
 }
 
 static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
-                         HashTable<int32_t, mco_StayTest> *out_tests)
+                         HashTable<int32_t, mco_Test> *out_tests)
 {
     if (UNLIKELY(line.len < 12)) {
         LogError("Truncated RUM line");
@@ -423,7 +423,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     }
 
     if (out_tests && tests) {
-        mco_StayTest test = {};
+        mco_Test test = {};
 
         bool valid = true;
         test.bill_id = stay.bill_id;
@@ -432,10 +432,10 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         valid &= ParsePmsiInt(line.Take(12, 3), &test.error);
 
         if (valid) {
-            mco_StayTest *it = out_tests->Append(test).first;
+            mco_Test *it = out_tests->Append(test).first;
             it->cluster_len++;
         } else {
-            mco_StayTest *it = out_tests->Find(test.bill_id);
+            mco_Test *it = out_tests->Find(test.bill_id);
             if (it) {
                 it->cluster_len++;
             }
@@ -447,7 +447,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
 }
 
 static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
-                         HashTable<int32_t, mco_StayTest> *out_tests)
+                         HashTable<int32_t, mco_Test> *out_tests)
 {
     if (UNLIKELY(line.len < 12)) {
         LogError("Truncated RSA line");
@@ -455,7 +455,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
 
     mco_Stay rsa = {};
-    mco_StayTest test = {};
+    mco_Test test = {};
     int age = 0;
     int age_days = 0;
     int global_auth_count = 0;
@@ -727,8 +727,8 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
 
 bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
                                   bool (*parse_func)(Span<const char> line, mco_StaySet *out_set,
-                                                     HashTable<int32_t, mco_StayTest> *out_tests),
-                                  HashTable<int32_t, mco_StayTest> *out_tests)
+                                                     HashTable<int32_t, mco_Test> *out_tests),
+                                  HashTable<int32_t, mco_Test> *out_tests)
 {
     Size stays_len = set.stays.len;
     DEFER_NC(set_guard, diagnoses_len = set.store.diagnoses.len,
@@ -765,12 +765,12 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
     return true;
 }
 
-bool mco_StaySetBuilder::LoadRss(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
     return LoadAtih(st, ParseRssLine, out_tests);
 }
 
-bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTest> *out_tests)
+bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
     static std::atomic_flag gave_rsa_warning = ATOMIC_FLAG_INIT;
     if (!gave_rsa_warning.test_and_set()) {
@@ -782,7 +782,7 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_StayTe
 }
 
 bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
-                                   HashTable<int32_t, mco_StayTest> *out_tests)
+                                   HashTable<int32_t, mco_Test> *out_tests)
 {
     bool success = true;
 
@@ -791,7 +791,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
         Span<const char> extension = GetPathExtension(filename, &compression_type);
 
         bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
-                                              HashTable<int32_t, mco_StayTest> *out_tests);
+                                              HashTable<int32_t, mco_Test> *out_tests);
         if (extension == ".dspak") {
             load_func = &mco_StaySetBuilder::LoadPack;
         } else if (extension == ".grp" || extension == ".rss") {
