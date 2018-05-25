@@ -377,15 +377,21 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
 {
     bool valid = true;
 
-    Size procedures_count = 0;
+    Size max_pointers_count = 0;
+    Size max_procedures_count = 0;
     for (const mco_Stay &stay: out_agg->stays) {
-        procedures_count += stay.procedures.len;
+        max_pointers_count += stay.procedures.len;
+        for (const mco_ProcedureRealisation &proc: stay.procedures) {
+            max_procedures_count += proc.count;
+        }
     }
 
     // We cannot allow the HeapArray to move
     out_agg->store.procedures.Clear(1024);
-    out_agg->store.procedures.Grow(2 * procedures_count);
+    out_agg->store.procedures.Grow(max_pointers_count + max_procedures_count);
+    out_agg->store.procedures.len = max_pointers_count;
 
+    Size pointers_count = 0;
     for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
         const mco_Stay &stay = *stay_info.stay;
 
@@ -482,11 +488,13 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
-                out_agg->store.procedures.ptr[procedures_count + out_agg->store.procedures.len] =
+                out_agg->store.procedures.ptr[pointers_count++] =
                     (const mco_ProcedureInfo *)((uintptr_t)proc_info | proc_info_mask);
-                out_agg->store.procedures.Append(proc_info);
+                for (Size i = 0; i < proc.count; i++) {
+                    out_agg->store.procedures.Append(proc_info);
+                }
+                stay_info.procedures.len += proc.count;
 
-                stay_info.procedures.len++;
                 proc_activities |= proc.activities;
             } else {
                 Span <const mco_ProcedureInfo> compatible_procs =
@@ -520,10 +528,9 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // Deduplicate procedures
     // TODO: Warn when we deduplicate procedures with different attributes,
     // such as when the two procedures fall into different date ranges / limits.
-    if (out_agg->store.procedures.len) {
+    if (pointers_count) {
         Span<const mco_ProcedureInfo *> procedures =
-            MakeSpan(out_agg->store.procedures.ptr + procedures_count, out_agg->store.procedures.len);
-        out_agg->store.procedures.len *= 2;
+            out_agg->store.procedures.Take(0, pointers_count);
 
         std::sort(procedures.begin(), procedures.end());
 
