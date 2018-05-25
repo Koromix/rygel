@@ -90,39 +90,6 @@ struct mco_Result {
     int total_cents;
 };
 
-struct mco_Summary {
-    Size results_count = 0;
-    Size stays_count = 0;
-    Size failures_count = 0;
-
-    int64_t ghs_cents = 0;
-    int64_t price_cents = 0;
-    mco_SupplementCounters<int32_t> supplement_days;
-    mco_SupplementCounters<int64_t> supplement_cents;
-    int64_t total_cents = 0;
-
-    mco_Summary &operator+=(const mco_Summary &other)
-    {
-        results_count += other.results_count;
-        stays_count += other.stays_count;
-        failures_count += other.failures_count;
-
-        ghs_cents += other.ghs_cents;
-        price_cents += other.price_cents;
-        supplement_days += other.supplement_days;
-        supplement_cents += other.supplement_cents;
-        total_cents += other.total_cents;
-
-        return *this;
-    }
-    mco_Summary operator+(const mco_Summary &other)
-    {
-        mco_Summary copy = *this;
-        copy += other;
-        return copy;
-    }
-};
-
 Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays,
                                Span<const mco_Stay> *out_remainder = nullptr);
 
@@ -158,5 +125,3 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
                           Span<const mco_Stay> stays, unsigned int flags,
                           HeapArray<mco_Result> *out_results,
                           HeapArray<mco_Result> *out_mono_results = nullptr);
-
-void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary);

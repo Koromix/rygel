@@ -2182,17 +2182,3 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
         out_mono_results->len += stays.len;
     }
 }
-
-void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
-{
-    out_summary->results_count += results.len;
-    for (const mco_Result &result: results) {
-        out_summary->stays_count += result.stays.len;
-        out_summary->failures_count += result.ghm.IsError();
-        out_summary->ghs_cents += result.ghs_pricing.ghs_cents;
-        out_summary->price_cents += result.ghs_pricing.price_cents;
-        out_summary->supplement_days += result.supplement_days;
-        out_summary->supplement_cents += result.supplement_cents;
-        out_summary->total_cents += result.total_cents;
-    }
-}
