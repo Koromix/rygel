@@ -999,8 +999,13 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                         valid &= ParseDec(prop.value, &supplement_prices.st.nn3);
                     } else if (prop.key == "REP") {
                         valid &= ParseDec(prop.value, &supplement_prices.st.rep);
-                    } else if (prop.key == "DIP" || prop.key == "RAP" || prop.key == "ANT" ||
-                               prop.key == "SDC" || prop.key == "TDE" || prop.key == "TSE") {
+                    } else if (prop.key == "ANT") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.ant);
+                    } else if (prop.key == "RAP") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.rap);
+                    } else if (prop.key == "SDC") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.sdc);
+                    } else if (prop.key == "DIP" || prop.key == "TDE" || prop.key == "TSE") {
                         // Unsupported (for now)
                     } else {
                         LogError("Unknown supplement '%1'", prop.key);
@@ -1045,6 +1050,13 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                         (!price_info.exh_treshold != !price_info.exh_cents)) {
                     LogError("Missing GHS price attributes");
                     valid = false;
+                }
+
+                // Special supplements
+                if (price_info.ghs == mco_GhsCode(9614)) {
+                    supplement_prices.st.ohb = (int32_t)(price_info.ghs_coefficient * price_info.ghs_cents);
+                } else if (price_info.ghs == mco_GhsCode(9615)) {
+                    supplement_prices.st.aph = (int32_t)(price_info.ghs_coefficient * price_info.ghs_cents);
                 }
 
                 out_ghs_prices->Append(price_info);

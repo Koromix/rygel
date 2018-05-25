@@ -551,9 +551,14 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset++;
     ParsePmsiInt(ReadFragment(1), &global_auth_count);
-    offset += 21; // Skip many fields
+    offset += 12; // Skip many fields
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.aph);
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rap);
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ant);
     ParsePmsiInt(ReadFragment(1), &radiotherapy_supp_count);
-    offset += (version >= 222) ? 18 : 26;
+    offset += (version >= 222) ? 14 : 22;
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ohb);
+    offset++; // Skip prestation type
     ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rea);
     ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.reasi);
     {
@@ -572,7 +577,9 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
 
     // Skip a whole bunch of stuff we don't care about
     if (version >= 223) {
-        offset += 64;
+        offset += 17;
+        ParsePmsiInt(ReadFragment(1), &test.supplement_days.st.sdc);
+        offset += 46;
     } else if (version >= 222) {
         offset += 49;
     } else {

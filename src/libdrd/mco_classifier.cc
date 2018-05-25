@@ -431,6 +431,13 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                         // case. I need to test how the official classifier deals with this.
                         SetError(out_errors, 102, -1);
                     }
+                } else if (proc_info->bytes[41] & 0x2) {
+                    if (!out_agg->info.childbirth_date.value) {
+                        out_agg->info.childbirth_date = proc.date;
+                    }
+                    if (!stay_info.childbirth_date.value) {
+                        stay_info.childbirth_date = proc.date;
+                    }
                 }
 
                 if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
@@ -1756,7 +1763,7 @@ static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::Sta
 
 // TODO: Count correctly when authorization date is too early (REA)
 void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                          mco_GhsCode ghs, unsigned int /*flags*/,
+                          mco_GhmCode ghm, mco_GhsCode ghs, unsigned int /*flags*/,
                           mco_SupplementCounters<int16_t> *out_counters)
 {
     if (ghs == mco_GhsCode(9999))
@@ -1777,6 +1784,19 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
         igs2_src_adjust = 0;
     }
     bool prev_reanimation = (agg.stays[0].entry.mode == '7' && agg.stays[0].entry.origin == 'R');
+
+    bool test_ohb;
+    bool test_aph;
+    bool test_sdc;
+    {
+        static mco_GhmCode ohb_ghm = mco_GhmCode::FromString("28Z15Z");
+        static mco_GhmCode aph_ghm = mco_GhmCode::FromString("28Z16Z");
+        static mco_GhmRootCode sdc_ghm = mco_GhmRootCode::FromString("05C19");
+
+        test_ohb = (ghm != ohb_ghm);
+        test_aph = (ghm != aph_ghm);
+        test_sdc = (agg.stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != sdc_ghm);
+    }
 
     const mco_Stay *ambu_stay = nullptr;
     int ambu_priority = 0;
@@ -1889,9 +1909,30 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             ambu_priority = priority;
             ambu_counter = counter;
         }
+
+        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+            out_counters->st.ohb += test_ohb && (proc_info->bytes[31] & 0x20);
+            out_counters->st.aph += test_aph && (proc_info->bytes[38] & 0x8);
+            out_counters->st.rap += agg.age < 18 && ((proc_info->bytes[27] & 0x80) |
+                                                     (proc_info->bytes[22] & 0x4) |
+                                                     (proc_info->bytes[39] & 0x10) |
+                                                     (proc_info->bytes[41] & 0xF0) |
+                                                     (proc_info->bytes[40] & 0x7));
+            out_counters->st.sdc |= test_sdc && (proc_info->bytes[24] & 0x2);
+        }
     }
     if (ambu_stay) {
         (*ambu_counter)++;
+    }
+
+    if (agg.flags & (int)mco_Aggregate::Flag::ChildbirthProcedure) {
+        bool enable_ant = std::any_of(agg.info.diagnoses.begin(), agg.info.diagnoses.end(),
+                                      [&](const mco_DiagnosisInfo *diag_info) {
+            return diag_info->Attributes(agg.stay.sex).raw[25] & 0x40;
+        });
+        if (enable_ant) {
+            out_counters->st.ant += std::max(0, agg.info.childbirth_date - agg.stay.entry.date - 2);
+        }
     }
 }
 
@@ -1995,7 +2036,8 @@ Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &
         result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
 
         // Count supplement days
-        mco_CountSupplements(agg, authorization_set, result.ghs, flags, &result.supplement_days);
+        mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
+                             &result.supplement_days);
 
         // Compute prices
         mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);

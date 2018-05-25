@@ -40,6 +40,7 @@ struct mco_Aggregate {
 
         Span<const mco_ProcedureInfo *> procedures;
         uint8_t proc_activities;
+        Date childbirth_date;
     };
 
     const mco_TableIndex *index;
@@ -136,7 +137,7 @@ mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_Er
 mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                             mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
 void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                          mco_GhsCode ghs, unsigned int flags,
+                          mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
                           mco_SupplementCounters<int16_t> *out_counters);
 
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,

@@ -227,7 +227,12 @@ enum class mco_SupplementType {
     Nn1,
     Nn2,
     Nn3,
-    Rep
+    Rep,
+    Ohb,
+    Aph,
+    Ant,
+    Rap,
+    Sdc
 };
 static const char *const mco_SupplementTypeNames[] = {
     "REA",
@@ -237,7 +242,12 @@ static const char *const mco_SupplementTypeNames[] = {
     "NN1",
     "NN2",
     "NN3",
-    "REP"
+    "REP",
+    "OHB",
+    "APH",
+    "ANT",
+    "RAP",
+    "SDC"
 };
 
 template <typename T>
@@ -252,6 +262,11 @@ union mco_SupplementCounters {
         T nn2;
         T nn3;
         T rep;
+        T ohb;
+        T aph;
+        T ant;
+        T rap;
+        T sdc;
     } st;
     StaticAssert(SIZE(mco_SupplementCounters::values) == SIZE(mco_SupplementCounters::st));
 
@@ -266,6 +281,11 @@ union mco_SupplementCounters {
         st.nn2 += other.st.nn2;
         st.nn3 += other.st.nn3;
         st.rep += other.st.rep;
+        st.ohb += other.st.ohb;
+        st.aph += other.st.aph;
+        st.ant += other.st.ant;
+        st.rap += other.st.rap;
+        st.sdc += other.st.sdc;
 
         return *this;
     }
@@ -287,7 +307,12 @@ union mco_SupplementCounters {
                st.nn1 == other.st.nn1 &&
                st.nn2 == other.st.nn2 &&
                st.nn3 == other.st.nn3 &&
-               st.rep == other.st.rep;
+               st.rep == other.st.rep &&
+               st.ohb == other.st.ohb &&
+               st.aph == other.st.aph &&
+               st.ant == other.st.ant &&
+               st.rap == other.st.rap &&
+               st.sdc == other.st.sdc;
     }
     template <typename U>
     bool operator !=(const mco_SupplementCounters<U> &other) const { return !(*this == other); }
