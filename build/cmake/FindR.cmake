@@ -110,6 +110,7 @@ if(R_FOUND)
         endif()
         target_include_directories(${TARGET} SYSTEM PRIVATE ${R_INCLUDE_DIRS})
         target_link_libraries(${TARGET} PRIVATE ${R_LIBRARY})
+        add_dependencies(${TARGET} ${TARGET}_copy)
 
         file(MAKE_DIRECTORY "${install_directory}")
         add_custom_command(
