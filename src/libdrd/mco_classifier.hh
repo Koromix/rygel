@@ -105,7 +105,8 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
                             mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
 void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
-                          mco_SupplementCounters<int16_t> *out_counters);
+                          mco_SupplementCounters<int16_t> *out_counters,
+                          Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
 
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
                  int ghs_duration, bool death, mco_GhsPricingResult *out_result = nullptr);
@@ -115,9 +116,6 @@ int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
                          const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices);
 
-Size mco_ClassifyRaw(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                     Span<const mco_Stay> stays, unsigned int flags, mco_Result out_results[],
-                     mco_Result out_mono_results[] = nullptr);
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
                   HeapArray<mco_Result> *out_mono_results = nullptr);

@@ -107,7 +107,10 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
         mco_Due *due = nullptr;
         int64_t total_ghs_cents = 0;
         int64_t total_price_cents = 0;
-        for (const DispenseCoefficient &unit_coefficient: coefficients) {
+        for (Size k = 0; k < coefficients.len; k++) {
+            const DispenseCoefficient &unit_coefficient = coefficients[k];
+            const mco_Result &mono_result = sub_mono_results[k];
+
             double coefficient = unit_coefficient.value / coefficients_total;
             int64_t ghs_cents = (int64_t)((double)result.ghs_pricing.ghs_cents * coefficient);
             int64_t price_cents = (int64_t)((double)result.ghs_pricing.price_cents * coefficient);
@@ -126,6 +129,11 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
 
             due->summary.ghs_cents += ghs_cents;
             due->summary.price_cents += price_cents;
+            due->summary.supplement_cents += mono_result.supplement_cents;
+            due->summary.supplement_days += mono_result.supplement_days;
+            due->summary.total_cents += price_cents + (mono_result.total_cents -
+                                                       mono_result.ghs_pricing.price_cents);
+
             total_ghs_cents += ghs_cents;
             total_price_cents += price_cents;
         }
@@ -133,6 +141,7 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
         // Attribute missing cents to last stay (rounding errors)
         due->summary.ghs_cents += result.ghs_pricing.ghs_cents - total_ghs_cents;
         due->summary.price_cents += result.ghs_pricing.price_cents - total_price_cents;
+        due->summary.total_cents += result.ghs_pricing.price_cents - total_price_cents;
     }
 }
 
