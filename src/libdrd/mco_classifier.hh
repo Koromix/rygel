@@ -103,15 +103,15 @@ mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_Er
 
 mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                             mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
-void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                          mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
-                          mco_SupplementCounters<int16_t> *out_counters,
-                          Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
-
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
                  int ghs_duration, bool death, mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
                  mco_GhsPricingResult *out_result = nullptr);
+
+void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                          mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
+                          mco_SupplementCounters<int16_t> *out_counters,
+                          Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
                          const mco_SupplementCounters<int16_t> &days,
                          mco_SupplementCounters<int32_t> *out_prices);

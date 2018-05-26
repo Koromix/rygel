@@ -1690,6 +1690,55 @@ mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet
     return ghs;
 }
 
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
+                 int ghs_duration, bool death, mco_GhsPricingResult *out_result)
+{
+    int price_cents = price_info.ghs_cents;
+
+    int exb_exh;
+    if (ghs_duration < price_info.exb_treshold && !death) {
+        exb_exh = -(price_info.exb_treshold - ghs_duration);
+        if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
+            price_cents -= price_info.exb_cents;
+        } else {
+            price_cents += price_info.exb_cents * exb_exh;
+        }
+    } else if (price_info.exh_treshold && ghs_duration + death >= price_info.exh_treshold) {
+        exb_exh = ghs_duration + death + 1 - price_info.exh_treshold;
+        price_cents += price_info.exh_cents * exb_exh;
+    } else {
+        exb_exh = 0;
+    }
+
+    price_cents = (int)(ghs_coefficient * (double)price_cents);
+
+    if (out_result) {
+        out_result->exb_exh = exb_exh;
+        out_result->ghs_cents = (int)(ghs_coefficient * (double)price_info.ghs_cents);
+        out_result->ghs_coefficient = ghs_coefficient;
+        out_result->price_cents = price_cents;
+    }
+    return price_cents;
+}
+
+int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
+                 mco_GhsPricingResult *out_result)
+{
+    if (ghs == mco_GhsCode(9999))
+        return 0;
+
+    // FIXME: Add some kind of error flag when this happens?
+    const mco_GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
+    if (!price_info) {
+        LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
+                 agg.index->limit_dates[0], agg.index->limit_dates[1]);
+        return 0;
+    }
+
+    return mco_PriceGhs(*price_info, agg.index->GhsCoefficient(Sector::Public),
+                        ghs_duration, agg.stay.exit.mode == '9', out_result);
+}
+
 static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
                               Size list2_treshold)
 {
@@ -1960,55 +2009,6 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             }
         }
     }
-}
-
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
-                 int ghs_duration, bool death, mco_GhsPricingResult *out_result)
-{
-    int price_cents = price_info.ghs_cents;
-
-    int exb_exh;
-    if (ghs_duration < price_info.exb_treshold && !death) {
-        exb_exh = -(price_info.exb_treshold - ghs_duration);
-        if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
-            price_cents -= price_info.exb_cents;
-        } else {
-            price_cents += price_info.exb_cents * exb_exh;
-        }
-    } else if (price_info.exh_treshold && ghs_duration + death >= price_info.exh_treshold) {
-        exb_exh = ghs_duration + death + 1 - price_info.exh_treshold;
-        price_cents += price_info.exh_cents * exb_exh;
-    } else {
-        exb_exh = 0;
-    }
-
-    price_cents = (int)(ghs_coefficient * (double)price_cents);
-
-    if (out_result) {
-        out_result->exb_exh = exb_exh;
-        out_result->ghs_cents = (int)(ghs_coefficient * (double)price_info.ghs_cents);
-        out_result->ghs_coefficient = ghs_coefficient;
-        out_result->price_cents = price_cents;
-    }
-    return price_cents;
-}
-
-int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 mco_GhsPricingResult *out_result)
-{
-    if (ghs == mco_GhsCode(9999))
-        return 0;
-
-    // FIXME: Add some kind of error flag when this happens?
-    const mco_GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
-    if (!price_info) {
-        LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
-                 agg.index->limit_dates[0], agg.index->limit_dates[1]);
-        return 0;
-    }
-
-    return mco_PriceGhs(*price_info, agg.index->GhsCoefficient(Sector::Public),
-                        ghs_duration, agg.stay.exit.mode == '9', out_result);
 }
 
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
