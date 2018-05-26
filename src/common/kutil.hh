@@ -633,6 +633,41 @@ static inline constexpr Span<T> MakeSpan(T (&arr)[N])
     return Span<T>(arr, N);
 }
 
+template <typename T>
+class Strider {
+public:
+    void *ptr;
+    Size stride;
+
+    Strider() = default;
+    constexpr Strider(T *ptr_) : ptr(ptr_), stride(SIZE(T)) {}
+    constexpr Strider(T *ptr_, Size stride_) : ptr(ptr_), stride(stride_) {}
+
+    bool IsValid() const { return ptr; }
+
+    T &operator[](Size idx) const
+    {
+        DebugAssert(idx >= 0);
+        return *(T *)((uint8_t *)ptr + (idx * stride));
+    }
+};
+
+template <typename T>
+static inline constexpr Strider<T> MakeStrider(T *ptr)
+{
+    return Strider<T>(ptr, SIZE(T));
+}
+template <typename T>
+static inline constexpr Strider<T> MakeStrider(T *ptr, Size stride)
+{
+    return Strider<T>(ptr, stride);
+}
+template <typename T, Size N>
+static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
+{
+    return Strider<T>(arr, SIZE(T));
+}
+
 template <typename T, Size N>
 class FixedArray {
 public:
