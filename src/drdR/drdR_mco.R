@@ -2,12 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-mco_summary_columns <- c('results', 'stays', 'failures',
-                         'total_cents', 'price_cents', 'ghs_cents', 'rea_cents', 'reasi_cents',
-                         'si_cents', 'src_cents', 'nn1_cents', 'nn2_cents', 'nn3_cents', 'rep_cents',
-                         'rea_days', 'reasi_days', 'si_days', 'src_days', 'nn1_days', 'nn2_days',
-                         'nn3_days', 'rep_days')
-
 mco_init <- function(data_dirs = character(0), table_dirs = character(0),
                      table_filenames = character(0), authorization_filename = NULL) {
     .Call(`drdR_mco_Init`, data_dirs, table_dirs, table_filenames, authorization_filename)
@@ -60,7 +54,7 @@ mco_compare <- function(summary1, summary2, ...) {
         summary2 <- summary(summary2, ...)
     }
 
-    groups <- setdiff(colnames(summary1), mco_summary_columns)
+    groups <- setdiff(colnames(summary1), mco_summary_columns())
 
     m <- merge(summary1, summary2, by = groups, all = TRUE)
     for (col in setdiff(colnames(m), groups)) {
@@ -69,7 +63,7 @@ mco_compare <- function(summary1, summary2, ...) {
 
     diff <- cbind(
         m[, groups, drop = FALSE],
-        as.data.frame(sapply(mco_summary_columns, function(col) {
+        as.data.frame(sapply(mco_summary_columns(), function(col) {
             m[[paste0(col, '.x')]] - m[[paste0(col, '.y')]]
         }, simplify = FALSE))
     )
@@ -78,41 +72,47 @@ mco_compare <- function(summary1, summary2, ...) {
 }
 
 summary.mco_results <- function(results, by = NULL) {
-    agg <- setDF(setDT(results)[, c(
-        list(
-            results = .N,
-            stays = sum(stays_count),
-            failures = sum(startsWith('90Z', ghm)),
-            total_cents = sum(total_cents),
-            price_cents = sum(price_cents),
-            ghs_cents = sum(ghs_cents),
-            rea_cents = sum(rea_cents),
-            reasi_cents = sum(reasi_cents),
-            si_cents = sum(si_cents),
-            src_cents = sum(src_cents),
-            nn1_cents = sum(nn1_cents),
-            nn2_cents = sum(nn2_cents),
-            nn3_cents = sum(nn3_cents),
-            rep_cents = sum(rep_cents),
-            rea_days = sum(rea_days),
-            reasi_days = sum(reasi_days),
-            si_days = sum(si_days),
-            src_days = sum(src_days),
-            nn1_days = sum(nn1_days),
-            nn2_days = sum(nn2_days),
-            nn3_days = sum(nn3_days),
-            rep_days = sum(rep_days)
-        )
-    ), keyby = by])
-    setDF(results)
+    f <- attr(summary.mco_results, 'f')
+    if (is.null(f)) {
+        code <- paste0('
+            function(results, by = NULL) {
+                agg <- setDF(setDT(results)[, c(
+                    list(
+                        results = .N,
+                        stays = sum(stays_count),
+                        failures = sum(startsWith(\'90Z\', ghm)),
+                        total_cents = sum(total_cents),
+                        price_cents = sum(price_cents),
+                        ghs_cents = sum(ghs_cents),',
+                        paste(sapply(tolower(.Call(`drdR_mco_SupplementTypes`)),
+                                     function(type) { paste0(type, '_cents = sum(', type, '_cents)') }), collapse = ', '), ', ',
+                        paste(sapply(tolower(.Call(`drdR_mco_SupplementTypes`)),
+                                     function(type) { paste0(type, '_count = sum(', type, '_count)') }), collapse = ', '),
+                   ')
+                ), keyby = by])
+                setDF(results)
 
-    class(agg) <- c('mco_summary', class(agg))
-    return(agg)
+                class(agg) <- c(\'mco_summary\', class(agg))
+                return(agg)
+            }
+        ')
+        print(code)
+        f <- eval(parse(text = code))
+        attr(summary.mco_results, 'f') <- f
+    }
+
+    return(f(results, by = by))
 }
 summary.mco_result_set <- function(result_set, by = NULL) {
     if (is.null(by)) {
-        return (result_set$summary)
+        return(result_set$summary)
     } else {
-        return (summary.mco_results(result_set$results, by = by))
+        return(summary.mco_results(result_set$results, by = by))
     }
+}
+
+mco_summary_columns <- function() {
+    c('results', 'stays', 'failures', 'total_cents', 'price_cents', 'ghs_cents',
+      paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_cents'),
+      paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_count'))
 }
