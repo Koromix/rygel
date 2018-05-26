@@ -2002,8 +2002,11 @@ int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
 
     int total_cents = 0;
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        out_prices->values[i] += days.values[i] * prices.values[i];
-        total_cents += days.values[i] * prices.values[i];
+        int32_t supplement_cents =
+            (int32_t)(agg.index->GhsCoefficient(Sector::Public) * days.values[i] * prices.values[i]);
+
+        out_prices->values[i] += supplement_cents;
+        total_cents += supplement_cents;
     }
 
     return total_cents;

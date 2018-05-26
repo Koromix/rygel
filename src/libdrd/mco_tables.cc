@@ -1054,9 +1054,9 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
                 // Special supplements
                 if (price_info.ghs == mco_GhsCode(9614)) {
-                    supplement_prices.st.ohb = (int32_t)(ghs_coefficient * price_info.ghs_cents);
+                    supplement_prices.st.ohb = price_info.ghs_cents;
                 } else if (price_info.ghs == mco_GhsCode(9615)) {
-                    supplement_prices.st.aph = (int32_t)(ghs_coefficient * price_info.ghs_cents);
+                    supplement_prices.st.aph = price_info.ghs_cents;
                 }
 
                 out_ghs_prices->Append(price_info);
