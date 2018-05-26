@@ -11,8 +11,8 @@ static void PrintSummary(const mco_Summary &summary)
     PrintLn("  Stays: %1", summary.stays_count);
     PrintLn("  Failures: %1", summary.failures_count);
     PrintLn();
-    PrintLn("  GHS: %1 €", FmtDouble((double)summary.ghs_cents / 100.0, 2));
     PrintLn("  GHS-EXB+EXH: %1 €", FmtDouble((double)summary.price_cents / 100.0, 2));
+    PrintLn("    GHS: %1 €", FmtDouble((double)summary.ghs_cents / 100.0, 2));
     PrintLn("  Supplements: %1 €",
             FmtDouble((double)(summary.total_cents - summary.price_cents) / 100.0, 2));
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
@@ -37,12 +37,13 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                 result.ghs);
 
         if (verbose) {
-            PrintLn("      %1GHS: %2 € [coefficient = %3]",
-                    padding, FmtDouble((double)result.ghs_pricing.ghs_cents / 100.0, 2),
-                    FmtDouble(result.ghs_pricing.ghs_coefficient, 4));
-            PrintLn("      %1GHS-EXB+EXH: %2 € [%3]",
+            PrintLn("      %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
                     padding, FmtDouble((double)result.ghs_pricing.price_cents / 100.0, 2),
-                    result.ghs_pricing.exb_exh);
+                    result.ghs_pricing.exb_exh, FmtDouble(result.ghs_pricing.ghs_coefficient, 4));
+            if (result.ghs_pricing.price_cents != result.ghs_pricing.ghs_cents) {
+                PrintLn("        %1GHS: %2 €",
+                        padding, FmtDouble((double)result.ghs_pricing.ghs_cents / 100.0, 2));
+            }
             if (result.total_cents > result.ghs_pricing.price_cents) {
                 PrintLn("      %1Supplements: %2 €", padding,
                         FmtDouble((double)(result.total_cents - result.ghs_pricing.price_cents) / 100.0, 2));
