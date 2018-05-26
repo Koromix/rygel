@@ -176,7 +176,13 @@ static void ExportDues(Span<const mco_Due> dues, mco_DispenseMode dispense_mode)
 {
     PrintLn("Dispensation (%1):", mco_DispenseModeOptions[(int)dispense_mode].help);
     for (const mco_Due &due: dues) {
-        PrintLn("  %1 = %2 €", due.unit, FmtDouble((double)due.summary.price_cents / 100.0, 2));
+        PrintLn("  %1: %2 €", due.unit,
+                FmtDouble((double)due.summary.total_cents / 100.0, 2));
+        if (due.summary.total_cents != due.summary.price_cents) {
+            PrintLn("    GHS-EXB+EXH: %1 €", FmtDouble((double)due.summary.price_cents / 100.0, 2));
+            PrintLn("    Supplements: %1 €",
+                    FmtDouble((double)(due.summary.total_cents - due.summary.price_cents) / 100.0, 2));
+        }
     }
 }
 
