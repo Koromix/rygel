@@ -386,6 +386,7 @@ class Rcc_ListBuilder {
     };
 
     LocalArray<Variable, 64> variables;
+    LinkedAllocator str_alloc;
 
 public:
     Rcc_ListBuilder() = default;
@@ -395,6 +396,7 @@ public:
 
     SEXP Add(const char *name, SEXP vec)
     {
+        name = DuplicateString(&str_alloc, name).ptr;
         variables.Append({name, vec});
         return vec;
     }
