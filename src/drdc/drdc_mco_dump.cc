@@ -5,11 +5,16 @@
 #include "../libdrd/libdrd.hh"
 #include "drdc_mco_dump.hh"
 
-// FIXME: Protect against infinite loops
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
-                         Size node_idx, int depth)
+                             Size node_idx, int depth)
 {
-    while (node_idx < ghm_nodes.len) {
+    for (Size i = 0;; i++) {
+        if (UNLIKELY(i >= ghm_nodes.len)) {
+            LogError("Empty GHM tree or infinite loop (%2)", ghm_nodes.len);
+            return;
+        }
+
+        DebugAssert(node_idx < ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ghm_nodes[node_idx];
 
         switch (ghm_node.type) {
@@ -20,8 +25,8 @@ void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                         ghm_node.u.test.children_count);
 
                 if (ghm_node.u.test.function != 20) {
-                    for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
-                        mco_DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + i, depth + 1);
+                    for (Size j = 1; j < ghm_node.u.test.children_count; j++) {
+                        mco_DumpGhmDecisionTree(ghm_nodes, ghm_node.u.test.children_idx + j, depth + 1);
                     }
 
                     node_idx = ghm_node.u.test.children_idx;

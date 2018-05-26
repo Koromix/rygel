@@ -173,34 +173,36 @@ var tables = {};
 
     function refreshClassifierTree(nodes)
     {
-        function recurseNodes(idx, ignore_header)
+        function recurseNodes(node_idx, ignore_header)
         {
             var ul = createElement('ul');
-            while (idx < nodes.length) {
+            for (var i = 0;; i++) {
+                var node = nodes[node_idx];
+
                 var click_function = function(e) {
                     // FIXME: this.classList.toggle('collapse');
                 };
 
-                if (nodes[idx].header && !ignore_header) {
+                if (node.header && !ignore_header) {
                     var li = createElement('li', {click: click_function},
-                                           addSpecLinks(nodes[idx].header));
-                    var child_ul = recurseNodes(idx, true);
+                                           addSpecLinks(node.header));
+                    var child_ul = recurseNodes(node_idx, true);
                     li.appendChild(child_ul);
                     ul.appendChild(li);
 
                     break;
                 } else {
                     var li = createElement('li', {click: click_function},
-                                           addSpecLinks(nodes[idx].text));
+                                           addSpecLinks(node.text));
 
-                    if (nodes[idx].children_idx) {
-                        for (var i = 1; i < nodes[idx].children_count; i++) {
-                            var child_ul = recurseNodes(nodes[idx].children_idx + i);
+                    if (node.children_idx) {
+                        for (var j = 1; j < node.children_count; j++) {
+                            var child_ul = recurseNodes(node.children_idx + j);
                             li.appendChild(child_ul);
                         }
                         ul.appendChild(li);
 
-                        idx = nodes[idx].children_idx;
+                        node_idx = node.children_idx;
                     } else {
                         ul.appendChild(li);
 

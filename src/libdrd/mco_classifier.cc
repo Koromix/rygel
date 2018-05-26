@@ -1424,14 +1424,14 @@ static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, const mco_Aggregate::Sta
     ctx.linked_diag_info = info.linked_diag_info;
 
     Size ghm_node_idx = 0;
-    for (Size i = 0; !ghm.IsValid(); i++) {
+    for (Size i = 0;; i++) {
         if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
             SetError(out_errors, 4, 2);
             return mco_GhmCode::FromString("90Z03Z");
         }
 
-        Assert(ghm_node_idx < agg.index->ghm_nodes.len);
+        DebugAssert(ghm_node_idx < agg.index->ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = agg.index->ghm_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
@@ -1452,11 +1452,10 @@ static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, const mco_Aggregate::Sta
                 if (ghm_node.u.ghm.error && out_errors) {
                     SetError(out_errors, ghm_node.u.ghm.error);
                 }
+                return ghm;
             } break;
         }
     }
-
-    return ghm;
 }
 
 static inline bool TestDiagnosisExclusion(const mco_TableIndex &index,

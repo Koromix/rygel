@@ -283,10 +283,15 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
     return ghm_node.u.test.children_idx;
 }
 
-// FIXME: Protect against infinite loops
 static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
 {
-    while (ghm_node_idx < ctx.ghm_nodes.len) {
+    for (Size i = 0;; i++) {
+        if (UNLIKELY(i >= ctx.ghm_nodes.len)) {
+            LogError("Empty GHM tree or infinite loop (%2)", ctx.ghm_nodes.len);
+            return false;
+        }
+
+        DebugAssert(ghm_node_idx < ctx.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[ghm_node_idx];
         ReadableGhmDecisionNode *out_node = &ctx.out_nodes[ghm_node_idx];
 
