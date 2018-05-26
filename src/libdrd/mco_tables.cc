@@ -955,12 +955,14 @@ bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
 }
 
 bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
+                         double *out_ghs_coefficient,
                          HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
                          mco_SupplementCounters<int32_t> *out_supplement_prices)
 {
     DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
     mco_SupplementCounters<int32_t> supplement_prices;
 
+    double ghs_coefficient = 0.0;
     {
         StreamReader st(file_data, table.filename);
         IniParser ini(&st);
@@ -969,7 +971,6 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
         ini.reader.PushLogHandler();
         DEFER { PopLogHandler(); };
 
-        double ghs_coefficient = 0.0;
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
@@ -1017,7 +1018,6 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
                 price_info.ghs = mco_GhsCode::FromString(prop.section);
                 valid &= price_info.ghs.IsValid();
-                price_info.ghs_coefficient = ghs_coefficient;
 
                 do {
                     if (prop.key == "PriceCents") {
@@ -1054,9 +1054,9 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
 
                 // Special supplements
                 if (price_info.ghs == mco_GhsCode(9614)) {
-                    supplement_prices.st.ohb = (int32_t)(price_info.ghs_coefficient * price_info.ghs_cents);
+                    supplement_prices.st.ohb = (int32_t)(ghs_coefficient * price_info.ghs_cents);
                 } else if (price_info.ghs == mco_GhsCode(9615)) {
-                    supplement_prices.st.aph = (int32_t)(price_info.ghs_coefficient * price_info.ghs_cents);
+                    supplement_prices.st.aph = (int32_t)(ghs_coefficient * price_info.ghs_cents);
                 }
 
                 out_ghs_prices->Append(price_info);
@@ -1071,6 +1071,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
     }
 
     out_guard.disable();
+    *out_ghs_coefficient = ghs_coefficient;
     *out_supplement_prices = supplement_prices;
     return true;
 }
@@ -1419,10 +1420,12 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 if (table_info) {
                     if (load_info->prev_index_idx < 0) {
                         auto array = set.store.ghs_prices[table_idx].AppendDefault();
-                        valid &= mco_ParsePriceTable(load_info->raw_data, *table_info, array,
+                        valid &= mco_ParsePriceTable(load_info->raw_data, *table_info,
+                                                     &index.ghs_coefficient[table_idx], array,
                                                      &index.supplement_prices[table_idx]);
                         index.ghs_prices[table_idx] = *array;
                     } else {
+                        index.ghs_coefficient[table_idx] = set.indexes[load_info->prev_index_idx].ghs_coefficient[table_idx];
                         index.ghs_prices[table_idx] = set.indexes[load_info->prev_index_idx].ghs_prices[table_idx];
                         index.supplement_prices[table_idx] = set.indexes[load_info->prev_index_idx].supplement_prices[table_idx];
                     }
@@ -1575,6 +1578,11 @@ const mco_AuthorizationInfo *mco_TableIndex::FindAuthorization(mco_Authorization
     key.st.code = type;
 
     return authorizations_map->FindValue(key.value, nullptr);
+}
+
+double mco_TableIndex::GhsCoefficient(Sector sector) const
+{
+    return ghs_coefficient[(int)sector];
 }
 
 const mco_GhsPriceInfo *mco_TableIndex::FindGhsPrice(mco_GhsCode ghs, Sector sector) const

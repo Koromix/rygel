@@ -200,7 +200,6 @@ struct mco_GhsPriceInfo {
     mco_GhsCode ghs;
 
     int32_t ghs_cents;
-    double ghs_coefficient;
     int16_t exh_treshold;
     int16_t exb_treshold;
     int32_t exh_cents;
@@ -266,6 +265,7 @@ bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
                            HeapArray<mco_SrcPair> *out_pairs);
 
 bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
+                         double *out_ghs_coefficient,
                          HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
                          mco_SupplementCounters<int32_t> *out_supplement_prices);
 
@@ -288,6 +288,7 @@ struct mco_TableIndex {
     Span<const mco_AuthorizationInfo> authorizations;
     Span<const mco_SrcPair> src_pairs[2];
 
+    double ghs_coefficient[2];
     Span<const mco_GhsPriceInfo> ghs_prices[2];
     mco_SupplementCounters<int32_t> supplement_prices[2];
 
@@ -310,6 +311,7 @@ struct mco_TableIndex {
     Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmRootCode ghm_root) const;
     const mco_AuthorizationInfo *FindAuthorization(mco_AuthorizationScope scope, int8_t type) const;
 
+    double GhsCoefficient(Sector sector) const;
     const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, Sector sector) const;
     const mco_SupplementCounters<int32_t> &SupplementPrices(Sector sector) const;
 };

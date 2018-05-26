@@ -1942,8 +1942,8 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     }
 }
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
-                 mco_GhsPricingResult *out_result)
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
+                 int ghs_duration, bool death, mco_GhsPricingResult *out_result)
 {
     int price_cents = price_info.ghs_cents;
 
@@ -1962,12 +1962,12 @@ int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool deat
         exb_exh = 0;
     }
 
-    price_cents = (int)(price_info.ghs_coefficient * (double)price_cents);
+    price_cents = (int)(ghs_coefficient * (double)price_cents);
 
     if (out_result) {
         out_result->exb_exh = exb_exh;
-        out_result->ghs_cents = (int)(price_info.ghs_coefficient * (double)price_info.ghs_cents);
-        out_result->ghs_coefficient = price_info.ghs_coefficient;
+        out_result->ghs_cents = (int)(ghs_coefficient * (double)price_info.ghs_cents);
+        out_result->ghs_coefficient = ghs_coefficient;
         out_result->price_cents = price_cents;
     }
     return price_cents;
@@ -1987,7 +1987,8 @@ int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
         return 0;
     }
 
-    return mco_PriceGhs(*price_info, ghs_duration, agg.stay.exit.mode == '9', out_result);
+    return mco_PriceGhs(*price_info, agg.index->GhsCoefficient(Sector::Public),
+                        ghs_duration, agg.stay.exit.mode == '9', out_result);
 }
 
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,

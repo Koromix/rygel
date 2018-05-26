@@ -107,8 +107,8 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
                           mco_SupplementCounters<int16_t> *out_counters);
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, int ghs_duration, bool death,
-                 mco_GhsPricingResult *out_result = nullptr);
+int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
+                 int ghs_duration, bool death, mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
                  mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,

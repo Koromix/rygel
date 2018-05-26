@@ -88,7 +88,7 @@ Response ProducePriceMap(MHD_Connection *conn, const char *, CompressionType com
 
                 if (ghs_price_info) {
                     writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
-                    writer.Key("ghs_coefficient"); writer.Double(ghs_price_info->ghs_coefficient);
+                    writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(Sector::Public));
                     if (ghs_price_info->exh_treshold) {
                         writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
                         writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
