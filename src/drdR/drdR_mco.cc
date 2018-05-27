@@ -421,7 +421,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
     Rcpp::CharacterVector options(options_xp);
-    bool details(details_xp);
+    Rcc_Vector<bool> details(details_xp);
+    if (details.Len() != 1)
+        Rcpp::stop("Expected one logical value for 'details'");
 
     unsigned int flags = 0;
     for (const char *opt: options) {
@@ -592,7 +594,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     Rcc_AutoSexp results_df;
-    if (details) {
+    if (details[0]) {
         results_df = ExportResultsDataFrame(result_sets);
     }
 
