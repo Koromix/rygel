@@ -137,7 +137,12 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             j += result.stays.len;
 
             HeapArray<mco_Due> dues;
-            mco_Dispense(result, sub_mono_results, dispense_mode, &dues);
+            {
+                // FIXME: Slow, it does a lot of unnecessary work
+                mco_Dispenser dispenser(dispense_mode);
+                dispenser.Dispense(result, sub_mono_results);
+                dispenser.Finish(&dues);
+            }
 
             for (const mco_Due &due: dues) {
                 if (!units.table.count || units.Find(due.unit)) {

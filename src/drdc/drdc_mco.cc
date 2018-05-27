@@ -416,15 +416,11 @@ Dispensation modes:)");
     if (dispense_mode >= 0) {
         LogInfo("Dispense");
 
-        HashMap<UnitCode, Size> dues_map;
+        mco_Dispenser dispenser((mco_DispenseMode)dispense_mode);
         for (const ClassifySet &classify_set: classify_sets) {
-            mco_Dispense(classify_set.results, classify_set.mono_results,
-                         (mco_DispenseMode)dispense_mode, &dues, &dues_map);
+            dispenser.Dispense(classify_set.results, classify_set.mono_results);
         }
-
-        std::sort(dues.begin(), dues.end(), [](const mco_Due &due1, const mco_Due &due2) {
-            return due1.unit.number < due2.unit.number;
-        });
+        dispenser.Finish(&dues);
     }
 
     LogInfo("Export");

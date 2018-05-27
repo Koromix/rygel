@@ -5,11 +5,6 @@
 #include "../common/kutil.hh"
 #include "mco_dispenser.hh"
 
-struct DispenseCoefficient {
-    UnitCode unit;
-    double value;
-};
-
 void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
 {
     out_summary->results_count += results.len;
@@ -24,9 +19,10 @@ void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary)
     }
 }
 
-static double ComputeCoefficients(mco_DispenseMode dispense_mode,
-                                  const mco_Result &result, Span<const mco_Result> mono_results,
-                                  HeapArray<DispenseCoefficient> *out_coefficients)
+double mco_Dispenser::ComputeCoefficients(mco_DispenseMode mode,
+                                          const mco_Result &result,
+                                          Span<const mco_Result> mono_results,
+                                          HeapArray<DispenseCoefficient> *out_coefficients)
 {
     double coefficients_total = 0.0;
     for (const mco_Result &mono_result: mono_results) {
@@ -36,7 +32,7 @@ static double ComputeCoefficients(mco_DispenseMode dispense_mode,
 
         coefficient.unit = mono_result.stays[0].unit;
 
-        switch (dispense_mode) {
+        switch (mode) {
             case mco_DispenseMode::E: {
                 coefficient.value = (double)mono_result.ghs_pricing.ghs_cents;
             } break;
@@ -80,14 +76,9 @@ static double ComputeCoefficients(mco_DispenseMode dispense_mode,
     return coefficients_total;
 }
 
-void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                  mco_DispenseMode dispense_mode, HeapArray<mco_Due> *out_dues,
-                  HashMap<UnitCode, Size> *out_dues_map)
+void mco_Dispenser::Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results)
 {
     DebugAssert(mono_results.len >= results.len);
-
-    // Reuse for performance
-    HeapArray<DispenseCoefficient> coefficients;
 
     Size j = 0;
     for (const mco_Result &result: results) {
@@ -95,8 +86,7 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
         j += result.stays.len;
 
         coefficients.Clear(64);
-        double coefficients_total = ComputeCoefficients(dispense_mode, result,
-                                                        sub_mono_results, &coefficients);
+        double coefficients_total = ComputeCoefficients(mode, result, sub_mono_results, &coefficients);
 
         if (UNLIKELY(coefficients_total == 0.0)) {
             coefficients.RemoveFrom(0);
@@ -116,14 +106,13 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
             int64_t price_cents = (int64_t)((double)result.ghs_pricing.price_cents * coefficient);
 
             {
-                std::pair<Size *, bool> ret =
-                    out_dues_map->AppendUninitialized(unit_coefficient.unit);
+                std::pair<Size *, bool> ret = dues_map.AppendUninitialized(unit_coefficient.unit);
                 if (ret.second) {
-                    *ret.first = out_dues->len;
-                    due = out_dues->AppendDefault();
+                    *ret.first = dues.len;
+                    due = dues.AppendDefault();
                     due->unit = unit_coefficient.unit;
                 } else {
-                    due = &(*out_dues)[*ret.first];
+                    due = &dues[*ret.first];
                 }
             }
 
@@ -145,13 +134,11 @@ void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_re
     }
 }
 
-void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                  mco_DispenseMode dispense_mode, HeapArray<mco_Due> *out_dues)
+void mco_Dispenser::Finish(HeapArray<mco_Due> *out_dues)
 {
-    HashMap<UnitCode, Size> dues_map;
-    for (Size i = 0; i < out_dues->len; i++) {
-        dues_map.Append((*out_dues)[i].unit, i);
-    }
+    std::sort(dues.begin(), dues.end(), [](const mco_Due &due1, const mco_Due &due2) {
+        return due1.unit.number < due2.unit.number;
+    });
 
-    mco_Dispense(results, mono_results, dispense_mode, out_dues, &dues_map);
+    SwapMemory(out_dues, &dues, SIZE(dues));
 }

@@ -64,8 +64,27 @@ struct mco_Due {
 
 void mco_Summarize(Span<const mco_Result> results, mco_Summary *out_summary);
 
-void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                  mco_DispenseMode dispense_mode, HeapArray<mco_Due> *out_dues,
-                  HashMap<UnitCode, Size> *out_dues_map);
-void mco_Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                  mco_DispenseMode dispense_mode, HeapArray<mco_Due> *out_dues);
+class mco_Dispenser {
+    struct DispenseCoefficient {
+        UnitCode unit;
+        double value;
+    };
+
+    // Reuse for performance
+    HeapArray<DispenseCoefficient> coefficients;
+
+    mco_DispenseMode mode;
+    HeapArray<mco_Due> dues;
+    HashMap<UnitCode, Size> dues_map;
+
+public:
+    mco_Dispenser(mco_DispenseMode mode) : mode(mode) {}
+
+    void Dispense(Span<const mco_Result> results, Span<const mco_Result> mono_results);
+    void Finish(HeapArray<mco_Due> *out_dues);
+
+private:
+    double ComputeCoefficients(mco_DispenseMode mode,
+                               const mco_Result &result, Span<const mco_Result> mono_results,
+                               HeapArray<mco_Dispenser::DispenseCoefficient> *out_coefficients);
+};
