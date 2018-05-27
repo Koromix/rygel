@@ -307,6 +307,8 @@ var tables = {};
             page = 'tables/procedures/' + target_date + '/' + str;
         } else if (str[0] === 'D') {
             page = 'tables/diagnoses/' + target_date + '/' + str;
+        } else if (str.match('^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$')) {
+            page = 'pricing/table/' + target_date + '/' + str.substr(0, 5);
         } else {
             return str;
         }
@@ -325,7 +327,7 @@ var tables = {};
     {
         var elements = [];
         for (;;) {
-            var m = str.match(/[AD](\-[0-9]+|\$[0-9]+\.[0-9]+)/);
+            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?)/);
             if (!m)
                 break;
 
