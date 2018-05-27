@@ -705,7 +705,7 @@ public:
     }
 
     Span<T> Take(Size offset, Size len) const
-        { return Span<T>(data, N).Take(offset, len); }
+        { return Span<T>((T *)data, this->len).Take(offset, len); }
 };
 
 template <typename T, Size N>
@@ -805,7 +805,9 @@ public:
     }
 
     Span<T> Take(Size offset, Size len) const
-        { return Span<T>(data, this->len).Take(offset, len); }
+        { return Span<T>((T *)data, N).Take(offset, len); }
+    Span<T> TakeAvailable() const
+        { return Span<T>((T *)data + len, N - len); }
 };
 
 template <typename T>
