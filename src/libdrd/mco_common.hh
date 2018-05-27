@@ -215,7 +215,7 @@ struct mco_GhsCode {
 
     operator FmtArg() const { return FmtArg(number); }
 };
-static inline uint64_t DefaultHash(mco_GhsCode code) { return DefaultHash(code.number); }
+static inline uint64_t DefaultHash(mco_GhsCode code) { return code.number; }
 static inline bool DefaultCompare(mco_GhsCode code1, mco_GhsCode code2)
     { return code1 == code2; }
 

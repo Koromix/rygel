@@ -70,7 +70,7 @@ union DiagnosisCode {
     bool Matches(const char *other_str) const
     {
         Size i = 0;
-        while (str[i] && other_str[i] && str[i] == other_str[i]) {
+        while (str[i] == other_str[i] && str[i]) {
             i++;
         }
         return !other_str[i];

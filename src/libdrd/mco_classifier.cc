@@ -961,7 +961,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
         return mco_GhmCode::FromString("90Z00Z");
 
     out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
-    if (!out_agg->index) {
+    if (UNLIKELY(!out_agg->index)) {
         SetError(out_errors, 502, 2);
         return mco_GhmCode::FromString("90Z03Z");
     }
@@ -2019,11 +2019,11 @@ int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
         return 0;
 
     const mco_SupplementCounters<int32_t> &prices = agg.index->SupplementPrices(Sector::Public);
+    double ghs_coefficient = agg.index->GhsCoefficient(Sector::Public) ;
 
     int total_cents = 0;
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        int32_t supplement_cents =
-            (int32_t)(agg.index->GhsCoefficient(Sector::Public) * days.values[i] * prices.values[i]);
+        int32_t supplement_cents = (int32_t)(ghs_coefficient * days.values[i] * prices.values[i]);
 
         out_prices->values[i] += supplement_cents;
         total_cents += supplement_cents;
