@@ -60,15 +60,21 @@ union mco_GhmRootCode {
     {
         StaticAssert(N >= 6);
 
-        // We need to be fast here (at least for drdR), sprintf is too slow
-        buf[0] = (char)('0' + (parts.cmd / 10));
-        buf[1] = (char)('0' + (parts.cmd % 10));
-        buf[2] = parts.type;
-        buf[3] = (char)('0' + (parts.seq / 10));
-        buf[4] = (char)('0' + (parts.seq % 10));
-        buf[5] = 0;
+        if (LIKELY(IsValid())) {
+            // We need to be fast here (at least for drdR), sprintf is too slow
+            buf[0] = (char)('0' + (parts.cmd / 10));
+            buf[1] = (char)('0' + (parts.cmd % 10));
+            buf[2] = parts.type;
+            buf[3] = (char)('0' + (parts.seq / 10));
+            buf[4] = (char)('0' + (parts.seq % 10));
+            buf[5] = 0;
 
-        return MakeSpan(buf, 5);
+            return MakeSpan(buf, 5);
+        } else {
+            buf[0] = '?';
+            buf[1] = 0;
+            return MakeSpan(buf, 1);
+        }
     }
 
     operator FmtArg() const
@@ -153,16 +159,21 @@ union mco_GhmCode {
     {
         StaticAssert(N >= 6);
 
-        // We need to be fast here (at least for drdR), sprintf is too slow
-        buf[0] = (char)('0' + (parts.cmd / 10));
-        buf[1] = (char)('0' + (parts.cmd % 10));
-        buf[2] = parts.type;
-        buf[3] = (char)('0' + (parts.seq / 10));
-        buf[4] = (char)('0' + (parts.seq % 10));
-        buf[5] = parts.mode;
-        buf[6] = 0;
-
-        return MakeSpan(buf, 6);
+        if (LIKELY(IsValid())) {
+            // We need to be fast here (at least for drdR), sprintf is too slow
+            buf[0] = (char)('0' + (parts.cmd / 10));
+            buf[1] = (char)('0' + (parts.cmd % 10));
+            buf[2] = parts.type;
+            buf[3] = (char)('0' + (parts.seq / 10));
+            buf[4] = (char)('0' + (parts.seq % 10));
+            buf[5] = parts.mode;
+            buf[6] = 0;
+            return MakeSpan(buf, 6);
+        } else {
+            buf[0] = '?';
+            buf[1] = 0;
+            return MakeSpan(buf, 1);
+        }
     }
 
     operator FmtArg() const

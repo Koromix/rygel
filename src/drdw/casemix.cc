@@ -122,12 +122,10 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
         for (const mco_Result &result: results) {
             int multiplier;
             if (!dates[0].value ||
-                    (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
-                     result.stays[result.stays.len - 1].exit.date < dates[1])) {
+                    (result.exit_date >= dates[0] && result.exit_date < dates[1])) {
                 multiplier = 1;
             } else if (diff_dates[0].value &&
-                       result.stays[result.stays.len - 1].exit.date >= diff_dates[0] &&
-                       result.stays[result.stays.len - 1].exit.date < diff_dates[1]) {
+                       result.exit_date >= diff_dates[0] && result.exit_date < diff_dates[1]) {
                 multiplier = -1;
             } else {
                 continue;

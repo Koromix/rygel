@@ -2050,6 +2050,8 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         errors.main_error = 0;
         result.stays = mco_Split(stays, &stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
+        result.bill_id = result.stays[0].bill_id;
+        result.exit_date = result.stays[result.stays.len - 1].exit.date;
         result.duration = agg.info.duration;
 
         // Classify GHM
@@ -2097,6 +2099,8 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         errors.main_error = 0;
         result.stays = mco_Split(stays, &stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
+        result.bill_id = result.stays[0].bill_id;
+        result.exit_date = result.stays[result.stays.len - 1].exit.date;
         result.duration = agg.info.duration;
 
         // Mono-stay results
@@ -2134,34 +2138,45 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
             const mco_Aggregate::StayInfo &stay_info = agg.stays_info[k];
             mco_Result *mono_result = &mono_results[k];
 
-            if (result.ghm.IsError() || result.stays.len == 1) {
+            if (result.stays.len == 1) {
                 *mono_result = result;
+                mono_result->unit = stay_info.stay->unit;
             } else {
                 mono_result->stays = *stay_info.stay;
+                mono_result->bill_id = result.bill_id;
+                mono_result->unit = stay_info.stay->unit;
+                mono_result->exit_date = stay_info.stay->exit.date;
+
+                mono_result->main_stay_idx = 0;
                 mono_result->duration = stay_info.duration;
 
-                // Classify GHM
-                mono_errors.main_error = 0;
-                mono_result->ghm = RunGhmTree(agg, stay_info, &mono_errors);
-                {
-                    const mco_GhmRootInfo *ghm_root_info =
-                        agg.index->FindGhmRoot(mono_result->ghm.Root());
-                    if (LIKELY(ghm_root_info)) {
-                        mono_result->ghm = RunGhmSeverity(agg, stay_info, mono_result->ghm,
-                                                          *ghm_root_info);
+                if (!result.ghm.IsError()) {
+                    // Classify GHM
+                    mono_errors.main_error = 0;
+                    mono_result->ghm = RunGhmTree(agg, stay_info, &mono_errors);
+                    {
+                        const mco_GhmRootInfo *ghm_root_info =
+                            agg.index->FindGhmRoot(mono_result->ghm.Root());
+                        if (LIKELY(ghm_root_info)) {
+                            mono_result->ghm = RunGhmSeverity(agg, stay_info, mono_result->ghm,
+                                                              *ghm_root_info);
+                        }
                     }
+                    mono_result->main_error = mono_errors.main_error;
+
+                    // Classify GHS
+                    mono_result->ghs = mco_ClassifyGhs(agg, authorization_set, mono_result->ghm, flags);
+
+                    // Compute prices
+                    mco_PriceGhs(agg, mono_result->ghs, mono_result->duration,
+                                 &mono_result->ghs_pricing);
+                    int supplement_cents = mco_PriceSupplements(agg, result.ghs,
+                                                                mono_result->supplement_days,
+                                                                &mono_result->supplement_cents);
+                    mono_result->total_cents = mono_result->ghs_pricing.price_cents + supplement_cents;
+                } else {
+                    mono_result->ghs = mco_GhsCode(9999);
                 }
-                mono_result->main_error = mono_errors.main_error;
-
-                // Classify GHS
-                mono_result->ghs = mco_ClassifyGhs(agg, authorization_set, mono_result->ghm, flags);
-
-                // Compute prices
-                mco_PriceGhs(agg, mono_result->ghs, mono_result->duration,
-                             &mono_result->ghs_pricing);
-                int supplement_cents = mco_PriceSupplements(agg, result.ghs, mono_result->supplement_days,
-                                                            &mono_result->supplement_cents);
-                mono_result->total_cents = mono_result->ghs_pricing.price_cents + supplement_cents;
             }
         }
 

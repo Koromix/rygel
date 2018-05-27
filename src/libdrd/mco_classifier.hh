@@ -77,6 +77,10 @@ struct mco_GhsPricingResult {
 
 struct mco_Result {
     Span<const mco_Stay> stays;
+    int32_t bill_id;
+    UnitCode unit; // For mono results only
+    Date exit_date;
+
     Size main_stay_idx;
     int duration;
 
