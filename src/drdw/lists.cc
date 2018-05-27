@@ -581,12 +581,11 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
                                       ghm_to_ghs_info.diagnosis_mask.value).ptr);
                 }
                 if (ghm_to_ghs_info.procedure_masks.len) {
-                    // FIXME: Avoid stupid heap allocations here
-                    HeapArray<char> buf;
+                    writer.Key("procedures"); writer.StartArray();
                     for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-                        Fmt(&buf, " A$%1.%2", mask.offset, mask.value);
+                        writer.String(Fmt(buf, "A$%1.%2", mask.offset, mask.value).ptr);
                     }
-                    writer.Key("procedures"); writer.String(buf.ptr + 1);
+                    writer.EndArray();
                 }
                 if (ghm_root_info.young_severity_limit) {
                     writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);

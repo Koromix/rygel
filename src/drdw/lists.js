@@ -261,6 +261,8 @@ var tables = {};
                         // FIXME: Put this meta-info in TableColumns
                         if (column === 'durations' || column === 'ages') {
                             var content = maskToRanges(item[column]);
+                        } else if (Array.isArray(item[column])) {
+                            var content = addSpecLinks(item[column].join(', '));
                         } else {
                             var content = addSpecLinks('' + item[column]);
                         }
