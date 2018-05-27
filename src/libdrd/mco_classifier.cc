@@ -943,6 +943,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
 
     // Reset cache
     out_agg->info = {};
+    out_agg->info.duration = -1;
     out_agg->stays_info.Clear(64);
     for (const mco_Stay &stay: stays) {
         mco_Aggregate::StayInfo info = {};
@@ -993,6 +994,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
 
     // Prepare cache
     out_agg->info.stay = &out_agg->stay;
+    out_agg->info.duration = 0;
     for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
         stay_info.duration = stay_info.stay->exit.date - stay_info.stay->entry.date;
         out_agg->info.duration += stay_info.duration;
