@@ -228,6 +228,7 @@ enum class mco_SupplementType {
     Nn2,
     Nn3,
     Rep,
+
     Ohb,
     Aph,
     Ant,
@@ -243,6 +244,7 @@ static const char *const mco_SupplementTypeNames[] = {
     "NN2",
     "NN3",
     "REP",
+
     "OHB",
     "APH",
     "ANT",
@@ -262,6 +264,7 @@ union mco_SupplementCounters {
         T nn2;
         T nn3;
         T rep;
+
         T ohb;
         T aph;
         T ant;
@@ -281,6 +284,7 @@ union mco_SupplementCounters {
         st.nn2 += other.st.nn2;
         st.nn3 += other.st.nn3;
         st.rep += other.st.rep;
+
         st.ohb += other.st.ohb;
         st.aph += other.st.aph;
         st.ant += other.st.ant;
