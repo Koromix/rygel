@@ -1424,6 +1424,7 @@ template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashTable {
 public:
+    uint64_t *used = nullptr;
     ValueType *data = nullptr;
     Size count = 0;
     Size capacity = 0;
@@ -1458,7 +1459,7 @@ public:
     void Clear()
     {
         for (Size i = 0; i < capacity; i++) {
-            if (!Handler::IsEmpty(data[i])) {
+            if (!IsEmpty(used, i)) {
                 data[i].~ValueType();
             }
         }
@@ -1516,14 +1517,14 @@ public:
     {
         if (!it)
             return;
-        DebugAssert(!Handler::IsEmpty(*it));
+        DebugAssert(!IsEmpty(used, it - data));
 
         it->~ValueType();
 
         Size idx = it - data;
         for (;;) {
             Size next_idx = (idx + 1) & (capacity - 1);
-            if (Handler::IsEmpty(data[next_idx]) ||
+            if (IsEmpty(used, next_idx) ||
                     KeyToIndex(Handler::GetKey(data[next_idx])) == next_idx) {
                 new (&data[idx]) ValueType();
                 break;
@@ -1539,7 +1540,7 @@ private:
         { return (ValueType *)((const HashTable *)this)->Find(idx, key); }
     const ValueType *Find(Size *idx, const KeyType &key) const
     {
-        while (!Handler::IsEmpty(data[*idx])) {
+        while (!IsEmpty(used, *idx)) {
             const KeyType &it_key = Handler::GetKey(data[*idx]);
             if (Handler::CompareKeys(it_key, key))
                 return &data[*idx];
@@ -1559,11 +1560,12 @@ private:
                 if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
-                    while (!Handler::IsEmpty(data[idx])) {
+                    while (!IsEmpty(used, idx)) {
                         idx = (idx + 1) & (capacity - 1);
                     }
                 }
                 count++;
+                used[idx / 64] |= (1ull << (idx % 64));
                 return {&data[idx], true};
             } else {
                 return {it, false};
@@ -1573,6 +1575,7 @@ private:
 
             Size idx = HashToIndex(hash);
             count++;
+            used[idx / 64] |= (1ull << (idx % 64));
             return {&data[idx], true};
         }
     }
@@ -1583,36 +1586,45 @@ private:
             return;
         DebugAssert(count <= new_capacity);
 
+        uint64_t *old_used = used;
         ValueType *old_data = data;
         Size old_capacity = capacity;
 
         if (new_capacity) {
             // We need to zero memory for POD values, we could avoid it in other
             // cases but I'll wait for widespred constexpr if (C++17) support
-            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * SIZE(ValueType),
-                                                    (int)Allocator::Flag::Zero);
+            used = (uint64_t *)Allocator::Allocate(allocator, (new_capacity + 1) / 8,
+                                                   (int)Allocator::Flag::Zero);
+            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
-                new (&data[i]) ValueType;
+                new (&data[i]) ValueType();
             }
             capacity = new_capacity;
 
             for (Size i = 0; i < old_capacity; i++) {
-                if (!Handler::IsEmpty(old_data[i])) {
+                if (!IsEmpty(old_used, i)) {
                     Size new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
-                    while (!Handler::IsEmpty(data[new_idx])) {
+                    while (!IsEmpty(used, new_idx)) {
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
+                    used[new_idx / 64] |= (1ull << (new_idx % 64));
                     memmove(&data[new_idx], &old_data[i], SIZE(*data));
                 }
             }
         } else {
+            used = nullptr;
             data = nullptr;
             capacity = 0;
         }
 
+        Allocator::Release(allocator, old_used, (old_capacity + 1) / 8);
         Allocator::Release(allocator, old_data, old_capacity * SIZE(ValueType));
     }
 
+    Size IsEmpty(uint64_t *used, Size idx) const
+    {
+        return !(used[idx / 64] & (1ull << (idx % 64)));
+    }
     Size HashToIndex(uint64_t hash) const
     {
         return (Size)(hash & (uint64_t)(capacity - 1));
@@ -1689,12 +1701,9 @@ static inline bool DefaultCompare(Span<const char> key1, const char *key2)
 static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
     { return key1 == key2; }
 
-#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
+#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, HashFunc, CompareFunc) \
     class Name { \
     public: \
-        static bool IsEmpty(const ValueType &value) \
-            { return value.KeyMember == (EmptyKey); } \
-        static bool IsEmpty(const ValueType *value) { return !value; } \
         static decltype(ValueType::KeyMember) GetKey(const ValueType &value) \
             { return value.KeyMember; } \
         static decltype(ValueType::KeyMember) GetKey(const ValueType *value) \
@@ -1705,12 +1714,12 @@ static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
                                 decltype(ValueType::KeyMember) key2) \
             { return CompareFunc((key1), (key2)); } \
     }
-#define HASH_TABLE_HANDLER_EX(ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc) \
-    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyMember, EmptyKey, HashFunc, CompareFunc)
+#define HASH_TABLE_HANDLER_EX(ValueType, KeyMember, HashFunc, CompareFunc) \
+    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyMember, HashFunc, CompareFunc)
 #define HASH_TABLE_HANDLER(ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX(ValueType, KeyMember, DefaultHash, DefaultCompare)
 #define HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, decltype(ValueType::KeyMember)(), DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
