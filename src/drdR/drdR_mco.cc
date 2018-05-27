@@ -343,7 +343,8 @@ static void MakeSupplementColumnName(const char *supplement_type, const char *su
     strcpy(out_buf + i, suffix);
 }
 
-static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets)
+static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets,
+                                   bool export_units)
 {
     Size results_count = 0;
     for (const HeapArray<mco_Result> &results: result_sets) {
@@ -352,6 +353,10 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
     Rcc_DataFrameBuilder df_builder(results_count);
     Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
+    Rcc_Vector<int> unit;
+    if (export_units) {
+        unit = df_builder.Add<int>("unit");
+    }
     Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
     Rcc_Vector<int> stays_count = df_builder.Add<int>("stays_count");
     Rcc_Vector<int> duration = df_builder.Add<int>("duration");
@@ -382,8 +387,11 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
         for (const mco_Result &result: results) {
             char buf[32];
 
-            bill_id[i] = result.stays[0].bill_id;
-            exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
+            bill_id[i] = result.bill_id;
+            if (export_units) {
+                unit[i] = result.unit.number;
+            }
+            exit_date.Set(i, result.exit_date);
             stays_count[i] = (int)result.stays.len;
             duration[i] = result.duration;
             main_stay[i] = (int)result.main_stay_idx + 1;
@@ -595,12 +603,12 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     Rcc_AutoSexp results_df;
     if (details[0]) {
-        results_df = ExportResultsDataFrame(result_sets);
+        results_df = ExportResultsDataFrame(result_sets, false);
     }
 
     Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
-        mono_results_df = ExportResultsDataFrame(mono_result_sets);
+        mono_results_df = ExportResultsDataFrame(mono_result_sets, true);
     }
 
     Rcc_AutoSexp ret_list;
