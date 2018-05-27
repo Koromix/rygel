@@ -1520,17 +1520,21 @@ public:
         DebugAssert(!IsEmpty(used, it - data));
 
         it->~ValueType();
+        count--;
 
         Size idx = it - data;
         for (;;) {
             Size next_idx = (idx + 1) & (capacity - 1);
+
             if (IsEmpty(used, next_idx) ||
                     KeyToIndex(Handler::GetKey(data[next_idx])) == next_idx) {
+                used[idx / 64] &= ~(1ull << (idx % 64));
                 new (&data[idx]) ValueType();
                 break;
-            } else {
-                memmove(&data[idx], &data[next_idx], SIZE(*data));
             }
+
+            memmove(&data[idx], &data[next_idx], SIZE(*data));
+            idx = next_idx;
         }
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
