@@ -640,11 +640,52 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         }
         ParsePmsiInt(ReadFragment(2), &stay.unit.number);
         stay.unit.number = (int16_t)(stay.unit.number + 10000);
-        offset += 18; // Skip many fields
+        offset += 2; // Skip end of UM type (A/B, H/P)
+
+        if (LIKELY(i < ARRAY_SIZE(test.auth_supplements))) {
+            int type = 0;
+            ParsePmsiInt(ReadFragment(2), &type);
+            ParsePmsiInt(ReadFragment(4), &test.auth_supplements[i].days);
+            if (!test.auth_supplements[i].days) {
+                type = 0;
+            }
+
+            switch (type) {
+                case 0: {
+                    test.auth_supplements[i].type = 0;
+                    test.auth_supplements[i].days = 0;
+                } break;
+
+                case 1: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Rea; } break;
+                case 2: {
+                    if (stay.unit.number == 10002 || stay.unit.number == 10016 ||
+                            stay.unit.number == 10018) {
+                        test.auth_supplements[i].type = (int8_t)mco_SupplementType::Si;
+                    } else {
+                        test.auth_supplements[i].type = (int8_t)mco_SupplementType::Reasi;
+                    }
+                } break;
+                case 3: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Src; } break;
+                case 4: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Nn1; } break;
+                case 5: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Nn2; } break;
+                case 6: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Nn3; } break;
+                case 13: { test.auth_supplements[i].type = (int8_t)mco_SupplementType::Rep; } break;
+
+                default: {
+                    LogError("Unrecognized supplement type %1", type);
+                    test.auth_supplements[i].type = 0;
+                    test.auth_supplements[i].days = 0;
+                } break;
+            }
+
+            offset += 10; // Skip many fields
+        } else {
+            offset += 16;
+        }
 
         out_set->stays.Append(stay);
-        stay.entry.date = stay.exit.date;
 
+        stay.entry.date = stay.exit.date;
         das_count += stay.diagnoses.len;
         procedures_count += stay.procedures.len;
     }

@@ -97,6 +97,11 @@ static inline bool mco_StaysAreCompatible(int32_t bill_id1, int32_t bill_id2)
 }
 
 struct mco_Test {
+    struct SupplementTest {
+        int8_t type;
+        int16_t days;
+    };
+
     int32_t bill_id;
 
     uint16_t cluster_len;
@@ -106,6 +111,8 @@ struct mco_Test {
 
     mco_GhsCode ghs;
     mco_SupplementCounters<int16_t> supplement_days;
+    // Also test individual authorization supplements for 16 first stays
+    SupplementTest auth_supplements[16];
     int exb_exh;
 
     HASH_TABLE_HANDLER(mco_Test, bill_id);

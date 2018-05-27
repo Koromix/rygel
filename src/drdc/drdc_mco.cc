@@ -81,15 +81,24 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 }
 
 static void ExportTests(Span<const mco_Result> results,
+                        Span<const mco_Result> mono_results,
                         const HashTable<int32_t, mco_Test> &tests, bool verbose)
 {
     PrintLn("  Tests:");
+
+    bool mono = mono_results.len;
 
     Size tested_clusters = 0, failed_clusters = 0;
     Size tested_ghm = 0, failed_ghm = 0;
     Size tested_ghs = 0, failed_ghs = 0;
     Size tested_exb_exh = 0, failed_exb_exh = 0;
     for (const mco_Result &result: results) {
+        Span<const mco_Result> sub_mono_results = {};
+        if (mono) {
+            sub_mono_results = mono_results.Take(0, result.stays.len);
+            mono_results = mono_results.Take(result.stays.len, mono_results.len - result.stays.len);
+        }
+
         const mco_Test *test = tests.Find(result.stays[0].bill_id);
         if (!test)
             continue;
@@ -134,6 +143,7 @@ static void ExportTests(Span<const mco_Result> results,
                                 test->bill_id, result.stays[0].exit.date,
                                 result.ghs, test->ghs);
                     }
+
                     for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                         if (result.supplement_days.values[j] !=
                                 test->supplement_days.values[j]) {
@@ -145,6 +155,50 @@ static void ExportTests(Span<const mco_Result> results,
                     }
                 }
                 continue;
+            }
+
+            if (mono) {
+                Size max_auth_tests = sub_mono_results.len;
+                if (max_auth_tests > ARRAY_SIZE(mco_Test::auth_supplements)) {
+                    LogError("Testing only first %1 unit authorizations for stay %2",
+                             ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
+                    max_auth_tests = ARRAY_SIZE(mco_Test::auth_supplements);
+                }
+
+                for (Size i = 0; i < max_auth_tests; i++) {
+                    const mco_Result &mono_result = sub_mono_results[i];
+
+                    int8_t type;
+                    int16_t days;
+                    if (mono_result.supplement_days.st.rea) {
+                        type = (int)mco_SupplementType::Rea;
+                    } else if (mono_result.supplement_days.st.reasi) {
+                        type = (int)mco_SupplementType::Reasi;
+                    } else if (mono_result.supplement_days.st.si) {
+                        type = (int)mco_SupplementType::Si;
+                    } else if (mono_result.supplement_days.st.src) {
+                        type = (int)mco_SupplementType::Src;
+                    } else if (mono_result.supplement_days.st.nn1) {
+                        type = (int)mco_SupplementType::Nn1;
+                    } else if (mono_result.supplement_days.st.nn2) {
+                        type = (int)mco_SupplementType::Nn2;
+                    } else if (mono_result.supplement_days.st.nn3) {
+                        type = (int)mco_SupplementType::Nn3;
+                    } else if (mono_result.supplement_days.st.rep) {
+                        type = (int)mco_SupplementType::Rep;
+                    } else {
+                        type = 0;
+                    }
+                    days = mono_result.supplement_days.values[type];
+
+                    if (type != test->auth_supplements[i].type ||
+                            days != test->auth_supplements[i].days) {
+                        PrintLn("    %1/%2 has inadequate %3 %4 != %5 %6",
+                                test->bill_id, i, mco_SupplementTypeNames[type], days,
+                                mco_SupplementTypeNames[test->auth_supplements[i].type],
+                                test->auth_supplements[i].days);
+                    }
+                }
             }
 
             if (test->exb_exh != result.ghs_pricing.exb_exh) {
@@ -370,7 +424,8 @@ Dispensation modes:)");
         main_summary += classify_set.summary;
 
         if (test) {
-            ExportTests(classify_set.results, classify_set.tests, verbosity >= 1);
+            ExportTests(classify_set.results, classify_set.mono_results,
+                        classify_set.tests, verbosity >= 1);
         }
     }
 
