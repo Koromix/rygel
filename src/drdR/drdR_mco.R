@@ -46,6 +46,22 @@ mco_load_stays <- function(filenames) {
     .Call(`drdR_mco_LoadStays`, filenames)
 }
 
+mco_dispense <- function(results, mono_results = NULL, mode = 'exj2') {
+    if (!is.data.frame(results) && is.list(results) && is.null(mono_results)) {
+        mono_results <- results$mono_results
+        results <- results$results
+    }
+
+    dues <- .Call(`drdR_mco_Dispense`, results, mono_results, mode)
+    supplements <- summary.mco_results(mono_results, by = 'unit')[, c('unit',
+                                                                    paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_cents'),
+                                                                    paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_count'))]
+
+    dues <- merge(dues, supplements, by = 'unit')
+
+    return(dues)
+}
+
 mco_compare <- function(summary1, summary2, ...) {
     if (!('mco_summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
