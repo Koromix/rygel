@@ -86,17 +86,19 @@ static void ExportTests(Span<const mco_Result> results,
 {
     PrintLn("  Tests:");
 
-    bool mono = mono_results.len;
-
     Size tested_clusters = 0, failed_clusters = 0;
     Size tested_ghm = 0, failed_ghm = 0;
     Size tested_ghs = 0, failed_ghs = 0;
+    Size tested_supplements = 0, failed_supplements = 0;
+    Size tested_auth_supplements = 0, failed_auth_supplements = 0;
     Size tested_exb_exh = 0, failed_exb_exh = 0;
+
+    Size j = 0;
     for (const mco_Result &result: results) {
         Span<const mco_Result> sub_mono_results = {};
-        if (mono) {
-            sub_mono_results = mono_results.Take(0, result.stays.len);
-            mono_results = mono_results.Take(result.stays.len, mono_results.len - result.stays.len);
+        if (mono_results.len) {
+            sub_mono_results = mono_results.Take(j, result.stays.len);
+            j += result.stays.len;
         }
 
         const mco_Test *test = tests.Find(result.stays[0].bill_id);
@@ -112,11 +114,10 @@ static void ExportTests(Span<const mco_Result> results,
                             test->bill_id, result.stays[0].exit.date,
                             result.stays.len, test->cluster_len);
                 }
-                continue;
             }
         }
 
-        if (test->ghm.value) {
+        if (test->ghm.IsValid()) {
             tested_ghm++;
             if (test->ghm != result.ghm) {
                 failed_ghm++;
@@ -126,73 +127,78 @@ static void ExportTests(Span<const mco_Result> results,
                             result.ghm, FmtArg(result.main_error).Pad(-3),
                             test->ghm, FmtArg(test->error).Pad(-3));
                 }
-                continue;
             }
         }
 
-        if (test->ghs.number) {
+        if (test->ghs.IsValid()) {
             tested_ghs++;
-            tested_exb_exh++;
-
-            if (test->ghs != result.ghs ||
-                    test->supplement_days != result.supplement_days) {
+            if (test->ghs != result.ghs) {
                 failed_ghs++;
                 if (verbose) {
-                    if (result.ghs != test->ghs) {
-                        PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
-                                test->bill_id, result.stays[0].exit.date,
-                                result.ghs, test->ghs);
-                    }
+                    PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
+                            test->bill_id, result.stays[0].exit.date,
+                            result.ghs, test->ghs);
+                }
+            }
+        }
 
-                    for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                        if (result.supplement_days.values[j] !=
-                                test->supplement_days.values[j]) {
+        if (test->ghs.IsValid()) {
+            tested_supplements++;
+            if (test->supplement_days != result.supplement_days) {
+                failed_supplements++;
+                if (verbose) {
+                    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+                        if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
                             PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
                                     test->bill_id, result.stays[0].exit.date,
-                                    mco_SupplementTypeNames[j], result.supplement_days.values[j],
-                                    test->supplement_days.values[j]);
+                                    mco_SupplementTypeNames[i], result.supplement_days.values[i],
+                                    test->supplement_days.values[i]);
                         }
                     }
                 }
-                continue;
+            }
+        }
+
+        if (test->ghs.IsValid() && mono_results.len) {
+            tested_auth_supplements += sub_mono_results.len;
+
+            Size max_auth_tests = sub_mono_results.len;
+            if (max_auth_tests > ARRAY_SIZE(mco_Test::auth_supplements)) {
+                LogError("Testing only first %1 unit authorizations for stay %2",
+                         ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
+                max_auth_tests = ARRAY_SIZE(mco_Test::auth_supplements);
             }
 
-            if (mono) {
-                Size max_auth_tests = sub_mono_results.len;
-                if (max_auth_tests > ARRAY_SIZE(mco_Test::auth_supplements)) {
-                    LogError("Testing only first %1 unit authorizations for stay %2",
-                             ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
-                    max_auth_tests = ARRAY_SIZE(mco_Test::auth_supplements);
+            for (Size i = 0; i < max_auth_tests; i++) {
+                const mco_Result &mono_result = sub_mono_results[i];
+
+                int8_t type;
+                int16_t days;
+                if (mono_result.supplement_days.st.rea) {
+                    type = (int)mco_SupplementType::Rea;
+                } else if (mono_result.supplement_days.st.reasi) {
+                    type = (int)mco_SupplementType::Reasi;
+                } else if (mono_result.supplement_days.st.si) {
+                    type = (int)mco_SupplementType::Si;
+                } else if (mono_result.supplement_days.st.src) {
+                    type = (int)mco_SupplementType::Src;
+                } else if (mono_result.supplement_days.st.nn1) {
+                    type = (int)mco_SupplementType::Nn1;
+                } else if (mono_result.supplement_days.st.nn2) {
+                    type = (int)mco_SupplementType::Nn2;
+                } else if (mono_result.supplement_days.st.nn3) {
+                    type = (int)mco_SupplementType::Nn3;
+                } else if (mono_result.supplement_days.st.rep) {
+                    type = (int)mco_SupplementType::Rep;
+                } else {
+                    type = 0;
                 }
+                days = mono_result.supplement_days.values[type];
 
-                for (Size i = 0; i < max_auth_tests; i++) {
-                    const mco_Result &mono_result = sub_mono_results[i];
-
-                    int8_t type;
-                    int16_t days;
-                    if (mono_result.supplement_days.st.rea) {
-                        type = (int)mco_SupplementType::Rea;
-                    } else if (mono_result.supplement_days.st.reasi) {
-                        type = (int)mco_SupplementType::Reasi;
-                    } else if (mono_result.supplement_days.st.si) {
-                        type = (int)mco_SupplementType::Si;
-                    } else if (mono_result.supplement_days.st.src) {
-                        type = (int)mco_SupplementType::Src;
-                    } else if (mono_result.supplement_days.st.nn1) {
-                        type = (int)mco_SupplementType::Nn1;
-                    } else if (mono_result.supplement_days.st.nn2) {
-                        type = (int)mco_SupplementType::Nn2;
-                    } else if (mono_result.supplement_days.st.nn3) {
-                        type = (int)mco_SupplementType::Nn3;
-                    } else if (mono_result.supplement_days.st.rep) {
-                        type = (int)mco_SupplementType::Rep;
-                    } else {
-                        type = 0;
-                    }
-                    days = mono_result.supplement_days.values[type];
-
-                    if (type != test->auth_supplements[i].type ||
-                            days != test->auth_supplements[i].days) {
+                if (type != test->auth_supplements[i].type ||
+                        days != test->auth_supplements[i].days) {
+                    failed_auth_supplements++;
+                    if (verbose) {
                         PrintLn("    %1/%2 has inadequate %3 %4 != %5 %6",
                                 test->bill_id, i, mco_SupplementTypeNames[type], days,
                                 mco_SupplementTypeNames[test->auth_supplements[i].type],
@@ -200,7 +206,10 @@ static void ExportTests(Span<const mco_Result> results,
                     }
                 }
             }
+        }
 
+        if (test->ghs.IsValid()) {
+            tested_exb_exh++;
             if (test->exb_exh != result.ghs_pricing.exb_exh) {
                 failed_exb_exh++;
                 if (verbose) {
@@ -211,7 +220,8 @@ static void ExportTests(Span<const mco_Result> results,
             }
         }
     }
-    if (verbose && (failed_clusters || failed_ghm || failed_ghs)) {
+    if (verbose && (failed_clusters || failed_ghm || failed_ghs ||
+                    failed_supplements || failed_auth_supplements)) {
         PrintLn();
     }
 
@@ -219,8 +229,17 @@ static void ExportTests(Span<const mco_Result> results,
             failed_clusters, tested_clusters, results.len - tested_clusters);
     PrintLn("    Failed GHM tests: %1 / %2 (missing %3)",
             failed_ghm, tested_ghm, results.len - tested_ghm);
-    PrintLn("    Failed GHS (and supplements) tests: %1 / %2 (missing %3)",
+    PrintLn("    Failed GHS tests: %1 / %2 (missing %3)",
             failed_ghs, tested_ghs, results.len - tested_ghs);
+    PrintLn("    Failed supplements tests: %1 / %2 (missing %3)",
+            failed_supplements, tested_supplements, results.len - tested_supplements);
+    if (mono_results.len) {
+        PrintLn("    Failed auth supplements tests: %1 / %2 (missing %3)",
+                failed_auth_supplements, tested_auth_supplements,
+                mono_results.len - tested_auth_supplements);
+    } else {
+        PrintLn("    Auth supplements tests not performed, needs --mono");
+    }
     PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
             failed_exb_exh, tested_exb_exh, results.len - tested_exb_exh);
     PrintLn();
