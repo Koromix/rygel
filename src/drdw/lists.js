@@ -214,7 +214,11 @@ var tables = {};
             return ul;
         }
 
-        var ul = recurseNodes(0, false);
+        if (nodes.length) {
+            var ul = recurseNodes(0, false);
+        } else {
+            var ul = createElement('ul');
+        }
 
         var old_ul = document.querySelector('#tables_tree');
         cloneAttributes(old_ul, ul);
