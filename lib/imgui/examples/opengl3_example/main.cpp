@@ -31,7 +31,8 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
     gl3wInit();
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
@@ -122,6 +123,8 @@ int main(int, char**)
     // Cleanup
     ImGui_ImplGlfwGL3_Shutdown();
     ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;

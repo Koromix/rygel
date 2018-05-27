@@ -285,7 +285,8 @@ int main(int, char**)
     ShowWindow(hwnd, SW_SHOWDEFAULT);
     UpdateWindow(hwnd);
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
@@ -410,7 +411,9 @@ int main(int, char**)
     WaitForLastSubmittedFrame();
     ImGui_ImplDX12_Shutdown();
     ImGui::DestroyContext();
+
     CleanupDeviceD3D();
+    DestroyWindow(hwnd);
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 
     return 0;

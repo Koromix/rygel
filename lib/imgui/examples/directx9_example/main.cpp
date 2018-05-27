@@ -74,7 +74,8 @@ int main(int, char**)
         return 0;
     }
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
@@ -188,6 +189,7 @@ int main(int, char**)
 
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (pD3D) pD3D->Release();
+    DestroyWindow(hwnd);
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 
     return 0;
