@@ -109,7 +109,15 @@ var tables = {};
         }
 
         if (target_specs[target_table]) {
-            h1.innerText = 'Filtre : ' + target_specs[target_table];
+            var remove_spec = function(e) {
+                tables.route({spec: null});
+                e.preventDefault();
+            };
+
+            h1.innerHTML = '';
+            h1.appendChild(document.createTextNode('Filtre : ' + target_specs[target_table] + ' '));
+            h1.appendChild(createElement('a', {href: '#',
+                                               click: remove_spec}, '(retirer)'));
         } else {
             h1.innerText = '';
         }
@@ -120,7 +128,7 @@ var tables = {};
         if (args !== undefined) {
             target_date = args.date || target_date;
             target_table = args.table || target_table;
-            if (args.spec)
+            if (args.spec !== undefined)
                 target_specs[target_table] = args.spec;
         }
 
