@@ -395,8 +395,13 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             stays_count[i] = (int)result.stays.len;
             duration[i] = result.duration;
             main_stay[i] = (int)result.main_stay_idx + 1;
-            ghm.Set(i, result.ghm.ToString(buf));
-            main_error[i] = result.main_error;
+            if (result.ghm.IsValid()) {
+                ghm.Set(i, result.ghm.ToString(buf));
+                main_error[i] = result.main_error;
+            } else {
+                ghm.Set(i, nullptr);
+                main_error[i] = NA_INTEGER;
+            }
             ghs[i] = result.ghs.number;
             total_cents[i] = result.total_cents;
             price_cents[i] = result.ghs_pricing.price_cents;
