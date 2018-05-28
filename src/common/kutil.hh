@@ -1530,7 +1530,7 @@ public:
 
             if (IsEmpty(used, next_idx) ||
                     KeyToIndex(Handler::GetKey(data[next_idx])) == next_idx) {
-                used[idx / 64] &= ~(1ull << (idx % 64));
+                MarkEmpty(idx);
                 new (&data[idx]) ValueType();
                 break;
             }
@@ -1546,6 +1546,18 @@ private:
         { return (ValueType *)((const HashTable *)this)->Find(idx, key); }
     const ValueType *Find(Size *idx, const KeyType &key) const
     {
+#if __cplusplus >= 201703L
+        if constexpr(std::is_pointer<ValueType>::value) {
+            while (data[*idx]) {
+                const KeyType &it_key = Handler::GetKey(data[*idx]);
+                if (Handler::CompareKeys(it_key, key))
+                    return &data[*idx];
+                *idx = (*idx + 1) & (capacity - 1);
+            }
+            return nullptr;
+        }
+#endif
+
         while (!IsEmpty(used, *idx)) {
             const KeyType &it_key = Handler::GetKey(data[*idx]);
             if (Handler::CompareKeys(it_key, key))
@@ -1571,7 +1583,7 @@ private:
                     }
                 }
                 count++;
-                used[idx / 64] |= (1ull << (idx % 64));
+                MarkUsed(idx);
                 return {&data[idx], true};
             } else {
                 return {it, false};
@@ -1581,7 +1593,7 @@ private:
 
             Size idx = HashToIndex(hash);
             count++;
-            used[idx / 64] |= (1ull << (idx % 64));
+            MarkUsed(idx);
             return {&data[idx], true};
         }
     }
@@ -1613,7 +1625,7 @@ private:
                     while (!IsEmpty(used, new_idx)) {
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
-                    used[new_idx / 64] |= (1ull << (new_idx % 64));
+                    MarkUsed(new_idx);
                     memmove(&data[new_idx], &old_data[i], SIZE(*data));
                 }
             }
@@ -1627,10 +1639,19 @@ private:
         Allocator::Release(allocator, old_data, old_capacity * SIZE(ValueType));
     }
 
+    void MarkUsed(Size idx)
+    {
+        used[idx / 64] |= (1ull << (idx % 64));
+    }
+    void MarkEmpty(Size idx)
+    {
+        used[idx / 64] &= ~(1ull << (idx % 64));
+    }
     Size IsEmpty(uint64_t *used, Size idx) const
     {
         return !(used[idx / 64] & (1ull << (idx % 64)));
     }
+
     Size HashToIndex(uint64_t hash) const
     {
         return (Size)(hash & (uint64_t)(capacity - 1));
