@@ -219,7 +219,7 @@ struct mco_GhsCode {
         return code;
     }
 
-    bool IsValid() const { return number > 0 && number <= 9999; }
+    bool IsValid() const { return number > 0; }
 
     bool operator==(mco_GhsCode other) const { return number == other.number; }
     bool operator!=(mco_GhsCode other) const { return number != other.number; }

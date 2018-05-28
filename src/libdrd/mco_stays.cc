@@ -534,7 +534,13 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset += 3;
     ParsePmsiInt(ReadFragment(2), &rsa.session_count) || SetErrorFlag(mco_Stay::Error::MalformedSessionCount);
-    ParsePmsiInt(ReadFragment(4), &test.ghs.number);
+    if (line[offset] == ' ' && line[offset + 1] == 'D') {
+        offset += 2;
+        ParsePmsiInt(ReadFragment(2), &test.ghs.number);
+        test.ghs.number += 20000;
+    } else {
+        ParsePmsiInt(ReadFragment(4), &test.ghs.number);
+    }
     {
         int exh = 0;
         int exb = 0;
