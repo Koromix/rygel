@@ -325,6 +325,9 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                                  HeapArray<ReadableGhmDecisionNode> *out_nodes,
                                  Allocator *str_alloc)
 {
+    if (!ghm_nodes.len)
+        return true;
+
     BuildReadableGhmTreeContext ctx = {};
 
     ctx.ghm_nodes = ghm_nodes;

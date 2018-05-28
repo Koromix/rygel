@@ -8,6 +8,9 @@
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                              Size node_idx, int depth)
 {
+    if (!ghm_nodes.len)
+        return;
+
     for (Size i = 0;; i++) {
         if (UNLIKELY(i >= ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", ghm_nodes.len);
