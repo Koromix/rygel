@@ -103,10 +103,10 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
 int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverityWithDuration(int severity, int duration);
 
-mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors);
+mco_GhmCode mco_PickGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors);
 
-mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                            mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
+mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                        mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
 int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
                  int ghs_duration, bool death, mco_GhsPricingResult *out_result = nullptr);
 int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,

@@ -1557,8 +1557,8 @@ static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, const mco_Aggregate:
     return ghm;
 }
 
-mco_GhmCode mco_ClassifyGhm(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
-                            unsigned int flags, mco_ErrorSet *out_errors)
+mco_GhmCode mco_PickGhm(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
+                        unsigned int flags, mco_ErrorSet *out_errors)
 {
     mco_GhmCode ghm;
 
@@ -1640,8 +1640,8 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
     return true;
 }
 
-mco_GhsCode mco_ClassifyGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
-                            mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
+mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+                        mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
 {
     mco_GhsCode ghs = mco_GhsCode(9999);
     int ghs_duration = agg.info.duration;
@@ -2059,14 +2059,14 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
             result.main_stay_idx = agg.main_stay_info - agg.stays_info.ptr;
-            result.ghm = mco_ClassifyGhm(agg, agg.info, flags, &errors);
+            result.ghm = mco_PickGhm(agg, agg.info, flags, &errors);
         }
         result.main_error = errors.main_error;
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
         int ghs_duration;
-        result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
+        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
 
         // Count supplements days
         mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
@@ -2112,14 +2112,14 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
             result.main_stay_idx = agg.main_stay_info - agg.stays_info.ptr;
-            result.ghm = mco_ClassifyGhm(agg, agg.info, flags, &errors);
+            result.ghm = mco_PickGhm(agg, agg.info, flags, &errors);
         }
         result.main_error = errors.main_error;
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
         int ghs_duration;
-        result.ghs = mco_ClassifyGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
+        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
 
         // Count supplements days
         {
@@ -2167,7 +2167,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
                     mono_result->main_error = mono_errors.main_error;
 
                     // Classify GHS
-                    mono_result->ghs = mco_ClassifyGhs(agg, authorization_set, mono_result->ghm, flags);
+                    mono_result->ghs = mco_PickGhs(agg, authorization_set, mono_result->ghm, flags);
 
                     // Compute prices
                     mco_PriceGhs(agg, mono_result->ghs, mono_result->duration,
