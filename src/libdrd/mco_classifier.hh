@@ -78,6 +78,7 @@ struct mco_GhsPricingResult {
 struct mco_Result {
     Span<const mco_Stay> stays;
 
+    const mco_TableIndex *index;
     Size main_stay_idx;
     int duration;
     mco_GhmCode ghm;

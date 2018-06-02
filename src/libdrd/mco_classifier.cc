@@ -2052,6 +2052,7 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         errors.main_error = 0;
         result.stays = mco_Split(stays, &stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
+        result.index = agg.index;
         result.duration = agg.info.duration;
 
         // Classify GHM
@@ -2098,6 +2099,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         errors.main_error = 0;
         result.stays = mco_Split(stays, &stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
+        result.index = agg.index;
         result.duration = agg.info.duration;
 
         // Mono-stay results
@@ -2139,6 +2141,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
             } else {
                 mono_result->stays = *stay_info.stay;
                 mono_result->main_stay_idx = 0;
+                mono_result->index = agg.index;
                 mono_result->duration = stay_info.duration;
 
                 if (!result.ghm.IsError()) {
