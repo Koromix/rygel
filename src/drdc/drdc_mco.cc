@@ -5,7 +5,7 @@
 #include "../libdrd/libdrd.hh"
 #include "drdc_mco_dump.hh"
 
-static void PrintSummary(const mco_Summary &summary)
+static void PrintSummary(const mco_Pricing &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
     PrintLn("  Stays: %1", summary.stays_count);
@@ -26,9 +26,11 @@ static void PrintSummary(const mco_Summary &summary)
 };
 
 static void ExportResults(Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                          Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
                           bool verbose)
 {
-    const auto ExportResult = [&](int depth, const mco_Result &result) {
+    const auto ExportResult = [&](int depth, const mco_Result &result,
+                                  const mco_Pricing &pricing) {
         FmtArg padding = FmtArg("").Pad(-2 * depth);
 
         PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
@@ -37,39 +39,44 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 
         if (verbose) {
             PrintLn("      %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
-                    padding, FmtDouble((double)result.ghs_pricing.price_cents / 100.0, 2),
-                    result.ghs_pricing.exb_exh, FmtDouble(result.ghs_pricing.ghs_coefficient, 4));
-            if (result.ghs_pricing.price_cents != result.ghs_pricing.ghs_cents) {
+                    padding, FmtDouble((double)pricing.price_cents / 100.0, 2),
+                    pricing.exb_exh, FmtDouble(pricing.ghs_coefficient, 4));
+            if (pricing.price_cents != pricing.ghs_cents) {
                 PrintLn("        %1GHS: %2 €",
-                        padding, FmtDouble((double)result.ghs_pricing.ghs_cents / 100.0, 2));
+                        padding, FmtDouble((double)pricing.ghs_cents / 100.0, 2));
             }
-            if (result.total_cents > result.ghs_pricing.price_cents) {
+            if (pricing.total_cents > pricing.price_cents) {
                 PrintLn("      %1Supplements: %2 €", padding,
-                        FmtDouble((double)(result.total_cents - result.ghs_pricing.price_cents) / 100.0, 2));
+                        FmtDouble((double)(pricing.total_cents - pricing.price_cents) / 100.0, 2));
                 for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                    if (result.supplement_cents.values[j]) {
+                    if (pricing.supplement_cents.values[j]) {
                         PrintLn("        %1%2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
-                                FmtDouble((double)result.supplement_cents.values[j] / 100.0, 2),
+                                FmtDouble((double)pricing.supplement_cents.values[j] / 100.0, 2),
                                 result.supplement_days.values[j]);
                     }
                 }
             }
             PrintLn("      %1Total: %2 €",
-                    padding, FmtDouble((double)result.total_cents / 100.0, 2));
+                    padding, FmtDouble((double)pricing.total_cents / 100.0, 2));
             PrintLn();
         }
     };
 
     PrintLn("  Details:");
     Size j = 0;
-    for (const mco_Result &result: results) {
-        ExportResult(0, result);
+    for (Size i = 0; i < results.len; i++) {
+        const mco_Result &result = results[i];
+        const mco_Pricing &pricing = pricings[i];
+
+        ExportResult(0, result, pricing);
 
         if (mono_results.len && result.stays.len > 1) {
             for (Size k = j; k < j + result.stays.len; k++) {
                 const mco_Result &mono_result = mono_results[k];
+                const mco_Pricing &mono_pricing = mono_pricings[k];
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
-                ExportResult(1, mono_result);
+
+                ExportResult(1, mono_result, mono_pricing);
             }
             j += result.stays.len;
         } else {
@@ -79,7 +86,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
     PrintLn();
 }
 
-static void ExportTests(Span<const mco_Result> results,
+static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> pricings,
                         Span<const mco_Result> mono_results,
                         const HashTable<int32_t, mco_Test> &tests, bool verbose)
 {
@@ -93,7 +100,10 @@ static void ExportTests(Span<const mco_Result> results,
     Size tested_exb_exh = 0, failed_exb_exh = 0;
 
     Size j = 0;
-    for (const mco_Result &result: results) {
+    for (Size i = 0; i < results.len; i++) {
+        const mco_Result &result = results[i];
+        const mco_Pricing &pricing = pricings[i];
+
         Span<const mco_Result> sub_mono_results = {};
         if (mono_results.len) {
             sub_mono_results = mono_results.Take(j, result.stays.len);
@@ -209,12 +219,12 @@ static void ExportTests(Span<const mco_Result> results,
 
         if (test->ghs.IsValid()) {
             tested_exb_exh++;
-            if (test->exb_exh != result.ghs_pricing.exb_exh) {
+            if (test->exb_exh != pricing.exb_exh) {
                 failed_exb_exh++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.ghs_pricing.exb_exh, test->exb_exh);
+                            pricing.exb_exh, test->exb_exh);
                 }
             }
         }
@@ -242,20 +252,6 @@ static void ExportTests(Span<const mco_Result> results,
     PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
             failed_exb_exh, tested_exb_exh, results.len - tested_exb_exh);
     PrintLn();
-}
-
-static void ExportDues(Span<const mco_Due> dues, mco_DispenseMode dispense_mode)
-{
-    PrintLn("Dispensation (%1):", mco_DispenseModeOptions[(int)dispense_mode].help);
-    for (const mco_Due &due: dues) {
-        PrintLn("  %1: %2 €", due.unit,
-                FmtDouble((double)due.summary.total_cents / 100.0, 2));
-        if (due.summary.total_cents != due.summary.price_cents) {
-            PrintLn("    GHS-EXB+EXH: %1 €", FmtDouble((double)due.summary.price_cents / 100.0, 2));
-            PrintLn("    Supplements: %1 €",
-                    FmtDouble((double)(due.summary.total_cents - due.summary.price_cents) / 100.0, 2));
-        }
-    }
 }
 
 bool RunMcoClassify(Span<const char *> arguments)
@@ -371,7 +367,10 @@ Dispensation modes:)");
 
         HeapArray<mco_Result> results;
         HeapArray<mco_Result> mono_results;
-        mco_Summary summary;
+        HeapArray<mco_Pricing> pricings;
+        HeapArray<mco_Pricing> mono_pricings;
+
+        mco_Pricing summary;
     };
     HeapArray<ClassifySet> classify_sets;
     classify_sets.AppendDefault(filenames.len);
@@ -392,17 +391,25 @@ Dispensation modes:)");
             for (int j = 0; j < torture; j++) {
                 classify_set->results.RemoveFrom(0);
                 classify_set->mono_results.RemoveFrom(0);
+                classify_set->pricings.RemoveFrom(0);
+                classify_set->mono_pricings.RemoveFrom(0);
+                classify_set->summary = {};
+
                 mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
                                      flags, &classify_set->results, &classify_set->mono_results);
-            }
 
-            LogInfo("Summarize '%1'", filenames[i]);
-            mco_Summarize(classify_set->results, &classify_set->summary);
-
-            if (0 && !verbosity && !test) {
-                classify_set->stay_set = {};
-                classify_set->results.Clear();
-                classify_set->mono_results.Clear();
+                if (dispense_mode >= 0 || verbosity || test) {
+                    mco_Price(classify_set->results, &classify_set->pricings);
+                    if (dispense_mode >= 0) {
+                        mco_Dispense(classify_set->pricings, classify_set->mono_results,
+                                     (mco_DispenseMode)dispense_mode, &classify_set->mono_pricings);
+                    } else {
+                        mco_Price(classify_set->mono_results, &classify_set->mono_pricings);
+                    }
+                    mco_Summarize(classify_set->pricings, &classify_set->summary);
+                } else {
+                    mco_PriceTotal(classify_set->results, &classify_set->summary);
+                }
             }
 
             return true;
@@ -411,19 +418,8 @@ Dispensation modes:)");
     if (!async.Sync())
         return false;
 
-    HeapArray<mco_Due> dues;
-    if (dispense_mode >= 0) {
-        LogInfo("Dispense");
-
-        mco_Dispenser dispenser((mco_DispenseMode)dispense_mode);
-        for (const ClassifySet &classify_set: classify_sets) {
-            dispenser.Dispense(classify_set.results, classify_set.mono_results);
-        }
-        dispenser.Finish(&dues);
-    }
-
     LogInfo("Export");
-    mco_Summary main_summary = {};
+    mco_Pricing main_summary = {};
     for (Size i = 0; i < filenames.len; i++) {
         const ClassifySet &classify_set = classify_sets[i];
 
@@ -431,6 +427,7 @@ Dispensation modes:)");
 
         if (verbosity - test >= 1) {
             ExportResults(classify_set.results, classify_set.mono_results,
+                          classify_set.pricings, classify_set.mono_pricings,
                           verbosity - test >= 2);
         }
 
@@ -438,7 +435,7 @@ Dispensation modes:)");
         main_summary += classify_set.summary;
 
         if (test) {
-            ExportTests(classify_set.results, classify_set.mono_results,
+            ExportTests(classify_set.results, classify_set.pricings, classify_set.mono_results,
                         classify_set.tests, verbosity >= 1);
         }
     }
@@ -446,10 +443,6 @@ Dispensation modes:)");
     if (filenames.len > 1) {
         PrintLn("Global summary:");
         PrintSummary(main_summary);
-    }
-
-    if (dispense_mode >= 0) {
-        ExportDues(dues, (mco_DispenseMode)dispense_mode);
     }
 
     return true;

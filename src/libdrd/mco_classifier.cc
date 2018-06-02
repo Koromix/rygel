@@ -1692,55 +1692,6 @@ mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &au
     return ghs;
 }
 
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
-                 int ghs_duration, bool death, mco_GhsPricingResult *out_result)
-{
-    int price_cents = price_info.ghs_cents;
-
-    int exb_exh;
-    if (ghs_duration < price_info.exb_treshold && !death) {
-        exb_exh = -(price_info.exb_treshold - ghs_duration);
-        if (price_info.flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
-            price_cents -= price_info.exb_cents;
-        } else {
-            price_cents += price_info.exb_cents * exb_exh;
-        }
-    } else if (price_info.exh_treshold && ghs_duration + death >= price_info.exh_treshold) {
-        exb_exh = ghs_duration + death + 1 - price_info.exh_treshold;
-        price_cents += price_info.exh_cents * exb_exh;
-    } else {
-        exb_exh = 0;
-    }
-
-    price_cents = (int)(ghs_coefficient * (double)price_cents);
-
-    if (out_result) {
-        out_result->exb_exh = exb_exh;
-        out_result->ghs_cents = (int)(ghs_coefficient * (double)price_info.ghs_cents);
-        out_result->ghs_coefficient = ghs_coefficient;
-        out_result->price_cents = price_cents;
-    }
-    return price_cents;
-}
-
-int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 mco_GhsPricingResult *out_result)
-{
-    if (ghs == mco_GhsCode(9999))
-        return 0;
-
-    // FIXME: Add some kind of error flag when this happens?
-    const mco_GhsPriceInfo *price_info = agg.index->FindGhsPrice(ghs, Sector::Public);
-    if (!price_info) {
-        LogDebug("Cannot find price for GHS %1 (%2 -- %3)", ghs,
-                 agg.index->limit_dates[0], agg.index->limit_dates[1]);
-        return 0;
-    }
-
-    return mco_PriceGhs(*price_info, agg.index->GhsCoefficient(Sector::Public),
-                        ghs_duration, agg.stay.exit.mode == '9', out_result);
-}
-
 static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
                               Size list2_treshold)
 {
@@ -2013,27 +1964,6 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
     }
 }
 
-int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
-                         const mco_SupplementCounters<int16_t> &days,
-                         mco_SupplementCounters<int32_t> *out_prices)
-{
-    if (ghs == mco_GhsCode(9999))
-        return 0;
-
-    const mco_SupplementCounters<int32_t> &prices = agg.index->SupplementPrices(Sector::Public);
-    double ghs_coefficient = agg.index->GhsCoefficient(Sector::Public) ;
-
-    int total_cents = 0;
-    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        int32_t supplement_cents = (int32_t)(ghs_coefficient * days.values[i] * prices.values[i]);
-
-        out_prices->values[i] += supplement_cents;
-        total_cents += supplement_cents;
-    }
-
-    return total_cents;
-}
-
 // TODO: Set some fields (duration) to invalid values when appropriate, and convert
 // to NA in drdR
 static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
@@ -2069,12 +1999,6 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         // Count supplements days
         mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
                              &result.supplement_days);
-
-        // Compute prices
-        mco_PriceGhs(agg, result.ghs, result.ghs_duration, &result.ghs_pricing);
-        int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
-                                                    &result.supplement_cents);
-        result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
 
         out_results[i] = result;
     }
@@ -2125,12 +2049,6 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
                                  &result.supplement_days, mono_supplement_days);
         }
 
-        // Compute prices
-        mco_PriceGhs(agg, result.ghs, result.ghs_duration, &result.ghs_pricing);
-        int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
-                                                    &result.supplement_cents);
-        result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
-
         // Perform mono-stay classifications
         for (Size k = 0; k < result.stays.len; k++) {
             const mco_Aggregate::StayInfo &stay_info = agg.stays_info[k];
@@ -2160,14 +2078,6 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
 
                     // Classify GHS
                     mono_result->ghs = mco_PickGhs(agg, authorization_set, mono_result->ghm, flags);
-
-                    // Compute prices
-                    mco_PriceGhs(agg, mono_result->ghs, mono_result->duration,
-                                 &mono_result->ghs_pricing);
-                    int supplement_cents = mco_PriceSupplements(agg, result.ghs,
-                                                                mono_result->supplement_days,
-                                                                &mono_result->supplement_cents);
-                    mono_result->total_cents = mono_result->ghs_pricing.price_cents + supplement_cents;
                 } else {
                     mono_result->ghs = mco_GhsCode(9999);
                 }

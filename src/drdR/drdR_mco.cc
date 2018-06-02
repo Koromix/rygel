@@ -327,8 +327,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
     // We're already running in parallel, using ClassifyParallel would slow us down,
     // because it has some overhead caused by multi-stays.
-    mco_Classify(classifier.table_set, classifier.authorization_set,
-                 out_stay_set->stays, flags, out_results, out_mono_results);
+    mco_Classify(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
+                 flags, out_results, out_mono_results);
 
     return true;
 }
@@ -344,6 +344,7 @@ static void MakeSupplementColumnName(const char *supplement_type, const char *su
 }
 
 static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets,
+                                   Span<const HeapArray<mco_Pricing>> pricing_sets,
                                    bool export_units)
 {
     Size results_count = 0;
@@ -382,39 +383,45 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
         supplement_count[i] = df_builder.Add<int>(name_buf);
     }
 
-    Size i = 0;
-    for (const HeapArray<mco_Result> &results: result_sets) {
-        for (const mco_Result &result: results) {
+    Size k = 0;
+    for (Size i = 0; i < result_sets.len; i++) {
+        Span<const mco_Result> results = result_sets[i];
+        Span<const mco_Pricing> pricings = pricing_sets[i];
+
+        for (Size j = 0; j < results.len; j++) {
+            const mco_Result &result = results[j];
+            const mco_Pricing &pricing = pricings[j];
+
             char buf[32];
 
-            bill_id[i] = result.stays[0].bill_id;
+            bill_id[k] = result.stays[0].bill_id;
             if (export_units) {
                 DebugAssert(result.stays.len == 1);
-                unit[i] = result.stays[0].unit.number;
+                unit[k] = result.stays[0].unit.number;
             }
-            exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
-            stays_count[i] = (int)result.stays.len;
-            duration[i] = result.duration >= 0 ? result.duration : NA_INTEGER;
-            main_stay[i] = (int)result.main_stay_idx + 1;
+            exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);
+            stays_count[k] = (int)result.stays.len;
+            duration[k] = (result.duration >= 0) ? result.duration : NA_INTEGER;
+            main_stay[k] = (int)result.main_stay_idx + 1;
             if (result.ghm.IsValid()) {
-                ghm.Set(i, result.ghm.ToString(buf));
-                main_error[i] = result.main_error;
+                ghm.Set(k, result.ghm.ToString(buf));
+                main_error[k] = result.main_error;
             } else {
-                ghm.Set(i, nullptr);
-                main_error[i] = NA_INTEGER;
+                ghm.Set(k, nullptr);
+                main_error[k] = NA_INTEGER;
             }
-            ghs[i] = result.ghs.number;
-            total_cents[i] = result.total_cents;
-            price_cents[i] = result.ghs_pricing.price_cents;
-            ghs_cents[i] = (double)result.ghs_pricing.ghs_cents;
-            ghs_coefficient[i] = (double)result.ghs_pricing.ghs_coefficient;
-            exb_exh[i] = result.ghs_pricing.exb_exh;
-            for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                supplement_cents[j][i] = result.supplement_cents.values[j];
-                supplement_count[j][i] = result.supplement_days.values[j];
+            ghs[k] = result.ghs.number;
+            total_cents[k] = pricing.total_cents;
+            price_cents[k] = pricing.price_cents;
+            ghs_cents[k] = (double)pricing.ghs_cents;
+            ghs_coefficient[k] = (double)pricing.ghs_coefficient;
+            exb_exh[k] = pricing.exb_exh;
+            for (Size l = 0; l < ARRAY_SIZE(mco_SupplementTypeNames); l++) {
+                supplement_cents[l][k] = pricing.supplement_cents.values[l];
+                supplement_count[l][k] = result.supplement_days.values[l];
             }
 
-            i++;
+            k++;
         }
     }
 
@@ -422,7 +429,8 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 }
 
 RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
-                                  SEXP procedures_xp, SEXP options_xp, SEXP details_xp)
+                                  SEXP procedures_xp, SEXP options_xp, SEXP details_xp,
+                                  SEXP dispense_mode_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -434,19 +442,37 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Rcpp::DataFrame stays_df(stays_xp);
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
-    Rcpp::CharacterVector options(options_xp);
+    Rcpp::CharacterVector options_vec(options_xp);
     Rcc_Vector<bool> details(details_xp);
+    Rcc_Vector<const char *> dispense_mode_vec(dispense_mode_xp);
     if (details.Len() != 1)
         Rcpp::stop("Expected one logical value for 'details'");
+    if (dispense_mode_vec.Len() > 1)
+        Rcpp::stop("Expected NULL or one string for 'dispense_mode'");
 
     unsigned int flags = 0;
-    for (const char *opt: options) {
+    for (const char *opt: options_vec) {
         const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
                                               std::end(mco_ClassifyFlagOptions),
                                               [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
         if (desc == std::end(mco_ClassifyFlagOptions))
             Rcpp::stop("Unknown classifier option '%1'", opt);
         flags |= 1u << (desc - mco_ClassifyFlagOptions);
+    }
+
+    int dispense_mode = -1;
+    if (dispense_mode_vec.Len()) {
+        const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                              std::end(mco_DispenseModeOptions),
+                                              [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_vec[0]); });
+        if (desc == std::end(mco_DispenseModeOptions)) {
+            LogError("Unknown dispensation mode '%1'", dispense_mode_vec[0]);
+            Rcc_StopWithLastError();
+        }
+        dispense_mode = (int)(desc - mco_DispenseModeOptions);
+        flags |= (int)mco_ClassifyFlag::MonoResults;
+    } else {
+        flags &= (int)mco_ClassifyFlag::MonoResults;
     }
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
@@ -521,11 +547,14 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Size sets_count = (stays.nrow - 1) / task_size + 1;
     HeapArray<mco_StaySet> stay_sets(sets_count);
     HeapArray<HeapArray<mco_Result>> result_sets(sets_count);
+    HeapArray<HeapArray<mco_Pricing>> pricing_sets(sets_count);
     HeapArray<HeapArray<mco_Result>> mono_result_sets;
+    HeapArray<HeapArray<mco_Pricing>> mono_pricing_sets(sets_count);
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
         mono_result_sets.Reserve(sets_count);
+        mono_pricing_sets.Reserve(sets_count);
     }
-    HeapArray<mco_Summary> summaries(sets_count);
+    HeapArray<mco_Pricing> summaries(sets_count);
 
     Async async;
     {
@@ -552,11 +581,14 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
             mco_StaySet *task_stay_set = stay_sets.AppendDefault();
             HeapArray<mco_Result> *task_results = result_sets.AppendDefault();
+            HeapArray<mco_Pricing> *task_pricings = pricing_sets.AppendDefault();
             HeapArray<mco_Result> *task_mono_results = nullptr;
+            HeapArray<mco_Pricing> *task_mono_pricings = nullptr;
             if (flags & (int)mco_ClassifyFlag::MonoResults) {
                 task_mono_results = mono_result_sets.AppendDefault();
+                task_mono_pricings = mono_pricing_sets.AppendDefault();
             }
-            mco_Summary *task_summary = summaries.AppendDefault();
+            mco_Pricing *task_summary = summaries.AppendDefault();
 
             async.AddTask([=, &stays, &diagnoses, &procedures]() mutable {
                 if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
@@ -565,7 +597,17 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                    flags, task_stay_set, task_results, task_mono_results))
                     return false;
 
-                mco_Summarize(*task_results, task_summary);
+                if (details[0] || dispense_mode >= 0) {
+                    mco_Price(*task_results, task_pricings);
+                    if (dispense_mode >= 0) {
+                        mco_Dispense(*task_pricings, *task_mono_results,
+                                     (mco_DispenseMode)dispense_mode, task_mono_pricings);
+                    }
+                    mco_Summarize(*task_pricings, task_summary);
+                } else {
+                    mco_PriceTotal(*task_results, task_summary);
+                }
+
                 return true;
             });
 
@@ -580,10 +622,8 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     LogDebug("Export");
 
-    mco_Summary summary = {};
-    for (const mco_Summary &task_summary: summaries) {
-        summary += task_summary;
-    }
+    mco_Pricing summary = {};
+    mco_Summarize(summaries, &summary);
 
     Rcc_AutoSexp summary_df;
     {
@@ -609,12 +649,12 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     Rcc_AutoSexp results_df;
     if (details[0]) {
-        results_df = ExportResultsDataFrame(result_sets, false);
+        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false);
     }
 
     Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
-        mono_results_df = ExportResultsDataFrame(mono_result_sets, true);
+        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true);
     }
 
     Rcc_AutoSexp ret_list;
@@ -631,120 +671,6 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     return ret_list;
-
-    END_RCPP
-}
-
-RcppExport SEXP drdR_mco_Dispense(SEXP results_xp, SEXP mono_results_xp, SEXP mode_xp)
-{
-    BEGIN_RCPP
-    RCC_SETUP_LOG_HANDLER();
-
-    Rcpp::DataFrame results_df(results_xp);
-    Rcpp::DataFrame mono_results_df(mono_results_xp);
-    Rcc_Vector<const char *> mode_str(mode_xp);
-    if (mode_str.Len() != 1)
-        Rcpp::stop("Mode must have exactly one value");
-
-    mco_DispenseMode dispense_mode;
-    {
-        const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                              std::end(mco_DispenseModeOptions),
-                                              [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str[0]); });
-        if (desc == std::end(mco_DispenseModeOptions)) {
-            LogError("Mode '%1' is not valid", mode_str[0]);
-            Rcc_StopWithLastError();
-        }
-
-        dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
-    }
-
-    struct ResultsProxy {
-        Size nrow;
-
-        Rcc_NumericVector<int> stays_count;
-        Rcc_NumericVector<int> unit;
-        Rcc_NumericVector<int> exb_exh;
-        Rcc_NumericVector<int> duration;
-        Rcc_NumericVector<int> total_cents;
-        Rcc_NumericVector<int> price_cents;
-        Rcc_NumericVector<int> ghs_cents;
-    };
-
-    ResultsProxy results;
-    results.nrow = results_df.nrow();
-    results.stays_count = results_df["stays_count"];
-    results.duration = results_df["duration"];
-    results.exb_exh = results_df["exb_exh"];
-    results.ghs_cents = results_df["ghs_cents"];
-    results.price_cents = results_df["price_cents"];
-    results.total_cents = results_df["total_cents"];
-
-    ResultsProxy mono_results;
-    mono_results.nrow = mono_results_df.nrow();
-    mono_results.unit = mono_results_df["unit"];
-    mono_results.duration = mono_results_df["duration"];
-    mono_results.exb_exh = mono_results_df["exb_exh"];
-    mono_results.ghs_cents = mono_results_df["ghs_cents"];
-    mono_results.price_cents = mono_results_df["price_cents"];
-    mono_results.total_cents = mono_results_df["total_cents"];
-
-    HeapArray<mco_Due> dues;
-    {
-        // Reuse for performance
-        HeapArray<mco_Result> mono_results2;
-
-        mco_Dispenser dispenser(dispense_mode);
-        Size j = 0;
-        for (Size i = 0; i < results.nrow; i++) {
-            mco_Result result = {};
-            result.stays.len = results.stays_count[i];
-            result.duration = results.duration[i];
-            result.ghs_pricing.exb_exh = results.exb_exh[i];
-            result.ghs_pricing.ghs_cents = results.ghs_cents[i];
-            result.ghs_pricing.price_cents = results.price_cents[i];
-            result.total_cents = results.total_cents[i];
-
-            mono_results2.Clear(64);
-            for (Size k = j; k < j + result.stays.len; k++) {
-                mco_Result mono_result = {};
-                // FIXME: mono_result.unit = UnitCode(mono_results.unit[k]);
-                mono_result.stays.len = 1;
-                mono_result.duration = mono_results.duration[k];
-                mono_result.ghs_pricing.exb_exh = mono_results.exb_exh[i];
-                mono_result.ghs_pricing.ghs_cents = mono_results.ghs_cents[k];
-                mono_result.ghs_pricing.price_cents = mono_results.price_cents[k];
-                mono_result.total_cents = mono_results.total_cents[k];
-                mono_results2.Append(mono_result);
-            }
-            j += result.stays.len;
-
-            dispenser.Dispense(result, mono_results2);
-        }
-        dispenser.Finish(&dues);
-    }
-
-    SEXP dues_df;
-    {
-        Rcc_DataFrameBuilder df_builder(dues.len);
-        Rcc_Vector<int> unit = df_builder.Add<int>("unit");
-        Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
-        Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
-        Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
-
-        for (Size i = 0; i < dues.len; i++) {
-            const mco_Due &due = dues[i];
-
-            unit[i] = due.unit.number;
-            total_cents[i] = due.summary.total_cents;
-            price_cents[i] = due.summary.price_cents;
-            ghs_cents[i] = due.summary.ghs_cents;
-        }
-
-        dues_df = df_builder.Build();
-    }
-
-    return dues_df;
 
     END_RCPP
 }
@@ -1012,8 +938,8 @@ RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
         {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
-        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 6},
-        {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
+        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 7},
+        // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},
         {"drdR_mco_LoadStays", (DL_FUNC)&drdR_mco_LoadStays, 1},

@@ -11,6 +11,6 @@
 #include "mco_tables.hh"
 #include "mco_stays.hh"
 #include "mco_classifier.hh"
-#include "mco_dispenser.hh"
 #include "mco_mapper.hh"
+#include "mco_pricing.hh"
 #include "mco_init.hh"

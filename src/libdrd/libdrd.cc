@@ -7,6 +7,6 @@
 #include "mco_tables.cc"
 #include "mco_stays.cc"
 #include "mco_classifier.cc"
-#include "mco_dispenser.cc"
 #include "mco_mapper.cc"
+#include "mco_pricing.cc"
 #include "mco_init.cc"

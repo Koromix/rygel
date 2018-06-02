@@ -115,6 +115,11 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
     mco_ClassifyParallel(*drdw_table_set, *drdw_authorization_set, drdw_stay_set.stays,
                          (int)mco_ClassifyFlag::MonoResults, &results, &mono_results);
 
+    HeapArray<mco_Pricing> pricings;
+    HeapArray<mco_Pricing> mono_pricings;
+    mco_Price(results, &pricings);
+    mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+
     HeapArray<CellSummary> summary;
     {
         Size j = 0;
@@ -134,18 +139,14 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             }
 
             Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
 
-            HeapArray<mco_Due> dues;
-            {
-                // FIXME: Slow, it does a lot of unnecessary work
-                mco_Dispenser dispenser(dispense_mode);
-                dispenser.Dispense(result, sub_mono_results);
-                dispenser.Finish(&dues);
-            }
+            for (Size k = 0; k < sub_mono_results.len; k++) {
+                const mco_Result &mono_result = sub_mono_results[k];
+                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
 
-            for (const mco_Due &due: dues) {
-                if (!units.table.count || units.Find(due.unit)) {
+                if (!units.table.count || units.Find(mono_result.stays[0].unit)) {
                     // TODO: Careful with duration overflow
                     SummaryMapKey key = {};
                     key.st.ghm = result.ghm;
@@ -162,8 +163,9 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                         cell_summary.duration = key.st.duration;
                         summary.Append(cell_summary);
                     }
+
                     summary[*ret.first].count += multiplier;
-                    summary[*ret.first].ghs_price_cents += multiplier * due.summary.price_cents;
+                    summary[*ret.first].ghs_price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
         }

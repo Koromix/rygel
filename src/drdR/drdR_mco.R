@@ -8,18 +8,16 @@ mco_init <- function(data_dirs = character(0), table_dirs = character(0),
 }
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
-                         sorted = TRUE, options = character(0), details = TRUE, mono = FALSE) {
+                         sorted = TRUE, options = character(0), details = TRUE,
+                         dispense = NULL) {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
         diagnoses <- stays$diagnoses
         procedures <- stays$procedures
         stays <- stays$stays
     }
-    if (mono) {
-        options = c(options, 'mono')
-    }
 
     result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
-                        options, details)
+                        options, details, dispense)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if (details) {
@@ -44,22 +42,6 @@ mco_procedures <- function(classifier, date) {
 
 mco_load_stays <- function(filenames) {
     .Call(`drdR_mco_LoadStays`, filenames)
-}
-
-mco_dispense <- function(results, mono_results = NULL, mode = 'exj2') {
-    if (!is.data.frame(results) && is.list(results) && is.null(mono_results)) {
-        mono_results <- results$mono_results
-        results <- results$results
-    }
-
-    dues <- .Call(`drdR_mco_Dispense`, results, mono_results, mode)
-    supplements <- summary.mco_results(mono_results, by = 'unit')[, c('unit',
-                                                                    paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_cents'),
-                                                                    paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_count'))]
-
-    dues <- merge(dues, supplements, by = 'unit')
-
-    return(dues)
 }
 
 mco_compare <- function(summary1, summary2, ...) {

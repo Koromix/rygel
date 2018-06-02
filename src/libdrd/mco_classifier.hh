@@ -68,13 +68,6 @@ struct mco_ErrorSet {
     Bitset<512> errors;
 };
 
-struct mco_GhsPricingResult {
-    int exb_exh;
-    int ghs_cents;
-    double ghs_coefficient;
-    int price_cents;
-};
-
 struct mco_Result {
     Span<const mco_Stay> stays;
 
@@ -87,10 +80,7 @@ struct mco_Result {
     mco_GhsCode ghs;
     int ghs_duration;
 
-    mco_GhsPricingResult ghs_pricing;
     mco_SupplementCounters<int16_t> supplement_days;
-    mco_SupplementCounters<int32_t> supplement_cents;
-    int total_cents;
 };
 
 Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays,
@@ -103,21 +93,12 @@ int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverityWithDuration(int severity, int duration);
 
 mco_GhmCode mco_PickGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors);
-
 mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                         mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
-int mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
-                 int ghs_duration, bool death, mco_GhsPricingResult *out_result = nullptr);
-int mco_PriceGhs(const mco_Aggregate &agg, mco_GhsCode ghs, int ghs_duration,
-                 mco_GhsPricingResult *out_result = nullptr);
-
 void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
                           mco_SupplementCounters<int16_t> *out_counters,
                           Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
-int mco_PriceSupplements(const mco_Aggregate &agg, mco_GhsCode ghs,
-                         const mco_SupplementCounters<int16_t> &days,
-                         mco_SupplementCounters<int32_t> *out_prices);
 
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
