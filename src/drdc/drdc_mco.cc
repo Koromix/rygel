@@ -32,8 +32,8 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
         FmtArg padding = FmtArg("").Pad(-2 * depth);
 
         PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
-                padding, result.bill_id, result.duration, result.exit_date,
-                result.ghm, result.main_error, result.ghs);
+                padding, result.stays[0].bill_id, result.duration,
+                result.stays[result.stays.len - 1].exit.date, result.ghm, result.main_error, result.ghs);
 
         if (verbose) {
             PrintLn("      %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
@@ -68,7 +68,7 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
         if (mono_results.len && result.stays.len > 1) {
             for (Size k = j; k < j + result.stays.len; k++) {
                 const mco_Result &mono_result = mono_results[k];
-                DebugAssert(mono_result.bill_id == result.bill_id);
+                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
                 ExportResult(1, mono_result);
             }
             j += result.stays.len;
@@ -100,7 +100,7 @@ static void ExportTests(Span<const mco_Result> results,
             j += result.stays.len;
         }
 
-        const mco_Test *test = tests.Find(result.bill_id);
+        const mco_Test *test = tests.Find(result.stays[0].bill_id);
         if (!test)
             continue;
 
@@ -110,7 +110,7 @@ static void ExportTests(Span<const mco_Result> results,
                 failed_clusters++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate cluster %3 != %4",
-                            test->bill_id, result.exit_date,
+                            test->bill_id, result.stays[result.stays.len - 1].exit.date,
                             result.stays.len, test->cluster_len);
                 }
             }
@@ -122,7 +122,7 @@ static void ExportTests(Span<const mco_Result> results,
                 failed_ghm++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
-                            test->bill_id, result.exit_date,
+                            test->bill_id, result.stays[result.stays.len - 1].exit.date,
                             result.ghm, FmtArg(result.main_error).Pad(-3),
                             test->ghm, FmtArg(test->error).Pad(-3));
                 }
@@ -135,7 +135,7 @@ static void ExportTests(Span<const mco_Result> results,
                 failed_ghs++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate GHS %3 != %4",
-                            test->bill_id, result.exit_date,
+                            test->bill_id, result.stays[result.stays.len - 1].exit.date,
                             result.ghs, test->ghs);
                 }
             }
@@ -149,7 +149,7 @@ static void ExportTests(Span<const mco_Result> results,
                     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
                         if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
                             PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
-                                    test->bill_id, result.exit_date,
+                                    test->bill_id, result.stays[1].exit.date,
                                     mco_SupplementTypeNames[i], result.supplement_days.values[i],
                                     test->supplement_days.values[i]);
                         }
@@ -164,7 +164,7 @@ static void ExportTests(Span<const mco_Result> results,
             Size max_auth_tests = sub_mono_results.len;
             if (max_auth_tests > ARRAY_SIZE(mco_Test::auth_supplements)) {
                 LogError("Testing only first %1 unit authorizations for stay %2",
-                         ARRAY_SIZE(mco_Test::auth_supplements), result.bill_id);
+                         ARRAY_SIZE(mco_Test::auth_supplements), result.stays[0].bill_id);
                 max_auth_tests = ARRAY_SIZE(mco_Test::auth_supplements);
             }
 
@@ -213,7 +213,7 @@ static void ExportTests(Span<const mco_Result> results,
                 failed_exb_exh++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate EXB/EXH %3 != %4",
-                            test->bill_id, result.exit_date,
+                            test->bill_id, result.stays[result.stays.len - 1].exit.date,
                             result.ghs_pricing.exb_exh, test->exb_exh);
                 }
             }

@@ -26,11 +26,11 @@ double mco_Dispenser::ComputeCoefficients(mco_DispenseMode mode,
 {
     double coefficients_total = 0.0;
     for (const mco_Result &mono_result: mono_results) {
-        DebugAssert(mono_result.bill_id == result.bill_id);
+        DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
         DispenseCoefficient coefficient = {};
 
-        coefficient.unit = mono_result.unit;
+        coefficient.unit = mono_result.stays[0].unit;
 
         switch (mode) {
             case mco_DispenseMode::E: {

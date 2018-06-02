@@ -387,11 +387,12 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
         for (const mco_Result &result: results) {
             char buf[32];
 
-            bill_id[i] = result.bill_id;
+            bill_id[i] = result.stays[0].bill_id;
             if (export_units) {
-                unit[i] = result.unit.number;
+                DebugAssert(result.stays.len == 1);
+                unit[i] = result.stays[0].unit.number;
             }
-            exit_date.Set(i, result.exit_date);
+            exit_date.Set(i, result.stays[result.stays.len - 1].exit.date);
             stays_count[i] = (int)result.stays.len;
             duration[i] = result.duration >= 0 ? result.duration : NA_INTEGER;
             main_stay[i] = (int)result.main_stay_idx + 1;
@@ -707,7 +708,7 @@ RcppExport SEXP drdR_mco_Dispense(SEXP results_xp, SEXP mono_results_xp, SEXP mo
             mono_results2.Clear(64);
             for (Size k = j; k < j + result.stays.len; k++) {
                 mco_Result mono_result = {};
-                mono_result.unit = UnitCode(mono_results.unit[k]);
+                // FIXME: mono_result.unit = UnitCode(mono_results.unit[k]);
                 mono_result.stays.len = 1;
                 mono_result.duration = mono_results.duration[k];
                 mono_result.ghs_pricing.exb_exh = mono_results.exb_exh[i];
