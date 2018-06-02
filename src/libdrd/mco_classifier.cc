@@ -2065,15 +2065,14 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        int ghs_duration;
-        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
+        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &result.ghs_duration);
 
         // Count supplements days
         mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
                              &result.supplement_days);
 
         // Compute prices
-        mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);
+        mco_PriceGhs(agg, result.ghs, result.ghs_duration, &result.ghs_pricing);
         int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
         result.total_cents = result.ghs_pricing.price_cents + supplement_cents;
@@ -2118,8 +2117,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        int ghs_duration;
-        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &ghs_duration);
+        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &result.ghs_duration);
 
         // Count supplements days
         {
@@ -2130,7 +2128,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         }
 
         // Compute prices
-        mco_PriceGhs(agg, result.ghs, ghs_duration, &result.ghs_pricing);
+        mco_PriceGhs(agg, result.ghs, result.ghs_duration, &result.ghs_pricing);
         int supplement_cents = mco_PriceSupplements(agg, result.ghs, result.supplement_days,
                                                     &result.supplement_cents);
         result.total_cents = result.ghs_pricing.price_cents + supplement_cents;

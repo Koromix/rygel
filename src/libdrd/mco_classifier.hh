@@ -80,14 +80,14 @@ struct mco_Result {
     int32_t bill_id;
     UnitCode unit; // For mono results only
     Date exit_date;
-
     Size main_stay_idx;
     int duration;
 
     mco_GhmCode ghm;
     int16_t main_error;
-
     mco_GhsCode ghs;
+    int ghs_duration;
+
     mco_GhsPricingResult ghs_pricing;
     mco_SupplementCounters<int16_t> supplement_days;
     mco_SupplementCounters<int32_t> supplement_cents;
