@@ -136,6 +136,7 @@ function markOutdated(selector, mark)
 // Navigation
 // ------------------------------------------------------------------------
 
+// Routing
 var url_base;
 var url_page;
 var module;
@@ -160,19 +161,22 @@ function switchMenu(selector, enable)
     }
 }
 
-function switchPage(page_url, mark_history)
+function switchPage(new_url, mark_history)
 {
     if (mark_history === undefined)
         mark_history = true;
 
-    if (mark_history && page_url !== url_page) {
-        url_page = page_url;
-        window.history.pushState(null, null, url_base + url_page);
+    new_url_parts = new_url.split('#', 2);
+    if (mark_history && new_url_parts[0] !== url_page) {
+        url_page = new_url_parts[0];
+        window.history.pushState(null, null, url_base + new_url);
     }
+    if (new_url_parts[1])
+        window.location.hash = new_url_parts[1];
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (page_url.startsWith(menu_anchors[i].getAttribute('href')) &&
+        var active = (url_page.startsWith(menu_anchors[i].getAttribute('href')) &&
                       !menu_anchors[i].classList.contains('category'));
         menu_anchors[i].classList.toggle('active', active);
     }
@@ -180,7 +184,7 @@ function switchPage(page_url, mark_history)
 
     removeClass(document.querySelectorAll('.page'), 'active');
 
-    var module_name = page_url.split('/')[0];
+    var module_name = url_page.split('/')[0];
     module = window[module_name];
     if (module !== undefined && module.run !== undefined)
         module.run();
