@@ -327,12 +327,14 @@ var tables = {};
     function makeSpecLink(str)
     {
         var page;
+        var klass = null;
         if (str[0] === 'A') {
             page = 'tables/procedures/' + target_date + '/' + str;
         } else if (str[0] === 'D') {
             page = 'tables/diagnoses/' + target_date + '/' + str;
         } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
             page = 'pricing/table/' + target_date + '/' + str.substr(0, 5);
+            klass = 'ghm';
         } else if (str.match(/noeud [0-9]+/)) {
             page = 'tables/classifier_tree/' + target_date + '#n' + str.substr(6);
         } else {
@@ -343,7 +345,7 @@ var tables = {};
             e.preventDefault();
         };
 
-        var link = createElement('a', {href: page,
+        var link = createElement('a', {href: page, class: klass,
                                        click: click_function}, str);
         return link;
     }

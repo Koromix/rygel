@@ -26,6 +26,10 @@
     border-left: 1px solid #ddd;
 }
 #tables_tree li.collapse ul { display: none !important; }
+#tables_tree a.ghm {
+    background: #ed6d0a;
+    color: white;
+}
 
 #tables_table {
     margin-top: 1em;
