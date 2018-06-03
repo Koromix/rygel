@@ -1426,7 +1426,7 @@ template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashTable {
 public:
-    uint64_t *used = nullptr;
+    size_t *used = nullptr;
     ValueType *data = nullptr;
     Size count = 0;
     Size capacity = 0;
@@ -1609,9 +1609,8 @@ private:
         Size old_capacity = capacity;
 
         if (new_capacity) {
-            // We need to zero memory for POD values, we could avoid it in other
-            // cases but I'll wait for widespred constexpr if (C++17) support
-            used = (uint64_t *)Allocator::Allocate(allocator, (new_capacity + 1) / 8,
+            used = (uint64_t *)Allocator::Allocate(allocator,
+                                                   (new_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t),
                                                    (int)Allocator::Flag::Zero);
             data = (ValueType *)Allocator::Allocate(allocator, new_capacity * SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
@@ -1641,15 +1640,15 @@ private:
 
     void MarkUsed(Size idx)
     {
-        used[idx / 64] |= (1ull << (idx % 64));
+        used[idx / (SIZE(size_t) * 8)] |= (1ull << (idx % (SIZE(size_t) * 8)));
     }
     void MarkEmpty(Size idx)
     {
-        used[idx / 64] &= ~(1ull << (idx % 64));
+        used[idx / (SIZE(size_t) * 8)] &= ~(1ull << (idx % (SIZE(size_t) * 8)));
     }
     Size IsEmpty(uint64_t *used, Size idx) const
     {
-        return !(used[idx / 64] & (1ull << (idx % 64)));
+        return !(used[idx / (SIZE(size_t) * 8)] & (1ull << (idx % (SIZE(size_t) * 8))));
     }
 
     Size HashToIndex(uint64_t hash) const
