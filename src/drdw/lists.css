@@ -10,6 +10,7 @@
 }
 #tables_tree li.collapse { list-style-type: disclosure-closed; }
 #tables_tree li.collapse ul { display: hide !important; }
+#tables_tree .n { color: #888; }
 
 #tables_table {
     margin-top: 1em;

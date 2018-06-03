@@ -201,7 +201,10 @@ var tables = {};
                     break;
                 } else {
                     var li = createElement('li', {click: click_function},
-                                           addSpecLinks(node.text));
+                        createElement('span', {id: 'n' + node_idx, class: 'n'},
+                                      '' + node_idx + '. '),
+                        addSpecLinks(node.text)
+                    );
 
                     if (node.children_idx) {
                         for (var j = 1; j < node.children_count; j++) {
@@ -317,8 +320,10 @@ var tables = {};
             page = 'tables/procedures/' + target_date + '/' + str;
         } else if (str[0] === 'D') {
             page = 'tables/diagnoses/' + target_date + '/' + str;
-        } else if (str.match('^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$')) {
+        } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
             page = 'pricing/table/' + target_date + '/' + str.substr(0, 5);
+        } else if (str.match(/noeud [0-9]+/)) {
+            page = 'tables/classifier_tree/' + target_date + '#n' + str.substr(6);
         } else {
             return str;
         }
@@ -337,7 +342,7 @@ var tables = {};
     {
         var elements = [];
         for (;;) {
-            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?)/);
+            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|noeud [0-9]+)/);
             if (!m)
                 break;
 
