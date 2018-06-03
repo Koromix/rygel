@@ -3,14 +3,20 @@
     text-align: center;
 }
 
-#tables_tree li { list-style-type: disclosure-open; }
+#tables_tree li { list-style-type: none; }
+#tables_tree .n { color: #888; }
+#tables_tree li.parent > .n {
+    background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGDpgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpIhyAADsMRhoPHRcAAAAAABJRU5ErkJggg==') no-repeat;
+    padding-left: 1em;
+    cursor: pointer;
+}
+#tables_tree li.collapse > .n { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGBRgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtIBgAhjBiJF1go8wAAAABJRU5ErkJggg==') no-repeat; }
+
 #tables_tree ul {
-    margin-left: -10px;
+    margin-left: 4px;
     border-left: 1px solid #ddd;
 }
-#tables_tree li.collapse { list-style-type: disclosure-closed; }
-#tables_tree li.collapse ul { display: hide !important; }
-#tables_tree .n { color: #888; }
+#tables_tree li.collapse ul { display: none !important; }
 
 #tables_table {
     margin-top: 1em;

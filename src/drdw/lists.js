@@ -10,6 +10,8 @@ var tables = {};
     var items_init = false;
     var items = {};
 
+    var collapse_nodes = new Set();
+
     const TableColumns = {
         'ghm_ghs': [
             'ghm',
@@ -181,15 +183,21 @@ var tables = {};
 
     function refreshClassifierTree(nodes)
     {
+        var click_function = function(e) {
+            var collapse_id = target_date + this.parentNode.id;
+            if (this.parentNode.classList.toggle('collapse')) {
+                collapse_nodes.add(collapse_id);
+            } else {
+                collapse_nodes.delete(collapse_id);
+            }
+            e.preventDefault();
+        };
+
         function recurseNodes(node_idx, ignore_header)
         {
             var ul = createElement('ul');
             for (var i = 0;; i++) {
                 var node = nodes[node_idx];
-
-                var click_function = function(e) {
-                    // FIXME: this.classList.toggle('collapse');
-                };
 
                 if (node.header && !ignore_header) {
                     var li = createElement('li', {click: click_function},
@@ -199,26 +207,29 @@ var tables = {};
                     ul.appendChild(li);
 
                     break;
-                } else {
-                    var li = createElement('li', {click: click_function},
-                        createElement('span', {id: 'n' + node_idx, class: 'n'},
-                                      '' + node_idx + '. '),
+                } else if (node.children_idx) {
+                    var li = createElement('li', {id: 'n' + node_idx, class: 'parent'},
+                        createElement('span', {class: 'n',
+                                               click: click_function}, '' + node_idx + '. '),
                         addSpecLinks(node.text)
                     );
-
-                    if (node.children_idx) {
-                        for (var j = 1; j < node.children_count; j++) {
-                            var child_ul = recurseNodes(node.children_idx + j);
-                            li.appendChild(child_ul);
-                        }
-                        ul.appendChild(li);
-
-                        node_idx = node.children_idx;
-                    } else {
-                        ul.appendChild(li);
-
-                        break;
+                    if (collapse_nodes.has(target_date + 'n' + node_idx))
+                        li.classList.add('collapse');
+                    for (var j = 1; j < node.children_count; j++) {
+                        var child_ul = recurseNodes(node.children_idx + j);
+                        li.appendChild(child_ul);
                     }
+                    ul.appendChild(li);
+
+                    node_idx = node.children_idx;
+                } else {
+                    var li = createElement('li', {id: 'n' + node_idx},
+                        createElement('span', {class: 'n'}, '' + node_idx + '. '),
+                        addSpecLinks(node.text)
+                    );
+                    ul.appendChild(li);
+
+                    break;
                 }
             }
 
