@@ -443,12 +443,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
     Rcpp::CharacterVector options_vec(options_xp);
-    Rcc_Vector<bool> details(details_xp);
-    Rcc_Vector<const char *> dispense_mode_vec(dispense_mode_xp);
-    if (details.Len() != 1)
-        Rcpp::stop("Expected one logical value for 'details'");
-    if (dispense_mode_vec.Len() > 1)
-        Rcpp::stop("Expected NULL or one string for 'dispense_mode'");
+    bool details = Rcpp::as<bool>(details_xp);
+    const char *dispense_mode_str = !Rf_isNull(dispense_mode_xp) ?
+                                    Rcpp::as<const char *>(dispense_mode_xp) : nullptr;
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
@@ -461,12 +458,12 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     int dispense_mode = -1;
-    if (dispense_mode_vec.Len()) {
+    if (dispense_mode_str) {
         const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                               std::end(mco_DispenseModeOptions),
-                                              [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_vec[0]); });
+                                              [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
         if (desc == std::end(mco_DispenseModeOptions)) {
-            LogError("Unknown dispensation mode '%1'", dispense_mode_vec[0]);
+            LogError("Unknown dispensation mode '%1'", dispense_mode_str);
             Rcc_StopWithLastError();
         }
         dispense_mode = (int)(desc - mco_DispenseModeOptions);
@@ -597,7 +594,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                    flags, task_stay_set, task_results, task_mono_results))
                     return false;
 
-                if (details[0] || dispense_mode >= 0) {
+                if (details || dispense_mode >= 0) {
                     mco_Price(*task_results, task_pricings);
                     if (dispense_mode >= 0) {
                         mco_Dispense(*task_pricings, *task_mono_results,
@@ -648,7 +645,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     Rcc_AutoSexp results_df;
-    if (details[0]) {
+    if (details) {
         results_df = ExportResultsDataFrame(result_sets, pricing_sets, false);
     }
 

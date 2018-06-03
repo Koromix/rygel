@@ -439,7 +439,7 @@ public:
             nrow = 0;
         }
 
-        SEXP df = BuildList();
+        Rcc_AutoSexp df = BuildList();
 
         // Class
         {
