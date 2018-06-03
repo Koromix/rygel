@@ -2077,7 +2077,8 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
                     mono_result->main_error = mono_errors.main_error;
 
                     // Classify GHS
-                    mono_result->ghs = mco_PickGhs(agg, authorization_set, mono_result->ghm, flags);
+                    mono_result->ghs = mco_PickGhs(agg, authorization_set, mono_result->ghm, flags,
+                                                   &mono_result->ghs_duration);
                 } else {
                     mono_result->ghs = mco_GhsCode(9999);
                 }
