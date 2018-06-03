@@ -1640,16 +1640,17 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
     return true;
 }
 
-mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+mco_GhsCode mco_PickGhs(const mco_AuthorizationSet &authorization_set,
+                        const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
                         mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
 {
     mco_GhsCode ghs = mco_GhsCode(9999);
-    int ghs_duration = agg.info.duration;
+    int ghs_duration = info.duration;
 
     if (LIKELY(ghm.IsValid() && !ghm.IsError())) {
         // Deal with UHCD-only stays
         bool uhcd = false;
-        if (agg.info.duration > 0 && agg.stays[0].entry.mode == '8' &&
+        if (info.duration > 0 && agg.stays[0].entry.mode == '8' &&
                 agg.stays[agg.stays.len - 1].exit.mode == '8') {
             uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
                                     [&](const mco_Stay &stay) {
@@ -1660,18 +1661,15 @@ mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &au
             if (uhcd) {
                 ghs_duration = 0;
 
-                // Use memcpy to avoid deep copy of arrays (diagnoses, procedures, etc.)
-                mco_Aggregate agg0;
-                memcpy(&agg0, &agg, SIZE(agg0));
-                DEFER { memset(&agg0, 0, SIZE(agg0)); };
-                agg0.info.duration = 0;
+                mco_Aggregate::StayInfo info0 = info;
+                info0.duration = 0;
 
                 // Don't run ClassifyGhm() because that would test the confirmation flag,
                 // which makes no sense when duration is forced to 0.
-                ghm = RunGhmTree(agg0, agg0.info, nullptr);
+                ghm = RunGhmTree(agg, info0, nullptr);
                 const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
                 if (LIKELY(ghm_root_info)) {
-                    ghm = RunGhmSeverity(agg0, agg0.info, ghm, *ghm_root_info);
+                    ghm = RunGhmSeverity(agg, info0, ghm, *ghm_root_info);
                 }
             }
         }
@@ -1994,7 +1992,8 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &result.ghs_duration);
+        result.ghs = mco_PickGhs(authorization_set, agg, agg.info, result.ghm, flags,
+                                 &result.ghs_duration);
 
         // Count supplements days
         mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
@@ -2039,7 +2038,8 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_PickGhs(agg, authorization_set, result.ghm, flags, &result.ghs_duration);
+        result.ghs = mco_PickGhs(authorization_set, agg, agg.info, result.ghm, flags,
+                                 &result.ghs_duration);
 
         // Count supplements days
         {
@@ -2077,7 +2077,8 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
                     mono_result->main_error = mono_errors.main_error;
 
                     // Classify GHS
-                    mono_result->ghs = mco_PickGhs(agg, authorization_set, mono_result->ghm, flags,
+                    mono_result->ghs = mco_PickGhs(authorization_set, agg, stay_info,
+                                                   mono_result->ghm, flags,
                                                    &mono_result->ghs_duration);
                 } else {
                     mono_result->ghs = mco_GhsCode(9999);
