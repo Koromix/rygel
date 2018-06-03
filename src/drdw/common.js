@@ -273,7 +273,7 @@ function refreshIndexesLine(selector, main_index)
             var radius = indexes[i].changed_prices ? 5 : 4;
             if (i == main_index) {
                 radius++;
-                var color = '#ff8900';
+                var color = '#ed6d0a';
                 var weight = 'bold';
             } else if (indexes[i].changed_prices) {
                 var color = '#000';

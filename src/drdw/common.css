@@ -7,6 +7,13 @@ body {
 }
 #side_bar { background: #eeeeee; }
 
+/* Common tags */
+a {
+    color: #ed6d0a;
+    text-decoration: none;
+    font-weight: bold;
+}
+
 /* Side bar */
 #side_menu ul {
     margin: 0;
@@ -20,7 +27,7 @@ body {
     text-decoration: none;
     color: black;
 }
-#side_menu a.category { font-weight: bold; }
+#side_menu a:not(.category) { font-weight: normal; }
 #side_menu a.active {
     background: #262626;
     color: white;
