@@ -950,9 +950,18 @@ public:
         Grow(count);
 
         T *first = ptr + len;
-        for (Size i = 0; i < count; i++) {
-            new (ptr + len) T();
-            len++;
+#if __cplusplus >= 201703L
+        if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
+            for (Size i = 0; i < count; i++) {
+                new (ptr + len) T();
+                len++;
+            }
+        } else {
+            memset(first, 0, count * SIZE(T));
+            len += count;
         }
         return first;
     }
