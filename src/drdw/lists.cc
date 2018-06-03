@@ -310,8 +310,12 @@ static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
             } break;
 
             case mco_GhmDecisionNode::Type::Ghm: {
-                out_node->text = Fmt(ctx.str_alloc, "GHM %1 [%2]",
-                                     ghm_node.u.ghm.ghm, ghm_node.u.ghm.error).ptr;
+                if (ghm_node.u.ghm.error) {
+                    out_node->text = Fmt(ctx.str_alloc, "GHM %1 [%2]",
+                                         ghm_node.u.ghm.ghm, ghm_node.u.ghm.error).ptr;
+                } else {
+                    out_node->text = Fmt(ctx.str_alloc, "GHM %1", ghm_node.u.ghm.ghm).ptr;
+                }
                 return true;
             } break;
         }
