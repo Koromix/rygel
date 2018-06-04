@@ -242,7 +242,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 35: {
-            out_node->text = "DP / DR inversés = 1";
+            out_node->text = "DP / DR inversés";
         } break;
 
         case 36: {
