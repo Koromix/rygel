@@ -229,6 +229,7 @@ var tables = {};
                 var next_idx = node.children_idx;
 
                 if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
+                    // Here we deal with jump lists (mainly D-xx and D-xxxx)
                     for (var j = 1; j < node.children_count; j++) {
                         var children = recurseNodes(node.children_idx + j, next_idx);
 
@@ -254,6 +255,7 @@ var tables = {};
 
                     var li = createNodeLi(node_idx, node.text, children.tagName === 'UL');
 
+                    // Simplify OR GOTO chains
                     while (next_idx && nodes[next_idx].children_count === 2 &&
                            nodes[nodes[next_idx].children_idx + 1].goto_idx === node.children_idx + 1) {
                         li.appendChild(createElement('br'));
@@ -267,6 +269,8 @@ var tables = {};
                     appendChildren(li, children);
                     ul.appendChild(li);
                 } else if (next_idx || node.goto_idx !== parent_next_idx) {
+                    // The test above hides GOTO nodes at the end of chains that
+                    // the classifier uses to jump back to go back one level.
                     var li = createNodeLi(node_idx, node.text,
                                           node.children_count && node.children_count > 1);
                     ul.appendChild(li);
@@ -280,6 +284,7 @@ var tables = {};
                 node_idx = next_idx;
             }
 
+            // Simplify when there is only one leaf children
             if (ul.querySelectorAll('.n').length == 1) {
                 var ul = Array.prototype.slice.call(ul.querySelector('li > span').childNodes);
                 ul.unshift(' ⇒ ');
