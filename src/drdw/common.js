@@ -35,24 +35,24 @@ function createElement(tag, attr)
     return createElementNS.apply(this, args);
 }
 
+function appendChildren(el, children)
+{
+    if (children === null || children === undefined) {
+        // Skip
+    } else if (typeof children === 'string') {
+        el.appendChild(document.createTextNode(children));
+    } else if (Array.isArray(children) || children instanceof NodeList) {
+        for (var i = 0; i < children.length; i++)
+            appendChildren(el, children[i]);
+    } else {
+        el.appendChild(children);
+    }
+}
+
 function createElementNS(ns, tag, attr)
 {
     ns = getFullNamespace(ns);
     var el = document.createElementNS(ns, tag);
-
-    function appendChild(child)
-    {
-        if (child === null || child === undefined) {
-            // Skip
-        } else if (typeof child === 'string') {
-            el.appendChild(document.createTextNode(child));
-        } else if (Array.isArray(child)) {
-            for (var i = 0; i < child.length; i++)
-                appendChild(child[i]);
-        } else {
-            el.appendChild(child);
-        }
-    }
 
     if (attr) {
         for (var key in attr) {
@@ -68,7 +68,7 @@ function createElementNS(ns, tag, attr)
     }
 
     for (var i = 3; i < arguments.length; i++)
-        appendChild(arguments[i]);
+        appendChildren(el, arguments[i]);
 
     return el;
 }
