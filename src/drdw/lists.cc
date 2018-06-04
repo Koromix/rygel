@@ -66,7 +66,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         case 0:
         case 1: {
             if (ghm_node.u.test.params[0] == 0) {
-                out_node->text = "DP (saut CMD)";
+                out_node->text = "DP";
 
                 int8_t prev_cmd = ctx.cmd;
                 for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
@@ -82,7 +82,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
 
                 return ghm_node.u.test.children_idx;
             } else if (ghm_node.u.test.params[0] == 1) {
-                out_node->text = "DP (saut liste D-XXXX)";
+                out_node->text = "DP";
 
                 for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
                     Size child_idx = ghm_node.u.test.children_idx + i;

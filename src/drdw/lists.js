@@ -193,53 +193,70 @@ var tables = {};
             e.preventDefault();
         };
 
-        function recurseNodes(node_idx, ignore_header)
+        function createNodeLi(idx, text, parent)
+        {
+            var content = addSpecLinks(text);
+
+            if (parent) {
+                var li = createElement('li', {id: 'n' + idx, class: 'parent'},
+                    createElement('span', {class: 'n',
+                                           click: click_function}, '' + idx + ' '),
+                    content
+                );
+                if (collapse_nodes.has(target_date + 'n' + idx))
+                    li.classList.add('collapse');
+            } else {
+                var li = createElement('li', {id: 'n' + idx},
+                    createElement('span', {class: 'n'}, '' + idx + ' '),
+                    content
+                );
+            }
+
+            return li;
+        }
+
+        function recurseNodes(node_idx)
         {
             var ul = createElement('ul');
+
             for (var i = 0;; i++) {
                 var node = nodes[node_idx];
 
-                if (node.header && !ignore_header) {
-                    var li = createElement('li', {click: click_function},
-                                           addSpecLinks(node.header));
-                    var child_ul = recurseNodes(node_idx, true);
-                    li.appendChild(child_ul);
-                    ul.appendChild(li);
-
-                    break;
-                } else if (node.children_idx) {
-                    var li = createElement('li', {id: 'n' + node_idx, class: 'parent'},
-                        createElement('span', {class: 'n',
-                                               click: click_function}, '' + node_idx + '. '),
-                        addSpecLinks(node.text)
-                    );
-                    if (collapse_nodes.has(target_date + 'n' + node_idx))
-                        li.classList.add('collapse');
+                if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                     for (var j = 1; j < node.children_count; j++) {
+                        var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + (j - 1)) : node_idx;
+                        var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
+                        var li = createNodeLi(pseudo_idx, pseudo_text, true);
+                        ul.appendChild(li);
+
                         var child_ul = recurseNodes(node.children_idx + j);
                         li.appendChild(child_ul);
                     }
-                    ul.appendChild(li);
-
-                    node_idx = node.children_idx;
                 } else {
-                    var li = createElement('li', {id: 'n' + node_idx},
-                        createElement('span', {class: 'n'}, '' + node_idx + '. '),
-                        addSpecLinks(node.text)
-                    );
+                    var li = createNodeLi(node_idx, node.text,
+                                          node.children_count && node.children_count > 1);
                     ul.appendChild(li);
 
-                    break;
+                    if (node.children_idx) {
+                        for (var j = 1; j < node.children_count; j++) {
+                            var child_ul = recurseNodes(node.children_idx + j);
+                            li.appendChild(child_ul);
+                        }
+                    } else {
+                        break;
+                    }
                 }
+
+                node_idx = node.children_idx;
             }
 
             return ul;
         }
 
         if (nodes.length) {
-            var ul = recurseNodes(0, false);
+            var ul = recurseNodes(0);
         } else {
-            var ul = createElement('ul');
+            var ul = createElement('ul', {});
         }
 
         var old_ul = document.querySelector('#tables_tree');
