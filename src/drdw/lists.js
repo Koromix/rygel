@@ -184,8 +184,9 @@ var tables = {};
     function refreshClassifierTree(nodes)
     {
         var click_function = function(e) {
-            var collapse_id = target_date + this.parentNode.id;
-            if (this.parentNode.classList.toggle('collapse')) {
+            var li = this.parentNode.parentNode;
+            var collapse_id = target_date + li.id;
+            if (li.classList.toggle('collapse')) {
                 collapse_nodes.add(collapse_id);
             } else {
                 collapse_nodes.delete(collapse_id);
@@ -199,16 +200,20 @@ var tables = {};
 
             if (parent) {
                 var li = createElement('li', {id: 'n' + idx, class: 'parent'},
-                    createElement('span', {class: 'n',
-                                           click: click_function}, '' + idx + ' '),
-                    content
+                    createElement('span', {},
+                        createElement('span', {class: 'n',
+                                               click: click_function}, '' + idx + ' '),
+                        content
+                    )
                 );
                 if (collapse_nodes.has(target_date + 'n' + idx))
                     li.classList.add('collapse');
             } else {
                 var li = createElement('li', {id: 'n' + idx, class: 'leaf'},
-                    createElement('span', {class: 'n'}, '' + idx + ' '),
-                    content
+                    createElement('span', {},
+                        createElement('span', {class: 'n'}, '' + idx + ' '),
+                        content
+                    )
                 );
             }
 
@@ -236,12 +241,28 @@ var tables = {};
                     }
 
                     node_idx = node.children_idx;
-                } else if (node.children_count === 2) {
-                    next_idx += !!node.reverse;
-                    var children = recurseNodes(node.children_idx + !node.reverse, next_idx);
+                } else if (node.children_count === 2 && node.reverse) {
+                    next_idx++;
+                    var children = recurseNodes(node.children_idx, next_idx);
 
-                    var li = createNodeLi(node_idx, node.reverse ? node.reverse : node.text,
-                                          children.tagName === 'UL');
+                    var li = createNodeLi(node_idx, node.reverse, children.tagName === 'UL');
+
+                    appendChildren(li, children);
+                    ul.appendChild(li);
+                } else if (node.children_count === 2) {
+                    var children = recurseNodes(node.children_idx + 1, next_idx);
+
+                    var li = createNodeLi(node_idx, node.text, children.tagName === 'UL');
+
+                    while (next_idx && nodes[next_idx].children_count === 2 &&
+                           nodes[nodes[next_idx].children_idx + 1].goto_idx === node.children_idx + 1) {
+                        li.appendChild(createElement('br'));
+
+                        var li2 = createNodeLi(next_idx, nodes[next_idx].text, true);
+                        appendChildren(li, li2.childNodes);
+
+                        next_idx = nodes[next_idx].children_idx;
+                    }
 
                     appendChildren(li, children);
                     ul.appendChild(li);
@@ -260,7 +281,7 @@ var tables = {};
             }
 
             if (ul.querySelectorAll('.n').length == 1) {
-                var ul = Array.prototype.slice.call(ul.querySelector('li').childNodes);
+                var ul = Array.prototype.slice.call(ul.querySelector('li > span').childNodes);
                 ul.unshift(' ⇒ ');
             }
 

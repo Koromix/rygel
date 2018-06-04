@@ -15,7 +15,7 @@
 }
 #tables_tree .n:first-child { padding-left: 12px; }
 #tables_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
-#tables_tree li.parent > .n { cursor: pointer; }
+#tables_tree li.parent > span > .n { cursor: pointer; }
 #tables_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
 #tables_tree li.leaf { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC') no-repeat; }
 #tables_tree ul {
