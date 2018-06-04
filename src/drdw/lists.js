@@ -287,7 +287,7 @@ var tables = {};
             // Simplify when there is only one leaf children
             if (ul.querySelectorAll('.n').length == 1) {
                 var ul = Array.prototype.slice.call(ul.querySelector('li > span').childNodes);
-                ul.unshift(' ⇒ ');
+                ul.unshift(' → ');
             }
 
             return ul;
