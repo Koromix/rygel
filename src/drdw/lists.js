@@ -215,16 +215,17 @@ var tables = {};
             return li;
         }
 
-        function recurseNodes(node_idx)
+        function recurseNodes(node_idx, parent_next_idx)
         {
             var ul = createElement('ul');
 
             for (var i = 0; node_idx !== undefined; i++) {
                 var node = nodes[node_idx];
+                var next_idx = node.children_idx;
 
                 if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                     for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j);
+                        var children = recurseNodes(node.children_idx + j, next_idx);
 
                         var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + (j - 1)) : node_idx;
                         var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
@@ -236,27 +237,26 @@ var tables = {};
 
                     node_idx = node.children_idx;
                 } else if (node.children_count === 2) {
-                    var children = recurseNodes(node.children_idx + !node.reverse);
+                    next_idx += !!node.reverse;
+                    var children = recurseNodes(node.children_idx + !node.reverse, next_idx);
 
                     var li = createNodeLi(node_idx, node.reverse ? node.reverse : node.text,
                                           children.tagName === 'UL');
 
                     appendChildren(li, children);
                     ul.appendChild(li);
-
-                    node_idx = node.children_idx + !!node.reverse;
-                } else {
+                } else if (next_idx || node.goto_idx !== parent_next_idx) {
                     var li = createNodeLi(node_idx, node.text,
                                           node.children_count && node.children_count > 1);
                     ul.appendChild(li);
 
                     for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j);
+                        var children = recurseNodes(node.children_idx + j, next_idx);
                         appendChildren(li, children);
                     }
-
-                    node_idx = node.children_idx;
                 }
+
+                node_idx = next_idx;
             }
 
             if (ul.querySelectorAll('.n').length == 1) {

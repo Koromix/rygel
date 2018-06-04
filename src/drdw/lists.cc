@@ -39,6 +39,7 @@ struct ReadableGhmDecisionNode {
     const char *text;
     const char *reverse;
 
+    uint8_t function;
     Size children_idx;
     Size children_count;
 };
@@ -60,6 +61,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
     DebugAssert(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     // FIXME: Check children_idx and children_count
+    out_node->function = ghm_node.u.test.function;
     out_node->children_idx = ghm_node.u.test.children_idx;
     out_node->children_count = ghm_node.u.test.children_count;
 
@@ -309,11 +311,8 @@ static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
                     return false;
 
                 // GOTO is special
-                if (ghm_node.u.test.function == 20) {
-                    out_node->children_idx = 0;
-                    out_node->children_count = 0;
+                if (ghm_node.u.test.function == 20)
                     return true;
-                }
             } break;
 
             case mco_GhmDecisionNode::Type::Ghm: {
@@ -382,7 +381,9 @@ Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionTy
             if (readable_node.reverse) {
                 writer.Key("reverse"); writer.String(readable_node.reverse);
             }
-            if (readable_node.children_idx) {
+            if (readable_node.function == 20) {
+                writer.Key("goto_idx"); writer.Int64(readable_node.children_idx);
+            } else if (readable_node.children_idx) {
                 writer.Key("children_idx"); writer.Int64(readable_node.children_idx);
                 writer.Key("children_count"); writer.Int64(readable_node.children_count);
             }
