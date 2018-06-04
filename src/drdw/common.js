@@ -73,7 +73,8 @@ function createElementNS(ns, tag, attr)
     return el;
 }
 
-function cloneAttributes(src_node, element) {
+function cloneAttributes(src_node, element)
+{
     var attributes = src_node.attributes;
     for (var i = 0; i < attributes.length; i++) {
         element.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
