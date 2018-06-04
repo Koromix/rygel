@@ -140,6 +140,7 @@ function markOutdated(selector, mark)
 // Routing
 var url_base;
 var url_page;
+var url_hash;
 var module;
 
 // Error accumulator
@@ -172,8 +173,7 @@ function switchPage(new_url, mark_history)
         url_page = new_url_parts[0];
         window.history.pushState(null, null, url_base + new_url);
     }
-    if (new_url_parts[1])
-        window.location.hash = new_url_parts[1];
+    url_hash = new_url_parts[1] || null;
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
@@ -189,6 +189,9 @@ function switchPage(new_url, mark_history)
     module = window[module_name];
     if (module !== undefined && module.run !== undefined)
         module.run();
+
+    if (url_hash)
+        window.location.hash = url_hash;
 }
 
 function initNavigation()

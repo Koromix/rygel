@@ -299,6 +299,16 @@ var tables = {};
             var ul = createElement('ul', {});
         }
 
+        // Make sure the corresponding node is visible
+        if (url_hash && url_hash.match(/^n[0-9]+$/)) {
+            var el = ul.querySelector('#' + url_hash);
+            while (el && el !== ul) {
+                if (el.tagName === 'LI')
+                    el.classList.remove('collapse');
+                el = el.parentNode;
+            }
+        }
+
         var old_ul = document.querySelector('#tables_tree');
         cloneAttributes(old_ul, ul);
         old_ul.parentNode.replaceChild(ul, old_ul);
