@@ -24,6 +24,8 @@
 }
 #tables_tree li.collapse ul { display: none !important; }
 #tables_tree a.ghm {
+    display: inline-block;
+    padding: 0 2px;
     background: #ed6d0a;
     color: white;
 }
