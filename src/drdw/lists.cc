@@ -112,7 +112,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                 out_node->text = Fmt(ctx.str_alloc, "Age (jours) > %1",
                                      ghm_node.u.test.params[0]).ptr;
                 if (ghm_node.u.test.params[0] == 7) {
-                    out_node->reverse = "Age (jours) <= 7";
+                    out_node->reverse = "Age (jours) ≤ 7";
                 }
             } else {
                 out_node->text = Fmt(ctx.str_alloc, "Age > %1",
@@ -251,7 +251,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 38: {
-            out_node->text = Fmt(ctx.str_alloc, "GNN >= %1 et <= %2",
+            out_node->text = Fmt(ctx.str_alloc, "GNN ≥ %1 et ≤ %2",
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
         } break;
 
