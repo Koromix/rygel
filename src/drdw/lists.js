@@ -219,7 +219,7 @@ var tables = {};
         {
             var ul = createElement('ul');
 
-            for (var i = 0;; i++) {
+            for (var i = 0; node_idx !== undefined; i++) {
                 var node = nodes[node_idx];
 
                 if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
@@ -232,22 +232,28 @@ var tables = {};
                         var child_ul = recurseNodes(node.children_idx + j);
                         li.appendChild(child_ul);
                     }
+
+                    node_idx = node.children_idx;
+                } else if (node.reverse && node.children_count === 2) {
+                    var li = createNodeLi(node_idx, node.reverse, true);
+                    ul.appendChild(li);
+
+                    var child_ul = recurseNodes(node.children_idx);
+                    li.appendChild(child_ul);
+
+                    node_idx = node.children_idx + 1;
                 } else {
                     var li = createNodeLi(node_idx, node.text,
                                           node.children_count && node.children_count > 1);
                     ul.appendChild(li);
 
-                    if (node.children_idx) {
-                        for (var j = 1; j < node.children_count; j++) {
-                            var child_ul = recurseNodes(node.children_idx + j);
-                            li.appendChild(child_ul);
-                        }
-                    } else {
-                        break;
+                    for (var j = 1; j < node.children_count; j++) {
+                        var child_ul = recurseNodes(node.children_idx + j);
+                        li.appendChild(child_ul);
                     }
-                }
 
-                node_idx = node.children_idx;
+                    node_idx = node.children_idx;
+                }
             }
 
             return ul;

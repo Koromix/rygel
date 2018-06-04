@@ -37,6 +37,7 @@ Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compress
 struct ReadableGhmDecisionNode {
     const char *header;
     const char *text;
+    const char *reverse;
 
     Size children_idx;
     Size children_count;
@@ -110,6 +111,9 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
             if (ghm_node.u.test.params[1] == 1) {
                 out_node->text = Fmt(ctx.str_alloc, "Age (jours) > %1",
                                      ghm_node.u.test.params[0]).ptr;
+                if (ghm_node.u.test.params[0] == 7) {
+                    out_node->reverse = "Age (jours) <= 7";
+                }
             } else {
                 out_node->text = Fmt(ctx.str_alloc, "Age > %1",
                                      ghm_node.u.test.params[0]).ptr;
@@ -223,6 +227,9 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         case 30: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
             out_node->text = Fmt(ctx.str_alloc, "Nombre de séances = %1", param).ptr;
+            if (param == 0) {
+                out_node->reverse = "Nombre de séances > 0";
+            }
         } break;
 
         case 33: {
@@ -372,6 +379,9 @@ Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionTy
                 writer.Key("header"); writer.String(readable_node.header);
             }
             writer.Key("text"); writer.String(readable_node.text);
+            if (readable_node.reverse) {
+                writer.Key("reverse"); writer.String(readable_node.reverse);
+            }
             if (readable_node.children_idx) {
                 writer.Key("children_idx"); writer.Int64(readable_node.children_idx);
                 writer.Key("children_count"); writer.Int64(readable_node.children_count);
