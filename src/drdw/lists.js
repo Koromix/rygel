@@ -220,18 +220,38 @@ var tables = {};
             return li;
         }
 
-        function recurseNodes(node_idx, parent_next_idx)
+        function recurseNodes(start_idx, parent_next_indices)
         {
             var ul = createElement('ul');
 
-            for (var i = 0; node_idx !== undefined; i++) {
+            var indices = [];
+            for (var node_idx = start_idx;;) {
+                indices.push(node_idx);
+
                 var node = nodes[node_idx];
-                var next_idx = node.children_idx;
+                if (nodes[node_idx].test === 20)
+                    break;
+
+                node_idx = node.children_idx;
+                if (node_idx === undefined)
+                    break;
+                node_idx += !!node.reverse;
+            }
+
+            while (indices.length) {
+                var node_idx = indices[0];
+                var node = nodes[node_idx];
+                indices.shift();
+
+                // Hide GOTO nodes at the end of a chain, the classifier uses those to
+                // jump back to go back one level.
+                if (node.test === 20 && node.children_idx === parent_next_indices[0])
+                    break;
 
                 if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                     // Here we deal with jump lists (mainly D-xx and D-xxxx)
                     for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j, next_idx);
+                        var children = recurseNodes(node.children_idx + j, indices);
 
                         var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + (j - 1)) : node_idx;
                         var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
@@ -240,52 +260,56 @@ var tables = {};
                         appendChildren(li, children);
                         ul.appendChild(li);
                     }
-
-                    node_idx = node.children_idx;
                 } else if (node.children_count === 2 && node.reverse) {
-                    next_idx++;
-                    var children = recurseNodes(node.children_idx, next_idx);
+                    var children = recurseNodes(node.children_idx, indices);
 
                     var li = createNodeLi(node_idx, node.reverse, children.tagName === 'UL');
 
                     appendChildren(li, children);
                     ul.appendChild(li);
                 } else if (node.children_count === 2) {
-                    var children = recurseNodes(node.children_idx + 1, next_idx);
+                    var children = recurseNodes(node.children_idx + 1, indices);
 
                     var li = createNodeLi(node_idx, node.text, children.tagName === 'UL');
 
                     // Simplify OR GOTO chains
-                    while (next_idx && nodes[next_idx].children_count === 2 &&
-                           nodes[nodes[next_idx].children_idx + 1].goto_idx === node.children_idx + 1) {
+                    while (indices.length && nodes[indices[0]].children_count === 2 &&
+                           nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
+                           nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
                         li.appendChild(createElement('br'));
 
-                        var li2 = createNodeLi(next_idx, nodes[next_idx].text, true);
+                        var li2 = createNodeLi(indices[0], nodes[indices[0]].text, true);
                         appendChildren(li, li2.childNodes);
 
-                        next_idx = nodes[next_idx].children_idx;
+                        indices.shift();
                     }
 
                     appendChildren(li, children);
                     ul.appendChild(li);
-                } else if (next_idx || node.goto_idx !== parent_next_idx) {
-                    // The test above hides GOTO nodes at the end of chains that
-                    // the classifier uses to jump back to go back one level.
+                } else {
                     var li = createNodeLi(node_idx, node.text,
                                           node.children_count && node.children_count > 1);
                     ul.appendChild(li);
 
                     for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j, next_idx);
+                        var children = recurseNodes(node.children_idx + j, indices);
                         appendChildren(li, children);
                     }
-                }
 
-                node_idx = next_idx;
+                    // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
+                    if (parent_next_indices.includes(node.children_idx)) {
+                        if (node.children_idx != parent_next_indices[0]) {
+                            var goto_li = createNodeLi('' + node_idx + '-1', 'Saut vers noeud ' + node.children_idx, false);
+                            ul.appendChild(goto_li);
+                        }
+
+                        break;
+                    }
+                }
             }
 
             // Simplify when there is only one leaf children
-            if (ul.querySelectorAll('.n').length == 1) {
+            if (ul.querySelectorAll('.n').length === 1) {
                 var ul = Array.prototype.slice.call(ul.querySelector('li > span').childNodes);
                 ul.unshift(' → ');
             }
@@ -294,7 +318,7 @@ var tables = {};
         }
 
         if (nodes.length) {
-            var ul = recurseNodes(0);
+            var ul = recurseNodes(0, []);
         } else {
             var ul = createElement('ul', {});
         }

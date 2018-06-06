@@ -381,9 +381,8 @@ Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionTy
             if (readable_node.reverse) {
                 writer.Key("reverse"); writer.String(readable_node.reverse);
             }
-            if (readable_node.function == 20) {
-                writer.Key("goto_idx"); writer.Int64(readable_node.children_idx);
-            } else if (readable_node.children_idx) {
+            writer.Key("test"); writer.Int(readable_node.function);
+            if (readable_node.children_idx) {
                 writer.Key("children_idx"); writer.Int64(readable_node.children_idx);
                 writer.Key("children_count"); writer.Int64(readable_node.children_count);
             }
