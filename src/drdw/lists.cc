@@ -150,8 +150,8 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
 
         case 13: {
             if (ghm_node.u.test.params[0] == 0) {
-                out_node->text = Fmt(ctx.str_alloc, "DP CMD = %1",
-                                     ghm_node.u.test.params[1]).ptr;
+                out_node->text = Fmt(ctx.str_alloc, "DP D-%1",
+                                     FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
 
                 int8_t prev_cmd = ctx.cmd;
                 for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
@@ -164,9 +164,10 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                 ctx.cmd = prev_cmd;
 
                 return ghm_node.u.test.children_idx;
-            } else if (ghm_node.u.test.params[0] == 0) {
-                out_node->text = Fmt(ctx.str_alloc, "DP liste = D-%1%2",
-                                     ctx.cmd, ghm_node.u.test.params[1]).ptr;
+            } else if (ghm_node.u.test.params[0] == 1) {
+                out_node->text = Fmt(ctx.str_alloc, "DP D-%1%2",
+                                     FmtArg(ctx.cmd).Pad0(-2),
+                                     FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
             } else {
                 out_node->text = Fmt(ctx.str_alloc, "DP byte %1 = %2",
                                      ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
@@ -262,8 +263,9 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 41: {
-            out_node->text = Fmt(ctx.str_alloc, "DP / DR / DAS liste = D-%1%2",
-                                 ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
+            out_node->text = Fmt(ctx.str_alloc, "DP / DR / DAS D-%1%2",
+                                 FmtArg(ghm_node.u.test.params[0]).Pad0(-2),
+                                 FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
         } break;
 
         case 42: {
@@ -272,8 +274,9 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 43: {
-            out_node->text = Fmt(ctx.str_alloc, "DP ou DAS liste = D-%1%2",
-                                 ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
+            out_node->text = Fmt(ctx.str_alloc, "DP ou DAS D-%1%2",
+                                 FmtArg(ghm_node.u.test.params[0]).Pad0(-2),
+                                 FmtArg(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
         } break;
 
         default: {
