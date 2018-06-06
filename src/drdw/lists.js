@@ -309,9 +309,11 @@ var tables = {};
             }
 
             // Simplify when there is only one leaf children
-            if (ul.querySelectorAll('.n').length === 1) {
-                var ul = Array.prototype.slice.call(ul.querySelector('li > span').childNodes);
-                ul.unshift(' → ');
+            if (ul.querySelectorAll('li').length === 1) {
+                ul = ul.querySelector('li').childNodes;
+                for (var i = 0; i < ul.length; i++)
+                    ul[i].classList.add('direct');
+                ul = Array.prototype.slice.call(ul);
             }
 
             return ul;

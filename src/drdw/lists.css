@@ -9,11 +9,13 @@
     list-style-type: none;
 }
 #tables_tree .n {
+    padding-left: 12px;
     font-size: 0.7em;
     color: #888;
     vertical-align: middle;
 }
-#tables_tree .n:first-child { padding-left: 12px; }
+#tables_tree .direct .n { padding-left: 0; }
+#tables_tree .direct:before { content: ' → '; }
 #tables_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
 #tables_tree li.parent > span > .n { cursor: pointer; }
 #tables_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
