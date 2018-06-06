@@ -117,7 +117,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
 
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
-    mco_Price(results, &pricings);
+    mco_Price(results, false, &pricings);
     mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
     HeapArray<CellSummary> summary;

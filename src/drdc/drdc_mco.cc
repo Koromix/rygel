@@ -262,10 +262,11 @@ bool RunMcoClassify(Span<const char *> arguments)
         PrintLn(fp, mco_options_usage);
         PrintLn(fp, R"(
 Classify options:
-    -m, --mono                   Compute mono-stay results (same as -fmono)
     -f, --flag <flags>           Classifier flags (see below)
 
+    -m, --mono                   Compute mono-stay results (same as -fmono)
     -d, --dispense <mode>        Run dispensation algorithm (see below)
+        --coeff                  Apply GHS coefficients
 
     -v, --verbose                Show more classification details (cumulative)
 
@@ -289,6 +290,7 @@ Dispensation modes:)");
     HeapArray<const char *> filenames;
     unsigned int flags = 0;
     int dispense_mode = -1;
+    bool apply_coefficient = false;
     int verbosity = 0;
     bool test = false;
     int torture = 1;
@@ -329,6 +331,8 @@ Dispensation modes:)");
                     return false;
                 }
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
+            } else if (TestOption(opt, "--coeff")) {
+                apply_coefficient = true;
             } else if (TestOption(opt, "-v", "--verbose")) {
                 verbosity++;
             } else if (TestOption(opt, "--test")) {
@@ -399,16 +403,18 @@ Dispensation modes:)");
                                      flags, &classify_set->results, &classify_set->mono_results);
 
                 if (dispense_mode >= 0 || verbosity || test) {
-                    mco_Price(classify_set->results, &classify_set->pricings);
+                    mco_Price(classify_set->results, apply_coefficient, &classify_set->pricings);
                     if (dispense_mode >= 0) {
                         mco_Dispense(classify_set->pricings, classify_set->mono_results,
                                      (mco_DispenseMode)dispense_mode, &classify_set->mono_pricings);
                     } else {
-                        mco_Price(classify_set->mono_results, &classify_set->mono_pricings);
+                        mco_Price(classify_set->mono_results, apply_coefficient,
+                                  &classify_set->mono_pricings);
                     }
                     mco_Summarize(classify_set->pricings, &classify_set->summary);
                 } else {
-                    mco_PriceTotal(classify_set->results, &classify_set->summary);
+                    mco_PriceTotal(classify_set->results, apply_coefficient,
+                                   &classify_set->summary);
                 }
             }
 
@@ -443,6 +449,12 @@ Dispensation modes:)");
     if (filenames.len > 1) {
         PrintLn("Global summary:");
         PrintSummary(main_summary);
+    }
+
+    if (apply_coefficient) {
+        PrintLn("GHS coefficients have been applied!");
+    } else {
+        PrintLn("GHS coefficients have NOT been applied!");
     }
 
     return true;

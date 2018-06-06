@@ -26,15 +26,15 @@ int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
     }
 
     if (out_ghs_cents) {
-        *out_ghs_cents += (int64_t)(ghs_coefficient * (double)price_info.ghs_cents);
+        *out_ghs_cents += (int64_t)(ghs_coefficient * price_info.ghs_cents);
     }
     if (out_exb_exh) {
         *out_exb_exh += exb_exh;
     }
-    return (int64_t)(ghs_coefficient * (double)price_cents);
+    return (int64_t)(ghs_coefficient * price_cents);
 }
 
-void mco_Price(const mco_Result &result, mco_Pricing *out_pricing)
+void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *out_pricing)
 {
     out_pricing->stays = result.stays;
 
@@ -50,6 +50,10 @@ void mco_Price(const mco_Result &result, mco_Pricing *out_pricing)
     const mco_SupplementCounters<int32_t> &prices = result.index->SupplementPrices(Sector::Public);
     double ghs_coefficient = result.index->GhsCoefficient(Sector::Public);
 
+    out_pricing->ghs_coefficient = ghs_coefficient;
+    if (!apply_coefficient)
+        ghs_coefficient = 1.0;
+
     if (LIKELY(price_info)) {
         int64_t price_cents = mco_PriceGhs(*price_info, ghs_coefficient, result.ghs_duration,
                                            result.stays[result.stays.len - 1].exit.mode == '9',
@@ -63,17 +67,16 @@ void mco_Price(const mco_Result &result, mco_Pricing *out_pricing)
 
     out_pricing->supplement_days += result.supplement_days;
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        int32_t supplement_cents = (int32_t)(ghs_coefficient * result.supplement_days.values[i] *
-                                             prices.values[i]);
+        int32_t supplement_cents = (int32_t)(ghs_coefficient *
+                                             (result.supplement_days.values[i] * prices.values[i]));
 
         out_pricing->supplement_cents.values[i] += supplement_cents;
         out_pricing->total_cents += supplement_cents;
     }
-
-    out_pricing->ghs_coefficient = ghs_coefficient;
 }
 
-void mco_Price(Span<const mco_Result> results, HeapArray<mco_Pricing> *out_pricings)
+void mco_Price(Span<const mco_Result> results, bool apply_coefficient,
+               HeapArray<mco_Pricing> *out_pricings)
 {
     static const int task_size = 2048;
 
@@ -89,7 +92,7 @@ void mco_Price(Span<const mco_Result> results, HeapArray<mco_Pricing> *out_prici
             memset(out_pricings->ptr + start_pricings_len + task_offset, 0,
                    (end - task_offset) * SIZE(*out_pricings->ptr));
             for (Size j = task_offset; j < end; j++) {
-                mco_Price(results[j], &out_pricings->ptr[start_pricings_len + j]);
+                mco_Price(results[j], apply_coefficient, &out_pricings->ptr[start_pricings_len + j]);
             }
             return true;
         });
@@ -99,7 +102,8 @@ void mco_Price(Span<const mco_Result> results, HeapArray<mco_Pricing> *out_prici
     out_pricings->len += results.len;
 }
 
-void mco_PriceTotal(Span<const mco_Result> results, mco_Pricing *out_pricing)
+void mco_PriceTotal(Span<const mco_Result> results, bool apply_coefficient,
+                    mco_Pricing *out_pricing)
 {
     static const int task_size = 2048;
 
@@ -114,7 +118,7 @@ void mco_PriceTotal(Span<const mco_Result> results, mco_Pricing *out_pricing)
         async.AddTask([&, task_offset, task_pricing]() {
             Size end = std::min(results.len, task_offset + task_size);
             for (Size j = task_offset; j < end; j++) {
-                mco_Price(results[j], task_pricing);
+                mco_Price(results[j], apply_coefficient, task_pricing);
             }
             return true;
         });
@@ -185,7 +189,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
     // First, calculate naive mono-stay prices, which we will use as coefficients (for
     // some modes at least) below.
     const Size start_mono_pricings_len = out_mono_pricings->len;
-    mco_Price(mono_results, out_mono_pricings);
+    mco_Price(mono_results, false, out_mono_pricings);
 
     Async async;
     for (Size i = 0; i < pricings.len; i += task_size) {

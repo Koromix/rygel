@@ -9,7 +9,7 @@ mco_init <- function(data_dirs = character(0), table_dirs = character(0),
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                          sorted = TRUE, options = character(0), details = TRUE,
-                         dispense = NULL) {
+                         dispense = NULL, apply_coefficient = FALSE) {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
         diagnoses <- stays$diagnoses
         procedures <- stays$procedures
@@ -17,7 +17,7 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     }
 
     result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
-                        options, details, dispense)
+                        options, details, dispense, apply_coefficient)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if (details) {

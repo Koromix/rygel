@@ -345,7 +345,7 @@ static void MakeSupplementColumnName(const char *supplement_type, const char *su
 
 static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets,
                                    Span<const HeapArray<mco_Pricing>> pricing_sets,
-                                   bool export_units)
+                                   bool export_units, bool apply_coefficient)
 {
     Size results_count = 0;
     for (const HeapArray<mco_Result> &results: result_sets) {
@@ -390,7 +390,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
         for (Size j = 0; j < results.len; j++) {
             const mco_Result &result = results[j];
-            const mco_Pricing &pricing = pricings[j];
+            mco_Pricing pricing = apply_coefficient ? pricings[j].WithCoefficient() : pricings[j];
 
             char buf[32];
 
@@ -430,7 +430,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
 RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
                                   SEXP procedures_xp, SEXP options_xp, SEXP details_xp,
-                                  SEXP dispense_mode_xp)
+                                  SEXP dispense_mode_xp, SEXP apply_coefficient_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -446,6 +446,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     bool details = Rcpp::as<bool>(details_xp);
     const char *dispense_mode_str = !Rf_isNull(dispense_mode_xp) ?
                                     Rcpp::as<const char *>(dispense_mode_xp) : nullptr;
+    bool apply_coefficient = Rcpp::as<bool>(apply_coefficient_xp);
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
@@ -595,14 +596,14 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                     return false;
 
                 if (details || dispense_mode >= 0) {
-                    mco_Price(*task_results, task_pricings);
+                    mco_Price(*task_results, apply_coefficient, task_pricings);
                     if (dispense_mode >= 0) {
                         mco_Dispense(*task_pricings, *task_mono_results,
                                      (mco_DispenseMode)dispense_mode, task_mono_pricings);
                     }
                     mco_Summarize(*task_pricings, task_summary);
                 } else {
-                    mco_PriceTotal(*task_results, task_summary);
+                    mco_PriceTotal(*task_results, apply_coefficient, task_summary);
                 }
 
                 return true;
@@ -646,12 +647,13 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     Rcc_AutoSexp results_df;
     if (details) {
-        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false);
+        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false, apply_coefficient);
     }
 
     Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
-        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true);
+        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true,
+                                                 apply_coefficient);
     }
 
     Rcc_AutoSexp ret_list;
@@ -935,7 +937,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
         {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
-        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 7},
+        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 8},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},
