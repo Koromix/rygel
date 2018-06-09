@@ -92,9 +92,12 @@ struct mco_DiagnosisInfo {
     struct Attributes {
         uint8_t raw[37];
 
-        uint8_t cmd;
-        uint8_t jump;
-        uint8_t severity;
+        int8_t cmd;
+        int8_t jump;
+
+        int8_t severity;
+        int8_t cma_minimal_age;
+        int8_t cma_maximal_age;
     } attributes[2];
     uint16_t warnings;
 

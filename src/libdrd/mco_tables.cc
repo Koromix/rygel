@@ -372,8 +372,13 @@ bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &tabl
                         diag.attributes[i].severity = 2;
                     } else if (diag.attributes[i].raw[20] & 0x1) {
                         diag.attributes[i].severity = 1;
-                    } else {
-                        diag.attributes[i].severity = 0;
+                    }
+
+                    if (diag.attributes[i].raw[19] & 0x10) {
+                        diag.attributes[i].cma_minimal_age = 14;
+                    }
+                    if (diag.attributes[i].raw[19] & 0x8 || diag.diag.str[0] == 'P') {
+                        diag.attributes[i].cma_maximal_age = 2;
                     }
                 }
 

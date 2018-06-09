@@ -1460,9 +1460,17 @@ static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, const mco_Aggregate::Sta
     }
 }
 
-static inline bool TestDiagnosisExclusion(const mco_TableIndex &index,
-                                          const mco_DiagnosisInfo &cma_diag_info,
-                                          const mco_DiagnosisInfo &main_diag_info)
+bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
+                              const mco_GhmRootInfo &ghm_root_info)
+{
+    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(mco_DiagnosisInfo::attributes[0].raw));
+    return (cma_diag_info.Attributes(sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
+            ghm_root_info.cma_exclusion_mask.value);
+}
+
+bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
+                                const mco_DiagnosisInfo &cma_diag_info,
+                                const mco_DiagnosisInfo &main_diag_info)
 {
     Assert(cma_diag_info.exclusion_set_idx < index.exclusions.len);
     const mco_ExclusionInfo *excl = &index.exclusions[cma_diag_info.exclusion_set_idx];
@@ -1474,26 +1482,25 @@ static inline bool TestDiagnosisExclusion(const mco_TableIndex &index,
             main_diag_info.cma_exclusion_mask.value);
 }
 
-static bool TestExclusion(const mco_Aggregate &agg,
-                          const mco_GhmRootInfo &ghm_root_info,
-                          const mco_DiagnosisInfo &diag_info,
-                          const mco_DiagnosisInfo &main_diag_info,
-                          const mco_DiagnosisInfo *linked_diag_info)
+// Don't forget to update drdR::mco_exclusions() if this changes
+bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
+                       const mco_DiagnosisInfo &cma_diag_info,
+                       const mco_GhmRootInfo &ghm_root_info,
+                       const mco_DiagnosisInfo &main_diag_info,
+                       const mco_DiagnosisInfo *linked_diag_info)
 {
-    if (agg.age < 14 && (diag_info.Attributes(agg.stay.sex).raw[19] & 0x10))
+    if (age < cma_diag_info.Attributes(sex).cma_minimal_age)
         return true;
-    if (agg.age >= 2 &&
-            ((diag_info.Attributes(agg.stay.sex).raw[19] & 0x8) || diag_info.diag.str[0] == 'P'))
-        return true;
-
-    Assert(ghm_root_info.cma_exclusion_mask.offset < SIZE(mco_DiagnosisInfo::attributes[0].raw));
-    if (diag_info.Attributes(agg.stay.sex).raw[ghm_root_info.cma_exclusion_mask.offset] &
-            ghm_root_info.cma_exclusion_mask.value)
+    if (cma_diag_info.Attributes(sex).cma_maximal_age &&
+            age >= cma_diag_info.Attributes(sex).cma_maximal_age)
         return true;
 
-    if (TestDiagnosisExclusion(*agg.index, diag_info, main_diag_info))
+    if (mco_TestGhmRootExclusion(sex, cma_diag_info, ghm_root_info))
         return true;
-    if (linked_diag_info && TestDiagnosisExclusion(*agg.index, diag_info, *linked_diag_info))
+
+    if (mco_TestDiagnosisExclusion(index, cma_diag_info, main_diag_info))
+        return true;
+    if (linked_diag_info && mco_TestDiagnosisExclusion(index, cma_diag_info, *linked_diag_info))
         return true;
 
     return false;
@@ -1533,8 +1540,9 @@ static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, const mco_Aggregate:
             // We wouldn't have gotten here if main_diagnosis was missing from the index
             int new_severity = diag_info->Attributes(agg.stay.sex).severity;
             if (new_severity > severity) {
-                bool excluded = TestExclusion(agg, ghm_root_info, *diag_info,
-                                              *info.main_diag_info, info.linked_diag_info);
+                bool excluded = mco_TestExclusion(*agg.index, agg.stay.sex, agg.age,
+                                                  *diag_info, ghm_root_info,
+                                                  *info.main_diag_info, info.linked_diag_info);
                 if (!excluded) {
                     severity = new_severity;
                 }

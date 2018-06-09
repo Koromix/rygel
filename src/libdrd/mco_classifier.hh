@@ -92,6 +92,17 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stay
 int mco_GetMinimalDurationForSeverity(int severity);
 int mco_LimitSeverityWithDuration(int severity, int duration);
 
+bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
+                              const mco_GhmRootInfo &ghm_root_info);
+bool mco_TestDiagnosisExclusion(const mco_TableIndex &index,
+                                const mco_DiagnosisInfo &cma_diag_info,
+                                const mco_DiagnosisInfo &main_diag_info);
+bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
+                       const mco_DiagnosisInfo &cma_diag_info,
+                       const mco_GhmRootInfo &ghm_root_info,
+                       const mco_DiagnosisInfo &main_diag_info,
+                       const mco_DiagnosisInfo *linked_diag_info = nullptr);
+
 mco_GhmCode mco_PickGhm(const mco_Aggregate &agg, unsigned int flags, mco_ErrorSet *out_errors);
 mco_GhsCode mco_PickGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
                         mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
