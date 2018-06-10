@@ -96,8 +96,8 @@ struct mco_DiagnosisInfo {
         int8_t jump;
 
         int8_t severity;
-        int8_t cma_minimal_age;
-        int8_t cma_maximal_age;
+        int8_t cma_minimum_age;
+        int8_t cma_maximum_age;
     } attributes[2];
     uint16_t warnings;
 

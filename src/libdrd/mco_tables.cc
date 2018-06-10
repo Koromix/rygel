@@ -375,10 +375,10 @@ bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &tabl
                     }
 
                     if (diag.attributes[i].raw[19] & 0x10) {
-                        diag.attributes[i].cma_minimal_age = 14;
+                        diag.attributes[i].cma_minimum_age = 14;
                     }
                     if (diag.attributes[i].raw[19] & 0x8 || diag.diag.str[0] == 'P') {
-                        diag.attributes[i].cma_maximal_age = 2;
+                        diag.attributes[i].cma_maximum_age = 2;
                     }
                 }
 

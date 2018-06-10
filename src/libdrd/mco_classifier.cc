@@ -1489,10 +1489,10 @@ bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
                        const mco_DiagnosisInfo &main_diag_info,
                        const mco_DiagnosisInfo *linked_diag_info)
 {
-    if (age < cma_diag_info.Attributes(sex).cma_minimal_age)
+    if (age < cma_diag_info.Attributes(sex).cma_minimum_age)
         return true;
-    if (cma_diag_info.Attributes(sex).cma_maximal_age &&
-            age >= cma_diag_info.Attributes(sex).cma_maximal_age)
+    if (cma_diag_info.Attributes(sex).cma_maximum_age &&
+            age >= cma_diag_info.Attributes(sex).cma_maximum_age)
         return true;
 
     if (mco_TestGhmRootExclusion(sex, cma_diag_info, ghm_root_info))

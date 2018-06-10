@@ -821,12 +821,12 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     {
         Size age_exclusions_count = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            bool test = diag_info.Attributes(1).cma_minimal_age ||
-                        diag_info.Attributes(1).cma_maximal_age;
+            bool test = diag_info.Attributes(1).cma_minimum_age ||
+                        diag_info.Attributes(1).cma_maximum_age;
 
             if ((diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) &&
-                    (diag_info.Attributes(2).cma_minimal_age ||
-                     diag_info.Attributes(2).cma_maximal_age) != test)
+                    (diag_info.Attributes(2).cma_minimum_age ||
+                     diag_info.Attributes(2).cma_maximum_age) != test)
                 Rcpp::stop("mco_exclusions() cannot export sex-specific exclusions");
 
             age_exclusions_count += test;
@@ -834,18 +834,18 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
 
         Rcc_DataFrameBuilder df_builder(age_exclusions_count);
         Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
-        Rcc_Vector<int> minimal_age = df_builder.Add<int>("minimal_age");
-        Rcc_Vector<int> maximal_age = df_builder.Add<int>("maximal_age");
+        Rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
+        Rcc_Vector<int> maximum_age = df_builder.Add<int>("maximum_age");
 
         Size i = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            bool test = diag_info.Attributes(1).cma_minimal_age ||
-                        diag_info.Attributes(1).cma_maximal_age;
+            bool test = diag_info.Attributes(1).cma_minimum_age ||
+                        diag_info.Attributes(1).cma_maximum_age;
 
             if (test) {
                 diag.Set(i, diag_info.diag.str);
-                minimal_age[i] = diag_info.Attributes(1).cma_minimal_age ? diag_info.Attributes(1).cma_minimal_age : NA_INTEGER;
-                maximal_age[i] = diag_info.Attributes(1).cma_maximal_age ? diag_info.Attributes(1).cma_maximal_age : NA_INTEGER;
+                minimum_age[i] = diag_info.Attributes(1).cma_minimum_age ? diag_info.Attributes(1).cma_minimum_age : NA_INTEGER;
+                maximum_age[i] = diag_info.Attributes(1).cma_maximum_age ? diag_info.Attributes(1).cma_maximum_age : NA_INTEGER;
                 i++;
             }
         }
