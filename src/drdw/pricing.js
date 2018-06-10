@@ -499,7 +499,7 @@ var pricing = {};
         });
 
         for (var duration = 0; duration < max_duration; duration++) {
-            if (duration && duration % 10 == 0) {
+            if (duration % 10 == 0) {
                 var tr = createElement('tr', {},
                     createElement('th', {class: 'repeat',
                                          colspan: 1 + ghs.length}, durationText(duration))
