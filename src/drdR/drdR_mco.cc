@@ -731,6 +731,142 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     END_RCPP
 }
 
+RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
+{
+    BEGIN_RCPP
+    RCC_SETUP_LOG_HANDLER();
+
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+
+    Date date = Rcc_Vector<Date>(date_xp).Value();
+    if (!date.value)
+        Rcc_StopWithLastError();
+
+    const mco_TableIndex *index = classifier->table_set.FindIndex(date);
+    if (!index) {
+        LogError("No table index available on '%1'", date);
+        Rcc_StopWithLastError();
+    }
+
+    Rcc_AutoSexp ghm_roots_df;
+    {
+        struct ExclusionInfo {
+            DiagnosisCode diag;
+            mco_GhmRootCode ghm_root;
+        };
+        HeapArray<ExclusionInfo> ghm_exclusions;
+
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
+                bool test = mco_TestGhmRootExclusion(1, diag_info, ghm_root_info);
+
+                if ((diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) &&
+                        mco_TestGhmRootExclusion(2, diag_info, ghm_root_info) != test)
+                    Rcpp::stop("mco_exclusions() cannot export sex-specific exclusions");
+
+                if (test) {
+                    ghm_exclusions.Append({diag_info.diag, ghm_root_info.ghm_root});
+                }
+            }
+        }
+
+        Rcc_DataFrameBuilder df_builder(ghm_exclusions.len);
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<const char *> ghm_root = df_builder.Add<const char *>("ghm_root");
+
+        for (Size i = 0; i < ghm_exclusions.len; i++) {
+            char buf[64];
+
+            const ExclusionInfo &excl = ghm_exclusions[i];
+
+            diag.Set(i, excl.diag.str);
+            ghm_root.Set(i, excl.ghm_root.ToString(buf));
+        }
+
+        ghm_roots_df = df_builder.Build();
+    }
+
+    Rcc_AutoSexp diagnoses_df;
+    {
+        struct ExclusionInfo {
+            DiagnosisCode diag;
+            DiagnosisCode main_diag;
+        };
+        HeapArray<ExclusionInfo> exclusions;
+
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            for (const mco_DiagnosisInfo &main_diag_info: index->diagnoses) {
+                if (mco_TestDiagnosisExclusion(*index, diag_info, main_diag_info)) {
+                    exclusions.Append({diag_info.diag, main_diag_info.diag});
+                }
+            }
+        }
+
+        Rcc_DataFrameBuilder df_builder(exclusions.len);
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_diag");
+
+        for (Size i = 0; i < exclusions.len; i++) {
+            const ExclusionInfo &excl = exclusions[i];
+
+            diag.Set(i, excl.diag.str);
+            main_diag.Set(i, excl.main_diag.str);
+        }
+
+        diagnoses_df = df_builder.Build();
+    }
+
+    Rcc_AutoSexp age_df;
+    {
+        Size age_exclusions_count = 0;
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            bool test = diag_info.Attributes(1).cma_minimal_age ||
+                        diag_info.Attributes(1).cma_maximal_age;
+
+            if ((diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) &&
+                    (diag_info.Attributes(2).cma_minimal_age ||
+                     diag_info.Attributes(2).cma_maximal_age) != test)
+                Rcpp::stop("mco_exclusions() cannot export sex-specific exclusions");
+
+            age_exclusions_count += test;
+        }
+
+        Rcc_DataFrameBuilder df_builder(age_exclusions_count);
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<int> minimal_age = df_builder.Add<int>("minimal_age");
+        Rcc_Vector<int> maximal_age = df_builder.Add<int>("maximal_age");
+
+        Size i = 0;
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            bool test = diag_info.Attributes(1).cma_minimal_age ||
+                        diag_info.Attributes(1).cma_maximal_age;
+
+            if (test) {
+                diag.Set(i, diag_info.diag.str);
+                minimal_age[i] = diag_info.Attributes(1).cma_minimal_age ? diag_info.Attributes(1).cma_minimal_age : NA_INTEGER;
+                maximal_age[i] = diag_info.Attributes(1).cma_maximal_age ? diag_info.Attributes(1).cma_maximal_age : NA_INTEGER;
+                i++;
+            }
+        }
+
+        age_df = df_builder.Build();
+    }
+
+    Rcc_AutoSexp ret_list;
+    {
+        Rcc_ListBuilder ret_builder;
+        ret_builder.Add("ghm_roots", ghm_roots_df);
+        ret_builder.Add("diagnoses", diagnoses_df);
+        ret_builder.Add("age", age_df);
+        ret_list = ret_builder.BuildList();
+    }
+
+    return ret_list;
+
+    END_RCPP
+}
+
 RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
@@ -949,6 +1085,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
         {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 8},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
+        {"drdR_mco_Exclusions", (DL_FUNC)&drdR_mco_Exclusions, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},
         {"drdR_mco_LoadStays", (DL_FUNC)&drdR_mco_LoadStays, 1},
         {"drdR_mco_SupplementTypes", (DL_FUNC)&drdR_mco_SupplementTypes, 0},

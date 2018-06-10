@@ -36,6 +36,10 @@ mco_diagnoses <- function(classifier, date) {
     .Call(`drdR_mco_Diagnoses`, classifier, date)
 }
 
+mco_exclusions <- function(classifier, date) {
+    .Call(`drdR_mco_Exclusions`, classifier, date)
+}
+
 mco_procedures <- function(classifier, date) {
     .Call(`drdR_mco_Procedures`, classifier, date)
 }
