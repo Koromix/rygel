@@ -1,7 +1,7 @@
 var casemix = {};
 (function() {
     // URL settings (routing)
-    var target_view = 'roots';
+    var target_view = 'global';
     var target_start = null;
     var target_end = null;
     var target_units = null;
@@ -64,9 +64,9 @@ var casemix = {};
             if (target_end)
                 document.querySelector('#casemix_end').value = target_end;
 
-            document.querySelector('#casemix_cmds').classList.toggle('active', target_view == 'roots');
-            document.querySelector('#casemix_roots').classList.toggle('active', target_view == 'roots');
-            document.querySelector('#casemix_ghs').classList.toggle('active', target_view == 'ghs');
+            document.querySelector('#casemix_cmds').classList.toggle('active', target_view == 'global');
+            document.querySelector('#casemix_roots').classList.toggle('active', target_view == 'global');
+            document.querySelector('#casemix_ghs').classList.toggle('active', target_view == 'ghm_root');
 
             refreshCmds(target_cmd);
             refreshRoots(target_cmd);
@@ -302,7 +302,7 @@ var casemix = {};
                     if (ghm_root_info !== undefined) {
                         var click_function = (function() {
                             var ghm_root = ghm_root_info.ghm_root;
-                            return function(e) { route({view: 'ghs',
+                            return function(e) { route({view: 'ghm_root',
                                                         ghm_root: ghm_root}); e.preventDefault(); };
                         })();
                         var text = ghm_root_info.ghm_root + ' = ' +
