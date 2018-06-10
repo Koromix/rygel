@@ -272,7 +272,7 @@ Classify options:
 
         --test                   Enable testing against GenRSA values
         --torture [N]            Run classifier N times
-                                 (default = 10)
+                                 (default = 1)
 
 Classifier flags:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
