@@ -124,7 +124,22 @@ struct mco_ProcedureInfo {
 
     Date limit_dates[2];
     uint8_t bytes[54];
-    uint16_t extensions;
+    uint8_t extensions;
+
+    static int MaskToDec(int8_t value)
+    {
+        int dec = 0;
+        for (int i = 0; value; i++) {
+            if (value & 0x1) {
+                dec = (dec * 10) + i;
+            }
+            value >>= 1;
+        }
+        return dec;
+    }
+
+    int ActivitiesToDec() const { return MaskToDec(activities); }
+    int ExtensionsToDec() const { return MaskToDec(extensions); }
 
     HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
 };

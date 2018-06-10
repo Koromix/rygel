@@ -1368,12 +1368,18 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                                               *table_info, &extensions);
 
                     for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
+                        if (ext_info.extension >= 8) {
+                            LogError("Procedure extension value %1 > 7 cannot be used",
+                                     ext_info.extension);
+                            continue;
+                        }
+
                         mco_ProcedureInfo *proc_info =
                             (mco_ProcedureInfo *)index.procedures_map->FindValue(ext_info.proc, nullptr);
                         if (LIKELY(proc_info)) {
                             do {
                                 if (proc_info->phase == ext_info.phase) {
-                                    proc_info->extensions |= (uint16_t)(1u << ext_info.extension);
+                                    proc_info->extensions |= (uint8_t)(1u << ext_info.extension);
                                 }
                             } while (++proc_info < index.procedures.end() &&
                                      proc_info->proc == ext_info.proc);

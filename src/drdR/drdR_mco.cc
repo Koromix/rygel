@@ -747,16 +747,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
 
             proc.Set(i, info.proc.str);
             phase[i] = info.phase;
-            {
-                int activities_dec = 0;
-                for (int activities_bin = info.activities, i = 0; activities_bin; i++) {
-                    if (activities_bin & 0x1) {
-                        activities_dec = (activities_dec * 10) + i;
-                    }
-                    activities_bin >>= 1;
-                }
-                activities[i] = activities_dec;
-            }
+            activities[i] = info.ActivitiesToDec();
             start_date.Set(i, info.limit_dates[0]);
             end_date.Set(i, info.limit_dates[1]);
         }

@@ -503,25 +503,9 @@ Response ProduceProcedures(MHD_Connection *conn, const char *, CompressionType c
                 writer.Key("begin_date"); writer.String(Fmt(buf, "%1", proc_info.limit_dates[0]).ptr);
                 writer.Key("end_date"); writer.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
                 writer.Key("phase"); writer.Int(proc_info.phase);
-                {
-                    int activities_dec = 0;
-                    for (int activities_bin = proc_info.activities, i = 0; activities_bin; i++) {
-                        if (activities_bin & 0x1) {
-                            activities_dec = (activities_dec * 10) + i;
-                        }
-                        activities_bin >>= 1;
-                    }
-                    writer.Key("activities"); writer.Int(activities_dec);
-                }
+                writer.Key("activities"); writer.Int(proc_info.ActivitiesToDec());
                 if (proc_info.extensions > 1) {
-                    int extensions_dec = 0;
-                    for (int extensions_bin = proc_info.extensions, i = 0; extensions_bin; i++) {
-                        if (extensions_bin & 0x1) {
-                            extensions_dec = (extensions_dec * 10) + i;
-                        }
-                        extensions_bin >>= 1;
-                    }
-                    writer.Key("extensions"); writer.Int(extensions_dec);
+                    writer.Key("extensions"); writer.Int(proc_info.ExtensionsToDec());
                 }
                 writer.EndObject();
             }
