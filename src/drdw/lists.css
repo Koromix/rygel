@@ -1,0 +1,25 @@
+#tables h1 {
+    font-size: 1.3em;
+    text-align: center;
+}
+
+#tables_tree li { list-style-type: disclosure-open; }
+#tables_tree li.collapse { list-style-type: disclosure-closed; }
+#tables_tree li.collapse ul { display: hide !important; }
+
+#tables_table {
+    margin-top: 1em;
+    width: 100%;
+    border-collapse: collapse;
+}
+#tables_table th, #tables_table td {
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#tables_table th {
+    text-align: center;
+    font-weight: bold;
+}

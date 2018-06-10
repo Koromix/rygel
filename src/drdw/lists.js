@@ -1,0 +1,252 @@
+var tables = {};
+(function() {
+    // URL settings (routing)
+    var target_table = 'classifier_tree';
+    var target_specs = {};
+
+    var table_index = null;
+    var table_type = null;
+    var table_spec = null;
+    var items_init = false;
+    var items = {};
+
+    function run()
+    {
+        // Parse route (model: tables/<table>/<date>[/<spec>])
+        var parts = url_page.split('/');
+        target_table = parts[1] || target_table;
+        target_date = parts[2] || target_date;
+        target_specs[target_table] = parts[3] || target_specs[target_table];
+
+        // Validate
+        var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
+        if (target_date !== null && indexes.length && main_index < 0)
+            errors.add('Date incorrecte');
+        // TODO: Validation is not complete
+
+        // Redirection (stable URLs)
+        if (target_date === null && indexes.length) {
+            route({date: indexes[indexes.length - 1].begin_date});
+            return;
+        }
+
+        // Common resources
+        updateIndexes(run);
+        if (main_index >= 0 && (table_index !== main_index || table_type !== target_table ||
+                                table_spec !== target_specs[target_table])) {
+            items_init = false;
+            markOutdated('#tables_view', true);
+            updateTable(target_table, main_index, target_specs[target_table], run);
+        }
+
+        // Refresh display
+        document.querySelector('#tables').classList.add('active');
+        document.querySelector('#tables_tree').classList.toggle('active', target_table === 'classifier_tree');
+        document.querySelector('#tables_table').classList.toggle('active', target_table !== 'classifier_tree');
+        refreshIndexesLine('#tables_indexes', main_index);
+        if (target_specs[target_table]) {
+            var h1 = document.querySelector('#tables_spec');
+            h1.innerText = 'Filtre : ' + target_specs[target_table];
+        } else {
+            var h1 = document.querySelector('#tables_spec');
+            h1.innerText = '';
+        }
+        if (!downloadJson.run_lock) {
+            if (target_table === 'classifier_tree') {
+                refreshClassifierTree(items);
+            } else {
+                refreshTable(items);
+            }
+
+            markOutdated('#tables_view', false);
+        }
+    }
+    this.run = run;
+
+    function route(args)
+    {
+        if (args !== undefined) {
+            target_date = args.date || target_date;
+            target_table = args.table || target_table;
+            if (args.spec)
+                target_specs[target_table] = args.spec;
+        }
+
+        if (target_date !== null) {
+            switchPage('tables/' + target_table + '/' + target_date +
+                       (target_specs[target_table] ? '/' + target_specs[target_table] : ''));
+        } else {
+            switchPage('tables/' + target_table);
+        }
+    }
+    this.route = route;
+
+    function updateTable(table, index, spec, func)
+    {
+        if (items_init)
+            return true;
+
+        var begin_date = indexes[index].begin_date;
+        downloadJson('api/' + table + '.json', {date: begin_date, spec: spec},
+                     function(status, json) {
+            var error = null;
+
+            switch (status) {
+                case 200: { items = json; } break;
+
+                case 404: { error = 'Table introuvable'; } break;
+                case 502:
+                case 503: { error = 'Service non accessible'; } break;
+                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+                default: { error = 'Erreur inconnue ' + status; } break;
+            }
+
+            if (!error) {
+                items_init = true;
+                table_type = table;
+                table_index = index;
+                table_spec = spec;
+            } else {
+                items_init = false;
+            }
+
+            if (error)
+                errors.add(error);
+            if (!downloadJson.run_lock)
+                func();
+        });
+    }
+
+    function refreshClassifierTree(nodes)
+    {
+        function recurseNodes(idx, ignore_header)
+        {
+            var ul = createElement('ul');
+            while (idx < nodes.length) {
+                var click_function = function(e) {
+                    // FIXME: this.classList.toggle('collapse');
+                };
+
+                if (nodes[idx].header && !ignore_header) {
+                    var li = createElement('li', {click: click_function},
+                                           addSpecLinks(nodes[idx].header));
+                    var child_ul = recurseNodes(idx, true);
+                    li.appendChild(child_ul);
+                    ul.appendChild(li);
+
+                    break;
+                } else {
+                    var li = createElement('li', {click: click_function},
+                                           addSpecLinks(nodes[idx].text));
+
+                    if (nodes[idx].children_idx) {
+                        for (var i = 1; i < nodes[idx].children_count; i++) {
+                            var child_ul = recurseNodes(nodes[idx].children_idx + i);
+                            li.appendChild(child_ul);
+                        }
+                        ul.appendChild(li);
+
+                        idx = nodes[idx].children_idx;
+                    } else {
+                        ul.appendChild(li);
+
+                        break;
+                    }
+                }
+            }
+
+            return ul;
+        }
+
+        var ul = recurseNodes(0, false);
+
+        var old_ul = document.querySelector('#tables_tree');
+        cloneAttributes(old_ul, ul);
+        old_ul.parentNode.replaceChild(ul, old_ul);
+    }
+
+    function refreshTable(items)
+    {
+        // FIXME: Don't use automatic columns but explicit column lists
+        var columns = new Set();
+        for (var i = 0; i < items.length; i++) {
+            for (var name in items[i])
+                columns.add(name);
+        }
+        columns = Array.from(columns);
+
+        var table = createElement('table', {},
+            createElement('thead'),
+            createElement('tbody')
+        );
+        var thead = table.querySelector('thead');
+        var tbody = table.querySelector('tbody');
+
+        var tr = createElement('tr');
+        for (var i = 0; i < columns.length; i++) {
+            var th = createElement('th', {title: columns[i]}, columns[i]);
+            tr.appendChild(th);
+        }
+        thead.appendChild(tr);
+
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+
+            var tr = createElement('tr');
+            for (var j = 0; j < columns.length; j++) {
+                var column = columns[j];
+
+                if (item[column] !== null && item[column] !== undefined) {
+                    var td = createElement('td', {}, addSpecLinks('' + item[column]));
+                } else {
+                    var td = createElement('td', {});
+                }
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+
+        var old_table = document.querySelector('#tables_table');
+        cloneAttributes(old_table, table);
+        old_table.parentNode.replaceChild(table, old_table);
+    }
+
+    function makeSpecLink(str)
+    {
+        var page;
+        if (str[0] === 'A') {
+            page = 'tables/procedures/' + target_date + '/' + str;
+        } else if (str[0] === 'D') {
+            page = 'tables/diagnoses/' + target_date + '/' + str;
+        } else {
+            return str;
+        }
+        var click_function = function(e) {
+            switchPage(page);
+            e.preventDefault();
+        };
+
+        var link = createElement('a', {href: page,
+                                       click: click_function}, str);
+        return link;
+    }
+    this.makeSpecLink = makeSpecLink;
+
+    function addSpecLinks(str)
+    {
+        var elements = [];
+        for (;;) {
+            var m = str.match(/[AD](\-[0-9]+|\$[0-9]+\.[0-9]+)/);
+            if (!m)
+                break;
+
+            elements.push(str.substr(0, m.index));
+            elements.push(makeSpecLink(m[0]));
+            str = str.substr(m.index + m[0].length);
+        }
+        elements.push(str);
+
+        return elements;
+    }
+    this.addSpecLinks = addSpecLinks;
+}).call(tables);

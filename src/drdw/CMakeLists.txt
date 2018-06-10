@@ -11,6 +11,8 @@ set(DRDW_RESOURCES drdw.html
                    common.js
                    casemix.css
                    casemix.js
+                   lists.css
+                   lists.js
                    pricing.css
                    pricing.js
                    images/favicon.ico

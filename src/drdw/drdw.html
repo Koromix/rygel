@@ -11,9 +11,11 @@
         <script type="text/javascript" src="static/chart.min.js"></script>
 
         <link rel="stylesheet" href="static/common.css"/>
+        <link rel="stylesheet" href="static/lists.css"/>
         <link rel="stylesheet" href="static/pricing.css"/>
         <link rel="stylesheet" href="static/casemix.css"/>
         <script type="text/javascript" src="static/common.js"></script>
+        <script type="text/javascript" src="static/lists.js"></script>
         <script type="text/javascript" src="static/pricing.js"></script>
         <script type="text/javascript" src="static/casemix.js"></script>
     </head>
@@ -28,6 +30,12 @@
                     <li><a href="pricing/table" onclick="pricing.route({view: 'table'}); return false;">Table</a></li>
                     <li><a href="pricing/chart" onclick="pricing.route({view: 'chart'}); return false;">Graphique</a></li>
 
+                    <li><a class="category" href="tables/classifier_tree" onclick="tables.route({table: 'classifier_tree'}); return false;">Listes</a></li>
+                    <li><a href="tables/classifier_tree" onclick="tables.route({table: 'classifier_tree'}); return false;">Arbre de groupage</a></li>
+                    <li><a href="tables/ghm_ghs" onclick="tables.route({table: 'ghm_ghs'}); return false;">GHM / GHS</a></li>
+                    <li><a href="tables/diagnoses" onclick="tables.route({table: 'diagnoses'}); return false;">Diagnostics</a></li>
+                    <li><a href="tables/procedures" onclick="tables.route({table: 'procedures'}); return false;">Actes</a></li>
+
                     <li><a class="category" href="casemix/grid" onclick="casemix.route({view: 'roots'}); return false;">Casemix</a></li>
                     <li><a href="casemix/roots" onclick="casemix.route({view: 'roots'}); return false;">Racines</a></li>
                     <li><a href="casemix/ghs" onclick="casemix.route({view: 'ghs'}); return false;">GHS</a></li>
@@ -39,11 +47,11 @@
             <div id="pricing" class="page">
                 <a class="deploy page_deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu" class="page_menu">
-                    <svg id="pricing_indexes">
-                        <text x="0" y="25" text-anchor="start" onclick="pricing.moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
+                    <svg id="pricing_indexes" class="indexes_line">
+                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
                         <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
                         <g></g>
-                        <text x="100%" y="25" text-anchor="end" onclick="pricing.moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
+                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
                     </svg>
 
                     <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
@@ -70,6 +78,24 @@
 
                     <table id="pricing_table" class="hide" ></table>
                     <canvas id="pricing_chart" class="hide" width="400" height="300"></canvas>
+                </div>
+            </div>
+
+            <div id="tables" class="page">
+                <a class="deploy page_deploy" href="#" onclick="switchMenu('#tables_menu'); return false;"></a>
+                <nav id="tables_menu" class="page_menu">
+                    <svg id="tables_indexes" class="indexes_line">
+                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
+                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
+                        <g></g>
+                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
+                    </svg>
+                </nav>
+
+                <div id="tables_view">
+                    <h1 id="tables_spec"></h1>
+                    <ul id="tables_tree" class="hide"></ul>
+                    <table id="tables_table" class="hide"></table>
                 </div>
             </div>
 

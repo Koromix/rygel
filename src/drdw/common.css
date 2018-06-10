@@ -57,6 +57,12 @@ body {
     100% { filter: grayscale(100%) opacity(50%); }
 }
 
+/* Indexes line (svg) */
+.indexes_line {
+    width: 100%;
+    height: 50px;
+}
+
 @media screen and (min-width: 801px) {
     /* Global */
     main {
