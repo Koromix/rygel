@@ -141,6 +141,7 @@ function markOutdated(selector, mark)
 var url_base;
 var url_page;
 var url_hash;
+var scroll_cache = {};
 var module;
 
 // Error accumulator
@@ -168,11 +169,13 @@ function switchPage(new_url, mark_history)
     if (mark_history === undefined)
         mark_history = true;
 
+    if (url_page)
+        scroll_cache[url_page] = [window.pageXOffset, window.pageYOffset];
+
     new_url_parts = new_url.split('#', 2);
-    if (mark_history && new_url_parts[0] !== url_page) {
-        url_page = new_url_parts[0];
+    if (mark_history && new_url_parts[0] !== url_page)
         window.history.pushState(null, null, url_base + new_url);
-    }
+    url_page = new_url_parts[0];
     url_hash = new_url_parts[1] || null;
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
@@ -190,8 +193,14 @@ function switchPage(new_url, mark_history)
     if (module !== undefined && module.run !== undefined)
         module.run();
 
-    if (url_hash)
+    var scroll_target = scroll_cache[url_page];
+    if (url_hash) {
         window.location.hash = url_hash;
+    } else if (scroll_target) {
+        window.scrollTo(scroll_target[0], scroll_target[1]);
+    } else {
+        window.scrollTo(0, 0);
+    }
 }
 
 function initNavigation()
