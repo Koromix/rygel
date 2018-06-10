@@ -4,4 +4,7 @@
 
 add_executable(packer ../common/kutil.cc
                       packer.cc)
-target_link_libraries(packer PUBLIC miniz Threads::Threads)
+target_link_libraries(packer PUBLIC miniz)
+if(NOT EMSCRIPTEN)
+    target_link_libraries(packer PUBLIC Threads::Threads)
+endif()

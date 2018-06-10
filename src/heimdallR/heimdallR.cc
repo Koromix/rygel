@@ -166,7 +166,7 @@ void R_HeimdallAddPeriods(SEXP inst_xp, Rcpp::String source, Rcpp::DataFrame per
     AddElements(inst, source, periods_df, keys, [&](Element &elmt, Size i) {
         elmt.type = Element::Type::Period;
         elmt.u.period.duration = periods.duration[i];
-        if (std::isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0)
+        if (isnan(elmt.u.period.duration) || elmt.u.period.duration < 0.0)
             Rcpp::stop("Duration must be zero or a positive number");
     });
 }

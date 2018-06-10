@@ -25,6 +25,9 @@
 #ifdef _WIN32
     #include <intrin.h>
 #endif
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#endif
 #ifdef _MSC_VER
     #define ENABLE_INTSAFE_SIGNED_FUNCTIONS
     #include <intsafe.h>
@@ -104,7 +107,11 @@ enum class Endianness {
     // thread_local has many bugs with MinGW (Windows):
     // - Destructors are run after the memory is freed
     // - It crashes when used in R packages
-    #define THREAD_LOCAL __thread
+    #ifdef __EMSCRIPTEN__
+        #define THREAD_LOCAL
+    #else
+        #define THREAD_LOCAL __thread
+    #endif
     #define MAYBE_UNUSED __attribute__((unused))
     #define FORCE_INLINE __attribute__((always_inline)) inline
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
@@ -1613,14 +1620,14 @@ private:
             return;
         DebugAssert(count <= new_capacity);
 
-        uint64_t *old_used = used;
+        size_t *old_used = used;
         ValueType *old_data = data;
         Size old_capacity = capacity;
 
         if (new_capacity) {
-            used = (uint64_t *)Allocator::Allocate(allocator,
-                                                   (new_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t),
-                                                   (int)Allocator::Flag::Zero);
+            used = (size_t *)Allocator::Allocate(allocator,
+                                                 (new_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t),
+                                                 (int)Allocator::Flag::Zero);
             data = (ValueType *)Allocator::Allocate(allocator, new_capacity * SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
@@ -1655,7 +1662,7 @@ private:
     {
         used[idx / (SIZE(size_t) * 8)] &= ~(1ull << (idx % (SIZE(size_t) * 8)));
     }
-    Size IsEmpty(uint64_t *used, Size idx) const
+    Size IsEmpty(size_t *used, Size idx) const
     {
         return !(used[idx / (SIZE(size_t) * 8)] & (1ull << (idx % (SIZE(size_t) * 8))));
     }
@@ -1980,6 +1987,8 @@ static inline uint64_t GetClockCounter()
                           : : "%ebx", "%ecx");
     uint64_t counter = ((uint64_t)counter_high << 32) | counter_low;
     return counter;
+#elif defined(__EMSCRIPTEN__)
+    return 0;
 #else
     #error Clock counter reading is not implemented for this CPU architecture
 #endif

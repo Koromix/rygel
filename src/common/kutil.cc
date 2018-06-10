@@ -25,9 +25,6 @@
     #define fseeko64 fseeko
     #define ftello64 ftello
 #endif
-#ifdef __EMSCRIPTEN__
-    #include <emscripten.h>
-#endif
 #include <chrono>
 #include <condition_variable>
 #include <thread>

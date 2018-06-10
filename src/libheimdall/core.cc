@@ -41,8 +41,8 @@ static bool DetectAnomaly(const Element &elmt)
     switch (elmt.type) {
         case Element::Type::Event: { return false; } break;
         case Element::Type::Measure: {
-            return ((!std::isnan(elmt.u.measure.min) && elmt.u.measure.value < elmt.u.measure.min) ||
-                    (!std::isnan(elmt.u.measure.max) && elmt.u.measure.value > elmt.u.measure.max));
+            return ((!isnan(elmt.u.measure.min) && elmt.u.measure.value < elmt.u.measure.min) ||
+                    (!isnan(elmt.u.measure.max) && elmt.u.measure.value > elmt.u.measure.max));
         } break;
         case Element::Type::Period: { return false; } break;
     }
@@ -92,15 +92,15 @@ static void TextMeasure(const Element &elmt)
         style_guard.enable();
     }
 
-    if (!std::isnan(elmt.u.measure.min) && !std::isnan(elmt.u.measure.max)) {
+    if (!isnan(elmt.u.measure.min) && !isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [%.2f ; %.2f]",
                     elmt.time, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.min, elmt.u.measure.max);
-    } else if (!std::isnan(elmt.u.measure.min)) {
+    } else if (!isnan(elmt.u.measure.min)) {
         ImGui::Text("%g | %s = %.2f [min = %.2f]",
                     elmt.time, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.min);
-    } else if (!std::isnan(elmt.u.measure.max)) {
+    } else if (!isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [max = %.2f]",
                     elmt.time, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.max);
@@ -217,7 +217,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                 if (!f(i, &point, &color))
                     break;
 
-                if (LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
+                if (LIKELY(!isnan(prev_point.y) && !isnan(point.y))) {
                     draw->AddLine(prev_point, point, prev_color, 1.0f);
                 }
 
@@ -237,7 +237,7 @@ void DrawLine(InterpolationMode interpolation, Fun f)
                 if (!f(i, &point, &color))
                     break;
 
-                if (LIKELY(!std::isnan(prev_point.y) && !std::isnan(point.y))) {
+                if (LIKELY(!isnan(prev_point.y) && !isnan(point.y))) {
                     ImVec2 points[] = {
                         prev_point,
                         ImVec2(point.x, prev_point.y),
@@ -297,7 +297,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
         if (i >= measures.len)
             return false;
         DebugAssert(measures[i]->type == Element::Type::Measure);
-        if (!std::isnan(measures[i]->u.measure.min)) {
+        if (!isnan(measures[i]->u.measure.min)) {
             *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.min);
             *out_color = GetVisColor(VisColor::Limit, alpha);
         } else {
@@ -308,7 +308,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
     DrawLine(interpolation, [&](Size i, ImVec2 *out_point, ImU32 *out_color) {
         if (i >= measures.len)
             return false;
-        if (!std::isnan(measures[i]->u.measure.max)) {
+        if (!isnan(measures[i]->u.measure.max)) {
             *out_point = ComputeCoordinates(measures[i]->time, measures[i]->u.measure.max);
             *out_color = GetVisColor(VisColor::Limit, alpha);
         } else {
@@ -428,10 +428,10 @@ static void DrawLineElements(ImRect bb, float tree_width,
             case Element::Type::Event: { events.Append(elmt); } break;
             case Element::Type::Measure: {
                 if (line.leaf && state.settings.plot_measures) {
-                    if (!std::isnan(elmt->u.measure.min)) {
+                    if (!isnan(elmt->u.measure.min)) {
                         min_min = std::min(min_min, elmt->u.measure.min);
                     }
-                    if (!std::isnan(elmt->u.measure.max)) {
+                    if (!isnan(elmt->u.measure.max)) {
                         max_max = std::max(max_max, elmt->u.measure.max);
                     }
                     measures_min = std::min(measures_min, elmt->u.measure.value);
@@ -788,7 +788,7 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
         if (x >= bb.Min.x) {
-            float x_exact = std::round(x);
+            float x_exact = round(x);
             if (x - prev_text_x >= min_text_delta) {
                 draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));

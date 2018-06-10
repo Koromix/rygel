@@ -6,6 +6,12 @@
     #error Please define GL_FUNCTION() before including opengl_func.inc
 #endif
 
+#ifdef __EMSCRIPTEN__
+
+// Nothing to load (yet?)
+
+#else
+
 // OpenGL 1.2
 
 GL_FUNCTION(gl_version >= 12, void, glCopyTexSubImage3D, GLenum target, GLint level, GLint xoffset,
@@ -1233,5 +1239,7 @@ GL_FUNCTION(gl_version >= 45, void, glVertexArrayVertexBuffer, GLuint vaobj, GLu
             GLuint buffer, GLintptr offset, GLsizei stride);
 GL_FUNCTION(gl_version >= 45, void, glVertexArrayVertexBuffers, GLuint vaobj, GLuint first,
             GLsizei count, const GLuint *buffers, const GLintptr *offsets, const GLsizei *strides);
+
+#endif
 
 #undef GL_FUNCTION

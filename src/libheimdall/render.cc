@@ -19,10 +19,17 @@ static GLuint vao = 0;
 
 static GLuint font_texture = 0;
 
-static const char *imgui_vertex_src = R"!(
-    #version 330 core
+static const char *imgui_vertex_src =
+#ifdef __EMSCRIPTEN__
+R"!(#version 300 es
 
-    uniform mat4 ProjMtx;
+    precision highp float;
+)!"
+#else
+R"!(#version 330 core
+)!"
+#endif
+R"!(uniform mat4 ProjMtx;
     in vec2 Position;
     in vec2 UV;
     in vec4 Color;
@@ -36,10 +43,17 @@ static const char *imgui_vertex_src = R"!(
         gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
     }
 )!";
-static const char *imgui_fragment_src = R"!(
-    #version 330 core
+static const char *imgui_fragment_src =
+#ifdef __EMSCRIPTEN__
+R"!(#version 300 es
 
-    uniform sampler2D Texture;
+    precision mediump float;
+)!"
+#else
+R"!(#version 330 core
+)!"
+#endif
+R"!(uniform sampler2D Texture;
     in vec2 Frag_UV;
     in vec4 Frag_Color;
     out vec4 Out_Color;

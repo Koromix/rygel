@@ -412,12 +412,13 @@ void SwapGLBuffers()
 bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
          bool *run_flag, std::mutex *lock)
 {
-    Win32Window window = {};
-    RunIO io = {};
     DEFER_C(prev_window = g_window, prev_io = g_io) {
         g_window = prev_window;
         g_io = prev_io;
     };
+
+    Win32Window window = {};
+    RunIO io = {};
     g_window = &window;
     g_io = &io;
 

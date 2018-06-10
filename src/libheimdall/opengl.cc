@@ -115,6 +115,8 @@ GLuint BuildGLShader(const char *name, const char *vertex_src, const char *fragm
     return shader_program;
 }
 
-#define GL_FUNCTION(Cond, ...) \
-    FORCE_EXPAND(GL_FUNCTION_PTR(__VA_ARGS__))
-#include "opengl_func.inc"
+#ifndef __EMSCRIPTEN__
+    #define GL_FUNCTION(Cond, ...) \
+        FORCE_EXPAND(GL_FUNCTION_PTR(__VA_ARGS__))
+    #include "opengl_func.inc"
+#endif
