@@ -694,17 +694,33 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 
     Rcc_AutoSexp diagnoses_df;
     {
-        Rcc_DataFrameBuilder df_builder(index->diagnoses.len);
+        Size row_count = index->diagnoses.len;
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            row_count += !!(diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference);
+        }
+
+        Rcc_DataFrameBuilder df_builder(row_count);
         Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
-        Rcc_Vector<int> cmd_m = df_builder.Add<int>("cmd_m");
-        Rcc_Vector<int> cmd_f = df_builder.Add<int>("cmd_f");
+        Rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
+        Rcc_Vector<int> cmd = df_builder.Add<int>("cmd");
+        Rcc_Vector<int> jump = df_builder.Add<int>("jump");
+        Rcc_Vector<int> severity = df_builder.Add<int>("severity");
 
-        for (Size i = 0; i < index->diagnoses.len; i++) {
-            const mco_DiagnosisInfo &info = index->diagnoses[i];
+        Size i = 0;
+        const auto ExportDiagInfo = [&](int8_t sex, const mco_DiagnosisInfo &diag_info) {
+            diag.Set(i, diag_info.diag.str);
+            sex_spec[i] = (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) ? sex : NA_INTEGER;
+            cmd[i] = diag_info.Attributes(sex).cmd ? diag_info.Attributes(sex).cmd : NA_INTEGER;
+            jump[i] = diag_info.Attributes(sex).jump ? diag_info.Attributes(sex).jump : NA_INTEGER;
+            severity[i] = diag_info.Attributes(sex).severity ? diag_info.Attributes(sex).severity : NA_INTEGER;
+            i++;
+        };
 
-            diag.Set(i, info.diag.str);
-            cmd_m[i] = info.Attributes(1).cmd;
-            cmd_f[i] = info.Attributes(2).cmd;
+        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+            ExportDiagInfo(1, diag_info);
+            if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
+                ExportDiagInfo(2, diag_info);
+            }
         }
 
         diagnoses_df = df_builder.Build();
