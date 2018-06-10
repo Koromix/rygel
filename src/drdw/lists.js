@@ -14,35 +14,55 @@ var tables = {};
 
     const TableColumns = {
         'ghm_ghs': [
-            'ghm',
-            'ghs',
-            'durations',
-            'ages',
-            'confirm_treshold',
-            'main_diagnosis',
-            'diagnoses',
-            'procedures',
-            'unit_authorization',
-            'bed_authorization',
-            'old_age_treshold',
-            'old_severity_limit',
-            'young_age_treshold',
-            'young_severity_limit'
+            {header: 'GHM', variable: 'ghm'},
+            {header: 'GHS', variable: 'ghs'},
+            {header: 'Durées', title: 'Durées (nuits)', func: function(ghm_ghs) {
+                return maskToRanges(ghm_ghs.durations);
+            }},
+            {header: 'Confirmation', title: 'Confirmation (nuits)', func: function(ghm_ghs) {
+                return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
+            }},
+            {header: 'DP', variable: 'main_diagnosis'},
+            {header: 'Diagnostics', variable: 'diagnoses'},
+            {header: 'Actes', variable: 'procedures'},
+            {header: 'Autorisations', title: 'Autorisations (unités et lits)', func: function(ghm_ghs) {
+                var ret = [];
+                if (ghm_ghs.unit_authorization)
+                    ret.push('Unité ' + ghm_ghs.unit_authorization);
+                if (ghm_ghs.bed_authorization)
+                    ret.push('Lit ' + ghm_ghs.bed_authorization);
+                return ret;
+            }},
+            {header: 'Sévérité âgé', func: function(ghm_ghs) {
+                if (ghm_ghs.old_age_treshold) {
+                    return 'Âge ≥ ' + ghm_ghs.old_age_treshold + ' et niveau < ' +
+                           (ghm_ghs.old_severity_limit + 1);
+                } else {
+                    return null;
+                }
+            }},
+            {header: 'Sévérité jeune', func: function(ghm_ghs) {
+                if (ghm_ghs.young_age_treshold) {
+                    return 'Âge < ' + ghm_ghs.young_age_treshold + ' et niveau < ' +
+                           (ghm_ghs.young_severity_limit + 1);
+                } else {
+                    return null;
+                }
+            }},
         ],
         'diagnoses': [
-            'diag',
-            'sex',
-            'cmd',
-            'main_list',
-            'severity'
+            {header: 'Diagnostic', variable: 'diag'},
+            {header: 'Sexe', variable: 'sex'},
+            {header: 'CMD', variable: 'cmd'},
+            {header: 'Liste principale', variable: 'main_list'},
+            {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }}
         ],
         'procedures': [
-            'proc',
-            'begin_date',
-            'end_date',
-            'phase',
-            'activities',
-            'extensions'
+            {header: 'Acte', func: function(proc) { return proc.proc + (proc.phase ? '/' + proc.phase : ''); }},
+            {header: 'Début (inclus)', variable: 'begin_date'},
+            {header: 'Fin (exclue)', variable: 'end_date'},
+            {header: 'Activitiés', variable: 'activities'},
+            {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
         ]
     };
 
@@ -353,7 +373,8 @@ var tables = {};
         if (items.length) {
             var tr = createElement('tr');
             for (var i = 0; i < columns.length; i++) {
-                var th = createElement('th', {title: columns[i]}, columns[i]);
+                var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header},
+                                       columns[i].header);
                 tr.appendChild(th);
             }
             thead.appendChild(tr);
@@ -365,19 +386,20 @@ var tables = {};
                 for (var j = 0; j < columns.length; j++) {
                     var column = columns[j];
 
-                    if (item[column] !== null && item[column] !== undefined) {
-                        // FIXME: Put this meta-info in TableColumns
-                        if (column === 'durations' || column === 'ages') {
-                            var content = maskToRanges(item[column]);
-                        } else if (Array.isArray(item[column])) {
-                            var content = addSpecLinks(item[column].join(', '));
-                        } else {
-                            var content = addSpecLinks('' + item[column]);
-                        }
-                        var td = createElement('td', {}, content);
-                    } else {
-                        var td = createElement('td', {});
+                    if (column.variable) {
+                        var content = item[column.variable];
+                    } else if (column.func) {
+                        var content = column.func(item);
                     }
+
+                    if (content === undefined || content === null) {
+                        content = '';
+                    } else if (Array.isArray(content)) {
+                        content = content.join(', ');
+                    }
+                    content = addSpecLinks('' + content);
+
+                    var td = createElement('td', {}, content);
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
