@@ -167,24 +167,31 @@ var pricing = {};
             return;
 
         var begin_date = indexes[index].begin_date;
-        downloadJson('api/price_map.json', {date: begin_date}, function(status, json) {
+        downloadJson('api/ghm_ghs.json', {date: begin_date}, function(status, json) {
             var error = null;
 
             switch (status) {
                 case 200: {
                     if (json.length > 0) {
                         for (var i = 0; i < json.length; i++) {
-                            var pricing_info = pricings_map[json[i].ghm_root];
+                            var ghm_root = json[i].ghm.substr(0, 5);
+                            var ghm_ghs = json[i];
+
+                            var pricing_info = pricings_map[ghm_root];
                             if (pricing_info === undefined) {
                                 pricing_info = Array.apply(null, Array(indexes.length));
-                                pricings_map[json[i].ghm_root] = pricing_info;
+                                pricings_map[ghm_root] = pricing_info;
                             }
-                            pricing_info[index] = json[i];
-                            pricing_info[index].ghs_map = {};
-                            for (var j = 0; j < pricing_info[index].ghs.length; j++) {
-                                var ghs = pricing_info[index].ghs[j];
-                                pricing_info[index].ghs_map[ghs.ghs] = ghs;
+
+                            if (pricing_info[index] === undefined) {
+                                pricing_info[index] = {
+                                    'ghm_root': ghm_ghs.ghm.substr(0, 5),
+                                    'ghs': [],
+                                    'ghs_map': {}
+                                };
                             }
+                            pricing_info[index].ghs.push(ghm_ghs);
+                            pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
                         }
                     } else {
                         error = 'Aucune racine de GHM dans cette table';
@@ -299,9 +306,9 @@ var pricing = {};
     {
         var ghs = pricing_info[main_index].ghs;
 
-        function ghsLabel(ghs)
+        function ghsLabel(ghs, conditions)
         {
-            return '' + ghs.ghs + (ghs.conditions.length ? '*' : '') + ' (' + ghs.ghm + ')';
+            return '' + ghs.ghs + (conditions.length ? '*' : '') + ' (' + ghs.ghm + ')';
         }
 
         function modeToColor(mode)
@@ -331,12 +338,14 @@ var pricing = {};
 
         var max_price = 0.0;
         for (var i = 0; i < ghs.length; i++) {
+            var conditions = buildConditionsArray(ghs[i]);
+
             var dataset = {
-                label: ghsLabel(ghs[i]),
+                label: ghsLabel(ghs[i], conditions),
                 data: [],
-                borderColor: modeToColor(ghs[i].ghm_mode),
-                backgroundColor: modeToColor(ghs[i].ghm_mode),
-                borderDash: (ghs[i].conditions.length ? [5, 5] : undefined),
+                borderColor: modeToColor(ghs[i].ghm.substr(5, 1)),
+                backgroundColor: modeToColor(ghs[i].ghm.substr(5, 1)),
+                borderDash: (conditions.length ? [5, 5] : undefined),
                 fill: false
             };
             for (var duration = 0; duration < max_duration; duration++) {
@@ -459,11 +468,13 @@ var pricing = {};
 
         appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, true]; });
         appendRow(thead, 'GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
-        appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm_mode, {class: 'desc'}, true]; });
+        appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
         appendRow(thead, 'Conditions', function(col) {
+            var conditions = buildConditionsArray(col);
+
             var el =
-                createElement('div', {title: col.conditions.join('\n')},
-                    col.conditions.length ? col.conditions.length.toString() : ''
+                createElement('div', {title: conditions.join('\n')},
+                    conditions.length ? conditions.length.toString() : ''
                 );
             return [el, {class: 'conditions'}, true];
         });
@@ -488,8 +499,8 @@ var pricing = {};
         });
         appendRow(thead, 'Age', function(col) {
             var texts = [];
-            if (col.ghm_mode >= '1' && col.ghm_mode < '5') {
-                var severity = col.ghm_mode.charCodeAt(0) - '1'.charCodeAt(0);
+            var severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+            if (severity >= 0 && severity < 4) {
                 if (severity < col.young_severity_limit)
                     texts.push('< ' + col.young_age_treshold.toString());
                 if (severity < col.old_severity_limit)
@@ -589,6 +600,28 @@ var pricing = {};
     function applyGhsCoefficient(ghs, cents, apply_coeff)
     {
         return apply_coeff && cents ? (ghs.ghs_coefficient * cents) : cents;
+    }
+
+    function buildConditionsArray(ghs)
+    {
+        var conditions = [];
+
+        if (ghs.unit_authorization)
+            conditions.push('Autorisation Unité ' + ghs.unit_authorization);
+        if (ghs.bed_authorization)
+            conditions.push('Autorisation Lit ' + ghs.bed_authorization);
+        if (ghs.minimum_duration)
+            conditions.push('Durée ≥ ' + ghs.minimum_duration);
+        if (ghs.minimum_age)
+            conditions.push('Âge ≥ ' + ghs.minimum_age);
+        if (ghs.main_diagnosis)
+            conditions.push('DP ' + ghs.main_diagnosis);
+        if (ghs.diagnoses)
+            conditions.push('Diagnostic ' + ghs.diagnoses);
+        if (ghs.procedures)
+            conditions.push('Acte ' + ghs.procedures.join(', '));
+
+        return conditions;
     }
 
     function durationText(duration)

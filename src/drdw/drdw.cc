@@ -341,7 +341,6 @@ static void InitRoutes()
 
     // API
     routes.Set({"/api/indexes.json", Route::Matching::Exact, ProduceIndexes});
-    routes.Set({"/api/price_map.json", Route::Matching::Exact, ProducePriceMap});
     routes.Set({"/api/casemix.json", Route::Matching::Exact, ProduceCaseMix});
     routes.Set({"/api/classifier_tree.json", Route::Matching::Exact, ProduceClassifierTree});
     routes.Set({"/api/diagnoses.json", Route::Matching::Exact, ProduceDiagnoses});

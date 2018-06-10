@@ -20,8 +20,7 @@ set(DRDW_RESOURCES drdw.html
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc
              casemix.cc
-             lists.cc
-             pricing.cc)
+             lists.cc)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>

@@ -35,6 +35,4 @@ Response ProduceDiagnoses(MHD_Connection *conn, const char *url, CompressionType
 Response ProduceProcedures(MHD_Connection *conn, const char *url, CompressionType compression_type);
 Response ProduceGhmGhs(MHD_Connection *conn, const char *url, CompressionType compression_type);
 
-Response ProducePriceMap(MHD_Connection *conn, const char *url, CompressionType compression_type);
-
 Response ProduceCaseMix(MHD_Connection *conn, const char *url, CompressionType compression_type);

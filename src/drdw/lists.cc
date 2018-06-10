@@ -547,23 +547,25 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
 
                 uint32_t combined_durations = constraint->durations &
                                               ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
-                uint32_t combined_ages = /* constraint->ages */ UINT32_MAX &
-                                         ~((1u << ghm_to_ghs_info.minimal_age) - 1);
 
                 writer.StartObject();
+
                 writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_to_ghs_info.ghm).ptr);
-                writer.Key("ghs"); writer.Int(ghm_to_ghs_info.Ghs(Sector::Public).number);
-                /* if (ghm_root_info.allow_ambulatory) {
-                    writer.Key("allow_ambulatory"); writer.Bool(true);
+                if (ghm_root_info.young_severity_limit) {
+                    writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
+                    writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
                 }
-                if (ghm_root_info.short_duration_treshold) {
-                    writer.Key("short_duration_treshold"); writer.Int(ghm_root_info.short_duration_treshold);
+                if (ghm_root_info.old_severity_limit) {
+                    writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
+                    writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
                 }
-                if (ghm_root_info.childbirth_severity_list) {
-                    writer.Key("childbirth_severity_list"); writer.Int(ghm_root_info.childbirth_severity_list);
-                } */
                 writer.Key("durations"); writer.Uint(combined_durations);
-                writer.Key("ages"); writer.Uint(combined_ages);
+
+                writer.Key("ghs"); writer.Int(ghm_to_ghs_info.Ghs(Sector::Public).number);
+                if ((combined_durations & 1) &&
+                        (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
+                    writer.Key("warn_cmd28"); writer.Bool(true);
+                }
                 if (ghm_root_info.confirm_duration_treshold) {
                     writer.Key("confirm_treshold"); writer.Int(ghm_root_info.confirm_duration_treshold);
                 }
@@ -572,6 +574,12 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
                 }
                 if (ghm_to_ghs_info.bed_authorization) {
                     writer.Key("bed_authorization"); writer.Int(ghm_to_ghs_info.bed_authorization);
+                }
+                if (ghm_to_ghs_info.minimal_duration) {
+                    writer.Key("minimum_duration"); writer.Int(ghm_to_ghs_info.minimal_duration);
+                }
+                if (ghm_to_ghs_info.minimal_age) {
+                    writer.Key("minimum_age"); writer.Int(ghm_to_ghs_info.minimal_age);
                 }
                 if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                     writer.Key("main_diagnosis");
@@ -592,14 +600,23 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
                     }
                     writer.EndArray();
                 }
-                if (ghm_root_info.young_severity_limit) {
-                    writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
-                    writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
+
+                if (ghs_price_info) {
+                    writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
+                    writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(Sector::Public));
+                    if (ghs_price_info->exh_treshold) {
+                        writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
+                        writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
+                    }
+                    if (ghs_price_info->exb_treshold) {
+                        writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
+                        writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
+                        if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
+                            writer.Key("exb_once"); writer.Bool(true);
+                        }
+                    }
                 }
-                if (ghm_root_info.old_severity_limit) {
-                    writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
-                    writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
-                }
+
                 writer.EndObject();
             }
         }
