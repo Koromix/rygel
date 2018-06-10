@@ -369,6 +369,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
     Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
     Rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
+    Rcc_Vector<int> ghs_duration = df_builder.Add<int>("ghs_duration");
     Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
     Rcc_Vector<double> supplement_cents[ARRAY_SIZE(mco_SupplementTypeNames)];
     Rcc_Vector<int> supplement_count[ARRAY_SIZE(mco_SupplementTypeNames)];
@@ -415,6 +416,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             price_cents[k] = pricing.price_cents;
             ghs_cents[k] = (double)pricing.ghs_cents;
             ghs_coefficient[k] = (double)pricing.ghs_coefficient;
+            ghs_duration[k] = (result.ghs_duration >= 0) ? result.ghs_duration : NA_INTEGER;
             exb_exh[k] = pricing.exb_exh;
             for (Size l = 0; l < ARRAY_SIZE(mco_SupplementTypeNames); l++) {
                 supplement_cents[l][k] = pricing.supplement_cents.values[l];
