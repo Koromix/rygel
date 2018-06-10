@@ -61,7 +61,7 @@ var tables = {};
             {header: 'Acte', func: function(proc) { return proc.proc + (proc.phase ? '/' + proc.phase : ''); }},
             {header: 'Début (inclus)', variable: 'begin_date'},
             {header: 'Fin (exclue)', variable: 'end_date'},
-            {header: 'Activitiés', variable: 'activities'},
+            {header: 'Activités', variable: 'activities'},
             {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
         ]
     };
