@@ -345,7 +345,7 @@ static void MakeSupplementColumnName(const char *supplement_type, const char *su
 
 static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets,
                                    Span<const HeapArray<mco_Pricing>> pricing_sets,
-                                   bool export_units, bool apply_coefficient)
+                                   bool export_units)
 {
     Size results_count = 0;
     for (const HeapArray<mco_Result> &results: result_sets) {
@@ -390,7 +390,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
         for (Size j = 0; j < results.len; j++) {
             const mco_Result &result = results[j];
-            mco_Pricing pricing = apply_coefficient ? pricings[j].WithCoefficient() : pricings[j];
+            const mco_Pricing &pricing = pricings[j];
 
             char buf[32];
 
@@ -647,13 +647,12 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     Rcc_AutoSexp results_df;
     if (details) {
-        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false, apply_coefficient);
+        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false);
     }
 
     Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
-        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true,
-                                                 apply_coefficient);
+        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true);
     }
 
     Rcc_AutoSexp ret_list;
