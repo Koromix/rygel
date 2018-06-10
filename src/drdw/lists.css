@@ -3,6 +3,7 @@
     text-align: center;
 }
 
+#tables_tree { white-space: nowrap; }
 #tables_tree li {
     margin-left: -8px;
     padding-top: 1px;
