@@ -700,7 +700,7 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
         }
 
         Rcc_DataFrameBuilder df_builder(row_count);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
         Rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
         Rcc_Vector<int> cmd = df_builder.Add<int>("cmd");
         Rcc_Vector<int> jump = df_builder.Add<int>("jump");
@@ -772,7 +772,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         }
 
         Rcc_DataFrameBuilder df_builder(ghm_exclusions.len);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
         Rcc_Vector<const char *> ghm_root = df_builder.Add<const char *>("ghm_root");
 
         for (Size i = 0; i < ghm_exclusions.len; i++) {
@@ -804,8 +804,8 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         }
 
         Rcc_DataFrameBuilder df_builder(exclusions.len);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
-        Rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_diag");
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        Rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_or_linked_diagnosis");
 
         for (Size i = 0; i < exclusions.len; i++) {
             const ExclusionInfo &excl = exclusions[i];
@@ -833,7 +833,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         }
 
         Rcc_DataFrameBuilder df_builder(age_exclusions_count);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diag");
+        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
         Rcc_Vector<int> minimal_age = df_builder.Add<int>("minimal_age");
         Rcc_Vector<int> maximal_age = df_builder.Add<int>("maximal_age");
 
@@ -888,7 +888,7 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     Rcc_AutoSexp procedures_df;
     {
         Rcc_DataFrameBuilder df_builder(index->procedures.len);
-        Rcc_Vector<const char *> proc = df_builder.Add<const char *>("proc");
+        Rcc_Vector<const char *> proc = df_builder.Add<const char *>("procedure");
         Rcc_Vector<int> phase = df_builder.Add<int>("phase");
         Rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
         Rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
