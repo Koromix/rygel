@@ -44,7 +44,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+#tables_table thead { background: #ccc; }
 #tables_table th {
     text-align: center;
     font-weight: bold;
 }
+#tables_table tbody tr:nth-child(odd) { background: #eee; }
+#tables_table tbody tr:nth-child(even) { background: #fafafa; }
