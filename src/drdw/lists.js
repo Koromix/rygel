@@ -33,7 +33,8 @@ var tables = {};
             'diag',
             'sex',
             'cmd',
-            'main_list'
+            'main_list',
+            'severity'
         ],
         'procedures': [
             'proc',

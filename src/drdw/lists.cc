@@ -424,44 +424,45 @@ Response ProduceDiagnoses(MHD_Connection *conn, const char *, CompressionType co
 
         const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
                                               int sex) {
-            if (diag_info.attributes[sex].cmd) {
+            if (diag_info.Attributes(sex).cmd) {
                 writer.Key("cmd");
                 writer.String(Fmt(buf, "D-%1",
-                                  FmtArg(diag_info.attributes[sex].cmd).Pad0(-2)).ptr);
+                                  FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2)).ptr);
             }
-            if (diag_info.attributes[sex].cmd && diag_info.attributes[sex].jump) {
+            if (diag_info.Attributes(sex).cmd && diag_info.Attributes(sex).jump) {
                 writer.Key("main_list");
                 writer.String(Fmt(buf, "D-%1%2",
-                                  FmtArg(diag_info.attributes[sex].cmd).Pad0(-2),
-                                  FmtArg(diag_info.attributes[sex].jump).Pad0(-2)).ptr);
+                                  FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2),
+                                  FmtArg(diag_info.Attributes(sex).jump).Pad0(-2)).ptr);
+            }
+            if (diag_info.Attributes(sex).severity) {
+                writer.Key("severity"); writer.Int(diag_info.Attributes(sex).severity);
             }
         };
 
         writer.StartArray();
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
             if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-                if (spec.Match(diag_info.attributes[0].raw)) {
-                writer.StartObject();
-                writer.Key("diag"); writer.String(diag_info.diag.str);
-                writer.Key("sex"); writer.String("Homme");
-                WriteSexSpecificInfo(diag_info, 0);
-                writer.EndObject();
-                }
-
-                if (spec.Match(diag_info.attributes[1].raw)) {
-                writer.StartObject();
-                writer.Key("diag"); writer.String(diag_info.diag.str);
-                writer.Key("sex"); writer.String("Femme");
-                WriteSexSpecificInfo(diag_info, 1);
-                writer.EndObject();
-                }
-            } else {
-                if (spec.Match(diag_info.attributes[0].raw)) {
+                if (spec.Match(diag_info.Attributes(1).raw)) {
                     writer.StartObject();
                     writer.Key("diag"); writer.String(diag_info.diag.str);
-                    WriteSexSpecificInfo(diag_info, 0);
+                    writer.Key("sex"); writer.String("Homme");
+                    WriteSexSpecificInfo(diag_info, 1);
                     writer.EndObject();
                 }
+
+                if (spec.Match(diag_info.Attributes(2).raw)) {
+                    writer.StartObject();
+                    writer.Key("diag"); writer.String(diag_info.diag.str);
+                    writer.Key("sex"); writer.String("Femme");
+                    WriteSexSpecificInfo(diag_info, 2);
+                    writer.EndObject();
+                }
+            } else if (spec.Match(diag_info.Attributes(1).raw)) {
+                writer.StartObject();
+                writer.Key("diag"); writer.String(diag_info.diag.str);
+                WriteSexSpecificInfo(diag_info, 1);
+                writer.EndObject();
             }
         }
         writer.EndArray();
