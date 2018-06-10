@@ -738,18 +738,20 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
         Rcc_DataFrameBuilder df_builder(index->procedures.len);
         Rcc_Vector<const char *> proc = df_builder.Add<const char *>("proc");
         Rcc_Vector<int> phase = df_builder.Add<int>("phase");
-        Rcc_Vector<int> activities = df_builder.Add<int>("activities");
         Rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
         Rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        Rcc_Vector<int> activities = df_builder.Add<int>("activities");
+        Rcc_Vector<int> extensions = df_builder.Add<int>("extensions");
 
         for (Size i = 0; i < index->procedures.len; i++) {
-            const mco_ProcedureInfo &info = index->procedures[i];
+            const mco_ProcedureInfo &proc_info = index->procedures[i];
 
-            proc.Set(i, info.proc.str);
-            phase[i] = info.phase;
-            activities[i] = info.ActivitiesToDec();
-            start_date.Set(i, info.limit_dates[0]);
-            end_date.Set(i, info.limit_dates[1]);
+            proc.Set(i, proc_info.proc.str);
+            phase[i] = proc_info.phase;
+            start_date.Set(i, proc_info.limit_dates[0]);
+            end_date.Set(i, proc_info.limit_dates[1]);
+            activities[i] = proc_info.ActivitiesToDec();
+            extensions[i] = proc_info.ExtensionsToDec();
         }
 
         procedures_df = df_builder.Build();
