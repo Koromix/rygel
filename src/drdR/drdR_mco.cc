@@ -675,6 +675,47 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     END_RCPP
 }
 
+RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
+{
+    BEGIN_RCPP
+    RCC_SETUP_LOG_HANDLER();
+
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+
+    Rcc_AutoSexp indexes_df;
+    {
+        Size valid_indexes_count = 0;
+        for (const mco_TableIndex &index: classifier->table_set.indexes) {
+            valid_indexes_count += index.valid;
+        }
+
+        Rcc_DataFrameBuilder df_builder(valid_indexes_count);
+        Rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
+        Rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        Rcc_Vector<bool> changed_tables = df_builder.Add<bool>("changed_tables");
+        Rcc_Vector<bool> changed_prices = df_builder.Add<bool>("changed_prices");
+
+        Size i = 0;
+        for (const mco_TableIndex &index: classifier->table_set.indexes) {
+            if (!index.valid)
+                continue;
+
+            start_date.Set(i, index.limit_dates[0]);
+            end_date.Set(i, index.limit_dates[1]);
+            changed_tables.Set(i, index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic));
+            changed_prices.Set(i, index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic));
+            i++;
+        }
+
+        indexes_df = df_builder.Build();
+    }
+
+    return indexes_df;
+
+    END_RCPP
+}
+
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
@@ -1085,6 +1126,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
         {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
         {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 8},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
+        {"drdR_mco_Indexes", (DL_FUNC)&drdR_mco_Indexes, 1},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
         {"drdR_mco_Exclusions", (DL_FUNC)&drdR_mco_Exclusions, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},

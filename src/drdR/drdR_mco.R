@@ -32,6 +32,10 @@ drd_options <- function(debug = NULL) {
     .Call(`drdR_Options`, debug)
 }
 
+mco_indexes <- function(classifier) {
+    .Call(`drdR_mco_Indexes`, classifier)
+}
+
 mco_diagnoses <- function(classifier, date) {
     .Call(`drdR_mco_Diagnoses`, classifier, date)
 }
