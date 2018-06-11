@@ -48,15 +48,10 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
         emscripten_enter_soft_fullscreen("canvas", &strat);
     }
 
-    // Activate mouse tracking, we'll use emscripten_get_mouse_status()
-    emscripten_set_mousedown_callback("canvas", nullptr, 0,
-                                    [](int, const EmscriptenMouseEvent *, void *) { return 1; });
-    emscripten_set_mouseup_callback("canvas", nullptr, 0,
-                                    [](int, const EmscriptenMouseEvent *, void *) { return 1; });
-    emscripten_set_mousemove_callback("canvas", nullptr, 0,
-                                    [](int, const EmscriptenMouseEvent *, void *) { return 1; });
-
     struct RunContext {
+        Bitset<256> keys;
+        int wheel_y;
+
         InterfaceState render_state;
         const EntitySet *entity_set;
         Span<const ConceptSet> concept_sets;
@@ -69,6 +64,38 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
     ctx.concept_sets = concept_sets;
     ctx.run_flag = run_flag;
     ctx.lock = lock;
+
+    // Activate mouse tracking, we'll use emscripten_get_mouse_status()
+    emscripten_set_mousedown_callback("canvas", nullptr, 0,
+                                      [](int, const EmscriptenMouseEvent *, void *) { return 1; });
+    emscripten_set_mouseup_callback("canvas", nullptr, 0,
+                                    [](int, const EmscriptenMouseEvent *, void *) { return 1; });
+    emscripten_set_mousemove_callback("canvas", nullptr, 0,
+                                      [](int, const EmscriptenMouseEvent *, void *) { return 1; });
+    emscripten_set_wheel_callback("canvas", &ctx.wheel_y, 0,
+                                  [](int, const EmscriptenWheelEvent *ev, void *udata) {
+        int *wheel_y = (int *)udata;
+        *wheel_y = ev->deltaY;
+        return 1;
+    });
+
+    // Follow keyboard events
+    emscripten_set_keydown_callback(0, &ctx.keys, 1,
+                                    [](int, const EmscriptenKeyboardEvent *ev, void *udata) {
+        Bitset<256> *keys = (Bitset<256> *)udata;
+        keys->Set((int)RunIO::Key::Control, ev->ctrlKey);
+        keys->Set((int)RunIO::Key::Shift, ev->shiftKey);
+        keys->Set((int)RunIO::Key::Alt, ev->altKey);
+        return 1;
+    });
+    emscripten_set_keyup_callback(0, &ctx.keys, 1,
+                                    [](int, const EmscriptenKeyboardEvent *ev, void *udata) {
+        Bitset<256> *keys = (Bitset<256> *)udata;
+        keys->Set((int)RunIO::Key::Control, ev->ctrlKey);
+        keys->Set((int)RunIO::Key::Shift, ev->shiftKey);
+        keys->Set((int)RunIO::Key::Alt, ev->altKey);
+        return 1;
+    });
 
     io.main.run = true;
     emscripten_set_main_loop_arg([](void *udata) {
@@ -84,8 +111,6 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
             double height = 0.0;
             emscripten_get_element_css_size("canvas", &width, &height);
 
-            LogError("SIZE: %1x%2", width, height);
-
             g_io->display.width = (int)width;
             g_io->display.height = (int)height;
         }
@@ -95,14 +120,13 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
         g_io->input.wheel_x = 0;
         g_io->input.wheel_y = 0;
 
-        // Handle mouse events
+        // Handle input events
         {
             EmscriptenMouseEvent ev;
             emscripten_get_mouse_status(&ev);
 
             g_io->input.x = ev.targetX;
             g_io->input.y = ev.targetY;
-
             g_io->input.buttons = 0;
             if (ev.buttons & 0x1) {
                 g_io->input.buttons |= MaskEnum(RunIO::Button::Left);
@@ -113,8 +137,10 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
             if (ev.buttons & 0x4) {
                 g_io->input.buttons |= MaskEnum(RunIO::Button::Right);
             }
+            g_io->input.wheel_y = ctx->wheel_y;
+            ctx->wheel_y = 0;
 
-            LogError("%1x%2: %3", g_io->input.x, g_io->input.y, FmtHex(g_io->input.buttons));
+            g_io->input.keys = ctx->keys;
         }
 
         // Append NUL byte to keyboard text
