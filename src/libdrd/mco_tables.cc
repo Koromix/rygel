@@ -1128,6 +1128,9 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
         StreamReader mem_st(raw_buf, st.filename);
         IniParser ini(&mem_st);
 
+        ini.reader.PushLogHandler();
+        DEFER { PopLogHandler(); };
+
         IniProperty prop;
         bool valid = true;
         while (ini.Next(&prop) && !prop.section.len) {

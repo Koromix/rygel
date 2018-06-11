@@ -75,6 +75,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
     };
 
     IniParser ini(&st);
+
     ini.reader.PushLogHandler();
     DEFER { PopLogHandler(); };
 
