@@ -149,7 +149,7 @@ static bool InitDescSet(Span<const char *const> resource_directories,
     {
         bool success = true;
         for (const char *resource_dir: resource_directories) {
-            const char *desc_dir = Fmt(&temp_alloc, "%1%/desc", resource_dir).ptr;
+            const char *desc_dir = Fmt(&temp_alloc, "%1%/concepts", resource_dir).ptr;
             if (TestPath(desc_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(desc_dir, "*.json", &temp_alloc, &filenames, 1024);
             }
@@ -347,7 +347,7 @@ static void InitRoutes()
     routes.Set({"/api/procedures.json", Route::Matching::Exact, ProduceProcedures});
     routes.Set({"/api/ghm_ghs.json", Route::Matching::Exact, ProduceGhmGhs});
     for (const PackerAsset &desc: desc_set.descs) {
-        const char *url = Fmt(&routes_alloc, "/api/%1", desc.name).ptr;
+        const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
         routes.Set({url, Route::Matching::Exact, desc, GetMimeType(url)});
     }
 
@@ -545,8 +545,8 @@ R"(Usage: drdw [options]
 Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
-        --desc_dir <dir>         Add descriptions directory
-                                 (default: <resource_dir>%/desc)
+        --concept_dir <dir>      Add concepts directory
+                                 (default: <resource_dir>%/concepts)
 
     -s, --stays <path>           Add stays to casemix
 )");

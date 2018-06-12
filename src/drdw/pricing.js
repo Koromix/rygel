@@ -122,7 +122,7 @@ var pricing = {};
         if (ghm_roots_init)
             return;
 
-        downloadJson('api/ghm_roots.json', {}, function(status, json) {
+        downloadJson('concepts/ghm_roots.json', {}, function(status, json) {
             var error = null;
 
             switch (status) {
