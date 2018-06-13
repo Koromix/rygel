@@ -57,7 +57,7 @@ function createElementNS(ns, tag, attr)
     if (attr) {
         for (var key in attr) {
             value = attr[key];
-            if (value !== null) {
+            if (value !== null && value !== undefined) {
                 if (typeof value === 'function') {
                     el.addEventListener(key, value.bind(el));
                 } else {

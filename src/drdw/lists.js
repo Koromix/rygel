@@ -10,60 +10,86 @@ var tables = {};
     var items_init = false;
     var items = {};
 
+    var concept_sets = {
+        'ccam': {key: 'procedure', concepts: null, map: {}},
+        'cim10': {key: 'diagnosis', concepts: null, map: {}},
+        'ghm_roots': {key: 'ghm_root', concepts: null, map: {}}
+    };
+
     var collapse_nodes = new Set();
 
-    const TableColumns = {
-        'ghm_ghs': [
-            {header: 'GHM', variable: 'ghm'},
-            {header: 'GHS', variable: 'ghs'},
-            {header: 'Durées', title: 'Durées (nuits)', func: function(ghm_ghs) {
-                return maskToRanges(ghm_ghs.durations);
-            }},
-            {header: 'Confirmation', title: 'Confirmation (nuits)', func: function(ghm_ghs) {
-                return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
-            }},
-            {header: 'DP', variable: 'main_diagnosis'},
-            {header: 'Diagnostics', variable: 'diagnoses'},
-            {header: 'Actes', variable: 'procedures'},
-            {header: 'Autorisations', title: 'Autorisations (unités et lits)', func: function(ghm_ghs) {
-                var ret = [];
-                if (ghm_ghs.unit_authorization)
-                    ret.push('Unité ' + ghm_ghs.unit_authorization);
-                if (ghm_ghs.bed_authorization)
-                    ret.push('Lit ' + ghm_ghs.bed_authorization);
-                return ret;
-            }},
-            {header: 'Sévérité âgé', func: function(ghm_ghs) {
-                if (ghm_ghs.old_age_treshold) {
-                    return 'Âge ≥ ' + ghm_ghs.old_age_treshold + ' et niveau < ' +
-                           (ghm_ghs.old_severity_limit + 1);
-                } else {
-                    return null;
-                }
-            }},
-            {header: 'Sévérité jeune', func: function(ghm_ghs) {
-                if (ghm_ghs.young_age_treshold) {
-                    return 'Âge < ' + ghm_ghs.young_age_treshold + ' et niveau < ' +
-                           (ghm_ghs.young_severity_limit + 1);
-                } else {
-                    return null;
-                }
-            }},
-        ],
-        'diagnoses': [
-            {header: 'Diagnostic', variable: 'diag'},
-            {header: 'Sexe', variable: 'sex'},
-            {header: 'CMD', variable: 'cmd'},
-            {header: 'Liste principale', variable: 'main_list'},
-            {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }}
-        ],
-        'procedures': [
-            {header: 'Acte', func: function(proc) { return proc.proc + (proc.phase ? '/' + proc.phase : ''); }},
-            {header: 'Début (inclus)', variable: 'begin_date'},
-            {header: 'Fin (exclue)', variable: 'end_date'},
-            {header: 'Activités', variable: 'activities'},
-            {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
-        ]
+    const Tables = {
+        'ghm_ghs': {
+            'concepts': 'ghm_roots',
+            'columns': [
+                {func: function(ghm_ghs, ghm_roots) {
+                    var ghm_root = ghm_ghs.ghm.substr(0, 5);
+                    return ghm_root + (ghm_roots.map[ghm_root] ? ' - ' + ghm_roots.map[ghm_root].desc : '');
+                }},
+                {header: 'GHM', variable: 'ghm'},
+                {header: 'GHS', variable: 'ghs'},
+                {header: 'Durées', title: 'Durées (nuits)', func: function(ghm_ghs) {
+                    return maskToRanges(ghm_ghs.durations);
+                }},
+                {header: 'Confirmation', title: 'Confirmation (nuits)', func: function(ghm_ghs) {
+                    return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
+                }},
+                {header: 'DP', variable: 'main_diagnosis'},
+                {header: 'Diagnostics', variable: 'diagnoses'},
+                {header: 'Actes', variable: 'procedures'},
+                {header: 'Autorisations', title: 'Autorisations (unités et lits)', func: function(ghm_ghs) {
+                    var ret = [];
+                    if (ghm_ghs.unit_authorization)
+                        ret.push('Unité ' + ghm_ghs.unit_authorization);
+                    if (ghm_ghs.bed_authorization)
+                        ret.push('Lit ' + ghm_ghs.bed_authorization);
+                    return ret;
+                }},
+                {header: 'Sévérité âgé', func: function(ghm_ghs) {
+                    if (ghm_ghs.old_age_treshold) {
+                        return '≥ ' + ghm_ghs.old_age_treshold + ' et < ' +
+                               (ghm_ghs.old_severity_limit + 1);
+                    } else {
+                        return null;
+                    }
+                }},
+                {header: 'Sévérité jeune', func: function(ghm_ghs) {
+                    if (ghm_ghs.young_age_treshold) {
+                        return '< ' + ghm_ghs.young_age_treshold + ' et < ' +
+                               (ghm_ghs.young_severity_limit + 1);
+                    } else {
+                        return null;
+                    }
+                }}
+            ]
+        },
+
+        'diagnoses': {
+            'concepts': 'cim10',
+            'columns': [
+                {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10) {
+                    return diag.diag + (cim10.map[diag.diag] ? ' - ' + cim10.map[diag.diag].desc : '');
+                }},
+                {header: 'Sexe', variable: 'sex'},
+                {header: 'CMD', variable: 'cmd'},
+                {header: 'Liste principale', variable: 'main_list'},
+                {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }}
+            ]
+        },
+
+        'procedures': {
+            'concepts': 'ccam',
+            'columns': [
+                {header: 'Acte', style: 'width: 60%;', func: function(proc, ccam) {
+                    var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
+                    return proc_phase + (ccam.map[proc.proc] ? ' - ' + ccam.map[proc.proc].desc : '');
+                }},
+                {header: 'Début (inclus)', variable: 'begin_date'},
+                {header: 'Fin (exclue)', variable: 'end_date'},
+                {header: 'Activités', variable: 'activities'},
+                {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
+            ]
+        }
     };
 
     function run()
@@ -110,7 +136,9 @@ var tables = {};
             if (target_table === 'classifier_tree') {
                 refreshClassifierTree(items);
             } else {
-                refreshTable(items, TableColumns[target_table]);
+                var table = Tables[target_table];
+                refreshTable(items, table.columns,
+                             table.concepts ? concept_sets[table.concepts] : null);
             }
 
             if (!downloadJson.run_lock)
@@ -164,12 +192,52 @@ var tables = {};
     }
     this.route = route;
 
+    function getConceptSet(name, func)
+    {
+        if (concept_sets[name].concepts)
+            return concept_sets[name];
+
+        downloadJson('concepts/' + name + '.json', {},
+                     function(status, json) {
+            var error = null;
+
+            switch (status) {
+                case 200: {
+                    var concept_set = concept_sets[name];
+                    concept_set.concepts = json;
+                    concept_set.map = {};
+                    for (var i = 0; i < json.length; i++) {
+                        var concept = json[i];
+                        concept_set.map[concept[concept_set.key]] = concept;
+                    }
+                } break;
+
+                case 404: { error = 'Concepts \'' + name + '\' introuvables'; } break;
+                case 502:
+                case 503: { error = 'Service non accessible'; } break;
+                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+                default: { error = 'Erreur inconnue ' + status; } break;
+            }
+
+            if (error)
+                errors.add(error);
+            if (!downloadJson.run_lock)
+                func();
+        });
+
+        return null;
+    }
+    this.getConceptSet = getConceptSet;
+
     function updateTable(table, index, spec, func)
     {
         if (items_init)
             return true;
 
         items = [];
+
+        if (Tables[table] && Tables[table].concepts)
+            getConceptSet(Tables[table].concepts, func);
 
         var begin_date = indexes[index].begin_date;
         downloadJson('api/' + table + '.json', {date: begin_date, spec: spec},
@@ -361,7 +429,7 @@ var tables = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, columns)
+    function refreshTable(items, columns, concepts)
     {
         var table = createElement('table', {},
             createElement('thead'),
@@ -370,36 +438,59 @@ var tables = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
+        function createContent(column, item)
+        {
+            if (column.variable) {
+                var content = item[column.variable];
+            } else if (column.func) {
+                var content = column.func(item, concepts);
+            }
+
+            if (content === undefined || content === null) {
+                content = '';
+            } else if (Array.isArray(content)) {
+                content = content.join(', ');
+            }
+
+            return '' + content;
+        }
+
         if (items.length) {
             var tr = createElement('tr');
-            for (var i = 0; i < columns.length; i++) {
-                var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header},
+
+            var first_column = 0;
+            if (!columns[0].header) {
+                first_column = 1;
+            }
+
+            for (var i = first_column; i < columns.length; i++) {
+                var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
+                                              style: columns[i].style},
                                        columns[i].header);
                 tr.appendChild(th);
             }
             thead.appendChild(tr);
 
+            var prev_heading_content = null;
             for (var i = 0; i < items.length; i++) {
                 var item = items[i];
 
+                if (!columns[0].header) {
+                    var content = createContent(columns[0], item);
+                    if (content !== prev_heading_content) {
+                        var tr = createElement('tr', {class: 'heading'},
+                            createElement('td', {colspan: columns.length - 1,
+                                                 title: content}, addSpecLinks(content))
+                        );
+                        tbody.appendChild(tr);
+                        prev_heading_content = content;
+                    }
+                }
+
                 var tr = createElement('tr');
-                for (var j = 0; j < columns.length; j++) {
-                    var column = columns[j];
-
-                    if (column.variable) {
-                        var content = item[column.variable];
-                    } else if (column.func) {
-                        var content = column.func(item);
-                    }
-
-                    if (content === undefined || content === null) {
-                        content = '';
-                    } else if (Array.isArray(content)) {
-                        content = content.join(', ');
-                    }
-                    content = addSpecLinks('' + content);
-
-                    var td = createElement('td', {}, content);
+                for (var j = first_column; j < columns.length; j++) {
+                    var content = createContent(columns[j], item);
+                    var td = createElement('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
