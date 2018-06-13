@@ -859,7 +859,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         diagnoses_df = df_builder.Build();
     }
 
-    Rcc_AutoSexp age_df;
+    Rcc_AutoSexp conditions_df;
     {
         Size age_exclusions_count = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
@@ -892,7 +892,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
             }
         }
 
-        age_df = df_builder.Build();
+        conditions_df = df_builder.Build();
     }
 
     Rcc_AutoSexp ret_list;
@@ -900,7 +900,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         Rcc_ListBuilder ret_builder;
         ret_builder.Add("ghm_roots", ghm_roots_df);
         ret_builder.Add("diagnoses", diagnoses_df);
-        ret_builder.Add("age", age_df);
+        ret_builder.Add("conditions", conditions_df);
         ret_list = ret_builder.BuildList();
     }
 
