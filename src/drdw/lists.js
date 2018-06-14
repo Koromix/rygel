@@ -386,7 +386,7 @@ var tables = {};
                     }
 
                     // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
-                    if (parent_next_indices.includes(node.children_idx)) {
+                    if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                         if (node.children_idx != parent_next_indices[0]) {
                             var goto_li = createNodeLi('' + node_idx + '-1', 'Saut vers noeud ' + node.children_idx, false);
                             ul.appendChild(goto_li);
