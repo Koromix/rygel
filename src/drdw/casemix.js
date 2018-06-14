@@ -98,7 +98,7 @@ var casemix = {};
                 mix_init = false;
         }
 
-        switchPage('casemix/' + target_view);
+        go('casemix/' + target_view);
     }
     this.route = route;
 
@@ -213,7 +213,7 @@ var casemix = {};
             }
 
             mix_init = !errors.length;
-            if (!downloadJson.queue.length)
+            if (!downloadJson.busy)
                 func(errors);
         });
     }

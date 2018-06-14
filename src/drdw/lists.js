@@ -1,30 +1,21 @@
-var tables = {};
+var list = {};
 (function() {
-    // URL settings (routing)
-    var target_table = 'classifier_tree';
-    var target_specs = {};
-
+    // Cache
+    var indexes = [];
     var table_index = null;
     var table_type = null;
     var table_spec = null;
-    var items_init = false;
     var items = {};
-
-    var concept_sets = {
-        'ccam': {key: 'procedure', concepts: null, map: {}},
-        'cim10': {key: 'diagnosis', concepts: null, map: {}},
-        'ghm_roots': {key: 'ghm_root', concepts: null, map: {}}
-    };
-
     var collapse_nodes = new Set();
+    var specs = {};
 
     const Tables = {
         'ghm_ghs': {
             'concepts': 'ghm_roots',
             'columns': [
-                {func: function(ghm_ghs, ghm_roots) {
+                {func: function(ghm_ghs, ghm_roots_map) {
                     var ghm_root = ghm_ghs.ghm.substr(0, 5);
-                    return ghm_root + (ghm_roots.map[ghm_root] ? ' - ' + ghm_roots.map[ghm_root].desc : '');
+                    return ghm_root + (ghm_roots_map[ghm_root] ? ' - ' + ghm_roots_map[ghm_root].desc : '');
                 }},
                 {header: 'GHM', variable: 'ghm'},
                 {header: 'GHS', variable: 'ghs'},
@@ -67,8 +58,8 @@ var tables = {};
         'diagnoses': {
             'concepts': 'cim10',
             'columns': [
-                {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10) {
-                    return diag.diag + (cim10.map[diag.diag] ? ' - ' + cim10.map[diag.diag].desc : '');
+                {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10_map) {
+                    return diag.diag + (cim10_map[diag.diag] ? ' - ' + cim10_map[diag.diag].desc : '');
                 }},
                 {header: 'Sexe', variable: 'sex'},
                 {header: 'CMD', variable: 'cmd'},
@@ -80,9 +71,9 @@ var tables = {};
         'procedures': {
             'concepts': 'ccam',
             'columns': [
-                {header: 'Acte', style: 'width: 60%;', func: function(proc, ccam) {
+                {header: 'Acte', style: 'width: 60%;', func: function(proc, ccam_map) {
                     var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
-                    return proc_phase + (ccam.map[proc.proc] ? ' - ' + ccam.map[proc.proc].desc : '');
+                    return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
                 {header: 'Début (inclus)', variable: 'begin_date'},
                 {header: 'Fin (exclue)', variable: 'end_date'},
@@ -92,62 +83,64 @@ var tables = {};
         }
     };
 
-    function run()
+    function run(route, url, parameters, hash)
     {
+        let errors = new Set(downloadJson.errors);
+
         // Parse route (model: tables/<table>/<date>[/<spec>])
-        var parts = url_page.split('/');
-        target_table = parts[1] || target_table;
-        target_date = parts[2] || target_date;
-        target_specs[target_table] = parts[3] || target_specs[target_table];
+        let url_parts = url.split('/');
+        route.list = url_parts[1] || route.list;
+        route.date = url_parts[2] || route.date;
+        route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
+        specs[route.list] = route.spec;
+
+        // Resources
+        indexes = getIndexes();
+        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
+        let force_refresh = false;
+        if (main_index >= 0 && (table_index !== main_index || table_type !== route.list ||
+                                table_spec !== route.spec)) {
+            force_refresh = (table_type !== route.list);
+            updateTable(route.list, main_index, route.spec);
+
+            table_type = route.list;
+            table_index = main_index;
+            table_spec = route.spec;
+        }
 
         // Validate
-        var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
-        if (target_date !== null && indexes.length && main_index < 0)
+        if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
         // TODO: Validation is not complete
 
         // Redirection (stable URLs)
-        if (target_date === null && indexes.length) {
-            route({date: indexes[indexes.length - 1].begin_date});
+        if (!route.date && indexes.length) {
+            redirect(buildUrl({date: indexes[indexes.length - 1].begin_date}));
             return;
         }
 
-        // Common resources
-        updateIndexes(run);
-        var force_refresh = false;
-        if (main_index >= 0 && (table_index !== main_index || table_type !== target_table ||
-                                table_spec !== target_specs[target_table])) {
-            force_refresh = (table_type !== target_table);
-            items_init = false;
-
-            markOutdated('#tables_view', true);
-            updateTable(target_table, main_index, target_specs[target_table], run);
-        }
-
         // Refresh display
-        document.querySelector('#tables').classList.add('active');
-        document.querySelector('#tables_tree').classList.toggle('active', target_table === 'classifier_tree');
-        document.querySelector('#tables_table').classList.toggle('active', target_table !== 'classifier_tree');
-        refreshIndexesLine('#tables_indexes', main_index);
-        if (!downloadJson.run_lock || force_refresh) {
-            refreshHeader(Array.from(errors));
-            errors.clear();
+        _('#tables').classList.add('active');
+        _('#tables_tree').classList.toggle('active', route.list === 'classifier_tree');
+        _('#tables_table').classList.toggle('active', route.list !== 'classifier_tree');
+        refreshIndexesLine(_('#tables_indexes'), indexes, main_index);
+        markOutdated('#tables_view', downloadJson.busy);
+        if (!downloadJson.busy || force_refresh) {
+            refreshHeader(route.spec, Array.from(errors));
+            downloadJson.errors = [];
 
-            if (target_table === 'classifier_tree') {
-                refreshClassifierTree(items);
+            if (route.list === 'classifier_tree') {
+                refreshClassifierTree(route.date, items, hash);
             } else {
-                var table = Tables[target_table];
+                var table = Tables[route.list];
                 refreshTable(items, table.columns,
-                             table.concepts ? concept_sets[table.concepts] : null);
+                             table.concepts ? getConcepts(table.concepts)[1] : null);
             }
-
-            if (!downloadJson.run_lock)
-                markOutdated('#tables_view', false);
         }
     }
     this.run = run;
 
-    function refreshHeader(errors)
+    function refreshHeader(spec, errors)
     {
         var log = document.querySelector('#tables .log');
         var h1 = document.querySelector('#tables_spec');
@@ -159,14 +152,14 @@ var tables = {};
             log.style.display = 'none';
         }
 
-        if (target_specs[target_table]) {
+        if (spec) {
             var remove_spec = function(e) {
-                tables.route({spec: null});
+                list.route({spec: null});
                 e.preventDefault();
             };
 
             h1.innerHTML = '';
-            h1.appendChild(document.createTextNode('Filtre : ' + target_specs[target_table] + ' '));
+            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
             h1.appendChild(createElement('a', {href: '#',
                                                click: remove_spec}, '(retirer)'));
         } else {
@@ -174,107 +167,40 @@ var tables = {};
         }
     }
 
+    function buildUrl(args)
+    {
+        let new_route = buildRoute(args);
+        if (args.spec === undefined)
+            new_route.spec = specs[new_route.list];
+
+        let url_parts = ['list', new_route.list, new_route.date, new_route.spec];
+        while (!url_parts[url_parts.length - 1])
+            url_parts.pop();
+
+        return url_parts.join('/');
+    }
+    this.buildUrl = buildUrl;
+
     function route(args)
     {
-        if (args !== undefined) {
-            target_date = args.date || target_date;
-            target_table = args.table || target_table;
-            if (args.spec !== undefined)
-                target_specs[target_table] = args.spec;
-        }
-
-        if (target_date !== null) {
-            switchPage('tables/' + target_table + '/' + target_date +
-                       (target_specs[target_table] ? '/' + target_specs[target_table] : ''));
-        } else {
-            switchPage('tables/' + target_table);
-        }
+        go(buildUrl(args));
     }
     this.route = route;
 
-    function getConceptSet(name, func)
+    function updateTable(list, index, spec)
     {
-        if (concept_sets[name].concepts)
-            return concept_sets[name];
-
-        downloadJson('concepts/' + name + '.json', {},
-                     function(status, json) {
-            var error = null;
-
-            switch (status) {
-                case 200: {
-                    var concept_set = concept_sets[name];
-                    concept_set.concepts = json;
-                    concept_set.map = {};
-                    for (var i = 0; i < json.length; i++) {
-                        var concept = json[i];
-                        concept_set.map[concept[concept_set.key]] = concept;
-                    }
-                } break;
-
-                case 404: { error = 'Concepts \'' + name + '\' introuvables'; } break;
-                case 502:
-                case 503: { error = 'Service non accessible'; } break;
-                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-                default: { error = 'Erreur inconnue ' + status; } break;
-            }
-
-            if (error)
-                errors.add(error);
-            if (!downloadJson.run_lock)
-                func();
-        });
-
-        return null;
-    }
-    this.getConceptSet = getConceptSet;
-
-    function updateTable(table, index, spec, func)
-    {
-        if (items_init)
-            return true;
-
         items = [];
-
-        if (Tables[table] && Tables[table].concepts)
-            getConceptSet(Tables[table].concepts, func);
-
-        var begin_date = indexes[index].begin_date;
-        downloadJson('api/' + table + '.json', {date: begin_date, spec: spec},
-                     function(status, json) {
-            var error = null;
-
-            switch (status) {
-                case 200: { items = json; } break;
-
-                case 404: { error = 'Table introuvable'; } break;
-                case 502:
-                case 503: { error = 'Service non accessible'; } break;
-                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-                default: { error = 'Erreur inconnue ' + status; } break;
-            }
-
-            if (!error) {
-                items_init = true;
-                table_type = table;
-                table_index = index;
-                table_spec = spec;
-            } else {
-                items_init = false;
-            }
-
-            if (error)
-                errors.add(error);
-            if (!downloadJson.run_lock)
-                func();
-        });
+        if (Tables[list] && Tables[list].concepts)
+            getConcepts(Tables[list].concepts);
+        downloadJson('api/' + list + '.json', {date: indexes[index].begin_date, spec: spec},
+                     function(json) { items = json; });
     }
 
-    function refreshClassifierTree(nodes)
+    function refreshClassifierTree(date, nodes, hash)
     {
         var click_function = function(e) {
             var li = this.parentNode.parentNode;
-            var collapse_id = target_date + li.id;
+            var collapse_id = date + li.id;
             if (li.classList.toggle('collapse')) {
                 collapse_nodes.add(collapse_id);
             } else {
@@ -295,7 +221,7 @@ var tables = {};
                         content
                     )
                 );
-                if (collapse_nodes.has(target_date + 'n' + idx))
+                if (collapse_nodes.has(date + 'n' + idx))
                     li.classList.add('collapse');
             } else {
                 var li = createElement('li', {id: 'n' + idx, class: 'leaf'},
@@ -368,6 +294,7 @@ var tables = {};
                         li.appendChild(createElement('br'));
 
                         var li2 = createNodeLi(indices[0], nodes[indices[0]].text, true);
+                        li2.children[0].id = li2.id;
                         appendChildren(li, li2.childNodes);
 
                         indices.shift();
@@ -415,8 +342,8 @@ var tables = {};
         }
 
         // Make sure the corresponding node is visible
-        if (url_hash && url_hash.match(/^n[0-9]+$/)) {
-            var el = ul.querySelector('#' + url_hash);
+        if (hash && hash.match(/^n[0-9]+$/)) {
+            var el = ul.querySelector('#' + hash);
             while (el && el !== ul) {
                 if (el.tagName === 'LI')
                     el.classList.remove('collapse');
@@ -429,7 +356,7 @@ var tables = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, columns, concepts)
+    function refreshTable(items, columns, concepts_map)
     {
         var table = createElement('table', {},
             createElement('thead'),
@@ -443,7 +370,7 @@ var tables = {};
             if (column.variable) {
                 var content = item[column.variable];
             } else if (column.func) {
-                var content = column.func(item, concepts);
+                var content = column.func(item, concepts_map);
             }
 
             if (content === undefined || content === null) {
@@ -533,28 +460,28 @@ var tables = {};
 
     function makeSpecLink(str)
     {
-        var page;
-        var klass = null;
+        let url = null;
+        let cls = null;
         if (str[0] === 'A') {
-            page = 'tables/procedures/' + target_date + '/' + str;
+            url = buildUrl({list: 'procedures', spec: str});
         } else if (str[0] === 'D') {
-            page = 'tables/diagnoses/' + target_date + '/' + str;
+            url = buildUrl({list: 'diagnoses', spec: str});
         } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            page = 'pricing/table/' + target_date + '/' + str.substr(0, 5);
-            klass = 'ghm';
+            url = pricing.buildUrl({view: 'table', ghm_root: str.substr(0, 5)});
+            cls = 'ghm';
         } else if (str.match(/noeud [0-9]+/)) {
-            page = 'tables/classifier_tree/' + target_date + '#n' + str.substr(6);
+            url = buildUrl({list: 'classifier_tree'}) + '#n' + str.substr(6);
         } else {
             return str;
         }
-        var click_function = function(e) {
-            switchPage(page);
+
+        let click_function = function(e) {
+            go(url);
             e.preventDefault();
         };
+        let anchor = createElement('a', {href: url, class: cls, click: click_function}, str);
 
-        var link = createElement('a', {href: page, class: klass,
-                                       click: click_function}, str);
-        return link;
+        return anchor;
     }
     this.makeSpecLink = makeSpecLink;
 
@@ -575,4 +502,4 @@ var tables = {};
         return elements;
     }
     this.addSpecLinks = addSpecLinks;
-}).call(tables);
+}).call(list);

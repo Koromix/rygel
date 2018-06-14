@@ -1,111 +1,105 @@
 var pricing = {};
 (function() {
-    // URL settings (routing)
-    var target_view = 'table';
-    var target_ghm_root = null;
-    var target_diff = null;
-    var target_coeff = false;
-
-    var ghm_roots_init = false;
+    // Cache
+    var indexes = [];
     var ghm_roots = [];
     var ghm_roots_map = {};
     var pricings_map = {};
 
     var chart = null;
 
-    function run()
+    function run(route, url, parameters, hash)
     {
-        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>)
-        var parts = url_page.split('/');
-        target_view = parts[1] || target_view;
-        if (parts[2]) {
-            var date_parts = parts[2].split('..', 2);
+        let errors = new Set(downloadJson.errors);
+
+        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
+        let url_parts = url.split('/');
+        route.view = url_parts[1] || route.view;
+        if (url_parts[2]) {
+            let date_parts = url_parts[2].split('..', 2);
             if (date_parts.length === 2) {
-                target_date = date_parts[1];
-                target_diff = date_parts[0];
+                route.date = date_parts[1];
+                route.diff = date_parts[0];
             } else {
-                target_date = date_parts[0];
-                target_diff = null;
+                route.date = date_parts[0];
+                route.diff = null;
             }
         }
-        target_ghm_root = parts[3] || target_ghm_root;
-        target_coeff = parts[3] ? (parts[4] && parts[4] === 'coeff') : target_coeff;
+        route.ghm_root = url_parts[3] || route.ghm_root;
+        if (url_parts[3])
+            route.apply_coefficient = (url_parts[4] === 'coeff');
 
-        // Validate
-        if (target_view !== 'chart' && target_view !== 'table')
+        // Resources
+        indexes = getIndexes();
+        updateGhmRoots();
+        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
+        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
+        if (main_index >= 0 && !indexes[main_index].init)
+            updatePriceMap(main_index);
+        if (diff_index >= 0 && !indexes[diff_index].init)
+            updatePriceMap(diff_index);
+
+        // Errors
+        if (route.view !== 'chart' && route.view !== 'table')
             errors.add('Mode d\'affichage incorrect');
-        var main_index = indexes.findIndex(function(info) { return info.begin_date === target_date; });
-        if (target_date !== null && indexes.length && main_index < 0)
+        if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
-        var diff_index = indexes.findIndex(function(info) { return info.begin_date === target_diff; });
-        if (target_diff !== null && indexes.length && diff_index < 0)
+        if (route.diff !== null && indexes.length && diff_index < 0)
             errors.add('Date de comparaison incorrecte');
-        if (target_ghm_root !== null && ghm_roots.length) {
-            if (!ghm_roots_map[target_ghm_root]) {
+        if (route.ghm_root !== null && ghm_roots.length) {
+            if (!ghm_roots_map[route.ghm_root]) {
                 errors.add('Racine de GHM inconnue');
             } else {
-                if (!checkIndexGhmRoot(main_index, target_ghm_root))
+                if (!checkIndexGhmRoot(main_index, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
-                if (!checkIndexGhmRoot(diff_index, target_ghm_root))
+                if (!checkIndexGhmRoot(diff_index, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
 
         // Redirection (stable URLs)
-        if (target_date === null && indexes.length) {
-            route({date: indexes[indexes.length - 1].begin_date});
+        if (!route.date && indexes.length) {
+            redirect(buildUrl({date: indexes[indexes.length - 1].begin_date}));
             return;
-        } else if (target_ghm_root === null && ghm_roots.length) {
-            route({ghm_root: ghm_roots[0].ghm_root});
+        } else if (!route.ghm_root && ghm_roots.length) {
+            redirect(buildUrl({ghm_root: ghm_roots[0].ghm_root}));
             return;
-        }
-
-        // Resources
-        updateIndexes(run);
-        updateGhmRoots(run);
-        if (main_index >= 0 && !indexes[main_index].init) {
-            markOutdated('#pricing_view', true);
-            updatePriceMap(main_index, run);
-        }
-        if (diff_index >= 0 && !indexes[diff_index].init) {
-            markOutdated('#pricing_view', true);
-            updatePriceMap(diff_index, run);
         }
 
         // Refresh display
-        document.querySelector('#pricing').classList.add('active');
-        document.querySelector('#pricing_table').classList.toggle('active', target_view === 'table');
-        document.querySelector('#pricing_chart').classList.toggle('active', target_view === 'chart');
-        refreshIndexesLine('#pricing_indexes', main_index);
-        refreshGhmRoots(main_index, target_ghm_root);
-        refreshIndexesDiff(diff_index, target_ghm_root);
-        document.querySelector('#pricing_coeff').checked = target_coeff;
-        if (!downloadJson.run_lock) {
-            refreshView(main_index, diff_index, target_ghm_root, target_coeff, Array.from(errors));
-            errors.clear();
+        _('#pricing').classList.add('active');
+        refreshIndexesLine(_('#pricing_indexes'), indexes, main_index);
+        refreshGhmRoots(main_index, route.ghm_root);
+        refreshIndexesDiff(diff_index, route.ghm_root);
+        _('#pricing_coeff').checked = route.apply_coefficient;
+        _('#pricing_table').classList.toggle('active', route.view === 'table');
+        _('#pricing_chart').classList.toggle('active', route.view === 'chart');
+        markOutdated('#pricing_view', downloadJson.busy);
+        if (!downloadJson.busy) {
+            // refreshHeader(Array.from(errors));
+            refreshView(main_index, diff_index, route.ghm_root, route.apply_coefficient, Array.from(errors));
+            downloadJson.errors = [];
         }
     }
     this.run = run;
 
+    function buildUrl(args)
+    {
+        let new_route = buildRoute(args);
+
+        let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
+        let coeff = new_route.apply_coefficient ? 'coeff' : null;
+        let url_parts = ['pricing', new_route.view, date, new_route.ghm_root, coeff];
+        while (!url_parts[url_parts.length - 1])
+            url_parts.pop();
+
+        return url_parts.join('/');
+    }
+    this.buildUrl = buildUrl;
+
     function route(args)
     {
-        if (args !== undefined) {
-            target_view = args.view || target_view;
-            target_date = args.date || target_date;
-            target_ghm_root = args.ghm_root || target_ghm_root;
-            if (args.diff === '')
-                args.diff = null;
-            target_diff = (args.diff !== undefined) ? args.diff : target_diff;
-            target_coeff = (args.coeff !== undefined) ? args.coeff : target_coeff;
-        }
-
-        if (target_view !== null && target_date !== null && target_ghm_root !== null) {
-            var diff_date = (target_diff !== null ? target_diff + '..' : '') + target_date;
-            switchPage('pricing/' + target_view + '/' + diff_date + '/' + target_ghm_root +
-                       (target_coeff ? '/coeff' : ''));
-        } else {
-            switchPage('pricing/' + target_view);
-        }
+        go(buildUrl(args));
     }
     this.route = route;
 
@@ -117,99 +111,51 @@ var pricing = {};
                (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
     }
 
-    function updateGhmRoots(func)
+    function updateGhmRoots()
     {
-        if (ghm_roots_init)
+        if (ghm_roots.length)
             return;
 
-        downloadJson('concepts/ghm_roots.json', {}, function(status, json) {
-            var error = null;
-
-            switch (status) {
-                case 200: {
-                    if (json.length > 0) {
-                        ghm_roots = json;
-                        for (var i = 0; i < ghm_roots.length; i++) {
-                            var ghm_root_info = ghm_roots[i];
-                            ghm_roots_map[ghm_root_info.ghm_root] = ghm_root_info;
-                        }
-                    }
-
-                    ghm_roots = ghm_roots.sort(function(ghm_root_info1, ghm_root_info2) {
-                        if (ghm_root_info1.da !== ghm_root_info2.da) {
-                            return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
-                        } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
-                            return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
-                        } else {
-                            return 0;
-                        }
-                    });
-                } break;
-
-                case 404: { error = 'Liste des racines de GHM introuvable'; } break;
-                case 502:
-                case 503: { error = 'Service non accessible'; } break;
-                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-                default: { error = 'Erreur inconnue ' + status; } break;
+        [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
+        ghm_roots = ghm_roots.sort(function(ghm_root_info1, ghm_root_info2) {
+            if (ghm_root_info1.da !== ghm_root_info2.da) {
+                return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
+            } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
+                return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+            } else {
+                return 0;
             }
-
-            ghm_roots_init = !error;
-            if (error)
-                errors.add(error);
-            if (!downloadJson.run_lock)
-                func();
         });
     }
 
-    function updatePriceMap(index, func)
+    function updatePriceMap(index)
     {
         if (indexes[index].init)
             return;
 
         var begin_date = indexes[index].begin_date;
-        downloadJson('api/ghm_ghs.json', {date: begin_date}, function(status, json) {
-            var error = null;
+        downloadJson('api/ghm_ghs.json', {date: begin_date}, function(json) {
+            for (var i = 0; i < json.length; i++) {
+                var ghm_root = json[i].ghm.substr(0, 5);
+                var ghm_ghs = json[i];
 
-            switch (status) {
-                case 200: {
-                    if (json.length > 0) {
-                        for (var i = 0; i < json.length; i++) {
-                            var ghm_root = json[i].ghm.substr(0, 5);
-                            var ghm_ghs = json[i];
+                var pricing_info = pricings_map[ghm_root];
+                if (pricing_info === undefined) {
+                    pricing_info = Array.apply(null, Array(indexes.length));
+                    pricings_map[ghm_root] = pricing_info;
+                }
 
-                            var pricing_info = pricings_map[ghm_root];
-                            if (pricing_info === undefined) {
-                                pricing_info = Array.apply(null, Array(indexes.length));
-                                pricings_map[ghm_root] = pricing_info;
-                            }
-
-                            if (pricing_info[index] === undefined) {
-                                pricing_info[index] = {
-                                    'ghm_root': ghm_ghs.ghm.substr(0, 5),
-                                    'ghs': [],
-                                    'ghs_map': {}
-                                };
-                            }
-                            pricing_info[index].ghs.push(ghm_ghs);
-                            pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
-                        }
-                    } else {
-                        error = 'Aucune racine de GHM dans cette table';
-                    }
-                } break;
-
-                case 404: { error = 'Aucune table disponible à cette date'; } break;
-                case 502:
-                case 503: { error = 'Service non accessible'; } break;
-                case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-                default: { error = 'Erreur inconnue ' + status; } break;
+                if (pricing_info[index] === undefined) {
+                    pricing_info[index] = {
+                        'ghm_root': ghm_ghs.ghm.substr(0, 5),
+                        'ghs': [],
+                        'ghs_map': {}
+                    };
+                }
+                pricing_info[index].ghs.push(ghm_ghs);
+                pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
             }
-
-            indexes[index].init = !error;
-            if (error)
-                errors.add(error);
-            if (!downloadJson.run_lock)
-                func();
+            indexes[index].init = true;
         });
     }
 

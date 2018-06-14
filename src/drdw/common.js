@@ -81,6 +81,15 @@ function cloneAttributes(src_node, element)
     }
 }
 
+function _(selector)
+{
+    return document.querySelector(selector);
+}
+
+// ------------------------------------------------------------------------
+// JSON
+// ------------------------------------------------------------------------
+
 function downloadJson(url, arguments, func)
 {
     var keys = Object.keys(arguments);
@@ -99,31 +108,64 @@ function downloadJson(url, arguments, func)
     if (downloadJson.queue.has(url))
         return;
     downloadJson.queue.add(url);
-    downloadJson.run_lock++;
+    downloadJson.busy++;
+
+    function handleFinishedRequest(status, response)
+    {
+        let error = null;
+        switch (status) {
+            case 200: { /* Success */ } break;
+            case 404: { error = 'Adresse \'' + url + '\'introuvable'; } break;
+            case 502:
+            case 503: { error = 'Service non accessible'; } break;
+            case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
+            default: { error = 'Erreur inconnue ' + status; } break;
+        }
+
+        if (!error) {
+            func(response);
+        } else {
+            downloadJson.errors.push(error);
+        }
+
+        if (!--downloadJson.busy) {
+            go();
+            downloadJson.queue.clear();
+        }
+    }
 
     var xhr = new XMLHttpRequest();
     xhr.open('get', url, true);
     xhr.responseType = 'json';
     xhr.timeout = 10000;
-    xhr.onload = function(e) {
-        downloadJson.run_lock--;
-        func(this.status, xhr.response);
-        downloadJson.queue.delete(url);
-    };
-    xhr.onerror = function(e) {
-        downloadJson.run_lock--;
-        func(503);
-        downloadJson.queue.delete(url);
-    };
-    xhr.ontimeout = function(e) {
-        downloadJson.run_lock--;
-        func(504);
-        downloadJson.queue.delete(url);
-    };
+    xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
+    xhr.onerror = function(e) { handleFinishedRequest(503); };
+    xhr.ontimeout = function(e) { handleFinishedRequest(504); };
     xhr.send();
 }
+downloadJson.errors = [];
 downloadJson.queue = new Set();
-downloadJson.run_lock = 0;
+downloadJson.busy = 0;
+
+// ------------------------------------------------------------------------
+// Navigation
+// ------------------------------------------------------------------------
+
+// Routing
+var route_url = null;
+var route_url_parts = null;
+var route = {
+    'view': 'table',
+    'date': null,
+    'ghm_root': null,
+    'diff': null,
+    'apply_coefficient': false,
+
+    'list': 'classifier_tree',
+    'spec': null
+};
+var scroll_cache = {};
+var module = null;
 
 function markOutdated(selector, mark)
 {
@@ -133,24 +175,7 @@ function markOutdated(selector, mark)
     }
 }
 
-// ------------------------------------------------------------------------
-// Navigation
-// ------------------------------------------------------------------------
-
-// Routing
-var url_base;
-var url_page;
-var url_hash;
-var scroll_cache = {};
-var module;
-
-// Error accumulator
-var errors = new Set();
-
-// Shared routing values
-var target_date = null;
-
-function switchMenu(selector, enable)
+function toggleMenu(selector, enable)
 {
     var el = document.querySelector(selector);
     if (enable === undefined)
@@ -164,61 +189,108 @@ function switchMenu(selector, enable)
     }
 }
 
-function switchPage(new_url, mark_history)
+function buildRoute(args)
 {
+    if (args === undefined)
+        args = {};
+
+    return Object.assign({}, route, args);
+}
+
+function parseUrl(url)
+{
+    var a = document.createElement('a');
+    a.href = url;
+
+    return {
+        source: url,
+        href: a.href,
+        origin: a.origin,
+        protocol: a.protocol.replace(':', ''),
+        host: a.hostname,
+        port: a.port,
+        query: a.search,
+        params: (function(){
+            var ret = {};
+            var seg = a.search.replace(/^\?/, '').split('&');
+            var len = seg.length;
+            var s;
+            for (var i = 0; i < len; i++) {
+                if (!seg[i])
+                    continue;
+                s = seg[i].split('=');
+                ret[s[0]] = s[1];
+            }
+            return ret;
+        })(),
+        hash: a.hash.replace('#', ''),
+        path: a.pathname.replace(/^([^/])/, '/$1')
+    };
+}
+
+function go(new_url, mark_history)
+{
+    if (new_url === undefined)
+        new_url = route_url;
     if (mark_history === undefined)
         mark_history = true;
 
-    if (url_page)
-        scroll_cache[url_page] = [window.pageXOffset, window.pageYOffset];
+    let url_parts = parseUrl(new_url);
+    new_url = url_parts.href.substr(url_parts.origin.length + 1);
 
-    new_url_parts = new_url.split('#', 2);
-    if (mark_history && new_url_parts[0] !== url_page)
-        window.history.pushState(null, null, url_base + new_url);
-    url_page = new_url_parts[0];
-    url_hash = new_url_parts[1] || null;
+    if (new_url !== route_url) {
+        if (route_url_parts)
+            scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
+
+        if (mark_history) {
+            window.history.pushState(null, null, new_url);
+        } else {
+            window.history.replaceState(null, null, new_url);
+        }
+    }
+    route_url = new_url;
+    route_url_parts = url_parts;
 
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (url_page.startsWith(menu_anchors[i].getAttribute('href')) &&
+        var active = (new_url.startsWith(menu_anchors[i].getAttribute('href')) &&
                       !menu_anchors[i].classList.contains('category'));
         menu_anchors[i].classList.toggle('active', active);
     }
-    switchMenu('#side_menu', false);
+    toggleMenu('#side_menu', false);
 
     removeClass(document.querySelectorAll('.page'), 'active');
 
-    var module_name = url_page.split('/')[0];
+    var module_name = new_url.split('/')[0];
     module = window[module_name];
     if (module !== undefined && module.run !== undefined)
-        module.run();
+        module.run(route, url_parts.path.substr(1), url_parts.params, url_parts.hash);
 
-    var scroll_target = scroll_cache[url_page];
-    if (url_hash) {
-        window.location.hash = url_hash;
+    var scroll_target = scroll_cache[url_parts.path];
+    if (url_parts.hash) {
+        window.location.hash = url_parts.hash;
     } else if (scroll_target) {
         window.scrollTo(scroll_target[0], scroll_target[1]);
     } else {
         window.scrollTo(0, 0);
     }
 }
+function redirect(new_url) { go(new_url, false); }
 
 function initNavigation()
 {
-    url_base = window.location.pathname.substr(0, window.location.pathname.indexOf('/')) +
-               document.querySelector('base').getAttribute('href');
-    url_page = window.location.pathname.substr(url_base.length);
-    if (url_page === '') {
+    let new_url;
+    if (window.location.pathname !== '/') {
+        new_url = window.location.href;
+    } else {
         var first_anchor = document.querySelector('#side_menu a');
-        url_page = first_anchor.getAttribute('href');
-        window.history.replaceState(null, null, url_base + url_page);
+        new_url = first_anchor.getAttribute('href');
+        window.history.replaceState(null, null, new_url);
     }
-
-    switchPage(url_page);
+    go(new_url, false);
 
     window.addEventListener('popstate', function(e) {
-        url_page = window.location.pathname.substr(url_base.length);
-        switchPage(url_page, false);
+        go(window.location.href, false);
     });
 }
 
@@ -232,45 +304,31 @@ if (document.readyState === 'complete') {
 // Indexes
 // ------------------------------------------------------------------------
 
-var indexes_init = false;
-var indexes = [];
-
-function updateIndexes(func)
+function getIndexes()
 {
-    if (indexes_init)
-        return;
+    var indexes = getIndexes.indexes;
 
-    downloadJson('api/indexes.json', {}, function(status, json) {
-        var error = null;
+    if (!indexes.length) {
+        downloadJson('api/indexes.json', {}, function(json) {
+            if (json.length > 0) {
+                indexes = json;
+                for (var i = 0; i < indexes.length; i++)
+                    indexes[i].init = false;
+            } else {
+                error = 'Aucune table disponible';
+            }
 
-        switch (status) {
-            case 200: {
-                if (json.length > 0) {
-                    indexes = json;
-                    for (var i = 0; i < indexes.length; i++)
-                        indexes[i].init = false;
-                } else {
-                    error = 'Aucune table disponible';
-                }
-            } break;
+            getIndexes.indexes = indexes;
+        });
+    }
 
-            case 404: { error = 'Liste des indexes introuvable'; } break;
-            case 502:
-            case 503: { error = 'Service non accessible'; } break;
-            case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-            default: { error = 'Erreur inconnue ' + status; } break;
-        }
-
-        indexes_init = !error;
-        if (error)
-            errors.add(error);
-        if (!downloadJson.run_lock)
-            func();
-    });
+    return indexes;
 }
+getIndexes.indexes = [];
 
-function refreshIndexesLine(selector, main_index)
+function refreshIndexesLine(el, indexes, main_index)
 {
+    var old_g = el.querySelector('g');
     var g = createElementNS('svg', 'g', {});
 
     if (indexes.length >= 2) {
@@ -322,21 +380,49 @@ function refreshIndexesLine(selector, main_index)
         }
     }
 
-    var old_g = document.querySelector(selector + ' > g');
     old_g.parentNode.replaceChild(g, old_g);
 }
 
 function moveIndex(relative_index)
 {
-    var index = indexes.findIndex(function(index) { return index.begin_date === target_date; });
+    let indexes = getIndexes.indexes;
+
+    let index = indexes.findIndex(function(index) { return index.begin_date === route.date; });
     if (index < 0)
         index = indexes.length - 1;
 
-    var new_index = index + relative_index;
+    let new_index = index + relative_index;
     if (new_index < 0 || new_index >= indexes.length)
         return;
 
-    target_date = indexes[new_index].begin_date;
-    module.route();
+    module.route({date: indexes[new_index].begin_date});
 }
 this.moveIndex = moveIndex;
+
+// ------------------------------------------------------------------------
+// Concepts
+// ------------------------------------------------------------------------
+
+function getConcepts(name)
+{
+    var sets = getConcepts.sets;
+    var set = sets[name];
+
+    if (!set.concepts.length) {
+        downloadJson('concepts/' + name + '.json', {}, function(json) {
+            set.concepts = json;
+            set.map = {};
+            for (var i = 0; i < json.length; i++) {
+                var concept = json[i];
+                set.map[concept[set.key]] = concept;
+            }
+        });
+    }
+
+    return [set.concepts, set.map];
+}
+getConcepts.sets = {
+    'ccam': {key: 'procedure', concepts: [], map: {}},
+    'cim10': {key: 'diagnosis', concepts: [], map: {}},
+    'ghm_roots': {key: 'ghm_root', concepts: [], map: {}}
+};

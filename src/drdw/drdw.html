@@ -22,30 +22,30 @@
 
     <body>
         <div id="side_bar">
-            <a class="deploy" href="#" onclick="switchMenu('#side_menu'); return false;"></a>
+            <a class="deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
                 <img id="logo" src="static/logo.png" alt="drdw logo"/>
                 <ul>
-                    <li><a class="category" href="casemix/global" onclick="casemix.route({view: 'global'}); return false;">Activité</a></li>
+                    <!--<li><a class="category" href="casemix/global" onclick="casemix.route({view: 'global'}); return false;">Activité</a></li>
                     <li><a href="casemix/global" onclick="casemix.route({view: 'global'}); return false;">Globale</a></li>
-                    <li><a href="casemix/ghm_root" onclick="casemix.route({view: 'ghm_root'}); return false;">Racine de GHM</a></li>
+                    <li><a href="casemix/ghm_root" onclick="casemix.route({view: 'ghm_root'}); return false;">Racine de GHM</a></li>-->
 
                     <li><a class="category" href="pricing/table" onclick="pricing.route({view: 'table'}); return false;">Tarifs</a></li>
                     <li><a href="pricing/table" onclick="pricing.route({view: 'table'}); return false;">Table</a></li>
                     <li><a href="pricing/chart" onclick="pricing.route({view: 'chart'}); return false;">Graphique</a></li>
 
-                    <li><a class="category" href="tables/classifier_tree" onclick="tables.route({table: 'classifier_tree'}); return false;">Listes</a></li>
-                    <li><a href="tables/classifier_tree" onclick="tables.route({table: 'classifier_tree'}); return false;">Arbre de groupage</a></li>
-                    <li><a href="tables/ghm_ghs" onclick="tables.route({table: 'ghm_ghs'}); return false;">GHM / GHS</a></li>
-                    <li><a href="tables/diagnoses" onclick="tables.route({table: 'diagnoses'}); return false;">Diagnostics</a></li>
-                    <li><a href="tables/procedures" onclick="tables.route({table: 'procedures'}); return false;">Actes</a></li>
+                    <li><a class="category" href="list/classifier_tree" onclick="list.route({list: 'classifier_tree'}); return false;">Listes</a></li>
+                    <li><a href="list/classifier_tree" onclick="list.route({list: 'classifier_tree'}); return false;">Arbre de groupage</a></li>
+                    <li><a href="list/ghm_ghs" onclick="list.route({list: 'ghm_ghs'}); return false;">GHM / GHS</a></li>
+                    <li><a href="list/diagnoses" onclick="list.route({list: 'diagnoses'}); return false;">Diagnostics</a></li>
+                    <li><a href="list/procedures" onclick="list.route({list: 'procedures'}); return false;">Actes</a></li>
                 </ul>
             </nav>
         </div>
-global
+
         <main>
             <div id="casemix" class="page">
-                <a class="deploy page_deploy" href="#" onclick="switchMenu('#casemix_menu'); return false;"></a>
+                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#casemix_menu'); return false;"></a>
                 <nav id="casemix_menu" class="page_menu">
                     <label>
                         Unités fonctionnelles
@@ -90,7 +90,7 @@ global
             </div>
 
             <div id="pricing" class="page">
-                <a class="deploy page_deploy" href="#" onclick="switchMenu('#pricing_menu'); return false;"></a>
+                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu" class="page_menu">
                     <svg id="pricing_indexes" class="indexes_line">
                         <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
@@ -114,7 +114,7 @@ global
                     <label>
                         <span>Coefficient prudentiel</span>
                         <input id="pricing_coeff" type="checkbox"
-                               onchange="pricing.route({coeff: this.checked});"/>
+                               onchange="pricing.route({apply_coefficient: this.checked});"/>
                     </label>
                 </nav>
 
@@ -127,7 +127,7 @@ global
             </div>
 
             <div id="tables" class="page">
-                <a class="deploy page_deploy" href="#" onclick="switchMenu('#tables_menu'); return false;"></a>
+                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#tables_menu'); return false;"></a>
                 <nav id="tables_menu" class="page_menu">
                     <svg id="tables_indexes" class="indexes_line">
                         <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
