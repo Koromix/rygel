@@ -14,10 +14,10 @@ function removeClass(elements, cls)
         elements[i].classList.remove(cls);
 }
 
-function toggleClass(elements, cls)
+function toggleClass(elements, cls, value)
 {
     for (var i = 0; i < elements.length; i++)
-        elements[i].classList.toggle(cls);
+        elements[i].classList.toggle(cls, value);
 }
 
 function getFullNamespace(ns)
@@ -162,6 +162,7 @@ var route = {
     'apply_coefficient': false,
 
     'list': 'classifier_tree',
+    'page': 1,
     'spec': null
 };
 var scroll_cache = {};

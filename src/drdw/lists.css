@@ -33,6 +33,12 @@
     color: white;
 }
 
+.tables_pages {
+    padding: 1em 1em 0 1em;
+    text-align: center;
+    font-size: 1.1em;
+}
+
 #tables_table {
     margin-top: 1em;
     width: 100%;

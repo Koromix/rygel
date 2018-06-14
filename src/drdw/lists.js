@@ -8,6 +8,7 @@ var list = {};
     var items = {};
     var collapse_nodes = new Set();
     var specs = {};
+    var pages = {};
 
     const Tables = {
         'ghm_ghs': {
@@ -91,8 +92,10 @@ var list = {};
         let url_parts = url.split('/');
         route.list = url_parts[1] || route.list;
         route.date = url_parts[2] || route.date;
+        route.page = parseInt(parameters.page) || 1;
         route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
         specs[route.list] = route.spec;
+        pages[route.list + route.spec] = route.page;
 
         // Resources
         indexes = getIndexes();
@@ -122,6 +125,7 @@ var list = {};
         // Refresh display
         _('#tables').classList.add('active');
         _('#tables_tree').classList.toggle('active', route.list === 'classifier_tree');
+        toggleClass(document.querySelectorAll('.tables_pages'), 'active', route.list !== 'classifier_tree');
         _('#tables_table').classList.toggle('active', route.list !== 'classifier_tree');
         refreshIndexesLine(_('#tables_indexes'), indexes, main_index);
         markOutdated('#tables_view', downloadJson.busy);
@@ -134,7 +138,7 @@ var list = {};
             } else {
                 var table = Tables[route.list];
                 refreshTable(items, table.columns,
-                             table.concepts ? getConcepts(table.concepts)[1] : null);
+                             table.concepts ? getConcepts(table.concepts)[1] : null, route.page);
             }
         }
     }
@@ -172,12 +176,17 @@ var list = {};
         let new_route = buildRoute(args);
         if (args.spec === undefined)
             new_route.spec = specs[new_route.list];
+        if (args.page === undefined)
+            new_route.page = pages[new_route.list + new_route.spec];
 
         let url_parts = ['list', new_route.list, new_route.date, new_route.spec];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
+        let url = url_parts.join('/');
+        if (new_route.page && new_route.page !== 1)
+            url += '?page=' + new_route.page;
 
-        return url_parts.join('/');
+        return url;
     }
     this.buildUrl = buildUrl;
 
@@ -358,14 +367,26 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, columns, concepts_map)
+    function refreshTable(items, columns, concepts_map, page)
     {
+        const PageLen = 1000;
+
+        if (page) {
+            var from = (page - 1) * PageLen;
+            var to = Math.min(items.length, from + PageLen);
+        } else {
+            var from = 0;
+            var to = items.length;
+        }
+
         var table = createElement('table', {},
             createElement('thead'),
             createElement('tbody')
         );
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
+
+        var pages = createElement('div');
 
         function createContent(column, item)
         {
@@ -384,7 +405,45 @@ var list = {};
             return '' + content;
         }
 
-        if (items.length) {
+        // Pagination
+        if (to - from < items.length) {
+            function makePageFunction(page)
+            {
+                return function(e) {
+                    console.log('cool');
+                    go(buildUrl({page: i}));
+                    e.preventDefault();
+                };
+            }
+
+            let last_page = (items.length / PageLen) + 1;
+            let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
+            let next_page = (page + 1 < last_page) ? (page + 1) : 1;
+
+            pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
+                                                  href: buildUrl({page: prev_page}),
+                                                  click: makePageFunction(prev_page)}, '≪'));
+
+            for (let i = 1; i < (items.length / PageLen) + 1; i++) {
+                if (i > 1)
+                    pages.appendChild(document.createTextNode(' - '));
+
+                if (page !== i) {
+                    let anchor = createElement('a', {href: buildUrl({page: i}),
+                                                     click: makePageFunction(i)}, '' + i);
+                    pages.appendChild(anchor);
+                } else {
+                    pages.appendChild(document.createTextNode(i));
+                }
+            }
+
+            pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
+                                                  href: buildUrl({page: next_page}),
+                                                  click: makePageFunction(next_page)}, '≫'));
+        }
+
+        // Table
+        if (to - from > 0) {
             var tr = createElement('tr');
 
             var first_column = 0;
@@ -401,7 +460,7 @@ var list = {};
             thead.appendChild(tr);
 
             var prev_heading_content = null;
-            for (var i = 0; i < items.length; i++) {
+            for (var i = from; i < to; i++) {
                 var item = items[i];
 
                 if (!columns[0].header) {
@@ -426,7 +485,14 @@ var list = {};
             }
         }
 
-        var old_table = document.querySelector('#tables_table');
+        let old_pages = document.querySelectorAll('.tables_pages');
+        for (let i = 0; i < old_pages.length; i++) {
+            let pages_copy = pages.cloneNode(true);
+            cloneAttributes(old_pages[i], pages_copy);
+            old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
+        }
+
+        let old_table = document.querySelector('#tables_table');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }
