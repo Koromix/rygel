@@ -26,8 +26,7 @@ var pricing = {};
             }
         }
         route.ghm_root = url_parts[3] || route.ghm_root;
-        if (url_parts[3])
-            route.apply_coefficient = (url_parts[4] === 'coeff');
+        route.apply_coefficient = parameters.apply_coefficient || false;
 
         // Resources
         indexes = getIndexes();
@@ -88,12 +87,14 @@ var pricing = {};
         let new_route = buildRoute(args);
 
         let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-        let coeff = new_route.apply_coefficient ? 'coeff' : null;
-        let url_parts = ['pricing', new_route.view, date, new_route.ghm_root, coeff];
+        let url_parts = ['pricing', new_route.view, date, new_route.ghm_root];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
+        let url = url_parts.join('/');
+        if (new_route.apply_coefficient)
+            url += '?apply_coefficient=1';
 
-        return url_parts.join('/');
+        return url;
     }
     this.buildUrl = buildUrl;
 
