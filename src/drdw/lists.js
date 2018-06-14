@@ -345,8 +345,10 @@ var list = {};
         if (hash && hash.match(/^n[0-9]+$/)) {
             var el = ul.querySelector('#' + hash);
             while (el && el !== ul) {
-                if (el.tagName === 'LI')
+                if (el.tagName === 'LI') {
                     el.classList.remove('collapse');
+                    collapse_nodes.delete(date + el.id);
+                }
                 el = el.parentNode;
             }
         }
