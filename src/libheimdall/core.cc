@@ -702,8 +702,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             if (!g_io->input.mouseover || (g_io->input.y < base_y || g_io->input.y >= y)) {
                 for (Size i = prev_lines_len; i < lines.len; i++) {
-                    lines[i].text_alpha *= 0.4f;
-                    lines[i].elements_alpha *= 0.4f;
+                    lines[i].text_alpha *= 0.05f;
+                    lines[i].elements_alpha *= 0.05f;
                 }
             }
             base_y = y;
