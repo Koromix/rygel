@@ -47,7 +47,7 @@ struct mco_Pricing {
 
     void ApplyCoefficient()
     {
-        DebugAssert(!isnan(ghs_coefficient));
+        DebugAssert(!std::isnan(ghs_coefficient));
 
         ghs_cents = (int64_t)(ghs_coefficient * ghs_cents);
         price_cents = (int64_t)(ghs_coefficient * price_cents);
@@ -59,7 +59,7 @@ struct mco_Pricing {
 
     mco_Pricing WithCoefficient() const
     {
-        DebugAssert(!isnan(ghs_coefficient));
+        DebugAssert(!std::isnan(ghs_coefficient));
 
         mco_Pricing pricing_coeff = *this;
         pricing_coeff.ApplyCoefficient();
