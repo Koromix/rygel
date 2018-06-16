@@ -473,15 +473,16 @@ static float ComputeElementHeight(const InterfaceSettings &settings, Element::Ty
     }
 }
 
-static ImVec2 ComputeEntitySize(const InterfaceState &state, const EntitySet &entity_set,
+static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &entity_set,
                                 const ConceptSet *concept_set, const Entity &ent)
 {
     ImGuiStyle &style = ImGui::GetStyle();
 
     HashMap<Span<const char>, float> line_heights;
-    float max_x = 0.0f, height = 0.0f;
+    float min_x = 0.0f, max_x = 0.0f, height = 0.0f;
 
     for (const Element &elmt: ent.elements) {
+        min_x = std::min((float)elmt.time, min_x);
         max_x = std::max((float)elmt.time, max_x);
 
         Span<const char> path;
@@ -528,7 +529,7 @@ static ImVec2 ComputeEntitySize(const InterfaceState &state, const EntitySet &en
         }
     }
 
-    return ImVec2(max_x, height);
+    return ImRect(min_x, 0.0f, max_x, height);
 }
 
 static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
@@ -549,6 +550,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     if (!state.size_cache_valid ||
             state.lines_top.len != entity_set.entities.len ||
             state.prev_concept_set != concept_set) {
+        state.minimum_x_unscaled = 0.0f;
         state.total_width_unscaled = 0.0f;
         state.total_height = 0.5f;
 
@@ -557,19 +559,21 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = 0; i < state.scroll_to_idx; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(state, entity_set, concept_set,
+            ImRect ent_size = ComputeEntitySize(state, entity_set, concept_set,
                                                 entity_set.entities[i]);
-            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
-            state.total_height += ent_size.y;
+            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
+            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
+            state.total_height += ent_size.Max.y;
         }
         ImGui::SetScrollY(state.total_height - state.scroll_offset_y);
         for (Size i = state.scroll_to_idx; i < entity_set.entities.len; i++) {
             state.lines_top[i] = state.total_height;
 
-            ImVec2 ent_size = ComputeEntitySize(state, entity_set, concept_set,
+            ImRect ent_size = ComputeEntitySize(state, entity_set, concept_set,
                                                 entity_set.entities[i]);
-            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.x);
-            state.total_height += ent_size.y;
+            state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
+            state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
+            state.total_height += ent_size.Max.y;
         }
 
         state.prev_concept_set = concept_set;
@@ -785,6 +789,11 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
 
     // TODO: Avoid overdraw (left of screen)
     float x = bb.Min.x - (float)time_offset * time_zoom, time = 0.0f;
+    while (x > bb.Min.x) {
+        x -= time_step * time_zoom;
+        time -= time_step;
+    }
+
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
         if (x >= bb.Min.x) {
@@ -820,20 +829,27 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
     }
 }
 
+static float AdjustScrollAfterZoom(float stable_x, double prev_zoom, double new_zoom)
+{
+    double stable_time = stable_x / prev_zoom;
+    return (float)(stable_time * (new_zoom - prev_zoom));
+}
+
 static bool DrawView(InterfaceState &state,
                      const EntitySet &entity_set, const ConceptSet *concept_set)
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
-    // Layout settings
-    float scale_height = 16.0f + ImGui::GetFontSize();
-    double time_offset = ImGui::GetScrollX() / state.time_zoom;
+    // Scroll values
+    float scroll_x = ImGui::GetScrollX() + state.scroll_x_delta;
+    float entities_mouse_x = (scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
 
-    // Deal with time zoom
+    // Handle zoom controls
     if (ImGui::IsMouseHoveringWindow() &&
             g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
         double (*animator)(double relative_time) = nullptr;
         if (state.time_zoom.animation.Running(g_io->time.monotonic)) {
+            scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
             state.time_zoom = state.time_zoom.end_value;
             animator = TweenOutQuad;
         } else {
@@ -855,8 +871,16 @@ static bool DrawView(InterfaceState &state,
                                             g_io->time.monotonic + 0.05, animator);
     }
 
-    // Run animations
-    state.time_zoom.Update(g_io->time.monotonic);
+    // Update time zoom
+    {
+        double prev_zoom = state.time_zoom;
+        state.time_zoom.Update(g_io->time.monotonic);
+        scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
+    }
+
+    // Layout settings
+    float scale_height = 16.0f + ImGui::GetFontSize();
+    double time_offset = scroll_x / state.time_zoom;
 
     // Render time scale
     ImRect scale_rect = win->ClipRect;
@@ -866,18 +890,20 @@ static bool DrawView(InterfaceState &state,
 
     // Render entities
     bool valid_frame;
-    {
-        ImRect entity_rect = win->ClipRect;
-        entity_rect.Max.y -= scale_height;
-        valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
-                                   time_offset, state, entity_set, concept_set);
-    }
+    ImRect entity_rect = win->ClipRect;
+    entity_rect.Max.y -= scale_height;
+    valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
+                               time_offset, state, entity_set, concept_set);
 
     // Help ImGui compute scrollbar and layout
-    ImGui::SetCursorPos(ImVec2(state.settings.tree_width + 20.0f + state.total_width_unscaled *
-                                                                   (float)state.time_zoom,
-                               state.total_height + scale_height));
+    state.scroll_x_delta = std::min(state.minimum_x_unscaled * state.time_zoom, scroll_x);
+    {
+        float max_x = std::max(win->ClipRect.Max.x - 4.0f - state.scroll_x_delta,
+                               state.settings.tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom);
+        ImGui::SetCursorPos(ImVec2(max_x, state.total_height + scale_height));
+    }
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
+    ImGui::SetScrollX(scroll_x - state.scroll_x_delta);
 
     return valid_frame;
 }

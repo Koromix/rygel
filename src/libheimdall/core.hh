@@ -38,6 +38,7 @@ struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
     AnimatedValue<float, double> time_zoom = 1.0f;
+    float scroll_x_delta = 0.0f;
 
     bool show_settings = false;
     InterfaceSettings settings;
@@ -48,6 +49,7 @@ struct InterfaceState {
 
     bool size_cache_valid = false;
     HeapArray<float> lines_top;
+    float minimum_x_unscaled;
     float total_width_unscaled;
     float total_height;
 
