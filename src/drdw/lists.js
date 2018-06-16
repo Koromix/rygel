@@ -400,7 +400,7 @@ var list = {};
         }
 
         // Pagination
-        if (to - from < items.length) {
+        if (items.length && to - from < items.length) {
             let last_page = (items.length / PageLen) + 1;
             let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
