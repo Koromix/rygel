@@ -157,15 +157,9 @@ var list = {};
         }
 
         if (spec) {
-            var remove_spec = function(e) {
-                list.route({spec: null});
-                e.preventDefault();
-            };
-
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(createElement('a', {href: '#',
-                                               click: remove_spec}, '(retirer)'));
+            h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
         } else {
             h1.innerText = '';
         }
@@ -407,30 +401,19 @@ var list = {};
 
         // Pagination
         if (to - from < items.length) {
-            function makePageFunction(page)
-            {
-                return function(e) {
-                    console.log('cool');
-                    go(buildUrl({page: i}));
-                    e.preventDefault();
-                };
-            }
-
             let last_page = (items.length / PageLen) + 1;
             let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
 
             pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
-                                                  href: buildUrl({page: prev_page}),
-                                                  click: makePageFunction(prev_page)}, '≪'));
+                                                  href: buildUrl({page: prev_page})}, '≪'));
 
             for (let i = 1; i < (items.length / PageLen) + 1; i++) {
                 if (i > 1)
                     pages.appendChild(document.createTextNode(' - '));
 
                 if (page !== i) {
-                    let anchor = createElement('a', {href: buildUrl({page: i}),
-                                                     click: makePageFunction(i)}, '' + i);
+                    let anchor = createElement('a', {href: buildUrl({page: i})}, '' + i);
                     pages.appendChild(anchor);
                 } else {
                     pages.appendChild(document.createTextNode(i));
@@ -438,8 +421,7 @@ var list = {};
             }
 
             pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
-                                                  href: buildUrl({page: next_page}),
-                                                  click: makePageFunction(next_page)}, '≫'));
+                                                  href: buildUrl({page: next_page})}, '≫'));
         }
 
         // Table
@@ -543,11 +525,7 @@ var list = {};
             return str;
         }
 
-        let click_function = function(e) {
-            go(url);
-            e.preventDefault();
-        };
-        let anchor = createElement('a', {href: url, class: cls, click: click_function}, str);
+        let anchor = createElement('a', {href: url, class: cls}, str);
 
         return anchor;
     }

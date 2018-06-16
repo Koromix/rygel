@@ -293,6 +293,16 @@ function initNavigation()
     window.addEventListener('popstate', function(e) {
         go(window.location.href, false);
     });
+
+    _('body').addEventListener('click', function(e) {
+        if (e.target && e.target.tagName == 'A') {
+            let href = e.target.getAttribute('href');
+            if (href && !href.match(/^(?:[a-z]+:)?\/\//)) {
+                go(href);
+                e.preventDefault();
+            }
+        }
+    });
 }
 
 if (document.readyState === 'complete') {
