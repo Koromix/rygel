@@ -313,7 +313,7 @@ function initNavigation()
     _('body').addEventListener('click', function(e) {
         if (e.target && e.target.tagName == 'A') {
             let href = e.target.getAttribute('href');
-            if (href && !href.match(/^(?:[a-z]+:)?\/\//)) {
+            if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
                 go(href);
                 e.preventDefault();
             }
