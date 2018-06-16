@@ -87,7 +87,7 @@ var pricing = {};
         let new_route = buildRoute(args);
 
         let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-        let url_parts = ['pricing', new_route.view, date, new_route.ghm_root];
+        let url_parts = [buildModuleUrl('pricing'), new_route.view, date, new_route.ghm_root];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -135,7 +135,7 @@ var pricing = {};
             return;
 
         var begin_date = indexes[index].begin_date;
-        downloadJson('api/ghm_ghs.json', {date: begin_date}, function(json) {
+        downloadJson(BaseUrl + 'api/ghm_ghs.json', {date: begin_date}, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var ghm_root = json[i].ghm.substr(0, 5);
                 var ghm_ghs = json[i];

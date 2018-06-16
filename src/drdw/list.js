@@ -173,7 +173,7 @@ var list = {};
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
-        let url_parts = ['list', new_route.list, new_route.date, new_route.spec];
+        let url_parts = [buildModuleUrl('list'), new_route.list, new_route.date, new_route.spec];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -195,7 +195,7 @@ var list = {};
         items = [];
         if (Tables[list] && Tables[list].concepts)
             getConcepts(Tables[list].concepts);
-        downloadJson('api/' + list + '.json', {date: indexes[index].begin_date, spec: spec},
+        downloadJson(BaseUrl + 'api/' + list + '.json', {date: indexes[index].begin_date, spec: spec},
                      function(json) { items = json; });
     }
 

@@ -1,3 +1,5 @@
+const BaseUrl = '/';
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
@@ -198,6 +200,11 @@ function buildRoute(args)
     return Object.assign({}, route, args);
 }
 
+function buildModuleUrl(module_name)
+{
+    return BaseUrl + module_name;
+}
+
 function parseUrl(url)
 {
     var a = document.createElement('a');
@@ -232,46 +239,45 @@ function parseUrl(url)
 function go(new_url, mark_history)
 {
     if (new_url === undefined)
-        new_url = route_url;
+        new_url = null;
     if (mark_history === undefined)
         mark_history = true;
 
     // Parse new URL
-    let url_parts = parseUrl(new_url);
-    new_url = url_parts.href.substr(url_parts.origin.length + 1);
+    let url_parts = new_url ? parseUrl(new_url) : route_url_parts;
+    let app_url = url_parts.path.substr(BaseUrl.length);
 
     // Update scroll cache and history
-    if (new_url !== route_url) {
+    if (!route_url_parts || url_parts.href !== route_url_parts.href) {
         if (route_url_parts)
             scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
 
         if (mark_history) {
-            window.history.pushState(null, null, new_url);
+            window.history.pushState(null, null, url_parts.href);
         } else {
-            window.history.replaceState(null, null, new_url);
+            window.history.replaceState(null, null, url_parts.href);
         }
     }
-    route_url = new_url;
+    route_url = app_url;
     route_url_parts = url_parts;
 
     // Hide all page-specific elements
     removeClass(document.querySelectorAll('.page'), 'active');
 
     // Find relevant module and run
-    var module_name = new_url.split('/')[0];
+    var module_name = app_url.split('/')[0];
     module = window[module_name];
     if (module !== undefined && module.run !== undefined)
-        module.run(route, url_parts.path.substr(1), url_parts.params, url_parts.hash);
+        module.run(route, app_url, url_parts.params, url_parts.hash);
 
     // Update menu state and links
     var menu_anchors = document.querySelectorAll('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
 
-        let anchor_url = eval(anchor.dataset.url);
-        anchor.setAttribute('href', anchor_url);
-
-        let active = (new_url.startsWith(anchor_url) && !anchor.classList.contains('category'));
+        anchor.href = eval(anchor.dataset.url);
+        let active = (url_parts.href.startsWith(anchor.href) &&
+                      !anchor.classList.contains('category'));
         anchor.classList.toggle('active', active);
     }
     toggleMenu('#side_menu', false);
@@ -291,7 +297,7 @@ function redirect(new_url) { go(new_url, false); }
 function initNavigation()
 {
     let new_url;
-    if (window.location.pathname !== '/') {
+    if (window.location.pathname !== BaseUrl) {
         new_url = window.location.href;
     } else {
         var first_anchor = document.querySelector('#side_menu a');
@@ -330,7 +336,7 @@ function getIndexes()
     var indexes = getIndexes.indexes;
 
     if (!indexes.length) {
-        downloadJson('api/indexes.json', {}, function(json) {
+        downloadJson(BaseUrl + 'api/indexes.json', {}, function(json) {
             if (json.length > 0) {
                 indexes = json;
                 for (var i = 0; i < indexes.length; i++)
@@ -430,7 +436,7 @@ function getConcepts(name)
     var set = sets[name];
 
     if (!set.concepts.length) {
-        downloadJson('concepts/' + name + '.json', {}, function(json) {
+        downloadJson(BaseUrl + 'concepts/' + name + '.json', {}, function(json) {
             set.concepts = json;
             set.map = {};
             for (var i = 0; i < json.length; i++) {

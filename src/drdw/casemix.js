@@ -110,7 +110,7 @@ var casemix = {};
 
         var dates = (start && end) ? (start + '..' + end) : null;
         var diff = (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null;
-        downloadJson('api/casemix.json', {dates: dates, units: units, mode: mode, diff: diff,
+        downloadJson(BaseUrl + 'api/casemix.json', {dates: dates, units: units, mode: mode, diff: diff,
                                           durations: 1},
                      function(status, json) {
             var errors = [];
