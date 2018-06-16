@@ -2,9 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "../packer/packer.hh"
 #include "opengl.hh"
 #include "render.hh"
 #include "runner.hh"
+
+extern const Span<const PackerAsset> packer_assets;
+#define IMGUI_FONT "Roboto-Medium.ttf"
 
 static GLuint shader_program = 0;
 static GLint attrib_proj_mtx;
@@ -109,6 +113,16 @@ static bool InitImGui()
                           (GLvoid *)OFFSET_OF(ImDrawVert, col));
 
     if (!font_texture) {
+        const PackerAsset *font_data =
+            std::find_if(std::begin(packer_assets), std::end(packer_assets),
+                         [&](const PackerAsset &asset) { return TestStr(asset.name, IMGUI_FONT); });
+        if (font_data != std::end(packer_assets)) {
+            ImFontConfig font_config;
+            font_config.FontDataOwnedByAtlas = false;
+            io->Fonts->AddFontFromMemoryTTF((void *)font_data->data.ptr, font_data->data.len, 16,
+                                            &font_config);
+        }
+
         uint8_t *pixels;
         int width, height;
         // TODO: Switch to GetTexDataAsAlpha8() eventually
