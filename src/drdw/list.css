@@ -1,0 +1,63 @@
+#list h1 {
+    font-size: 1.3em;
+    text-align: center;
+}
+
+#list_tree { white-space: nowrap; }
+#list_tree li {
+    margin-left: -8px;
+    padding-top: 1px;
+    list-style-type: none;
+}
+#list_tree .n {
+    padding-left: 12px;
+    font-size: 0.7em;
+    color: #888;
+    vertical-align: middle;
+}
+#list_tree .direct .n { padding-left: 0; }
+#list_tree .direct:before { content: ' → '; }
+#list_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
+#list_tree li.parent > span > .n { cursor: pointer; }
+#list_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
+#list_tree li.leaf { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC') no-repeat; }
+#list_tree ul {
+    margin-left: 4px;
+    border-left: 1px solid #ddd;
+}
+#list_tree li.collapse ul { display: none !important; }
+#list_tree a.ghm {
+    display: inline-block;
+    padding: 0 2px;
+    background: #ed6d0a;
+    color: white;
+}
+
+.list_pages {
+    padding: 1em 1em 0 1em;
+    text-align: center;
+    font-size: 1.1em;
+}
+
+#list_table {
+    margin-top: 1em;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    min-width: 600px;
+}
+#list_table th, #list_table td {
+    max-width: 260px;
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#list_table thead { background: #ccc; }
+#list_table tbody { background: #fafafa; }
+#list_table th {
+    text-align: center;
+    font-weight: bold;
+}
+#list_table tr.heading { background: #eee; }

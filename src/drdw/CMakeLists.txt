@@ -11,8 +11,8 @@ set(DRDW_RESOURCES drdw.html
                    common.js
                    casemix.css
                    casemix.js
-                   lists.css
-                   lists.js
+                   list.css
+                   list.js
                    pricing.css
                    pricing.js
                    images/favicon.ico
@@ -20,7 +20,7 @@ set(DRDW_RESOURCES drdw.html
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc
              casemix.cc
-             lists.cc)
+             list.cc)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>

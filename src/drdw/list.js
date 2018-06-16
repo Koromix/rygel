@@ -88,7 +88,7 @@ var list = {};
     {
         let errors = new Set(downloadJson.errors);
 
-        // Parse route (model: tables/<table>/<date>[/<spec>])
+        // Parse route (model: list/<table>/<date>[/<spec>])
         let url_parts = url.split('/');
         route.list = url_parts[1] || route.list;
         route.date = url_parts[2] || route.date;
@@ -123,12 +123,12 @@ var list = {};
         }
 
         // Refresh display
-        _('#tables').classList.add('active');
-        _('#tables_tree').classList.toggle('active', route.list === 'classifier_tree');
-        toggleClass(document.querySelectorAll('.tables_pages'), 'active', route.list !== 'classifier_tree');
-        _('#tables_table').classList.toggle('active', route.list !== 'classifier_tree');
-        refreshIndexesLine(_('#tables_indexes'), indexes, main_index);
-        markOutdated('#tables_view', downloadJson.busy);
+        _('#list').classList.add('active');
+        _('#list_tree').classList.toggle('active', route.list === 'classifier_tree');
+        toggleClass(document.querySelectorAll('.list_pages'), 'active', route.list !== 'classifier_tree');
+        _('#list_table').classList.toggle('active', route.list !== 'classifier_tree');
+        refreshIndexesLine(_('#list_indexes'), indexes, main_index);
+        markOutdated('#list_view', downloadJson.busy);
         if (!downloadJson.busy || force_refresh) {
             refreshHeader(route.spec, Array.from(errors));
             downloadJson.errors = [];
@@ -146,8 +146,8 @@ var list = {};
 
     function refreshHeader(spec, errors)
     {
-        var log = document.querySelector('#tables .log');
-        var h1 = document.querySelector('#tables_spec');
+        var log = document.querySelector('#list .log');
+        var h1 = document.querySelector('#list_spec');
 
         if (errors.length) {
             log.style.display = 'block';
@@ -356,7 +356,7 @@ var list = {};
             }
         }
 
-        var old_ul = document.querySelector('#tables_tree');
+        var old_ul = document.querySelector('#list_tree');
         cloneAttributes(old_ul, ul);
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
@@ -467,14 +467,14 @@ var list = {};
             }
         }
 
-        let old_pages = document.querySelectorAll('.tables_pages');
+        let old_pages = document.querySelectorAll('.list_pages');
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
-        let old_table = document.querySelector('#tables_table');
+        let old_table = document.querySelector('#list_table');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }

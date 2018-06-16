@@ -13,11 +13,11 @@
         <link rel="stylesheet" href="static/common.css"/>
         <link rel="stylesheet" href="static/casemix.css"/>
         <link rel="stylesheet" href="static/pricing.css"/>
-        <link rel="stylesheet" href="static/lists.css"/>
+        <link rel="stylesheet" href="static/list.css"/>
         <script type="text/javascript" src="static/common.js"></script>
         <script type="text/javascript" src="static/casemix.js"></script>
         <script type="text/javascript" src="static/pricing.js"></script>
-        <script type="text/javascript" src="static/lists.js"></script>
+        <script type="text/javascript" src="static/list.js"></script>
     </head>
 
     <body>
@@ -126,10 +126,10 @@
                 </div>
             </div>
 
-            <div id="tables" class="page">
-                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#tables_menu'); return false;"></a>
-                <nav id="tables_menu" class="page_menu">
-                    <svg id="tables_indexes" class="indexes_line">
+            <div id="list" class="page">
+                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#list_menu'); return false;"></a>
+                <nav id="list_menu" class="page_menu">
+                    <svg id="list_indexes" class="indexes_line">
                         <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
                         <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
                         <g></g>
@@ -137,15 +137,15 @@
                     </svg>
                 </nav>
 
-                <div id="tables_view">
+                <div id="list_view">
                     <div class="log" style="display: none;"></div>
 
-                    <h1 id="tables_spec"></h1>
-                    <div class="tables_pages hide"></div>
-                    <table id="tables_table" class="hide"></table>
-                    <div class="tables_pages hide"></div>
+                    <h1 id="list_spec"></h1>
+                    <div class="list_pages hide"></div>
+                    <table id="list_table" class="hide"></table>
+                    <div class="list_pages hide"></div>
 
-                    <ul id="tables_tree" class="hide"></ul>
+                    <ul id="list_tree" class="hide"></ul>
                 </div>
             </div>
         </main>
