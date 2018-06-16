@@ -236,9 +236,11 @@ function go(new_url, mark_history)
     if (mark_history === undefined)
         mark_history = true;
 
+    // Parse new URL
     let url_parts = parseUrl(new_url);
     new_url = url_parts.href.substr(url_parts.origin.length + 1);
 
+    // Update scroll cache and history
     if (new_url !== route_url) {
         if (route_url_parts)
             scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
@@ -252,21 +254,29 @@ function go(new_url, mark_history)
     route_url = new_url;
     route_url_parts = url_parts;
 
-    var menu_anchors = document.querySelectorAll('#side_menu a');
-    for (var i = 0; i < menu_anchors.length; i++) {
-        var active = (new_url.startsWith(menu_anchors[i].getAttribute('href')) &&
-                      !menu_anchors[i].classList.contains('category'));
-        menu_anchors[i].classList.toggle('active', active);
-    }
-    toggleMenu('#side_menu', false);
-
+    // Hide all page-specific elements
     removeClass(document.querySelectorAll('.page'), 'active');
 
+    // Find relevant module and run
     var module_name = new_url.split('/')[0];
     module = window[module_name];
     if (module !== undefined && module.run !== undefined)
         module.run(route, url_parts.path.substr(1), url_parts.params, url_parts.hash);
 
+    // Update menu state and links
+    var menu_anchors = document.querySelectorAll('#side_menu a');
+    for (var i = 0; i < menu_anchors.length; i++) {
+        let anchor = menu_anchors[i];
+
+        let anchor_url = eval(anchor.dataset.url);
+        anchor.setAttribute('href', anchor_url);
+
+        let active = (new_url.startsWith(anchor_url) && !anchor.classList.contains('category'));
+        anchor.classList.toggle('active', active);
+    }
+    toggleMenu('#side_menu', false);
+
+    // Update scroll target
     var scroll_target = scroll_cache[url_parts.path];
     if (url_parts.hash) {
         window.location.hash = url_parts.hash;
@@ -285,7 +295,7 @@ function initNavigation()
         new_url = window.location.href;
     } else {
         var first_anchor = document.querySelector('#side_menu a');
-        new_url = first_anchor.getAttribute('href');
+        new_url = eval(first_anchor.dataset.url);
         window.history.replaceState(null, null, new_url);
     }
     go(new_url, false);

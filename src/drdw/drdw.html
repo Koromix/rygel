@@ -26,19 +26,19 @@
             <nav id="side_menu">
                 <img id="logo" src="static/logo.png" alt="drdw logo"/>
                 <ul>
-                    <!--<li><a class="category" href="casemix/global" onclick="casemix.route({view: 'global'}); return false;">Activité</a></li>
-                    <li><a href="casemix/global" onclick="casemix.route({view: 'global'}); return false;">Globale</a></li>
-                    <li><a href="casemix/ghm_root" onclick="casemix.route({view: 'ghm_root'}); return false;">Racine de GHM</a></li>-->
+                    <!--<li><a class="category" data-url="casemix.buildUrl({view: 'global'});">Activité</a></li>
+                    <li><a data-url="casemix.buildUrl({view: 'global'});">Globale</a></li>
+                    <li><a data-url="casemix.buildUrl({view: 'global'});">Racine de GHM</a></li>-->
 
-                    <li><a class="category" href="pricing/table" onclick="pricing.route({view: 'table'}); return false;">Tarifs</a></li>
-                    <li><a href="pricing/table" onclick="pricing.route({view: 'table'}); return false;">Table</a></li>
-                    <li><a href="pricing/chart" onclick="pricing.route({view: 'chart'}); return false;">Graphique</a></li>
+                    <li><a class="category" data-url="pricing.buildUrl({view: 'table'});">Tarifs</a></li>
+                    <li><a data-url="pricing.buildUrl({view: 'table'});">Table</a></li>
+                    <li><a data-url="pricing.buildUrl({view: 'chart'});">Graphique</a></li>
 
-                    <li><a class="category" href="list/classifier_tree" onclick="list.route({list: 'classifier_tree'}); return false;">Listes</a></li>
-                    <li><a href="list/classifier_tree" onclick="list.route({list: 'classifier_tree'}); return false;">Arbre de groupage</a></li>
-                    <li><a href="list/ghm_ghs" onclick="list.route({list: 'ghm_ghs'}); return false;">GHM / GHS</a></li>
-                    <li><a href="list/diagnoses" onclick="list.route({list: 'diagnoses'}); return false;">Diagnostics</a></li>
-                    <li><a href="list/procedures" onclick="list.route({list: 'procedures'}); return false;">Actes</a></li>
+                    <li><a class="category" data-url="list.buildUrl({list: 'classifier_tree'});">Listes</a></li>
+                    <li><a data-url="list.buildUrl({list: 'classifier_tree'});">Arbre de groupage</a></li>
+                    <li><a data-url="list.buildUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
+                    <li><a data-url="list.buildUrl({list: 'diagnoses'});">Diagnostics</a></li>
+                    <li><a data-url="list.buildUrl({list: 'procedures'});">Actes</a></li>
                 </ul>
             </nav>
         </div>
