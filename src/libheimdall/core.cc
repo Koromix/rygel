@@ -532,7 +532,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     return ImRect(min_x, 0.0f, max_x, height);
 }
 
-static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
+static bool DrawEntities(ImRect bb, float tree_width, double time_offset, float scroll_y,
                          InterfaceState &state, const EntitySet &entity_set,
                          const ConceptSet *concept_set)
 {
@@ -584,10 +584,10 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     Size render_idx = -1;
     float render_offset = 0.0f;
     for (Size i = 1; i < state.lines_top.len; i++) {
-        if (state.lines_top[i] >= ImGui::GetScrollY()) {
+        if (state.lines_top[i] >= scroll_y) {
             if (!cache_refreshed) {
                 state.scroll_to_idx = i;
-                state.scroll_offset_y = state.lines_top[i] - ImGui::GetScrollY();
+                state.scroll_offset_y = state.lines_top[i] - scroll_y;
             }
             render_idx = i - 1;
             ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
@@ -840,60 +840,77 @@ static bool DrawView(InterfaceState &state,
 {
     ImGuiWindow *win = ImGui::GetCurrentWindow();
 
+    // Layout
+    float scale_height = 16.0f + ImGui::GetFontSize();
+    ImRect scale_rect = win->ClipRect;
+    ImRect entity_rect = win->ClipRect;
+    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
+    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
+    entity_rect.Max.y -= scale_height;
+
     // Scroll values
     float scroll_x = ImGui::GetScrollX() + state.scroll_x_delta;
+    float scroll_y = ImGui::GetScrollY();
     float entities_mouse_x = (scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
 
-    // Handle zoom controls
-    if (ImGui::IsMouseHoveringWindow() &&
-            g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
-        double (*animator)(double relative_time) = nullptr;
-        if (state.time_zoom.animation.Running(g_io->time.monotonic)) {
-            scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
-            state.time_zoom = state.time_zoom.end_value;
-            animator = TweenOutQuad;
-        } else {
-            animator = TweenInOutQuad;
-        }
-
-        float new_zoom;
-        {
-            float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 2.0736f : 1.2f);
-            if (g_io->input.wheel_y > 0) {
-                new_zoom = state.time_zoom * (float)g_io->input.wheel_y * multiplier;
-            } else {
-                new_zoom = state.time_zoom / -(float)g_io->input.wheel_y / multiplier;
+    // Handle controls
+    if (ImGui::IsMouseHoveringWindow()) {
+        if (g_io->input.buttons & MaskEnum(RunIO::Button::Left)) {
+            if (state.grab_canvas) {
+                scroll_x += state.grab_canvas_x - (float)g_io->input.x;
+                scroll_y += state.grab_canvas_y - (float)g_io->input.y;
+            } else if (entity_rect.Contains(ImVec2((float)g_io->input.x, (float)g_io->input.y))) {
+                state.grab_canvas = true;
             }
-            new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
+
+            state.grab_canvas_x = (float)g_io->input.x;
+            state.grab_canvas_y = (float)g_io->input.y;
+        } else {
+            state.grab_canvas = false;
         }
 
-        state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, g_io->time.monotonic,
-                                            g_io->time.monotonic + 0.05, animator);
+        if (g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
+            double (*animator)(double relative_time) = nullptr;
+            if (state.time_zoom.animation.Running(g_io->time.monotonic)) {
+                scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
+                state.time_zoom = state.time_zoom.end_value;
+                animator = TweenOutQuad;
+            } else {
+                animator = TweenInOutQuad;
+            }
+
+            float new_zoom;
+            {
+                float multiplier = ((g_io->input.keys.Test((int)RunIO::Key::Shift)) ? 2.0736f : 1.2f);
+                if (g_io->input.wheel_y > 0) {
+                    new_zoom = state.time_zoom * (float)g_io->input.wheel_y * multiplier;
+                } else {
+                    new_zoom = state.time_zoom / -(float)g_io->input.wheel_y / multiplier;
+                }
+                new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
+            }
+
+            state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, g_io->time.monotonic,
+                                                g_io->time.monotonic + 0.05, animator);
+        }
     }
 
     // Update time zoom
+    double time_offset;
     {
         double prev_zoom = state.time_zoom;
         state.time_zoom.Update(g_io->time.monotonic);
         scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
     }
+    time_offset = scroll_x / state.time_zoom;
 
-    // Layout settings
-    float scale_height = 16.0f + ImGui::GetFontSize();
-    double time_offset = scroll_x / state.time_zoom;
-
-    // Render time scale
-    ImRect scale_rect = win->ClipRect;
-    scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
-    scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
-    DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha);
-
-    // Render entities
+    // Render time scale and entities
     bool valid_frame;
-    ImRect entity_rect = win->ClipRect;
-    entity_rect.Max.y -= scale_height;
-    valid_frame = DrawEntities(entity_rect, state.settings.tree_width,
-                               time_offset, state, entity_set, concept_set);
+    {
+        DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha);
+        valid_frame = DrawEntities(entity_rect, state.settings.tree_width, time_offset, scroll_y,
+                                   state, entity_set, concept_set);
+    }
 
     // Help ImGui compute scrollbar and layout
     state.scroll_x_delta = std::min(state.minimum_x_unscaled * state.time_zoom, scroll_x);
@@ -903,7 +920,10 @@ static bool DrawView(InterfaceState &state,
         ImGui::SetCursorPos(ImVec2(max_x, state.total_height + scale_height));
     }
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
+
+    // Sync scroll state
     ImGui::SetScrollX(scroll_x - state.scroll_x_delta);
+    ImGui::SetScrollY(scroll_y);
 
     return valid_frame;
 }

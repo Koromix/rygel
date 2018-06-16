@@ -55,6 +55,10 @@ struct InterfaceState {
 
     Size scroll_to_idx = 0;
     float scroll_offset_y;
+
+    bool grab_canvas = false;
+    float grab_canvas_x;
+    float grab_canvas_y;
 };
 
 bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets);
