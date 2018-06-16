@@ -57,6 +57,7 @@ Options:
                                  (default: %1)
         --span_name <name>       Change span name exported by output code
                                  (default: packer_assets)
+    -e, --export                 Export span symbol
 
 Available compression types:)", CompressionTypeNames[0]);
         for (const char *type: CompressionTypeNames) {
@@ -69,6 +70,7 @@ Available compression types:)", CompressionTypeNames[0]);
     const char *output_path = nullptr;
     int depth = -1;
     const char *span_name = "packer_assets";
+    bool export_span = false;
     CompressionType compression_type = CompressionType::None;
     HeapArray<const char *> filenames;
     {
@@ -94,6 +96,8 @@ Available compression types:)", CompressionTypeNames[0]);
                     return 1;
 
                 span_name = opt_parser.current_value;
+            } else if (TestOption(opt, "--export", "-e")) {
+                export_span = true;
             } else if (TestOption(opt, "-O")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
@@ -218,8 +222,8 @@ static PackerAsset assets[] = {)");
     PrintLn(&st,
 R"(};
 
-EXPORT extern const Span<const PackerAsset> %1;
-const Span<const PackerAsset> %1 = assets;)", span_name);
+%1extern const Span<const PackerAsset> %2;
+const Span<const PackerAsset> %2 = assets;)", export_span ? "EXPORT " : "", span_name);
 
     return 0;
 }

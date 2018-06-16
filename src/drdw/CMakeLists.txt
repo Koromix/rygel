@@ -24,7 +24,7 @@ set(DRDW_SRC drdw.cc
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
-                   ARGS -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${DRDW_RESOURCES}
+                   ARGS -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${DRDW_RESOURCES}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                    DEPENDS packer ${DRDW_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
