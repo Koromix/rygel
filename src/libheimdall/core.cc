@@ -923,7 +923,9 @@ static bool DrawView(InterfaceState &state,
 
     // Sync scroll state
     ImGui::SetScrollX(scroll_x - state.scroll_x_delta);
-    ImGui::SetScrollY(state.scroll_y);
+    if (state.scroll_y != ImGui::GetScrollY()) {
+        ImGui::SetScrollY(state.scroll_y);
+    }
 
     return valid_frame;
 }
