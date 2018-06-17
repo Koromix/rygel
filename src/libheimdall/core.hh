@@ -61,6 +61,7 @@ struct InterfaceState {
 
     Size scroll_to_idx = 0;
     float scroll_offset_y;
+    Size highlight_idx = -1;
 
     bool grab_canvas = false;
     float grab_canvas_x;
