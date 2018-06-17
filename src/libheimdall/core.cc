@@ -1085,7 +1085,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
     if (ImGui::BeginMainMenuBar()) {
         ImGui::PushItemWidth(100.0f);
         ImGui::ShowStyleSelector("##StyleSelector");
-        if (ImGui::Checkbox("Highlight entity", &state.settings.highlight_current)) {
+        if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
             state.new_settings.highlight_current = state.settings.highlight_current;
         }
         ImGui::Checkbox("Other settings", &state.show_settings);
@@ -1177,7 +1177,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             ImGui::SliderFloat("Grid opacity", &state.new_settings.grid_alpha, 0.0f, 1.0f);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Parent opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
-            ImGui::Checkbox("Highlight entity", &state.new_settings.highlight_current);
+            ImGui::Checkbox("Hide background entities", &state.new_settings.highlight_current);
         }
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
