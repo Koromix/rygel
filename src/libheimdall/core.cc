@@ -791,20 +791,31 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
     // float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     float time_step = 10.0f / powf(10.0f, floorf(log10f(time_zoom)));
     int precision = (int)log10f(1.0f / time_step);
-    float min_text_delta = 20.0f + 10.0f * fabsf(log10f(1.0f / time_step));
+    float min_text_delta = 25.0f + 10.0f * fabsf(log10f(1.0f / time_step));
 
     // TODO: Avoid overdraw (left of screen)
-    float x = bb.Min.x - (float)time_offset * time_zoom, time = 0.0f;
-    while (x > bb.Min.x) {
-        x -= time_step * time_zoom;
-        time -= time_step;
+    float x = bb.Min.x - (float)time_offset * time_zoom;
+    float time = 0.0f;
+    {
+        int test = (int)std::ceil(min_text_delta / (time_step * time_zoom));
+        while (x > bb.Min.x) {
+            x -= time_step * time_zoom * test;
+            time -= time_step * test;
+        }
     }
 
     float prev_text_x = x - min_text_delta - 1.0f;
     while (x < bb.Max.x + 30.0f) {
+        bool show_text = false;
+        if (x - prev_text_x >= min_text_delta) {
+            show_text = true;
+            prev_text_x = x;
+        }
+
         if (x >= bb.Min.x) {
             float x_exact = round(x);
-            if (x - prev_text_x >= min_text_delta) {
+
+            if (show_text) {
                 draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
@@ -819,7 +830,6 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
 
                 draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
                               ImGui::GetColorU32(ImGuiCol_Text), time_str);
-                prev_text_x = x;
             } else {
                 draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 8.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
