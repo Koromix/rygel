@@ -1204,11 +1204,13 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
             *out_text = concept_sets[idx].name;
             return true;
         }, &concept_sets, (int)concept_sets.len);
+        ImGui::Separator();
 
         if (state.align_concepts.table.count) {
             if (ImGui::Button("Desalign")) {
                 ToggleAlign(state);
             }
+            ImGui::Separator();
             // TODO: Fix limited format specifiers on Windows
             ImGui::Text("Entities: %d / %d",
                         (int)state.visible_entities, (int)entity_set.entities.len);
@@ -1217,8 +1219,10 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
                                 state.select_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
                 ToggleAlign(state);
             }
+            ImGui::Separator();
             ImGui::Text("Entities: %d", (int)entity_set.entities.len);
         }
+        ImGui::Separator();
 
         {
             int highlight_mode = (int)state.settings.highlight_mode;
@@ -1228,6 +1232,8 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
                 state.new_settings.highlight_mode = (InterfaceSettings::HighlightMode)highlight_mode;
             }
         }
+        ImGui::Separator();
+
         ImGui::Checkbox("Other settings", &state.show_settings);
 
 //        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
