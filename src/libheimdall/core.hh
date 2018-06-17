@@ -53,6 +53,7 @@ struct InterfaceState {
     float total_width_unscaled;
     float total_height;
 
+    float scroll_y = 0.0f;
     Size scroll_to_idx = 0;
     float scroll_offset_y;
 

@@ -532,7 +532,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     return ImRect(min_x, 0.0f, max_x, height);
 }
 
-static bool DrawEntities(ImRect bb, float tree_width, double time_offset, float scroll_y,
+static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                          InterfaceState &state, const EntitySet &entity_set,
                          const ConceptSet *concept_set)
 {
@@ -565,7 +565,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset, float 
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
             state.total_height += ent_size.Max.y;
         }
-        ImGui::SetScrollY(state.total_height - state.scroll_offset_y);
+        state.scroll_y = state.total_height - state.scroll_offset_y;
         for (Size i = state.scroll_to_idx; i < entity_set.entities.len; i++) {
             state.lines_top[i] = state.total_height;
 
@@ -584,10 +584,10 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset, float 
     Size render_idx = -1;
     float render_offset = 0.0f;
     for (Size i = 1; i < state.lines_top.len; i++) {
-        if (state.lines_top[i] >= scroll_y) {
+        if (state.lines_top[i] >= state.scroll_y) {
             if (!cache_refreshed) {
                 state.scroll_to_idx = i;
-                state.scroll_offset_y = state.lines_top[i] - scroll_y;
+                state.scroll_offset_y = state.lines_top[i] - state.scroll_y;
             }
             render_idx = i - 1;
             ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
@@ -850,15 +850,15 @@ static bool DrawView(InterfaceState &state,
 
     // Scroll values
     float scroll_x = ImGui::GetScrollX() + state.scroll_x_delta;
-    float scroll_y = ImGui::GetScrollY();
     float entities_mouse_x = (scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
+    state.scroll_y = ImGui::GetScrollY();
 
     // Handle controls
     if (ImGui::IsMouseHoveringWindow()) {
         if (g_io->input.buttons & MaskEnum(RunIO::Button::Left)) {
             if (state.grab_canvas) {
                 scroll_x += state.grab_canvas_x - (float)g_io->input.x;
-                scroll_y += state.grab_canvas_y - (float)g_io->input.y;
+                state.scroll_y += state.grab_canvas_y - (float)g_io->input.y;
             } else if (entity_rect.Contains(ImVec2((float)g_io->input.x, (float)g_io->input.y))) {
                 state.grab_canvas = true;
             }
@@ -923,7 +923,7 @@ static bool DrawView(InterfaceState &state,
 
     // Sync scroll state
     ImGui::SetScrollX(scroll_x - state.scroll_x_delta);
-    ImGui::SetScrollY(scroll_y);
+    ImGui::SetScrollY(state.scroll_y);
 
     return valid_frame;
 }
