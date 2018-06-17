@@ -1170,13 +1170,15 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             if (ImGui::Button("Desalign")) {
                 ToggleAlign(state);
             }
-            ImGui::Text("Entities: %llu / %llu", state.visible_entities, entity_set.entities.len);
+            // TODO: Fix limited format specifiers on Windows
+            ImGui::Text("Entities: %d / %d",
+                        (int)state.visible_entities, (int)entity_set.entities.len);
         } else {
             if (ImGui::ButtonEx("Align", ImVec2(0, 0),
                                 state.select_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
                 ToggleAlign(state);
             }
-            ImGui::Text("Entities: %llu", entity_set.entities.len);
+            ImGui::Text("Entities: %d", (int)entity_set.entities.len);
         }
 
         if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
