@@ -581,7 +581,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         cache_refreshed = true;
     }
 
-    Size render_idx = -1;
+    Size render_idx = entity_set.entities.len;
     float render_offset = 0.0f;
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= state.scroll_y) {
@@ -595,7 +595,6 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             break;
         }
     }
-    DebugAssert(render_idx >= 0);
 
     HeapArray<LineData> lines;
     {
