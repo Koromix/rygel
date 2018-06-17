@@ -1080,11 +1080,17 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
     if (!StartRender())
         return false;
 
+    // Theme
+    if (state.settings.light_theme) {
+        ImGui::StyleColorsLight();
+    } else {
+        ImGui::StyleColorsDark();
+    }
+
     // Menu
     float menu_height = 0.0f;
     if (ImGui::BeginMainMenuBar()) {
         ImGui::PushItemWidth(100.0f);
-        ImGui::ShowStyleSelector("##StyleSelector");
         if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
             state.new_settings.highlight_current = state.settings.highlight_current;
         }
@@ -1173,6 +1179,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             ImGui::SliderFloat("Plot height", &state.new_settings.plot_height, 20.0f, 100.0f);
         }
         if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Light theme", &state.new_settings.light_theme);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Grid opacity", &state.new_settings.grid_alpha, 0.0f, 1.0f);
             ImGui::PushItemWidth(100.0f);
