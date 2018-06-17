@@ -765,9 +765,11 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             }
 
             // Try to stabilize highlighted entity if any
-            if (g_io->input.mouseover && g_io->input.y >= base_y && g_io->input.y < y &&
-                    !cache_refreshed && !ImGui::IsPopupOpen("tree_menu")) {
+            if (g_io->input.mouseover && !state.grab_canvas && !cache_refreshed &&
+                    g_io->input.y >= base_y && g_io->input.y < y && !ImGui::IsPopupOpen("tree_menu")) {
                 state.highlight_idx = i;
+                state.scroll_to_idx = i;
+                state.scroll_offset_y = base_y - style.ItemSpacing.y;
             }
             if (i != state.highlight_idx && state.settings.highlight_current) {
                 for (Size j = prev_lines_len; j < lines.len; j++) {
