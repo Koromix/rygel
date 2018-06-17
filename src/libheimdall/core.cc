@@ -1090,21 +1090,22 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
     // Menu
     float menu_height = 0.0f;
     if (ImGui::BeginMainMenuBar()) {
+        ImGui::Text("Views");
         ImGui::PushItemWidth(100.0f);
-        if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
-            state.new_settings.highlight_current = state.settings.highlight_current;
-        }
-        ImGui::Checkbox("Other settings", &state.show_settings);
-
-        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
-                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
-
-        ImGui::Combo("Views", &state.concept_set_idx,
+        ImGui::Combo("##views", &state.concept_set_idx,
                      [](void *udata, int idx, const char **out_text) {
             Span<const ConceptSet> &concept_sets = *(Span<const ConceptSet> *)udata;
             *out_text = concept_sets[idx].name;
             return true;
         }, &concept_sets, (int)concept_sets.len);
+
+        if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
+            state.new_settings.highlight_current = state.settings.highlight_current;
+        }
+        ImGui::Checkbox("Other settings", &state.show_settings);
+
+//        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
+//                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
 
         menu_height = ImGui::GetWindowSize().y;
         ImGui::EndMainMenuBar();
