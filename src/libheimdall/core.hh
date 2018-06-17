@@ -25,6 +25,12 @@ static const char *const interpolation_mode_names[] = {
 };
 
 struct InterfaceSettings {
+    enum class HighlightMode {
+        Never,
+        Deployed,
+        Always
+    };
+
     bool light_theme = false;
     float tree_width = 200.0f;
     bool plot_measures = true;
@@ -32,7 +38,7 @@ struct InterfaceSettings {
     float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
     float grid_alpha = 0.04f;
-    bool highlight_current = false;
+    HighlightMode highlight_mode = HighlightMode::Deployed;
 };
 
 struct InterfaceState {

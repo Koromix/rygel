@@ -676,6 +676,19 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         }
     }
 
+    bool highlight;
+    switch (state.settings.highlight_mode) {
+        case InterfaceSettings::HighlightMode::Never: {
+            highlight = false;
+        } break;
+        case InterfaceSettings::HighlightMode::Deployed: {
+            highlight = state.deploy_paths.Find("/");
+        } break;
+        case InterfaceSettings::HighlightMode::Always: {
+            highlight = true;
+        } break;
+    }
+
     HeapArray<LineData> lines;
     {
         float base_y = render_offset;
@@ -805,7 +818,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 state.scroll_to_idx = i;
                 state.scroll_offset_y = base_y - style.ItemSpacing.y;
             }
-            if (i != state.highlight_idx && state.settings.highlight_current) {
+            if (i != state.highlight_idx && highlight) {
                 for (Size j = prev_lines_len; j < lines.len; j++) {
                     lines[j].text_alpha *= 0.05f;
                     lines[j].elements_alpha *= 0.05f;
@@ -1207,8 +1220,13 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
             ImGui::Text("Entities: %d", (int)entity_set.entities.len);
         }
 
-        if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
-            state.new_settings.highlight_current = state.settings.highlight_current;
+        {
+            int highlight_mode = (int)state.settings.highlight_mode;
+            ImGui::Text("Highlight:");
+            if (ImGui::Combo("##highlight_mode", &highlight_mode, "Never\0Deployed\0Always\0")) {
+                state.settings.highlight_mode = (InterfaceSettings::HighlightMode)highlight_mode;
+                state.new_settings.highlight_mode = (InterfaceSettings::HighlightMode)highlight_mode;
+            }
         }
         ImGui::Checkbox("Other settings", &state.show_settings);
 
@@ -1298,7 +1316,6 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
             ImGui::SliderFloat("Grid opacity", &state.new_settings.grid_alpha, 0.0f, 1.0f);
             ImGui::PushItemWidth(100.0f);
             ImGui::SliderFloat("Parent opacity", &state.new_settings.deployed_alpha, 0.0f, 1.0f);
-            ImGui::Checkbox("Hide background entities", &state.new_settings.highlight_current);
         }
         if (ImGui::CollapsingHeader("Plots", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Draw plots", &state.new_settings.plot_measures);
