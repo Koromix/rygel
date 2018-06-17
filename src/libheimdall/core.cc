@@ -1145,6 +1145,7 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
                         }
                     }
                 }
+                state.size_cache_valid = false;
             }
             ImGui::Separator();
             ImGui::MenuItem("Create View");
