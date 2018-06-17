@@ -416,7 +416,14 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
 
     // Deploy
     if (ImGui::ItemAdd(deploy_bb, 0)) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha));
+        ImU32 text_color;
+        if (line.align_marker) {
+            text_color = ImGui::GetColorU32(ImGuiCol_PlotHistogramHovered, line.text_alpha);
+        } else {
+            text_color = ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha);
+        }
+
+        ImGui::PushStyleColor(ImGuiCol_Text, text_color);
         DEFER { ImGui::PopStyleColor(1); };
 
         if (!line.leaf) {
@@ -744,7 +751,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             }
                             line->selected_max++;
                             line->selected += !!state.select_concepts.Find(title);
-                            line->align_marker = state.align_concepts.Find(title);
+                            line->align_marker |= !!state.align_concepts.Find(title);
                             fully_deployed &= line->deployed;
                         }
                         line->elements.Append(&elmt);
