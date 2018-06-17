@@ -1280,12 +1280,14 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
                     ConceptSet *concept_set = CreateView(new_view_buf, &concept_sets);
                     new_view_buf[0] = 0;
                     AddConceptsToView(state.select_concepts, concept_set);
+                    state.select_concepts.Clear();
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::Separator();
                 for (ConceptSet &concept_set: concept_sets) {
                     if (ImGui::MenuItem(concept_set.name)) {
                         AddConceptsToView(state.select_concepts, &concept_set);
+                        state.select_concepts.Clear();
                     }
                 }
                 ImGui::EndMenu();
@@ -1293,6 +1295,7 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
             if (ImGui::MenuItem("Remove from view", nullptr, false,
                                 state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len)) {
                 RemoveConceptsFromView(state.select_concepts, &concept_sets[state.concept_set_idx]);
+                state.select_concepts.Clear();
             }
             ImGui::EndPopup();
         }
