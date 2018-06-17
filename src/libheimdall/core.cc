@@ -357,13 +357,16 @@ struct LineData {
     const Entity *entity;
     Span<const char> path;
     Span<const char> title;
+    bool draw;
     bool leaf;
     bool deployed;
-    bool select;
+    Size selected;
+    Size selected_max;
     int depth;
     float text_alpha;
     float elements_alpha;
     float height;
+    bool align_marker;
     double align_offset;
     HeapArray<const Element *> elements;
 };
@@ -383,19 +386,32 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
     float y = (bb.Min.y + bb.Max.y) / 2.0f - 9.0f;
     ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
     ImRect select_bb(bb.Min.x + 2.0f, y + 2.0f, bb.Min.x + 14.0f, y + 16.0f);
-    ImRect deploy_bb(bb.Min.x + 16.0f + (float)line.depth * 12.0f - 3.0f, y,
-                     bb.Min.x + 16.0f + (float)line.depth * 12.0f + 23.0f + text_size.x, y + 16.0f);
+    ImRect deploy_bb(bb.Min.x + (float)line.depth * 16.0f - 3.0f, y,
+                     bb.Min.x + (float)line.depth * 16.0f + 23.0f + text_size.x, y + 16.0f);
     ImRect full_bb(select_bb.Min.x, deploy_bb.Min.y, deploy_bb.Max.x, deploy_bb.Max.y);
 
     LineInteraction interaction = LineInteraction::None;
 
     // Select
-    if (ImGui::ItemAdd(select_bb, 0) && line.select) {
-        ImGui::RenderCheckMark(ImVec2(bb.Min.x + 2.0f, y + 2.0f),
-                               ImGui::GetColorU32(ImGuiCol_CheckMark), 10.0f);
-    }
-    if (ImGui::IsItemClicked()) {
-        interaction = LineInteraction::Select;
+    if (line.depth) {
+        if (ImGui::ItemAdd(select_bb, 0)) {
+            if (line.selected == line.selected_max) {
+                draw->AddRectFilled(ImVec2(select_bb.Min.x + 1.0f, select_bb.Min.y + 2.0f),
+                                    ImVec2(select_bb.Max.x - 2.0f, select_bb.Max.y - 2.0f),
+                                    ImGui::GetColorU32(ImGuiCol_CheckMark));
+            } else if (line.selected) {
+                draw->AddRectFilled(ImVec2(select_bb.Min.x + 3.0f, select_bb.Min.y + 4.0f),
+                                    ImVec2(select_bb.Max.x - 4.0f, select_bb.Max.y - 4.0f),
+                                    ImGui::GetColorU32(ImGuiCol_CheckMark, 0.5f));
+            } else {
+                draw->AddRect(ImVec2(select_bb.Min.x + 1.0f, select_bb.Min.y + 2.0f),
+                              ImVec2(select_bb.Max.x - 2.0f, select_bb.Max.y - 2.0f),
+                              ImGui::GetColorU32(ImGuiCol_CheckMark, 0.2f));
+            }
+        }
+        if (ImGui::IsItemClicked()) {
+            interaction = LineInteraction::Select;
+        }
     }
 
     // Deploy
@@ -404,12 +420,12 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
         DEFER { ImGui::PopStyleColor(1); };
 
         if (!line.leaf) {
-            ImGui::RenderArrow(ImVec2(bb.Min.x + 16.0f + (float)line.depth * 12.0f, y),
+            ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 16.0f, y),
                                line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
 
         ImVec4 text_rect {
-            bb.Min.x + 16.0f + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
+            bb.Min.x + (float)line.depth * 16.0f + 20.0f, bb.Min.y,
             bb.Min.x + tree_width, bb.Max.y
         };
         draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y),
@@ -691,7 +707,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 }
                 DebugAssert(path.len > 0);
 
-                bool fully_deployed = false;
+                bool fully_deployed = true;
                 int tree_depth = 0;
                 {
                     Size name_offset = 1;
@@ -705,6 +721,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                 tree_depth = line->depth + 1;
                             } else {
                                 line = lines.AppendDefault();
+                                line->draw = fully_deployed;
                                 line->entity = &ent;
                                 line->path = partial_path;
                                 if (partial_path.len > 1) {
@@ -714,26 +731,30 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                     line->title = ent.id;
                                 }
                                 line->leaf = false;
-                                line->deployed = state.deploy_paths.Find(partial_path);
+                                line->deployed = fully_deployed && state.deploy_paths.Find(partial_path);
                                 line->depth = tree_depth++;
                                 line->text_alpha = 1.0f;
                                 line->elements_alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
-                                line->height = 20.0f;
+                                line->height = fully_deployed ? 20.0f : 0.0f;
                                 line->align_offset = align_offset;
-                                y += line->height + style.ItemSpacing.y;
+                                y += fully_deployed ? line->height + style.ItemSpacing.y : 0.0f;
                             }
-                            fully_deployed = line->deployed;
+                            line->selected_max++;
+                            line->selected += !!state.select_concepts.Find(title);
+                            line->align_marker = state.align_concepts.Find(title);
+                            fully_deployed &= line->deployed;
                         }
                         line->elements.Append(&elmt);
 
-                        if (!fully_deployed || partial_path.len == path.len)
+                        if (partial_path.len == path.len)
                             break;
                         name_offset = partial_path.len + (partial_path.len > 1);
                         while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
                     }
                 }
 
-                if (fully_deployed) {
+                // Add leaf
+                {
                     LineData *line;
                     {
                         std::pair<Size *, bool> ret = lines_map.Append(elmt.concept, lines.len);
@@ -744,18 +765,21 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->entity = &ent;
                             line->path = path;
                             line->title = title;
+                            line->draw = fully_deployed;
                             line->leaf = true;
                             line->depth = tree_depth;
-                            line->select = state.select_concepts.Find(title);
+                            line->selected = !!state.select_concepts.Find(title);
+                            line->selected_max = 1;
                             line->text_alpha = 1.0f;
                             line->elements_alpha = 1.0f;
                             line->height = 0.0f;
+                            line->align_marker = state.align_concepts.Find(title);
                             line->align_offset = align_offset;
-                            y += style.ItemSpacing.y;
+                            y += fully_deployed ? style.ItemSpacing.y : 0.0f;
                         }
 
                         float new_height = ComputeElementHeight(state.settings, elmt.type);
-                        if (new_height > line->height) {
+                        if (fully_deployed && new_height > line->height) {
                             y += new_height - line->height;
                             line->height = new_height;
                         }
@@ -798,6 +822,9 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
         float y = render_offset;
         for (const LineData &line: lines) {
+            if (!line.draw)
+                continue;
+
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
                       win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
             DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
@@ -807,7 +834,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
     // Draw frames (header, support line)
     Span<const char> deploy_path = {};
-    Span<const char> select_concept = {};
+    HeapArray<Span<const char>> select_concepts;
+    bool select_enable = false;
     {
         const Entity *ent = nullptr;
         float ent_offset_y = 0.0f;
@@ -815,6 +843,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         float y = render_offset;
         for (Size i = 0; i < lines.len && y < win->ClipRect.Max.y; i++) {
             const LineData &line = lines[i];
+            if (!line.draw)
+                continue;
 
             if (ent != line.entity) {
                 ent = line.entity;
@@ -834,15 +864,23 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                     deploy_path = line.path;
                 } break;
 
-                case LineInteraction::Select: {
-                    select_concept = line.title;
-                } break;
-
+                case LineInteraction::Select:
                 case LineInteraction::Menu: {
-                    if (!line.select) {
-                        select_concept = line.title;
+                    if (line.leaf) {
+                        select_concepts.Append(line.title);
                     }
-                    ImGui::OpenPopup("tree_menu");
+                    for (Size j = i + 1; j < lines.len && lines[j].depth > line.depth; j++) {
+                        if (lines[j].leaf) {
+                            select_concepts.Append(lines[j].title);
+                        }
+                    }
+
+                    if (interaction == LineInteraction::Menu) {
+                        ImGui::OpenPopup("tree_menu");
+                        select_enable = true;
+                    } else {
+                        select_enable = !(line.selected == line.selected_max);
+                    }
                 } break;
             }
 
@@ -857,10 +895,13 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         }
 
         state.size_cache_valid = false;
-    } else if (select_concept.len) {
-        std::pair<Span<const char> *, bool> ret = state.select_concepts.Append(select_concept);
-        if (!ret.second) {
-            state.select_concepts.Remove(ret.first);
+    } else if (select_enable) {
+        for (Span<const char> concept: select_concepts) {
+             state.select_concepts.Append(concept);
+        }
+    } else {
+        for (Span<const char> concept: select_concepts) {
+            state.select_concepts.Remove(concept);
         }
     }
 
