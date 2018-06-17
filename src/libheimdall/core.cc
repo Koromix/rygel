@@ -398,15 +398,15 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
             if (line.selected == line.selected_max) {
                 draw->AddRectFilled(ImVec2(select_bb.Min.x + 1.0f, select_bb.Min.y + 2.0f),
                                     ImVec2(select_bb.Max.x - 2.0f, select_bb.Max.y - 2.0f),
-                                    ImGui::GetColorU32(ImGuiCol_CheckMark));
+                                    ImGui::GetColorU32(ImGuiCol_CheckMark, line.text_alpha));
             } else if (line.selected) {
                 draw->AddRectFilled(ImVec2(select_bb.Min.x + 3.0f, select_bb.Min.y + 4.0f),
                                     ImVec2(select_bb.Max.x - 4.0f, select_bb.Max.y - 4.0f),
-                                    ImGui::GetColorU32(ImGuiCol_CheckMark, 0.5f));
+                                    ImGui::GetColorU32(ImGuiCol_CheckMark, 0.5f * line.text_alpha));
             } else {
                 draw->AddRect(ImVec2(select_bb.Min.x + 1.0f, select_bb.Min.y + 2.0f),
                               ImVec2(select_bb.Max.x - 2.0f, select_bb.Max.y - 2.0f),
-                              ImGui::GetColorU32(ImGuiCol_CheckMark, 0.2f));
+                              ImGui::GetColorU32(ImGuiCol_CheckMark, 0.2f * line.text_alpha));
             }
         }
         if (ImGui::IsItemClicked()) {
