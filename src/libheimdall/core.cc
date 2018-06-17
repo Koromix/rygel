@@ -28,8 +28,8 @@ enum class VisColor {
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
     switch (color) {
-        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.100f, 0.400f, 0.750f, alpha)); } break;
-        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.724f, 0.107f, 0.076f, alpha)); } break;
+        case VisColor::Event: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.27f, 0.52f, 0.85f, alpha)); } break;
+        case VisColor::Alert: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.93f, 0.22f, 0.20f, alpha)); } break;
         case VisColor::Plot: { return ImGui::GetColorU32(ImGuiCol_PlotLines, alpha); } break;
         case VisColor::Limit: { return ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.7f, 0.03f, 0.4f * alpha)); } break;
     }
