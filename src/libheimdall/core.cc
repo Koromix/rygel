@@ -704,10 +704,16 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 }
             }
 
-            if (!g_io->input.mouseover || (g_io->input.y < base_y || g_io->input.y >= y)) {
-                for (Size i = prev_lines_len; i < lines.len; i++) {
-                    lines[i].text_alpha *= 0.05f;
-                    lines[i].elements_alpha *= 0.05f;
+            if (g_io->input.mouseover && g_io->input.y >= base_y && g_io->input.y < y) {
+                // Try to stabilize highlighted entity if any
+                if (!cache_refreshed && base_y >= 0) {
+                    state.scroll_to_idx = i;
+                    state.scroll_offset_y = base_y - style.ItemSpacing.y - ImGui::GetWindowPos().y;
+                }
+            } else {
+                for (Size j = prev_lines_len; j < lines.len; j++) {
+                    lines[j].text_alpha *= 0.05f;
+                    lines[j].elements_alpha *= 0.05f;
                 }
             }
             base_y = y;
