@@ -824,7 +824,11 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
 
                 char time_str[32];
                 ImVec2 text_size;
-                Fmt(time_str, "%1", FmtDouble(time, precision));
+                if (std::abs(time) < 0.000001) {
+                    Fmt(time_str, "%1", FmtDouble(0.0, precision));
+                } else {
+                    Fmt(time_str, "%1", FmtDouble(time, precision));
+                }
                 text_size = ImGui::CalcTextSize(time_str);
 
                 draw->AddText(ImVec2(x - text_size.x / 2.0f, bb.Max.y - ImGui::GetFontSize() - 2.0f),
