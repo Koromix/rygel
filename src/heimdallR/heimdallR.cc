@@ -237,7 +237,7 @@ void R_HeimdallRun(SEXP inst_xp)
 
         inst->run = true;
         inst->run_thread = std::thread([=]() {
-            Run(inst->entity_set, inst->concept_sets, &inst->run, &inst->lock);
+            Run(inst->concept_sets, inst->entity_set, &inst->run, &inst->lock);
             inst->run = false;
         });
     }
@@ -253,7 +253,7 @@ void R_HeimdallRunSync(SEXP inst_xp)
     if (inst->run)
         Rcpp::stop("Async run in progress");
 
-    Run(inst->entity_set, inst->concept_sets);
+    Run(inst->concept_sets, inst->entity_set);
 }
 
 static void StopInstance(Instance *inst)

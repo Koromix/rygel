@@ -1131,18 +1131,44 @@ static void ToggleAlign(InterfaceState &state)
     if (state.align_concepts.table.count) {
         state.align_concepts.Clear();
     } else {
-        // FIXME: Add iterator to HashTable and related containers
-        for (Size i = 0; i < state.select_concepts.table.capacity; i++) {
-            if (!state.select_concepts.table.IsEmpty(i)) {
-                Span<const char> concept = state.select_concepts.table.data[i].value;
-                state.align_concepts.Append(concept);
-            }
-        }
+        SwapMemory(&state.align_concepts, &state.select_concepts, SIZE(state.align_concepts));
     }
     state.size_cache_valid = false;
 }
 
-bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets)
+static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_concept_sets)
+{
+    ConceptSet *concept_set = out_concept_sets->AppendDefault();
+    concept_set->name = DuplicateString(&concept_set->str_alloc, name).ptr;
+    concept_set->paths.Append("/");
+    concept_set->paths_set.Append("/");
+    return concept_set;
+}
+
+static void AddConceptsToView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
+{
+    // FIXME: Add iterator to HashTable and related containers
+    for (Size i = 0; i < concepts.table.capacity; i++) {
+        if (!concepts.table.IsEmpty(i)) {
+            Concept concept = {};
+            concept.name = MakeString(&out_concept_set->str_alloc, concepts.table.data[i].value).ptr;
+            concept.title = concept.name;
+            concept.path = "/";
+            out_concept_set->concepts_map.Append(concept);
+        }
+    }
+}
+
+static void RemoveConceptsFromView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
+{
+    for (Size i = 0; i < concepts.table.capacity; i++) {
+        if (!concepts.table.IsEmpty(i)) {
+            out_concept_set->concepts_map.Remove(concepts.table.data[i].value.ptr);
+        }
+    }
+}
+
+bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set)
 {
     if (!StartRender())
         return false;
@@ -1227,14 +1253,29 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            ImGui::MenuItem("Create View");
             if (ImGui::BeginMenu("Add to view")) {
-                for (const ConceptSet &concept_set: concept_sets) {
-                    ImGui::MenuItem(concept_set.name);
+                ImGui::Text("New view:");
+                static char new_view_buf[128];
+                // TODO: Avoid empty and duplicate names
+                ImGui::InputText("##new_view", new_view_buf, IM_ARRAYSIZE(new_view_buf));
+                if (ImGui::Button("Create")) {
+                    ConceptSet *concept_set = CreateView(new_view_buf, &concept_sets);
+                    new_view_buf[0] = 0;
+                    AddConceptsToView(state.select_concepts, concept_set);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::Separator();
+                for (ConceptSet &concept_set: concept_sets) {
+                    if (ImGui::MenuItem(concept_set.name)) {
+                        AddConceptsToView(state.select_concepts, &concept_set);
+                    }
                 }
                 ImGui::EndMenu();
             }
-            ImGui::MenuItem("Remove from view");
+            if (ImGui::MenuItem("Remove from view", nullptr, false,
+                                state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len)) {
+                RemoveConceptsFromView(state.select_concepts, &concept_sets[state.concept_set_idx]);
+            }
             ImGui::EndPopup();
         }
 

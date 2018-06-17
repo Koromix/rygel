@@ -409,7 +409,7 @@ void SwapGLBuffers()
     SwapBuffers(g_window->hdc);
 }
 
-bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
+bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
          bool *run_flag, std::mutex *lock)
 {
     DEFER_C(prev_window = g_window, prev_io = g_io) {
@@ -481,10 +481,10 @@ bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
         // Run the real code
         if (lock) {
             std::lock_guard<std::mutex> locker(*lock);
-            if (!Step(render_state, entity_set, concept_sets))
+            if (!Step(render_state, concept_sets, entity_set))
                 return false;
         } else {
-            if (!Step(render_state, entity_set, concept_sets))
+            if (!Step(render_state, concept_sets, entity_set))
                 return false;
         }
 

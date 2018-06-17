@@ -77,4 +77,4 @@ struct InterfaceState {
     HashSet<Span<const char>> align_concepts;
 };
 
-bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets);
+bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set);

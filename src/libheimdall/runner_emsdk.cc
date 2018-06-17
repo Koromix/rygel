@@ -17,7 +17,7 @@ void SwapGLBuffers()
     // The browser does this automatically, we don't have control over it
 }
 
-bool Run(const EntitySet &entity_set, Span<const ConceptSet> concept_sets,
+bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
          bool *run_flag, std::mutex *lock)
 {
     DEFER_C(prev_io = g_io) { g_io = prev_io; };

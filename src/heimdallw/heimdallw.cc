@@ -6,6 +6,7 @@
 
 int main(void)
 {
+    HeapArray<ConceptSet> concept_sets;
     EntitySet entity_set = {};
-    return !Run(entity_set, {});
+    return !Run(concept_sets, entity_set);
 }
