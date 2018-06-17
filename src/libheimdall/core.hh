@@ -45,7 +45,7 @@ struct InterfaceState {
     // TODO: Separate deploy_paths set for each concept set
     HashSet<Span<const char>> deploy_paths;
 
-    AnimatedValue<float, double> time_zoom = 1.0f;
+    AnimatedValue<float, double> time_zoom = NAN;
     float scroll_x = 0.0f;
     float scroll_y = 0.0f;
     /*float scroll_x_delta = 0.0f;

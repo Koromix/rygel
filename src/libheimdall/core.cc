@@ -1017,9 +1017,27 @@ static bool DrawView(InterfaceState &state,
     float scale_height = 16.0f + ImGui::GetFontSize();
     ImRect scale_rect = win->ClipRect;
     ImRect entity_rect = win->ClipRect;
+    ImRect view_rect = win->ClipRect;
     scale_rect.Min.x = ImMin(scale_rect.Min.x + state.settings.tree_width + 15.0f, scale_rect.Max.x);
     scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
     entity_rect.Max.y -= scale_height;
+    view_rect.Min.x += state.settings.tree_width + 15.0f;
+    view_rect.Max.y -= scale_height;
+
+    // Default zoom
+    if (std::isnan(state.time_zoom)) {
+        double min_time = DBL_MAX;
+        double max_time = DBL_MIN;
+        for (const Entity &ent: entity_set.entities) {
+            for (const Element &elmt: ent.elements) {
+                min_time = std::min(min_time, elmt.time);
+                max_time = std::max(max_time, elmt.time);
+            }
+        }
+
+        state.time_zoom = view_rect.GetWidth() / (max_time - min_time);
+        state.scroll_x = min_time * state.time_zoom;
+    }
 
     // Copy ImGui scroll changes
     /*float prev_scroll_y = state.scroll_y;
