@@ -31,6 +31,7 @@ struct InterfaceSettings {
     float plot_height = 50.0f;
     InterpolationMode interpolation = InterpolationMode::Linear;
     float grid_alpha = 0.04f;
+    bool highlight_current = true;
 };
 
 struct InterfaceState {
