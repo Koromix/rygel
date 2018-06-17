@@ -624,6 +624,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         state.minimum_x_unscaled = 0.0f;
         state.total_width_unscaled = 0.0f;
         state.total_height = 0.5f;
+        state.visible_entities = 0;
 
         state.lines_top.SetCapacity(entity_set.entities.len);
         state.lines_top.len = entity_set.entities.len;
@@ -635,6 +636,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
             state.total_height += ent_size.Max.y;
+            state.visible_entities += (ent_size.Max.y > 0.0f);
         }
         state.scroll_y = state.total_height - state.scroll_offset_y;
         for (Size i = state.scroll_to_idx; i < entity_set.entities.len; i++) {
@@ -645,6 +647,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             state.minimum_x_unscaled = std::min(state.minimum_x_unscaled, ent_size.Min.x);
             state.total_width_unscaled = std::max(state.total_width_unscaled, ent_size.Max.x);
             state.total_height += ent_size.Max.y;
+            state.visible_entities += (ent_size.Max.y > 0.0f);
         }
 
         state.prev_concept_set = concept_set;
@@ -1116,6 +1119,22 @@ static bool DrawView(InterfaceState &state,
     return valid_frame;
 }
 
+static void ToggleAlign(InterfaceState &state)
+{
+    if (state.align_concepts.table.count) {
+        state.align_concepts.Clear();
+    } else {
+        // FIXME: Add iterator to HashTable and related containers
+        for (Size i = 0; i < state.select_concepts.table.capacity; i++) {
+            if (!state.select_concepts.table.IsEmpty(i)) {
+                Span<const char> concept = state.select_concepts.table.data[i].value;
+                state.align_concepts.Append(concept);
+            }
+        }
+    }
+    state.size_cache_valid = false;
+}
+
 bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets)
 {
     if (!StartRender())
@@ -1139,6 +1158,19 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             *out_text = concept_sets[idx].name;
             return true;
         }, &concept_sets, (int)concept_sets.len);
+
+        if (state.align_concepts.table.count) {
+            if (ImGui::Button("Desalign")) {
+                ToggleAlign(state);
+            }
+            ImGui::Text("Entities: %llu / %llu", state.visible_entities, entity_set.entities.len);
+        } else {
+            if (ImGui::ButtonEx("Align", ImVec2(0, 0),
+                                state.select_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
+                ToggleAlign(state);
+            }
+            ImGui::Text("Entities: %llu", entity_set.entities.len);
+        }
 
         if (ImGui::Checkbox("Hide background", &state.settings.highlight_current)) {
             state.new_settings.highlight_current = state.settings.highlight_current;
@@ -1181,19 +1213,9 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
         }
 
         if (ImGui::BeginPopup("tree_menu")) {
-            if (ImGui::MenuItem("Align", nullptr, state.align_concepts.table.count)) {
-                if (state.align_concepts.table.count) {
-                    state.align_concepts.Clear();
-                } else {
-                    // FIXME: Add iterator to HashTable and related containers
-                    for (Size i = 0; i < state.select_concepts.table.capacity; i++) {
-                        if (!state.select_concepts.table.IsEmpty(i)) {
-                            Span<const char> concept = state.select_concepts.table.data[i].value;
-                            state.align_concepts.Append(concept);
-                        }
-                    }
-                }
-                state.size_cache_valid = false;
+            if (ImGui::MenuItem("Align", nullptr, state.align_concepts.table.count,
+                                state.align_concepts.table.count || state.select_concepts.table.count)) {
+                ToggleAlign(state);
             }
             ImGui::Separator();
             ImGui::MenuItem("Create View");

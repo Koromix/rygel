@@ -60,6 +60,7 @@ struct InterfaceState {
     float minimum_x_unscaled;
     float total_width_unscaled;
     float total_height;
+    Size visible_entities = 0;
 
     Size scroll_to_idx = 0;
     float scroll_offset_y;
