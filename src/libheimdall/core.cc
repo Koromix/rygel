@@ -749,6 +749,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                 line->entity = &ent;
                                 line->path = partial_path;
                                 if (partial_path.len > 1) {
+                                    name_offset += (name_offset < partial_path.len &&
+                                                    partial_path[name_offset] == '~');
                                     line->title = MakeSpan(partial_path.ptr + name_offset,
                                                            partial_path.len - name_offset);
                                 } else {
