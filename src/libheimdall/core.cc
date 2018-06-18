@@ -662,8 +662,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         cache_refreshed = true;
     }
 
-    Size render_idx = entity_set.entities.len;
-    float render_offset = 0.0f;
+    Size render_idx = entity_set.entities.len - 1;
+    float render_offset = state.lines_top[entity_set.entities.len - 1];
     for (Size i = 1; i < state.lines_top.len; i++) {
         if (state.lines_top[i] >= state.scroll_y) {
             if (!cache_refreshed) {
@@ -671,10 +671,11 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 state.scroll_offset_y = state.lines_top[i] - state.scroll_y;
             }
             render_idx = i - 1;
-            render_offset = state.lines_top[i - 1] + style.ItemSpacing.y - state.scroll_y;
+            render_offset = state.lines_top[i - 1];
             break;
         }
     }
+    render_offset -= state.scroll_y;
 
     bool highlight;
     switch (state.settings.highlight_mode) {
@@ -813,10 +814,11 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             // Try to stabilize highlighted entity if any
             if (g_io->input.mouseover && !state.grab_canvas && !cache_refreshed &&
-                    g_io->input.y >= base_y && g_io->input.y < y && !ImGui::IsPopupOpen("tree_menu")) {
+                    g_io->input.y >= bb.Min.y + base_y && g_io->input.y < bb.Min.y + y &&
+                    !ImGui::IsPopupOpen("tree_menu")) {
                 state.highlight_idx = i;
                 state.scroll_to_idx = i;
-                state.scroll_offset_y = base_y - style.ItemSpacing.y;
+                state.scroll_offset_y = base_y;
             }
             if (i != state.highlight_idx && highlight) {
                 for (Size j = prev_lines_len; j < lines.len; j++) {
@@ -843,7 +845,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                            win->ClipRect.Max, true);
         DEFER { draw->PopClipRect(); };
 
-        float y = render_offset;
+        float y = render_offset + bb.Min.y;
         for (const LineData &line: lines) {
             if (!line.draw)
                 continue;
@@ -863,7 +865,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         const Entity *ent = nullptr;
         float ent_offset_y = 0.0f;
 
-        float y = render_offset;
+        float y = render_offset + bb.Min.y;
         for (Size i = 0; i < lines.len && y < win->ClipRect.Max.y; i++) {
             const LineData &line = lines[i];
             if (!line.draw)
@@ -874,16 +876,16 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 ent_offset_y = y;
             }
 
-            ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
-                      win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
-            LineInteraction interaction = DrawLineFrame(bb, tree_width, line);
+            ImRect line_bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
+                           win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
+            LineInteraction interaction = DrawLineFrame(line_bb, tree_width, line);
 
             switch (interaction) {
                 case LineInteraction::None: {} break;
 
                 case LineInteraction::Click: {
                     state.scroll_to_idx = ent - entity_set.entities.ptr;
-                    state.scroll_offset_y = ent_offset_y - style.ItemSpacing.y;
+                    state.scroll_offset_y = ent_offset_y - bb.Min.y;
                     deploy_path = line.path;
                 } break;
 
@@ -907,7 +909,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 } break;
             }
 
-            y = bb.Max.y;
+            y = line_bb.Max.y;
         }
     }
 
