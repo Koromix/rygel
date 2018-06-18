@@ -417,7 +417,7 @@ static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData
     // Deploy
     if (ImGui::ItemAdd(deploy_bb, 0)) {
         ImU32 text_color;
-        if (line.align_marker) {
+        if (line.align_marker && line.depth) {
             text_color = ImGui::GetColorU32(ImGuiCol_PlotHistogramHovered, line.text_alpha);
         } else {
             text_color = ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha);
