@@ -1226,6 +1226,8 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
         }, &concept_sets, (int)concept_sets.len);
         ImGui::Separator();
 
+        Size entities_count = (state.demo_limit >= 0) ? state.demo_limit : entity_set.entities.len;
+
         if (state.align_concepts.table.count) {
             if (ImGui::Button("Desalign")) {
                 ToggleAlign(state);
@@ -1233,14 +1235,14 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
             ImGui::Separator();
             // TODO: Fix limited format specifiers on Windows
             ImGui::Text("Entities: %d / %d",
-                        (int)state.visible_entities, (int)entity_set.entities.len);
+                        (int)state.visible_entities, (int)entities_count);
         } else {
             if (ImGui::ButtonEx("Align", ImVec2(0, 0),
                                 state.select_concepts.table.count ? 0 : ImGuiButtonFlags_Disabled)) {
                 ToggleAlign(state);
             }
             ImGui::Separator();
-            ImGui::Text("Entities: %d", (int)entity_set.entities.len);
+            ImGui::Text("Entities: %d", (int)entities_count);
         }
         ImGui::Separator();
 
@@ -1255,6 +1257,14 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
         ImGui::Separator();
 
         ImGui::Checkbox("Other settings", &state.show_settings);
+
+        ImGui::Text("          ");
+        if (ImGui::Button("More data...")) {
+            state.demo_limit = 5;
+        }
+        if (state.demo_limit != 1 && ImGui::Button("More data!")) {
+            state.demo_limit = -1;
+        }
 
 //        ImGui::Text("             Framerate: %.1f (%.3f ms/frame)             ",
 //                    ImGui::GetIO().Framerate, 1000.0f / ImGui::GetIO().Framerate);
@@ -1284,6 +1294,12 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
 
         ImGui::Begin("View", nullptr, view_flags);
         {
+            EntitySet *entity_set_mut = (EntitySet *)&entity_set;
+            DEFER_C(len = entity_set_mut->entities.len) { entity_set_mut->entities.len = len; };
+            if (state.demo_limit >= 0) {
+                entity_set_mut->entities.len = state.demo_limit;
+            }
+
             const ConceptSet *concept_set = nullptr;
             if (state.concept_set_idx >= 0 && state.concept_set_idx < concept_sets.len) {
                 concept_set = &concept_sets[state.concept_set_idx];

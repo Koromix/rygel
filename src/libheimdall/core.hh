@@ -81,6 +81,8 @@ struct InterfaceState {
 
     HashSet<Span<const char>> select_concepts;
     HashSet<Span<const char>> align_concepts;
+
+    Size demo_limit = 1;
 };
 
 bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set);
