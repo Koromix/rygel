@@ -8,6 +8,7 @@ var list = {};
     var items = {};
     var collapse_nodes = new Set();
     var specs = {};
+    var search = {};
     var pages = {};
 
     const Tables = {
@@ -94,7 +95,9 @@ var list = {};
         route.date = url_parts[2] || route.date;
         route.page = parseInt(parameters.page) || 1;
         route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
+        route.search = parameters.search;
         specs[route.list] = route.spec;
+        search[route.list] = route.search;
         pages[route.list + route.spec] = route.page;
 
         // Resources
@@ -124,13 +127,14 @@ var list = {};
 
         // Refresh display
         _('#list').classList.add('active');
+        _('#list_search').parentNode.classList.toggle('active', route.list !== 'classifier_tree');
         _('#list_tree').classList.toggle('active', route.list === 'classifier_tree');
         toggleClass(document.querySelectorAll('.list_pages'), 'active', route.list !== 'classifier_tree');
         _('#list_table').classList.toggle('active', route.list !== 'classifier_tree');
         refreshIndexesLine(_('#list_indexes'), indexes, main_index);
         markOutdated('#list_view', downloadJson.busy);
         if (!downloadJson.busy || force_refresh) {
-            refreshHeader(route.spec, Array.from(errors));
+            refreshHeader(route.spec, route.search, Array.from(errors));
             downloadJson.errors = [];
 
             if (route.list === 'classifier_tree') {
@@ -138,16 +142,18 @@ var list = {};
             } else {
                 var table = Tables[route.list];
                 refreshTable(items, table.columns,
-                             table.concepts ? getConcepts(table.concepts)[1] : null, route.page);
+                             table.concepts ? getConcepts(table.concepts)[1] : null,
+                             route.search, route.page);
             }
         }
     }
     this.run = run;
 
-    function refreshHeader(spec, errors)
+    function refreshHeader(spec, search, errors)
     {
         var log = document.querySelector('#list .log');
         var h1 = document.querySelector('#list_spec');
+        var search_input = document.querySelector('#list_search');
 
         if (errors.length) {
             log.style.display = 'block';
@@ -163,6 +169,9 @@ var list = {};
         } else {
             h1.innerText = '';
         }
+
+        if (search != search_input.value)
+            search_input.value = search || '';
     }
 
     function buildUrl(args)
@@ -170,6 +179,8 @@ var list = {};
         let new_route = buildRoute(args);
         if (args.spec === undefined)
             new_route.spec = specs[new_route.list];
+        if (args.search === undefined)
+            new_route.search = search[new_route.list];
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
@@ -177,16 +188,22 @@ var list = {};
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
+
+        let query = [];
+        if (new_route.search)
+            query.push('search=' + encodeURI(new_route.search));
         if (new_route.page && new_route.page !== 1)
-            url += '?page=' + new_route.page;
+            query.push('page=' + encodeURI(new_route.page));
+        if (query.length)
+            url += '?' + query.join('&');
 
         return url;
     }
     this.buildUrl = buildUrl;
 
-    function route(args)
+    function route(args, delay)
     {
-        go(buildUrl(args));
+        go(buildUrl(args), true, delay);
     }
     this.route = route;
 
@@ -361,8 +378,11 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, columns, concepts_map, page)
+    function refreshTable(items, columns, concepts_map, search, page)
     {
+        if (search)
+            search = simplifyForSearch(search);
+
         const PageLen = 1000;
 
         if (page) {
@@ -399,16 +419,53 @@ var list = {};
             return '' + content;
         }
 
+        function simplifyForSearch(str)
+        {
+            return str.toLowerCase().replace(/[êéèàâùœ]/g, function(c) {
+                switch (c) {
+                    case 'ê': return 'e';
+                    case 'é': return 'e';
+                    case 'è': return 'e';
+                    case 'à': return 'a';
+                    case 'â': return 'a';
+                    case 'ù': return 'u';
+                    case 'œ': return 'oe';
+                }
+            });
+        }
+
+        // Search
+        let contents = [];
+        let match_count = 0;
+        let visible_count = 0;
+        for (let i = 0; i < items.length; i++) {
+            let show = false;
+            let prev_length = contents.length;
+            for (var j = 0; j < columns.length; j++) {
+                let content = createContent(columns[j], items[i]);
+                if (!search || simplifyForSearch(content).indexOf(search) >= 0)
+                    show = true;
+                contents.push(content);
+            }
+
+            match_count += show;
+            if (show && match_count >= from && match_count < to) {
+                visible_count++;
+            } else {
+                contents.splice(prev_length);
+            }
+        }
+
         // Pagination
-        if (items.length && to - from < items.length) {
-            let last_page = (items.length / PageLen) + 1;
+        if (match_count) {
+            let last_page = (match_count / PageLen) + 1;
             let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
 
             pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
                                                   href: buildUrl({page: prev_page})}, '≪'));
 
-            for (let i = 1; i < (items.length / PageLen) + 1; i++) {
+            for (let i = 1; i < last_page; i++) {
                 if (i > 1)
                     pages.appendChild(document.createTextNode(' - '));
 
@@ -425,13 +482,12 @@ var list = {};
         }
 
         // Table
-        if (to - from > 0) {
+        if (visible_count) {
             var tr = createElement('tr');
 
             var first_column = 0;
-            if (!columns[0].header) {
+            if (!columns[0].header)
                 first_column = 1;
-            }
 
             for (var i = first_column; i < columns.length; i++) {
                 var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
@@ -442,11 +498,9 @@ var list = {};
             thead.appendChild(tr);
 
             var prev_heading_content = null;
-            for (var i = from; i < to; i++) {
-                var item = items[i];
-
+            for (var i = 0; i < visible_count; i++) {
                 if (!columns[0].header) {
-                    var content = createContent(columns[0], item);
+                    let content = contents[i * columns.length];
                     if (content !== prev_heading_content) {
                         var tr = createElement('tr', {class: 'heading'},
                             createElement('td', {colspan: columns.length - 1,
@@ -459,8 +513,8 @@ var list = {};
 
                 var tr = createElement('tr');
                 for (var j = first_column; j < columns.length; j++) {
-                    var content = createContent(columns[j], item);
-                    var td = createElement('td', {title: content}, addSpecLinks(content));
+                    let content = contents[i * columns.length + j];
+                    let td = createElement('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);

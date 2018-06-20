@@ -134,6 +134,12 @@
                         <g></g>
                         <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
                     </svg>
+
+                    <label class="hide">
+                        Recherche
+                        <input id="list_search" type="search" style="width: 16em;"
+                               oninput="window.list.route({search: this.value}, 200);"/>
+                    </label>
                 </nav>
 
                 <div id="list_view">

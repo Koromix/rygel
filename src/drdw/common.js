@@ -227,7 +227,7 @@ function parseUrl(url)
                 if (!seg[i])
                     continue;
                 s = seg[i].split('=');
-                ret[s[0]] = s[1];
+                ret[s[0]] = decodeURI(s[1]);
             }
             return ret;
         })(),
@@ -236,12 +236,25 @@ function parseUrl(url)
     };
 }
 
-function go(new_url, mark_history)
+var go_timer_id = null;
+function go(new_url, mark_history, delay)
 {
     if (new_url === undefined)
         new_url = null;
     if (mark_history === undefined)
         mark_history = true;
+
+    if (go_timer_id) {
+        clearTimeout(go_timer_id);
+        go_timer_id = null;
+    }
+    if (delay) {
+        console.log('cool');
+        go_timer_id = setTimeout(function() {
+            go(new_url, mark_history);
+        }, delay);
+        return;
+    }
 
     // Parse new URL
     let url_parts = new_url ? parseUrl(new_url) : route_url_parts;
