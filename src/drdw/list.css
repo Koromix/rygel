@@ -44,7 +44,7 @@
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
-    min-width: 600px;
+    min-width: 700px;
 }
 #list_table th, #list_table td {
     max-width: 260px;
