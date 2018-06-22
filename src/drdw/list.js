@@ -582,7 +582,7 @@ var list = {};
         }
 
         // Pagination
-        if (match_count) {
+        if (visible_count != match_count) {
             let last_page = (match_count / PageLen) + 1;
             let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
