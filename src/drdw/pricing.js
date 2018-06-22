@@ -118,15 +118,6 @@ var pricing = {};
             return;
 
         [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
-        ghm_roots = ghm_roots.sort(function(ghm_root_info1, ghm_root_info2) {
-            if (ghm_root_info1.da !== ghm_root_info2.da) {
-                return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
-            } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
-                return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
-            } else {
-                return 0;
-            }
-        });
     }
 
     function updatePriceMap(index)
@@ -227,22 +218,17 @@ var pricing = {};
         var el = document.querySelector('#pricing_ghm_roots');
         el.innerHTML = '';
 
-        for (var i = 0; i < ghm_roots.length;) {
-            var da = ghm_roots[i].da;
+        for (var i = 0; i < ghm_roots.length; i++) {
+            var ghm_root_info = ghm_roots[i];
 
-            var optgroup = createElement('optgroup', {label: da + ' – ' + ghm_roots[i].da_desc});
-            for (; i < ghm_roots.length && ghm_roots[i].da === da; i++) {
-                var ghm_root_info = ghm_roots[i];
-
-                var opt = createElement('option', {value: ghm_root_info.ghm_root},
-                                        ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-                if (!checkIndexGhmRoot(index, ghm_root_info.ghm_root)) {
-                    opt.setAttribute('disabled', '');
-                    opt.text += '*';
-                }
-                optgroup.appendChild(opt);
+            var opt = createElement('option', {value: ghm_root_info.ghm_root},
+                                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
+            if (!checkIndexGhmRoot(index, ghm_root_info.ghm_root)) {
+                opt.setAttribute('disabled', '');
+                opt.text += '*';
             }
-            el.appendChild(optgroup);
+
+            el.appendChild(opt);
         }
         if (select_ghm_root)
             el.value = select_ghm_root;
