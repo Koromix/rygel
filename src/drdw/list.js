@@ -149,31 +149,6 @@ var list = {};
     }
     this.run = run;
 
-    function refreshHeader(spec, search, errors)
-    {
-        var log = document.querySelector('#list .log');
-        var h1 = document.querySelector('#list_spec');
-        var search_input = document.querySelector('#list_search');
-
-        if (errors.length) {
-            log.style.display = 'block';
-            log.innerHTML = errors.join('<br/>');
-        } else {
-            log.style.display = 'none';
-        }
-
-        if (spec) {
-            h1.innerHTML = '';
-            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
-        } else {
-            h1.innerText = '';
-        }
-
-        if (search != search_input.value)
-            search_input.value = search || '';
-    }
-
     function buildUrl(args)
     {
         let new_route = buildRoute(args);
@@ -214,6 +189,31 @@ var list = {};
             getConcepts(Tables[list].concepts);
         downloadJson(BaseUrl + 'api/' + list + '.json', {date: indexes[index].begin_date, spec: spec},
                      function(json) { items = json; });
+    }
+
+    function refreshHeader(spec, search, errors)
+    {
+        var log = document.querySelector('#list .log');
+        var h1 = document.querySelector('#list_spec');
+        var search_input = document.querySelector('#list_search');
+
+        if (errors.length) {
+            log.style.display = 'block';
+            log.innerHTML = errors.join('<br/>');
+        } else {
+            log.style.display = 'none';
+        }
+
+        if (spec) {
+            h1.innerHTML = '';
+            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
+            h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
+        } else {
+            h1.innerText = '';
+        }
+
+        if (search != search_input.value)
+            search_input.value = search || '';
     }
 
     function refreshClassifierTree(date, nodes, hash)
