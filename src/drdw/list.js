@@ -524,13 +524,14 @@ var list = {};
 
         function simplifyForSearch(str)
         {
-            return str.toLowerCase().replace(/[êéèàâùœ]/g, function(c) {
+            return str.toLowerCase().replace(/[êéèàâïùœ]/g, function(c) {
                 switch (c) {
                     case 'ê': return 'e';
                     case 'é': return 'e';
                     case 'è': return 'e';
                     case 'à': return 'a';
                     case 'â': return 'a';
+                    case 'ï': return 'i';
                     case 'ù': return 'u';
                     case 'œ': return 'oe';
                 }
