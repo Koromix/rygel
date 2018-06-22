@@ -1,7 +1,6 @@
 #pricing_table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
 }
 #pricing_table th, #pricing_table td {
     border: 1px solid #a4a4a4;

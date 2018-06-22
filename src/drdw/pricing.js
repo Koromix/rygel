@@ -450,7 +450,7 @@ var pricing = {};
             if (duration % 10 == 0) {
                 var tr = createElement('tr', {},
                     createElement('th', {class: 'repeat',
-                                         colspan: 1 + ghs.length}, durationText(duration))
+                                         colspan: ghs.length}, durationText(duration))
                 );
                 tbody.appendChild(tr);
             }

@@ -36,7 +36,6 @@
 #casemix_ghs {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
 }
 #casemix_ghs th, #casemix_ghs td {
     border: 1px solid #a4a4a4;
