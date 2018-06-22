@@ -550,7 +550,8 @@ Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compr
 
                 writer.StartObject();
 
-                writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_to_ghs_info.ghm).ptr);
+                writer.Key("ghm"); writer.String(ghm_to_ghs_info.ghm.ToString(buf).ptr);
+                writer.Key("ghm_root"); writer.String(ghm_to_ghs_info.ghm.Root().ToString(buf).ptr);
                 if (ghm_root_info.young_severity_limit) {
                     writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
                     writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);

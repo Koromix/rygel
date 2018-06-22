@@ -8,16 +8,87 @@ var list = {};
     var items = {};
     var collapse_nodes = new Set();
     var specs = {};
+    var sort = {};
     var search = {};
     var pages = {};
 
     const Tables = {
+        'classifier_tree': {},
+
+        'ghm_roots': {
+            'table': 'ghm_ghs',
+            'concepts': 'ghm_roots',
+
+            'sort': [
+                {type: 'ghm_roots', name: 'Racines'},
+                {type: 'da', name: 'Domaines d\'activité',
+                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
+                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
+                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root];
+
+                    if (ghm_root_info1.da !== ghm_root_info2.da) {
+                        return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
+                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
+                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+                    } else {
+                        return 0;
+                    }
+                }},
+                {type: 'ga', name: 'Groupes d\'activité',
+                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
+                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
+                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root];
+
+                    if (ghm_root_info1.ga !== ghm_root_info2.ga) {
+                        return (ghm_root_info1.ga < ghm_root_info2.ga) ? -1 : 1;
+                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
+                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+                    } else {
+                        return 0;
+                    }
+                }}
+            ],
+            'deduplicate': function(ghm_ghs) { return ghm_ghs.ghm_root; },
+
+            'header': false,
+            'columns': [
+                {func: function(ghm_ghs, ghm_roots_map, sort_type) {
+                    switch (sort_type) {
+                        case 'da': {
+                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            if (ghm_root_info && ghm_root_info.da) {
+                                return ghm_root_info.da + ' - ' + ghm_root_info.da_desc;
+                            } else {
+                                return 'DA inconnu ??';
+                            }
+                        } break;
+
+                        case 'ga': {
+                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            if (ghm_root_info && ghm_root_info.ga) {
+                                return ghm_root_info.ga + ' - ' + ghm_root_info.ga_desc;
+                            } else {
+                                return 'GA inconnu ??';
+                            }
+                        } break;
+
+                        case 'ghm_roots': { return null; } break;
+                    }
+                }},
+                {header: 'Racine de GHM', func: function(ghm_ghs, ghm_roots_map) {
+                    return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
+                                              ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
+                }}
+            ]
+        },
+
         'ghm_ghs': {
             'concepts': 'ghm_roots',
+
             'columns': [
                 {func: function(ghm_ghs, ghm_roots_map) {
-                    var ghm_root = ghm_ghs.ghm.substr(0, 5);
-                    return ghm_root + (ghm_roots_map[ghm_root] ? ' - ' + ghm_roots_map[ghm_root].desc : '');
+                    return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
+                                              ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }},
                 {header: 'GHM', variable: 'ghm'},
                 {header: 'GHS', variable: 'ghs'},
@@ -59,6 +130,7 @@ var list = {};
 
         'diagnoses': {
             'concepts': 'cim10',
+
             'columns': [
                 {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10_map) {
                     return diag.diag + (cim10_map[diag.diag] ? ' - ' + cim10_map[diag.diag].desc : '');
@@ -72,6 +144,7 @@ var list = {};
 
         'procedures': {
             'concepts': 'ccam',
+
             'columns': [
                 {header: 'Acte', style: 'width: 60%;', func: function(proc, ccam_map) {
                     var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
@@ -95,9 +168,11 @@ var list = {};
         route.date = url_parts[2] || route.date;
         route.page = parseInt(parameters.page) || 1;
         route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
+        route.sort = parameters.sort;
         route.search = parameters.search;
         specs[route.list] = route.spec;
         search[route.list] = route.search;
+        sort[route.list] = route.sort;
         pages[route.list + route.spec] = route.page;
 
         // Resources
@@ -133,6 +208,12 @@ var list = {};
         _('#list_table').classList.toggle('active', route.list !== 'classifier_tree');
         refreshIndexesLine(_('#list_indexes'), indexes, main_index);
         markOutdated('#list_view', downloadJson.busy);
+        if (Tables[route.list] && Tables[route.list].sort !== undefined) {
+            _('#list_sort').parentNode.classList.add('active');
+            refreshSortList(Tables[route.list], route.sort);
+        } else {
+            _('#list_sort').parentNode.classList.remove('active');
+        }
         if (!downloadJson.busy || force_refresh) {
             refreshHeader(route.spec, route.search, Array.from(errors));
             downloadJson.errors = [];
@@ -140,10 +221,10 @@ var list = {};
             if (route.list === 'classifier_tree') {
                 refreshClassifierTree(route.date, items, hash);
             } else {
-                var table = Tables[route.list];
-                refreshTable(items, table.columns,
-                             table.concepts ? getConcepts(table.concepts)[1] : null,
-                             route.search, route.page);
+                var table_info = Tables[route.list];
+                refreshTable(items, table_info,
+                             table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
+                             route.search, route.sort, route.page);
             }
         }
     }
@@ -156,6 +237,8 @@ var list = {};
             new_route.spec = specs[new_route.list];
         if (args.search === undefined)
             new_route.search = search[new_route.list];
+        if (args.sort === undefined)
+            new_route.sort = sort[new_route.list];
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
@@ -169,6 +252,9 @@ var list = {};
             query.push('search=' + encodeURI(new_route.search));
         if (new_route.page && new_route.page !== 1)
             query.push('page=' + encodeURI(new_route.page));
+        if (new_route.sort && (!Tables[new_route.list] || !Tables[new_route.list].sort ||
+                               new_route.sort !== Tables[new_route.list].sort[0].type))
+            query.push('sort=' + encodeURI(new_route.sort));
         if (query.length)
             url += '?' + query.join('&');
 
@@ -185,9 +271,10 @@ var list = {};
     function updateTable(list, index, spec)
     {
         items = [];
-        if (Tables[list] && Tables[list].concepts)
+        if (Tables[list].concepts)
             getConcepts(Tables[list].concepts);
-        downloadJson(BaseUrl + 'api/' + list + '.json', {date: indexes[index].begin_date, spec: spec},
+        let api = Tables[list].table || list;
+        downloadJson(BaseUrl + 'api/' + api + '.json', {date: indexes[index].begin_date, spec: spec},
                      function(json) { items = json; });
     }
 
@@ -214,6 +301,20 @@ var list = {};
 
         if (search != search_input.value)
             search_input.value = search || '';
+    }
+
+    function refreshSortList(table_info, select_sort)
+    {
+        var el = document.querySelector('#list_sort');
+        el.innerHTML = '';
+
+        for (let i = 0; i < table_info.sort.length; i++) {
+            let sort_info = table_info.sort[i];
+            let opt = createElement('option', {value: sort_info.type}, sort_info.name);
+            el.appendChild(opt);
+        }
+        if (select_sort)
+            el.value = select_sort;
     }
 
     function refreshClassifierTree(date, nodes, hash)
@@ -378,7 +479,7 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, columns, concepts_map, search, page)
+    function refreshTable(items, table_info, concepts_map, search, sort, page)
     {
         if (search)
             search = simplifyForSearch(search);
@@ -402,12 +503,14 @@ var list = {};
 
         var pages = createElement('div');
 
+        let columns = table_info.columns;
+
         function createContent(column, item)
         {
             if (column.variable) {
                 var content = item[column.variable];
             } else if (column.func) {
-                var content = column.func(item, concepts_map);
+                var content = column.func(item, concepts_map, sort);
             }
 
             if (content === undefined || content === null) {
@@ -434,25 +537,47 @@ var list = {};
             });
         }
 
+        // Sort
+        if (sort && table_info.sort) {
+            let sort_info = table_info.sort.find(function(sort_info) {
+                return sort_info.type == sort;
+            });
+            if (sort_info) {
+                items = items.slice(0).sort(function(v1, v2) {
+                    return sort_info.func(v1, v2, concepts_map);
+                });
+            }
+        }
+
         // Search
         let contents = [];
         let match_count = 0;
         let visible_count = 0;
-        for (let i = 0; i < items.length; i++) {
-            let show = false;
-            let prev_length = contents.length;
-            for (var j = 0; j < columns.length; j++) {
-                let content = createContent(columns[j], items[i]);
-                if (!search || simplifyForSearch(content).indexOf(search) >= 0)
-                    show = true;
-                contents.push(content);
-            }
+        {
+            let prev_deduplicate_key = null;
+            for (let i = 0; i < items.length; i++) {
+                if (table_info.deduplicate) {
+                    let deduplicate_key = table_info.deduplicate(items[i], concepts_map);
+                    if (deduplicate_key === prev_deduplicate_key)
+                        continue;
+                    prev_deduplicate_key = deduplicate_key;
+                }
 
-            match_count += show;
-            if (show && match_count >= from && visible_count < max_visible) {
-                visible_count++;
-            } else {
-                contents.splice(prev_length);
+                let show = false;
+                let prev_length = contents.length;
+                for (var j = 0; j < columns.length; j++) {
+                    let content = createContent(columns[j], items[i]);
+                    if (!search || simplifyForSearch(content).indexOf(search) >= 0)
+                        show = true;
+                    contents.push(content);
+                }
+
+                match_count += show;
+                if (show && match_count >= from && visible_count < max_visible) {
+                    visible_count++;
+                } else {
+                    contents.splice(prev_length);
+                }
             }
         }
 
@@ -489,19 +614,21 @@ var list = {};
             if (!columns[0].header)
                 first_column = 1;
 
-            for (var i = first_column; i < columns.length; i++) {
-                var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
-                                              style: columns[i].style},
-                                       columns[i].header);
-                tr.appendChild(th);
+            if (table_info.header === undefined || table_info.header) {
+                for (var i = first_column; i < columns.length; i++) {
+                    var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
+                                                  style: columns[i].style},
+                                           columns[i].header);
+                    tr.appendChild(th);
+                }
+                thead.appendChild(tr);
             }
-            thead.appendChild(tr);
 
             var prev_heading_content = null;
             for (var i = 0; i < visible_count; i++) {
                 if (!columns[0].header) {
                     let content = contents[i * columns.length];
-                    if (content !== prev_heading_content) {
+                    if (content && content !== prev_heading_content) {
                         var tr = createElement('tr', {class: 'heading'},
                             createElement('td', {colspan: columns.length - 1,
                                                  title: content}, addSpecLinks(content))
