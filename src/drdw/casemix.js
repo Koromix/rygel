@@ -1,220 +1,199 @@
 var casemix = {};
 (function() {
-    // URL settings (routing)
-    var target_view = 'global';
-    var target_start = null;
-    var target_end = null;
-    var target_units = null;
-    var target_mode = 'exj2';
-    var target_diff_start = null;
-    var target_diff_end = null;
-    var target_cmd = null;
-    var target_ghm_root = null;
-
     // Casemix
-    var mix_init = false;
+    var mix_url = null;
     var mix_cmds = [];
     var mix_cmds_map = {};
     var mix_ghm_roots = [];
     var mix_ghm_roots_map = {};
     var mix_price_density_max = 0;
 
-    function run(errors)
+    function run(route, url, parameters, hash)
     {
-        if (errors === undefined)
-            errors = [];
+        let errors = new Set(downloadJson.errors);
 
         // Parse route (model: casemix/<view>/<start>..<end>/<units>/<cmd>)
-        var parts = url_page.split('/');
-        target_view = parts[1] || target_view;
-        /*
-        if (parts[2]) {
-            var date_parts = parts[2].split('..', 2);
-            target_start = date_parts[0];
-            target_end = date_parts[1];
-        }
-        target_units = parts[3] ? parts[3].split('_') : target_units;
-        target_cmd = parts[4] || target_cmd;
+        let url_parts = url.split('/', 3);
+        if (url_parts[2])
+            Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
+        route.cm_view = url_parts[1] || route.cm_view;
 
+        /*
         // Validate
         // TODO: Enforce date format (yyyy-mm-dd)
-        if (target_view !== 'roots' || target_view !== 'ghs')
+        if (route.cm_view !== 'roots' || route.cm_view !== 'ghs')
             errors.push('Mode d\'affichage incorrect');
-        if (target_start === undefined || target_end === undefined) {
+        if (route.cm_start === undefined || route.cm_end === undefined) {
             errors.push('Dates incorrectes');
-            target_start = target_start || null;
-            target_end = target_end || null;
+            route.cm_start = route.cm_start || null;
+            route.cm_end = route.cm_end || null;
         }
 
         // Redirection (stable URLs)
         */
 
         // Resources
-        if (!mix_init) {
-            markOutdated('#casemix_view', true);
-            updateCaseMix(target_start, target_end, target_units, target_mode,
-                          target_diff_start, target_diff_end, run);
-        }
+        updateCaseMix(route.cm_start, route.cm_end, route.cm_units, route.cm_mode,
+                      route.cm_diff_start, route.cm_diff_end, run);
 
         // Refresh view
         document.querySelector('#casemix').classList.add('active');
-        if (!downloadJson.run_lock) {
-            if (target_start)
-                document.querySelector('#casemix_start').value = target_start;
-            if (target_end)
-                document.querySelector('#casemix_end').value = target_end;
+        markOutdated('#casemix_view', downloadJson.busy);
+        if (!downloadJson.busy) {
+            if (route.cm_start)
+                document.querySelector('#casemix_start').value = route.cm_start;
+            if (route.cm_end)
+                document.querySelector('#casemix_end').value = route.cm_end;
 
-            document.querySelector('#casemix_cmds').classList.toggle('active', target_view == 'global');
-            document.querySelector('#casemix_roots').classList.toggle('active', target_view == 'global');
-            document.querySelector('#casemix_ghs').classList.toggle('active', target_view == 'ghm_root');
+            document.querySelector('#casemix_cmds').classList.toggle('active', route.cm_view == 'global');
+            document.querySelector('#casemix_roots').classList.toggle('active', route.cm_view == 'global');
+            document.querySelector('#casemix_ghs').classList.toggle('active', route.cm_view == 'ghm_root');
 
-            refreshCmds(target_cmd);
-            refreshRoots(target_cmd);
-            refreshGhmRoot(target_ghm_root);
-
-            markOutdated('#casemix_view', false);
+            refreshCmds(route.cm_cmd);
+            refreshRoots(route.cm_cmd);
+            refreshGhmRoot(route.ghm_root);
         }
     }
     this.run = run;
 
-    function route(args)
+    function buildUrl(args)
     {
-        if (args !== undefined) {
-            target_view = args.view || target_view;
-            target_start = (args.start !== undefined) ? args.start : target_start;
-            target_end = (args.end !== undefined) ? args.end : target_end;
-            if (args.units === '')
-                args.units = null;
-            target_units = (args.units !== undefined) ? args.units : target_units;
-            target_mode = args.mode || target_mode;
-            target_diff_start = (args.diff_start !== undefined) ? args.diff_start : target_diff_start;
-            target_diff_end = (args.diff_end !== undefined) ? args.diff_end : target_diff_end;
-            target_cmd = args.cmd || target_cmd;
-            target_ghm_root = args.ghm_root || target_ghm_root;
+        const keep_keys = [
+            'cm_start',
+            'cm_end',
+            'cm_units',
+            'cm_mode',
+            'cm_diff_start',
+            'cm_diff_end',
+            'cm_cmd',
+            'ghm_root'
+        ];
 
-            // FIXME: This will not behave correctly if an update is already running
-            if (args.start !== undefined || args.end !== undefined || args.units !== undefined ||
-                    args.diff_start !== undefined || args.diff_end !== undefined)
-                mix_init = false;
+        let new_route = buildRoute(args);
+
+        let short_route = {};
+        for (let i = 0; i < keep_keys.length; i++) {
+            let k = keep_keys[i];
+            short_route[k] = new_route[k] || null;
         }
 
-        go('casemix/' + target_view);
+        let url_parts = [buildModuleUrl('casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
+        while (!url_parts[url_parts.length - 1])
+            url_parts.pop();
+        let url = url_parts.join('/');
+
+        return url;
+    }
+    this.buildUrl = buildUrl;
+
+    function route(args, delay)
+    {
+        go(buildUrl(args), true, delay);
     }
     this.route = route;
 
     function updateCaseMix(start, end, units, mode, diff_start, diff_end, func)
     {
-        if (mix_init)
+        let params = {
+            dates: (start && end) ? (start + '..' + end) : null,
+            units: units,
+            mode: mode,
+            diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
+            durations: 1
+        };
+
+        if (JSON.stringify(params) === mix_url)
             return;
-        mix_init = true;
 
-        var dates = (start && end) ? (start + '..' + end) : null;
-        var diff = (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null;
-        downloadJson(BaseUrl + 'api/casemix.json', {dates: dates, units: units, mode: mode, diff: diff,
-                                          durations: 1},
-                     function(status, json) {
-            var errors = [];
-
+        downloadJson(BaseUrl + 'api/casemix.json', params, function(json) {
             mix_cmds = [];
             mix_cmds_map = {};
             mix_ghm_roots = [];
             mix_ghm_roots_map = {};
             mix_price_density_max = 0;
 
-            switch (status) {
-                case 200: {
-                    for (var i = 0; i < json.length; i++) {
-                        var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
-                        var ghm_root = json[i].ghm.substr(0, 5);
+            for (var i = 0; i < json.length; i++) {
+                var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
+                var ghm_root = json[i].ghm.substr(0, 5);
 
-                        var cmd_info = mix_cmds_map[cmd];
-                        if (cmd_info === undefined) {
-                            cmd_info = {
-                                cmd: cmd,
-                                stays_count: 0,
-                                ghs_price_cents: 0,
-                                ghm_roots: [],
-                                ghm_roots_map: {}
-                            };
-                            mix_cmds.push(cmd_info);
-                            mix_cmds_map[cmd] = cmd_info;
-                        }
-                        var ghm_root_info = cmd_info.ghm_roots_map[ghm_root];
-                        if (ghm_root_info === undefined) {
-                            ghm_root_info = {
-                                ghm_root: ghm_root,
-                                stays_count: 0,
-                                ghs_price_cents: 0,
-                                max_duration: 0,
-                                ghs: [],
-                                ghs_map: {}
-                            };
-                            cmd_info.ghm_roots.push(ghm_root_info);
-                            cmd_info.ghm_roots_map[ghm_root] = ghm_root_info;
-                            mix_ghm_roots.push(ghm_root_info);
-                            mix_ghm_roots_map[ghm_root] = ghm_root_info;
-                        }
+                var cmd_info = mix_cmds_map[cmd];
+                if (cmd_info === undefined) {
+                    cmd_info = {
+                        cmd: cmd,
+                        stays_count: 0,
+                        ghs_price_cents: 0,
+                        ghm_roots: [],
+                        ghm_roots_map: {}
+                    };
+                    mix_cmds.push(cmd_info);
+                    mix_cmds_map[cmd] = cmd_info;
+                }
+                var ghm_root_info = cmd_info.ghm_roots_map[ghm_root];
+                if (ghm_root_info === undefined) {
+                    ghm_root_info = {
+                        ghm_root: ghm_root,
+                        stays_count: 0,
+                        ghs_price_cents: 0,
+                        max_duration: 0,
+                        ghs: [],
+                        ghs_map: {}
+                    };
+                    cmd_info.ghm_roots.push(ghm_root_info);
+                    cmd_info.ghm_roots_map[ghm_root] = ghm_root_info;
+                    mix_ghm_roots.push(ghm_root_info);
+                    mix_ghm_roots_map[ghm_root] = ghm_root_info;
+                }
 
-                        var ghs_info = ghm_root_info.ghs_map[json[i].ghs];
-                        if (ghs_info === undefined) {
-                            ghs_info = {
-                                ghs: json[i].ghs,
-                                details: []
-                            };
-                            ghm_root_info.ghs.push(ghs_info);
-                            ghm_root_info.ghs_map[json[i].ghs] = ghs_info;
-                        }
+                var ghs_info = ghm_root_info.ghs_map[json[i].ghs];
+                if (ghs_info === undefined) {
+                    ghs_info = {
+                        ghs: json[i].ghs,
+                        details: []
+                    };
+                    ghm_root_info.ghs.push(ghs_info);
+                    ghm_root_info.ghs_map[json[i].ghs] = ghs_info;
+                }
 
-                        cmd_info.stays_count += json[i].stays_count;
-                        cmd_info.ghs_price_cents += json[i].ghs_price_cents;
-                        ghm_root_info.stays_count += json[i].stays_count;
-                        ghm_root_info.ghs_price_cents += json[i].ghs_price_cents;
-                        if (json[i].duration >= ghm_root_info.max_duration)
-                            ghm_root_info.max_duration = json[i].duration + 1;
-                        ghs_info.details.push(json[i]);
+                cmd_info.stays_count += json[i].stays_count;
+                cmd_info.ghs_price_cents += json[i].ghs_price_cents;
+                ghm_root_info.stays_count += json[i].stays_count;
+                ghm_root_info.ghs_price_cents += json[i].ghs_price_cents;
+                if (json[i].duration >= ghm_root_info.max_duration)
+                    ghm_root_info.max_duration = json[i].duration + 1;
+                ghs_info.details.push(json[i]);
 
-                        mix_price_density_max += Math.abs(json[i].ghs_price_cents);
-                    }
-
-                    for (var i = 0; i < mix_cmds.length; i++) {
-                        mix_cmds[i].ghm_roots = mix_cmds[i].ghm_roots.sort(
-                                function(ghm_root_info1, ghm_root_info2) {
-                            if (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) {
-                                return -1;
-                            } else if (ghm_root_info1.ghm_root > ghm_root_info2.ghm_root) {
-                                return 1;
-                            } else {
-                                return 0;
-                            }
-                        });
-                    }
-
-                    for (var i = 0; i < mix_ghm_roots.length; i++) {
-                        var ghm_root_info = mix_ghm_roots[i];
-
-                        ghm_root_info.ghs = ghm_root_info.ghs.sort(function(ghs_info1, ghs_info2) {
-                            return ghs_info1.ghs - ghs_info2.ghs;
-                        });
-
-                        for (var j = 0; j < ghm_root_info.ghs.length; j++) {
-                            ghm_root_info.ghs[j].details = ghm_root_info.ghs[j].details.sort(
-                                    function(details1, details2) {
-                                return details1.duration - details2.duration;
-                            });
-                        }
-                    }
-                } break;
-
-                case 404: { errors.push('Casemix introuvable'); } break;
-                case 502:
-                case 503: { errors.push('Service non accessible'); } break;
-                case 504: { errors.push('Délai d\'attente dépassé, réessayez'); } break;
-                default: { errors.push('Erreur inconnue ' + status); } break;
+                mix_price_density_max += Math.abs(json[i].ghs_price_cents);
             }
 
-            mix_init = !errors.length;
-            if (!downloadJson.busy)
-                func(errors);
+            for (var i = 0; i < mix_cmds.length; i++) {
+                mix_cmds[i].ghm_roots = mix_cmds[i].ghm_roots.sort(
+                        function(ghm_root_info1, ghm_root_info2) {
+                    if (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) {
+                        return -1;
+                    } else if (ghm_root_info1.ghm_root > ghm_root_info2.ghm_root) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
+            }
+
+            for (var i = 0; i < mix_ghm_roots.length; i++) {
+                var ghm_root_info = mix_ghm_roots[i];
+
+                ghm_root_info.ghs = ghm_root_info.ghs.sort(function(ghs_info1, ghs_info2) {
+                    return ghs_info1.ghs - ghs_info2.ghs;
+                });
+
+                for (var j = 0; j < ghm_root_info.ghs.length; j++) {
+                    ghm_root_info.ghs[j].details = ghm_root_info.ghs[j].details.sort(
+                            function(details1, details2) {
+                        return details1.duration - details2.duration;
+                    });
+                }
+            }
+
+            mix_url = JSON.stringify(params);
         });
     }
 
@@ -245,14 +224,8 @@ var casemix = {};
                 var td_style = null;
             }
 
-            var click_function = (function() {
-                var cmd = cmd_num;
-                return function(e) { route({cmd: cmd}); e.preventDefault(); };
-            })();
-
             var td = createElement('td', {style: td_style},
-                stays_count ? createElement('a', {href: stays_count ? '#' : null,
-                                                  click: click_function}, '' + valid_cmds[i])
+                stays_count ? createElement('a', {href: buildUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
                             : valid_cmds[i]
             );
             tr.appendChild(td);
@@ -300,19 +273,15 @@ var casemix = {};
                     var ghm_root_info = ghm_roots[ghm_types[j]][i];
 
                     if (ghm_root_info !== undefined) {
-                        var click_function = (function() {
-                            var ghm_root = ghm_root_info.ghm_root;
-                            return function(e) { route({view: 'ghm_root',
-                                                        ghm_root: ghm_root}); e.preventDefault(); };
-                        })();
                         var text = ghm_root_info.ghm_root + ' = ' +
                                    pricing.priceText(ghm_root_info.ghs_price_cents);
 
                         tr.appendChild(createElement('td', {'style': 'border-right: 0;'},
                                                      '' + ghm_root_info.stays_count));
                         tr.appendChild(createElement('td', {'style': 'border-left: 0; border-right: 0;'},
-                            createElement('a', {href: '#',
-                                                click: click_function}, ghm_root_info.ghm_root)
+                            createElement('a', {href: buildUrl({cm_view: 'ghm_root',
+                                                                ghm_root: ghm_root_info.ghm_root})},
+                                          ghm_root_info.ghm_root)
                         ));
                         tr.appendChild(createElement('td', {'style': 'border-left: 0;'},
                                                      pricing.priceText(ghm_root_info.ghs_price_cents)));

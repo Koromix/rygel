@@ -10,13 +10,13 @@
         <script type="text/javascript" src="/static/chart.min.js"></script>
 
         <link rel="stylesheet" href="/static/common.css"/>
-        <link rel="stylesheet" href="/static/casemix.css"/>
         <link rel="stylesheet" href="/static/pricing.css"/>
         <link rel="stylesheet" href="/static/list.css"/>
+        <link rel="stylesheet" href="/static/casemix.css"/>
         <script type="text/javascript" src="/static/common.js"></script>
-        <script type="text/javascript" src="/static/casemix.js"></script>
         <script type="text/javascript" src="/static/pricing.js"></script>
         <script type="text/javascript" src="/static/list.js"></script>
+        <script type="text/javascript" src="/static/casemix.js"></script>
     </head>
 
     <body>
@@ -25,10 +25,6 @@
             <nav id="side_menu">
                 <img id="logo" src="/static/logo.png" alt="drdw logo"/>
                 <ul>
-                    <!--<li><a class="category" data-url="casemix.buildUrl({view: 'global'});">Activité</a></li>
-                    <li><a data-url="casemix.buildUrl({view: 'global'});">Globale</a></li>
-                    <li><a data-url="casemix.buildUrl({view: 'global'});">Racine de GHM</a></li>-->
-
                     <li><a class="category" data-url="pricing.buildUrl({view: 'table'});">Tarifs</a></li>
                     <li><a data-url="pricing.buildUrl({view: 'table'});">Table</a></li>
                     <li><a data-url="pricing.buildUrl({view: 'chart'});">Graphique</a></li>
@@ -38,56 +34,15 @@
                     <li><a data-url="list.buildUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
                     <li><a data-url="list.buildUrl({list: 'diagnoses'});">Diagnostics</a></li>
                     <li><a data-url="list.buildUrl({list: 'procedures'});">Actes</a></li>
+
+                    <li><a class="category" data-url="casemix.buildUrl({cm_view: 'global'});">Activité</a></li>
+                    <li><a data-url="casemix.buildUrl({cm_view: 'global'});">Globale</a></li>
+                    <li><a data-url="casemix.buildUrl({cm_view: 'ghm_root'});">Racine de GHM</a></li>
                 </ul>
             </nav>
         </div>
 
         <main>
-            <div id="casemix" class="page">
-                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#casemix_menu'); return false;"></a>
-                <nav id="casemix_menu" class="page_menu">
-                    <label>
-                        Unités fonctionnelles
-                        <input id="casemix_units" type="text" size="40" value=""/>
-                    </label><br/>
-
-                    <label>
-                        Dates
-                        <input id="casemix_start" type="date" value=""/>
-                        <input id="casemix_end" type="date" value=""/>
-                    </label>
-                    <label>
-                        Comparer
-                        <input id="casemix_diff_start" type="date" value=""/>
-                        <input id="casemix_diff_end" type="date" value=""/>
-                    </label>
-                    <label>
-                        Algorithme
-                        <select id="casemix_mode">
-                            <option value="e">Algorithme E</option>
-                            <option value="ex">Algorithme Ex</option>
-                            <option value="ex2">Algorithme Ex'</option>
-                            <option value="j">Algorithme J</option>
-                            <option value="exj">Algorithme ExJ</option>
-                            <option value="exj2">Algorithme Ex'J</option>
-                        </select>
-                    </label><br/>
-
-                    <button onclick="casemix.route({start: document.querySelector('#casemix_start').value,
-                                                    end: document.querySelector('#casemix_end').value,
-                                                    mode: document.querySelector('#casemix_mode').value,
-                                                    diff_start: document.querySelector('#casemix_diff_start').value,
-                                                    diff_end: document.querySelector('#casemix_diff_end').value,
-                                                    units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
-                </nav>
-
-                <div id="casemix_view">
-                    <table id="casemix_cmds" class="hide"></table>
-                    <table id="casemix_roots" class="hide"></table>
-                    <table id="casemix_ghs" class="hide"></table>
-                </div>
-            </div>
-
             <div id="pricing" class="page">
                 <a class="deploy page_deploy" href="#" onclick="toggleMenu('#pricing_menu'); return false;"></a>
                 <nav id="pricing_menu" class="page_menu">
@@ -151,6 +106,51 @@
                     <div class="list_pages hide"></div>
 
                     <ul id="list_tree" class="hide"></ul>
+                </div>
+            </div>
+
+            <div id="casemix" class="page">
+                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#casemix_menu'); return false;"></a>
+                <nav id="casemix_menu" class="page_menu">
+                    <label>
+                        Unités fonctionnelles
+                        <input id="casemix_units" type="text" size="40" value=""/>
+                    </label><br/>
+
+                    <label>
+                        Dates
+                        <input id="casemix_start" type="date" value=""/>
+                        <input id="casemix_end" type="date" value=""/>
+                    </label>
+                    <label>
+                        Comparer
+                        <input id="casemix_diff_start" type="date" value=""/>
+                        <input id="casemix_diff_end" type="date" value=""/>
+                    </label>
+                    <label>
+                        Algorithme
+                        <select id="casemix_mode">
+                            <option value="e">Algorithme E</option>
+                            <option value="ex">Algorithme Ex</option>
+                            <option value="ex2">Algorithme Ex'</option>
+                            <option value="j">Algorithme J</option>
+                            <option value="exj">Algorithme ExJ</option>
+                            <option value="exj2">Algorithme Ex'J</option>
+                        </select>
+                    </label><br/>
+
+                    <button onclick="casemix.route({cm_start: document.querySelector('#casemix_start').value,
+                                                    cm_end: document.querySelector('#casemix_end').value,
+                                                    cm_mode: document.querySelector('#casemix_mode').value,
+                                                    cm_diff_start: document.querySelector('#casemix_diff_start').value,
+                                                    cm_diff_end: document.querySelector('#casemix_diff_end').value,
+                                                    cm_units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
+                </nav>
+
+                <div id="casemix_view">
+                    <table id="casemix_cmds" class="hide"></table>
+                    <table id="casemix_roots" class="hide"></table>
+                    <table id="casemix_ghs" class="hide"></table>
                 </div>
             </div>
         </main>

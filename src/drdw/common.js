@@ -165,7 +165,17 @@ var route = {
 
     'list': 'classifier_tree',
     'page': 1,
-    'spec': null
+    'spec': null,
+
+    'cm_view': 'global',
+    'cm_start': null,
+    'cm_end': null,
+    'cm_units': null,
+    'cm_mode': 'exj2',
+    'cm_diff_start': null,
+    'cm_diff_end': null,
+    'cm_cmd': null,
+    'cm_ghm_root': null
 };
 var scroll_cache = {};
 var module = null;
