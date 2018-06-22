@@ -131,7 +131,7 @@ var pricing = {};
         var begin_date = indexes[index].begin_date;
         downloadJson(BaseUrl + 'api/ghm_ghs.json', {date: begin_date}, function(json) {
             for (var i = 0; i < json.length; i++) {
-                var ghm_root = json[i].ghm.substr(0, 5);
+                var ghm_root = json[i].ghm_root;
                 var ghm_ghs = json[i];
 
                 var pricing_info = pricings_map[ghm_root];
@@ -142,7 +142,7 @@ var pricing = {};
 
                 if (pricing_info[index] === undefined) {
                     pricing_info[index] = {
-                        'ghm_root': ghm_ghs.ghm.substr(0, 5),
+                        'ghm_root': ghm_ghs.ghm_root,
                         'ghs': [],
                         'ghs_map': {}
                     };
@@ -402,6 +402,12 @@ var pricing = {};
             );
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
+
+        thead.appendChild(createElement('tr', {},
+            createElement('td', {colspan: 1 + ghs.length, class: 'ghm_root'},
+                          pricing_info[main_index].ghm_root + ' - ' +
+                          (ghm_roots_map[pricing_info[main_index].ghm_root].desc || ''))
+        ));
 
         appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, true]; });
         appendRow(thead, 'GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });

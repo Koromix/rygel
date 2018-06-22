@@ -60,16 +60,21 @@
         -webkit-filter: invert(10%);
     }
     #pricing_table th:first-child { width: 90px; }
-    #pricing_table th.repeat { display: none; }
+    #pricing_table .repeat, #pricing_table .ghm_root { display: none; }
 }
 
 @media screen and (max-width: 800px) {
     #pricing_table th, #pricing_table td { border: 0; }
 
     #pricing_table th:not(.repeat) { display: none; }
-    #pricing_table th.repeat {
+    #pricing_table .repeat {
         text-align: center;
         font-size: 0.8em;
         padding: 1px 0;
+    }
+    #pricing_table .ghm_root {
+        background: #262626;
+        color: white;
+        font-weight: normal;
     }
 }
