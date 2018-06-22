@@ -59,23 +59,28 @@ var casemix = {};
         }
 
         // Refresh view
-        document.querySelector('#casemix').classList.add('active');
+        _('#casemix').classList.add('active');
         refreshIndexesLine(_('#casemix_indexes'), indexes, main_index, false);
         refreshIndexesDiff(diff_index, route.ghm_root);
         markOutdated('#casemix_view', downloadJson.busy);
         if (!downloadJson.busy) {
-            if (route.cm_start)
-                document.querySelector('#casemix_start').value = route.cm_start;
-            if (route.cm_end)
-                document.querySelector('#casemix_end').value = route.cm_end;
+            _('#casemix_cmds').classList.toggle('active', route.cm_view === 'global');
+            _('#casemix_roots').classList.toggle('active', route.cm_view === 'global');
+            _('#casemix_ghs').classList.toggle('active', route.cm_view === 'ghm_root');
 
-            document.querySelector('#casemix_cmds').classList.toggle('active', route.cm_view == 'global');
-            document.querySelector('#casemix_roots').classList.toggle('active', route.cm_view == 'global');
-            document.querySelector('#casemix_ghs').classList.toggle('active', route.cm_view == 'ghm_root');
+            refreshErrors(Array.from(errors));
+            downloadJson.errors = [];
 
-            refreshCmds(route.cm_cmd);
-            refreshRoots(route.cm_cmd);
-            refreshGhmRoot(pricing.pricings_map[route.ghm_root], main_index, diff_index, route.ghm_root);
+            switch (route.cm_view) {
+                case 'global': {
+                    refreshCmds(route.cm_cmd);
+                    refreshRoots(route.cm_cmd);
+                } break;
+                case 'ghm_root': {
+                    refreshGhmRoot(pricing.pricings_map[route.ghm_root],
+                                   main_index, diff_index, route.ghm_root);
+                } break;
+            }
         }
     }
     this.run = run;
@@ -127,13 +132,13 @@ var casemix = {};
         if (JSON.stringify(params) === mix_url)
             return;
 
-        downloadJson(BaseUrl + 'api/casemix.json', params, function(json) {
-            mix_cmds = [];
-            mix_cmds_map = {};
-            mix_ghm_roots = [];
-            mix_ghm_roots_map = {};
-            mix_price_density_max = 0;
+        mix_cmds = [];
+        mix_cmds_map = {};
+        mix_ghm_roots = [];
+        mix_ghm_roots_map = {};
+        mix_price_density_max = 0;
 
+        downloadJson(BaseUrl + 'api/casemix.json', params, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
                 var ghm_root = json[i].ghm.substr(0, 5);
@@ -192,6 +197,18 @@ var casemix = {};
         });
     }
 
+    function refreshErrors(errors)
+    {
+        var log = document.querySelector('#casemix .log');
+
+        if (errors.length) {
+            log.style.display = 'block';
+            log.innerHTML = errors.join('<br/>');
+        } else {
+            log.style.display = 'none';
+        }
+    }
+
     function refreshIndexesDiff(diff_index, test_ghm_root)
     {
         var el = document.querySelector("#casemix_diff_indexes");
@@ -228,23 +245,25 @@ var casemix = {};
         );
         var tr = table.querySelector('tr');
 
-        for (var i = 0; i < valid_cmds.length; i++) {
-            var cmd_num = parseInt(valid_cmds[i], 10);
-            var mix_cmd = mix_cmds_map[cmd_num];
-            var stays_count = mix_cmd ? mix_cmd.stays_count : 0;
+        if (mix_cmds.length) {
+            for (var i = 0; i < valid_cmds.length; i++) {
+                var cmd_num = parseInt(valid_cmds[i], 10);
+                var mix_cmd = mix_cmds_map[cmd_num];
+                var stays_count = mix_cmd ? mix_cmd.stays_count : 0;
 
-            if (stays_count) {
-                var td_style = 'background: rgba(' + (stays_count > 0 ? '0, 255, 0, ' : '255, 0, 0, ') +
-                                                     (Math.abs(mix_cmd.ghs_price_cents) / mix_price_density_max) + ');';
-            } else {
-                var td_style = null;
+                if (stays_count) {
+                    var td_style = 'background: rgba(' + (stays_count > 0 ? '0, 255, 0, ' : '255, 0, 0, ') +
+                                                         (Math.abs(mix_cmd.ghs_price_cents) / mix_price_density_max) + ');';
+                } else {
+                    var td_style = null;
+                }
+
+                var td = createElement('td', {style: td_style},
+                    stays_count ? createElement('a', {href: buildUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
+                                : valid_cmds[i]
+                );
+                tr.appendChild(td);
             }
-
-            var td = createElement('td', {style: td_style},
-                stays_count ? createElement('a', {href: buildUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
-                            : valid_cmds[i]
-            );
-            tr.appendChild(td);
         }
 
         var old_table = document.querySelector('#casemix_cmds');
