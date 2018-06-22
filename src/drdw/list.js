@@ -387,10 +387,10 @@ var list = {};
 
         if (page) {
             var from = (page - 1) * PageLen;
-            var to = Math.min(items.length, from + PageLen);
+            var max_visible = PageLen;
         } else {
             var from = 0;
-            var to = items.length;
+            var max_visible = items.length;
         }
 
         var table = createElement('table', {},
@@ -449,7 +449,7 @@ var list = {};
             }
 
             match_count += show;
-            if (show && match_count >= from && match_count < to) {
+            if (show && match_count >= from && visible_count < max_visible) {
                 visible_count++;
             } else {
                 contents.splice(prev_length);
