@@ -160,7 +160,7 @@ var pricing = {};
     {
         var ghm_root_info = ghm_roots_map[ghm_root];
         var pricing_info = pricings_map[ghm_root];
-        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value) + 1;
+        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value);
 
         var log = document.querySelector('#pricing .log');
         var old_table = document.querySelector('#pricing_table');
