@@ -3,7 +3,11 @@
     text-align: center;
 }
 
-#list_tree { white-space: nowrap; }
+#list_tree {
+    margin: 8px 22px;
+    padding: 0;
+    white-space: nowrap;
+}
 #list_tree li {
     margin-left: -8px;
     padding-top: 1px;
@@ -61,6 +65,9 @@
 #list_table tr.heading { background: #eee; }
 
 @media screen and (max-width: 800px) {
+    #list_tree { font-size: 0.9em; }
+    #list_tree ul { padding-left: 30px; }
+
     #list_table th, #list_table td {
         font-size: 0.8em;
         border: 0;
