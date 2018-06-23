@@ -133,9 +133,15 @@ var list = {};
 
             'columns': [
                 {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10_map) {
-                    return diag.diag + (cim10_map[diag.diag] ? ' - ' + cim10_map[diag.diag].desc : '');
+                    let text = diag.diag;
+                    switch (diag.sex) {
+                        case 'Homme': { text += ' (♂)'; } break;
+                        case 'Femme': { text += ' (♀)'; } break;
+                    }
+                    if (cim10_map[diag.diag])
+                        text += ' - ' + cim10_map[diag.diag].desc;
+                    return text;
                 }},
-                {header: 'Sexe', variable: 'sex'},
                 {header: 'CMD', variable: 'cmd'},
                 {header: 'Liste principale', variable: 'main_list'},
                 {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }}
