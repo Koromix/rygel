@@ -17,10 +17,7 @@
     font-style: italic;
     font-weight: normal;
 }
-#pricing_table thead td {
-    text-align: center;
-    font-weight: bold;
-}
+#pricing_table thead td { text-align: center; }
 #pricing_table tbody td {
     background: #969696;
     text-align: right;
@@ -61,11 +58,14 @@
     }
     #pricing_table th:first-child { width: 90px; }
     #pricing_table .repeat, #pricing_table .ghm_root { display: none; }
+    #pricing_table thead td { font-weight: bold; }
 }
 
 @media screen and (max-width: 800px) {
-    #pricing_table th, #pricing_table td { border: 0; }
-
+    #pricing_table th, #pricing_table td {
+        font-size: 0.9em;
+        border: 0;
+    }
     #pricing_table th:not(.repeat) { display: none; }
     #pricing_table .repeat {
         text-align: center;
@@ -73,8 +73,13 @@
         padding: 1px 0;
     }
     #pricing_table .ghm_root {
+        box-sizing: border-box;
+        max-width: 100vw;
         background: #262626;
         color: white;
         font-weight: normal;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 }
