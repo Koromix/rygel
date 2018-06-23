@@ -156,8 +156,10 @@ var list = {};
                     var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
-                {header: 'Début (inclus)', variable: 'begin_date'},
-                {header: 'Fin (exclue)', variable: 'end_date'},
+                {header: 'Dates', title: 'Date de début incluse, date de fin exclue',
+                 func: function(proc) {
+                    return proc.begin_date + ' -- ' + proc.end_date;
+                }},
                 {header: 'Activités', variable: 'activities'},
                 {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
             ]

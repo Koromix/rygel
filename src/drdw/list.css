@@ -66,6 +66,11 @@
 
 #list_diagnoses td:nth-child(2) { text-align: center; }
 
+@media screen and (min-width: 800px) {
+    #list_procedures td:first-child { min-width: 70%; }
+    #list_diagnoses td:first-child { min-width: 70%; }
+}
+
 @media screen and (max-width: 800px) {
     #list_tree { font-size: 0.9em; }
     #list_tree ul { padding-left: 30px; }
