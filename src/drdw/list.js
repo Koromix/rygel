@@ -152,7 +152,7 @@ var list = {};
             'concepts': 'ccam',
 
             'columns': [
-                {header: 'Acte', style: 'width: 60%;', func: function(proc, ccam_map) {
+                {header: 'Acte', func: function(proc, ccam_map) {
                     var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
@@ -210,7 +210,7 @@ var list = {};
         _('#list').classList.add('active');
         _('#list_search').parentNode.classList.toggle('active', route.list !== 'classifier_tree');
         _('#list_tree').classList.toggle('active', route.list === 'classifier_tree');
-        toggleClass(document.querySelectorAll('.list_pages'), 'active', route.list !== 'classifier_tree');
+        removeClass(document.querySelectorAll('.list_pages'), 'active');
         _('#list_table').classList.toggle('active', route.list !== 'classifier_tree');
         refreshIndexesLine(_('#list_indexes'), indexes, main_index);
         markOutdated('#list_view', downloadJson.busy);
@@ -301,8 +301,10 @@ var list = {};
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
             h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
+            h1.classList.add('active');
         } else {
             h1.innerText = '';
+            h1.classList.remove('active');
         }
 
         if (search != search_input.value)
@@ -659,6 +661,7 @@ var list = {};
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
+            pages_copy.classList.toggle('active', visible_count != match_count);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
