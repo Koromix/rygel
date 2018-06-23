@@ -190,17 +190,31 @@ var list = {};
         if (main_index >= 0 && (table_index !== main_index || table_type !== route.list ||
                                 table_spec !== route.spec)) {
             force_refresh = (table_type !== route.list);
-            updateTable(route.list, main_index, route.spec);
+            if (Tables[route.list])
+                updateTable(route.list, main_index, route.spec);
 
             table_type = route.list;
             table_index = main_index;
             table_spec = route.spec;
         }
+        let sort_info = null;
+        if (Tables[route.list] && Tables[route.list].sort) {
+            if (route.sort) {
+                sort_info = Tables[route.list].sort.find(function(sort_info) {
+                    return sort_info.type == route.sort;
+                });
+            } else {
+                sort_info = Tables[route.list].sort[0];
+            }
+        }
 
-        // Validate
+        // Errors
+        if (!Tables[route.list])
+            errors.add('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
-        // TODO: Validation is not complete
+        if (route.sort && Tables[route.list] && !sort_info)
+            errors.add('Critère de tri inconnu');
 
         // Redirection (stable URLs)
         if (!route.date && indexes.length) {
@@ -228,11 +242,13 @@ var list = {};
 
             if (route.list === 'classifier_tree') {
                 refreshClassifierTree(route.date, items, hash);
-            } else {
+            } else if (Tables[route.list]) {
                 var table_info = Tables[route.list];
                 refreshTable(items, route.list, table_info,
                              table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
-                             route.search, route.sort, route.page);
+                             sort_info, route.search, route.page);
+            } else {
+                _('.list_table').classList.remove('active');
             }
         }
     }
@@ -489,7 +505,7 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, list_name, table_info, concepts_map, search, sort, page)
+    function refreshTable(items, list_name, table_info, concepts_map, sort_info, search, page)
     {
         if (search)
             search = simplifyForSearch(search);
@@ -520,7 +536,7 @@ var list = {};
             if (column.variable) {
                 var content = item[column.variable];
             } else if (column.func) {
-                var content = column.func(item, concepts_map, sort);
+                var content = column.func(item, concepts_map, sort_info ? sort_info.type : null);
             }
 
             if (content === undefined || content === null) {
@@ -549,15 +565,10 @@ var list = {};
         }
 
         // Sort
-        if (sort && table_info.sort) {
-            let sort_info = table_info.sort.find(function(sort_info) {
-                return sort_info.type == sort;
+        if (sort_info && sort_info.func) {
+            items = items.slice(0).sort(function(v1, v2) {
+                return sort_info.func(v1, v2, concepts_map);
             });
-            if (sort_info) {
-                items = items.slice(0).sort(function(v1, v2) {
-                    return sort_info.func(v1, v2, concepts_map);
-                });
-            }
         }
 
         // Search
