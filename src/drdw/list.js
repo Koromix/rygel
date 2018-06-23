@@ -132,7 +132,7 @@ var list = {};
             'concepts': 'cim10',
 
             'columns': [
-                {header: 'Diagnostic', style: 'width: 60%;', func: function(diag, cim10_map) {
+                {header: 'Diagnostic', func: function(diag, cim10_map) {
                     let text = diag.diag;
                     switch (diag.sex) {
                         case 'Homme': { text += ' (♂)'; } break;
@@ -142,9 +142,9 @@ var list = {};
                         text += ' - ' + cim10_map[diag.diag].desc;
                     return text;
                 }},
+                {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }},
                 {header: 'CMD', variable: 'cmd'},
-                {header: 'Liste principale', variable: 'main_list'},
-                {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }}
+                {header: 'Liste principale', variable: 'main_list'}
             ]
         },
 
@@ -211,7 +211,7 @@ var list = {};
         _('#list_search').parentNode.classList.toggle('active', route.list !== 'classifier_tree');
         _('#list_tree').classList.toggle('active', route.list === 'classifier_tree');
         removeClass(document.querySelectorAll('.list_pages'), 'active');
-        _('#list_table').classList.toggle('active', route.list !== 'classifier_tree');
+        _('.list_table').classList.toggle('active', route.list !== 'classifier_tree');
         refreshIndexesLine(_('#list_indexes'), indexes, main_index);
         markOutdated('#list_view', downloadJson.busy);
         if (Tables[route.list] && Tables[route.list].sort !== undefined) {
@@ -228,7 +228,7 @@ var list = {};
                 refreshClassifierTree(route.date, items, hash);
             } else {
                 var table_info = Tables[route.list];
-                refreshTable(items, table_info,
+                refreshTable(items, route.list, table_info,
                              table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
                              route.search, route.sort, route.page);
             }
@@ -487,7 +487,7 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, table_info, concepts_map, search, sort, page)
+    function refreshTable(items, list_name, table_info, concepts_map, search, sort, page)
     {
         if (search)
             search = simplifyForSearch(search);
@@ -665,8 +665,9 @@ var list = {};
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
-        let old_table = document.querySelector('#list_table');
+        let old_table = document.querySelector('.list_table');
         cloneAttributes(old_table, table);
+        table.id = 'list_' + list_name;
         old_table.parentNode.replaceChild(table, old_table);
     }
 
