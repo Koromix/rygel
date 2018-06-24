@@ -168,14 +168,10 @@ var route = {
     'spec': null,
 
     'cm_view': 'global',
-    'cm_start': null,
-    'cm_end': null,
+    'cm_diff': null,
     'cm_units': null,
     'cm_mode': 'exj2',
-    'cm_diff_start': null,
-    'cm_diff_end': null,
-    'cm_cmd': null,
-    'cm_ghm_root': null
+    'cm_cmd': null
 };
 var scroll_cache = {};
 var module = null;
@@ -376,8 +372,11 @@ function getIndexes()
 }
 getIndexes.indexes = [];
 
-function refreshIndexesLine(el, indexes, main_index)
+function refreshIndexesLine(el, indexes, main_index, show_table_changes)
 {
+    if (show_table_changes === undefined)
+        show_table_changes = true;
+
     var old_g = el.querySelector('g');
     var g = createElementNS('svg', 'g', {});
 
@@ -399,10 +398,13 @@ function refreshIndexesLine(el, indexes, main_index)
             } else if (indexes[i].changed_prices) {
                 var color = '#000';
                 var weight = 'normal';
-            } else {
+            } else if (show_table_changes) {
                 var color = '#888';
                 var weight = 'normal';
+            } else {
+                continue;
             }
+
             var click_function = (function() {
                 var index = i;
                 return function(e) { module.route({date: indexes[index].begin_date}); };

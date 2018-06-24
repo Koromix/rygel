@@ -1,11 +1,16 @@
 var casemix = {};
 (function() {
     // Casemix
+    var indexes = [];
+    var ghm_roots = [];
+    var ghm_roots_map = {};
     var mix_url = null;
     var mix_cmds = [];
     var mix_cmds_map = {};
     var mix_ghm_roots = [];
     var mix_ghm_roots_map = {};
+    var mix_start_date = null;
+    var mix_end_date = null;
     var mix_price_density_max = 0;
 
     function run(route, url, parameters, hash)
@@ -33,11 +38,30 @@ var casemix = {};
         */
 
         // Resources
-        updateCaseMix(route.cm_start, route.cm_end, route.cm_units, route.cm_mode,
-                      route.cm_diff_start, route.cm_diff_end, run);
+        indexes = getIndexes();
+        [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
+        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
+        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.cm_diff; });
+        if (main_index >= 0 && !indexes[main_index].init)
+            pricing.updatePriceMap(main_index);
+        if (main_index >= 0) {
+            let end_date = indexes[main_index].begin_date;
+            for (let i = main_index + 1; i < indexes.length; i++) {
+                if (indexes[i].changed_prices) {
+                    end_date = indexes[i].begin_date;
+                    break;
+                }
+            }
+
+            updateCaseMix(route.date, end_date, route.cm_units, route.cm_mode,
+                          diff_index >= 0 ? indexes[diff_index].begin_date : null,
+                          diff_index >= 0 ? indexes[diff_index].end_date : null);
+        }
 
         // Refresh view
         document.querySelector('#casemix').classList.add('active');
+        refreshIndexesLine(_('#casemix_indexes'), indexes, main_index, false);
+        refreshIndexesDiff(diff_index, route.ghm_root);
         markOutdated('#casemix_view', downloadJson.busy);
         if (!downloadJson.busy) {
             if (route.cm_start)
@@ -51,20 +75,18 @@ var casemix = {};
 
             refreshCmds(route.cm_cmd);
             refreshRoots(route.cm_cmd);
-            refreshGhmRoot(route.ghm_root);
+            refreshGhmRoot(pricing.pricings_map[route.ghm_root], main_index, diff_index, route.ghm_root);
         }
     }
     this.run = run;
 
     function buildUrl(args)
     {
-        const keep_keys = [
-            'cm_start',
-            'cm_end',
+        const KeepKeys = [
+            'date',
+            'cm_diff',
             'cm_units',
             'cm_mode',
-            'cm_diff_start',
-            'cm_diff_end',
             'cm_cmd',
             'ghm_root'
         ];
@@ -72,8 +94,8 @@ var casemix = {};
         let new_route = buildRoute(args);
 
         let short_route = {};
-        for (let i = 0; i < keep_keys.length; i++) {
-            let k = keep_keys[i];
+        for (let i = 0; i < KeepKeys.length; i++) {
+            let k = KeepKeys[i];
             short_route[k] = new_route[k] || null;
         }
 
@@ -92,7 +114,7 @@ var casemix = {};
     }
     this.route = route;
 
-    function updateCaseMix(start, end, units, mode, diff_start, diff_end, func)
+    function updateCaseMix(start, end, units, mode, diff_start, diff_end)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
@@ -128,6 +150,7 @@ var casemix = {};
                     mix_cmds.push(cmd_info);
                     mix_cmds_map[cmd] = cmd_info;
                 }
+
                 var ghm_root_info = cmd_info.ghm_roots_map[ghm_root];
                 if (ghm_root_info === undefined) {
                     ghm_root_info = {
@@ -165,36 +188,29 @@ var casemix = {};
                 mix_price_density_max += Math.abs(json[i].ghs_price_cents);
             }
 
-            for (var i = 0; i < mix_cmds.length; i++) {
-                mix_cmds[i].ghm_roots = mix_cmds[i].ghm_roots.sort(
-                        function(ghm_root_info1, ghm_root_info2) {
-                    if (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) {
-                        return -1;
-                    } else if (ghm_root_info1.ghm_root > ghm_root_info2.ghm_root) {
-                        return 1;
-                    } else {
-                        return 0;
-                    }
-                });
-            }
-
-            for (var i = 0; i < mix_ghm_roots.length; i++) {
-                var ghm_root_info = mix_ghm_roots[i];
-
-                ghm_root_info.ghs = ghm_root_info.ghs.sort(function(ghs_info1, ghs_info2) {
-                    return ghs_info1.ghs - ghs_info2.ghs;
-                });
-
-                for (var j = 0; j < ghm_root_info.ghs.length; j++) {
-                    ghm_root_info.ghs[j].details = ghm_root_info.ghs[j].details.sort(
-                            function(details1, details2) {
-                        return details1.duration - details2.duration;
-                    });
-                }
-            }
-
             mix_url = JSON.stringify(params);
         });
+    }
+
+    function refreshIndexesDiff(diff_index, test_ghm_root)
+    {
+        var el = document.querySelector("#casemix_diff_indexes");
+        el.innerHTML = '';
+
+        el.appendChild(createElement('option', {value: ''}, 'Désactiver'));
+        for (var i = 0; i < indexes.length; i++) {
+            if (indexes[i].changed_prices) {
+                var opt = createElement('option', {value: indexes[i].begin_date},
+                                        indexes[i].begin_date);
+                if (i === diff_index)
+                    opt.setAttribute('selected', '');
+                /*if (!checkIndexGhmRoot(i, test_ghm_root)) {
+                    opt.setAttribute('disabled', '');
+                    opt.text += '*';
+                }*/
+                el.appendChild(opt);
+            }
+        }
     }
 
     function refreshCmds(cmd)
@@ -250,40 +266,53 @@ var casemix = {};
 
         if (cmd && mix_cmds_map[cmd]) {
             var types_tr = createElement('tr');
-            var ghm_roots = {};
+            var ghm_roots_by_type = {};
             for (var i = 0; i < ghm_types.length; i++) {
                 types_tr.appendChild(createElement('th', {colspan: 3}, '' + ghm_types[i]));
-                ghm_roots[ghm_types[i]] = [];
+                ghm_roots_by_type[ghm_types[i]] = [];
             }
             thead.appendChild(types_tr);
 
-            var rows_count = 0;
+            let rows_count = 0;
+            let ghm_roots_by_type_map = {};
+            for (let i = 0; i < ghm_roots.length; i++) {
+                let ghm_root_cmd = parseInt(ghm_roots[i].ghm_root.substr(0, 2));
+                if (ghm_root_cmd === cmd) {
+                    let type = ghm_roots[i].ghm_root.substr(2, 1);
+                    let ghm_root_info = {ghm_root: ghm_roots[i].ghm_root};
+                    if (ghm_roots_by_type[type]) {
+                        ghm_roots_by_type[type].push(ghm_root_info);
+                        ghm_roots_by_type_map[ghm_roots[i].ghm_root] = ghm_root_info;
+                        rows_count = Math.max(rows_count, ghm_roots_by_type[type].length);
+                    }
+                }
+            }
+
+            // FIXME: Missing if missing from ghm_roots_by_type_map
             for (var i = 0; i < mix_cmds_map[cmd].ghm_roots.length; i++) {
                 var ghm_root_info = mix_cmds_map[cmd].ghm_roots[i];
                 var ghm_root_type = ghm_root_info.ghm_root.substr(2, 1);
 
-                ghm_roots[ghm_root_type].push(ghm_root_info);
-                if (ghm_roots[ghm_root_type].length > rows_count)
-                    rows_count = ghm_roots[ghm_root_type].length;
+                Object.assign(ghm_roots_by_type_map[ghm_root_info.ghm_root], ghm_root_info);
             }
 
             for (var i = 0; i < rows_count; i++) {
                 var tr = createElement('tr');
                 for (var j = 0; j < ghm_types.length; j++) {
-                    var ghm_root_info = ghm_roots[ghm_types[j]][i];
+                    var ghm_root_info = ghm_roots_by_type[ghm_types[j]][i];
 
                     if (ghm_root_info !== undefined) {
                         var text = ghm_root_info.ghm_root + ' = ' +
                                    pricing.priceText(ghm_root_info.ghs_price_cents);
 
-                        tr.appendChild(createElement('td', {'style': 'border-right: 0;'},
-                                                     '' + ghm_root_info.stays_count));
-                        tr.appendChild(createElement('td', {'style': 'border-left: 0; border-right: 0;'},
+                        tr.appendChild(createElement('td', {'style': 'border-right: 0; text-align: left;'},
+                                                     ghm_root_info.stays_count ? '' + ghm_root_info.stays_count : ''));
+                        tr.appendChild(createElement('td', {'style': ' border-left: 0; border-right: 0; text-align: center;'},
                             createElement('a', {href: buildUrl({cm_view: 'ghm_root',
                                                                 ghm_root: ghm_root_info.ghm_root})},
                                           ghm_root_info.ghm_root)
                         ));
-                        tr.appendChild(createElement('td', {'style': 'border-left: 0;'},
+                        tr.appendChild(createElement('td', {'style': 'border-left: 0; text-align: right;'},
                                                      pricing.priceText(ghm_root_info.ghs_price_cents)));
                     } else {
                         tr.appendChild(createElement('td', {colspan: 3}));
@@ -298,47 +327,53 @@ var casemix = {};
         old_table.parentNode.replaceChild(table, old_table);
     }
 
-    function refreshGhmRoot(ghm_root)
+    function refreshGhmRoot(pricing_info, main_index, diff_index, ghm_root)
     {
-        var table = createElement('table', {},
-            createElement('thead'),
-            createElement('tbody')
-        );
-        var thead = table.querySelector('thead');
-        var tbody = table.querySelector('tbody');
-
         if (ghm_root && mix_ghm_roots_map[ghm_root]) {
             var ghm_root_info = mix_ghm_roots_map[ghm_root];
 
-            var tr = createElement('tr');
-            tr.appendChild(createElement('th', {}, ''));
-            for (var i = 0; i < ghm_root_info.ghs.length; i++)
-                tr.appendChild(createElement('th', {}, '' + ghm_root_info.ghs[i].ghs));
-            thead.appendChild(tr);
+            let max_duration = Math.max(ghm_root_info.max_duration, 20);
+            var table = pricing.createTable(pricing_info, main_index, diff_index,
+                                            max_duration, false, true, function(col, duration) {
+                let ghs = ghm_root_info.ghs_map[col.ghs];
 
-            for (var i = 0; i < ghm_root_info.max_duration; i++) {
-                var tr = createElement('tr');
-                tr.appendChild(createElement('th', {}, pricing.durationText(i)));
-                for (var j = 0; j < ghm_root_info.ghs.length; j++) {
-                    // FIXME: All of this is getting really ugly
+                let content = '';
+                let style = 'filter: opacity(20%);';
+                if (ghs) {
+                    // FIXME: Ugly search loop
                     var info = null;
-                    for (var k = 0; k < ghm_root_info.ghs[j].details.length; k++) {
-                        if (ghm_root_info.ghs[j].details[k].duration == i) {
-                            info = ghm_root_info.ghs[j].details[k];
+                    for (var i = 0; i < ghs.details.length; i++) {
+                        if (ghs.details[i].duration == duration) {
+                            info = ghs.details[i];
                             break;
                         }
                     }
 
-                    if (info !== null) {
-                        var td = createElement('td', {title: info.stays_count},
-                                               pricing.priceText(info.ghs_price_cents));
-                    } else {
-                        var td = createElement('td');
+                    if (info) {
+                        let width = 60 + 40 * (info.ghs_price_cents / ghm_root_info.ghs_price_cents);
+                        style = 'filter: opacity(' + width + '%)';
+                        content = [
+                            //createElement('div', {style: 'float: left; height: 1em; background: red; width: ' + width + '%;'}),
+                            createElement('div', {style: 'float: left; width: 50%; text-align: left;'},
+                                          '' + info.stays_count),
+                            createElement('div', {style: 'float: right; width: 50%; text-align: right;'},
+                                          pricing.priceText(info.ghs_price_cents))
+                        ];
                     }
-                    tr.appendChild(td);
                 }
-                tbody.appendChild(tr);
-            }
+
+                if (col.exb_treshold && duration < col.exb_treshold) {
+                    var mode = 'exb';
+                } else if (col.exh_treshold && duration >= col.exh_treshold) {
+                    var mode = 'exh';
+                } else {
+                    var mode = 'price';
+                }
+
+                return [content, {class: mode, style: style}, false];
+            });
+        } else {
+            var table = createElement('table');
         }
 
         var old_table = document.querySelector('#casemix_ghs');

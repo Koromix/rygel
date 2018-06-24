@@ -5,6 +5,7 @@ var pricing = {};
     var ghm_roots = [];
     var ghm_roots_map = {};
     var pricings_map = {};
+    this.pricings_map = pricings_map;
 
     var chart = null;
 
@@ -118,10 +119,12 @@ var pricing = {};
             return;
 
         [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
+        return [ghm_roots, ghm_roots_map];
     }
 
     function updatePriceMap(index)
     {
+        let indexes = getIndexes();
         if (indexes[index].init)
             return;
 
@@ -150,6 +153,7 @@ var pricing = {};
             indexes[index].init = true;
         });
     }
+    this.updatePriceMap = updatePriceMap;
 
     // TODO: Split refreshHeader(), remove this function
     function refreshView(main_index, diff_index, ghm_root, apply_coeff, errors)

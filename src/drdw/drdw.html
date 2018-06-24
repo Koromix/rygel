@@ -118,21 +118,23 @@
             <div id="casemix" class="page">
                 <a class="deploy page_deploy" href="#" onclick="toggleMenu('#casemix_menu'); return false;"></a>
                 <nav id="casemix_menu" class="page_menu">
+                    <svg id="casemix_indexes" class="indexes_line">
+                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
+                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
+                        <g></g>
+                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
+                    </svg>
+
                     <label>
-                        Unités fonctionnelles
-                        <input id="casemix_units" type="text" size="40" value=""/>
+                        Unités médicales
+                        <input id="casemix_units" type="text" style="width: 82%;" value=""/>
                     </label><br/>
 
                     <label>
-                        Dates
-                        <input id="casemix_start" type="date" value=""/>
-                        <input id="casemix_end" type="date" value=""/>
-                    </label>
-                    <label>
                         Comparer
-                        <input id="casemix_diff_start" type="date" value=""/>
-                        <input id="casemix_diff_end" type="date" value=""/>
+                        <select id="casemix_diff_indexes" style="width: 12em;"></select>
                     </label>
+
                     <label>
                         Algorithme
                         <select id="casemix_mode">
@@ -143,13 +145,10 @@
                             <option value="exj">Algorithme ExJ</option>
                             <option value="exj2">Algorithme Ex'J</option>
                         </select>
-                    </label><br/>
+                    </label>
 
-                    <button onclick="casemix.route({cm_start: document.querySelector('#casemix_start').value,
-                                                    cm_end: document.querySelector('#casemix_end').value,
-                                                    cm_mode: document.querySelector('#casemix_mode').value,
-                                                    cm_diff_start: document.querySelector('#casemix_diff_start').value,
-                                                    cm_diff_end: document.querySelector('#casemix_diff_end').value,
+                    <button onclick="casemix.route({cm_mode: document.querySelector('#casemix_mode').value,
+                                                    cm_diff: document.querySelector('#casemix_diff_indexes').value,
                                                     cm_units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
                 </nav>
 
