@@ -133,12 +133,11 @@ var pricing = {};
 
     function updateGhmRoots()
     {
-        if (ghm_roots.length)
-            return;
-
-        [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
+        if (!ghm_roots.length)
+            [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
         return [ghm_roots, ghm_roots_map];
     }
+    this.updateGhmRoots = updateGhmRoots;
 
     function updatePriceMap(index)
     {

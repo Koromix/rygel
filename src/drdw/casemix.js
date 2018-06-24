@@ -39,7 +39,7 @@ var casemix = {};
 
         // Resources
         indexes = getIndexes();
-        [ghm_roots, ghm_roots_map] = getConcepts('ghm_roots');
+        [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.cm_diff; });
         if (main_index >= 0 && !indexes[main_index].init)
