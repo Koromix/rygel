@@ -302,7 +302,7 @@ function go(new_url, mark_history, delay)
         module.run(route, app_url, url_parts.params, url_parts.hash);
 
     // Update URL to reflect real state (module may have set default values, etc.)
-    let real_url = module.routeToUrl({});
+    let real_url = module.routeToUrl({}) + (url_parts.hash ? ('#' + url_parts.hash) : '');
     window.history.replaceState(null, null, real_url);
     route_url_parts = parseUrl(real_url);
     route_url = real_url.substr(BaseUrl.length);
