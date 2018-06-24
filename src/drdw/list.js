@@ -229,20 +229,28 @@ var list = {};
         }
 
         // Refresh view
-        addClass(__('.ls_pages, .ls_table'), 'hide');
-        if (route.list && Lists[route.list])
-            _('#ls_' + route.list).classList.remove('hide');
+        let list_table = _('#ls_' + route.list);
+        {
+            let list_tables = __('.ls_table');
+            for (let i = 0; i < list_tables.length; i++) {
+                if (list_tables[i] != list_table)
+                    list_tables[i].classList.add('hide');
+            }
+        }
+        if (list_table && list_table.classList.contains('hide')) {
+            _('#ls_spec').classList.add('hide');
+            addClass(__('.ls_pages'), 'hide');
+        }
         if (!downloadJson.busy) {
-            refreshHeader(route.spec, route.search, Array.from(errors));
+            refreshHeader(route.spec, Array.from(errors));
             downloadJson.errors = [];
 
-            if (Lists[route.list]) {
-                var list_info = Lists[route.list];
-                refreshTable(_('#ls_' + route.list), route.list,
+            let list_info = Lists[route.list];
+            if (list_info) {
+                list_table.classList.remove('hide');
+                refreshTable(list_table, route.list,
                              list_info.concepts ? getConcepts(list_info.concepts)[1] : null,
                              route.page);
-            } else {
-                _('.ls_table').classList.add('hide');
             }
         }
         _('#ls').classList.remove('hide');
@@ -298,11 +306,15 @@ var list = {};
             if (Lists[list_name].concepts)
                 getConcepts(Lists[list_name].concepts);
 
+            list_cache[list_name] = {
+                url: null, items: [],
+                init: false, cells: [], offsets: []
+            };
+            list = list_cache[list_name];
+
             downloadJson(url, function(json) {
-                list_cache[list_name] = {
-                    url: url, items: json,
-                    init: false, cells: [], offsets: []
-                };
+                list.url = url;
+                list.items = json;
             });
         } else if (!list.init || sort_info !== list.sort_info || search !== list.search) {
             if (search)
@@ -392,7 +404,7 @@ var list = {};
         });
     }
 
-    function refreshHeader(spec, search, errors)
+    function refreshHeader(spec, errors)
     {
         var log = _('#log');
         var h1 = _('#ls_spec');
@@ -440,43 +452,42 @@ var list = {};
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
-        let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
-        // Pagination
-        if (offset || list.match_count > PageLen) {
-            let last_page = (list.match_count / PageLen) + 1;
-            let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
-            let next_page = (page + 1 < last_page) ? (page + 1) : 1;
+        if (list.url) {
+            let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
-            pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
-                                                  href: routeToUrl({page: prev_page})}, '≪'));
+            // Pagination
+            if (list.match_count && (list.match_count > PageLen || offset)) {
+                let last_page = (list.match_count / PageLen) + 1;
+                let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
+                let next_page = (page + 1 < last_page) ? (page + 1) : 1;
 
-            for (let i = 1; i < last_page; i++) {
-                if (i > 1)
-                    pages.appendChild(document.createTextNode(' - '));
+                pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
+                                                      href: routeToUrl({page: prev_page})}, '≪'));
 
-                if (page !== i) {
-                    let anchor = createElement('a', {href: routeToUrl({page: i})}, '' + i);
-                    pages.appendChild(anchor);
-                } else {
-                    pages.appendChild(document.createTextNode(i));
+                for (let i = 1; i < last_page; i++) {
+                    if (i > 1)
+                        pages.appendChild(document.createTextNode(' - '));
+
+                    if (page !== i) {
+                        let anchor = createElement('a', {href: routeToUrl({page: i})}, '' + i);
+                        pages.appendChild(anchor);
+                    } else {
+                        pages.appendChild(document.createTextNode(i));
+                    }
                 }
+
+                pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
+                                                      href: routeToUrl({page: next_page})}, '≫'));
             }
 
-            pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
-                                                  href: routeToUrl({page: next_page})}, '≫'));
-        }
-
-        // Table
-        let visible_count = 0;
-        {
-            var tr = createElement('tr');
-
-            var first_column = 0;
+            let first_column = 0;
             if (!list_info.columns[0].header)
                 first_column = 1;
 
+            // Header
             if (list_info.header === undefined || list_info.header) {
+                var tr = createElement('tr');
                 for (var i = first_column; i < list_info.columns.length; i++) {
                     let title = list_info.columns[i].title ? list_info.columns[i].title : list_info.columns[i].header;
                     var th = createElement('th', {title: title, style: list_info.columns[i].style},
@@ -486,8 +497,10 @@ var list = {};
                 thead.appendChild(tr);
             }
 
-            var prev_heading_content = null;
+            // Data
+            let visible_count = 0;
             let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
+            let prev_heading_content = null;
             for (var i = offset; i < end; i += list_info.columns.length) {
                 if (!list_info.columns[0].header) {
                     let content = list.cells[i];
@@ -510,26 +523,25 @@ var list = {};
                 tbody.appendChild(tr);
                 visible_count++;
             }
-        }
 
-        if (!visible_count) {
-            let message = list.match_count ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
-            tbody.appendChild(createElement('tr', {},
-                createElement('td', {colspan: list_info.columns.length - first_column},
-                              message)
-            ));
+            if (!visible_count) {
+                let message = list.match_count ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
+                tbody.appendChild(createElement('tr', {},
+                    createElement('td', {colspan: list_info.columns.length - first_column},
+                                  message)
+                ));
+            }
         }
 
         let old_pages = __('.ls_pages');
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
-            pages_copy.classList.toggle('hide', visible_count === list.match_count);
+            pages_copy.classList.toggle('hide', !pages.children.length);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
         cloneAttributes(old_table, table);
-        table.id = 'ls_' + list_name;
         old_table.parentNode.replaceChild(table, old_table);
     }
 
