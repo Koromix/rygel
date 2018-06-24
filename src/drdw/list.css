@@ -3,40 +3,6 @@
     text-align: center;
 }
 
-#ls_tree {
-    margin: 8px 22px;
-    padding: 0;
-    white-space: nowrap;
-}
-#ls_tree li {
-    margin-left: -8px;
-    padding-top: 1px;
-    list-style-type: none;
-}
-#ls_tree .n {
-    padding-left: 12px;
-    font-size: 0.7em;
-    color: #888;
-    vertical-align: middle;
-}
-#ls_tree .direct .n { padding-left: 0; }
-#ls_tree .direct:before { content: ' → '; }
-#ls_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
-#ls_tree li.parent > span > .n { cursor: pointer; }
-#ls_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
-#ls_tree li.leaf { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC') no-repeat; }
-#ls_tree ul {
-    margin-left: 4px;
-    border-left: 1px solid #ddd;
-}
-#ls_tree li.collapse ul { display: none !important; }
-#ls_tree a.ghm {
-    display: inline-block;
-    padding: 0 2px;
-    background: #ed6d0a;
-    color: white;
-}
-
 .ls_pages {
     padding: 0.5em 1em 0.5em 1em;
     text-align: center;

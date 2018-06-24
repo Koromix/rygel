@@ -11,11 +11,8 @@ var list = {};
     // Cache
     var indexes = [];
     var list_cache = {};
-    var collapse_nodes = new Set();
 
     const Lists = {
-        'classifier_tree': {},
-
         'ghm_roots': {
             'table': 'ghm_ghs',
             'concepts': 'ghm_roots',
@@ -220,8 +217,8 @@ var list = {};
         // Refresh settings
         removeClass(__('#opt_indexes'), 'hide');
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
-        if (route.list !== 'classifier_tree') {
-            _('#opt_search').classList.remove('hide');
+        _('#opt_search').classList.remove('hide');
+        {
             let search_input = _('#opt_search > input');
             if (route.search != search_input.value)
                 search_input.value = route.search || '';
@@ -232,17 +229,14 @@ var list = {};
         }
 
         // Refresh view
-        _('#ls_tree').classList.toggle('hide', route.list !== 'classifier_tree');
         addClass(__('.ls_pages, .ls_table'), 'hide');
-        if (route.list && route.list !== 'classifier_tree')
+        if (route.list)
             _('#ls_' + route.list).classList.remove('hide');
         if (!downloadJson.busy) {
             refreshHeader(route.spec, route.search, Array.from(errors));
             downloadJson.errors = [];
 
-            if (route.list === 'classifier_tree') {
-                refreshClassifierTree(route.date, items, hash);
-            } else if (Lists[route.list]) {
+            if (Lists[route.list]) {
                 var list_info = Lists[route.list];
                 refreshTable(_('#ls_' + route.list), route.list,
                              list_info.concepts ? getConcepts(list_info.concepts)[1] : null,
@@ -433,168 +427,6 @@ var list = {};
             el.value = select_sort;
     }
 
-    function refreshClassifierTree(date, nodes, hash)
-    {
-        var click_function = function(e) {
-            var li = this.parentNode.parentNode;
-            var collapse_id = date + li.id;
-            if (li.classList.toggle('collapse')) {
-                collapse_nodes.add(collapse_id);
-            } else {
-                collapse_nodes.delete(collapse_id);
-            }
-            e.preventDefault();
-        };
-
-        function createNodeLi(idx, text, parent)
-        {
-            var content = addSpecLinks(text);
-
-            if (parent) {
-                var li = createElement('li', {id: 'n' + idx, class: 'parent'},
-                    createElement('span', {},
-                        createElement('span', {class: 'n',
-                                               click: click_function}, '' + idx + ' '),
-                        content
-                    )
-                );
-                if (collapse_nodes.has(date + 'n' + idx))
-                    li.classList.add('collapse');
-            } else {
-                var li = createElement('li', {id: 'n' + idx, class: 'leaf'},
-                    createElement('span', {},
-                        createElement('span', {class: 'n'}, '' + idx + ' '),
-                        content
-                    )
-                );
-            }
-
-            return li;
-        }
-
-        function recurseNodes(start_idx, parent_next_indices)
-        {
-            var ul = createElement('ul');
-
-            var indices = [];
-            for (var node_idx = start_idx;;) {
-                indices.push(node_idx);
-
-                var node = nodes[node_idx];
-                if (nodes[node_idx].test === 20)
-                    break;
-
-                node_idx = node.children_idx;
-                if (node_idx === undefined)
-                    break;
-                node_idx += !!node.reverse;
-            }
-
-            while (indices.length) {
-                var node_idx = indices[0];
-                var node = nodes[node_idx];
-                indices.shift();
-
-                // Hide GOTO nodes at the end of a chain, the classifier uses those to
-                // jump back to go back one level.
-                if (node.test === 20 && node.children_idx === parent_next_indices[0])
-                    break;
-
-                if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
-                    // Here we deal with jump lists (mainly D-xx and D-xxxx)
-                    for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j, indices);
-
-                        var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + (j - 1)) : node_idx;
-                        var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
-                        var li = createNodeLi(pseudo_idx, pseudo_text, children.tagName === 'UL');
-
-                        appendChildren(li, children);
-                        ul.appendChild(li);
-                    }
-                } else if (node.children_count === 2 && node.reverse) {
-                    var children = recurseNodes(node.children_idx, indices);
-
-                    var li = createNodeLi(node_idx, node.reverse, children.tagName === 'UL');
-
-                    appendChildren(li, children);
-                    ul.appendChild(li);
-                } else if (node.children_count === 2) {
-                    var children = recurseNodes(node.children_idx + 1, indices);
-
-                    var li = createNodeLi(node_idx, node.text, children.tagName === 'UL');
-
-                    // Simplify OR GOTO chains
-                    while (indices.length && nodes[indices[0]].children_count === 2 &&
-                           nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
-                           nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
-                        li.appendChild(createElement('br'));
-
-                        var li2 = createNodeLi(indices[0], nodes[indices[0]].text, true);
-                        li2.children[0].id = li2.id;
-                        appendChildren(li, li2.childNodes);
-
-                        indices.shift();
-                    }
-
-                    appendChildren(li, children);
-                    ul.appendChild(li);
-                } else {
-                    var li = createNodeLi(node_idx, node.text,
-                                          node.children_count && node.children_count > 1);
-                    ul.appendChild(li);
-
-                    for (var j = 1; j < node.children_count; j++) {
-                        var children = recurseNodes(node.children_idx + j, indices);
-                        appendChildren(li, children);
-                    }
-
-                    // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
-                    if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
-                        if (node.children_idx != parent_next_indices[0]) {
-                            var goto_li = createNodeLi('' + node_idx + '-1', 'Saut vers noeud ' + node.children_idx, false);
-                            ul.appendChild(goto_li);
-                        }
-
-                        break;
-                    }
-                }
-            }
-
-            // Simplify when there is only one leaf children
-            if (ul.querySelectorAll('li').length === 1) {
-                ul = ul.querySelector('li').childNodes;
-                for (var i = 0; i < ul.length; i++)
-                    ul[i].classList.add('direct');
-                ul = Array.prototype.slice.call(ul);
-            }
-
-            return ul;
-        }
-
-        if (nodes.length) {
-            var ul = recurseNodes(0, []);
-        } else {
-            var ul = createElement('ul', {});
-        }
-
-        // Make sure the corresponding node is visible
-        if (hash && hash.match(/^n[0-9]+$/)) {
-            var el = ul.querySelector('#' + hash);
-            while (el && el !== ul) {
-                if (el.tagName === 'LI') {
-                    el.classList.remove('collapse');
-                    collapse_nodes.delete(date + el.id);
-                }
-                el = el.parentNode;
-            }
-        }
-
-        var old_ul = _('#ls_tree');
-        cloneAttributes(old_ul, ul);
-        old_ul.parentNode.replaceChild(ul, old_ul);
-    }
-
     function refreshTable(old_table, list_name, concepts_map, page)
     {
         var table = createElement('table', {},
@@ -734,7 +566,7 @@ var list = {};
             url = pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
             cls = 'ghm';
         } else if (str.match(/noeud [0-9]+/)) {
-            url = routeToUrl({list: 'classifier_tree'}) + '#n' + str.substr(6);
+            url = tree.routeToUrl() + '#n' + str.substr(6);
         } else {
             return str;
         }

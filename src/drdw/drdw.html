@@ -12,10 +12,12 @@
         <link rel="stylesheet" href="/static/common.css"/>
         <link rel="stylesheet" href="/static/pricing.css"/>
         <link rel="stylesheet" href="/static/list.css"/>
+        <link rel="stylesheet" href="/static/tree.css"/>
         <link rel="stylesheet" href="/static/casemix.css"/>
         <script type="text/javascript" src="/static/common.js"></script>
         <script type="text/javascript" src="/static/pricing.js"></script>
         <script type="text/javascript" src="/static/list.js"></script>
+        <script type="text/javascript" src="/static/tree.js"></script>
         <script type="text/javascript" src="/static/casemix.js"></script>
     </head>
 
@@ -30,8 +32,8 @@
                     <li><a data-url="pricing.routeToUrl({view: 'table'});">Grille</a></li>
                     <li><a data-url="pricing.routeToUrl({view: 'chart'});">Courbes</a></li>
 
-                    <li><a class="category" data-url="list.routeToUrl({list: 'classifier_tree'});">Listes</a></li>
-                    <li><a data-url="list.routeToUrl({list: 'classifier_tree'});">Arbre de groupage</a></li>
+                    <li><a class="category" data-url="tree.routeToUrl();">Listes</a></li>
+                    <li><a data-url="tree.routeToUrl();">Arbre de groupage</a></li>
                     <li><a data-url="list.routeToUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
                     <li><a data-url="list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
                     <li><a data-url="list.routeToUrl({list: 'procedures'});">Actes</a></li>
@@ -106,6 +108,9 @@
                 <table id="pr_table"></table>
                 <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
+            <div id="tr">
+                <ul id="tr_tree"></ul>
+            </div>
             <div id="ls">
                 <h1 id="ls_spec"></h1>
                 <div class="ls_pages"></div>
@@ -114,8 +119,6 @@
                 <table id="ls_diagnoses" class="ls_table"></table>
                 <table id="ls_procedures" class="ls_table"></table>
                 <div class="ls_pages"></div>
-
-                <ul id="ls_tree"></ul>
             </div>
             <div id="cm">
                 <table id="cm_cmds"></table>

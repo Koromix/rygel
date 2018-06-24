@@ -15,6 +15,8 @@ set(DRDW_RESOURCES drdw.html
                    list.js
                    pricing.css
                    pricing.js
+                   tree.css
+                   tree.js
                    images/favicon.ico
                    images/logo.png
                    ../../lib/chartjs/chart.min.js)

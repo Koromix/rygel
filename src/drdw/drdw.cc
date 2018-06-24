@@ -328,6 +328,7 @@ static void InitRoutes()
         routes.Set({"/", Route::Matching::Exact, html->u.st.asset, html->u.st.mime_type});
         routes.Set({"/pricing", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
         routes.Set({"/list", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/tree", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
         routes.Set({"/casemix", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
         routes.Remove(html);
 
