@@ -212,8 +212,9 @@ var list = {};
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
         if (route.list !== 'classifier_tree') {
             _('#opt_search').classList.remove('hide');
-            if (route.search != _('#opt_search').value)
-                _('#opt_search').value = route.search;
+            let search_input = _('#opt_search > input');
+            if (route.search != search_input.value)
+                search_input.value = route.search || '';
         }
         if (Tables[route.list] && Tables[route.list].sort !== undefined) {
             _('#opt_sort').classList.remove('hide');
@@ -303,7 +304,6 @@ var list = {};
     {
         var log = _('#log');
         var h1 = _('#ls_spec');
-        var search_input = _('#opt_search');
 
         if (errors.length) {
             log.innerHTML = errors.join('<br/>');
