@@ -50,46 +50,38 @@
 
                 <select id="opt_ghm_roots" onchange="module.route({ghm_root: this.value});"
                         style="width: 96%;"></select><br/>
-
                 <label id="opt_units">
                     Unités médicales
                     <input type="text" style="width: 82%;" value=""/><br/>
                 </label>
-
                 <label id="opt_diff_indexes">
                     Comparer
                     <select onchange="module.route({diff: this.value});"
                             style="width: 12em;"></select>
                 </label>
-
                 <label id="opt_max_duration">
                     Durée
                     <input type="number" onchange="module.route();"
                            value="200" min="0" max="500" step="5"/>
                 </label>
-
                 <label id="opt_apply_coefficient">
-                    <span>Coefficient prudentiel</span>
+                    Coefficient prudentiel
                     <input type="checkbox"
                            onchange="module.route({apply_coefficient: this.checked});"/>
                 </label>
-
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
                            oninput="module.route({search: this.value}, 200);"/>
                 </label>
-
                 <label id="opt_sort">
                     Tri
                     <select onchange="module.route({sort: this.value});"></select><br/>
                 </label>
-
                 <label id="opt_diff_casemix">
                     Comparer
                     <select style="width: 12em;"></select>
                 </label>
-
                 <label id="opt_algorithm">
                     Algorithme
                     <select>
@@ -114,7 +106,6 @@
                 <table id="pr_table"></table>
                 <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
-
             <div id="ls">
                 <h1 id="ls_spec"></h1>
                 <div class="ls_pages"></div>
@@ -123,7 +114,6 @@
 
                 <ul id="ls_tree"></ul>
             </div>
-
             <div id="cm">
                 <table id="cm_cmds"></table>
                 <table id="cm_roots"></table>
