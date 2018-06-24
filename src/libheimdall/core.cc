@@ -50,7 +50,7 @@ static bool DetectAnomaly(const Element &elmt)
 }
 
 static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
-                        Span<const Element *const> periods)
+                        Span<const Element *const> periods, double align_offset)
 {
     const ImGuiStyle &style = ImGui::GetStyle();
     ImDrawList *draw = ImGui::GetWindowDrawList();
@@ -73,14 +73,16 @@ static void DrawPeriods(float x_offset, float y_min, float y_max, float time_zoo
 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                ImGui::Text("%g | %s [until %g]", elmt->time, elmt->concept, elmt->time + elmt->u.period.duration);
+                ImGui::Text("%g | %s [until %g]",
+                            elmt->time - align_offset, elmt->concept,
+                            elmt->time - align_offset + elmt->u.period.duration);
                 ImGui::EndTooltip();
             }
         }
     }
 }
 
-static void TextMeasure(const Element &elmt)
+static void TextMeasure(const Element &elmt, double align_offset)
 {
     DebugAssert(elmt.type == Element::Type::Measure);
 
@@ -94,22 +96,24 @@ static void TextMeasure(const Element &elmt)
 
     if (!std::isnan(elmt.u.measure.min) && !std::isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [%.2f ; %.2f]",
-                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.min, elmt.u.measure.max);
     } else if (!std::isnan(elmt.u.measure.min)) {
         ImGui::Text("%g | %s = %.2f [min = %.2f]",
-                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.min);
     } else if (!std::isnan(elmt.u.measure.max)) {
         ImGui::Text("%g | %s = %.2f [max = %.2f]",
-                    elmt.time, elmt.concept, elmt.u.measure.value,
+                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value,
                     elmt.u.measure.max);
     } else {
-        ImGui::Text("%g | %s = %.2f", elmt.time, elmt.concept, elmt.u.measure.value);
+        ImGui::Text("%g | %s = %.2f",
+                    elmt.time - align_offset, elmt.concept, elmt.u.measure.value);
     }
 }
 
-static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const> events)
+static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const> events,
+                            double align_offset)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -163,9 +167,9 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
         ImGui::BeginTooltip();
         for (const Element *elmt: events) {
             if (elmt->type == Element::Type::Measure) {
-                TextMeasure(*elmt);
+                TextMeasure(*elmt, align_offset);
             } else {
-                ImGui::Text("%g | %s", elmt->time, elmt->concept);
+                ImGui::Text("%g | %s", elmt->time - align_offset, elmt->concept);
             }
         }
         ImGui::EndTooltip();
@@ -173,7 +177,7 @@ static void DrawEventsBlock(ImRect rect, float alpha, Span<const Element *const>
 }
 
 static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
-                       Span<const Element *const> events)
+                       Span<const Element *const> events, double align_offset)
 {
     if (!events.len)
         return;
@@ -188,7 +192,8 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
 
         float event_pos = x_offset + ((float)elmt->time * time_zoom);
         if (event_pos - rect.Max.x >= 16.0f) {
-            DrawEventsBlock(rect, alpha, events.Take(first_block_event, i - first_block_event));
+            DrawEventsBlock(rect, alpha, events.Take(first_block_event, i - first_block_event),
+                            align_offset);
 
             rect.Min.x = event_pos;
             first_block_event = i;
@@ -196,7 +201,8 @@ static void DrawEvents(float x_offset, float y_min, float y_max, float time_zoom
         rect.Max.x = event_pos;
     }
     if (first_block_event < events.len) {
-        DrawEventsBlock(rect, alpha, events.Take(first_block_event, events.len - first_block_event));
+        DrawEventsBlock(rect, alpha, events.Take(first_block_event, events.len - first_block_event),
+                        align_offset);
     }
 }
 
@@ -263,8 +269,8 @@ void DrawLine(InterpolationMode interpolation, Fun f)
 }
 
 static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zoom, float alpha,
-                         Span<const Element *const> measures, double min, double max,
-                         InterpolationMode interpolation)
+                         Span<const Element *const> measures, double align_offset,
+                         double min, double max, InterpolationMode interpolation)
 {
     if (!measures.len)
         return;
@@ -340,7 +346,7 @@ static void DrawMeasures(float x_offset, float y_min, float y_max, float time_zo
 
             if (ImGui::IsItemHovered()) {
                 ImGui::BeginTooltip();
-                TextMeasure(*elmt);
+                TextMeasure(*elmt, align_offset);
                 ImGui::EndTooltip();
             }
         }
@@ -353,44 +359,71 @@ struct LineData {
     Span<const char> title;
     bool leaf;
     bool deployed;
+    bool select;
     int depth;
     float text_alpha;
     float elements_alpha;
     float height;
+    double align_offset;
     HeapArray<const Element *> elements;
 };
 
-static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
+enum class LineInteraction {
+    None,
+    Click,
+    Select,
+    Menu
+};
+
+static LineInteraction DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
-    // Line header
-    bool deploy_click;
-    {
-        float y = (bb.Min.y + bb.Max.y) / 2.0f;
-        ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
-        ImRect deploy_bb(bb.Min.x + (float)line.depth * 12.0f - 3.0f, y - 9.0f,
-                         bb.Min.x + (float)line.depth * 12.0f + 23.0f + text_size.x, y + 7.0f);
+    // Layout
+    float y = (bb.Min.y + bb.Max.y) / 2.0f - 9.0f;
+    ImVec2 text_size = ImGui::CalcTextSize(line.title.ptr, line.title.end());
+    ImRect select_bb(bb.Min.x + 2.0f, y + 2.0f, bb.Min.x + 14.0f, y + 16.0f);
+    ImRect deploy_bb(bb.Min.x + 16.0f + (float)line.depth * 12.0f - 3.0f, y,
+                     bb.Min.x + 16.0f + (float)line.depth * 12.0f + 23.0f + text_size.x, y + 16.0f);
+    ImRect full_bb(select_bb.Min.x, deploy_bb.Min.y, deploy_bb.Max.x, deploy_bb.Max.y);
 
-        if (ImGui::ItemAdd(deploy_bb, 0)) {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha));
-            DEFER { ImGui::PopStyleColor(1); };
+    LineInteraction interaction = LineInteraction::None;
 
-            if (!line.leaf) {
-                ImGui::RenderArrow(ImVec2(bb.Min.x + (float)line.depth * 12.0f, y - 9.0f),
-                                   line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
-            }
+    // Select
+    if (ImGui::ItemAdd(select_bb, 0) && line.select) {
+        ImGui::RenderCheckMark(ImVec2(bb.Min.x + 2.0f, y + 2.0f),
+                               ImGui::GetColorU32(ImGuiCol_CheckMark), 10.0f);
+    }
+    if (ImGui::IsItemClicked()) {
+        interaction = LineInteraction::Select;
+    }
 
-            ImVec4 text_rect {
-                bb.Min.x + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
-                bb.Min.x + tree_width, bb.Max.y
-            };
-            draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y - 9.0f),
-                          ImGui::GetColorU32(ImGuiCol_Text),
-                          line.title.ptr, line.title.end(), 0.0f, &text_rect);
+    // Deploy
+    if (ImGui::ItemAdd(deploy_bb, 0)) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetColorU32(ImGuiCol_Text, line.text_alpha));
+        DEFER { ImGui::PopStyleColor(1); };
+
+        if (!line.leaf) {
+            ImGui::RenderArrow(ImVec2(bb.Min.x + 16.0f + (float)line.depth * 12.0f, y),
+                               line.deployed ? ImGuiDir_Down : ImGuiDir_Right);
         }
 
-        deploy_click = !line.leaf && ImGui::IsItemClicked();
+        ImVec4 text_rect {
+            bb.Min.x + 16.0f + (float)line.depth * 12.0f + 20.0f, bb.Min.y,
+            bb.Min.x + tree_width, bb.Max.y
+        };
+        draw->AddText(nullptr, 0.0f, ImVec2(text_rect.x, y),
+                      ImGui::GetColorU32(ImGuiCol_Text),
+                      line.title.ptr, line.title.end(), 0.0f, &text_rect);
+    }
+    if (!line.leaf && ImGui::IsItemClicked()) {
+        interaction = LineInteraction::Click;
+    }
+
+    // Menu
+    ImGui::ItemAdd(full_bb, 0);
+    if (ImGui::IsItemClicked(1)) {
+        interaction = LineInteraction::Menu;
     }
 
     // Support line
@@ -408,7 +441,7 @@ static bool DrawLineFrame(ImRect bb, float tree_width, const LineData &line)
                       ImGui::GetColorU32(ImGuiCol_Separator));
     }
 
-    return deploy_click;
+    return interaction;
 }
 
 static void DrawLineElements(ImRect bb, float tree_width,
@@ -458,10 +491,29 @@ static void DrawLineElements(ImRect bb, float tree_width,
 
     // Draw elements
     float x_offset = bb.Min.x + tree_width + 15.0f - (float)(time_offset * state.time_zoom);
-    DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, periods);
-    DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, events);
+    DrawPeriods(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, periods,
+                line.align_offset);
+    DrawEvents(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha, events,
+               line.align_offset);
     DrawMeasures(x_offset, bb.Min.y, bb.Max.y, state.time_zoom, line.elements_alpha,
-                 measures, measures_min, measures_max, state.settings.interpolation);
+                 measures, line.align_offset, measures_min, measures_max, state.settings.interpolation);
+}
+
+static bool FindConceptAndAlign(const Entity &ent, const HashSet<Span<const char>> &align_concepts,
+                                double *out_offset = nullptr)
+{
+    if (align_concepts.table.count) {
+        for (const Element &elmt: ent.elements) {
+            if (align_concepts.Find(elmt.concept)) {
+                *out_offset = elmt.time;
+                return true;
+            }
+        }
+        return false;
+    } else {
+        *out_offset = 0.0;
+        return true;
+    }
 }
 
 static float ComputeElementHeight(const InterfaceSettings &settings, Element::Type type)
@@ -481,50 +533,53 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     HashMap<Span<const char>, float> line_heights;
     float min_x = 0.0f, max_x = 0.0f, height = 0.0f;
 
-    for (const Element &elmt: ent.elements) {
-        min_x = std::min((float)elmt.time, min_x);
-        max_x = std::max((float)elmt.time, max_x);
+    double align_offset;
+    if (FindConceptAndAlign(ent, state.align_concepts, &align_offset)) {
+        for (const Element &elmt: ent.elements) {
+            min_x = std::min((float)(elmt.time - align_offset), min_x);
+            max_x = std::max((float)(elmt.time - align_offset), max_x);
 
-        Span<const char> path;
-        {
-            if (elmt.concept[0] == '/') {
-                path = elmt.concept;
-                while (path.len > 1 && path.ptr[--path.len] != '/');
-            } else if (concept_set) {
-                const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
-                if (!concept) {
-                    const char *src_name = *entity_set.sources.Find(elmt.source_id);
-                    concept = concept_set->concepts_map.Find(src_name);
-                    if (!concept)
-                        continue;
+            Span<const char> path;
+            {
+                if (elmt.concept[0] == '/') {
+                    path = elmt.concept;
+                    while (path.len > 1 && path.ptr[--path.len] != '/');
+                } else if (concept_set) {
+                    const Concept *concept = concept_set->concepts_map.Find(elmt.concept);
+                    if (!concept) {
+                        const char *src_name = *entity_set.sources.Find(elmt.source_id);
+                        concept = concept_set->concepts_map.Find(src_name);
+                        if (!concept)
+                            continue;
+                    }
+                    path = concept->path;
+                } else {
+                    continue;
                 }
-                path = concept->path;
-            } else {
-                continue;
             }
-        }
-        DebugAssert(path.len > 0);
+            DebugAssert(path.len > 0);
 
-        bool fully_deployed = false;
-        {
-            Span<const char> partial_path = {path.ptr, 1};
-            for (;;) {
-                height += line_heights.Append(partial_path, 20.0f).second *
-                          (20.0f + style.ItemSpacing.y);
-                fully_deployed = state.deploy_paths.Find(partial_path);
+            bool fully_deployed = false;
+            {
+                Span<const char> partial_path = {path.ptr, 1};
+                for (;;) {
+                    height += line_heights.Append(partial_path, 20.0f).second *
+                              (20.0f + style.ItemSpacing.y);
+                    fully_deployed = state.deploy_paths.Find(partial_path);
 
-                if (!fully_deployed || partial_path.len == path.len)
-                    break;
-                while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
+                    if (!fully_deployed || partial_path.len == path.len)
+                        break;
+                    while (++partial_path.len < path.len && partial_path.ptr[partial_path.len] != '/');
+                }
             }
-        }
 
-        if (fully_deployed) {
-            float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
-            std::pair<float *, bool> ret = line_heights.Append(elmt.concept, 0.0f);
-            if (new_height > *ret.first) {
-                height += new_height - *ret.first;
-                *ret.first = new_height;
+            if (fully_deployed) {
+                float new_height = ComputeElementHeight(state.settings, elmt.type) + style.ItemSpacing.y;
+                std::pair<float *, bool> ret = line_heights.Append(elmt.concept, 0.0f);
+                if (new_height > *ret.first) {
+                    height += new_height - *ret.first;
+                    *ret.first = new_height;
+                }
             }
         }
     }
@@ -590,8 +645,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 state.scroll_offset_y = state.lines_top[i] - state.scroll_y;
             }
             render_idx = i - 1;
-            ImGui::SetCursorPosY(state.lines_top[i - 1] + style.ItemSpacing.y);
-            render_offset = ImGui::GetCursorScreenPos().y;
+            render_offset = state.lines_top[i - 1] + style.ItemSpacing.y - state.scroll_y;
             break;
         }
     }
@@ -603,6 +657,10 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (Size i = render_idx; i < entity_set.entities.len &&
                                   y < win->ClipRect.Max.y; i++) {
             const Entity &ent = entity_set.entities[i];
+
+            double align_offset = 0.0f;
+            if (!FindConceptAndAlign(ent, state.align_concepts, &align_offset))
+                continue;
 
             Size prev_lines_len = lines.len;
             HashMap<Span<const char>, Size> lines_map;
@@ -661,6 +719,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                                 line->text_alpha = 1.0f;
                                 line->elements_alpha = line->deployed ? state.settings.deployed_alpha : 1.0f;
                                 line->height = 20.0f;
+                                line->align_offset = align_offset;
                                 y += line->height + style.ItemSpacing.y;
                             }
                             fully_deployed = line->deployed;
@@ -687,9 +746,11 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                             line->title = title;
                             line->leaf = true;
                             line->depth = tree_depth;
+                            line->select = state.select_concepts.Find(title);
                             line->text_alpha = 1.0f;
                             line->elements_alpha = 1.0f;
                             line->height = 0.0f;
+                            line->align_offset = align_offset;
                             y += style.ItemSpacing.y;
                         }
 
@@ -707,7 +768,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
                 // Try to stabilize highlighted entity if any
                 if (!cache_refreshed && base_y >= 0) {
                     state.scroll_to_idx = i;
-                    state.scroll_offset_y = base_y - style.ItemSpacing.y - ImGui::GetWindowPos().y;
+                    state.scroll_offset_y = base_y - style.ItemSpacing.y - state.scroll_y;
                 }
             } else {
                 for (Size j = prev_lines_len; j < lines.len; j++) {
@@ -737,13 +798,14 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         for (const LineData &line: lines) {
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
                       win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
-            DrawLineElements(bb, tree_width, state, time_offset, line);
+            DrawLineElements(bb, tree_width, state, time_offset + line.align_offset, line);
             y = bb.Max.y;
         }
     }
 
     // Draw frames (header, support line)
     Span<const char> deploy_path = {};
+    Span<const char> select_concept = {};
     {
         const Entity *ent = nullptr;
         float ent_offset_y = 0.0f;
@@ -759,12 +821,27 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
 
             ImRect bb(win->ClipRect.Min.x, y + style.ItemSpacing.y,
                       win->ClipRect.Max.x, y + style.ItemSpacing.y + line.height);
-            if (DrawLineFrame(bb, tree_width, line)) {
-                state.scroll_to_idx = ent - entity_set.entities.ptr;
-                // NOTE: I'm not sure I get why ent_offset_y does not work directly but
-                // it's 5 in the morning. Fix this hack later.
-                state.scroll_offset_y = ent_offset_y - style.ItemSpacing.y - ImGui::GetWindowPos().y;
-                deploy_path = line.path;
+            LineInteraction interaction = DrawLineFrame(bb, tree_width, line);
+
+            switch (interaction) {
+                case LineInteraction::None: {} break;
+
+                case LineInteraction::Click: {
+                    state.scroll_to_idx = ent - entity_set.entities.ptr;
+                    state.scroll_offset_y = ent_offset_y - style.ItemSpacing.y;
+                    deploy_path = line.path;
+                } break;
+
+                case LineInteraction::Select: {
+                    select_concept = line.title;
+                } break;
+
+                case LineInteraction::Menu: {
+                    if (!line.select) {
+                        select_concept = line.title;
+                    }
+                    ImGui::OpenPopup("tree_menu");
+                } break;
             }
 
             y = bb.Max.y;
@@ -778,12 +855,18 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
         }
 
         state.size_cache_valid = false;
+    } else if (select_concept.len) {
+        std::pair<Span<const char> *, bool> ret = state.select_concepts.Append(select_concept);
+        if (!ret.second) {
+            state.select_concepts.Remove(ret.first);
+        }
     }
 
     return !cache_refreshed;
 }
 
-static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float grid_alpha)
+static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float grid_alpha,
+                          bool highlight_zero)
 {
     ImDrawList *draw = ImGui::GetWindowDrawList();
 
@@ -818,8 +901,13 @@ static void DrawTimeScale(ImRect bb, double time_offset, float time_zoom, float 
                 draw->AddLine(ImVec2(x_exact, bb.Min.y + 2.0f), ImVec2(x_exact, bb.Max.y - ImGui::GetFontSize() - 4.0f),
                               ImGui::GetColorU32(ImGuiCol_Text));
                 if (grid_alpha > 0.0f) {
-                    draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
-                                  ImGui::GetColorU32(ImGuiCol_Text, grid_alpha));
+                    if (highlight_zero && std::abs(time) < 0.00001) {
+                        draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
+                                      GetVisColor(VisColor::Limit, 0.7f));
+                    } else {
+                        draw->AddLine(ImVec2(x_exact, 0.0f), ImVec2(x_exact, bb.Min.y + 2.0f),
+                                      ImGui::GetColorU32(ImGuiCol_Text, grid_alpha));
+                    }
                 }
 
                 char time_str[32];
@@ -867,16 +955,17 @@ static bool DrawView(InterfaceState &state,
     scale_rect.Min.y = ImMin(scale_rect.Max.y - scale_height, scale_rect.Max.y);
     entity_rect.Max.y -= scale_height;
 
-    // Scroll values
-    float scroll_x = ImGui::GetScrollX() + state.scroll_x_delta;
-    float entities_mouse_x = (scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
-    state.scroll_y = ImGui::GetScrollY();
+    // Copy ImGui scroll changes
+    /*float prev_scroll_y = state.scroll_y;
+    state.scroll_x = ImGui::GetScrollX() + state.imgui_delta_x;
+    state.scroll_y = ImGui::GetScrollY() + state.imgui_delta_y;*/
 
     // Handle controls
+    float entities_mouse_x = (state.scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
     if (ImGui::IsMouseHoveringWindow()) {
         if (g_io->input.buttons & MaskEnum(RunIO::Button::Left)) {
             if (state.grab_canvas) {
-                scroll_x += state.grab_canvas_x - (float)g_io->input.x;
+                state.scroll_x += state.grab_canvas_x - (float)g_io->input.x;
                 state.scroll_y += state.grab_canvas_y - (float)g_io->input.y;
             } else if (entity_rect.Contains(ImVec2((float)g_io->input.x, (float)g_io->input.y))) {
                 state.grab_canvas = true;
@@ -891,7 +980,7 @@ static bool DrawView(InterfaceState &state,
         if (g_io->input.keys.Test((int)RunIO::Key::Control) && g_io->input.wheel_y) {
             double (*animator)(double relative_time) = nullptr;
             if (state.time_zoom.animation.Running(g_io->time.monotonic)) {
-                scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
+                state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
                 state.time_zoom = state.time_zoom.end_value;
                 animator = TweenOutQuad;
             } else {
@@ -919,32 +1008,67 @@ static bool DrawView(InterfaceState &state,
     {
         double prev_zoom = state.time_zoom;
         state.time_zoom.Update(g_io->time.monotonic);
-        scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
+        state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
+
+        time_offset = state.scroll_x / state.time_zoom;
     }
-    time_offset = scroll_x / state.time_zoom;
 
     // Render time scale and entities
     bool valid_frame;
     {
-        DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha);
-        valid_frame = DrawEntities(entity_rect, state.settings.tree_width, time_offset, scroll_y,
+        DrawTimeScale(scale_rect, time_offset, state.time_zoom, state.settings.grid_alpha,
+                      state.align_concepts.table.count);
+        valid_frame = DrawEntities(entity_rect, state.settings.tree_width, time_offset,
                                    state, entity_set, concept_set);
     }
 
-    // Help ImGui compute scrollbar and layout
-    state.scroll_x_delta = std::min(state.minimum_x_unscaled * state.time_zoom, scroll_x);
+#if 1
+    // Scrollbar limits
     {
-        float max_x = std::max(win->ClipRect.Max.x - 4.0f - state.scroll_x_delta,
-                               state.settings.tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom);
+        /*float min_x = std::min((float)(state.minimum_x_unscaled * state.time_zoom), scroll_x);
+        float max_x = std::max((float)(state.total_width_unscaled * state.time_zoom) + state.settings.tree_width + 20.0f, scroll_x) +
+                      win->ClipRect.Max.x - 4.0f;
+
+        state.extra_scroll_left = std::max(0.0f, -min_x);
+        state.extra_scroll_right = std::max(0.0f, max_x);
+
+        float width = state.settings.tree_width + 20.0f +
+                      state.extra_scroll_left + state.extra_scroll_right +
+                      state.total_width_unscaled * (float)state.time_zoom;
+
+        ImGui::SetCursorPos(ImVec2(width, state.total_height + scale_height));*/
+
+        state.imgui_delta_x = std::min(0.0f, state.minimum_x_unscaled * state.time_zoom);
+        state.imgui_delta_x = std::min(state.imgui_delta_x, state.scroll_x);
+        state.imgui_delta_y = std::min(0.0f, state.scroll_y);
+
+        float width = (state.total_width_unscaled - state.minimum_x_unscaled) * (float)state.time_zoom;
+        width += std::max(state.minimum_x_unscaled * (float)state.time_zoom - state.scroll_x, 0.0f);
+
+        float height = state.total_height;
+        height += std::max(-state.scroll_y, 0.0f);
+
+        ImGui::SetCursorPos(ImVec2(state.settings.tree_width + 20.0f + width, height + scale_height));
+    }
+#else
+    state.scroll_x_delta = std::min(state.minimum_x_unscaled * state.time_zoom, scroll_x);
+    // state.scroll_x_expand = std::max(0.0f, state.scroll_x_expand + scroll_x - state.scroll_x_delta - ImGui::GetScrollX());
+    {
+        float max_x = state.settings.tree_width + 20.0f + (state.total_width_unscaled - state.minimum_x_unscaled) * (float)state.time_zoom;
+        max_x = std::max(max_x, win->ClipRect.Max.x - 4.0f - state.scroll_x_delta);
+        //max_x = std::max(max_x, win->ClipRect.Max.x - 4.0f + state.scroll_x_expand);
+        /*float max_x = std::max(win->ClipRect.Max.x - 4.0f - state.scroll_x_delta,
+                               state.settings.tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom);*/
         ImGui::SetCursorPos(ImVec2(max_x, state.total_height + scale_height));
     }
+#endif
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
 
     // Sync scroll state
-    ImGui::SetScrollX(scroll_x - state.scroll_x_delta);
-    if (state.scroll_y != ImGui::GetScrollY()) {
+    /*ImGui::SetScrollX(state.scroll_x + state.imgui_delta_x);
+    if (state.scroll_y != prev_scroll_y) {
         ImGui::SetScrollY(state.scroll_y);
-    }
+    }*/
 
     return valid_frame;
 }
@@ -1002,6 +1126,33 @@ bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const Concept
             }
             valid_frame = DrawView(state, entity_set, concept_set);
         }
+
+        if (ImGui::BeginPopup("tree_menu")) {
+            if (ImGui::MenuItem("Align", nullptr, state.align_concepts.table.count)) {
+                if (state.align_concepts.table.count) {
+                    state.align_concepts.Clear();
+                } else {
+                    // FIXME: Add iterator to HashTable and related containers
+                    for (Size i = 0; i < state.select_concepts.table.capacity; i++) {
+                        if (!state.select_concepts.table.IsEmpty(i)) {
+                            Span<const char> concept = state.select_concepts.table.data[i].value;
+                            state.align_concepts.Append(concept);
+                        }
+                    }
+                }
+            }
+            ImGui::Separator();
+            ImGui::MenuItem("Create View");
+            if (ImGui::BeginMenu("Add to view")) {
+                for (const ConceptSet &concept_set: concept_sets) {
+                    ImGui::MenuItem(concept_set.name);
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::MenuItem("Remove from view");
+            ImGui::EndPopup();
+        }
+
         ImGui::End();
     }
 

@@ -38,7 +38,13 @@ struct InterfaceState {
     HashSet<Span<const char>> deploy_paths;
 
     AnimatedValue<float, double> time_zoom = 1.0f;
-    float scroll_x_delta = 0.0f;
+    float scroll_x = 0.0f;
+    float scroll_y = 0.0f;
+    /*float scroll_x_delta = 0.0f;
+    float scroll_x_expand = 0.0f;
+    float extra_scroll_left = 0.0f;
+    float extra_scroll_right = 0.0f;
+    // float minimum_scroll_x = 0.0f;*/
 
     bool show_settings = false;
     InterfaceSettings settings;
@@ -53,13 +59,18 @@ struct InterfaceState {
     float total_width_unscaled;
     float total_height;
 
-    float scroll_y = 0.0f;
     Size scroll_to_idx = 0;
     float scroll_offset_y;
 
     bool grab_canvas = false;
     float grab_canvas_x;
     float grab_canvas_y;
+
+    float imgui_delta_x = 0.0f;
+    float imgui_delta_y = 0.0f;
+
+    HashSet<Span<const char>> select_concepts;
+    HashSet<Span<const char>> align_concepts;
 };
 
 bool Step(InterfaceState &state, const EntitySet &entity_set, Span<const ConceptSet> concept_sets);
