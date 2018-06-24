@@ -142,6 +142,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
 
+            bool counted_rss = false;
             for (Size k = 0; k < sub_mono_results.len; k++) {
                 const mco_Result &mono_result = sub_mono_results[k];
                 const mco_Pricing &mono_pricing = sub_mono_pricings[k];
@@ -164,7 +165,10 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                         summary.Append(cell_summary);
                     }
 
-                    summary[*ret.first].count += multiplier;
+                    if (!counted_rss) {
+                        summary[*ret.first].count += multiplier;
+                        counted_rss = true;
+                    }
                     summary[*ret.first].ghs_price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
