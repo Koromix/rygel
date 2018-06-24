@@ -439,10 +439,8 @@ var list = {};
         var pages = createElement('div');
 
         let list_info = Lists[list_name];
-        let columns = list_info.columns;
         let list = list_cache[list_name];
-        let cells = list.cells;
-        let offset = list.offsets[page - 1];
+        let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
         // Pagination
         if (offset || list.match_count > PageLen) {
@@ -470,31 +468,32 @@ var list = {};
         }
 
         // Table
+        let visible_count = 0;
         {
             var tr = createElement('tr');
 
             var first_column = 0;
-            if (!columns[0].header)
+            if (!list_info.columns[0].header)
                 first_column = 1;
 
             if (list_info.header === undefined || list_info.header) {
-                for (var i = first_column; i < columns.length; i++) {
-                    var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
-                                                  style: columns[i].style},
-                                           columns[i].header);
+                for (var i = first_column; i < list_info.columns.length; i++) {
+                    let title = list_info.columns[i].title ? list_info.columns[i].title : list_info.columns[i].header;
+                    var th = createElement('th', {title: title, style: list_info.columns[i].style},
+                                           list_info.columns[i].header);
                     tr.appendChild(th);
                 }
                 thead.appendChild(tr);
             }
 
             var prev_heading_content = null;
-            let end = Math.min(offset + PageLen * columns.length, list.cells.length);
-            for (var i = offset; i < end; i += columns.length) {
-                if (!columns[0].header) {
-                    let content = cells[i];
+            let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
+            for (var i = offset; i < end; i += list_info.columns.length) {
+                if (!list_info.columns[0].header) {
+                    let content = list.cells[i];
                     if (content && content !== prev_heading_content) {
                         var tr = createElement('tr', {class: 'heading'},
-                            createElement('td', {colspan: columns.length - 1,
+                            createElement('td', {colspan: list_info.columns.length - 1,
                                                  title: content}, addSpecLinks(content))
                         );
                         tbody.appendChild(tr);
@@ -503,20 +502,29 @@ var list = {};
                 }
 
                 var tr = createElement('tr');
-                for (var j = first_column; j < columns.length; j++) {
-                    let content = cells[i + j];
+                for (var j = first_column; j < list_info.columns.length; j++) {
+                    let content = list.cells[i + j];
                     let td = createElement('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
+                visible_count++;
             }
+        }
+
+        if (!visible_count) {
+            let message = list.match_count ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
+            tbody.appendChild(createElement('tr', {},
+                createElement('td', {colspan: list_info.columns.length - first_column},
+                              message)
+            ));
         }
 
         let old_pages = __('.ls_pages');
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
-            pages_copy.classList.toggle('hide', list.visible_count === list.match_count);
+            pages_copy.classList.toggle('hide', visible_count === list.match_count);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
