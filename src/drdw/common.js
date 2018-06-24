@@ -255,7 +255,6 @@ function go(new_url, mark_history, delay)
         go_timer_id = null;
     }
     if (delay) {
-        console.log('cool');
         go_timer_id = setTimeout(function() {
             go(new_url, mark_history);
         }, delay);
