@@ -2,9 +2,7 @@ var list = {};
 (function() {
     // Cache
     var indexes = [];
-    var table_index = null;
-    var table_type = null;
-    var table_spec = null;
+    var list_url = null;
     var items = {};
     var collapse_nodes = new Set();
     var specs = {};
@@ -188,13 +186,8 @@ var list = {};
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let force_refresh = false;
-        if (main_index >= 0 && (table_index !== main_index || table_type !== route.list ||
-                                table_spec !== route.spec)) {
-            force_refresh = (table_type !== route.list);
-            if (Tables[route.list])
-                updateTable(route.list, main_index, route.spec);
-        }
+        if (main_index >= 0 && Tables[route.list])
+            updateTable(route.list, main_index, route.spec);
         let sort_info = null;
         if (Tables[route.list] && Tables[route.list].sort) {
             if (route.sort) {
@@ -229,9 +222,10 @@ var list = {};
 
         // Refresh view
         _('#ls_tree').classList.toggle('hide', route.list !== 'classifier_tree');
-        addClass(__('.ls_pages'), 'hide');
-        _('.ls_table').classList.toggle('hide', route.list === 'classifier_tree');
-        if (!downloadJson.busy || force_refresh) {
+        addClass(__('.ls_pages, .ls_table'), 'hide');
+        if (route.list && route.list !== 'classifier_tree')
+            _('#ls_' + route.list).classList.remove('hide');
+        if (!downloadJson.busy) {
             refreshHeader(route.spec, route.search, Array.from(errors));
             downloadJson.errors = [];
 
@@ -239,7 +233,7 @@ var list = {};
                 refreshClassifierTree(route.date, items, hash);
             } else if (Tables[route.list]) {
                 var table_info = Tables[route.list];
-                refreshTable(items, route.list, table_info,
+                refreshTable(_('#ls_' + route.list), items, route.list, table_info,
                              table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
                              sort_info, route.search, route.page);
             } else {
@@ -291,20 +285,17 @@ var list = {};
 
     function updateTable(list, index, spec)
     {
-        table_type = null;
-        items = [];
-
-        if (Tables[list].concepts)
-            getConcepts(Tables[list].concepts);
-
         let url = buildUrl(BaseUrl + 'api/' + (Tables[list].table || list) + '.json',
                            {date: indexes[index].begin_date, spec: spec});
+        if (url === list_url)
+            return;
+
+        items = [];
+        if (Tables[list].concepts)
+            getConcepts(Tables[list].concepts);
         downloadJson(url, function(json) {
             items = json;
-
-            table_type = list;
-            table_index = index;
-            table_spec = spec;
+            list_url = url;
         });
     }
 
@@ -506,7 +497,8 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(items, list_name, table_info, concepts_map, sort_info, search, page)
+    function refreshTable(old_table, items, list_name, table_info, concepts_map,
+                          sort_info, search, page)
     {
         if (search)
             search = simplifyForSearch(search);
@@ -679,7 +671,6 @@ var list = {};
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
-        let old_table = _('.ls_table');
         cloneAttributes(old_table, table);
         table.id = 'ls_' + list_name;
         old_table.parentNode.replaceChild(table, old_table);
