@@ -62,6 +62,7 @@ var casemix = {};
         removeClass(__('#opt_indexes, #opt_diff_casemix, #opt_algorithm, #opt_units, #opt_update'), 'hide');
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index, false);
         refreshIndexesDiff(diff_index, route.ghm_root);
+        _('#opt_algorithm').value = route.cm_mode;
 
         // Refresh view
         _('#cm_cmds').classList.toggle('hide', route.cm_view !== 'global');
