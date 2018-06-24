@@ -129,8 +129,9 @@ var casemix = {};
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             durations: 1
         };
+        let url = buildUrl(BaseUrl + 'api/casemix.json', params);
 
-        if (JSON.stringify(params) === mix_url)
+        if (url == mix_url)
             return;
 
         mix_cmds = [];
@@ -139,7 +140,6 @@ var casemix = {};
         mix_ghm_roots_map = {};
         mix_price_density_max = 0;
 
-        let url = buildUrl(BaseUrl + 'api/casemix.json', params);
         downloadJson(url, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
@@ -195,7 +195,7 @@ var casemix = {};
                 mix_price_density_max += Math.abs(json[i].ghs_price_cents);
             }
 
-            mix_url = JSON.stringify(params);
+            mix_url = url;
         });
     }
 
