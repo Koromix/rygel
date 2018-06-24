@@ -44,121 +44,90 @@
         </div>
 
         <main>
-            <div id="pricing" class="page">
-                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#pricing_menu'); return false;"></a>
-                <nav id="pricing_menu" class="page_menu">
-                    <svg id="pricing_indexes" class="indexes_line">
-                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
-                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
-                        <g></g>
-                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
-                    </svg>
+            <a id="opt_deploy" class="deploy" href="#" onclick="toggleMenu('#opt_menu'); return false;"></a>
+            <nav id="opt_menu">
+                <svg id="opt_indexes" class="indexes_line"></svg>
 
-                    <select id="pricing_ghm_roots" onchange="pricing.route({ghm_root: this.value});"
-                            style="width: 96%;"></select><br/>
-                    <label>
-                        Comparer
-                        <select id="pricing_diff_indexes" onchange="pricing.route({diff: this.value});"
-                                style="width: 12em;"></select>
-                    </label>
-                    <label>
-                        Durée
-                        <input id="pricing_max_duration" type="number" onchange="pricing.route();"
-                               value="200" min="0" max="500" step="5"/>
-                    </label>
-                    <label>
-                        <span>Coefficient prudentiel</span>
-                        <input id="pricing_coeff" type="checkbox"
-                               onchange="pricing.route({apply_coefficient: this.checked});"/>
-                    </label>
-                </nav>
+                <select id="opt_ghm_roots" onchange="module.route({ghm_root: this.value});"
+                        style="width: 96%;"></select><br/>
 
-                <div id="pricing_view">
-                    <div class="log" style="display: none;"></div>
+                <label id="opt_units">
+                    Unités médicales
+                    <input type="text" style="width: 82%;" value=""/><br/>
+                </label>
 
-                    <table id="pricing_table" class="hide" ></table>
-                    <canvas id="pricing_chart" class="hide" width="400" height="300"></canvas>
-                </div>
+                <label id="opt_diff_indexes">
+                    Comparer
+                    <select onchange="module.route({diff: this.value});"
+                            style="width: 12em;"></select>
+                </label>
+
+                <label id="opt_max_duration">
+                    Durée
+                    <input type="number" onchange="module.route();"
+                           value="200" min="0" max="500" step="5"/>
+                </label>
+
+                <label id="opt_apply_coefficient">
+                    <span>Coefficient prudentiel</span>
+                    <input type="checkbox"
+                           onchange="module.route({apply_coefficient: this.checked});"/>
+                </label>
+
+                <label id="opt_search">
+                    Recherche
+                    <input type="search" style="width: 16em;"
+                           oninput="module.route({search: this.value}, 200);"/>
+                </label>
+
+                <label id="opt_sort">
+                    Tri
+                    <select onchange="module.route({sort: this.value});"></select><br/>
+                </label>
+
+                <label id="opt_diff_casemix">
+                    Comparer
+                    <select style="width: 12em;"></select>
+                </label>
+
+                <label id="opt_algorithm">
+                    Algorithme
+                    <select>
+                        <option value="e">Algorithme E</option>
+                        <option value="ex">Algorithme Ex</option>
+                        <option value="ex2">Algorithme Ex'</option>
+                        <option value="j">Algorithme J</option>
+                        <option value="exj">Algorithme ExJ</option>
+                        <option value="exj2">Algorithme Ex'J</option>
+                    </select>
+                </label>
+
+                <button id="opt_update"
+                        onclick="module.route({cm_mode: _('#opt_algorithm > select').value,
+                                               cm_diff: _('#opt_diff_casemix > select').value,
+                                               cm_units: _('#opt_units > input').value});">Mettre à jour</button>
+            </nav>
+
+            <div id="log"></div>
+
+            <div id="pr">
+                <table id="pr_table"></table>
+                <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
 
-            <div id="list" class="page">
-                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#list_menu'); return false;"></a>
-                <nav id="list_menu" class="page_menu">
-                    <svg id="list_indexes" class="indexes_line">
-                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
-                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
-                        <g></g>
-                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
-                    </svg>
+            <div id="ls">
+                <h1 id="ls_spec"></h1>
+                <div class="ls_pages"></div>
+                <table class="ls_table"></table>
+                <div class="ls_pages"></div>
 
-                    <label class="hide">
-                        Recherche
-                        <input id="list_search" type="search" style="width: 16em;"
-                               oninput="window.list.route({search: this.value}, 200);"/>
-                    </label>
-
-                    <label class="hide">
-                        Tri
-                        <select id="list_sort" onchange="list.route({sort: this.value});"></select><br/>
-                    </label>
-                </nav>
-
-                <div id="list_view">
-                    <div class="log" style="display: none;"></div>
-
-                    <h1 id="list_spec" class="hide"></h1>
-                    <div class="list_pages hide"></div>
-                    <table class="list_table hide"></table>
-                    <div class="list_pages hide"></div>
-
-                    <ul id="list_tree" class="hide"></ul>
-                </div>
+                <ul id="ls_tree"></ul>
             </div>
 
-            <div id="casemix" class="page">
-                <a class="deploy page_deploy" href="#" onclick="toggleMenu('#casemix_menu'); return false;"></a>
-                <nav id="casemix_menu" class="page_menu">
-                    <svg id="casemix_indexes" class="indexes_line">
-                        <text x="0" y="25" text-anchor="start" onclick="moveIndex(-1);" style="cursor: pointer; font-size: 1.5em;">≪</text>
-                        <line x1="6%" y1="20" x2="94%" y2="20" style="stroke: #888; stroke-width: 1"/>
-                        <g></g>
-                        <text x="100%" y="25" text-anchor="end" onclick="moveIndex(1);" style="cursor: pointer; font-size: 1.5em;">≫</text>
-                    </svg>
-
-                    <label>
-                        Unités médicales
-                        <input id="casemix_units" type="text" style="width: 82%;" value=""/>
-                    </label><br/>
-
-                    <label>
-                        Comparer
-                        <select id="casemix_diff_indexes" style="width: 12em;"></select>
-                    </label>
-
-                    <label>
-                        Algorithme
-                        <select id="casemix_mode">
-                            <option value="e">Algorithme E</option>
-                            <option value="ex">Algorithme Ex</option>
-                            <option value="ex2">Algorithme Ex'</option>
-                            <option value="j">Algorithme J</option>
-                            <option value="exj">Algorithme ExJ</option>
-                            <option value="exj2">Algorithme Ex'J</option>
-                        </select>
-                    </label>
-
-                    <button onclick="casemix.route({cm_mode: document.querySelector('#casemix_mode').value,
-                                                    cm_diff: document.querySelector('#casemix_diff_indexes').value,
-                                                    cm_units: document.querySelector('#casemix_units').value});">Mettre à jour</button>
-                </nav>
-
-                <div id="casemix_view">
-                    <div class="log" style="display: none;"></div>
-
-                    <table id="casemix_cmds" class="hide"></table>
-                    <table id="casemix_roots" class="hide"></table>
-                    <table id="casemix_ghs" class="hide"></table>
-                </div>
+            <div id="cm">
+                <table id="cm_cmds"></table>
+                <table id="cm_roots"></table>
+                <table id="cm_ghs"></table>
             </div>
         </main>
     </body>

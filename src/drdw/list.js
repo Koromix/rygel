@@ -192,10 +192,6 @@ var list = {};
             force_refresh = (table_type !== route.list);
             if (Tables[route.list])
                 updateTable(route.list, main_index, route.spec);
-
-            table_type = route.list;
-            table_index = main_index;
-            table_spec = route.spec;
         }
         let sort_info = null;
         if (Tables[route.list] && Tables[route.list].sort) {
@@ -222,20 +218,23 @@ var list = {};
             return;
         }
 
-        // Refresh display
-        _('#list').classList.add('active');
-        _('#list_search').parentNode.classList.toggle('active', route.list !== 'classifier_tree');
-        _('#list_tree').classList.toggle('active', route.list === 'classifier_tree');
-        removeClass(document.querySelectorAll('.list_pages'), 'active');
-        _('.list_table').classList.toggle('active', route.list !== 'classifier_tree');
-        refreshIndexesLine(_('#list_indexes'), indexes, main_index);
-        markOutdated('#list_view', downloadJson.busy);
-        if (Tables[route.list] && Tables[route.list].sort !== undefined) {
-            _('#list_sort').parentNode.classList.add('active');
-            refreshSortList(Tables[route.list], route.sort);
-        } else {
-            _('#list_sort').parentNode.classList.remove('active');
+        // Refresh settings
+        removeClass(__('#opt_indexes'), 'hide');
+        refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
+        if (route.list !== 'classifier_tree') {
+            _('#opt_search').classList.remove('hide');
+            if (route.search != _('#opt_search').value)
+                _('#opt_search').value = route.search;
         }
+        if (Tables[route.list] && Tables[route.list].sort !== undefined) {
+            _('#opt_sort').classList.remove('hide');
+            refreshSortList(Tables[route.list], route.sort);
+        }
+
+        // Refresh view
+        _('#ls_tree').classList.toggle('hide', route.list !== 'classifier_tree');
+        addClass(__('.ls_pages'), 'hide');
+        _('.ls_table').classList.toggle('hide', route.list === 'classifier_tree');
         if (!downloadJson.busy || force_refresh) {
             refreshHeader(route.spec, route.search, Array.from(errors));
             downloadJson.errors = [];
@@ -248,9 +247,11 @@ var list = {};
                              table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
                              sort_info, route.search, route.page);
             } else {
-                _('.list_table').classList.remove('active');
+                _('.ls_table').classList.add('hide');
             }
         }
+        _('#ls').classList.remove('hide');
+        markBusy('#ls', downloadJson.busy);
     }
     this.run = run;
 
@@ -294,44 +295,47 @@ var list = {};
 
     function updateTable(list, index, spec)
     {
+        table_type = null;
         items = [];
+
         if (Tables[list].concepts)
             getConcepts(Tables[list].concepts);
         let api = Tables[list].table || list;
         downloadJson(BaseUrl + 'api/' + api + '.json', {date: indexes[index].begin_date, spec: spec},
-                     function(json) { items = json; });
+                     function(json) {
+            items = json;
+
+            table_type = list;
+            table_index = index;
+            table_spec = spec;
+        });
     }
 
     function refreshHeader(spec, search, errors)
     {
-        var log = document.querySelector('#list .log');
-        var h1 = document.querySelector('#list_spec');
-        var search_input = document.querySelector('#list_search');
+        var log = _('#log');
+        var h1 = _('#ls_spec');
+        var search_input = _('#opt_search');
 
         if (errors.length) {
-            log.style.display = 'block';
             log.innerHTML = errors.join('<br/>');
-        } else {
-            log.style.display = 'none';
+            log.classList.remove('hide');
         }
 
         if (spec) {
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
             h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
-            h1.classList.add('active');
+            h1.classList.remove('hide');
         } else {
             h1.innerText = '';
-            h1.classList.remove('active');
+            h1.classList.add('hide');
         }
-
-        if (search != search_input.value)
-            search_input.value = search || '';
     }
 
     function refreshSortList(table_info, select_sort)
     {
-        var el = document.querySelector('#list_sort');
+        var el = _('#opt_sort > select');
         el.innerHTML = '';
 
         for (let i = 0; i < table_info.sort.length; i++) {
@@ -500,7 +504,7 @@ var list = {};
             }
         }
 
-        var old_ul = document.querySelector('#list_tree');
+        var old_ul = _('#ls_tree');
         cloneAttributes(old_ul, ul);
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
@@ -670,17 +674,17 @@ var list = {};
             }
         }
 
-        let old_pages = document.querySelectorAll('.list_pages');
+        let old_pages = __('.ls_pages');
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
-            pages_copy.classList.toggle('active', visible_count != match_count);
+            pages_copy.classList.toggle('hide', visible_count == match_count);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
-        let old_table = document.querySelector('.list_table');
+        let old_table = _('.ls_table');
         cloneAttributes(old_table, table);
-        table.id = 'list_' + list_name;
+        table.id = 'ls_' + list_name;
         old_table.parentNode.replaceChild(table, old_table);
     }
 

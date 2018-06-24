@@ -66,20 +66,38 @@ var pricing = {};
             return;
         }
 
-        // Refresh display
-        _('#pricing').classList.add('active');
-        refreshIndexesLine(_('#pricing_indexes'), indexes, main_index);
+        // Refresh settings
+        removeClass(__('#opt_indexes, #opt_ghm_roots, #opt_diff_indexes, #opt_max_duration, #opt_apply_coefficient'), 'hide');
+        refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
         refreshGhmRoots(main_index, route.ghm_root);
         refreshIndexesDiff(diff_index, route.ghm_root);
-        _('#pricing_coeff').checked = route.apply_coefficient;
-        _('#pricing_table').classList.toggle('active', route.view === 'table');
-        _('#pricing_chart').classList.toggle('active', route.view === 'chart');
-        markOutdated('#pricing_view', downloadJson.busy);
+        _('#opt_apply_coefficient').checked = route.apply_coefficient;
+
+        // Refresh view
+        _('#pr_table').classList.toggle('hide', route.view !== 'table');
+        _('#pr_chart').classList.toggle('hide', route.view !== 'chart');
         if (!downloadJson.busy) {
-            // refreshHeader(Array.from(errors));
-            refreshView(main_index, diff_index, route.ghm_root, route.apply_coefficient, Array.from(errors));
+            refreshErrors(Array.from(errors));
             downloadJson.errors = [];
+
+            let ghm_root_info = ghm_roots_map[route.ghm_root];
+            let pricing_info = pricings_map[route.ghm_root];
+            let max_duration = parseInt(_('#opt_max_duration > input').value);
+
+            switch (route.view) {
+                case 'table': {
+                    refreshPriceTable(pricing_info, main_index, diff_index, max_duration,
+                                      route.apply_coefficient, true);
+                } break;
+                case 'chart': {
+                    let chart_ctx = _('#pr_chart').getContext('2d');
+                    chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
+                                         diff_index, max_duration, route.apply_coefficient);
+                } break;
+            }
         }
+        _('#pr').classList.remove('hide');
+        markBusy('#pr', downloadJson.busy);
     }
     this.run = run;
 
@@ -155,52 +173,19 @@ var pricing = {};
     }
     this.updatePriceMap = updatePriceMap;
 
-    // TODO: Split refreshHeader(), remove this function
-    function refreshView(main_index, diff_index, ghm_root, apply_coeff, errors)
+    function refreshErrors(errors)
     {
-        var ghm_root_info = ghm_roots_map[ghm_root];
-        var pricing_info = pricings_map[ghm_root];
-        var max_duration = parseInt(document.querySelector('#pricing_max_duration').value);
-
-        var log = document.querySelector('#pricing .log');
-        var old_table = document.querySelector('#pricing_table');
-        var chart_ctx = document.querySelector('#pricing_chart').getContext('2d');
+        var log = _('#log');
 
         if (errors.length) {
-            log.style.display = 'block';
             log.innerHTML = errors.join('<br/>');
-        } else {
-            log.style.display = 'none';
+            log.classList.remove('hide');
         }
-
-        if (pricing_info && pricing_info[main_index] && (diff_index < 0 || pricing_info[diff_index])) {
-            if (document.querySelector('#pricing_table').classList.contains('active')) {
-                var table = createPriceTable(pricing_info, main_index, diff_index, max_duration,
-                                             apply_coeff, true);
-                cloneAttributes(old_table, table);
-                old_table.parentNode.replaceChild(table, old_table);
-            }
-
-            if (document.querySelector('#pricing_chart').classList.contains('active')) {
-                chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
-                                     diff_index, max_duration, apply_coeff);
-            }
-        } else {
-            var table = createElement('table');
-            cloneAttributes(old_table, table);
-            old_table.parentNode.replaceChild(table, old_table);
-
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        }
-        markOutdated('#pricing_view', false);
     }
 
     function refreshIndexesDiff(diff_index, test_ghm_root)
     {
-        var el = document.querySelector("#pricing_diff_indexes");
+        var el = _("#opt_diff_indexes > select");
         el.innerHTML = '';
 
         el.appendChild(createElement('option', {value: ''}, 'Désactiver'));
@@ -219,7 +204,7 @@ var pricing = {};
 
     function refreshGhmRoots(index, select_ghm_root)
     {
-        var el = document.querySelector('#pricing_ghm_roots');
+        var el = _('#opt_ghm_roots');
         el.innerHTML = '';
 
         for (var i = 0; i < ghm_roots.length; i++) {
@@ -238,9 +223,50 @@ var pricing = {};
             el.value = select_ghm_root;
     }
 
+    function refreshPriceTable(pricing_info, main_index, diff_index, max_duration,
+                               apply_coeff, merge_cells)
+    {
+        let table = null;
+        if (pricing_info && pricing_info[main_index]) {
+            table = createTable(pricing_info, main_index, diff_index, max_duration, apply_coeff,
+                                merge_cells, function(col, duration) {
+                if (diff_index < 0) {
+                    var info = computePrice(col, duration, apply_coeff);
+                } else {
+                    var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
+                                                 duration, apply_coeff);
+                }
+                if (info === null)
+                    return null;
+
+                var props = [priceText(info[0]), {class: info[1]}, false];
+                if (duration == 0 && col.warn_cmd28) {
+                    props[1].class += ' warn';
+                    props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
+                }
+                return props;
+            });
+        } else {
+            table = createElement('table');
+        }
+
+        let old_table = _('#pr_table');
+        cloneAttributes(old_table, table);
+        old_table.parentNode.replaceChild(table, old_table);
+    }
+
     function refreshChart(chart, chart_ctx, pricing_info, main_index, diff_index,
                           max_duration, apply_coeff)
     {
+        if (!pricing_info || !pricing_info[main_index]) {
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+
+            return;
+        }
+
         var ghs = pricing_info[main_index].ghs;
 
         function ghsLabel(ghs, conditions)
@@ -468,29 +494,6 @@ var pricing = {};
         return table;
     }
     this.createTable = createTable;
-
-    function createPriceTable(pricing_info, main_index, diff_index, max_duration,
-                              apply_coeff, merge_cells)
-    {
-        return createTable(pricing_info, main_index, diff_index, max_duration, apply_coeff,
-                           merge_cells, function(col, duration) {
-            if (diff_index < 0) {
-                var info = computePrice(col, duration, apply_coeff);
-            } else {
-                var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
-                                             duration, apply_coeff);
-            }
-            if (info === null)
-                return null;
-
-            var props = [priceText(info[0]), {class: info[1]}, false];
-            if (duration == 0 && col.warn_cmd28) {
-                props[1].class += ' warn';
-                props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
-            }
-            return props;
-        });
-    }
 
     function computePrice(ghs, duration, apply_coeff)
     {

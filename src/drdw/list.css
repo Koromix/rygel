@@ -1,53 +1,53 @@
-#list h1 {
+#ls h1 {
     font-size: 1.3em;
     text-align: center;
 }
 
-#list_tree {
+#ls_tree {
     margin: 8px 22px;
     padding: 0;
     white-space: nowrap;
 }
-#list_tree li {
+#ls_tree li {
     margin-left: -8px;
     padding-top: 1px;
     list-style-type: none;
 }
-#list_tree .n {
+#ls_tree .n {
     padding-left: 12px;
     font-size: 0.7em;
     color: #888;
     vertical-align: middle;
 }
-#list_tree .direct .n { padding-left: 0; }
-#list_tree .direct:before { content: ' → '; }
-#list_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
-#list_tree li.parent > span > .n { cursor: pointer; }
-#list_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
-#list_tree li.leaf { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC') no-repeat; }
-#list_tree ul {
+#ls_tree .direct .n { padding-left: 0; }
+#ls_tree .direct:before { content: ' → '; }
+#ls_tree li.parent { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGIZgPQMDw38cuB5ZoQAORfehciggAYvCAFxOOI+kaD0+typAFb3HZiU66GdgYCggpAgnAAADhRho33RdVwAAAABJRU5ErkJggg==') no-repeat; }
+#ls_tree li.parent > span > .n { cursor: pointer; }
+#ls_tree li.collapse { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPUlEQVQYlWNgGFpgPgMDgwIxCv9DcQGxCv8zMDCcx2f6fyy4nxiF76HOEMCncD8hq88zMDAEEPALdmtgAAAziBiJaRyRUwAAAABJRU5ErkJggg==') no-repeat; }
+#ls_tree li.leaf { background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAMCAYAAABbayygAAAAPElEQVQYlWNgGObAgIGBwYGQonoGBob/UHwen0n/0XABNoUKxCpkgFoHU/SegYFBAJ87E6AmKeBThBMAANf6EaFwwYgUAAAAAElFTkSuQmCC') no-repeat; }
+#ls_tree ul {
     margin-left: 4px;
     border-left: 1px solid #ddd;
 }
-#list_tree li.collapse ul { display: none !important; }
-#list_tree a.ghm {
+#ls_tree li.collapse ul { display: none !important; }
+#ls_tree a.ghm {
     display: inline-block;
     padding: 0 2px;
     background: #ed6d0a;
     color: white;
 }
 
-.list_pages {
+.ls_pages {
     padding: 0.5em 1em 0.5em 1em;
     text-align: center;
     font-size: 1.1em;
 }
 
-.list_table {
+.ls_table {
     width: 100%;
     border-collapse: collapse;
 }
-.list_table th, .list_table td {
+.ls_table th, .ls_table td {
     min-width: 60px;
     max-width: 260px;
     border: 1px solid #a4a4a4;
@@ -56,32 +56,32 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.list_table thead { background: #ccc; }
-.list_table tbody { background: #fafafa; }
-.list_table th {
+.ls_table thead { background: #ccc; }
+.ls_table tbody { background: #fafafa; }
+.ls_table th {
     text-align: center;
     font-weight: bold;
 }
-.list_table tr.heading { background: #eee; }
+.ls_table tr.heading { background: #eee; }
 
-#list_diagnoses td:nth-child(2) { text-align: center; }
+#ls_diagnoses td:nth-child(2) { text-align: center; }
 
 @media screen and (min-width: 800px) {
-    #list_procedures td:first-child { min-width: 70%; }
-    #list_diagnoses td:first-child { min-width: 70%; }
+    #ls_procedures td:first-child { min-width: 70%; }
+    #ls_diagnoses td:first-child { min-width: 70%; }
 }
 
 @media screen and (max-width: 800px) {
-    #list_tree { font-size: 0.9em; }
-    #list_tree ul { padding-left: 30px; }
+    #ls_tree { font-size: 0.9em; }
+    #ls_tree ul { padding-left: 30px; }
 
-    .list_table th, .list_table td {
+    .ls_table th, .ls_table td {
         font-size: 0.8em;
         border: 0;
     }
 
-    .list_table td { box-sizing: border-box; }
-    #list_ghm_roots td:first-child, #list_procedures td:first-child { min-width: 100vw; }
-    #list_diagnoses td:first-child { min-width: 85vw; }
-    #list_diagnoses td:nth-child(2) { min-width: 15vw; }
+    .ls_table td { box-sizing: border-box; }
+    #ls_ghm_roots td:first-child, #ls_procedures td:first-child { min-width: 100vw; }
+    #ls_diagnoses td:first-child { min-width: 85vw; }
+    #ls_diagnoses td:nth-child(2) { min-width: 15vw; }
 }

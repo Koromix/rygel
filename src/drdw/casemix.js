@@ -58,16 +58,16 @@ var casemix = {};
                           diff_index >= 0 ? indexes[diff_index].end_date : null);
         }
 
-        // Refresh view
-        _('#casemix').classList.add('active');
-        refreshIndexesLine(_('#casemix_indexes'), indexes, main_index, false);
+        // Refresh settings
+        removeClass(__('#opt_indexes, #opt_diff_casemix, #opt_algorithm, #opt_units, #opt_update'), 'hide');
+        refreshIndexesLine(_('#opt_indexes'), indexes, main_index, false);
         refreshIndexesDiff(diff_index, route.ghm_root);
-        markOutdated('#casemix_view', downloadJson.busy);
-        if (!downloadJson.busy) {
-            _('#casemix_cmds').classList.toggle('active', route.cm_view === 'global');
-            _('#casemix_roots').classList.toggle('active', route.cm_view === 'global');
-            _('#casemix_ghs').classList.toggle('active', route.cm_view === 'ghm_root');
 
+        // Refresh view
+        _('#cm_cmds').classList.toggle('hide', route.cm_view !== 'global');
+        _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
+        _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
+        if (!downloadJson.busy) {
             refreshErrors(Array.from(errors));
             downloadJson.errors = [];
 
@@ -82,6 +82,8 @@ var casemix = {};
                 } break;
             }
         }
+        _('#cm').classList.remove('hide');
+        markBusy('#cm', downloadJson.busy);
     }
     this.run = run;
 
@@ -199,19 +201,17 @@ var casemix = {};
 
     function refreshErrors(errors)
     {
-        var log = document.querySelector('#casemix .log');
+        var log = _('#log');
 
         if (errors.length) {
-            log.style.display = 'block';
             log.innerHTML = errors.join('<br/>');
-        } else {
-            log.style.display = 'none';
+            log.classList.remove('hide');
         }
     }
 
     function refreshIndexesDiff(diff_index, test_ghm_root)
     {
-        var el = document.querySelector("#casemix_diff_indexes");
+        var el = _("#opt_diff_casemix > select");
         el.innerHTML = '';
 
         el.appendChild(createElement('option', {value: ''}, 'Désactiver'));
@@ -266,7 +266,7 @@ var casemix = {};
             }
         }
 
-        var old_table = document.querySelector('#casemix_cmds');
+        var old_table = _('#cm_cmds');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }
@@ -341,7 +341,7 @@ var casemix = {};
             }
         }
 
-        var old_table = document.querySelector('#casemix_roots');
+        var old_table = _('#cm_roots');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }
@@ -395,7 +395,7 @@ var casemix = {};
             var table = createElement('table');
         }
 
-        var old_table = document.querySelector('#casemix_ghs');
+        var old_table = _('#cm_ghs');
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }

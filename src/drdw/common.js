@@ -88,6 +88,11 @@ function _(selector)
     return document.querySelector(selector);
 }
 
+function __(selector)
+{
+    return document.querySelectorAll(selector);
+}
+
 // ------------------------------------------------------------------------
 // JSON
 // ------------------------------------------------------------------------
@@ -176,21 +181,20 @@ var route = {
 var scroll_cache = {};
 var module = null;
 
-function markOutdated(selector, mark)
+function markBusy(selector, busy)
 {
-    var elements = document.querySelectorAll(selector);
-    for (var i = 0; i < elements.length; i++) {
-        elements[i].classList.toggle('outdated', mark);
-    }
+    var elements = __(selector);
+    for (var i = 0; i < elements.length; i++)
+        elements[i].classList.toggle('busy', busy);
 }
 
 function toggleMenu(selector, enable)
 {
-    var el = document.querySelector(selector);
+    var el = _(selector);
     if (enable === undefined)
         enable = !el.classList.contains('active');
     if (enable) {
-        var els = document.querySelectorAll('nav');
+        var els = __('nav');
         for (var i = 0; i < els.length; i++)
             els[i].classList.toggle('active', els[i] == el);
     } else {
@@ -279,8 +283,9 @@ function go(new_url, mark_history, delay)
     route_url = app_url;
     route_url_parts = url_parts;
 
-    // Hide all page-specific elements
-    removeClass(document.querySelectorAll('.page'), 'active');
+    // Hide all module-specific views
+    addClass(__('main > div'), 'hide');
+    addClass(__('#opt_menu > *'), 'hide');
 
     // Find relevant module and run
     var module_name = app_url.split('/')[0];
@@ -289,7 +294,7 @@ function go(new_url, mark_history, delay)
         module.run(route, app_url, url_parts.params, url_parts.hash);
 
     // Update menu state and links
-    var menu_anchors = document.querySelectorAll('#side_menu a');
+    var menu_anchors = __('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
 
@@ -318,7 +323,7 @@ function initNavigation()
     if (window.location.pathname !== BaseUrl) {
         new_url = window.location.href;
     } else {
-        var first_anchor = document.querySelector('#side_menu a');
+        var first_anchor = _('#side_menu a');
         new_url = eval(first_anchor.dataset.url);
         window.history.replaceState(null, null, new_url);
     }
@@ -377,6 +382,20 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
         show_table_changes = true;
 
     var old_g = el.querySelector('g');
+    if (!old_g) {
+        el.appendChild(createElementNS('svg', 'text',
+                                       {x: 0, y: 25, 'text-anchor': 'start',
+                                        style: 'cursor: pointer; font-size: 1.5em;'}, '≪'));
+        el.appendChild(createElementNS('svg', 'line',
+                                       {x1: '6%', y1: 20, x2: '94%', y2: 20, style: 'stroke: #888; stroke-width: 1;'}));
+        el.appendChild(createElementNS('svg', 'g'));
+        el.appendChild(createElementNS('svg', 'text',
+                                       {x: '100%', y: 25, 'text-anchor': 'end',
+                                        style: 'cursor: pointer; font-size: 1.5em;'}, '≫'));
+
+        old_g = el.querySelector('g');
+    }
+
     var g = createElementNS('svg', 'g', {});
 
     if (indexes.length >= 2) {
