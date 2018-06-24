@@ -171,8 +171,8 @@ var pricing = {};
 
         if (pricing_info && pricing_info[main_index] && (diff_index < 0 || pricing_info[diff_index])) {
             if (document.querySelector('#pricing_table').classList.contains('active')) {
-                var table = createTable(pricing_info, main_index, diff_index, max_duration,
-                                        apply_coeff, true);
+                var table = createPriceTable(pricing_info, main_index, diff_index, max_duration,
+                                             apply_coeff, true);
                 cloneAttributes(old_table, table);
                 old_table.parentNode.replaceChild(table, old_table);
             }
@@ -353,7 +353,7 @@ var pricing = {};
     }
 
     function createTable(pricing_info, main_index, diff_index, max_duration,
-                         apply_coeff, merge_cells)
+                         apply_coeff, merge_cells, row_func)
     {
         var ghs = pricing_info[main_index].ghs;
 
@@ -451,26 +451,35 @@ var pricing = {};
                 tbody.appendChild(tr);
             }
 
-            appendRow(tbody, durationText(duration), function(col, i) {
-                if (diff_index < 0) {
-                    var info = computePrice(col, duration, apply_coeff);
-                } else {
-                    var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
-                                                 duration, apply_coeff);
-                }
-                if (info === null)
-                    return null;
-
-                var props = [priceText(info[0]), {class: info[1]}, false];
-                if (duration == 0 && col.warn_cmd28) {
-                    props[1].class += ' warn';
-                    props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
-                }
-                return props;
-            });
+            appendRow(tbody, durationText(duration),
+                      function(col, i) { return row_func(col, duration); });
         }
 
         return table;
+    }
+    this.createTable = createTable;
+
+    function createPriceTable(pricing_info, main_index, diff_index, max_duration,
+                              apply_coeff, merge_cells)
+    {
+        return createTable(pricing_info, main_index, diff_index, max_duration, apply_coeff,
+                           merge_cells, function(col, duration) {
+            if (diff_index < 0) {
+                var info = computePrice(col, duration, apply_coeff);
+            } else {
+                var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
+                                             duration, apply_coeff);
+            }
+            if (info === null)
+                return null;
+
+            var props = [priceText(info[0]), {class: info[1]}, false];
+            if (duration == 0 && col.warn_cmd28) {
+                props[1].class += ' warn';
+                props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
+            }
+            return props;
+        });
     }
 
     function computePrice(ghs, duration, apply_coeff)
