@@ -1477,7 +1477,7 @@ public:
     void Clear()
     {
         for (Size i = 0; i < capacity; i++) {
-            if (!IsEmpty(used, i)) {
+            if (!IsEmpty(i)) {
                 data[i].~ValueType();
             }
         }
@@ -1535,7 +1535,7 @@ public:
     {
         if (!it)
             return;
-        DebugAssert(!IsEmpty(used, it - data));
+        DebugAssert(!IsEmpty(it - data));
 
         it->~ValueType();
         count--;
@@ -1544,7 +1544,7 @@ public:
         for (;;) {
             Size next_idx = (idx + 1) & (capacity - 1);
 
-            if (IsEmpty(used, next_idx) ||
+            if (IsEmpty(next_idx) ||
                     KeyToIndex(Handler::GetKey(data[next_idx])) == next_idx) {
                 MarkEmpty(idx);
                 new (&data[idx]) ValueType();
@@ -1556,6 +1556,8 @@ public:
         }
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
+
+    Size IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
 private:
     ValueType *Find(Size *idx, const KeyType &key)
@@ -1574,7 +1576,7 @@ private:
         }
 #endif
 
-        while (!IsEmpty(used, *idx)) {
+        while (!IsEmpty(*idx)) {
             const KeyType &it_key = Handler::GetKey(data[*idx]);
             if (Handler::CompareKeys(it_key, key))
                 return &data[*idx];
@@ -1594,7 +1596,7 @@ private:
                 if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
-                    while (!IsEmpty(used, idx)) {
+                    while (!IsEmpty(idx)) {
                         idx = (idx + 1) & (capacity - 1);
                     }
                 }
@@ -1637,7 +1639,7 @@ private:
             for (Size i = 0; i < old_capacity; i++) {
                 if (!IsEmpty(old_used, i)) {
                     Size new_idx = KeyToIndex(Handler::GetKey(old_data[i]));
-                    while (!IsEmpty(used, new_idx)) {
+                    while (!IsEmpty(new_idx)) {
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
                     MarkUsed(new_idx);
