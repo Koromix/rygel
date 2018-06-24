@@ -280,8 +280,6 @@ function go(new_url, mark_history, delay)
             window.history.replaceState(null, null, url_parts.href);
         }
     }
-    route_url = app_url;
-    route_url_parts = url_parts;
 
     // Hide all module-specific views
     addClass(__('main > div'), 'hide');
@@ -293,22 +291,28 @@ function go(new_url, mark_history, delay)
     if (module !== undefined && module.run !== undefined)
         module.run(route, app_url, url_parts.params, url_parts.hash);
 
+    // Update URL to reflect real state (module may have set default values, etc.)
+    let real_url = module.buildUrl({});
+    window.history.replaceState(null, null, real_url);
+    route_url_parts = parseUrl(real_url);
+    route_url = real_url.substr(BaseUrl.length);
+
     // Update menu state and links
     var menu_anchors = __('#side_menu a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
 
         anchor.href = eval(anchor.dataset.url);
-        let active = (url_parts.href.startsWith(anchor.href) &&
+        let active = (route_url_parts.href.startsWith(anchor.href) &&
                       !anchor.classList.contains('category'));
         anchor.classList.toggle('active', active);
     }
     toggleMenu('#side_menu', false);
 
     // Update scroll target
-    var scroll_target = scroll_cache[url_parts.path];
-    if (url_parts.hash) {
-        window.location.hash = url_parts.hash;
+    var scroll_target = scroll_cache[route_url_parts.path];
+    if (route_url_parts.hash) {
+        window.location.hash = route_url_parts.hash;
     } else if (scroll_target) {
         window.scrollTo(scroll_target[0], scroll_target[1]);
     } else {

@@ -33,8 +33,6 @@ var casemix = {};
             route.cm_start = route.cm_start || null;
             route.cm_end = route.cm_end || null;
         }
-
-        // Redirection (stable URLs)
         */
 
         // Resources

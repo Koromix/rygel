@@ -185,6 +185,8 @@ var list = {};
 
         // Resources
         indexes = getIndexes();
+        if (!route.date && indexes.length)
+            route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         let force_refresh = false;
         if (main_index >= 0 && (table_index !== main_index || table_type !== route.list ||
@@ -211,12 +213,6 @@ var list = {};
             errors.add('Date incorrecte');
         if (route.sort && Tables[route.list] && !sort_info)
             errors.add('Critère de tri inconnu');
-
-        // Redirection (stable URLs)
-        if (!route.date && indexes.length) {
-            redirect(buildUrl({date: indexes[indexes.length - 1].begin_date}));
-            return;
-        }
 
         // Refresh settings
         removeClass(__('#opt_indexes'), 'hide');

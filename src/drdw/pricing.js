@@ -32,6 +32,10 @@ var pricing = {};
         // Resources
         indexes = getIndexes();
         updateGhmRoots();
+        if (!route.date && indexes.length)
+            route.date = indexes[indexes.length - 1].begin_date;
+        if (!route.ghm_root && ghm_roots.length)
+            route.ghm_root = ghm_roots[0].ghm_root;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
         if (main_index >= 0 && !indexes[main_index].init)
@@ -55,15 +59,6 @@ var pricing = {};
                 if (!checkIndexGhmRoot(diff_index, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
-        }
-
-        // Redirection (stable URLs)
-        if (!route.date && indexes.length) {
-            redirect(buildUrl({date: indexes[indexes.length - 1].begin_date}));
-            return;
-        } else if (!route.ghm_root && ghm_roots.length) {
-            redirect(buildUrl({ghm_root: ghm_roots[0].ghm_root}));
-            return;
         }
 
         // Refresh settings
