@@ -11,7 +11,6 @@ struct Instance {
 
     EntitySet entity_set;
     int last_source_id = 0;
-    HashMap<const char *, Size> entities_map;
 
     HeapArray<ConceptSet> concept_sets;
 
@@ -69,15 +68,21 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
         inst->entity_set.sources.Append(inst->last_source_id, src_name);
     }
 
+    HashMap<const char *, Size> entities_map;
+    for (Size i = 0; i < inst->entity_set.entities.len; i++) {
+        const Entity &ent = inst->entity_set.entities[i];
+        entities_map.Append(ent.id, i);
+    }
+
     for (Size i = 0; i < values_df.nrow(); i++) {
         Entity *entity;
         {
-            Size idx = inst->entities_map.FindValue(values.entity[i], -1);
+            Size idx = entities_map.FindValue(values.entity[i], -1);
             if (idx == -1) {
                 entity = inst->entity_set.entities.AppendDefault();
                 entity->id = DuplicateString(&inst->entity_set.str_alloc, values.entity[i]).ptr;
 
-                inst->entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
+                entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
             } else {
                 entity = &inst->entity_set.entities[idx];
             }
