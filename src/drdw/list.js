@@ -230,7 +230,7 @@ var list = {};
 
         // Refresh view
         addClass(__('.ls_pages, .ls_table'), 'hide');
-        if (route.list)
+        if (route.list && Lists[route.list])
             _('#ls_' + route.list).classList.remove('hide');
         if (!downloadJson.busy) {
             refreshHeader(route.spec, route.search, Array.from(errors));
