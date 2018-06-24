@@ -1,16 +1,19 @@
 var list = {};
 (function() {
-    // Cache
-    var indexes = [];
-    var list_url = null;
-    var items = {};
-    var collapse_nodes = new Set();
+    const PageLen = 1000;
+
+    // Routes
     var specs = {};
     var sort = {};
     var search = {};
     var pages = {};
 
-    const Tables = {
+    // Cache
+    var indexes = [];
+    var list_cache = {};
+    var collapse_nodes = new Set();
+
+    const Lists = {
         'classifier_tree': {},
 
         'ghm_roots': {
@@ -18,7 +21,14 @@ var list = {};
             'concepts': 'ghm_roots',
 
             'sort': [
-                {type: 'ghm_roots', name: 'Racines'},
+                {type: 'ghm_roots', name: 'Racines',
+                 func: function(ghm_ghs1, ghm_ghs2) {
+                    if (ghm_ghs1.ghm_root !== ghm_ghs2.ghm_root) {
+                        return (ghm_ghs1.ghm_root < ghm_ghs2.ghm_root) ? -1 : 1;
+                    } else {
+                        return 0;
+                    }
+                 }},
                 {type: 'da', name: 'Domaines d\'activité',
                  func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
                     let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
@@ -186,25 +196,25 @@ var list = {};
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        if (main_index >= 0 && Tables[route.list])
-            updateTable(route.list, main_index, route.spec);
         let sort_info = null;
-        if (Tables[route.list] && Tables[route.list].sort) {
+        if (Lists[route.list] && Lists[route.list].sort) {
             if (route.sort) {
-                sort_info = Tables[route.list].sort.find(function(sort_info) {
+                sort_info = Lists[route.list].sort.find(function(sort_info) {
                     return sort_info.type == route.sort;
                 });
             } else {
-                sort_info = Tables[route.list].sort[0];
+                sort_info = Lists[route.list].sort[0];
             }
         }
+        if (main_index >= 0 && Lists[route.list])
+            updateList(route.list, main_index, route.spec, sort_info, route.search);
 
         // Errors
-        if (!Tables[route.list])
+        if (!Lists[route.list])
             errors.add('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
-        if (route.sort && Tables[route.list] && !sort_info)
+        if (route.sort && Lists[route.list] && !sort_info)
             errors.add('Critère de tri inconnu');
 
         // Refresh settings
@@ -216,9 +226,9 @@ var list = {};
             if (route.search != search_input.value)
                 search_input.value = route.search || '';
         }
-        if (Tables[route.list] && Tables[route.list].sort !== undefined) {
+        if (Lists[route.list] && Lists[route.list].sort !== undefined) {
             _('#opt_sort').classList.remove('hide');
-            refreshSortList(Tables[route.list], route.sort);
+            refreshSortList(Lists[route.list], route.sort);
         }
 
         // Refresh view
@@ -232,11 +242,11 @@ var list = {};
 
             if (route.list === 'classifier_tree') {
                 refreshClassifierTree(route.date, items, hash);
-            } else if (Tables[route.list]) {
-                var table_info = Tables[route.list];
-                refreshTable(_('#ls_' + route.list), items, route.list, table_info,
-                             table_info.concepts ? getConcepts(table_info.concepts)[1] : null,
-                             sort_info, route.search, route.page);
+            } else if (Lists[route.list]) {
+                var list_info = Lists[route.list];
+                refreshTable(_('#ls_' + route.list), route.list,
+                             list_info.concepts ? getConcepts(list_info.concepts)[1] : null,
+                             route.page);
             } else {
                 _('.ls_table').classList.add('hide');
             }
@@ -268,8 +278,8 @@ var list = {};
             query.push('search=' + encodeURI(new_route.search));
         if (new_route.page && new_route.page !== 1)
             query.push('page=' + encodeURI(new_route.page));
-        if (new_route.sort && (!Tables[new_route.list] || !Tables[new_route.list].sort ||
-                               new_route.sort !== Tables[new_route.list].sort[0].type))
+        if (new_route.sort && (!Lists[new_route.list] || !Lists[new_route.list].sort ||
+                               new_route.sort !== Lists[new_route.list].sort[0].type))
             query.push('sort=' + encodeURI(new_route.sort));
         if (query.length)
             url += '?' + query.join('&');
@@ -284,19 +294,107 @@ var list = {};
     }
     this.route = route;
 
-    function updateTable(list, index, spec)
+    function updateList(list_name, index, spec, sort_info, search)
     {
-        let url = buildUrl(BaseUrl + 'api/' + (Tables[list].table || list) + '.json',
+        let url = buildUrl(BaseUrl + 'api/' + (Lists[list_name].table || list_name) + '.json',
                            {date: indexes[index].begin_date, spec: spec});
-        if (url === list_url)
-            return;
+        let list = list_cache[list_name];
 
-        items = [];
-        if (Tables[list].concepts)
-            getConcepts(Tables[list].concepts);
-        downloadJson(url, function(json) {
-            items = json;
-            list_url = url;
+        if (!list || url !== list.url) {
+            if (Lists[list_name].concepts)
+                getConcepts(Lists[list_name].concepts);
+
+            downloadJson(url, function(json) {
+                list_cache[list_name] = {
+                    url: url, items: json,
+                    init: false, cells: [], offsets: []
+                };
+            });
+        } else if (!list.init || sort_info !== list.sort_info || search !== list.search) {
+            if (search)
+                search = simplifyForSearch(search);
+
+            let list_info = Lists[list_name];
+            let columns = list_info.columns;
+            let concepts_map = undefined;
+            if (list_info.concepts)
+                concepts_map = getConcepts(list_info.concepts)[1];
+
+            // Sort
+            if (sort_info) {
+                list.items.sort(function(v1, v2) { return sort_info.func(v1, v2, concepts_map); });
+                list.sort = sort_info.type;
+            }
+
+            // Filter
+            list.cells = [];
+            list.match_count = 0;
+            {
+                let prev_deduplicate_key = null;
+                for (let i = 0; i < list.items.length; i++) {
+                    if (list_info.deduplicate) {
+                        let deduplicate_key = list_info.deduplicate(list.items[i], concepts_map);
+                        if (deduplicate_key === prev_deduplicate_key)
+                            continue;
+                        prev_deduplicate_key = deduplicate_key;
+                    }
+
+                    let show = false;
+                    let prev_length = list.cells.length;
+                    for (var j = 0; j < columns.length; j++) {
+                        let content = createContent(columns[j], list.items[i], concepts_map,
+                                                    sort_info ? sort_info.type : null);
+                        if (!search || simplifyForSearch(content).indexOf(search) >= 0)
+                            show = true;
+                        list.cells.push(content);
+                    }
+
+                    if (show) {
+                        if (list.match_count % PageLen === 0)
+                            list.offsets.push(prev_length);
+                        list.match_count++;
+                    } else {
+                        list.cells.splice(prev_length);
+                    }
+                }
+            }
+
+            list.init = true;
+            list.sort_info = sort_info;
+            list.search = search;
+        }
+    }
+
+    function createContent(column, item, concepts_map, sort_type)
+    {
+        if (column.variable) {
+            var content = item[column.variable];
+        } else if (column.func) {
+            var content = column.func(item, concepts_map, sort_type);
+        }
+
+        if (content === undefined || content === null) {
+            content = '';
+        } else if (Array.isArray(content)) {
+            content = content.join(', ');
+        }
+
+        return '' + content;
+    }
+
+    function simplifyForSearch(str)
+    {
+        return str.toLowerCase().replace(/[êéèàâïùœ]/g, function(c) {
+            switch (c) {
+                case 'ê': return 'e';
+                case 'é': return 'e';
+                case 'è': return 'e';
+                case 'à': return 'a';
+                case 'â': return 'a';
+                case 'ï': return 'i';
+                case 'ù': return 'u';
+                case 'œ': return 'oe';
+            }
         });
     }
 
@@ -321,13 +419,13 @@ var list = {};
         }
     }
 
-    function refreshSortList(table_info, select_sort)
+    function refreshSortList(list_info, select_sort)
     {
         var el = _('#opt_sort > select');
         el.innerHTML = '';
 
-        for (let i = 0; i < table_info.sort.length; i++) {
-            let sort_info = table_info.sort[i];
+        for (let i = 0; i < list_info.sort.length; i++) {
+            let sort_info = list_info.sort[i];
             let opt = createElement('option', {value: sort_info.type}, sort_info.name);
             el.appendChild(opt);
         }
@@ -497,22 +595,8 @@ var list = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function refreshTable(old_table, items, list_name, table_info, concepts_map,
-                          sort_info, search, page)
+    function refreshTable(old_table, list_name, concepts_map, page)
     {
-        if (search)
-            search = simplifyForSearch(search);
-
-        const PageLen = 1000;
-
-        if (page) {
-            var from = (page - 1) * PageLen;
-            var max_visible = PageLen;
-        } else {
-            var from = 0;
-            var max_visible = items.length;
-        }
-
         var table = createElement('table', {},
             createElement('thead'),
             createElement('tbody')
@@ -522,83 +606,15 @@ var list = {};
 
         var pages = createElement('div');
 
-        let columns = table_info.columns;
-
-        function createContent(column, item)
-        {
-            if (column.variable) {
-                var content = item[column.variable];
-            } else if (column.func) {
-                var content = column.func(item, concepts_map, sort_info ? sort_info.type : null);
-            }
-
-            if (content === undefined || content === null) {
-                content = '';
-            } else if (Array.isArray(content)) {
-                content = content.join(', ');
-            }
-
-            return '' + content;
-        }
-
-        function simplifyForSearch(str)
-        {
-            return str.toLowerCase().replace(/[êéèàâïùœ]/g, function(c) {
-                switch (c) {
-                    case 'ê': return 'e';
-                    case 'é': return 'e';
-                    case 'è': return 'e';
-                    case 'à': return 'a';
-                    case 'â': return 'a';
-                    case 'ï': return 'i';
-                    case 'ù': return 'u';
-                    case 'œ': return 'oe';
-                }
-            });
-        }
-
-        // Sort
-        if (sort_info && sort_info.func) {
-            items = items.slice(0).sort(function(v1, v2) {
-                return sort_info.func(v1, v2, concepts_map);
-            });
-        }
-
-        // Search
-        let contents = [];
-        let match_count = 0;
-        let visible_count = 0;
-        {
-            let prev_deduplicate_key = null;
-            for (let i = 0; i < items.length; i++) {
-                if (table_info.deduplicate) {
-                    let deduplicate_key = table_info.deduplicate(items[i], concepts_map);
-                    if (deduplicate_key === prev_deduplicate_key)
-                        continue;
-                    prev_deduplicate_key = deduplicate_key;
-                }
-
-                let show = false;
-                let prev_length = contents.length;
-                for (var j = 0; j < columns.length; j++) {
-                    let content = createContent(columns[j], items[i]);
-                    if (!search || simplifyForSearch(content).indexOf(search) >= 0)
-                        show = true;
-                    contents.push(content);
-                }
-
-                match_count += show;
-                if (show && match_count >= from && visible_count < max_visible) {
-                    visible_count++;
-                } else {
-                    contents.splice(prev_length);
-                }
-            }
-        }
+        let list_info = Lists[list_name];
+        let columns = list_info.columns;
+        let list = list_cache[list_name];
+        let cells = list.cells;
+        let offset = list.offsets[page - 1];
 
         // Pagination
-        if (visible_count != match_count) {
-            let last_page = (match_count / PageLen) + 1;
+        if (offset || list.match_count > PageLen) {
+            let last_page = (list.match_count / PageLen) + 1;
             let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
 
@@ -622,14 +638,14 @@ var list = {};
         }
 
         // Table
-        if (visible_count) {
+        {
             var tr = createElement('tr');
 
             var first_column = 0;
             if (!columns[0].header)
                 first_column = 1;
 
-            if (table_info.header === undefined || table_info.header) {
+            if (list_info.header === undefined || list_info.header) {
                 for (var i = first_column; i < columns.length; i++) {
                     var th = createElement('th', {title: columns[i].title ? columns[i].title : columns[i].header,
                                                   style: columns[i].style},
@@ -640,9 +656,10 @@ var list = {};
             }
 
             var prev_heading_content = null;
-            for (var i = 0; i < visible_count; i++) {
+            let end = Math.min(offset + PageLen * columns.length, list.cells.length);
+            for (var i = offset; i < end; i += columns.length) {
                 if (!columns[0].header) {
-                    let content = contents[i * columns.length];
+                    let content = cells[i];
                     if (content && content !== prev_heading_content) {
                         var tr = createElement('tr', {class: 'heading'},
                             createElement('td', {colspan: columns.length - 1,
@@ -655,7 +672,7 @@ var list = {};
 
                 var tr = createElement('tr');
                 for (var j = first_column; j < columns.length; j++) {
-                    let content = contents[i * columns.length + j];
+                    let content = cells[i + j];
                     let td = createElement('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
                 }
@@ -667,7 +684,7 @@ var list = {};
         for (let i = 0; i < old_pages.length; i++) {
             let pages_copy = pages.cloneNode(true);
             cloneAttributes(old_pages[i], pages_copy);
-            pages_copy.classList.toggle('hide', visible_count == match_count);
+            pages_copy.classList.toggle('hide', list.visible_count === list.match_count);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
