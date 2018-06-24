@@ -96,7 +96,7 @@ var pricing = {};
     }
     this.run = run;
 
-    function buildUrl(args)
+    function routeToUrl(args)
     {
         let new_route = buildRoute(args);
 
@@ -110,11 +110,11 @@ var pricing = {};
 
         return url;
     }
-    this.buildUrl = buildUrl;
+    this.routeToUrl = routeToUrl;
 
     function route(args)
     {
-        go(buildUrl(args));
+        go(routeToUrl(args));
     }
     this.route = route;
 
@@ -140,8 +140,9 @@ var pricing = {};
         if (indexes[index].init)
             return;
 
-        var begin_date = indexes[index].begin_date;
-        downloadJson(BaseUrl + 'api/ghm_ghs.json', {date: begin_date}, function(json) {
+        let begin_date = indexes[index].begin_date;
+        let url = buildUrl(BaseUrl + 'api/ghm_ghs.json', {date: begin_date});
+        downloadJson(url, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var ghm_root = json[i].ghm_root;
                 var ghm_ghs = json[i];

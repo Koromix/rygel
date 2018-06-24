@@ -1,7 +1,7 @@
 const BaseUrl = '/';
 
 // ------------------------------------------------------------------------
-// Utility
+// DOM
 // ------------------------------------------------------------------------
 
 function addClass(elements, cls)
@@ -94,24 +94,65 @@ function __(selector)
 }
 
 // ------------------------------------------------------------------------
+// URL
+// ------------------------------------------------------------------------
+
+function parseUrl(url)
+{
+    var a = document.createElement('a');
+    a.href = url;
+
+    return {
+        source: url,
+        href: a.href,
+        origin: a.origin,
+        protocol: a.protocol.replace(':', ''),
+        host: a.hostname,
+        port: a.port,
+        query: a.search,
+        params: (function(){
+            var ret = {};
+            var seg = a.search.replace(/^\?/, '').split('&');
+            var len = seg.length;
+            var s;
+            for (var i = 0; i < len; i++) {
+                if (!seg[i])
+                    continue;
+                s = seg[i].split('=');
+                ret[s[0]] = decodeURI(s[1]);
+            }
+            return ret;
+        })(),
+        hash: a.hash.replace('#', ''),
+        path: a.pathname.replace(/^([^/])/, '/$1')
+    };
+}
+
+function buildUrl(url, query_values)
+{
+    if (query_values === undefined)
+        query_values = {};
+
+    let query_fragments = [];
+    for (k in query_values) {
+        let value = query_values[k];
+        if (value !== null && value !== undefined) {
+            let arg = escape(k) + '=' + escape(value);
+            query_fragments.push(arg);
+        }
+    }
+    if (query_fragments)
+        url += '?' + query_fragments.sort().join('&');
+
+    return url;
+}
+
+// ------------------------------------------------------------------------
 // JSON
 // ------------------------------------------------------------------------
 
-function downloadJson(url, arguments, func)
+function downloadJson(url, func)
 {
-    var keys = Object.keys(arguments);
-    if (keys.length) {
-        var query_arguments = [];
-        for (var i = 0; i < keys.length; i++) {
-            var value = arguments[keys[i]];
-            if (value !== null && value !== undefined) {
-                var arg = escape(keys[i]) + '=' + escape(arguments[keys[i]]);
-                query_arguments.push(arg);
-            }
-        }
-        url += '?' + query_arguments.sort().join('&');
-    }
-
     if (downloadJson.queue.has(url))
         return;
     downloadJson.queue.add(url);
@@ -215,37 +256,6 @@ function buildModuleUrl(module_name)
     return BaseUrl + module_name;
 }
 
-function parseUrl(url)
-{
-    var a = document.createElement('a');
-    a.href = url;
-
-    return {
-        source: url,
-        href: a.href,
-        origin: a.origin,
-        protocol: a.protocol.replace(':', ''),
-        host: a.hostname,
-        port: a.port,
-        query: a.search,
-        params: (function(){
-            var ret = {};
-            var seg = a.search.replace(/^\?/, '').split('&');
-            var len = seg.length;
-            var s;
-            for (var i = 0; i < len; i++) {
-                if (!seg[i])
-                    continue;
-                s = seg[i].split('=');
-                ret[s[0]] = decodeURI(s[1]);
-            }
-            return ret;
-        })(),
-        hash: a.hash.replace('#', ''),
-        path: a.pathname.replace(/^([^/])/, '/$1')
-    };
-}
-
 var go_timer_id = null;
 function go(new_url, mark_history, delay)
 {
@@ -292,7 +302,7 @@ function go(new_url, mark_history, delay)
         module.run(route, app_url, url_parts.params, url_parts.hash);
 
     // Update URL to reflect real state (module may have set default values, etc.)
-    let real_url = module.buildUrl({});
+    let real_url = module.routeToUrl({});
     window.history.replaceState(null, null, real_url);
     route_url_parts = parseUrl(real_url);
     route_url = real_url.substr(BaseUrl.length);
@@ -363,7 +373,7 @@ function getIndexes()
     var indexes = getIndexes.indexes;
 
     if (!indexes.length) {
-        downloadJson(BaseUrl + 'api/indexes.json', {}, function(json) {
+        downloadJson(BaseUrl + 'api/indexes.json', function(json) {
             if (json.length > 0) {
                 indexes = json;
                 for (var i = 0; i < indexes.length; i++)
@@ -483,7 +493,7 @@ function getConcepts(name)
     var set = sets[name];
 
     if (!set.concepts.length) {
-        downloadJson(BaseUrl + 'concepts/' + name + '.json', {}, function(json) {
+        downloadJson(BaseUrl + 'concepts/' + name + '.json', function(json) {
             set.concepts = json;
             set.map = {};
             for (var i = 0; i < json.length; i++) {

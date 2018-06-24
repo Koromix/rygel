@@ -86,7 +86,7 @@ var casemix = {};
     }
     this.run = run;
 
-    function buildUrl(args)
+    function routeToUrl(args)
     {
         const KeepKeys = [
             'date',
@@ -112,11 +112,11 @@ var casemix = {};
 
         return url;
     }
-    this.buildUrl = buildUrl;
+    this.routeToUrl = routeToUrl;
 
     function route(args, delay)
     {
-        go(buildUrl(args), true, delay);
+        go(routeToUrl(args), true, delay);
     }
     this.route = route;
 
@@ -139,7 +139,8 @@ var casemix = {};
         mix_ghm_roots_map = {};
         mix_price_density_max = 0;
 
-        downloadJson(BaseUrl + 'api/casemix.json', params, function(json) {
+        let url = buildUrl(BaseUrl + 'api/casemix.json', params);
+        downloadJson(url, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
                 var ghm_root = json[i].ghm.substr(0, 5);
@@ -258,7 +259,7 @@ var casemix = {};
                 }
 
                 var td = createElement('td', {style: td_style},
-                    stays_count ? createElement('a', {href: buildUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
+                    stays_count ? createElement('a', {href: routeToUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
                                 : valid_cmds[i]
                 );
                 tr.appendChild(td);
@@ -326,8 +327,8 @@ var casemix = {};
                         tr.appendChild(createElement('td', {'style': 'border-right: 0; text-align: left;'},
                                                      ghm_root_info.stays_count ? '' + ghm_root_info.stays_count : ''));
                         tr.appendChild(createElement('td', {'style': ' border-left: 0; border-right: 0; text-align: center;'},
-                            createElement('a', {href: buildUrl({cm_view: 'ghm_root',
-                                                                ghm_root: ghm_root_info.ghm_root})},
+                            createElement('a', {href: routeToUrl({cm_view: 'ghm_root',
+                                                                  ghm_root: ghm_root_info.ghm_root})},
                                           ghm_root_info.ghm_root)
                         ));
                         tr.appendChild(createElement('td', {'style': 'border-left: 0; text-align: right;'},

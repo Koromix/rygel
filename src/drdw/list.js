@@ -251,7 +251,7 @@ var list = {};
     }
     this.run = run;
 
-    function buildUrl(args)
+    function routeToUrl(args)
     {
         let new_route = buildRoute(args);
         if (args.spec === undefined)
@@ -281,11 +281,11 @@ var list = {};
 
         return url;
     }
-    this.buildUrl = buildUrl;
+    this.routeToUrl = routeToUrl;
 
     function route(args, delay)
     {
-        go(buildUrl(args), true, delay);
+        go(routeToUrl(args), true, delay);
     }
     this.route = route;
 
@@ -296,9 +296,10 @@ var list = {};
 
         if (Tables[list].concepts)
             getConcepts(Tables[list].concepts);
-        let api = Tables[list].table || list;
-        downloadJson(BaseUrl + 'api/' + api + '.json', {date: indexes[index].begin_date, spec: spec},
-                     function(json) {
+
+        let url = buildUrl(BaseUrl + 'api/' + (Tables[list].table || list) + '.json',
+                           {date: indexes[index].begin_date, spec: spec});
+        downloadJson(url, function(json) {
             items = json;
 
             table_type = list;
@@ -321,7 +322,7 @@ var list = {};
         if (spec) {
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(createElement('a', {href: buildUrl({spec: null})}, '(retirer)'));
+            h1.appendChild(createElement('a', {href: routeToUrl({spec: null})}, '(retirer)'));
             h1.classList.remove('hide');
         } else {
             h1.innerText = '';
@@ -610,14 +611,14 @@ var list = {};
             let next_page = (page + 1 < last_page) ? (page + 1) : 1;
 
             pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
-                                                  href: buildUrl({page: prev_page})}, '≪'));
+                                                  href: routeToUrl({page: prev_page})}, '≪'));
 
             for (let i = 1; i < last_page; i++) {
                 if (i > 1)
                     pages.appendChild(document.createTextNode(' - '));
 
                 if (page !== i) {
-                    let anchor = createElement('a', {href: buildUrl({page: i})}, '' + i);
+                    let anchor = createElement('a', {href: routeToUrl({page: i})}, '' + i);
                     pages.appendChild(anchor);
                 } else {
                     pages.appendChild(document.createTextNode(i));
@@ -625,7 +626,7 @@ var list = {};
             }
 
             pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
-                                                  href: buildUrl({page: next_page})}, '≫'));
+                                                  href: routeToUrl({page: next_page})}, '≫'));
         }
 
         // Table
@@ -718,14 +719,14 @@ var list = {};
         let url = null;
         let cls = null;
         if (str[0] === 'A') {
-            url = buildUrl({list: 'procedures', spec: str});
+            url = routeToUrl({list: 'procedures', spec: str});
         } else if (str[0] === 'D') {
-            url = buildUrl({list: 'diagnoses', spec: str});
+            url = routeToUrl({list: 'diagnoses', spec: str});
         } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            url = pricing.buildUrl({view: 'table', ghm_root: str.substr(0, 5)});
+            url = pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
             cls = 'ghm';
         } else if (str.match(/noeud [0-9]+/)) {
-            url = buildUrl({list: 'classifier_tree'}) + '#n' + str.substr(6);
+            url = routeToUrl({list: 'classifier_tree'}) + '#n' + str.substr(6);
         } else {
             return str;
         }

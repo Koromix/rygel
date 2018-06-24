@@ -25,20 +25,20 @@
             <nav id="side_menu">
                 <img id="logo" src="/static/logo.png" alt="drdw logo"/>
                 <ul>
-                    <li><a class="category" data-url="list.buildUrl({list: 'ghm_roots'});">Tarifs</a></li>
-                    <li><a data-url="list.buildUrl({list: 'ghm_roots'});">Racines de GHM</a></li>
-                    <li><a data-url="pricing.buildUrl({view: 'table'});">Grille</a></li>
-                    <li><a data-url="pricing.buildUrl({view: 'chart'});">Courbes</a></li>
+                    <li><a class="category" data-url="list.routeToUrl({list: 'ghm_roots'});">Tarifs</a></li>
+                    <li><a data-url="list.routeToUrl({list: 'ghm_roots'});">Racines de GHM</a></li>
+                    <li><a data-url="pricing.routeToUrl({view: 'table'});">Grille</a></li>
+                    <li><a data-url="pricing.routeToUrl({view: 'chart'});">Courbes</a></li>
 
-                    <li><a class="category" data-url="list.buildUrl({list: 'classifier_tree'});">Listes</a></li>
-                    <li><a data-url="list.buildUrl({list: 'classifier_tree'});">Arbre de groupage</a></li>
-                    <li><a data-url="list.buildUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
-                    <li><a data-url="list.buildUrl({list: 'diagnoses'});">Diagnostics</a></li>
-                    <li><a data-url="list.buildUrl({list: 'procedures'});">Actes</a></li>
+                    <li><a class="category" data-url="list.routeToUrl({list: 'classifier_tree'});">Listes</a></li>
+                    <li><a data-url="list.routeToUrl({list: 'classifier_tree'});">Arbre de groupage</a></li>
+                    <li><a data-url="list.routeToUrl({list: 'ghm_ghs'});">GHM / GHS</a></li>
+                    <li><a data-url="list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
+                    <li><a data-url="list.routeToUrl({list: 'procedures'});">Actes</a></li>
 
-                    <li><a class="category" data-url="casemix.buildUrl({cm_view: 'global'});">Activité</a></li>
-                    <li><a data-url="casemix.buildUrl({cm_view: 'global'});">Globale</a></li>
-                    <li><a data-url="casemix.buildUrl({cm_view: 'ghm_root'});">Racine de GHM</a></li>
+                    <li><a class="category" data-url="casemix.routeToUrl({cm_view: 'global'});">Activité</a></li>
+                    <li><a data-url="casemix.routeToUrl({cm_view: 'global'});">Globale</a></li>
+                    <li><a data-url="casemix.routeToUrl({cm_view: 'ghm_root'});">Racine de GHM</a></li>
                 </ul>
             </nav>
         </div>
