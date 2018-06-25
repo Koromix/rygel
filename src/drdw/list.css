@@ -4,9 +4,14 @@
 }
 
 .ls_pages {
-    padding: 0.5em 1em 0.5em 1em;
+    margin: 0.5em auto;
     text-align: center;
     font-size: 1.1em;
+    table-layout: fixed;
+}
+.ls_pages td {
+    width: 28px;
+    vertical-align: bottom;
 }
 
 .ls_table {

@@ -397,15 +397,9 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
 
     var old_g = el.querySelector('g');
     if (!old_g) {
-        el.appendChild(createElementNS('svg', 'text',
-                                       {x: 0, y: 25, 'text-anchor': 'start',
-                                        style: 'cursor: pointer; font-size: 1.5em;'}, '≪'));
         el.appendChild(createElementNS('svg', 'line',
-                                       {x1: '6%', y1: 20, x2: '94%', y2: 20, style: 'stroke: #888; stroke-width: 1;'}));
+                                       {x1: '2%', y1: 20, x2: '98%', y2: 20, style: 'stroke: #888; stroke-width: 1;'}));
         el.appendChild(createElementNS('svg', 'g'));
-        el.appendChild(createElementNS('svg', 'text',
-                                       {x: '100%', y: 25, 'text-anchor': 'end',
-                                        style: 'cursor: pointer; font-size: 1.5em;'}, '≫'));
 
         old_g = el.querySelector('g');
     }
@@ -421,7 +415,7 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
         for (var i = 0; i < indexes.length; i++) {
             var date = new Date(indexes[i].begin_date);
 
-            var x = (9.0 + (date - first_date) / max_delta * 82.0).toFixed(1) + '%';
+            var x = (6.0 + (date - first_date) / max_delta * 88.0).toFixed(1) + '%';
             var radius = indexes[i].changed_prices ? 5 : 4;
             if (i == main_index) {
                 radius++;

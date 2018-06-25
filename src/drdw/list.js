@@ -1,6 +1,6 @@
 var list = {};
 (function() {
-    const PageLen = 1000;
+    const PageLen = 200;
 
     // Routes
     var specs = {};
@@ -458,27 +458,8 @@ var list = {};
 
             // Pagination
             if (list.match_count && (list.match_count > PageLen || offset)) {
-                let last_page = (list.match_count / PageLen) + 1;
-                let prev_page = (page - 1 >= 1) ? (page - 1) : last_page;
-                let next_page = (page + 1 < last_page) ? (page + 1) : 1;
-
-                pages.appendChild(createElement('a', {style: 'margin-right: 1em;',
-                                                      href: routeToUrl({page: prev_page})}, '≪'));
-
-                for (let i = 1; i < last_page; i++) {
-                    if (i > 1)
-                        pages.appendChild(document.createTextNode(' - '));
-
-                    if (page !== i) {
-                        let anchor = createElement('a', {href: routeToUrl({page: i})}, '' + i);
-                        pages.appendChild(anchor);
-                    } else {
-                        pages.appendChild(document.createTextNode(i));
-                    }
-                }
-
-                pages.appendChild(createElement('a', {style: 'margin-left: 1em;',
-                                                      href: routeToUrl({page: next_page})}, '≫'));
+                let last_page = Math.floor((list.match_count / PageLen) + 1);
+                pages = createPagination(page, last_page);
             }
 
             let first_column = 0;
@@ -543,6 +524,52 @@ var list = {};
 
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
+    }
+
+    function createPagination(page, last_page)
+    {
+        let pages = createElement('table', {},
+            createElement('tr')
+        );
+        let tr = pages.querySelector('tr');
+
+        function addPageLink(text, page)
+        {
+            if (page) {
+                tr.appendChild(createElement('td', {},
+                    createElement('a', {href: routeToUrl({page: page})}, '' + text)
+                ));
+            } else {
+                tr.appendChild(createElement('td', {}, '' + text));
+            }
+        }
+
+        let start_page, end_page;
+        if (last_page < 5 || page < 5) {
+            start_page = 1;
+            end_page = Math.min(5, last_page);
+        } else if (page > last_page - 4) {
+            start_page = last_page - 4;
+            end_page = last_page;
+        } else {
+            start_page = page - 1;
+            end_page = page + 1;
+        }
+
+        addPageLink('≪', (page > 1) ? (page - 1) : null);
+        if (start_page > 1) {
+            addPageLink(1, 1);
+            addPageLink(' … ');
+        }
+        for (let i = start_page; i <= end_page; i++)
+            addPageLink(i, (page !== i) ? i : null);
+        if (end_page < last_page) {
+            addPageLink(' … ');
+            addPageLink(last_page, last_page);
+        }
+        addPageLink('≫', (page < last_page) ? (page + 1) : null);
+
+        return pages;
     }
 
     function maskToRanges(mask)
