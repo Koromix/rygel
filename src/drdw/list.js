@@ -448,7 +448,7 @@ var list = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
-        var pages = createElement('div');
+        var pages = createElement('table');
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
