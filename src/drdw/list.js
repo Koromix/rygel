@@ -453,6 +453,7 @@ var list = {};
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
 
+        let visible_count = 0;
         if (list.url) {
             let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
@@ -479,7 +480,6 @@ var list = {};
             }
 
             // Data
-            let visible_count = 0;
             let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
             let prev_heading_content = null;
             for (var i = offset; i < end; i += list_info.columns.length) {
@@ -521,6 +521,10 @@ var list = {};
             pages_copy.classList.toggle('hide', !pages.children.length);
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
+
+        _('#ls_stats').innerText = '' + ((page - 1) * PageLen) + ' - ' +
+                                   ((page - 1) * PageLen + visible_count) +
+                                   ' (' + list.match_count + ' lignes)';
 
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);

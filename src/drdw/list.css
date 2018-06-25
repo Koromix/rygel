@@ -14,6 +14,13 @@
     vertical-align: bottom;
 }
 
+#ls_stats {
+    margin: 3px;
+    font-size: 0.9em;
+    font-style: italic;
+    color: #777;
+}
+
 .ls_table {
     width: 100%;
     border-collapse: collapse;
