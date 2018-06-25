@@ -458,7 +458,7 @@ var list = {};
 
             // Pagination
             if (list.match_count && (list.match_count > PageLen || offset)) {
-                let last_page = Math.floor((list.match_count / PageLen) + 1);
+                let last_page = Math.floor((list.match_count - 1) / PageLen + 1);
                 pages = createPagination(page, last_page);
             }
 
