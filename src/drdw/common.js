@@ -291,13 +291,13 @@ function go(new_url, mark_history, delay)
         }
     }
 
-    // Hide all module-specific views
-    addClass(__('main > div'), 'hide');
-    addClass(__('#opt_menu > *'), 'hide');
-
     // Find relevant module and run
-    var module_name = app_url.split('/')[0];
-    module = window[module_name];
+    let new_module_name = app_url.split('/')[0];
+    let new_module = window[new_module_name];
+    if (new_module != module)
+        addClass(__('main > div'), 'hide');
+    addClass(__('#opt_menu > *'), 'hide');
+    module = new_module;
     if (module !== undefined && module.run !== undefined)
         module.run(route, app_url, url_parts.params, url_parts.hash);
 
