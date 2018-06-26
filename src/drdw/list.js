@@ -553,9 +553,12 @@ var list = {};
         }
 
         let start_page, end_page;
-        if (last_page < 5 || page < 5) {
+        if (last_page < 8) {
             start_page = 1;
-            end_page = Math.min(5, last_page);
+            end_page = last_page;
+        } else if (page < 5) {
+            start_page = 1;
+            end_page = 5;
         } else if (page > last_page - 4) {
             start_page = last_page - 4;
             end_page = last_page;
