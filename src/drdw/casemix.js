@@ -63,9 +63,6 @@ var casemix = {};
         _('#opt_algorithm').value = route.cm_mode;
 
         // Refresh view
-        _('#cm_cmds').classList.toggle('hide', route.cm_view !== 'global');
-        _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
-        _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
         if (!downloadJson.busy) {
             refreshErrors(Array.from(errors));
             downloadJson.errors = [];
@@ -80,8 +77,12 @@ var casemix = {};
                                    main_index, diff_index, route.ghm_root);
                 } break;
             }
+
+            _('#cm_cmds').classList.toggle('hide', route.cm_view !== 'global');
+            _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
+            _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
+            _('#cm').classList.remove('hide');
         }
-        _('#cm').classList.remove('hide');
         markBusy('#cm', downloadJson.busy);
     }
     this.run = run;

@@ -36,8 +36,9 @@ var tree = {};
             downloadJson.errors = [];
 
             refreshTree(route.date, nodes, hash);
+
+            _('#tr').classList.remove('hide');
         }
-        _('#tr').classList.remove('hide');
         markBusy('#tr', downloadJson.busy);
     }
     this.run = run;

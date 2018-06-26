@@ -69,8 +69,6 @@ var pricing = {};
         _('#opt_apply_coefficient').checked = route.apply_coefficient;
 
         // Refresh view
-        _('#pr_table').classList.toggle('hide', route.view !== 'table');
-        _('#pr_chart').classList.toggle('hide', route.view !== 'chart');
         if (!downloadJson.busy) {
             refreshErrors(Array.from(errors));
             downloadJson.errors = [];
@@ -90,8 +88,11 @@ var pricing = {};
                                          diff_index, max_duration, route.apply_coefficient);
                 } break;
             }
+
+            _('#pr_table').classList.toggle('hide', route.view !== 'table');
+            _('#pr_chart').classList.toggle('hide', route.view !== 'chart');
+            _('#pr').classList.remove('hide');
         }
-        _('#pr').classList.remove('hide');
         markBusy('#pr', downloadJson.busy);
     }
     this.run = run;

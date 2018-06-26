@@ -230,16 +230,12 @@ var list = {};
 
         // Refresh view
         let list_table = _('#ls_' + route.list);
-        {
-            let list_tables = __('.ls_table');
-            for (let i = 0; i < list_tables.length; i++) {
-                if (list_tables[i] != list_table)
-                    list_tables[i].classList.add('hide');
-            }
-        }
-        if (list_table && list_table.classList.contains('hide')) {
-            _('#ls_spec').classList.add('hide');
-            addClass(__('.ls_pages'), 'hide');
+        let show_table = list_table && !list_table.classList.contains('hide');
+        addClass(__('.ls_table'), 'hide');
+        if (show_table) {
+            list_table.classList.remove('hide');
+        } else {
+            _('#ls').classList.add('hide');
         }
         if (!downloadJson.busy) {
             refreshHeader(route.spec, Array.from(errors));
@@ -252,8 +248,9 @@ var list = {};
                              list_info.concepts ? getConcepts(list_info.concepts)[1] : null,
                              route.page);
             }
+
+            _('#ls').classList.remove('hide');
         }
-        _('#ls').classList.remove('hide');
         markBusy('#ls', downloadJson.busy);
     }
     this.run = run;
