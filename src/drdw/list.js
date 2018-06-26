@@ -304,7 +304,7 @@ var list = {};
                 getConcepts(Lists[list_name].concepts);
 
             list_cache[list_name] = {
-                url: null, items: [],
+                url: null, items: [], match_count: 0,
                 init: false, cells: [], offsets: []
             };
             list = list_cache[list_name];
@@ -450,7 +450,7 @@ var list = {};
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
 
-        let visible_count = 0;
+        let stats_text = '';
         if (list.url) {
             let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
@@ -477,6 +477,7 @@ var list = {};
             }
 
             // Data
+            let visible_count = 0;
             let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
             let prev_heading_content = null;
             for (var i = offset; i < end; i += list_info.columns.length) {
@@ -509,6 +510,14 @@ var list = {};
                                   message)
                 ));
             }
+
+            if (visible_count)
+                stats_text += ((page - 1) * PageLen + 1) + ' - ' + ((page - 1) * PageLen + visible_count);
+            if (list.match_count < list.items.length) {
+                stats_text += ' (' + list.match_count + ' lignes sur ' + list.items.length + ')';
+            } else {
+                stats_text += ' (' + list.match_count + ' lignes)';
+            }
         }
 
         let old_pages = __('.ls_pages');
@@ -519,9 +528,7 @@ var list = {};
             old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
         }
 
-        _('#ls_stats').innerText = '' + ((page - 1) * PageLen) + ' - ' +
-                                   ((page - 1) * PageLen + visible_count) +
-                                   ' (' + list.match_count + ' lignes)';
+        _('#ls_stats').innerText = stats_text;
 
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
