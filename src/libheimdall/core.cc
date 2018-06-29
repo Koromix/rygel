@@ -1043,10 +1043,14 @@ static bool DrawView(InterfaceState &state,
         state.scroll_x = min_time * state.time_zoom;
     }
 
-    // Copy ImGui scroll changes
-    /*float prev_scroll_y = state.scroll_y;
-    state.scroll_x = ImGui::GetScrollX() + state.imgui_delta_x;
-    state.scroll_y = ImGui::GetScrollY() + state.imgui_delta_y;*/
+    // Sync scroll from ImGui
+    float prev_scroll_x = state.scroll_x;
+    float prev_scroll_y = state.scroll_y;
+    state.scroll_x = ImGui::GetScrollX() + state.imgui_scroll_delta_x;
+    if (prev_scroll_x < state.imgui_scroll_delta_x) {
+        state.scroll_x += prev_scroll_x - state.imgui_scroll_delta_x;
+    }
+    state.scroll_y = ImGui::GetScrollY() + (state.scroll_y < 0 ? state.scroll_y : 0);
 
     // Handle controls
     float entities_mouse_x = (state.scroll_x + (float)g_io->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
@@ -1110,53 +1114,47 @@ static bool DrawView(InterfaceState &state,
                                    state, entity_set, concept_set);
     }
 
-#if 1
-    // Scrollbar limits
+    // Inform ImGui about content size and fake scroll offsets
     {
-        /*float min_x = std::min((float)(state.minimum_x_unscaled * state.time_zoom), scroll_x);
-        float max_x = std::max((float)(state.total_width_unscaled * state.time_zoom) + state.settings.tree_width + 20.0f, scroll_x) +
-                      win->ClipRect.Max.x - 4.0f;
-
-        state.extra_scroll_left = std::max(0.0f, -min_x);
-        state.extra_scroll_right = std::max(0.0f, max_x);
-
         float width = state.settings.tree_width + 20.0f +
-                      state.extra_scroll_left + state.extra_scroll_right +
                       state.total_width_unscaled * (float)state.time_zoom;
+        float max_scroll_x = width - win->ClipRect.GetWidth();
+        width -= (state.minimum_x_unscaled * (float)state.time_zoom);
+        state.imgui_scroll_delta_x = state.minimum_x_unscaled * (float)state.time_zoom;
 
-        ImGui::SetCursorPos(ImVec2(width, state.total_height + scale_height));*/
+        float set_scroll_x;
+        if (state.scroll_x < state.imgui_scroll_delta_x) {
+            width += (state.imgui_scroll_delta_x - state.scroll_x);
+            set_scroll_x = 0.0f;
+        } else if (state.scroll_x > max_scroll_x) {
+            width += state.scroll_x - max_scroll_x;
+            set_scroll_x = state.scroll_x - state.imgui_scroll_delta_x;
+        } else {
+            set_scroll_x = state.scroll_x - state.imgui_scroll_delta_x;
+        }
 
-        state.imgui_delta_x = std::min(0.0f, state.minimum_x_unscaled * state.time_zoom);
-        state.imgui_delta_x = std::min(state.imgui_delta_x, state.scroll_x);
-        state.imgui_delta_y = std::min(0.0f, state.scroll_y);
+        float height = scale_height + state.total_height;
+        float max_scroll_y = height - win->ClipRect.GetHeight();
+        float set_scroll_y;
+        if (state.scroll_y < -1.0f) {
+            height -= state.scroll_y;
+            set_scroll_y = 0.0f;
+        } else if (state.scroll_y > max_scroll_y) {
+            height += state.scroll_y - max_scroll_y;
+            set_scroll_y = state.scroll_y;
+        } else {
+            set_scroll_y = state.scroll_y;
+        }
 
-        float width = (state.total_width_unscaled - state.minimum_x_unscaled) * (float)state.time_zoom;
-        width += std::max(state.minimum_x_unscaled * (float)state.time_zoom - state.scroll_x, 0.0f);
-
-        float height = state.total_height;
-        height += std::max(-state.scroll_y, 0.0f);
-
-        ImGui::SetCursorPos(ImVec2(state.settings.tree_width + 20.0f + width, height + scale_height));
+        ImGui::SetCursorPos(ImVec2(width, height));
+        if (state.scroll_x != prev_scroll_x) {
+            ImGui::SetScrollX(set_scroll_x);
+        }
+        if (state.scroll_y != prev_scroll_y) {
+            ImGui::SetScrollY(set_scroll_y);
+        }
     }
-#else
-    state.scroll_x_delta = std::min(state.minimum_x_unscaled * state.time_zoom, scroll_x);
-    // state.scroll_x_expand = std::max(0.0f, state.scroll_x_expand + scroll_x - state.scroll_x_delta - ImGui::GetScrollX());
-    {
-        float max_x = state.settings.tree_width + 20.0f + (state.total_width_unscaled - state.minimum_x_unscaled) * (float)state.time_zoom;
-        max_x = std::max(max_x, win->ClipRect.Max.x - 4.0f - state.scroll_x_delta);
-        //max_x = std::max(max_x, win->ClipRect.Max.x - 4.0f + state.scroll_x_expand);
-        /*float max_x = std::max(win->ClipRect.Max.x - 4.0f - state.scroll_x_delta,
-                               state.settings.tree_width + 20.0f + state.total_width_unscaled * (float)state.time_zoom);*/
-        ImGui::SetCursorPos(ImVec2(max_x, state.total_height + scale_height));
-    }
-#endif
     ImGui::ItemSize(ImVec2(0.0f, 0.0f));
-
-    // Sync scroll state
-    /*ImGui::SetScrollX(state.scroll_x + state.imgui_delta_x);
-    if (state.scroll_y != prev_scroll_y) {
-        ImGui::SetScrollY(state.scroll_y);
-    }*/
 
     return valid_frame;
 }
@@ -1288,7 +1286,8 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
                                       ImGuiWindowFlags_NoSavedSettings |
                                       ImGuiWindowFlags_NoFocusOnAppearing |
                                       ImGuiWindowFlags_HorizontalScrollbar |
-                                      ImGuiWindowFlags_AlwaysHorizontalScrollbar;
+                                      ImGuiWindowFlags_AlwaysHorizontalScrollbar |
+                                      ImGuiWindowFlags_AlwaysVerticalScrollbar;
         ImGui::SetNextWindowPos(view_pos);
         ImGui::SetNextWindowSize(view_size);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
