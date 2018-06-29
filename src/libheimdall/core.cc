@@ -560,7 +560,7 @@ static ImRect ComputeEntitySize(const InterfaceState &state, const EntitySet &en
     if (FindConceptAndAlign(ent, state.align_concepts, &align_offset)) {
         for (const Element &elmt: ent.elements) {
             min_x = std::min((float)(elmt.time - align_offset), min_x);
-            max_x = std::max((float)(elmt.time - align_offset), max_x);
+            max_x = std::max((float)(elmt.time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0) - align_offset), max_x);
 
             Span<const char> path;
             {
@@ -1035,7 +1035,7 @@ static bool DrawView(InterfaceState &state,
         for (const Entity &ent: entity_set.entities) {
             for (const Element &elmt: ent.elements) {
                 min_time = std::min(min_time, elmt.time);
-                max_time = std::max(max_time, elmt.time);
+                max_time = std::max(max_time + (elmt.type == Element::Type::Period ? elmt.u.period.duration : 0), elmt.time);
             }
         }
 
