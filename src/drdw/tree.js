@@ -35,7 +35,7 @@ var tree = {};
             refreshErrors(Array.from(errors));
             downloadJson.errors = [];
 
-            refreshTree(route.date, nodes, hash);
+            refreshTree(nodes, hash);
 
             _('#tr').classList.remove('hide');
         }
@@ -85,10 +85,10 @@ var tree = {};
         }
     }
 
-    function refreshTree(date, nodes, hash)
+    function refreshTree(nodes, hash)
     {
         if (nodes.length) {
-            var ul = recurseNodes(date, 0, []);
+            var ul = recurseNodes(0, '', []);
         } else {
             var ul = createElement('ul', {});
         }
@@ -97,9 +97,9 @@ var tree = {};
         if (hash && hash.match(/^n[0-9]+$/)) {
             var el = ul.querySelector('#' + hash);
             while (el && el !== ul) {
-                if (el.tagName === 'LI') {
+                if (el.tagName === 'LI' && el.dataset.chain) {
                     el.classList.remove('collapse');
-                    collapse_nodes.delete(date + el.id);
+                    collapse_nodes.delete(el.dataset.chain);
                 }
                 el = el.parentNode;
             }
@@ -110,7 +110,7 @@ var tree = {};
         old_ul.parentNode.replaceChild(ul, old_ul);
     }
 
-    function recurseNodes(date, start_idx, parent_next_indices)
+    function recurseNodes(start_idx, chain_str, parent_next_indices)
     {
         var ul = createElement('ul');
 
@@ -141,26 +141,32 @@ var tree = {};
             if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                 // Here we deal with jump lists (mainly D-xx and D-xxxx)
                 for (var j = 1; j < node.children_count; j++) {
-                    var children = recurseNodes(date, node.children_idx + j, indices);
+                    let recurse_str = chain_str + node.key + ('0' + j).slice(-2);
 
-                    var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + (j - 1)) : node_idx;
+                    var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + j) : node_idx;
                     var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
-                    var li = createNodeLi(date, pseudo_idx, pseudo_text, children.tagName === 'UL');
+                    var children = recurseNodes(node.children_idx + j, recurse_str, indices);
+                    var li = createNodeLi(pseudo_idx, pseudo_text,
+                                          children.tagName === 'UL' ? recurse_str : null);
 
                     appendChildren(li, children);
                     ul.appendChild(li);
                 }
             } else if (node.children_count === 2 && node.reverse) {
-                var children = recurseNodes(date, node.children_idx, indices);
+                let recurse_str = chain_str + node.key;
 
-                var li = createNodeLi(date, node_idx, node.reverse, children.tagName === 'UL');
+                var children = recurseNodes(node.children_idx, recurse_str, indices);
+                var li = createNodeLi(node_idx, node.reverse,
+                                      children.tagName === 'UL' ? recurse_str  : null);
 
                 appendChildren(li, children);
                 ul.appendChild(li);
             } else if (node.children_count === 2) {
-                var children = recurseNodes(date, node.children_idx + 1, indices);
+                let recurse_str = chain_str + node.key;
 
-                var li = createNodeLi(date, node_idx, node.text, children.tagName === 'UL');
+                var children = recurseNodes(node.children_idx + 1, recurse_str, indices);
+                var li = createNodeLi(node_idx, node.text,
+                                      children.tagName === 'UL' ? recurse_str : null);
 
                 // Simplify OR GOTO chains
                 while (indices.length && nodes[indices[0]].children_count === 2 &&
@@ -168,7 +174,7 @@ var tree = {};
                        nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
                     li.appendChild(createElement('br'));
 
-                    var li2 = createNodeLi(date, indices[0], nodes[indices[0]].text, true);
+                    var li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
                     li2.children[0].id = li2.id;
                     appendChildren(li, li2.childNodes);
 
@@ -178,19 +184,23 @@ var tree = {};
                 appendChildren(li, children);
                 ul.appendChild(li);
             } else {
-                var li = createNodeLi(date, node_idx, node.text,
-                                      node.children_count && node.children_count > 1);
+                let recurse_str = chain_str + node.key;
+
+                var li = createNodeLi(node_idx, node.text,
+                                      (node.children_count && node.children_count > 1) ? recurse_str : null);
                 ul.appendChild(li);
 
                 for (var j = 1; j < node.children_count; j++) {
-                    var children = recurseNodes(date, node.children_idx + j, indices);
+                    var children = recurseNodes(node.children_idx + j, recurse_str, indices);
                     appendChildren(li, children);
                 }
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
                 if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                     if (node.children_idx != parent_next_indices[0]) {
-                        var goto_li = createNodeLi(date, '' + node_idx + '-1', 'Saut vers noeud ' + node.children_idx, false);
+                        let pseudo_idx = '' + node_idx + '-2';
+                        let pseudo_text = 'Saut vers noeud ' + node.children_idx;
+                        var goto_li = createNodeLi(pseudo_idx, pseudo_text, null);
                         ul.appendChild(goto_li);
                     }
 
@@ -210,31 +220,21 @@ var tree = {};
         return ul;
     }
 
-    function createNodeLi(date, idx, text, parent)
+    function createNodeLi(idx, text, chain_str)
     {
-        var click_function = function(e) {
-            var li = this.parentNode.parentNode;
-            var collapse_id = date + li.id;
-            if (li.classList.toggle('collapse')) {
-                collapse_nodes.add(collapse_id);
-            } else {
-                collapse_nodes.delete(collapse_id);
-            }
-            e.preventDefault();
-        };
-
         var content = list.addSpecLinks(text);
 
-        if (parent) {
+        if (chain_str) {
             var li = createElement('li', {id: 'n' + idx, class: 'parent'},
                 createElement('span', {},
                     createElement('span', {class: 'n',
-                                           click: click_function}, '' + idx + ' '),
+                                           click: handleNodeClick}, '' + idx + ' '),
                     content
                 )
             );
-            if (collapse_nodes.has(date + 'n' + idx))
+            if (collapse_nodes.has(chain_str))
                 li.classList.add('collapse');
+            li.dataset.chain = chain_str;
         } else {
             var li = createElement('li', {id: 'n' + idx, class: 'leaf'},
                 createElement('span', {},
@@ -246,4 +246,15 @@ var tree = {};
 
         return li;
     }
+
+    function handleNodeClick(e)
+    {
+        var li = this.parentNode.parentNode;
+        if (li.classList.toggle('collapse')) {
+            collapse_nodes.add(li.dataset.chain);
+        } else {
+            collapse_nodes.delete(li.dataset.chain);
+        }
+        e.preventDefault();
+    };
 }).call(tree);

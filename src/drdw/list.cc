@@ -35,6 +35,7 @@ Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compress
 }
 
 struct ReadableGhmDecisionNode {
+    const char *key;
     const char *header;
     const char *text;
     const char *reverse;
@@ -59,6 +60,11 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                            ReadableGhmDecisionNode *out_node)
 {
     DebugAssert(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+
+    out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
+                        FmtHex(ghm_node.u.test.function).Pad0(-2),
+                        FmtHex(ghm_node.u.test.params[0]).Pad0(-2),
+                        FmtHex(ghm_node.u.test.params[1]).Pad0(-2)).ptr;
 
     // FIXME: Check children_idx and children_count
     out_node->function = ghm_node.u.test.function;
@@ -319,6 +325,7 @@ static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
             } break;
 
             case mco_GhmDecisionNode::Type::Ghm: {
+                out_node->key = Fmt(ctx.str_alloc, "%1", ghm_node.u.ghm.ghm).ptr;
                 if (ghm_node.u.ghm.error) {
                     out_node->text = Fmt(ctx.str_alloc, "GHM %1 [%2]",
                                          ghm_node.u.ghm.ghm, ghm_node.u.ghm.error).ptr;
@@ -384,8 +391,9 @@ Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionTy
             if (readable_node.reverse) {
                 writer.Key("reverse"); writer.String(readable_node.reverse);
             }
-            writer.Key("test"); writer.Int(readable_node.function);
             if (readable_node.children_idx) {
+                writer.Key("key"); writer.String(readable_node.key);
+                writer.Key("test"); writer.Int(readable_node.function);
                 writer.Key("children_idx"); writer.Int64(readable_node.children_idx);
                 writer.Key("children_count"); writer.Int64(readable_node.children_count);
             }
