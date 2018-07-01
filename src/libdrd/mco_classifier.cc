@@ -6,8 +6,10 @@
 #include "mco_classifier.hh"
 
 struct RunGhmTreeContext {
-    const mco_Aggregate *agg;
-    const mco_Aggregate::StayInfo *info;
+    const mco_TableIndex *index;
+
+    const mco_Stay *stay;
+    const mco_PreparedStay *prep;
 
     // Keep a copy for DP - DR reversal (function 34)
     const mco_DiagnosisInfo *main_diag_info;
@@ -55,47 +57,46 @@ static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t off
     return GetProcedureByte(proc_info, offset) & value;
 }
 
-Span<const mco_Stay> mco_Split(Span<const mco_Stay> stays, Span<const mco_Stay> *out_remainder)
+Span<const mco_Stay> mco_Split(Span<const mco_Stay> mono_stays, Span<const mco_Stay> *out_remainder)
 {
-    DebugAssert(stays.len > 0);
+    DebugAssert(mono_stays.len > 0);
 
     Size agg_len = 1;
-    while (agg_len < stays.len &&
-           mco_StaysAreCompatible(stays[agg_len - 1].bill_id, stays[agg_len].bill_id)) {
+    while (agg_len < mono_stays.len &&
+           mco_StaysAreCompatible(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id)) {
         agg_len++;
     }
 
     if (out_remainder) {
-        *out_remainder = stays.Take(agg_len, stays.len - agg_len);
+        *out_remainder = mono_stays.Take(agg_len, mono_stays.len - agg_len);
     }
-    return stays.Take(0, agg_len);
+    return mono_stays.Take(0, agg_len);
 }
 
-static const mco_Aggregate::StayInfo *FindMainStay(Span<const mco_Aggregate::StayInfo> stays,
-                                                   int duration)
+static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
     DebugAssert(duration >= 0);
 
     int max_duration = -1;
-    const mco_Aggregate::StayInfo *zx_stay_info = nullptr;
+    const mco_PreparedStay *zx_prep = nullptr;
     int zx_duration = -1;
     int proc_priority = 0;
-    const mco_Aggregate::StayInfo *trauma_stay_info = nullptr;
-    const mco_Aggregate::StayInfo *last_trauma_stay_info = nullptr;
+    const mco_PreparedStay *trauma_prep = nullptr;
+    const mco_PreparedStay *last_trauma_prep = nullptr;
     bool ignore_trauma = false;
-    const mco_Aggregate::StayInfo *score_stay_info = nullptr;
+    const mco_PreparedStay *score_prep = nullptr;
     int base_score = 0;
     int min_score = INT_MAX;
 
-    for (const mco_Aggregate::StayInfo &stay_info: stays) {
-        const mco_Stay &stay = *stay_info.stay;
+    for (const mco_PreparedStay &mono_prep: mono_preps) {
+        const mco_Stay &mono_stay = *mono_prep.stay;
 
         int stay_score = base_score;
 
         proc_priority = 0;
-        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+        for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
             if (proc_info->bytes[0] & 0x80 && !(proc_info->bytes[23] & 0x80))
-                return &stay_info;
+                return &mono_prep;
 
             if (proc_priority < 3 && proc_info->bytes[38] & 0x2) {
                 proc_priority = 3;
@@ -113,57 +114,57 @@ static const mco_Aggregate::StayInfo *FindMainStay(Span<const mco_Aggregate::Sta
             stay_score -= 9999;
         }
 
-        if (stay_info.duration > zx_duration && stay_info.duration >= max_duration) {
-            if (stay.main_diagnosis.Matches("Z515") ||
-                    stay.main_diagnosis.Matches("Z502") ||
-                    stay.main_diagnosis.Matches("Z503")) {
-                zx_stay_info = &stay_info;
-                zx_duration = stay_info.duration;
+        if (mono_prep.duration > zx_duration && mono_prep.duration >= max_duration) {
+            if (mono_stay.main_diagnosis.Matches("Z515") ||
+                    mono_stay.main_diagnosis.Matches("Z502") ||
+                    mono_stay.main_diagnosis.Matches("Z503")) {
+                zx_prep = &mono_prep;
+                zx_duration = mono_prep.duration;
             } else {
-                zx_stay_info = nullptr;
+                zx_prep = nullptr;
             }
         }
 
         if (!ignore_trauma) {
-            if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x4) {
-                last_trauma_stay_info = &stay_info;
-                if (stay_info.duration > max_duration) {
-                    trauma_stay_info = &stay_info;
+            if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x4) {
+                last_trauma_prep = &mono_prep;
+                if (mono_prep.duration > max_duration) {
+                    trauma_prep = &mono_prep;
                 }
             } else {
                 ignore_trauma = true;
             }
         }
 
-        if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x20) {
+        if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x20) {
             stay_score += 150;
-        } else if (stay_info.duration >= 2) {
+        } else if (mono_prep.duration >= 2) {
             base_score += 100;
         }
-        if (stay_info.duration == 0) {
+        if (mono_prep.duration == 0) {
             stay_score += 2;
-        } else if (stay_info.duration == 1) {
+        } else if (mono_prep.duration == 1) {
             stay_score++;
         }
-        if (stay_info.main_diag_info->Attributes(stay.sex).raw[21] & 0x2) {
+        if (mono_prep.main_diag_info->Attributes(mono_stay.sex).raw[21] & 0x2) {
             stay_score += 201;
         }
 
         if (stay_score < min_score) {
-            score_stay_info = &stay_info;
+            score_prep = &mono_prep;
             min_score = stay_score;
         }
 
-        if (stay_info.duration > max_duration) {
-            max_duration = stay_info.duration;
+        if (mono_prep.duration > max_duration) {
+            max_duration = mono_prep.duration;
         }
     }
 
-    if (zx_stay_info)
-        return zx_stay_info;
-    if (last_trauma_stay_info >= score_stay_info)
-        return trauma_stay_info;
-    return score_stay_info;
+    if (zx_prep)
+        return zx_prep;
+    if (last_trauma_prep >= score_prep)
+        return trauma_prep;
+    return score_prep;
 }
 
 static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
@@ -185,7 +186,7 @@ static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
     return false;
 }
 
-static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisInfo &diag_info,
+static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_DiagnosisInfo &diag_info,
                                  const int16_t error_codes[13], mco_ErrorSet *out_errors)
 {
     // Inappropriate, imprecise warnings
@@ -201,7 +202,7 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
 
     // Sex warning
     {
-        int sex_bit = 13 - agg.stay.sex;
+        int sex_bit = 13 - prep.stay->sex;
         if (UNLIKELY(diag_info.warnings & (1 << sex_bit))) {
             SetError(out_errors, error_codes[11], -1);
         }
@@ -210,15 +211,15 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
     // Age warning
     if (diag_info.warnings) {
         int age_bit;
-        if (agg.age_days < 29) {
+        if (prep.age_days < 29) {
             age_bit = 4;
-        } else if (!agg.age) {
+        } else if (!prep.age) {
             age_bit = 3;
-        } else if (agg.age < (agg.stay.exit.date >= Date(2016, 3, 1) ? 8 : 10)) {
+        } else if (prep.age < (prep.stay->exit.date >= Date(2016, 3, 1) ? 8 : 10)) {
             age_bit = 5;
-        } else if (agg.age < 20) {
+        } else if (prep.age < 20) {
             age_bit = 6;
-        } else if (agg.age < 65) {
+        } else if (prep.age < 65) {
             age_bit = 7;
         } else {
             age_bit = 8;
@@ -229,7 +230,7 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
         }
     }
 
-    const auto &diag_attr = diag_info.Attributes(agg.stay.sex);
+    const auto &diag_attr = diag_info.Attributes(prep.stay->sex);
 
     // Real errors
     if (UNLIKELY(diag_attr.raw[5] & 2)) {
@@ -241,21 +242,24 @@ static bool CheckDiagnosisErrors(const mco_Aggregate &agg, const mco_DiagnosisIn
             case 2: { return SetError(out_errors, error_codes[3]); } break;
             case 3: { return SetError(out_errors, error_codes[4]); } break;
         }
-    } else if (UNLIKELY(agg.stay.exit.date >= Date(2014, 3, 1) &&
+    } else if (UNLIKELY(prep.stay->exit.date >= Date(2014, 3, 1) &&
                         diag_attr.raw[0] == 23 && diag_attr.raw[1] == 14)) {
         return SetError(out_errors, error_codes[5]);
-    } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && agg.age < 9)) {
+    } else if (UNLIKELY(diag_attr.raw[19] & 0x10 && prep.age < 9)) {
         return SetError(out_errors, error_codes[6]);
-    } else if (UNLIKELY(diag_attr.raw[19] & 0x8 && agg.age >= 2)) {
+    } else if (UNLIKELY(diag_attr.raw[19] & 0x8 && prep.age >= 2)) {
         return SetError(out_errors, error_codes[7]);
     }
 
     return true;
 }
 
-static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
+static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int flags,
                                  mco_ErrorSet *out_errors)
 {
+    const mco_TableIndex &index = *out_prepared_set->index;
+    mco_PreparedStay *out_prep = &out_prepared_set->prep;
+
     bool valid = true;
 
     static const int16_t main_diagnosis_errors[13] = {
@@ -280,37 +284,39 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
     // We cannot allow the HeapArray to move
     {
         Size diagnoses_count = 0;
-        for (const mco_Stay &stay: out_agg->stays) {
-            diagnoses_count += stay.diagnoses.len;
+        for (const mco_Stay &mono_stay: out_prepared_set->mono_stays) {
+            diagnoses_count += mono_stay.diagnoses.len;
         }
 
-        out_agg->store.diagnoses.Clear(512);
-        out_agg->store.diagnoses.Grow(2 * diagnoses_count);
+        out_prepared_set->store.diagnoses.Clear(512);
+        out_prepared_set->store.diagnoses.Grow(2 * diagnoses_count);
     }
 
-    for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
-        const mco_Stay &stay = *stay_info.stay;
+    for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
+        const mco_Stay &mono_stay = *mono_prep.stay;
 
-        stay_info.diagnoses.ptr = out_agg->store.diagnoses.end();
-        for (DiagnosisCode diag: stay.diagnoses) {
-            if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
+        mono_prep.diagnoses.ptr = out_prepared_set->store.diagnoses.end();
+        for (DiagnosisCode diag: mono_stay.diagnoses) {
+            if (diag == mono_stay.main_diagnosis || diag == mono_stay.linked_diagnosis)
                 continue;
 
             if (diag.Matches("Z37")) {
-                out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthDiagnosis;
+                out_prep->markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
+                mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
             }
             if (diag.Matches("O8") && (diag.str[2] == '0' || diag.str[2] == '1' ||
                                        diag.str[2] == '2' || diag.str[2] == '3' ||
                                        diag.str[2] == '4')) {
-                out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthType;
+                out_prep->markers |= (int)mco_PreparedStay::Marker::ChildbirthType;
+                mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthType;
             }
 
-            const mco_DiagnosisInfo *diag_info = out_agg->index->FindDiagnosis(diag);
+            const mco_DiagnosisInfo *diag_info = index.FindDiagnosis(diag);
             if (LIKELY(diag_info)) {
-                out_agg->store.diagnoses.Append(diag_info);
-                stay_info.diagnoses.len++;
+                out_prepared_set->store.diagnoses.Append(diag_info);
+                mono_prep.diagnoses.len++;
 
-                valid &= CheckDiagnosisErrors(*out_agg, *diag_info,
+                valid &= CheckDiagnosisErrors(*out_prep, *diag_info,
                                               associate_diagnosis_errors, out_errors);
             } else {
                 valid &= SetError(out_errors, 70);
@@ -318,24 +324,24 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
         }
 
         // Main diagnosis is valid (checks are done in CheckMainError)
-        stay_info.main_diag_info = out_agg->index->FindDiagnosis(stay.main_diagnosis);
-        if (LIKELY(stay_info.main_diag_info)) {
-            out_agg->store.diagnoses.Append(stay_info.main_diag_info);
-            stay_info.diagnoses.len++;
+        mono_prep.main_diag_info = index.FindDiagnosis(mono_stay.main_diagnosis);
+        if (LIKELY(mono_prep.main_diag_info)) {
+            out_prepared_set->store.diagnoses.Append(mono_prep.main_diag_info);
+            mono_prep.diagnoses.len++;
 
-            valid &= CheckDiagnosisErrors(*out_agg, *stay_info.main_diag_info,
+            valid &= CheckDiagnosisErrors(*out_prep, *mono_prep.main_diag_info,
                                           main_diagnosis_errors, out_errors);
         } else {
             valid &= SetError(out_errors, 67);
         }
 
-        if (stay.linked_diagnosis.IsValid()) {
-            stay_info.linked_diag_info = out_agg->index->FindDiagnosis(stay.linked_diagnosis);
-            if (LIKELY(stay_info.linked_diag_info)) {
-                out_agg->store.diagnoses.Append(stay_info.linked_diag_info);
-                stay_info.diagnoses.len++;
+        if (mono_stay.linked_diagnosis.IsValid()) {
+            mono_prep.linked_diag_info = index.FindDiagnosis(mono_stay.linked_diagnosis);
+            if (LIKELY(mono_prep.linked_diag_info)) {
+                out_prepared_set->store.diagnoses.Append(mono_prep.linked_diag_info);
+                mono_prep.diagnoses.len++;
 
-                valid &= CheckDiagnosisErrors(*out_agg, *stay_info.linked_diag_info,
+                valid &= CheckDiagnosisErrors(*out_prep, *mono_prep.linked_diag_info,
                                               linked_diagnosis_errors, out_errors);
             } else {
                 valid &= SetError(out_errors, 94);
@@ -343,17 +349,17 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
         }
 
         if (flags & (int)mco_ClassifyFlag::MonoResults) {
-            std::sort(stay_info.diagnoses.begin(), stay_info.diagnoses.end());
+            std::sort(mono_prep.diagnoses.begin(), mono_prep.diagnoses.end());
         }
     }
 
     // Deduplicate diagnoses
-    if (out_agg->store.diagnoses.len > 1) {
-        Span<const mco_DiagnosisInfo *> diagnoses = MakeSpan(out_agg->store.diagnoses.end(),
-                                                             out_agg->store.diagnoses.len);
-        memcpy(diagnoses.ptr, out_agg->store.diagnoses.ptr,
-               (size_t)out_agg->store.diagnoses.len * SIZE(*out_agg->store.diagnoses.ptr));
-        out_agg->store.diagnoses.len *= 2;
+    if (out_prepared_set->store.diagnoses.len > 1) {
+        Span<const mco_DiagnosisInfo *> diagnoses = MakeSpan(out_prepared_set->store.diagnoses.end(),
+                                                             out_prepared_set->store.diagnoses.len);
+        memcpy(diagnoses.ptr, out_prepared_set->store.diagnoses.ptr,
+               (size_t)out_prepared_set->store.diagnoses.len * SIZE(*out_prepared_set->store.diagnoses.ptr));
+        out_prepared_set->store.diagnoses.len *= 2;
 
         std::sort(diagnoses.begin(), diagnoses.end());
 
@@ -364,40 +370,44 @@ static bool AppendValidDiagnoses(mco_Aggregate *out_agg, unsigned int flags,
             }
         }
 
-        out_agg->info.diagnoses = diagnoses.Take(0, j + 1);
+        out_prepared_set->prep.diagnoses = diagnoses.Take(0, j + 1);
     } else {
-        out_agg->info.diagnoses = out_agg->store.diagnoses;
+        out_prepared_set->prep.diagnoses = out_prepared_set->store.diagnoses;
     }
 
     return valid;
 }
 
-static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
+static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned int flags,
                                   mco_ErrorSet *out_errors)
 {
+    const mco_TableIndex &index = *out_prepared_set->index;
+    mco_PreparedStay *out_prep = &out_prepared_set->prep;
+    const mco_Stay &stay = *out_prep->stay;
+
     bool valid = true;
 
     Size max_pointers_count = 0;
     Size max_procedures_count = 0;
-    for (const mco_Stay &stay: out_agg->stays) {
-        max_pointers_count += stay.procedures.len;
-        for (const mco_ProcedureRealisation &proc: stay.procedures) {
+    for (const mco_Stay &mono_stay: out_prepared_set->mono_stays) {
+        max_pointers_count += mono_stay.procedures.len;
+        for (const mco_ProcedureRealisation &proc: mono_stay.procedures) {
             max_procedures_count += proc.count;
         }
     }
 
     // We cannot allow the HeapArray to move
-    out_agg->store.procedures.Clear(1024);
-    out_agg->store.procedures.Grow(max_pointers_count + max_procedures_count);
-    out_agg->store.procedures.len = max_pointers_count;
+    out_prepared_set->store.procedures.Clear(1024);
+    out_prepared_set->store.procedures.Grow(max_pointers_count + max_procedures_count);
+    out_prepared_set->store.procedures.len = max_pointers_count;
 
     Size pointers_count = 0;
-    for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
-        const mco_Stay &stay = *stay_info.stay;
+    for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
+        const mco_Stay &mono_stay = *mono_prep.stay;
 
         uint8_t proc_activities = 0;
-        stay_info.procedures.ptr = out_agg->store.procedures.end();
-        for (const mco_ProcedureRealisation &proc: stay.procedures) {
+        mono_prep.procedures.ptr = out_prepared_set->store.procedures.end();
+        for (const mco_ProcedureRealisation &proc: mono_stay.procedures) {
             if (UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
             }
@@ -410,26 +420,26 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                 valid &= SetError(out_errors, 173);
             }
 
-            const mco_ProcedureInfo *proc_info =
-                out_agg->index->FindProcedure(proc.proc, proc.phase, stay.exit.date);
-
+            const mco_ProcedureInfo *proc_info = index.FindProcedure(proc.proc, proc.phase,
+                                                                     mono_stay.exit.date);
             if (LIKELY(proc_info)) {
-                if (UNLIKELY((proc_info->bytes[43] & 0x40) && stay.sex == 2)) {
+                if (UNLIKELY((proc_info->bytes[43] & 0x40) && mono_stay.sex == 2)) {
                     SetError(out_errors, 148, -1);
                 }
-                if (UNLIKELY((out_agg->age || out_agg->age_days > 28) &&
-                             (proc_info->bytes[44] & 0x20) && (!out_agg->stay.newborn_weight ||
-                                                               out_agg->stay.newborn_weight >= 3000))) {
+                if (UNLIKELY((out_prep->age || out_prep->age_days > 28) &&
+                             (proc_info->bytes[44] & 0x20) && (!stay.newborn_weight ||
+                                                               stay.newborn_weight >= 3000))) {
                     valid &= SetError(out_errors, 149);
                 }
 
                 if (proc_info->bytes[41] & 0x2) {
-                    out_agg->flags |= (int)mco_Aggregate::Flag::ChildbirthProcedure;
+                    out_prep->markers |= (int)mco_PreparedStay::Marker::ChildbirthProcedure;
+                    mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthProcedure;
                 }
 
                 if (UNLIKELY(!proc.date.IsValid() ||
-                             proc.date < stay.entry.date ||
-                             proc.date > stay.exit.date)) {
+                             proc.date < mono_stay.entry.date ||
+                             proc.date > mono_stay.exit.date)) {
                     if (proc_info->bytes[41] & 0x2) {
                         valid &= SetError(out_errors, 142);
                     } else if (proc.date.value) {
@@ -438,18 +448,18 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                         SetError(out_errors, 102, -1);
                     }
                 } else if (proc_info->bytes[41] & 0x2) {
-                    if (!out_agg->info.childbirth_date.value) {
-                        out_agg->info.childbirth_date = proc.date;
+                    if (!out_prep->childbirth_date.value) {
+                        out_prep->childbirth_date = proc.date;
                     }
-                    if (!stay_info.childbirth_date.value) {
-                        stay_info.childbirth_date = proc.date;
+                    if (!mono_prep.childbirth_date.value) {
+                        mono_prep.childbirth_date = proc.date;
                     }
                 }
 
                 if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureExtension) &&
-                             out_agg->stay.exit.date >= Date(2016, 3, 1) &&
+                             stay.exit.date >= Date(2016, 3, 1) &&
                              !(proc_info->extensions & (1u << proc.extension)))) {
-                    if (out_agg->stay.exit.date >= Date(2017, 3, 1)) {
+                    if (stay.exit.date >= Date(2017, 3, 1)) {
                         valid &= SetError(out_errors, 186);
                     } else {
                         SetError(out_errors, 186, 0);
@@ -473,7 +483,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                         }
                     }
 
-                    if (UNLIKELY(out_agg->stay.exit.date >= Date(2013, 3, 1) &&
+                    if (UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
                                  (proc.activities & (1 << 4)) && !proc.doc)) {
                         SetError(out_errors, 170, 0);
                     }
@@ -488,26 +498,25 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
                     }
                 }
 
-                out_agg->store.procedures.ptr[pointers_count++] =
+                out_prepared_set->store.procedures.ptr[pointers_count++] =
                     (const mco_ProcedureInfo *)((uintptr_t)proc_info | proc_info_mask);
                 for (Size i = 0; i < proc.count; i++) {
-                    out_agg->store.procedures.Append(proc_info);
+                    out_prepared_set->store.procedures.Append(proc_info);
                 }
-                stay_info.procedures.len += proc.count;
+                mono_prep.procedures.len += proc.count;
 
                 proc_activities |= proc.activities;
             } else {
-                Span <const mco_ProcedureInfo> compatible_procs =
-                    out_agg->index->FindProcedure(proc.proc);
+                Span <const mco_ProcedureInfo> compatible_procs = index.FindProcedure(proc.proc);
                 bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
                                               [&](const mco_ProcedureInfo &proc_info) {
                     return proc_info.phase == proc.phase;
                 });
                 if (valid_proc) {
                     if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
-                        if (stay.exit.date < compatible_procs[0].limit_dates[0]) {
+                        if (mono_stay.exit.date < compatible_procs[0].limit_dates[0]) {
                             valid &= SetError(out_errors, 79);
-                        } else if (stay.entry.date >= compatible_procs[compatible_procs.len - 1].limit_dates[1]) {
+                        } else if (mono_stay.entry.date >= compatible_procs[compatible_procs.len - 1].limit_dates[1]) {
                             valid &= SetError(out_errors, 78);
                         }
                     }
@@ -518,11 +527,11 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
         }
 
         if (flags & (int)mco_ClassifyFlag::MonoResults) {
-            std::sort(stay_info.procedures.begin(), stay_info.procedures.end());
+            std::sort(mono_prep.procedures.begin(), mono_prep.procedures.end());
         }
 
-        stay_info.proc_activities = proc_activities;
-        out_agg->info.proc_activities |= proc_activities;
+        out_prep->proc_activities |= proc_activities;
+        mono_prep.proc_activities = proc_activities;
     }
 
     // Deduplicate procedures
@@ -530,7 +539,7 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
     // such as when the two procedures fall into different date ranges / limits.
     if (pointers_count) {
         Span<const mco_ProcedureInfo *> procedures =
-            out_agg->store.procedures.Take(0, pointers_count);
+            out_prepared_set->store.procedures.Take(0, pointers_count);
 
         std::sort(procedures.begin(), procedures.end());
 
@@ -548,9 +557,9 @@ static bool AppendValidProcedures(mco_Aggregate *out_agg, unsigned int flags,
             }
         }
 
-        out_agg->info.procedures = procedures.Take(0, j + 1);
+        out_prep->procedures = procedures.Take(0, j + 1);
     } else {
-        out_agg->info.procedures = {};
+        out_prep->procedures = {};
     }
 
     return valid;
@@ -570,28 +579,28 @@ static bool CheckDateErrors(bool malformed_flag, Date date, const int16_t error_
     return true;
 }
 
-static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors)
+static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_errors)
 {
     bool valid = true;
 
     // Bill id
-    if (UNLIKELY(stays[0].errors & (int)mco_Stay::Error::MalformedBillId)) {
+    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::MalformedBillId)) {
         static bool warned = false;
         if (!warned) {
             LogError("Non-numeric RSS identifiers are not supported");
             warned = true;
         }
         valid &= SetError(out_errors, 61);
-    } else if (UNLIKELY(!stays[0].bill_id)) {
+    } else if (UNLIKELY(!mono_stays[0].bill_id)) {
         valid &= SetError(out_errors, 11);
     }
 
-    for (const mco_Stay &stay: stays) {
+    for (const mco_Stay &mono_stay: mono_stays) {
         // Sex
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedSex)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSex)) {
             valid &= SetError(out_errors, 17);
-        } else if (UNLIKELY(stay.sex != 1 && stay.sex != 2)) {
-            valid &= SetError(out_errors, stay.sex ? 17 : 16);
+        } else if (UNLIKELY(mono_stay.sex != 1 && mono_stay.sex != 2)) {
+            valid &= SetError(out_errors, mono_stay.sex ? 17 : 16);
         }
 
         // Dates
@@ -601,20 +610,20 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
             static const int16_t entry_date_errors[3] = {20, 19, 21};
             static const int16_t exit_date_errors[3] = {29, 28, 30};
 
-            bool birthdate_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedBirthdate,
-                                                   stay.birthdate, birthdate_errors, out_errors);
-            bool entry_date_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedEntryDate,
-                                                    stay.entry.date, entry_date_errors, out_errors);
-            bool exit_date_valid = CheckDateErrors(stay.errors & (int)mco_Stay::Error::MalformedExitDate,
-                                                   stay.exit.date, exit_date_errors, out_errors);
+            bool birthdate_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedBirthdate,
+                                                   mono_stay.birthdate, birthdate_errors, out_errors);
+            bool entry_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedEntryDate,
+                                                    mono_stay.entry.date, entry_date_errors, out_errors);
+            bool exit_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedExitDate,
+                                                   mono_stay.exit.date, exit_date_errors, out_errors);
 
             if (UNLIKELY(birthdate_valid && entry_date_valid &&
-                         (stay.birthdate > stay.entry.date ||
-                          stay.entry.date.st.year - stay.birthdate.st.year > 140))) {
+                         (mono_stay.birthdate > mono_stay.entry.date ||
+                          mono_stay.entry.date.st.year - mono_stay.birthdate.st.year > 140))) {
                 valid &= SetError(out_errors, 15);
             }
             if (UNLIKELY(entry_date_valid && exit_date_valid &&
-                         stay.exit.date < stay.entry.date)) {
+                         mono_stay.exit.date < mono_stay.entry.date)) {
                 valid &= SetError(out_errors, 32);
             }
 
@@ -622,87 +631,87 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
         }
 
         // Entry mode and origin
-        if (UNLIKELY(stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
+        if (UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
                                         (int)mco_Stay::Error::MalformedEntryOrigin))) {
             valid &= SetError(out_errors, 25);
         }
 
         // Exit mode and destination
-        if (UNLIKELY(stay.errors & ((int)mco_Stay::Error::MalformedExitMode |
+        if (UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedExitMode |
                                         (int)mco_Stay::Error::MalformedExitDestination))) {
             valid &= SetError(out_errors, 34);
         }
 
         // Sessions
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedSessionCount)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedSessionCount)) {
             valid &= SetError(out_errors, 36);
         }
 
         // Gestational age
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedGestationalAge)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedGestationalAge)) {
             valid &= SetError(out_errors, 125);
         }
 
         // Menstrual period
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLastMenstrualPeriod)) {
             valid &= SetError(out_errors, 160);
-        } else if (UNLIKELY(stay.last_menstrual_period.value &&
-                            !stay.last_menstrual_period.IsValid())) {
+        } else if (UNLIKELY(mono_stay.last_menstrual_period.value &&
+                            !mono_stay.last_menstrual_period.IsValid())) {
             valid &= SetError(out_errors, 161);
         }
 
         // IGS2
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedIgs2)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedIgs2)) {
             valid &= SetError(out_errors, 169);
         }
 
         // Confirmation code
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedConfirmation)) {
             SetError(out_errors, 121, -1);
         }
 
         // Diagnoses
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedMainDiagnosis)) {
            valid &= SetError(out_errors, 41);
-        } else if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
+        } else if (UNLIKELY(!mono_stay.main_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 40);
         }
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedLinkedDiagnosis)) {
             valid &= SetError(out_errors, 51);
         }
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 55);
-        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
+        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosesCount)) {
             valid &= SetError(out_errors, 56);
-        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
+        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedOtherDiagnosis)) {
             valid &= SetError(out_errors, 42);
         }
 
         // Procedures
-        if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MissingProceduresCount)) {
+        if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MissingProceduresCount)) {
             valid &= SetError(out_errors, 57);
-        } else if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedProceduresCount)) {
+        } else if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProceduresCount)) {
             valid &= SetError(out_errors, 58);
         } else {
-            if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
+            if (UNLIKELY(mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureCode)) {
                 valid &= SetError(out_errors, 43);
             }
-            if (UNLIKELY(stays[stays.len - 1].exit.date >= Date(2016, 3, 1) &&
-                         stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
+            if (UNLIKELY(mono_stays[mono_stays.len - 1].exit.date >= Date(2016, 3, 1) &&
+                         mono_stay.errors & (int)mco_Stay::Error::MalformedProcedureExtension)) {
                 valid &= SetError(out_errors, 185);
             }
         }
     }
 
     // Coherency checks
-    for (Size i = 1; i < stays.len; i++) {
-        if (UNLIKELY(stays[i].sex != stays[i - 1].sex &&
-                     (stays[i].sex == 1 || stays[i].sex == 2))) {
+    for (Size i = 1; i < mono_stays.len; i++) {
+        if (UNLIKELY(mono_stays[i].sex != mono_stays[i - 1].sex &&
+                     (mono_stays[i].sex == 1 || mono_stays[i].sex == 2))) {
             valid &= SetError(out_errors, 46);
         }
 
-        if (UNLIKELY(stays[i].birthdate != stays[i - 1].birthdate &&
-                     stays[i].birthdate.IsValid())) {
+        if (UNLIKELY(mono_stays[i].birthdate != mono_stays[i - 1].birthdate &&
+                     mono_stays[i].birthdate.IsValid())) {
             valid &= SetError(out_errors, 45);
         }
     }
@@ -710,45 +719,50 @@ static bool CheckDataErrors(Span<const mco_Stay> stays, mco_ErrorSet *out_errors
     return valid;
 }
 
-static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_errors)
+static bool CheckAggregateErrors(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
+                                 mco_ErrorSet *out_errors)
 {
+    const mco_Stay &stay = *prep.stay;
+
     bool valid = true;
 
-    if (agg.stay.entry.mode == '0' || agg.stay.exit.mode == '0') {
-        if (UNLIKELY(agg.stay.exit.mode != agg.stay.entry.mode)) {
+    if (stay.entry.mode == '0' || stay.exit.mode == '0') {
+        if (UNLIKELY(stay.exit.mode != stay.entry.mode)) {
             valid &= SetError(out_errors, 26);
             SetError(out_errors, 35);
-        } else if (UNLIKELY(agg.info.duration > 1)) {
+        } else if (UNLIKELY(prep.duration > 1)) {
             valid &= SetError(out_errors, 50);
         }
     } else {
-        if (UNLIKELY(agg.stay.entry.mode == '6' && agg.stay.entry.origin == '1')) {
+        if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == '1')) {
             valid &= SetError(out_errors, 26);
         }
-        if (UNLIKELY(agg.stay.exit.mode == '6' && agg.stay.exit.destination == '1')) {
+        if (UNLIKELY(stay.exit.mode == '6' && stay.exit.destination == '1')) {
             valid &= SetError(out_errors, 35);
         }
     }
 
-    for (const mco_Stay &stay: agg.stays) {
+    for (const mco_PreparedStay &mono_prep: mono_preps) {
+        const mco_Stay &mono_stay = *mono_prep.stay;
+
         // Dates
-        if (UNLIKELY(stay.entry.date.st.year < 1985 && stay.entry.date.IsValid())) {
+        if (UNLIKELY(mono_stay.entry.date.st.year < 1985 && mono_stay.entry.date.IsValid())) {
             SetError(out_errors, 77, -1);
         }
 
         // Entry mode and origin
-        switch (stay.entry.mode) {
+        switch (mono_stay.entry.mode) {
             case '0':
             case '6': {
-                if (UNLIKELY(stay.entry.mode == '0' && stay.entry.origin == '6')) {
+                if (UNLIKELY(mono_stay.entry.mode == '0' && mono_stay.entry.origin == '6')) {
                     valid &= SetError(out_errors, 25);
                 }
-                if (UNLIKELY(stay.entry.mode == '6' && stay.entry.origin == 'R')) {
+                if (UNLIKELY(mono_stay.entry.mode == '6' && mono_stay.entry.origin == 'R')) {
                     valid &= SetError(out_errors, 25);
                 }
             } // fallthrough
             case '7': {
-                switch (stay.entry.origin) {
+                switch (mono_stay.entry.origin) {
                     case '1':
                     case '2':
                     case '3':
@@ -762,7 +776,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
             } break;
 
             case '8': {
-                switch (stay.entry.origin) {
+                switch (mono_stay.entry.origin) {
                     case 0:
                     case '5':
                     case '7': { /* Valid origin */ } break;
@@ -776,11 +790,11 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
         }
 
         // Exit mode and destination
-        switch (stay.exit.mode) {
+        switch (mono_stay.exit.mode) {
             case '0':
             case '6':
             case '7': {
-                switch (stay.exit.destination) {
+                switch (mono_stay.exit.destination) {
                     case '1':
                     case '2':
                     case '3':
@@ -793,7 +807,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
             } break;
 
             case '8': {
-                switch (stay.exit.destination) {
+                switch (mono_stay.exit.destination) {
                     case 0:
                     case '7': { /* Valid destination */ } break;
 
@@ -802,7 +816,7 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
             } break;
 
             case '9': {
-                if (UNLIKELY(stay.exit.destination)) {
+                if (UNLIKELY(mono_stay.exit.destination)) {
                     valid &= SetError(out_errors, 34);
                 }
             } break;
@@ -812,73 +826,76 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
         }
 
         // Sessions
-        if (UNLIKELY(agg.stays.len > 1 && stay.session_count > 0)) {
+        if (UNLIKELY(mono_preps.len > 1 && mono_stay.session_count > 0)) {
             valid &= SetError(out_errors, 37);
         }
-        if (UNLIKELY(stay.session_count < 0 || stay.session_count >= 32)) {
+        if (UNLIKELY(mono_stay.session_count < 0 || mono_stay.session_count >= 32)) {
             SetError(out_errors, 66, -1);
         }
 
         // Gestational age
-        if (stay.gestational_age) {
-            if (UNLIKELY(stay.gestational_age > 44 ||
-                         (stay.gestational_age < 22 && agg.stay.exit.mode != '9' && !agg.age))) {
+        if (mono_stay.gestational_age) {
+            if (UNLIKELY(mono_stay.gestational_age > 44 ||
+                         (mono_stay.gestational_age < 22 && stay.exit.mode != '9' && !prep.age))) {
                 valid &= SetError(out_errors, 127);
-            } else if (UNLIKELY(agg.stay.newborn_weight &&
-                                ((stay.gestational_age >= 37 && agg.stay.newborn_weight < 1000 && !stay.main_diagnosis.Matches("P95")) ||
-                                 (stay.gestational_age < 33 && agg.stay.newborn_weight > 4000) ||
-                                 (stay.gestational_age < 28 && agg.stay.newborn_weight > 2500)))) {
+            } else if (UNLIKELY(stay.newborn_weight &&
+                                ((mono_stay.gestational_age >= 37 && stay.newborn_weight < 1000 && !mono_stay.main_diagnosis.Matches("P95")) ||
+                                 (mono_stay.gestational_age < 33 && stay.newborn_weight > 4000) ||
+                                 (mono_stay.gestational_age < 28 && stay.newborn_weight > 2500)))) {
                 valid &= SetError(out_errors, 129);
             }
         }
 
         // Menstrual period
-        if (UNLIKELY(stay.last_menstrual_period.value &&
-                     stay.last_menstrual_period != agg.stay.last_menstrual_period)) {
+        if (UNLIKELY(mono_stay.last_menstrual_period.value &&
+                     mono_stay.last_menstrual_period != stay.last_menstrual_period)) {
             valid &= SetError(out_errors, 163);
         }
 
         // Stillborn
-        if (UNLIKELY(stay.main_diagnosis.Matches("P95"))) {
-            if (UNLIKELY(stay.exit.mode != '9')) {
+        if (UNLIKELY(mono_stay.main_diagnosis.Matches("P95"))) {
+            if (UNLIKELY(mono_stay.exit.mode != '9')) {
                 valid &= SetError(out_errors, 143);
                 SetError(out_errors, 147);
-            } else if (UNLIKELY(agg.stays.len > 1 || stay.entry.mode != '8' ||
-                                stay.birthdate != stay.entry.date || !stay.newborn_weight ||
-                                stay.exit.date != stay.entry.date)) {
+            } else if (UNLIKELY(mono_preps.len > 1 || mono_stay.entry.mode != '8' ||
+                                mono_stay.birthdate != mono_stay.entry.date || !mono_stay.newborn_weight ||
+                                mono_stay.exit.date != mono_stay.entry.date)) {
                 valid &= SetError(out_errors, 147);
             }
         }
     }
 
     // Continuity checks
-    for (Size i = 1; i < agg.stays.len; i++) {
-        if (agg.stays[i - 1].exit.mode == '0' && agg.stays[i].entry.mode == '0') {
-            if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date &&
-                         agg.stays[i].entry.date - agg.stays[i - 1].exit.date != 1)) {
+    for (Size i = 1; i < mono_preps.len; i++) {
+        const mco_Stay &prev_mono_stay = *mono_preps[i - 1].stay;
+        const mco_Stay &mono_stay = *mono_preps[i].stay;
+
+        if (prev_mono_stay.exit.mode == '0' && mono_stay.entry.mode == '0') {
+            if (UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date &&
+                         mono_stay.entry.date - prev_mono_stay.exit.date != 1)) {
                 valid &= SetError(out_errors, 50);
             }
         } else {
-            if (UNLIKELY(agg.stays[i - 1].exit.mode == '0' ||
-                         agg.stays[i].entry.mode != '6' ||
-                         agg.stays[i].entry.origin != '1')) {
+            if (UNLIKELY(prev_mono_stay.exit.mode == '0' ||
+                         mono_stay.entry.mode != '6' ||
+                         mono_stay.entry.origin != '1')) {
                 valid &= SetError(out_errors, 27);
             }
-            if (UNLIKELY(agg.stays[i].entry.mode == '0' ||
-                         agg.stays[i - 1].exit.mode != '6' ||
-                         agg.stays[i - 1].exit.destination != '1')) {
+            if (UNLIKELY(mono_stay.entry.mode == '0' ||
+                         prev_mono_stay.exit.mode != '6' ||
+                         prev_mono_stay.exit.destination != '1')) {
                 valid &= SetError(out_errors, 49);
             }
-            if (UNLIKELY(agg.stays[i].entry.date != agg.stays[i - 1].exit.date)) {
+            if (UNLIKELY(mono_stay.entry.date != prev_mono_stay.exit.date)) {
                 valid &= SetError(out_errors, 23);
             }
         }
     }
 
     // Sessions
-    if (agg.info.main_diag_info->Attributes(agg.stay.sex).raw[8] & 0x2) {
-        if (UNLIKELY(!agg.info.duration && !agg.stay.session_count)) {
-            bool tolerate = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
+    if (prep.main_diag_info->Attributes(stay.sex).raw[8] & 0x2) {
+        if (UNLIKELY(!prep.duration && !stay.session_count)) {
+            bool tolerate = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
                 return (proc_info->bytes[44] & 0x40);
             });
@@ -887,48 +904,48 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
                 // official classifier does not actually enforce it.
                 SetError(out_errors, 145, 0);
             }
-        } else if (UNLIKELY(agg.stay.session_count > agg.info.duration + 1)) {
+        } else if (UNLIKELY(stay.session_count > prep.duration + 1)) {
             SetError(out_errors, 146, -1);
         }
     }
 
     // Gestation and newborn
-    if (UNLIKELY(!agg.stay.gestational_age &&
-                 ((agg.flags & (int)mco_Aggregate::Flag::Childbirth) ||
-                  agg.stay.birthdate == agg.stay.entry.date))) {
+    if (UNLIKELY(!stay.gestational_age &&
+                 ((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) ||
+                  stay.birthdate == stay.entry.date))) {
         valid &= SetError(out_errors, 126);
     }
-    if (UNLIKELY(agg.stay.errors & (int)mco_Stay::Error::MalformedNewbornWeight)) {
+    if (UNLIKELY(stay.errors & (int)mco_Stay::Error::MalformedNewbornWeight)) {
         valid &= SetError(out_errors, 82);
     } else {
-        if (UNLIKELY(agg.age_days < 29 && !agg.stay.newborn_weight)) {
+        if (UNLIKELY(prep.age_days < 29 && !stay.newborn_weight)) {
             valid &= SetError(out_errors, 168);
-        } else if (UNLIKELY(agg.stay.newborn_weight > 0 && agg.stay.newborn_weight < 100)) {
+        } else if (UNLIKELY(stay.newborn_weight > 0 && stay.newborn_weight < 100)) {
             valid &= SetError(out_errors, 128);
         }
     }
-    if (UNLIKELY(agg.stay.exit.date >= Date(2013, 3, 1) &&
-                 (agg.flags & (int)mco_Aggregate::Flag::ChildbirthProcedure) &&
-                 agg.stay.gestational_age < 22)) {
+    if (UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
+                 (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) &&
+                 stay.gestational_age < 22)) {
         valid &= SetError(out_errors, 174);
     }
 
     // Menstruation
-    if (UNLIKELY((agg.flags & (int)mco_Aggregate::Flag::Childbirth) &&
-                 !agg.stay.last_menstrual_period.value)) {
+    if (UNLIKELY((prep.markers & (int)mco_PreparedStay::Marker::Childbirth) &&
+                 !stay.last_menstrual_period.value)) {
         valid &= SetError(out_errors, 162);
     }
-    if (UNLIKELY(agg.stay.sex == 1 && agg.stay.last_menstrual_period.value)) {
+    if (UNLIKELY(stay.sex == 1 && stay.last_menstrual_period.value)) {
         SetError(out_errors, 164, -1);
     }
-    if (agg.stay.last_menstrual_period.value) {
-        if (UNLIKELY(agg.stay.last_menstrual_period > agg.stay.entry.date)) {
-            if (agg.stay.exit.date >= Date(2016, 3, 1)) {
+    if (stay.last_menstrual_period.value) {
+        if (UNLIKELY(stay.last_menstrual_period > stay.entry.date)) {
+            if (stay.exit.date >= Date(2016, 3, 1)) {
                 valid &= SetError(out_errors, 165);
             } else {
                 SetError(out_errors, 165, -1);
             }
-        } else if (UNLIKELY(agg.stay.entry.date - agg.stay.last_menstrual_period > 305)) {
+        } else if (UNLIKELY(stay.entry.date - stay.last_menstrual_period > 305)) {
             SetError(out_errors, 166, -1);
         }
     }
@@ -936,115 +953,107 @@ static bool CheckAggregateErrors(const mco_Aggregate &agg, mco_ErrorSet *out_err
     return valid;
 }
 
-mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> stays,
-                        unsigned int flags, mco_Aggregate *out_agg, mco_ErrorSet *out_errors)
+mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
+                        unsigned int flags, mco_PreparedSet *out_prepared_set,
+                        mco_ErrorSet *out_errors)
 {
-    DebugAssert(stays.len > 0);
+    DebugAssert(mono_stays.len > 0);
 
     // Reset cache
-    out_agg->info = {};
-    out_agg->info.duration = -1;
-    out_agg->stays_info.Clear(64);
-    for (const mco_Stay &stay: stays) {
-        mco_Aggregate::StayInfo info = {};
-        info.stay = &stay;
-        info.duration = -1;
-        out_agg->stays_info.Append(info);
+    out_prepared_set->prep = {};
+    out_prepared_set->prep.duration = -1;
+    out_prepared_set->mono_preps.Clear(64);
+    for (const mco_Stay &mono_stay: mono_stays) {
+        mco_PreparedStay mono_prep = {};
+        mono_prep.stay = &mono_stay;
+        mono_prep.duration = -1;
+        out_prepared_set->mono_preps.Append(mono_prep);
     }
 
     // These errors are too serious to continue (broken data, etc.)
-    if (UNLIKELY(stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
-        DebugAssert(stays.len == 1);
+    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
+        DebugAssert(mono_stays.len == 1);
         SetError(out_errors, 59);
         return mco_GhmCode::FromString("90Z00Z");
     }
-    if (UNLIKELY(!CheckDataErrors(stays, out_errors)))
+    if (UNLIKELY(!CheckDataErrors(mono_stays, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
 
-    out_agg->index = table_set.FindIndex(stays[stays.len - 1].exit.date);
-    if (UNLIKELY(!out_agg->index)) {
+    out_prepared_set->index = table_set.FindIndex(mono_stays[mono_stays.len - 1].exit.date);
+    if (UNLIKELY(!out_prepared_set->index)) {
         SetError(out_errors, 502, 2);
         return mco_GhmCode::FromString("90Z03Z");
     }
 
-    // Aggregate basic information
-    out_agg->stays = stays;
-    out_agg->stay = stays[0];
-    out_agg->age = ComputeAge(out_agg->stay.entry.date, out_agg->stay.birthdate);
-    out_agg->age_days = out_agg->stay.entry.date - out_agg->stay.birthdate;
-    out_agg->flags = 0;
-    for (const mco_Stay &stay: stays) {
-        if (stay.gestational_age > 0) {
-            out_agg->stay.gestational_age = stay.gestational_age;
+    // Aggregate mono_stays into stay
+    out_prepared_set->mono_stays = mono_stays;
+    out_prepared_set->stay = mono_stays[0];
+    for (const mco_Stay &mono_stay: mono_stays) {
+        if (mono_stay.gestational_age > 0) {
+            out_prepared_set->stay.gestational_age = mono_stay.gestational_age;
         }
-        if (stay.last_menstrual_period.value && !out_agg->stay.last_menstrual_period.value) {
-            out_agg->stay.last_menstrual_period = stay.last_menstrual_period;
+        if (mono_stay.last_menstrual_period.value &&
+                !out_prepared_set->stay.last_menstrual_period.value) {
+            out_prepared_set->stay.last_menstrual_period = mono_stay.last_menstrual_period;
         }
-        if (stay.igs2 > out_agg->stay.igs2) {
-            out_agg->stay.igs2 = stay.igs2;
+        if (mono_stay.igs2 > out_prepared_set->stay.igs2) {
+            out_prepared_set->stay.igs2 = mono_stay.igs2;
         }
     }
-    out_agg->stay.exit = stays[stays.len - 1].exit;
-    out_agg->stay.flags = 0;
-    if (out_agg->stays[stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed) {
-        out_agg->stay.flags |= (int)mco_Stay::Flag::Confirmed;
+    out_prepared_set->stay.exit = mono_stays[mono_stays.len - 1].exit;
+    out_prepared_set->stay.flags = 0;
+    if (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed) {
+        out_prepared_set->stay.flags |= (int)mco_Stay::Flag::Confirmed;
     }
-    out_agg->stay.diagnoses = {};
-    out_agg->stay.procedures = {};
+    out_prepared_set->stay.diagnoses = {};
+    out_prepared_set->stay.procedures = {};
 
     // Prepare cache
-    out_agg->info.stay = &out_agg->stay;
-    out_agg->info.duration = 0;
-    for (mco_Aggregate::StayInfo &stay_info: out_agg->stays_info) {
-        stay_info.duration = stay_info.stay->exit.date - stay_info.stay->entry.date;
-        out_agg->info.duration += stay_info.duration;
+    out_prepared_set->prep.stay = &out_prepared_set->stay;
+    out_prepared_set->prep.duration = 0;
+    for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
+        mono_prep.duration = mono_prep.stay->exit.date - mono_prep.stay->entry.date;
+        out_prepared_set->prep.duration += mono_prep.duration;
+
+        mono_prep.age = ComputeAge(mono_prep.stay->entry.date, mono_prep.stay->birthdate);
+        mono_prep.age_days = mono_prep.stay->entry.date - mono_prep.stay->birthdate;
     }
+    out_prepared_set->prep.age = out_prepared_set->mono_preps[0].age;
+    out_prepared_set->prep.age_days = out_prepared_set->mono_preps[0].age_days;
 
     bool valid = true;
 
     // Aggregate diagnoses and procedures
-    valid &= AppendValidDiagnoses(out_agg, flags, out_errors);
-    valid &= AppendValidProcedures(out_agg, flags, out_errors);
+    valid &= AppendValidDiagnoses(out_prepared_set, flags, out_errors);
+    valid &= AppendValidProcedures(out_prepared_set, flags, out_errors);
 
     // Pick main stay
     {
-        const mco_Aggregate::StayInfo *main_stay_info;
-        if (stays.len > 1) {
-            main_stay_info = FindMainStay(out_agg->stays_info, out_agg->info.duration);
+        const mco_PreparedStay *main_prep;
+        if (mono_stays.len > 1) {
+            main_prep = FindMainStay(out_prepared_set->mono_preps, out_prepared_set->prep.duration);
 
-            out_agg->stay.main_diagnosis = main_stay_info->main_diag_info->diag;
-            if (main_stay_info->linked_diag_info) {
-                out_agg->stay.linked_diagnosis = main_stay_info->linked_diag_info->diag;
+            out_prepared_set->stay.main_diagnosis = main_prep->main_diag_info->diag;
+            if (main_prep->linked_diag_info) {
+                out_prepared_set->stay.linked_diagnosis = main_prep->linked_diag_info->diag;
             } else {
-                out_agg->stay.linked_diagnosis = {};
+                out_prepared_set->stay.linked_diagnosis = {};
             }
         } else {
-            main_stay_info = &out_agg->stays_info[0];
+            main_prep = &out_prepared_set->mono_preps[0];
         }
 
-        out_agg->main_stay_info = main_stay_info;
-        out_agg->info.main_diag_info = main_stay_info->main_diag_info;
-        out_agg->info.linked_diag_info = main_stay_info->linked_diag_info;
+        out_prepared_set->main_prep = main_prep;
+        out_prepared_set->prep.main_diag_info = main_prep->main_diag_info;
+        out_prepared_set->prep.linked_diag_info = main_prep->linked_diag_info;
     }
 
     // Check remaining stay errors
-    valid &= CheckAggregateErrors(*out_agg, out_errors);
+    valid &= CheckAggregateErrors(out_prepared_set->prep, out_prepared_set->mono_preps, out_errors);
     if (UNLIKELY(!valid))
         return mco_GhmCode::FromString("90Z00Z");
 
     return {};
-}
-
-int mco_GetMinimalDurationForSeverity(int severity)
-{
-    DebugAssert(severity >= 0 && severity < 4);
-    return severity ? (severity + 2) : 0;
-}
-
-int mco_LimitSeverityWithDuration(int severity, int duration)
-{
-    DebugAssert(severity >= 0 && severity < 4);
-    return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
 static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm_node,
@@ -1055,12 +1064,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
     switch (ghm_node.u.test.function) {
         case 0:
         case 1: {
-            return GetDiagnosisByte(ctx.agg->stay.sex, *ctx.main_diag_info,
+            return GetDiagnosisByte(ctx.stay->sex, *ctx.main_diag_info,
                                     ghm_node.u.test.params[0]);
         } break;
 
         case 2: {
-            for (const mco_ProcedureInfo *proc_info: ctx.info->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
                 if (TestProcedure(*proc_info, ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
@@ -1069,22 +1078,22 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 3: {
             if (ghm_node.u.test.params[1] == 1) {
-                return (ctx.agg->age_days > ghm_node.u.test.params[0]);
+                return (ctx.prep->age_days > ghm_node.u.test.params[0]);
             } else {
-                return (ctx.agg->age > ghm_node.u.test.params[0]);
+                return (ctx.prep->age > ghm_node.u.test.params[0]);
             }
         } break;
 
         case 5: {
-            return TestDiagnosis(ctx.agg->stay.sex, *ctx.main_diag_info,
+            return TestDiagnosis(ctx.stay->sex, *ctx.main_diag_info,
                                  ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
         } break;
 
         case 6: {
             // NOTE: Incomplete, should behave differently when params[0] >= 128,
             // but it's probably relevant only for FG 9 and 10 (CMAs)
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                if (TestDiagnosis(ctx.stay->sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.main_diag_info && diag_info != ctx.linked_diag_info)
                     return 1;
@@ -1093,8 +1102,8 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 7: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                if (TestDiagnosis(ctx.stay->sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]))
                     return 1;
             }
@@ -1103,7 +1112,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 9: {
             int result = 0;
-            for (const mco_ProcedureInfo *proc_info: ctx.info->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
                 if (proc_info->bytes[0] & 0x80) {
                     if (TestProcedure(*proc_info,
                                       ghm_node.u.test.params[0], ghm_node.u.test.params[1])) {
@@ -1122,7 +1131,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
             // to run on it) but not always deduplicated, that's why we need to check
             // against prev_proc_info.
             const mco_ProcedureInfo *prev_proc_info = nullptr;
-            for (const mco_ProcedureInfo *proc_info: ctx.info->procedures) {
+            for (const mco_ProcedureInfo *proc_info: ctx.prep->procedures) {
                 if (TestProcedure(*proc_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         proc_info != prev_proc_info) {
@@ -1136,21 +1145,21 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 13: {
-            uint8_t diag_byte = GetDiagnosisByte(ctx.agg->stay.sex, *ctx.main_diag_info,
+            uint8_t diag_byte = GetDiagnosisByte(ctx.stay->sex, *ctx.main_diag_info,
                                                  ghm_node.u.test.params[0]);
             return (diag_byte == ghm_node.u.test.params[1]);
         } break;
 
         case 14: {
-            return ((int)ctx.agg->stay.sex == ghm_node.u.test.params[0] - 48);
+            return ((int)ctx.stay->sex == ghm_node.u.test.params[0] - 48);
         } break;
 
         case 18: {
             Size matches = 0, special_matches = 0;
             // See test 10 for why that's needed
             const mco_DiagnosisInfo *prev_diag_info = nullptr;
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                if (TestDiagnosis(ctx.stay->sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != prev_diag_info) {
                     matches++;
@@ -1168,16 +1177,16 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         case 19: {
             switch (ghm_node.u.test.params[1]) {
                 case 0: {
-                    return (ctx.agg->stay.exit.mode == '0' + ghm_node.u.test.params[0]);
+                    return (ctx.stay->exit.mode == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 1: {
-                    return (ctx.agg->stay.exit.destination == '0' + ghm_node.u.test.params[0]);
+                    return (ctx.stay->exit.destination == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 2: {
-                    return (ctx.agg->stay.entry.mode == '0' + ghm_node.u.test.params[0]);
+                    return (ctx.stay->entry.mode == '0' + ghm_node.u.test.params[0]);
                 } break;
                 case 3: {
-                    return (ctx.agg->stay.entry.origin == '0' + ghm_node.u.test.params[0]);
+                    return (ctx.stay->entry.origin == '0' + ghm_node.u.test.params[0]);
                 } break;
             }
         } break;
@@ -1188,12 +1197,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 22: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.info->duration < param);
+            return (ctx.prep->duration < param);
         } break;
 
         case 26: {
-            if (ctx.info->linked_diag_info) {
-                return TestDiagnosis(ctx.agg->stay.sex, *ctx.linked_diag_info,
+            if (ctx.linked_diag_info) {
+                return TestDiagnosis(ctx.stay->sex, *ctx.linked_diag_info,
                                      ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
             } else {
                 return 0;
@@ -1207,22 +1216,22 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 29: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.info->duration == param);
+            return (ctx.prep->duration == param);
         } break;
 
         case 30: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.agg->stay.session_count == param);
+            return (ctx.stay->session_count == param);
         } break;
 
         case 33: {
-            return !!(ctx.info->proc_activities & (1 << ghm_node.u.test.params[0]));
+            return !!(ctx.prep->proc_activities & (1 << ghm_node.u.test.params[0]));
         } break;
 
         case 34: {
-            if (ctx.linked_diag_info && ctx.linked_diag_info == ctx.info->linked_diag_info) {
-                uint8_t cmd = ctx.linked_diag_info->Attributes(ctx.agg->stay.sex).cmd;
-                uint8_t jump = ctx.linked_diag_info->Attributes(ctx.agg->stay.sex).jump;
+            if (ctx.linked_diag_info && ctx.linked_diag_info == ctx.prep->linked_diag_info) {
+                uint8_t cmd = ctx.linked_diag_info->Attributes(ctx.stay->sex).cmd;
+                uint8_t jump = ctx.linked_diag_info->Attributes(ctx.stay->sex).jump;
                 if (cmd || jump != 3) {
                     std::swap(ctx.main_diag_info, ctx.linked_diag_info);
                 }
@@ -1232,12 +1241,12 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 35: {
-            return (ctx.main_diag_info != ctx.info->main_diag_info);
+            return (ctx.linked_diag_info != ctx.prep->linked_diag_info);
         } break;
 
         case 36: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                if (TestDiagnosis(ctx.agg->stay.sex, *diag_info,
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                if (TestDiagnosis(ctx.stay->sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
                         diag_info != ctx.linked_diag_info)
                     return 1;
@@ -1252,14 +1261,13 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 39: {
             if (!ctx.gnn) {
-                int gestational_age = ctx.agg->stay.gestational_age;
+                int gestational_age = ctx.stay->gestational_age;
                 if (!gestational_age) {
                     gestational_age = 99;
                 }
 
-                for (const mco_ValueRangeCell<2> &cell: ctx.agg->index->gnn_cells) {
-                    if (cell.Test(0, ctx.agg->stay.newborn_weight) &&
-                            cell.Test(1, gestational_age)) {
+                for (const mco_ValueRangeCell<2> &cell: ctx.index->gnn_cells) {
+                    if (cell.Test(0, ctx.stay->newborn_weight) && cell.Test(1, gestational_age)) {
                         ctx.gnn = cell.value;
                         break;
                     }
@@ -1270,9 +1278,9 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 41: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                uint8_t cmd = diag_info->Attributes(ctx.stay->sex).cmd;
+                uint8_t jump = diag_info->Attributes(ctx.stay->sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1])
                     return 1;
             }
@@ -1282,13 +1290,13 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 42: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            return (ctx.agg->stay.newborn_weight && ctx.agg->stay.newborn_weight < param);
+            return (ctx.stay->newborn_weight && ctx.stay->newborn_weight < param);
         } break;
 
         case 43: {
-            for (const mco_DiagnosisInfo *diag_info: ctx.info->diagnoses) {
-                uint8_t cmd = diag_info->Attributes(ctx.agg->stay.sex).cmd;
-                uint8_t jump = diag_info->Attributes(ctx.agg->stay.sex).jump;
+            for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
+                uint8_t cmd = diag_info->Attributes(ctx.stay->sex).cmd;
+                uint8_t jump = diag_info->Attributes(ctx.stay->sex).jump;
                 if (cmd == ghm_node.u.test.params[0] && jump == ghm_node.u.test.params[1] &&
                         diag_info != ctx.linked_diag_info)
                     return 1;
@@ -1302,20 +1310,22 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
     return -1;
 }
 
-static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
+static bool CheckConfirmation(const mco_PreparedStay &prep, mco_GhmCode ghm,
                               const mco_GhmRootInfo &ghm_root_info, mco_ErrorSet *out_errors)
 {
+    const mco_Stay &stay = *prep.stay;
+
     bool valid = true;
 
     bool confirm = false;
-    if (UNLIKELY(agg.info.duration >= 365)) {
+    if (UNLIKELY(prep.duration >= 365)) {
         confirm = true;
-    } else if (agg.info.duration < ghm_root_info.confirm_duration_treshold &&
-               agg.stay.exit.mode != '9' && agg.stay.exit.mode != '0' &&
-               (agg.stay.exit.mode != '7' || agg.stay.exit.destination != '1')) {
+    } else if (prep.duration < ghm_root_info.confirm_duration_treshold &&
+               stay.exit.mode != '9' && stay.exit.mode != '0' &&
+               (stay.exit.mode != '7' || stay.exit.destination != '1')) {
         confirm = true;
-    } else if (agg.flags & ((int)mco_Aggregate::Flag::Childbirth |
-                            (int)mco_Aggregate::Flag::ChildbirthType)) {
+    } else if (prep.markers & ((int)mco_PreparedStay::Marker::Childbirth |
+                             (int)mco_PreparedStay::Marker::ChildbirthType)) {
         // I don't really know the rational behind these tests, to be honest. It's
         // what the official classifier does.
         switch (ghm.parts.cmd) {
@@ -1355,10 +1365,10 @@ static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
         }
     }
 
-    if (agg.stay.flags & (int)mco_Stay::Flag::Confirmed) {
+    if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
         if (confirm) {
             SetError(out_errors, 223, 0);
-        } else if (agg.info.duration >= ghm_root_info.confirm_duration_treshold) {
+        } else if (prep.duration >= ghm_root_info.confirm_duration_treshold) {
             valid &= SetError(out_errors, 124);
         }
     } else if (confirm) {
@@ -1368,18 +1378,21 @@ static bool CheckConfirmation(const mco_Aggregate &agg, mco_GhmCode ghm,
     return valid;
 }
 
-static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorSet *out_errors)
+static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
+                           mco_GhmCode ghm, mco_ErrorSet *out_errors)
 {
+    const mco_Stay &stay = *prep.stay;
+
     bool valid = true;
 
     // Sessions
     if (ghm.parts.cmd == 28) {
-        if (UNLIKELY(agg.stays.len > 1)) {
+        if (UNLIKELY(mono_preps.len > 1)) {
             valid &= SetError(out_errors, 150);
         }
-        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) &&
-                     agg.stay.main_diagnosis.Matches("Z511") &&
-                     !agg.stay.linked_diagnosis.IsValid())) {
+        if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) &&
+                     stay.main_diagnosis.Matches("Z511") &&
+                     !stay.linked_diagnosis.IsValid())) {
             valid &= SetError(out_errors, 187);
         }
     }
@@ -1389,7 +1402,7 @@ static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorS
         static mco_GhmRootCode ghm_root_14C04 = mco_GhmRootCode::FromString("14C04");
         static mco_GhmRootCode ghm_root_14M02 = mco_GhmRootCode::FromString("14M02");
         if (UNLIKELY((ghm.parts.cmd == 14 && ghm.Root() != ghm_root_14C04 && ghm.Root() != ghm_root_14M02) &&
-                     !agg.stay.last_menstrual_period.value)) {
+                     !stay.last_menstrual_period.value)) {
             valid &= SetError(out_errors, 162);
         }
     }
@@ -1397,8 +1410,8 @@ static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorS
     // FIXME: Find a way to optimize away calls to FromString() in simple cases
     {
         static mco_GhmRootCode ghm_root_14Z08 = mco_GhmRootCode::FromString("14Z08");
-        if (UNLIKELY(agg.stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
-            bool type_present = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
+        if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
+            bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                             [](const mco_ProcedureInfo *proc_info) {
                 static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
                 static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
@@ -1414,27 +1427,28 @@ static bool CheckGhmErrors(const mco_Aggregate &agg, mco_GhmCode ghm, mco_ErrorS
     return valid;
 }
 
-static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
+static mco_GhmCode RunGhmTree(const mco_TableIndex &index, const mco_PreparedStay &prep,
                               mco_ErrorSet *out_errors)
 {
     mco_GhmCode ghm = {};
 
     RunGhmTreeContext ctx = {};
-    ctx.agg = &agg;
-    ctx.info = &info;
-    ctx.main_diag_info = info.main_diag_info;
-    ctx.linked_diag_info = info.linked_diag_info;
+    ctx.index = &index;
+    ctx.stay = prep.stay;
+    ctx.prep = &prep;
+    ctx.main_diag_info = prep.main_diag_info;
+    ctx.linked_diag_info = prep.linked_diag_info;
 
     Size ghm_node_idx = 0;
     for (Size i = 0;; i++) {
-        if (UNLIKELY(i >= agg.index->ghm_nodes.len)) {
-            LogError("Empty GHM tree or infinite loop (%2)", agg.index->ghm_nodes.len);
+        if (UNLIKELY(i >= index.ghm_nodes.len)) {
+            LogError("Empty GHM tree or infinite loop (%2)", index.ghm_nodes.len);
             SetError(out_errors, 4, 2);
             return mco_GhmCode::FromString("90Z03Z");
         }
 
-        DebugAssert(ghm_node_idx < agg.index->ghm_nodes.len);
-        const mco_GhmDecisionNode &ghm_node = agg.index->ghm_nodes[ghm_node_idx];
+        DebugAssert(ghm_node_idx < index.ghm_nodes.len);
+        const mco_GhmDecisionNode &ghm_node = index.ghm_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
             case mco_GhmDecisionNode::Type::Test: {
@@ -1458,6 +1472,18 @@ static mco_GhmCode RunGhmTree(const mco_Aggregate &agg, const mco_Aggregate::Sta
             } break;
         }
     }
+}
+
+int mco_GetMinimalDurationForSeverity(int severity)
+{
+    DebugAssert(severity >= 0 && severity < 4);
+    return severity ? (severity + 2) : 0;
+}
+
+int mco_LimitSeverityWithDuration(int severity, int duration)
+{
+    DebugAssert(severity >= 0 && severity < 4);
+    return duration >= 3 ? std::min(duration - 2, severity) : 0;
 }
 
 bool mco_TestGhmRootExclusion(int8_t sex, const mco_DiagnosisInfo &cma_diag_info,
@@ -1506,116 +1532,125 @@ bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
     return false;
 }
 
-static mco_GhmCode RunGhmSeverity(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
+static mco_GhmCode RunGhmSeverity(const mco_TableIndex &index, const mco_PreparedStay &prep,
                                   mco_GhmCode ghm, const mco_GhmRootInfo &ghm_root_info)
 {
+    const mco_Stay &stay = *prep.stay;
+
     // Ambulatory and / or short duration GHM
-    if (ghm_root_info.allow_ambulatory && info.duration == 0) {
+    if (ghm_root_info.allow_ambulatory && !prep.duration) {
         ghm.parts.mode = 'J';
     } else if (ghm_root_info.short_duration_treshold &&
-               info.duration < ghm_root_info.short_duration_treshold) {
+               prep.duration < ghm_root_info.short_duration_treshold) {
         ghm.parts.mode = 'T';
     } else if (ghm.parts.mode >= 'A' && ghm.parts.mode < 'E') {
         int severity = ghm.parts.mode - 'A';
 
         if (ghm_root_info.childbirth_severity_list) {
             Assert(ghm_root_info.childbirth_severity_list > 0 &&
-                   ghm_root_info.childbirth_severity_list <= SIZE(agg.index->cma_cells));
-            for (const mco_ValueRangeCell<2> &cell: agg.index->cma_cells[ghm_root_info.childbirth_severity_list - 1]) {
-                if (cell.Test(0, agg.stay.gestational_age) && cell.Test(1, severity)) {
+                   ghm_root_info.childbirth_severity_list <= SIZE(index.cma_cells));
+            Span<const mco_ValueRangeCell<2>> cma_cells =
+                index.cma_cells[ghm_root_info.childbirth_severity_list - 1];
+            for (const mco_ValueRangeCell<2> &cell: cma_cells) {
+                if (cell.Test(0, stay.gestational_age) && cell.Test(1, severity)) {
                     severity = cell.value;
                     break;
                 }
             }
         }
 
-        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, info.duration));
+        ghm.parts.mode = (char)('A' + mco_LimitSeverityWithDuration(severity, prep.duration));
     } else if (!ghm.parts.mode) {
         int severity = 0;
 
-        for (const mco_DiagnosisInfo *diag_info: info.diagnoses) {
-            if (diag_info == info.main_diag_info || diag_info == info.linked_diag_info)
+        for (const mco_DiagnosisInfo *diag_info: prep.diagnoses) {
+            if (diag_info == prep.main_diag_info || diag_info == prep.linked_diag_info)
                 continue;
 
             // We wouldn't have gotten here if main_diagnosis was missing from the index
-            int new_severity = diag_info->Attributes(agg.stay.sex).severity;
+            int new_severity = diag_info->Attributes(stay.sex).severity;
             if (new_severity > severity) {
-                bool excluded = mco_TestExclusion(*agg.index, agg.stay.sex, agg.age,
+                bool excluded = mco_TestExclusion(index, stay.sex, prep.age,
                                                   *diag_info, ghm_root_info,
-                                                  *info.main_diag_info, info.linked_diag_info);
+                                                  *prep.main_diag_info, prep.linked_diag_info);
                 if (!excluded) {
                     severity = new_severity;
                 }
             }
         }
 
-        if (agg.age >= ghm_root_info.old_age_treshold &&
+        if (prep.age >= ghm_root_info.old_age_treshold &&
                 severity < ghm_root_info.old_severity_limit) {
             severity++;
-        } else if (agg.age < ghm_root_info.young_age_treshold &&
+        } else if (prep.age < ghm_root_info.young_age_treshold &&
                    severity < ghm_root_info.young_severity_limit) {
             severity++;
-        } else if (agg.stay.exit.mode == '9' && !severity) {
+        } else if (stay.exit.mode == '9' && !severity) {
             severity = 1;
         }
 
-        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, info.duration));
+        ghm.parts.mode = (char)('1' + mco_LimitSeverityWithDuration(severity, prep.duration));
     }
 
     return ghm;
 }
 
-mco_GhmCode mco_PickGhm(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
+mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
+                        const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                         unsigned int flags, mco_ErrorSet *out_errors)
 {
     mco_GhmCode ghm;
 
-    ghm = RunGhmTree(agg, info, out_errors);
+    ghm = RunGhmTree(index, prep, out_errors);
 
-    const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+    const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
     if (UNLIKELY(!ghm_root_info)) {
         LogError("Unknown GHM root '%1'", ghm.Root());
         SetError(out_errors, 4, 2);
         return mco_GhmCode::FromString("90Z03Z");
     }
 
-    if (UNLIKELY(!CheckGhmErrors(agg, ghm, out_errors)))
+    if (UNLIKELY(!CheckGhmErrors(prep, mono_preps, ghm, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
     if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation) &&
-                 !CheckConfirmation(agg, ghm, *ghm_root_info, out_errors)))
+                 !CheckConfirmation(prep, ghm, *ghm_root_info, out_errors)))
         return mco_GhmCode::FromString("90Z00Z");
 
-    ghm = RunGhmSeverity(agg, info, ghm, *ghm_root_info);
+    ghm = RunGhmSeverity(index, prep, ghm, *ghm_root_info);
 
     return ghm;
 }
 
-static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
+                    const mco_AuthorizationSet &authorization_set,
                     const mco_GhmToGhsInfo &ghm_to_ghs_info)
 {
-    if (ghm_to_ghs_info.minimal_age && agg.age < ghm_to_ghs_info.minimal_age)
+    const mco_Stay &stay = *prep.stay;
+
+    if (ghm_to_ghs_info.minimal_age && prep.age < ghm_to_ghs_info.minimal_age)
         return false;
 
     int duration;
     if (ghm_to_ghs_info.unit_authorization) {
         duration = 0;
         bool authorized = false;
-        for (const mco_Aggregate::StayInfo &stay_info: agg.stays_info) {
-            if (authorization_set.TestAuthorization(stay_info.stay->unit, stay_info.stay->exit.date,
+        for (const mco_PreparedStay &mono_prep: mono_preps) {
+            const mco_Stay &mono_stay = *mono_prep.stay;
+            if (authorization_set.TestAuthorization(mono_stay.unit, mono_stay.exit.date,
                                                     ghm_to_ghs_info.unit_authorization)) {
-                duration += std::max(1, stay_info.duration);
+                duration += std::max(1, mono_prep.duration);
                 authorized = true;
             }
         }
         if (!authorized)
             return false;
     } else {
-        duration = agg.info.duration;
+        duration = prep.duration;
     }
     if (ghm_to_ghs_info.bed_authorization) {
-        bool test = std::any_of(agg.stays.begin(), agg.stays.end(),
-                                [&](const mco_Stay &stay) {
-            return stay.bed_authorization == ghm_to_ghs_info.bed_authorization;
+        bool test = std::any_of(mono_preps.begin(), mono_preps.end(),
+                                [&](const mco_PreparedStay &mono_prep) {
+            return mono_prep.stay->bed_authorization == ghm_to_ghs_info.bed_authorization;
         });
         if (!test)
             return false;
@@ -1624,20 +1659,19 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
         return false;
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {
-        if (!TestDiagnosis(agg.stay.sex, *agg.info.main_diag_info,
-                           ghm_to_ghs_info.main_diagnosis_mask))
+        if (!TestDiagnosis(stay.sex, *prep.main_diag_info, ghm_to_ghs_info.main_diagnosis_mask))
             return false;
     }
     if (ghm_to_ghs_info.diagnosis_mask.value) {
-        bool test = std::any_of(agg.info.diagnoses.begin(), agg.info.diagnoses.end(),
+        bool test = std::any_of(prep.diagnoses.begin(), prep.diagnoses.end(),
                                 [&](const mco_DiagnosisInfo *diag_info) {
-            return TestDiagnosis(agg.stay.sex, *diag_info, ghm_to_ghs_info.diagnosis_mask);
+            return TestDiagnosis(stay.sex, *diag_info, ghm_to_ghs_info.diagnosis_mask);
         });
         if (!test)
             return false;
     }
     for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-        bool test = std::any_of(agg.info.procedures.begin(), agg.info.procedures.end(),
+        bool test = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                 [&](const mco_ProcedureInfo *proc_info) {
             return TestProcedure(*proc_info, mask);
         });
@@ -1648,44 +1682,47 @@ static bool TestGhs(const mco_Aggregate &agg, const mco_AuthorizationSet &author
     return true;
 }
 
-mco_GhsCode mco_PickGhs(const mco_AuthorizationSet &authorization_set,
-                        const mco_Aggregate &agg, const mco_Aggregate::StayInfo &info,
+mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
+                        const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                         mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
 {
+    const mco_Stay &stay = *prep.stay;
+
     mco_GhsCode ghs = mco_GhsCode(9999);
-    int ghs_duration = info.duration;
+    int ghs_duration = prep.duration;
 
     if (LIKELY(ghm.IsValid() && !ghm.IsError())) {
         // Deal with UHCD-only stays
         bool uhcd = false;
-        if (info.duration > 0 && agg.stays[0].entry.mode == '8' &&
-                agg.stays[agg.stays.len - 1].exit.mode == '8') {
-            uhcd = std::all_of(agg.stays.begin(), agg.stays.end(),
-                                    [&](const mco_Stay &stay) {
-                int8_t auth_type = authorization_set.GetAuthorizationType(stay.unit, stay.exit.date);
+        if (prep.duration > 0 && stay.entry.mode == '8' && stay.exit.mode == '8') {
+            uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
+                               [&](const mco_PreparedStay &mono_prep) {
+                const mco_Stay &mono_stay = *mono_prep.stay;
+                int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit,
+                                                                          mono_stay.exit.date);
                 return (auth_type == 7);
             });
 
             if (uhcd) {
                 ghs_duration = 0;
 
-                mco_Aggregate::StayInfo info0 = info;
-                info0.duration = 0;
+                mco_PreparedStay prep0 = prep;
+                prep0.duration = 0;
 
                 // Don't run ClassifyGhm() because that would test the confirmation flag,
                 // which makes no sense when duration is forced to 0.
-                ghm = RunGhmTree(agg, info0, nullptr);
-                const mco_GhmRootInfo *ghm_root_info = agg.index->FindGhmRoot(ghm.Root());
+                ghm = RunGhmTree(index, prep0, nullptr);
+                const mco_GhmRootInfo *ghm_root_info = index.FindGhmRoot(ghm.Root());
                 if (LIKELY(ghm_root_info)) {
-                    ghm = RunGhmSeverity(agg, info0, ghm, *ghm_root_info);
+                    ghm = RunGhmSeverity(index, prep0, ghm, *ghm_root_info);
                 }
             }
         }
 
-        Span<const mco_GhmToGhsInfo> compatible_ghs = agg.index->FindCompatibleGhs(ghm);
+        Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm);
 
         for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-            if (TestGhs(agg, authorization_set, ghm_to_ghs_info)) {
+            if (TestGhs(prep, mono_preps, authorization_set, ghm_to_ghs_info)) {
                 ghs = ghm_to_ghs_info.Ghs(Sector::Public);
                 break;
             }
@@ -1698,12 +1735,12 @@ mco_GhsCode mco_PickGhs(const mco_AuthorizationSet &authorization_set,
     return ghs;
 }
 
-static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
+static bool TestSupplementRea(const mco_PreparedStay &prep, const mco_PreparedStay &mono_prep,
                               Size list2_treshold)
 {
-    if (stay_info.stay->igs2 >= 15 || agg.age < 18) {
+    if (mono_prep.stay->igs2 >= 15 || prep.age < 18) {
         Size list2_matches = 0;
-        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+        for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
             if (proc_info->bytes[27] & 0x10)
                 return true;
             if (proc_info->bytes[27] & 0x8) {
@@ -1717,23 +1754,26 @@ static bool TestSupplementRea(const mco_Aggregate &agg, const mco_Aggregate::Sta
     return false;
 }
 
-static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::StayInfo &stay_info,
-                              int16_t igs2_src_adjust, bool prev_reanimation)
+static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedStay &prep,
+                              const mco_PreparedStay &mono_prep, int16_t igs2_src_adjust,
+                              bool prev_reanimation, const mco_PreparedStay *prev_mono_prep)
 {
+    const mco_Stay &stay = *prep.stay;
+
     if (prev_reanimation)
         return true;
-    if (agg.age >= 18 && stay_info.stay->igs2 - igs2_src_adjust >= 15)
+    if (prep.age >= 18 && mono_prep.stay->igs2 - igs2_src_adjust >= 15)
         return true;
 
     HeapArray<ProcedureCode> src_procedures;
 
-    if (stay_info.stay->igs2 - igs2_src_adjust >= 7 || agg.age < 18) {
-        for (const mco_DiagnosisInfo *diag_info: stay_info.diagnoses) {
-            if (diag_info->Attributes(agg.stay.sex).raw[21] & 0x10)
+    if (mono_prep.stay->igs2 - igs2_src_adjust >= 7 || prep.age < 18) {
+        for (const mco_DiagnosisInfo *diag_info: mono_prep.diagnoses) {
+            if (diag_info->Attributes(stay.sex).raw[21] & 0x10)
                 return true;
-            if (diag_info->Attributes(agg.stay.sex).raw[21] & 0x8) {
+            if (diag_info->Attributes(stay.sex).raw[21] & 0x8) {
                 // TODO: HashSet for SrcPair on diagnoses to accelerate this
-                for (const mco_SrcPair &pair: agg.index->src_pairs[0]) {
+                for (const mco_SrcPair &pair: index.src_pairs[0]) {
                     if (pair.diag == diag_info->diag) {
                         src_procedures.Append(pair.proc);
                     }
@@ -1741,12 +1781,12 @@ static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::Sta
             }
         }
     }
-    if (agg.age < 18) {
-        for (const mco_DiagnosisInfo *diag_info: stay_info.diagnoses) {
-            if (diag_info->Attributes(agg.stay.sex).raw[22] & 0x80)
+    if (prep.age < 18) {
+        for (const mco_DiagnosisInfo *diag_info: mono_prep.diagnoses) {
+            if (diag_info->Attributes(stay.sex).raw[22] & 0x80)
                 return true;
-            if (diag_info->Attributes(agg.stay.sex).raw[22] & 0x40) {
-                for (const mco_SrcPair &pair: agg.index->src_pairs[1]) {
+            if (diag_info->Attributes(stay.sex).raw[22] & 0x40) {
+                for (const mco_SrcPair &pair: index.src_pairs[1]) {
                     if (pair.diag == diag_info->diag) {
                         src_procedures.Append(pair.proc);
                     }
@@ -1754,19 +1794,19 @@ static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::Sta
             }
         }
     }
-    for (const mco_ProcedureRealisation &proc: stay_info.stay->procedures) {
+    for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
         for (ProcedureCode diag_proc: src_procedures) {
-            if (diag_proc == proc.proc)
+            if (diag_proc == proc_info->proc)
                 return true;
         }
     }
 
-    for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+    for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
         if (proc_info->bytes[38] & 0x1)
             return true;
     }
-    if (&stay_info > &agg.stays_info[0]) {
-        for (const mco_ProcedureInfo *proc_info: (&stay_info - 1)->procedures) {
+    if (prev_mono_prep) {
+        for (const mco_ProcedureInfo *proc_info: prev_mono_prep->procedures) {
             if (proc_info->bytes[38] & 0x1)
                 return true;
         }
@@ -1776,29 +1816,32 @@ static bool TestSupplementSrc(const mco_Aggregate &agg, const mco_Aggregate::Sta
 }
 
 // TODO: Count correctly when authorization date is too early (REA)
-void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &authorization_set,
+void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
+                          const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int /*flags*/,
                           mco_SupplementCounters<int16_t> *out_counters,
                           Strider<mco_SupplementCounters<int16_t>> out_mono_counters)
 {
+    const mco_Stay &stay = *prep.stay;
+
     if (ghs == mco_GhsCode(9999))
         return;
 
     int16_t igs2_src_adjust;
-    if (agg.age >= 80) {
+    if (prep.age >= 80) {
         igs2_src_adjust = 18;
-    } else if (agg.age >= 75) {
+    } else if (prep.age >= 75) {
         igs2_src_adjust = 16;
-    } else if (agg.age >= 70) {
+    } else if (prep.age >= 70) {
         igs2_src_adjust = 15;
-    } else if (agg.age >= 60) {
+    } else if (prep.age >= 60) {
         igs2_src_adjust = 12;
-    } else if (agg.age >= 40) {
+    } else if (prep.age >= 40) {
         igs2_src_adjust = 7;
     } else {
         igs2_src_adjust = 0;
     }
-    bool prev_reanimation = (agg.stays[0].entry.mode == '7' && agg.stays[0].entry.origin == 'R');
+    bool prev_reanimation = (stay.entry.mode == '7' && stay.entry.origin == 'R');
 
     bool test_ohb;
     bool test_aph;
@@ -1810,7 +1853,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
         test_ohb = (ghm != ohb_ghm);
         test_aph = (ghm != aph_ghm);
-        test_sdc = (agg.stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != sdc_ghm);
+        test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != sdc_ghm);
     }
 
     Size ambu_stay_idx = -1;
@@ -1824,13 +1867,13 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
         }
     };
 
-    for (Size i = 0; i < agg.stays_info.len; i++) {
-        const mco_Aggregate::StayInfo &stay_info = agg.stays_info[i];
+    for (Size i = 0; i < mono_preps.len; i++) {
+        const mco_PreparedStay &mono_prep = mono_preps[i];
+        const mco_Stay &mono_stay = *mono_prep.stay;
 
-        int8_t auth_type = authorization_set.GetAuthorizationType(stay_info.stay->unit,
-                                                                  stay_info.stay->exit.date);
+        int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit, mono_stay.exit.date);
         const mco_AuthorizationInfo *auth_info =
-            agg.index->FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
+            index.FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
         if (!auth_info)
             continue;
 
@@ -1840,22 +1883,22 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
         switch (auth_info->function) {
             case 1: {
-                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
+                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     type = (int)mco_SupplementType::Nn1;
                     priority = 1;
                 }
             } break;
 
             case 2: {
-                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
+                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     type = (int)mco_SupplementType::Nn2;
                     priority = 3;
                 }
             } break;
 
             case 3: {
-                if (LIKELY(agg.age < 2) && ghs != mco_GhsCode(5903)) {
-                    if (TestSupplementRea(agg, stay_info, 1)) {
+                if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
+                    if (TestSupplementRea(prep, mono_prep, 1)) {
                         type = (int)mco_SupplementType::Nn3;
                         priority = 6;
                         reanimation = true;
@@ -1867,7 +1910,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             } break;
 
             case 4: {
-                if (TestSupplementRea(agg, stay_info, 3)) {
+                if (TestSupplementRea(prep, mono_prep, 3)) {
                     type = (int)mco_SupplementType::Rea;
                     priority = 7;
                     reanimation = true;
@@ -1878,7 +1921,9 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             } break;
 
             case 6: {
-                if (TestSupplementSrc(agg, stay_info, igs2_src_adjust, prev_reanimation)) {
+                const mco_PreparedStay *prev_mono_prep = i ? &mono_preps[i - 1] : nullptr;
+                if (TestSupplementSrc(index, prep, mono_prep, igs2_src_adjust,
+                                      prev_reanimation, prev_mono_prep)) {
                     type = (int)mco_SupplementType::Src;
                     priority = 2;
                 }
@@ -1891,8 +1936,8 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
             case 9: {
                 if (ghs != mco_GhsCode(5903)) {
-                    if (agg.age < 18) {
-                        if (TestSupplementRea(agg, stay_info, 1)) {
+                    if (prep.age < 18) {
+                        if (TestSupplementRea(prep, mono_prep, 1)) {
                             type = (int)mco_SupplementType::Rep;
                             priority = 8;
                             reanimation = true;
@@ -1901,7 +1946,7 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
                             priority = 5;
                         }
                     } else {
-                        if (TestSupplementRea(agg, stay_info, 3)) {
+                        if (TestSupplementRea(prep, mono_prep, 3)) {
                             type = (int)mco_SupplementType::Rea;
                             priority = 7;
                             reanimation = true;
@@ -1916,15 +1961,15 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 
         prev_reanimation = reanimation;
 
-        if (stay_info.duration) {
+        if (mono_prep.duration) {
             if (ambu_stay_idx >= 0 && ambu_priority >= priority) {
                 if (type >= 0) {
-                    int16_t days = stay_info.duration + (stay_info.stay->exit.mode == '9') - 1;
+                    int16_t days = mono_prep.duration + (mono_stay.exit.mode == '9') - 1;
                     AddToCounter(i, type, days);
                 }
                 AddToCounter(ambu_stay_idx, ambu_type, 1);
             } else if (type >= 0) {
-                int16_t days = stay_info.duration + (stay_info.stay->exit.mode == '9');
+                int16_t days = mono_prep.duration + (mono_stay.exit.mode == '9');
                 AddToCounter(i, type, days);
             }
             ambu_stay_idx = -1;
@@ -1935,14 +1980,14 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
             ambu_type = type;
         }
 
-        for (const mco_ProcedureInfo *proc_info: stay_info.procedures) {
+        for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
             AddToCounter(i, (int)mco_SupplementType::Ohb, test_ohb && (proc_info->bytes[31] & 0x20));
             AddToCounter(i, (int)mco_SupplementType::Aph, test_aph && (proc_info->bytes[38] & 0x8));
-            AddToCounter(i, (int)mco_SupplementType::Rap, agg.age < 18 && ((proc_info->bytes[27] & 0x80) |
-                                                                          (proc_info->bytes[22] & 0x4) |
-                                                                          (proc_info->bytes[39] & 0x10) |
-                                                                          (proc_info->bytes[41] & 0xF0) |
-                                                                          (proc_info->bytes[40] & 0x7)));
+            AddToCounter(i, (int)mco_SupplementType::Rap, prep.age < 18 && ((proc_info->bytes[27] & 0x80) |
+                                                                            (proc_info->bytes[22] & 0x4) |
+                                                                            (proc_info->bytes[39] & 0x10) |
+                                                                            (proc_info->bytes[41] & 0xF0) |
+                                                                            (proc_info->bytes[40] & 0x7)));
             if (test_sdc && (proc_info->bytes[24] & 0x2)) {
                 AddToCounter(i, (int)mco_SupplementType::Sdc, 1);
                 test_sdc = false;
@@ -1953,18 +1998,18 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
         AddToCounter(ambu_stay_idx, ambu_type, 1);
     }
 
-    if (agg.flags & (int)mco_Aggregate::Flag::ChildbirthProcedure) {
-        bool ant_diag = std::any_of(agg.info.diagnoses.begin(), agg.info.diagnoses.end(),
+    if (prep.markers & (int)mco_PreparedStay::Marker::ChildbirthProcedure) {
+        bool ant_diag = std::any_of(prep.diagnoses.begin(), prep.diagnoses.end(),
                                       [&](const mco_DiagnosisInfo *diag_info) {
-            return diag_info->Attributes(agg.stay.sex).raw[25] & 0x40;
+            return diag_info->Attributes(stay.sex).raw[25] & 0x40;
         });
 
         if (ant_diag) {
-            int ant_days = agg.info.childbirth_date - agg.stay.entry.date - 2;
+            int ant_days = prep.childbirth_date - stay.entry.date - 2;
             for (Size i = 0; ant_days > 0; i++) {
-                int stay_ant_days = std::min(agg.stays_info[i].duration, ant_days);
-                AddToCounter(i, (int)mco_SupplementType::Ant, stay_ant_days);
-                ant_days -= stay_ant_days;
+                int mono_ant_days = std::min(mono_preps[i].duration, ant_days);
+                AddToCounter(i, (int)mco_SupplementType::Ant, mono_ant_days);
+                ant_days -= mono_ant_days;
             }
         }
     }
@@ -1973,39 +2018,42 @@ void mco_CountSupplements(const mco_Aggregate &agg, const mco_AuthorizationSet &
 // TODO: Set some fields (duration) to invalid values when appropriate, and convert
 // to NA in drdR
 static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                     Span<const mco_Stay> stays, unsigned int flags, mco_Result out_results[])
+                     Span<const mco_Stay> mono_stays, unsigned int flags, mco_Result out_results[])
 {
     // Reuse data structures to reduce heap allocations
     // (around 5% faster on typical sets on my old MacBook)
-    mco_Aggregate agg;
+    mco_PreparedSet prepared_set;
     mco_ErrorSet errors;
 
     Size i;
-    for (i = 0; stays.len; i++) {
+    for (i = 0; mono_stays.len; i++) {
         mco_Result result = {};
 
         // Prepare
         errors.main_error = 0;
-        result.stays = mco_Split(stays, &stays);
-        result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
-        result.index = agg.index;
-        result.duration = agg.info.duration;
+        result.stays = mco_Split(mono_stays, &mono_stays);
+        result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
+        result.index = prepared_set.index;
+        result.duration = prepared_set.prep.duration;
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
-            result.main_stay_idx = agg.main_stay_info - agg.stays_info.ptr;
-            result.ghm = mco_PickGhm(agg, agg.info, flags, &errors);
+            result.main_stay_idx = prepared_set.main_prep - prepared_set.mono_preps.ptr;
+            result.ghm = mco_PickGhm(*prepared_set.index,
+                                     prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
         result.main_error = errors.main_error;
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_PickGhs(authorization_set, agg, agg.info, result.ghm, flags,
-                                 &result.ghs_duration);
+        result.ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm,
+                                 flags, &result.ghs_duration);
 
         // Count supplements days
-        mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
-                             &result.supplement_days);
+        mco_CountSupplements(*prepared_set.index, authorization_set,
+                             prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
+                             flags, &result.supplement_days);
 
         out_results[i] = result;
     }
@@ -2014,24 +2062,25 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
 }
 
 static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                         Span<const mco_Stay> stays, unsigned int flags,
+                         Span<const mco_Stay> mono_stays, unsigned int flags,
                          Strider<mco_Result> out_results, Strider<mco_Result> out_mono_results)
 {
-    mco_Aggregate agg;
+    // Reuse for performance
+    mco_PreparedSet prepared_set;
     mco_ErrorSet errors;
     HeapArray<mco_Result> mono_results;
     mco_ErrorSet mono_errors;
 
     Size i, j = 0;
-    for (i = 0; stays.len; i++) {
+    for (i = 0; mono_stays.len; i++) {
         mco_Result result = {};
 
         // Prepare
         errors.main_error = 0;
-        result.stays = mco_Split(stays, &stays);
-        result.ghm = mco_Prepare(table_set, result.stays, flags, &agg, &errors);
-        result.index = agg.index;
-        result.duration = agg.info.duration;
+        result.stays = mco_Split(mono_stays, &mono_stays);
+        result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
+        result.index = prepared_set.index;
+        result.duration = prepared_set.prep.duration;
 
         // Mono-stay results
         mono_results.Clear(64);
@@ -2039,55 +2088,58 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
-            result.main_stay_idx = agg.main_stay_info - agg.stays_info.ptr;
-            result.ghm = mco_PickGhm(agg, agg.info, flags, &errors);
+            result.main_stay_idx = prepared_set.main_prep - prepared_set.mono_preps.ptr;
+            result.ghm = mco_PickGhm(*prepared_set.index,
+                                     prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
         result.main_error = errors.main_error;
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_PickGhs(authorization_set, agg, agg.info, result.ghm, flags,
-                                 &result.ghs_duration);
+        result.ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm,
+                                 flags, &result.ghs_duration);
 
         // Count supplements days
         {
             Strider<mco_SupplementCounters<int16_t>> mono_supplement_days =
                 MakeStrider(&mono_results[0].supplement_days, SIZE(mco_Result));
-            mco_CountSupplements(agg, authorization_set, result.ghm, result.ghs, flags,
-                                 &result.supplement_days, mono_supplement_days);
+            mco_CountSupplements(*prepared_set.index, authorization_set,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
+                                 flags, &result.supplement_days, mono_supplement_days);
         }
 
         // Perform mono-stay classifications
         for (Size k = 0; k < result.stays.len; k++) {
-            const mco_Aggregate::StayInfo &stay_info = agg.stays_info[k];
+            const mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
             mco_Result *mono_result = &mono_results[k];
 
             if (result.stays.len == 1) {
                 *mono_result = result;
             } else {
-                mono_result->stays = *stay_info.stay;
+                mono_result->stays = *mono_prep.stay;
                 mono_result->main_stay_idx = 0;
-                mono_result->index = agg.index;
-                mono_result->duration = stay_info.duration;
+                mono_result->index = prepared_set.index;
+                mono_result->duration = mono_prep.duration;
 
                 if (!result.ghm.IsError()) {
                     // Classify GHM
                     mono_errors.main_error = 0;
-                    mono_result->ghm = RunGhmTree(agg, stay_info, &mono_errors);
+                    mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
                     {
                         const mco_GhmRootInfo *ghm_root_info =
-                            agg.index->FindGhmRoot(mono_result->ghm.Root());
+                            prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
                         if (LIKELY(ghm_root_info)) {
-                            mono_result->ghm = RunGhmSeverity(agg, stay_info, mono_result->ghm,
-                                                              *ghm_root_info);
+                            mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
+                                                              mono_result->ghm, *ghm_root_info);
                         }
                     }
                     mono_result->main_error = mono_errors.main_error;
 
                     // Classify GHS
-                    mono_result->ghs = mco_PickGhs(authorization_set, agg, stay_info,
-                                                   mono_result->ghm, flags,
-                                                   &mono_result->ghs_duration);
+                    mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                                   mono_prep, mono_prep, mono_result->ghm,
+                                                   flags, &mono_result->ghs_duration);
                 } else {
                     mono_result->ghs = mco_GhsCode(9999);
                 }
@@ -2104,7 +2156,7 @@ static Size ClassifyMono(const mco_TableSet &table_set, const mco_AuthorizationS
 }
 
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                  Span<const mco_Stay> stays, unsigned int flags,
+                  Span<const mco_Stay> mono_stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
@@ -2114,20 +2166,20 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     }
 
     // Pessimistic assumption (no multi-stay)
-    out_results->Grow(stays.len);
+    out_results->Grow(mono_stays.len);
     if (out_mono_results) {
-        out_mono_results->Grow(stays.len);
-        out_results->len += ClassifyMono(table_set, authorization_set, stays, flags,
+        out_mono_results->Grow(mono_stays.len);
+        out_results->len += ClassifyMono(table_set, authorization_set, mono_stays, flags,
                                          out_results->end(), out_mono_results->end());
-        out_mono_results->len += stays.len;
+        out_mono_results->len += mono_stays.len;
     } else {
-        out_results->len += Classify(table_set, authorization_set, stays, flags,
+        out_results->len += Classify(table_set, authorization_set, mono_stays, flags,
                                      out_results->end());
     }
 }
 
 void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                          Span<const mco_Stay> stays, unsigned int flags,
+                          Span<const mco_Stay> mono_stays, unsigned int flags,
                           HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     if (flags & (int)mco_ClassifyFlag::MonoResults) {
@@ -2136,16 +2188,16 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
         out_mono_results = nullptr;
     }
 
-    if (!stays.len)
+    if (!mono_stays.len)
         return;
 
     static const int task_size = 2048;
 
     // Pessimistic assumption (no multi-stay), but we cannot resize the
     // buffer as we go because the worker threads will fill it directly.
-    out_results->Grow(stays.len);
+    out_results->Grow(mono_stays.len);
     if (out_mono_results) {
-        out_mono_results->Grow(stays.len);
+        out_mono_results->Grow(mono_stays.len);
     }
 
     Async async;
@@ -2155,7 +2207,7 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
             mco_Result *task_out_results = out_results->ptr + results_offset;
             if (out_mono_results) {
                 mco_Result *task_out_mono_results = out_mono_results->ptr +
-                                                    (task_stays.ptr - stays.ptr);
+                                                    (task_stays.ptr - mono_stays.ptr);
                 async.AddTask([&, task_stays, task_out_results, task_out_mono_results]() mutable {
                     ClassifyMono(table_set, authorization_set, task_stays, flags,
                                  task_out_results, task_out_mono_results);
@@ -2171,13 +2223,13 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
         };
 
         Size results_offset = out_results->len;
-        Span<const mco_Stay> task_stays = stays[0];
-        for (Size i = 1; i < stays.len; i++) {
-            if (!mco_StaysAreCompatible(stays[i - 1].bill_id, stays[i].bill_id)) {
+        Span<const mco_Stay> task_stays = mono_stays[0];
+        for (Size i = 1; i < mono_stays.len; i++) {
+            if (!mco_StaysAreCompatible(mono_stays[i - 1].bill_id, mono_stays[i].bill_id)) {
                 if (results_count % task_size == 0) {
                     AddClassifierTask(task_stays, results_offset);
                     results_offset += task_size;
-                    task_stays = MakeSpan(&stays[i], 0);
+                    task_stays = MakeSpan(&mono_stays[i], 0);
                 }
                 results_count++;
             }
@@ -2189,6 +2241,6 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
 
     out_results->len += results_count;
     if (out_mono_results) {
-        out_mono_results->len += stays.len;
+        out_mono_results->len += mono_stays.len;
     }
 }
