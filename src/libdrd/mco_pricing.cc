@@ -128,15 +128,15 @@ void mco_PriceTotal(Span<const mco_Result> results, bool apply_coefficient,
     mco_Summarize(task_pricings, out_pricing);
 }
 
-static int64_t ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pricing> mono_pricings,
-                                   mco_DispenseMode mode, HeapArray<int64_t> *out_coefficients)
+static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pricing> mono_pricings,
+                                  mco_DispenseMode mode, HeapArray<double> *out_coefficients)
 {
-    int64_t total = 0;
+    double total = 0;
     for (Size i = 0; i < mono_pricings.len; i++) {
         const mco_Pricing &mono_pricing = mono_pricings[i];
         DebugAssert(mono_pricing.stays[0].bill_id == pricing.stays[0].bill_id);
 
-        int64_t coefficient = -1;
+        double coefficient = -1;
         switch (mode) {
             case mco_DispenseMode::E: {
                 coefficient = mono_pricing.ghs_cents;
@@ -199,7 +199,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
 
         async.AddTask([&, task_offset, task_mono_offset]() {
             // Reuse for performance
-            HeapArray<int64_t> coefficients;
+            HeapArray<double> coefficients;
 
             Size end = std::min(pricings.len, task_offset + task_size);
             Size j = task_mono_offset;
@@ -209,7 +209,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
                 j += pricing.stays_count;
 
                 coefficients.Clear(64);
-                int64_t coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
+                double coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
                                                                  dispense_mode, &coefficients);
 
                 if (UNLIKELY(!coefficients_total)) {
@@ -223,11 +223,11 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
                 int64_t total_price_cents = 0;
                 for (Size k = 0; k < coefficients.len; k++) {
                     mono_pricing = &sub_mono_pricings[k];
-                    int64_t coefficient = coefficients[k];
+                    double fraction = coefficients[k] / coefficients_total;
 
                     {
-                        int64_t ghs_cents = pricing.ghs_cents * coefficient / coefficients_total;
-                        int64_t price_cents = pricing.price_cents * coefficient / coefficients_total;
+                        int64_t ghs_cents = (int64_t)round(pricing.ghs_cents * fraction);
+                        int64_t price_cents = (int64_t)round(pricing.price_cents * fraction);
                         int64_t supplement_cents = mono_pricing->total_cents - mono_pricing->price_cents;
 
                         mono_pricing->ghs_cents = ghs_cents;
