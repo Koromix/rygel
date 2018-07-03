@@ -4,7 +4,7 @@ var list = {};
 
     // Routes
     var specs = {};
-    var sort = {};
+    var groups = {};
     var search = {};
     var pages = {};
 
@@ -17,7 +17,7 @@ var list = {};
             'table': 'ghm_ghs',
             'concepts': 'ghm_roots',
 
-            'sort': [
+            'groups': [
                 {type: 'ghm_roots', name: 'Racines',
                  func: function(ghm_ghs1, ghm_ghs2) {
                     if (ghm_ghs1.ghm_root !== ghm_ghs2.ghm_root) {
@@ -57,8 +57,8 @@ var list = {};
 
             'header': false,
             'columns': [
-                {func: function(ghm_ghs, ghm_roots_map, sort_type) {
-                    switch (sort_type) {
+                {func: function(ghm_ghs, ghm_roots_map, group) {
+                    switch (group) {
                         case 'da': {
                             let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
                             if (ghm_root_info && ghm_root_info.da) {
@@ -181,11 +181,11 @@ var list = {};
         route.date = url_parts[2] || route.date;
         route.page = parseInt(parameters.page) || 1;
         route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
-        route.sort = parameters.sort;
+        route.group = parameters.group;
         route.search = parameters.search;
         specs[route.list] = route.spec;
         search[route.list] = route.search;
-        sort[route.list] = route.sort;
+        groups[route.list] = route.group;
         pages[route.list + route.spec] = route.page;
 
         // Resources
@@ -193,25 +193,25 @@ var list = {};
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let sort_info = null;
-        if (Lists[route.list] && Lists[route.list].sort) {
-            if (route.sort) {
-                sort_info = Lists[route.list].sort.find(function(sort_info) {
-                    return sort_info.type == route.sort;
+        let group_info = null;
+        if (Lists[route.list] && Lists[route.list].groups) {
+            if (route.group) {
+                group_info = Lists[route.list].groups.find(function(group_info) {
+                    return group_info.type == route.group;
                 });
             } else {
-                sort_info = Lists[route.list].sort[0];
+                group_info = Lists[route.list].groups[0];
             }
         }
         if (main_index >= 0 && Lists[route.list])
-            updateList(route.list, main_index, route.spec, sort_info, route.search);
+            updateList(route.list, main_index, route.spec, group_info, route.search);
 
         // Errors
         if (!Lists[route.list])
             errors.add('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
-        if (route.sort && Lists[route.list] && !sort_info)
+        if (route.group && Lists[route.list] && !group_info)
             errors.add('Critère de tri inconnu');
 
         // Refresh settings
@@ -223,9 +223,9 @@ var list = {};
             if (route.search != search_input.value)
                 search_input.value = route.search || '';
         }
-        if (Lists[route.list] && Lists[route.list].sort !== undefined) {
-            _('#opt_sort').classList.remove('hide');
-            refreshSortList(Lists[route.list], route.sort);
+        if (Lists[route.list] && Lists[route.list].groups !== undefined) {
+            _('#opt_groups').classList.remove('hide');
+            refreshGroups(Lists[route.list], route.group);
         }
 
         // Refresh view
@@ -262,8 +262,8 @@ var list = {};
             new_route.spec = specs[new_route.list];
         if (args.search === undefined)
             new_route.search = search[new_route.list];
-        if (args.sort === undefined)
-            new_route.sort = sort[new_route.list];
+        if (args.group === undefined)
+            new_route.group = groups[new_route.list];
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
@@ -277,9 +277,9 @@ var list = {};
             query.push('search=' + encodeURI(new_route.search));
         if (new_route.page && new_route.page !== 1)
             query.push('page=' + encodeURI(new_route.page));
-        if (new_route.sort && (!Lists[new_route.list] || !Lists[new_route.list].sort ||
-                               new_route.sort !== Lists[new_route.list].sort[0].type))
-            query.push('sort=' + encodeURI(new_route.sort));
+        if (new_route.group && (!Lists[new_route.list] || !Lists[new_route.list].groups ||
+                                new_route.group !== Lists[new_route.list].groups[0].type))
+            query.push('group=' + encodeURI(new_route.group));
         if (query.length)
             url += '?' + query.join('&');
 
@@ -293,7 +293,7 @@ var list = {};
     }
     this.route = route;
 
-    function updateList(list_name, index, spec, sort_info, search)
+    function updateList(list_name, index, spec, group_info, search)
     {
         let url = buildUrl(BaseUrl + 'api/' + (Lists[list_name].table || list_name) + '.json',
                            {date: indexes[index].begin_date, spec: spec});
@@ -313,7 +313,7 @@ var list = {};
                 list.url = url;
                 list.items = json;
             });
-        } else if (!list.init || sort_info !== list.sort_info || search !== list.search) {
+        } else if (!list.init || group_info !== list.group_info || search !== list.search) {
             if (search)
                 search = simplifyForSearch(search);
 
@@ -323,11 +323,9 @@ var list = {};
             if (list_info.concepts)
                 concepts_map = getConcepts(list_info.concepts)[1];
 
-            // Sort
-            if (sort_info) {
-                list.items.sort(function(v1, v2) { return sort_info.func(v1, v2, concepts_map); });
-                list.sort = sort_info.type;
-            }
+            // Groups
+            if (group_info)
+                list.items.sort(function(v1, v2) { return group_info.func(v1, v2, concepts_map); });
 
             // Filter
             list.cells = [];
@@ -348,7 +346,7 @@ var list = {};
                     let prev_length = list.cells.length;
                     for (var j = 0; j < columns.length; j++) {
                         let content = createContent(columns[j], list.items[i], concepts_map,
-                                                    sort_info ? sort_info.type : null);
+                                                    group_info ? group_info.type : null);
                         if (!search || simplifyForSearch(content).indexOf(search) >= 0)
                             show = true;
                         list.cells.push(content);
@@ -365,17 +363,17 @@ var list = {};
             }
 
             list.init = true;
-            list.sort_info = sort_info;
+            list.group_info = group_info;
             list.search = search;
         }
     }
 
-    function createContent(column, item, concepts_map, sort_type)
+    function createContent(column, item, concepts_map, group)
     {
         if (column.variable) {
             var content = item[column.variable];
         } else if (column.func) {
-            var content = column.func(item, concepts_map, sort_type);
+            var content = column.func(item, concepts_map, group);
         }
 
         if (content === undefined || content === null) {
@@ -424,18 +422,18 @@ var list = {};
         }
     }
 
-    function refreshSortList(list_info, select_sort)
+    function refreshGroups(list_info, select_group)
     {
-        var el = _('#opt_sort > select');
+        var el = _('#opt_groups > select');
         el.innerHTML = '';
 
-        for (let i = 0; i < list_info.sort.length; i++) {
-            let sort_info = list_info.sort[i];
-            let opt = createElement('option', {value: sort_info.type}, sort_info.name);
+        for (let i = 0; i < list_info.groups.length; i++) {
+            let group_info = list_info.groups[i];
+            let opt = createElement('option', {value: group_info.type}, group_info.name);
             el.appendChild(opt);
         }
-        if (select_sort)
-            el.value = select_sort;
+        if (select_group)
+            el.value = select_group;
     }
 
     function refreshTable(old_table, list_name, concepts_map, page)
