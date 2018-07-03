@@ -677,7 +677,7 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
     }
     render_offset -= state.scroll_y;
 
-    bool highlight;
+    bool highlight = false;
     switch (state.settings.highlight_mode) {
         case InterfaceSettings::HighlightMode::Never: {
             highlight = false;
