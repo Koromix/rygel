@@ -1180,24 +1180,19 @@ static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_conce
 
 static void AddConceptsToView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
-    // FIXME: Add iterator to HashTable and related containers
-    for (Size i = 0; i < concepts.table.capacity; i++) {
-        if (!concepts.table.IsEmpty(i)) {
-            Concept concept = {};
-            concept.name = MakeString(&out_concept_set->str_alloc, concepts.table.data[i].value).ptr;
-            concept.title = concept.name;
-            concept.path = "/";
-            out_concept_set->concepts_map.Append(concept);
-        }
+    for (Span<const char> concept_name: concepts.table) {
+        Concept concept = {};
+        concept.name = MakeString(&out_concept_set->str_alloc, concept_name).ptr;
+        concept.title = concept.name;
+        concept.path = "/";
+        out_concept_set->concepts_map.Append(concept);
     }
 }
 
 static void RemoveConceptsFromView(const HashSet<Span<const char>> &concepts, ConceptSet *out_concept_set)
 {
-    for (Size i = 0; i < concepts.table.capacity; i++) {
-        if (!concepts.table.IsEmpty(i)) {
-            out_concept_set->concepts_map.Remove(concepts.table.data[i].value.ptr);
-        }
+    for (Span<const char> concept_name: concepts.table) {
+        out_concept_set->concepts_map.Remove(concept_name.ptr);
     }
 }
 

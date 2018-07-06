@@ -1330,22 +1330,21 @@ public:
         bool operator!=(const Iterator &other) const { return !(*this == other); }
     };
 
+    typedef Size value_type;
+    typedef Iterator<Bitset> iterator_type;
+
     static constexpr Size Bits = N;
     size_t data[(N + SIZE(size_t) - 1) / SIZE(size_t)] = {};
-
-    typedef Size value_type;
-    typedef Iterator<Bitset<N>> iterator_type;
 
     void Clear()
     {
         memset(data, 0, SIZE(data));
     }
 
-    iterator_type begin() { return iterator_type(this, 0); }
-    Iterator<const Bitset<N>> begin() const { return Iterator<const Bitset<N>>(this, 0); }
-    iterator_type end() { return iterator_type(this, ARRAY_SIZE(data)); }
-    Iterator<const Bitset<N>> end() const
-        { return Iterator<const Bitset<N>>(this, ARRAY_SIZE(data)); }
+    Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
+    Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
+    Iterator<Bitset> end() { return Iterator<Bitset>(this, ARRAY_SIZE(data)); }
+    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, ARRAY_SIZE(data)); }
 
     Size PopCount() const
     {
@@ -1442,6 +1441,48 @@ template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashTable {
 public:
+    template <typename T>
+    class Iterator {
+    public:
+        T *table;
+        Size offset;
+
+        Iterator(T *table, Size offset)
+            : table(table), offset(offset - 1) { operator++(); }
+
+        ValueType &operator*()
+        {
+            DebugAssert(!table->IsEmpty(offset));
+            return table->data[offset];
+        }
+        const ValueType &operator*() const
+        {
+            DebugAssert(!table->IsEmpty(offset));
+            return table->data[offset];
+        }
+
+        Iterator &operator++()
+        {
+            DebugAssert(offset <= table->capacity);
+            while (offset < table->capacity && table->IsEmpty(++offset));
+            return *this;
+        }
+
+        Iterator operator++(int) const
+        {
+            Iterator ret = *this;
+            ++(*this);
+            return ret;
+        }
+
+        bool operator==(const Iterator &other) const
+            { return table == other.table && offset == other.offset; }
+        bool operator!=(const Iterator &other) const { return !(*this == other); }
+    };
+
+    typedef Size value_type;
+    typedef Iterator<HashTable> iterator_type;
+
     size_t *used = nullptr;
     ValueType *data = nullptr;
     Size count = 0;
@@ -1485,6 +1526,11 @@ public:
 
         Rehash(0);
     }
+
+    Iterator<HashTable> begin() { return Iterator<HashTable>(this, 0); }
+    Iterator<const HashTable> begin() const { return Iterator<const HashTable>(this, 0); }
+    Iterator<HashTable> end() { return Iterator<HashTable>(this, capacity); }
+    Iterator<const HashTable> end() const { return Iterator<const HashTable>(this, capacity); }
 
     ValueType *Find(const KeyType &key)
         { return (ValueType *)((const HashTable *)this)->Find(key); }
@@ -1828,48 +1874,32 @@ public:
 
 template <typename ValueType>
 class HashSet {
-public:
-    struct Bucket {
-        ValueType value;
-
-        HASH_TABLE_HANDLER(Bucket, value);
+    class Handler {
+    public:
+        static ValueType GetKey(const ValueType &value) { return value; }
+        static ValueType GetKey(const ValueType *value) { return *value; }
+        static uint64_t HashKey(const ValueType &value) { return DefaultHash(value); }
+        static bool CompareKeys(const ValueType &value1, const ValueType &value2)
+            { return DefaultCompare(value1, value2); }
     };
 
-    HashTable<ValueType, Bucket> table;
+public:
+    HashTable<ValueType, ValueType, Handler> table;
 
     void Clear() { table.Clear(); }
 
-    std::pair<ValueType *, bool> Append(const ValueType &value)
-    {
-        std::pair<Bucket *, bool> ret = table.Append({value});
-        return { &ret.first->value, ret.second };
-    }
+    std::pair<ValueType *, bool> Append(const ValueType &value) { return table.Append(value); }
+    ValueType *Set(const ValueType &value) { return table.Set(value); }
 
-    ValueType *Set(const ValueType &value)
-        { return &table.Set({value})->value; }
-
-    void Remove(ValueType *it)
-    {
-        if (!it)
-            return;
-        table.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value)));
-    }
+    void Remove(ValueType *it) { table.Remove(it); }
     void Remove(const ValueType &value) { Remove(Find(value)); }
 
-    ValueType *Find(const ValueType &value)
-        { return (ValueType *)((const HashSet *)this)->Find(value); }
-    const ValueType *Find(const ValueType &value) const
-    {
-        const Bucket *table_it = table.Find(value);
-        return table_it ? &table_it->value : nullptr;
-    }
+    ValueType *Find(const ValueType &value) { return table.Find(value); }
+    const ValueType *Find(const ValueType &value) const { return table.Find(value); }
     ValueType FindValue(const ValueType &value, const ValueType &default_value)
-        { return (ValueType)((const HashSet *)this)->FindValue(value, default_value); }
+        { return table.FindValue(value, default_value); }
     const ValueType FindValue(const ValueType &value, const ValueType &default_value) const
-    {
-        const ValueType *it = Find(value);
-        return it ? *it : default_value;
-    }
+        { return table.FindValue(value, default_value); }
 };
 
 // ------------------------------------------------------------------------
