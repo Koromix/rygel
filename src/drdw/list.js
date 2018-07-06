@@ -331,6 +331,7 @@ var list = {};
 
             // Filter
             list.cells = [];
+            list.items_count = 0;
             list.match_count = 0;
             {
                 let prev_deduplicate_key = null;
@@ -341,6 +342,7 @@ var list = {};
                             continue;
                         prev_deduplicate_key = deduplicate_key;
                     }
+                    list.items_count++;
 
                     let show = false;
                     let prev_length = list.cells.length;
@@ -512,13 +514,11 @@ var list = {};
             }
 
             if (visible_count)
-                stats_text += ((page - 1) * PageLen + 1) + ' - ' + ((page - 1) * PageLen + visible_count);
-            if (list.match_count < list.items.length) {
-                stats_text += ' (' + list.match_count + ' ' + (list.match_count > 1 ? 'lignes' : 'ligne') +
-                              ' sur ' + list.items.length + ')';
-            } else {
-                stats_text += ' (' + list.match_count + ' ' + (list.match_count > 1 ? 'lignes' : 'ligne') + ')';
-            }
+                stats_text += ((page - 1) * PageLen + 1) + ' - ' + ((page - 1) * PageLen + visible_count) + ' ';
+            stats_text += '(' + list.match_count + ' ' + (list.match_count > 1 ? 'lignes' : 'ligne');
+            if (list.match_count < list.items_count)
+                stats_text += ' sur ' + list.items_count;
+            stats_text += ')';
         }
 
         let old_pages = __('.ls_pages');
