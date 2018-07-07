@@ -643,7 +643,7 @@ static inline constexpr Span<T> MakeSpan(T (&arr)[N])
 template <typename T>
 class Strider {
 public:
-    void *ptr;
+    void *ptr = nullptr;
     Size stride;
 
     Strider() = default;
