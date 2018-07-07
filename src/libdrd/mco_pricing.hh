@@ -14,6 +14,7 @@ struct mco_Pricing {
     Size stays_count;
     Size failures_count;
     int64_t duration;
+    int64_t ghs_duration;
 
     double ghs_coefficient; // Not valid in totals / summaries
     int64_t ghs_cents;
@@ -29,6 +30,7 @@ struct mco_Pricing {
         stays_count += other.stays_count;
         failures_count += other.failures_count;
         duration += other.duration;
+        ghs_duration += other.ghs_duration;
 
         ghs_cents += other.ghs_cents;
         price_cents += other.price_cents;
