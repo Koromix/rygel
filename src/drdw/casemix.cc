@@ -113,7 +113,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
     mco_ClassifyParallel(*drdw_table_set, *drdw_authorization_set, drdw_stay_set.stays,
-                         (int)mco_ClassifyFlag::MonoResults, &results, &mono_results);
+                         (int)mco_ClassifyFlag::Mono, &results, &mono_results);
 
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;

@@ -301,7 +301,7 @@ Dispensation modes:)");
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-m", "--mono")) {
-                flags |= (int)mco_ClassifyFlag::MonoResults;
+                flags |= (int)mco_ClassifyFlag::Mono;
             } else if (TestOption(opt, "-f", "--flag")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
@@ -355,7 +355,7 @@ Dispensation modes:)");
         }
     }
     if (dispense_mode >= 0) {
-        flags |= (int)mco_ClassifyFlag::MonoResults;
+        flags |= (int)mco_ClassifyFlag::Mono;
     }
 
     const mco_TableSet *table_set = mco_GetMainTableSet();

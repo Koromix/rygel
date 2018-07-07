@@ -348,7 +348,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int
             }
         }
 
-        if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        if (flags & (int)mco_ClassifyFlag::Mono) {
             std::sort(mono_prep.diagnoses.begin(), mono_prep.diagnoses.end());
         }
     }
@@ -526,7 +526,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
             }
         }
 
-        if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        if (flags & (int)mco_ClassifyFlag::Mono) {
             std::sort(mono_prep.procedures.begin(), mono_prep.procedures.end());
         }
 
@@ -2015,6 +2015,16 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
     }
 }
 
+static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)
+{
+    mono_stay.entry.mode = '8';
+    mono_stay.entry.origin = 0;
+    mono_stay.exit.mode = '8';
+    mono_stay.exit.destination = 0;
+
+    return mono_stay;
+}
+
 static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                      Span<const mco_Stay> mono_stays, unsigned int flags,
                      mco_Result out_results[], Strider<mco_Result> out_mono_results)
@@ -2070,12 +2080,12 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
         out_results[i] = result;
 
         // Perform mono-stay classifications
-        if (flags & (int)mco_ClassifyFlag::MonoResults) {
+        if (flags & (int)mco_ClassifyFlag::Mono) {
             if (result.stays.len == 1) {
                 out_mono_results[j++] = result;
             } else {
                 for (Size k = 0; k < result.stays.len; k++) {
-                    const mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
+                    mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
                     mco_Result *mono_result = &mono_results[k];
 
                     mono_result->stays = *mono_prep.stay;
@@ -2084,23 +2094,32 @@ static Size Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &
                     mono_result->duration = mono_prep.duration;
 
                     if (!result.ghm.IsError()) {
-                        // Classify mono-stay GHM
+                        int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
+
                         mono_errors.main_error = 0;
-                        mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
-                        {
+                        if (flags & (int)mco_ClassifyFlag::MonoOriginalStay) {
+                            mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
                             const mco_GhmRootInfo *ghm_root_info =
                                 prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
                             if (LIKELY(ghm_root_info)) {
                                 mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
                                                                   mono_result->ghm, *ghm_root_info);
                             }
+                            mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           mono_flags, &mono_result->ghs_duration);
+                        } else {
+                            DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
+                            mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
+                            mono_prep.stay = &fixed_mono_stay;
+
+                            mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep,
+                                                           mono_prep, mono_flags, &mono_errors);
+                            mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           mono_flags, &mono_result->ghs_duration);
                         }
                         mono_result->main_error = mono_errors.main_error;
-
-                        // Classify mono-stay GHS
-                        mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                       mono_prep, mono_prep, mono_result->ghm,
-                                                       flags, &mono_result->ghs_duration);
                     } else {
                         mono_result->ghs = mco_GhsCode(9999);
                     }
@@ -2119,7 +2138,7 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
                   Span<const mco_Stay> mono_stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
-    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+    if (flags & (int)mco_ClassifyFlag::Mono) {
         DebugAssert(out_mono_results);
     }
 
@@ -2140,7 +2159,7 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
                           Span<const mco_Stay> mono_stays, unsigned int flags,
                           HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
-    if (flags & (int)mco_ClassifyFlag::MonoResults) {
+    if (flags & (int)mco_ClassifyFlag::Mono) {
         DebugAssert(out_mono_results);
     }
 
