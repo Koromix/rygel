@@ -1874,14 +1874,11 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
         int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit, mono_stay.exit.date);
         const mco_AuthorizationInfo *auth_info =
             index.FindAuthorization(mco_AuthorizationScope::Unit, auth_type);
-        if (!auth_info)
-            continue;
 
+        bool reanimation = false;
         int type = -1;
         int priority = 0;
-        bool reanimation = false;
-
-        switch (auth_info->function) {
+        switch (auth_info ? auth_info->function : 0) {
             case 1: {
                 if (LIKELY(prep.age < 2) && ghs != mco_GhsCode(5903)) {
                     type = (int)mco_SupplementType::Nn1;
