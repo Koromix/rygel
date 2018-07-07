@@ -69,14 +69,14 @@ enum class Endianness {
     BigEndian
 };
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
     #define ARCH_64
     #define ARCH_LITTLE_ENDIAN
     #define ARCH_ENDIANNESS (Endianness::LittleEndian)
 
     typedef int64_t Size;
     #define LEN_MAX INT64_MAX
-#elif defined(__i386__) || defined(_M_IX86) || defined(__EMSCRIPTEN__)
+#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
     #define ARCH_32
     #define ARCH_LITTLE_ENDIAN
     #define ARCH_ENDIANNESS (Endianness::LittleEndian)
@@ -2008,23 +2008,22 @@ extern uint64_t g_start_time;
 
 uint64_t GetMonotonicTime();
 
+#if defined(_MSC_VER)
 static inline uint64_t GetClockCounter()
 {
-#if defined(_MSC_VER)
     return __rdtsc();
+}
 #elif defined(__i386__) || defined(__x86_64__)
+static inline uint64_t GetClockCounter()
+{
     uint32_t counter_low, counter_high;
     __asm__ __volatile__ ("cpuid; rdtsc"
                           : "=a" (counter_low), "=d" (counter_high)
                           : : "%ebx", "%ecx");
     uint64_t counter = ((uint64_t)counter_high << 32) | counter_low;
     return counter;
-#elif defined(__EMSCRIPTEN__)
-    return 0;
-#else
-    #error Clock counter reading is not implemented for this CPU architecture
-#endif
 }
+#endif
 
 // ------------------------------------------------------------------------
 // Streams

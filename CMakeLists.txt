@@ -15,8 +15,8 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields -fvisibility=hidden -Wno-unknown-warning-option")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields -fno-rtti -fno-exceptions -fvisibility=hidden \
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -Wno-unknown-warning-option")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -fvisibility=hidden \
                                             -Wno-unknown-warning-option")
     foreach(lang C CXX)
         set(CMAKE_${lang}_FLAGS_DEBUG "-O0 -g")
@@ -25,6 +25,9 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     endforeach()
 
     if(MINGW)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields")
+
         # Latest approach to force MinGW to statically link libwinpthread, until a new
         # version breaks this one too.
         # Number of hours programmers have wasted on dynamic linking: 42547417 (and counting).

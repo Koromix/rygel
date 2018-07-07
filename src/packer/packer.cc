@@ -151,9 +151,9 @@ R"(// This Source Code Form is subject to the terms of the Mozilla Public
 #include <initializer_list>
 #include <stdint.h>
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
     typedef int64_t Size;
-#elif defined(__i386__) || defined(_M_IX86) || defined(__EMSCRIPTEN__)
+#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
     typedef int32_t Size;
 #endif
 
