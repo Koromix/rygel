@@ -50,8 +50,8 @@
 #define HEAPARRAY_GROWTH_FACTOR 1.5f
 
 // Must be a power-of-two
-#define HASHSET_BASE_CAPACITY 32
-#define HASHSET_MAX_LOAD_FACTOR 0.6f
+#define HASHTABLE_BASE_CAPACITY 32
+#define HASHTABLE_MAX_LOAD_FACTOR 0.6f
 
 #define FMT_STRING_BASE_CAPACITY 256
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
@@ -1593,7 +1593,7 @@ private:
             Size idx = HashToIndex(hash);
             ValueType *it = Find(&idx, key);
             if (!it) {
-                if (count >= (Size)((float)capacity * HASHSET_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((float)capacity * HASHTABLE_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                     while (!IsEmpty(idx)) {
@@ -1607,7 +1607,7 @@ private:
                 return {it, false};
             }
         } else {
-            Rehash(HASHSET_BASE_CAPACITY);
+            Rehash(HASHTABLE_BASE_CAPACITY);
 
             Size idx = HashToIndex(hash);
             count++;
