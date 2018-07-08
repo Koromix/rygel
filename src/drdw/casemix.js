@@ -355,6 +355,9 @@ var casemix = {};
                                             max_duration, false, true, function(col, duration) {
                 let ghs = ghm_root_info.ghs_map[col.ghs];
 
+                if (!pricing.testDuration(col, duration))
+                    return null;
+
                 let content = '';
                 let style = 'filter: opacity(20%);';
                 if (ghs) {

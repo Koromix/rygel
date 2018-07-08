@@ -489,18 +489,24 @@ var pricing = {};
     }
     this.createTable = createTable;
 
-    function computePrice(ghs, duration, apply_coeff)
+    function testDuration(ghs, duration)
     {
-        if (!ghs.ghs_cents)
-            return null;
-
         var duration_mask;
         if (duration < 32) {
             duration_mask = 1 << duration;
         } else {
             duration_mask = 1 << 31;
         }
-        if (!(ghs.durations & duration_mask))
+
+        return !!(ghs.durations & duration_mask);
+    }
+    this.testDuration = testDuration;
+
+    function computePrice(ghs, duration, apply_coeff)
+    {
+        if (!ghs.ghs_cents)
+            return null;
+        if (!testDuration(ghs, duration))
             return null;
 
         if (ghs.exb_treshold && duration < ghs.exb_treshold) {
