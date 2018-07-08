@@ -159,7 +159,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
                     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
                         if (test->supplement_days.values[i] != result.supplement_days.values[i]) {
                             PrintLn("    %1 [%2] has inadequate %3 %4 != %5",
-                                    test->bill_id, result.stays[1].exit.date,
+                                    test->bill_id, result.stays[result.stays.len - 1].exit.date,
                                     mco_SupplementTypeNames[i], result.supplement_days.values[i],
                                     test->supplement_days.values[i]);
                         }
