@@ -79,10 +79,8 @@ var tree = {};
     {
         var log = _('#log');
 
-        if (errors.length) {
-            log.innerHTML = errors.join('<br/>');
-            log.classList.remove('hide');
-        }
+        log.innerHTML = errors.join('<br/>');
+        log.classList.toggle('hide', !errors.length);
     }
 
     function refreshTree(nodes, hash)

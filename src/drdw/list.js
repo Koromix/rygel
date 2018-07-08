@@ -406,10 +406,8 @@ var list = {};
         var log = _('#log');
         var h1 = _('#ls_spec');
 
-        if (errors.length) {
-            log.innerHTML = errors.join('<br/>');
-            log.classList.remove('hide');
-        }
+        log.innerHTML = errors.join('<br/>');
+        log.classList.toggle('hide', !errors.length);
 
         if (spec) {
             h1.innerHTML = '';
