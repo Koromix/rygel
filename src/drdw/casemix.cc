@@ -125,6 +125,10 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
         Size j = 0;
         HashMap<int64_t, Size> summary_map;
         for (const mco_Result &result: results) {
+            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+            j += result.stays.len;
+
             int multiplier;
             if (!dates[0].value ||
                     (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
@@ -138,14 +142,11 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                 continue;
             }
 
-            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-            j += result.stays.len;
-
             bool counted_rss = false;
             for (Size k = 0; k < sub_mono_results.len; k++) {
                 const mco_Result &mono_result = sub_mono_results[k];
                 const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                 if (!units.table.count || units.Find(mono_result.stays[0].unit)) {
                     // TODO: Careful with duration overflow
