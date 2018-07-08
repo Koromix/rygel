@@ -52,10 +52,6 @@
 
                 <select id="opt_ghm_roots" onchange="module.route({ghm_root: this.value});"
                         style="width: 96%;"></select><br/>
-                <label id="opt_units">
-                    Unités médicales
-                    <input type="text" style="width: 82%;" value=""/><br/>
-                </label>
                 <label id="opt_diff_indexes">
                     Comparer
                     <select onchange="module.route({diff: this.value});"
@@ -71,6 +67,7 @@
                     <input type="checkbox"
                            onchange="module.route({apply_coefficient: this.checked});"/>
                 </label>
+
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
@@ -79,6 +76,11 @@
                 <label id="opt_groups">
                     Tri
                     <select onchange="module.route({group: this.value});"></select><br/>
+                </label>
+
+                <label id="opt_units">
+                    Unités médicales
+                    <input type="text" style="width: 82%;" value=""/><br/>
                 </label>
                 <label id="opt_diff_casemix">
                     Comparer
@@ -101,16 +103,17 @@
                                                cm_diff: _('#opt_diff_casemix > select').value,
                                                cm_units: _('#opt_units > input').value});">Mettre à jour</button>
             </nav>
-
             <div id="log"></div>
 
             <div id="pr">
                 <table id="pr_table" class="pr_grid"></table>
                 <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
+
             <div id="tr">
                 <ul id="tr_tree"></ul>
             </div>
+
             <div id="ls">
                 <h1 id="ls_spec"></h1>
                 <table class="ls_pages"></table>
@@ -121,6 +124,7 @@
                 <table id="ls_procedures" class="ls_table"></table>
                 <table class="ls_pages"></table>
             </div>
+
             <div id="cm">
                 <table id="cm_cmds"></table>
                 <table id="cm_roots"></table>
