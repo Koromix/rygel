@@ -24,13 +24,7 @@
     <ClCompile Include="..\..\src\libdrd\mco_classifier.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\mco_constraints.cc">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\libdrd\mco_authorizations.cc">
-      <Filter>Fichiers sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\mco_catalogs.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\libdrd\mco_stays.cc">
@@ -39,7 +33,13 @@
     <ClCompile Include="..\..\src\libdrd\mco_tables.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libdrd\mco_main.cc">
+    <ClCompile Include="..\..\src\libdrd\mco_init.cc">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libdrd\mco_pricing.cc">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libdrd\mco_mapper.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -50,16 +50,10 @@
     <ClInclude Include="..\..\src\libdrd\mco_classifier.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\mco_constraints.hh">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\libdrd\mco_authorizations.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\libdrd\mco_common.hh">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\mco_catalogs.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\libdrd\mco_stays.hh">
@@ -68,16 +62,16 @@
     <ClInclude Include="..\..\src\libdrd\mco_tables.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\libdrd.hh">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\libdrd\mco_main.hh">
-      <Filter>Fichiers d%27en-tête</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\src\common\json.hh">
-      <Filter>Fichiers sources</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\src\libdrd\common.hh">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libdrd\mco_init.hh">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libdrd\mco_pricing.hh">
+      <Filter>Fichiers d%27en-tête</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\libdrd\mco_mapper.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>

@@ -145,24 +145,22 @@
     <ClCompile Include="..\..\lib\miniz\miniz.c" />
     <ClCompile Include="..\..\src\common\kutil.cc" />
     <ClCompile Include="..\..\src\libdrd\mco_authorizations.cc" />
-    <ClCompile Include="..\..\src\libdrd\mco_catalogs.cc" />
     <ClCompile Include="..\..\src\libdrd\mco_classifier.cc" />
-    <ClCompile Include="..\..\src\libdrd\mco_constraints.cc" />
-    <ClCompile Include="..\..\src\libdrd\mco_main.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_init.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_mapper.cc" />
+    <ClCompile Include="..\..\src\libdrd\mco_pricing.cc" />
     <ClCompile Include="..\..\src\libdrd\mco_stays.cc" />
     <ClCompile Include="..\..\src\libdrd\mco_tables.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\common\json.hh" />
     <ClInclude Include="..\..\src\common\kutil.hh" />
     <ClInclude Include="..\..\src\libdrd\common.hh" />
-    <ClInclude Include="..\..\src\libdrd\libdrd.hh" />
     <ClInclude Include="..\..\src\libdrd\mco_authorizations.hh" />
-    <ClInclude Include="..\..\src\libdrd\mco_catalogs.hh" />
     <ClInclude Include="..\..\src\libdrd\mco_classifier.hh" />
     <ClInclude Include="..\..\src\libdrd\mco_common.hh" />
-    <ClInclude Include="..\..\src\libdrd\mco_constraints.hh" />
-    <ClInclude Include="..\..\src\libdrd\mco_main.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_init.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_mapper.hh" />
+    <ClInclude Include="..\..\src\libdrd\mco_pricing.hh" />
     <ClInclude Include="..\..\src\libdrd\mco_stays.hh" />
     <ClInclude Include="..\..\src\libdrd\mco_tables.hh" />
   </ItemGroup>

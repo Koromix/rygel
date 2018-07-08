@@ -15,15 +15,18 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\drdc\dump.cc">
+    <ClCompile Include="..\..\src\drdc\drdc.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\drdc\drdc.cc">
+    <ClCompile Include="..\..\src\drdc\drdc_mco.cc">
+      <Filter>Fichiers sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\drdc\drdc_mco_dump.cc">
       <Filter>Fichiers sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\src\drdc\dump.hh">
+    <ClInclude Include="..\..\src\drdc\drdc_mco_dump.hh">
       <Filter>Fichiers d%27en-tête</Filter>
     </ClInclude>
   </ItemGroup>

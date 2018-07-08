@@ -146,16 +146,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\drdc\dump.cc" />
-    <ClCompile Include="..\..\src\drdc\drdc.cc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\src\drdc\dump.hh" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="libdrd.vcxproj">
       <Project>{38b4d5f6-3190-40a2-a34d-1900364b738a}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\src\drdc\drdc.cc" />
+    <ClCompile Include="..\..\src\drdc\drdc_mco.cc" />
+    <ClCompile Include="..\..\src\drdc\drdc_mco_dump.cc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\src\drdc\drdc_mco_dump.hh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
