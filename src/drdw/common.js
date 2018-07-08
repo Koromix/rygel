@@ -185,7 +185,7 @@ function downloadJson(url, func)
     var xhr = new XMLHttpRequest();
     xhr.open('get', url, true);
     xhr.responseType = 'json';
-    xhr.timeout = 10000;
+    xhr.timeout = 14000;
     xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
     xhr.onerror = function(e) { handleFinishedRequest(503); };
     xhr.ontimeout = function(e) { handleFinishedRequest(504); };
