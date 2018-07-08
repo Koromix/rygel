@@ -171,7 +171,6 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
                 }
             } break;
         }
-        DebugAssert(coefficient >= 0);
 
         out_coefficients->Append(coefficient);
         total += coefficient;
