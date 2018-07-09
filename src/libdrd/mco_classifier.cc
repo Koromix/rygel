@@ -893,7 +893,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep, Span<const mco_Pr
     }
 
     // Sessions
-    if (prep.main_diag_info->Attributes(stay.sex).raw[8] & 0x2) {
+    if (prep.main_diag_info && (prep.main_diag_info->Attributes(stay.sex).raw[8] & 0x2)) {
         if (UNLIKELY(!prep.duration && !stay.session_count)) {
             bool tolerate = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
