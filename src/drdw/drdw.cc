@@ -549,7 +549,7 @@ Options:
         --concept_dir <dir>      Add concepts directory
                                  (default: <resource_dir>%/concepts)
 
-    -s, --stays <path>           Add stays to casemix
+    -c, --casemix                Load stays for casemix module
 )");
         PrintLn(fp, mco_options_usage);
     };
@@ -572,6 +572,7 @@ Options:
         OptionParser opt_parser(argc, argv);
 
         const char *opt;
+        bool casemix = false;
         while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
@@ -593,12 +594,17 @@ Options:
                     return 1;
 
                 desc_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-s", "--stays")) {
-                if (!opt_parser.RequireValue(PrintUsage))
-                    return 1;
-
-                stays_filenames.Append(opt_parser.current_value);
+            } else if (TestOption(opt, "-c", "--casemix")) {
+                casemix = true;
             } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+                return 1;
+            }
+        }
+
+        if (casemix) {
+            opt_parser.ConsumeNonOptions(&stays_filenames);
+            if (!stays_filenames.len) {
+                LogError("No stay filenames specified despite '--casemix' option");
                 return 1;
             }
         }
