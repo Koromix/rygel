@@ -1845,6 +1845,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
 
     bool test_ohb;
     bool test_aph;
+    bool test_dia;
     bool test_sdc;
     {
         static mco_GhmCode ohb_ghm = mco_GhmCode::FromString("28Z15Z");
@@ -1853,6 +1854,11 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
 
         test_ohb = (ghm != ohb_ghm);
         test_aph = (ghm != aph_ghm);
+        test_dia = (ghm != mco_GhmCode(28, 'Z', 1, 'Z') &&
+                    ghm != mco_GhmCode(28, 'Z', 2, 'Z') &&
+                    ghm != mco_GhmCode(28, 'Z', 3, 'Z') &&
+                    ghm != mco_GhmCode(28, 'Z', 4, 'Z') &&
+                    ghm != mco_GhmCode(11, 'K', 2, 'J'));
         test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != sdc_ghm);
     }
 
@@ -1985,6 +1991,12 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
                                                                             (proc_info->bytes[39] & 0x10) |
                                                                             (proc_info->bytes[41] & 0xF0) |
                                                                             (proc_info->bytes[40] & 0x7)));
+            if (test_dia) {
+                AddToCounter(i, (int)mco_SupplementType::Dia, !!(proc_info->bytes[32] & 0x2));
+                AddToCounter(i, (int)mco_SupplementType::Ent1, !!(proc_info->bytes[23] & 0x1));
+                AddToCounter(i, (int)mco_SupplementType::Ent2, !!(proc_info->bytes[24] & 0x80));
+                AddToCounter(i, (int)mco_SupplementType::Ent3, !!(proc_info->bytes[30] & 0x4));
+            }
             if (test_sdc && (proc_info->bytes[24] & 0x2)) {
                 AddToCounter(i, (int)mco_SupplementType::Sdc, 1);
                 test_sdc = false;

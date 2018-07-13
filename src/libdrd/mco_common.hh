@@ -11,6 +11,7 @@ union mco_GhmRootCode {
     int32_t value;
     struct {
 #ifdef ARCH_LITTLE_ENDIAN
+        int8_t pad1;
         int8_t seq;
         char type;
         int8_t cmd;
@@ -18,10 +19,17 @@ union mco_GhmRootCode {
         int8_t cmd;
         char type;
         int8_t seq;
+        int8_t pad1;
 #endif
     } parts;
 
     mco_GhmRootCode() = default;
+    constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
+#ifdef ARCH_LITTLE_ENDIAN
+        : parts {0, seq, type, cmd} {}
+#else
+        : parts {cmd, type, seq, 0} {}
+#endif
 
     static mco_GhmRootCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
                                       Span<const char> *out_remaining = nullptr)
@@ -106,6 +114,12 @@ union mco_GhmCode {
     } parts;
 
     mco_GhmCode() = default;
+    constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
+#ifdef ARCH_LITTLE_ENDIAN
+        : parts {mode, seq, type, cmd} {}
+#else
+        : parts {cmd, type, seq, mode} {}
+#endif
 
     static mco_GhmCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
                                   Span<const char> *out_remaining = nullptr)
@@ -244,6 +258,10 @@ enum class mco_SupplementType {
     Aph,
     Ant,
     Rap,
+    Dia,
+    Ent1,
+    Ent2,
+    Ent3,
     Sdc
 };
 static const char *const mco_SupplementTypeNames[] = {
@@ -260,6 +278,10 @@ static const char *const mco_SupplementTypeNames[] = {
     "APH",
     "ANT",
     "RAP",
+    "DIA",
+    "ENT1",
+    "ENT2",
+    "ENT3",
     "SDC"
 };
 
@@ -280,6 +302,10 @@ union mco_SupplementCounters {
         T aph;
         T ant;
         T rap;
+        T dia;
+        T ent1;
+        T ent2;
+        T ent3;
         T sdc;
     } st;
     StaticAssert(SIZE(mco_SupplementCounters::values) == SIZE(mco_SupplementCounters::st));
@@ -300,6 +326,10 @@ union mco_SupplementCounters {
         st.aph += other.st.aph;
         st.ant += other.st.ant;
         st.rap += other.st.rap;
+        st.dia += other.st.dia;
+        st.ent1 += other.st.ent1;
+        st.ent2 += other.st.ent2;
+        st.ent3 += other.st.ent3;
         st.sdc += other.st.sdc;
 
         return *this;
@@ -327,6 +357,10 @@ union mco_SupplementCounters {
                st.aph == other.st.aph &&
                st.ant == other.st.ant &&
                st.rap == other.st.rap &&
+               st.dia == other.st.dia &&
+               st.ent1 == other.st.ent1 &&
+               st.ent2 == other.st.ent2 &&
+               st.ent3 == other.st.ent3 &&
                st.sdc == other.st.sdc;
     }
     template <typename U>

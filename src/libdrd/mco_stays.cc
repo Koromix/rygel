@@ -557,7 +557,10 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset++;
     ParsePmsiInt(ReadFragment(1), &global_auth_count);
-    offset += 12; // Skip many fields
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.dia);
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent1);
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent2);
+    ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ent3);
     ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.aph);
     ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.rap);
     ParsePmsiInt(ReadFragment(3), &test.supplement_days.st.ant);

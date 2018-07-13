@@ -1062,6 +1062,14 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                     supplement_prices.st.ohb = price_info.ghs_cents;
                 } else if (price_info.ghs == mco_GhsCode(9615)) {
                     supplement_prices.st.aph = price_info.ghs_cents;
+                } else if (price_info.ghs == mco_GhsCode(9605)) {
+                    supplement_prices.st.dia = price_info.ghs_cents;
+                } else if (price_info.ghs == mco_GhsCode(20020)) {
+                    supplement_prices.st.ent1 = price_info.ghs_cents;
+                } else if (price_info.ghs == mco_GhsCode(20021)) {
+                    supplement_prices.st.ent2 = price_info.ghs_cents;
+                } else if (price_info.ghs == mco_GhsCode(20024)) {
+                    supplement_prices.st.ent3 = price_info.ghs_cents;
                 }
 
                 out_ghs_prices->Append(price_info);
