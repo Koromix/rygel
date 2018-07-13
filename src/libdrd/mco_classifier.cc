@@ -1398,29 +1398,24 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
     }
 
     // Menstruation
-    {
-        static mco_GhmRootCode ghm_root_14C04 = mco_GhmRootCode::FromString("14C04");
-        static mco_GhmRootCode ghm_root_14M02 = mco_GhmRootCode::FromString("14M02");
-        if (UNLIKELY((ghm.parts.cmd == 14 && ghm.Root() != ghm_root_14C04 && ghm.Root() != ghm_root_14M02) &&
-                     !stay.last_menstrual_period.value)) {
-            valid &= SetError(out_errors, 162);
-        }
+    if (UNLIKELY(ghm.parts.cmd == 14 &&
+                 ghm.Root() != mco_GhmRootCode(14, 'C', 4) &&
+                 ghm.Root() != mco_GhmRootCode(14, 'M', 2) &&
+                 !stay.last_menstrual_period.value)) {
+        valid &= SetError(out_errors, 162);
     }
 
-    // FIXME: Find a way to optimize away calls to FromString() in simple cases
-    {
-        static mco_GhmRootCode ghm_root_14Z08 = mco_GhmRootCode::FromString("14Z08");
-        if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == ghm_root_14Z08)) {
-            bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
-                                            [](const mco_ProcedureInfo *proc_info) {
-                static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
-                static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
+    // Abortion
+    if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
+        bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
+                                        [](const mco_ProcedureInfo *proc_info) {
+            static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
+            static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
 
-                return proc_info->proc == proc1 || proc_info->proc == proc2;
-            });
-            if (!type_present) {
-                SetError(out_errors, 179, -1);
-            }
+            return proc_info->proc == proc1 || proc_info->proc == proc2;
+        });
+        if (!type_present) {
+            SetError(out_errors, 179, -1);
         }
     }
 
@@ -1843,24 +1838,14 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
     }
     bool prev_reanimation = (stay.entry.mode == '7' && stay.entry.origin == 'R');
 
-    bool test_ohb;
-    bool test_aph;
-    bool test_dia;
-    bool test_sdc;
-    {
-        static mco_GhmCode ohb_ghm = mco_GhmCode::FromString("28Z15Z");
-        static mco_GhmCode aph_ghm = mco_GhmCode::FromString("28Z16Z");
-        static mco_GhmRootCode sdc_ghm = mco_GhmRootCode::FromString("05C19");
-
-        test_ohb = (ghm != ohb_ghm);
-        test_aph = (ghm != aph_ghm);
-        test_dia = (ghm != mco_GhmCode(28, 'Z', 1, 'Z') &&
-                    ghm != mco_GhmCode(28, 'Z', 2, 'Z') &&
-                    ghm != mco_GhmCode(28, 'Z', 3, 'Z') &&
-                    ghm != mco_GhmCode(28, 'Z', 4, 'Z') &&
-                    ghm != mco_GhmCode(11, 'K', 2, 'J'));
-        test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != sdc_ghm);
-    }
+    bool test_ohb = (ghm != mco_GhmCode(28, 'Z', 15, 'Z'));
+    bool test_aph = (ghm != mco_GhmCode(28, 'Z', 16, 'Z'));
+    bool test_dia = (ghm != mco_GhmCode(28, 'Z', 1, 'Z') &&
+                     ghm != mco_GhmCode(28, 'Z', 2, 'Z') &&
+                     ghm != mco_GhmCode(28, 'Z', 3, 'Z') &&
+                     ghm != mco_GhmCode(28, 'Z', 4, 'Z') &&
+                     ghm != mco_GhmCode(11, 'K', 2, 'J'));
+    bool test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != mco_GhmRootCode(5, 'C', 19));
 
     Size ambu_stay_idx = -1;
     int ambu_priority = 0;
