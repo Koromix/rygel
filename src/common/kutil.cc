@@ -2505,16 +2505,14 @@ const char *OptionParser::ConsumeValue()
     if (current_value)
         return current_value;
 
-    const char *arg = args[pos];
-
     // Support '-fbar' where bar is the value, but only for the first short option
     // if it's an aggregate.
-    if (smallopt_offset == 1 && arg[2]) {
+    if (smallopt_offset == 1 && args[pos][2]) {
         smallopt_offset = 0;
-        current_value = arg + 2;
+        current_value = args[pos] + 2;
         pos++;
     // Support '-f bar' and '--foo bar', see ConsumeOption() for '--foo=bar'
-    } else if (!smallopt_offset && pos < args.len && !IsOption(arg)) {
+    } else if (!smallopt_offset && pos < args.len && !IsOption(args[pos])) {
         current_value = args[pos];
         pos++;
     }
