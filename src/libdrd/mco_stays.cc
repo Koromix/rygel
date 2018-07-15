@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 9
+#define PACK_VERSION 10
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -831,6 +831,68 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> 
     return LoadAtih(st, ParseRsaLine, out_tests);
 }
 
+bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> */*out_tests*/)
+{
+    Size lines = 0;
+    Size errors = 0;
+    {
+        LineReader reader(&st);
+        reader.PushLogHandler();
+        DEFER { PopLogHandler(); };
+
+        Span<const char> line;
+        while (reader.Next(&line)) {
+            lines++;
+
+            if (line.len < 92) {
+                LogError("Truncated FICHCOMP line");
+                errors++;
+                continue;
+            }
+
+            int type = 0;
+            int32_t admin_id = -1;
+            {
+                bool valid = true;
+
+                valid &= ParsePmsiInt(line.Take(9, 2), &type);
+                valid &= ParsePmsiInt(line.Take(11, 20), &admin_id);
+
+                if (UNLIKELY(!valid)) {
+                    LogError("Malformed FICHCOMP line");
+                    errors++;
+                    continue;
+                }
+            }
+
+            switch (type) {
+                case 6:
+                case 9:
+                case 10: {
+                    ucd_set.Append(admin_id);
+                } break;
+
+                case 2:
+                case 3:
+                case 4:
+                case 7:
+                case 99: {} break;
+
+                default: {
+                    LogError("Unknown or invalid FICHCOMP type %1", type);
+                    errors++;
+                } break;
+            }
+        }
+        if (reader.error)
+            return false;
+    }
+    if (errors && errors == lines)
+        return false;
+
+    return true;
+}
+
 bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
                                    HashTable<int32_t, mco_Test> *out_tests)
 {
@@ -848,6 +910,8 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
             load_func = &mco_StaySetBuilder::LoadRss;
         } else if (extension == ".rsa") {
             load_func = &mco_StaySetBuilder::LoadRsa;
+        } else if (extension == ".txt") {
+            load_func = &mco_StaySetBuilder::LoadFichComp;
         } else {
             LogError("Cannot load stays from file '%1' with unknown extension '%2'",
                      filename, extension);
@@ -869,13 +933,17 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
 bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
 {
     for (mco_Stay &stay: set.stays) {
-#define FIX_SPAN(SpanName) \
-            stay.SpanName.ptr = set.store.SpanName.ptr + (Size)stay.SpanName.ptr
+        stay.diagnoses.ptr = set.store.diagnoses.ptr + (Size)stay.diagnoses.ptr;
+        stay.procedures.ptr = set.store.procedures.ptr + (Size)stay.procedures.ptr;
 
-        FIX_SPAN(diagnoses);
-        FIX_SPAN(procedures);
-
-#undef FIX_SPAN
+        int32_t *ucd = ucd_set.Find(stay.admin_id);
+        if (ucd) {
+            stay.flags |= (int)mco_Stay::Flag::Ucd;
+            ucd_set.Remove(ucd);
+        }
+    }
+    if (ucd_set.table.count) {
+        LogError("Some UCD entries (%1) have no matching stay", ucd_set.table.count);
     }
 
     SwapMemory(out_set, &set, SIZE(set));

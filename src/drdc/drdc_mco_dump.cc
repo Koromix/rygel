@@ -322,6 +322,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set)
                     Size sector_idx = i - (int)mco_TableType::PriceTablePublic;
                     mco_DumpGhsPriceTable(index.ghs_prices[sector_idx]);
                 } break;
+                case mco_TableType::GhsMinorationTable: {} break;
 
                 case mco_TableType::UnknownTable:
                     break;

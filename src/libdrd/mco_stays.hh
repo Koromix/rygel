@@ -21,6 +21,7 @@ struct mco_ProcedureRealisation {
 struct mco_Stay {
     enum class Flag {
         Confirmed = 1 << 0,
+        Ucd = 1 << 1
     };
 
     enum class Error {
@@ -133,10 +134,13 @@ struct mco_StaySet {
 class mco_StaySetBuilder {
     mco_StaySet set;
 
+    HashSet<int32_t> ucd_set;
+
 public:
     bool LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
     bool LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
     bool LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
+    bool LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
 
     bool LoadFiles(Span<const char *const> filenames,
                    HashTable<int32_t, mco_Test> *out_tests = nullptr);

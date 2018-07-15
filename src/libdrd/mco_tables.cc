@@ -185,6 +185,8 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
             table.type = mco_TableType::AuthorizationTable;
         } else if (TestStr(table.raw_type, "SRCDGACT")) {
             table.type = mco_TableType::SrcPairTable;
+        } else if (TestStr(table.raw_type, "GHSMINOR")) {
+            table.type = mco_TableType::GhsMinorationTable;
         } else {
             table.type = mco_TableType::UnknownTable;
         }
@@ -959,6 +961,28 @@ bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
     return true;
 }
 
+bool mco_ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                 HeapArray<mco_GhsCode> *out_minored_ghs)
+{
+    DEFER_NC(out_guard, len = out_minored_ghs->len) { out_minored_ghs->RemoveFrom(len); };
+
+    FAIL_PARSE_IF(table.filename, table.sections.len != 1);
+    FAIL_PARSE_IF(table.filename, table.sections[0].value_len != SIZE(int16_t));
+
+    for (Size i = 0; i < table.sections[0].values_count; i++) {
+        mco_GhsCode ghs = {};
+
+        uint16_t raw_ghs;
+        memcpy(&raw_ghs, file_data + table.sections[0].raw_offset + i * SIZE(uint16_t), SIZE(uint16_t));
+        ghs.number = BigEndian(raw_ghs);
+
+        out_minored_ghs->Append(ghs);
+    }
+
+    out_guard.disable();
+    return true;
+}
+
 bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
                          double *out_ghs_coefficient,
                          HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
@@ -1315,8 +1339,12 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     // ccamdesc.tab are added to the ProcedureInfo table). Two consequences:
     // - when we load a new main table, we need to reload secondary tables,
     // - when we load a new secondary table, we need to make a new version of the main table.
-    HandleTableDependencies(current_tables[(int)mco_TableType::ProcedureTable],
-                            current_tables[(int)mco_TableType::ProcedureExtensionTable]);
+    static const std::pair<mco_TableType, mco_TableType> TableDependencies[] = {
+        {mco_TableType::ProcedureTable, mco_TableType::ProcedureExtensionTable},
+        {mco_TableType::PriceTablePublic, mco_TableType::GhsMinorationTable},
+        {mco_TableType::PriceTablePrivate, mco_TableType::GhsMinorationTable}
+    };
+    HandleDependencies(current_tables, TableDependencies);
 
 #define LOAD_TABLE(MemberName, LoadFunc, ...) \
         do { \
@@ -1456,6 +1484,24 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 BUILD_MAP(ghs_prices[table_idx], ghs_prices_map[table_idx], ghs_prices[table_idx]);
             } break;
 
+            case mco_TableType::GhsMinorationTable: {
+                if (table_info) {
+                    HeapArray<mco_GhsCode> minored_ghs;
+                    valid &= mco_ParseGhsMinorationTable(load_info->raw_data.ptr, *table_info,
+                                                         &minored_ghs);
+
+                    for (int j = 0; j < 2; j++) {
+                        for (mco_GhsCode ghs: minored_ghs) {
+                            mco_GhsPriceInfo *price_info =
+                                (mco_GhsPriceInfo *)index.ghs_prices_map[j]->FindValue(ghs, nullptr);
+                            if (LIKELY(price_info)) {
+                                price_info->flags |= (int)mco_GhsPriceInfo::Flag::Minoration;
+                            }
+                        }
+                    }
+                }
+            } break;
+
             case mco_TableType::UnknownTable: {} break;
         }
 
@@ -1507,28 +1553,24 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     return success;
 }
 
-template <typename... Args>
-void mco_TableSetBuilder::HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args)
+void mco_TableSetBuilder::HandleDependencies(mco_TableSetBuilder::TableLoadInfo *current_tables[],
+                                             Span<const std::pair<mco_TableType, mco_TableType>> pairs)
 {
-    TableLoadInfo *secondary_tables[] = {secondary_args...};
+    for (const std::pair<mco_TableType, mco_TableType> &p: pairs) {
+        mco_TableSetBuilder::TableLoadInfo *main_table = current_tables[(Size)p.first];
+        mco_TableSetBuilder::TableLoadInfo *secondary_table = current_tables[(Size)p.second];
 
-    if (main_table) {
-        for (TableLoadInfo *secondary_table: secondary_tables) {
-            if (secondary_table->table_idx >= 0 && secondary_table->prev_index_idx < 0) {
-                main_table->prev_index_idx = -1;
-            }
+        if (secondary_table->table_idx >= 0 && secondary_table->prev_index_idx < 0) {
+            main_table->prev_index_idx = -1;
         }
+    }
+
+    for (const std::pair<mco_TableType, mco_TableType> &p: pairs) {
+        mco_TableSetBuilder::TableLoadInfo *main_table = current_tables[(Size)p.first];
+        mco_TableSetBuilder::TableLoadInfo *secondary_table = current_tables[(Size)p.second];
 
         if (main_table->prev_index_idx < 0) {
-            for (TableLoadInfo *secondary_table: secondary_tables) {
-                if (secondary_table->table_idx >= 0) {
-                    secondary_table->prev_index_idx = -1;
-                }
-            }
-        }
-    } else {
-        for (TableLoadInfo *secondary_table: secondary_tables) {
-            secondary_table->table_idx = -1;
+            secondary_table->prev_index_idx = -1;
         }
     }
 }

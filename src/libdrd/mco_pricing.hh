@@ -87,8 +87,9 @@ static const struct OptionDesc mco_DispenseModeOptions[] = {
     {"exj2", "Ex'J"}
 };
 
-int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient, int ghs_duration,
-                     bool death, int64_t *out_ghs_cents = nullptr, int32_t *out_exb_exh = nullptr);
+int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
+                     int ghs_duration, bool death, bool ucd,
+                     int64_t *out_ghs_cents = nullptr, int32_t *out_exb_exh = nullptr);
 
 void mco_Price(const mco_Result &result, mco_Pricing *out_pricing);
 void mco_Price(Span<const mco_Result> results, bool apply_coefficient,

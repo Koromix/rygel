@@ -19,9 +19,9 @@ enum class mco_TableType: uint32_t {
     GhmToGhsTable,
     AuthorizationTable,
     SrcPairTable,
-
     PriceTablePublic,
-    PriceTablePrivate
+    PriceTablePrivate,
+    GhsMinorationTable
 };
 static const char *const mco_TableTypeNames[] = {
     "Unknown Table",
@@ -35,9 +35,9 @@ static const char *const mco_TableTypeNames[] = {
     "GHM To GHS Table",
     "Authorization Table",
     "SRC Pair Table",
-
     "Price Table (public)",
-    "Price Table (private)"
+    "Price Table (private)",
+    "GHS Minoration Table"
 };
 
 struct mco_TableInfo {
@@ -212,7 +212,8 @@ struct mco_GhmToGhsInfo {
 
 struct mco_GhsPriceInfo {
     enum class Flag {
-        ExbOnce = 1
+        ExbOnce = 1 << 0,
+        Minoration = 1 << 1
     };
 
     mco_GhsCode ghs;
@@ -281,6 +282,8 @@ bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &
                                  HeapArray<mco_AuthorizationInfo> *out_auths);
 bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
                            HeapArray<mco_SrcPair> *out_pairs);
+bool mco_ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                 HeapArray<mco_GhsCode> *out_minored_ghs);
 
 bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
                          double *out_ghs_coefficient,
@@ -394,8 +397,8 @@ public:
 
 private:
     bool CommitIndex(Date start_date, Date end_date, TableLoadInfo *current_tables[]);
-    template <typename... Args>
-    void HandleTableDependencies(TableLoadInfo *main_table, Args... secondary_args);
+    void HandleDependencies(mco_TableSetBuilder::TableLoadInfo *current_tables[],
+                            Span<const std::pair<mco_TableType, mco_TableType>> pairs);
 };
 
 class mco_ListSpecifier {

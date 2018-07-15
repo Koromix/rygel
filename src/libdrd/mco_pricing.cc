@@ -6,10 +6,13 @@
 #include "mco_pricing.hh"
 
 int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
-                     int ghs_duration, bool death, int64_t *out_ghs_cents, int32_t *out_exb_exh)
+                     int ghs_duration, bool death, bool ucd,
+                     int64_t *out_ghs_cents, int32_t *out_exb_exh)
 {
-    int price_cents = price_info.ghs_cents;
+    int ghs_cents = price_info.ghs_cents -
+                    4000 * ((price_info.flags & (int)mco_GhsPriceInfo::Flag::Minoration) && ucd);
 
+    int price_cents = ghs_cents;
     int exb_exh;
     if (ghs_duration < price_info.exb_treshold && !death) {
         exb_exh = -(price_info.exb_treshold - ghs_duration);
@@ -26,7 +29,7 @@ int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,
     }
 
     if (out_ghs_cents) {
-        *out_ghs_cents += (int64_t)(ghs_coefficient * price_info.ghs_cents);
+        *out_ghs_cents += (int64_t)(ghs_coefficient * ghs_cents);
     }
     if (out_exb_exh) {
         *out_exb_exh += exb_exh;
@@ -58,6 +61,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     if (LIKELY(price_info)) {
         int64_t price_cents = mco_PriceGhs(*price_info, ghs_coefficient, result.ghs_duration,
                                            result.stays[result.stays.len - 1].exit.mode == '9',
+                                           result.stays[0].flags & (int)mco_Stay::Flag::Ucd,
                                            &out_pricing->ghs_cents, &out_pricing->exb_exh);
         out_pricing->price_cents += price_cents;
         out_pricing->total_cents += price_cents;

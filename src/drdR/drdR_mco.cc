@@ -100,6 +100,7 @@ struct StaysProxy {
     Rcc_Vector<const char *> linked_diagnosis;
 
     Rcc_NumericVector<int> confirm;
+    Rcc_NumericVector<int> ucd;
 };
 
 struct DiagnosesProxy {
@@ -187,6 +188,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.last_menstrual_period = stays.last_menstrual_period[i];
         if (stays.confirm.Len() && stays.confirm[i] && stays.confirm[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::Confirmed;
+        }
+        if (stays.ucd.Len() && stays.ucd[i] && stays.ucd[i] != NA_INTEGER) {
+            stay.flags |= (int)mco_Stay::Flag::Ucd;
         }
 
         stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
@@ -507,6 +511,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     if (!(flags & (int)mco_ClassifyFlag::IgnoreConfirmation)) {
         stays.confirm = stays_df["confirm"];
     }
+    LOAD_OPTIONAL_COLUMN(stays, ucd);
 
     DiagnosesProxy diagnoses;
     diagnoses.nrow = diagnoses_df.nrow();
@@ -1007,6 +1012,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         Rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
         Rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
         Rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
+        Rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
 
         Rcc_DataFrameBuilder diagnoses_builder(stay_set.store.diagnoses.len);
         Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
@@ -1059,6 +1065,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
                 stays_linked_diagnosis.Set(i, nullptr);
             }
             stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
+            stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::Ucd);
 
             for (DiagnosisCode diag: stay.diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);
