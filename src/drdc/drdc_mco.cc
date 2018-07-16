@@ -33,36 +33,35 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
                                   const mco_Pricing &pricing) {
         FmtArg padding = FmtArg("").Pad(-2 * depth);
 
-        PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
+        PrintLn("  %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
                 padding, result.stays[0].bill_id, result.duration,
                 result.stays[result.stays.len - 1].exit.date, result.ghm, result.main_error, result.ghs);
 
         if (verbose) {
-            PrintLn("      %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
+            PrintLn("    %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
                     padding, FmtDouble((double)pricing.price_cents / 100.0, 2),
                     pricing.exb_exh, FmtDouble(pricing.ghs_coefficient, 4));
             if (pricing.price_cents != pricing.ghs_cents) {
-                PrintLn("        %1GHS: %2 €",
+                PrintLn("      %1GHS: %2 €",
                         padding, FmtDouble((double)pricing.ghs_cents / 100.0, 2));
             }
             if (pricing.total_cents > pricing.price_cents) {
-                PrintLn("      %1Supplements: %2 €", padding,
+                PrintLn("    %1Supplements: %2 €", padding,
                         FmtDouble((double)(pricing.total_cents - pricing.price_cents) / 100.0, 2));
                 for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
                     if (pricing.supplement_cents.values[j]) {
-                        PrintLn("        %1%2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
+                        PrintLn("      %1%2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
                                 FmtDouble((double)pricing.supplement_cents.values[j] / 100.0, 2),
                                 result.supplement_days.values[j]);
                     }
                 }
             }
-            PrintLn("      %1Total: %2 €",
+            PrintLn("    %1Total: %2 €",
                     padding, FmtDouble((double)pricing.total_cents / 100.0, 2));
             PrintLn();
         }
     };
 
-    PrintLn("  Details:");
     Size j = 0;
     for (Size i = 0; i < results.len; i++) {
         const mco_Result &result = results[i];
@@ -90,8 +89,6 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
                         Span<const mco_Result> mono_results,
                         const HashTable<int32_t, mco_Test> &tests, bool verbose)
 {
-    PrintLn("  Tests:");
-
     Size tested_clusters = 0, failed_clusters = 0;
     Size tested_ghm = 0, failed_ghm = 0;
     Size tested_ghs = 0, failed_ghs = 0;
@@ -365,90 +362,61 @@ Dispensation modes:)");
     if (!authorization_set)
         return false;
 
-    struct ClassifySet {
-        mco_StaySet stay_set;
-        HashTable<int32_t, mco_Test> tests;
+    mco_StaySet stay_set;
+    HashTable<int32_t, mco_Test> tests;
 
-        HeapArray<mco_Result> results;
-        HeapArray<mco_Result> mono_results;
-        HeapArray<mco_Pricing> pricings;
-        HeapArray<mco_Pricing> mono_pricings;
-
-        mco_Pricing summary;
-    };
-    HeapArray<ClassifySet> classify_sets;
-    classify_sets.AppendDefault(filenames.len);
-
-    Async async;
-    for (Size i = 0; i < filenames.len; i++) {
-        async.AddTask([&, i]() {
-            ClassifySet *classify_set = &classify_sets[i];
-
-            LogInfo("Load '%1'", filenames[i]);
-            mco_StaySetBuilder stay_set_builder;
-            if (!stay_set_builder.LoadFiles(filenames[i], test ? &classify_set->tests : nullptr))
+    // Load
+    {
+        mco_StaySetBuilder stay_set_builder;
+        for (const char *filename: filenames) {
+            LogInfo("Load '%1'", filename);
+            if (!stay_set_builder.LoadFiles(filename, test ? &tests : nullptr))
                 return false;
-            if (!stay_set_builder.Finish(&classify_set->stay_set))
-                return false;
-
-            LogInfo("Classify '%1'", filenames[i]);
-            for (int j = 0; j < torture; j++) {
-                classify_set->results.RemoveFrom(0);
-                classify_set->mono_results.RemoveFrom(0);
-                classify_set->pricings.RemoveFrom(0);
-                classify_set->mono_pricings.RemoveFrom(0);
-                classify_set->summary = {};
-
-                mco_ClassifyParallel(*table_set, *authorization_set, classify_set->stay_set.stays,
-                                     flags, &classify_set->results, &classify_set->mono_results);
-
-                if (dispense_mode >= 0 || verbosity || test) {
-                    mco_Price(classify_set->results, apply_coefficient, &classify_set->pricings);
-                    if (dispense_mode >= 0) {
-                        mco_Dispense(classify_set->pricings, classify_set->mono_results,
-                                     (mco_DispenseMode)dispense_mode, &classify_set->mono_pricings);
-                    } else {
-                        mco_Price(classify_set->mono_results, apply_coefficient,
-                                  &classify_set->mono_pricings);
-                    }
-                    mco_Summarize(classify_set->pricings, &classify_set->summary);
-                } else {
-                    mco_PriceTotal(classify_set->results, apply_coefficient,
-                                   &classify_set->summary);
-                }
-            }
-
-            return true;
-        });
+        }
+        if (!stay_set_builder.Finish(&stay_set))
+            return false;
     }
-    if (!async.Sync())
-        return false;
+
+    LogInfo("Classify");
+    HeapArray<mco_Result> results;
+    HeapArray<mco_Result> mono_results;
+    HeapArray<mco_Pricing> pricings;
+    HeapArray<mco_Pricing> mono_pricings;
+    mco_Pricing summary;
+    for (int j = 0; j < torture; j++) {
+        results.RemoveFrom(0);
+        mono_results.RemoveFrom(0);
+        pricings.RemoveFrom(0);
+        mono_pricings.RemoveFrom(0);
+        summary = {};
+
+        mco_ClassifyParallel(*table_set, *authorization_set, stay_set.stays, flags,
+                             &results, &mono_results);
+
+        if (dispense_mode >= 0 || verbosity || test) {
+            mco_Price(results, apply_coefficient, &pricings);
+            if (dispense_mode >= 0) {
+                mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
+                             &mono_pricings);
+            } else {
+                mco_Price(mono_results, apply_coefficient, &mono_pricings);
+            }
+            mco_Summarize(pricings, &summary);
+        } else {
+            mco_PriceTotal(results, apply_coefficient, &summary);
+        }
+    }
 
     LogInfo("Export");
-    mco_Pricing main_summary = {};
-    for (Size i = 0; i < filenames.len; i++) {
-        const ClassifySet &classify_set = classify_sets[i];
-
-        PrintLn("%1:", filenames[i]);
-
-        if (verbosity - test >= 1) {
-            ExportResults(classify_set.results, classify_set.mono_results,
-                          classify_set.pricings, classify_set.mono_pricings,
-                          verbosity - test >= 2);
-        }
-
-        PrintSummary(classify_set.summary);
-        main_summary += classify_set.summary;
-
-        if (test) {
-            ExportTests(classify_set.results, classify_set.pricings, classify_set.mono_results,
-                        classify_set.tests, verbosity >= 1);
-        }
+    if (verbosity - test >= 1) {
+        PrintLn("Results:");
+        ExportResults(results, mono_results, pricings, mono_pricings, verbosity - test >= 2);
     }
-
-    if (filenames.len > 1) {
-        PrintLn("Global summary:");
-        PrintSummary(main_summary);
+    PrintLn("Summary:");
+    PrintSummary(summary);
+    if (test) {
+        PrintLn("Tests:");
+        ExportTests(results, pricings, mono_results, tests, verbosity >= 1);
     }
 
     if (apply_coefficient) {
