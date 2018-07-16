@@ -789,15 +789,26 @@ bool RunMcoShow(Span<const char *> arguments)
         {
             mco_GhsCode ghs = mco_GhsCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghs.IsValid()) {
-                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, Sector::Public);
-                if (ghs_price_info) {
-                    mco_DumpGhsPriceTable(*ghs_price_info);
-                    PrintLn();
+                const mco_GhsPriceInfo *pub_price_info = index->FindGhsPrice(ghs, Sector::Public);
+                const mco_GhsPriceInfo *priv_price_info = index->FindGhsPrice(ghs, Sector::Private);
+                if (pub_price_info || priv_price_info) {
                     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs) {
-                        if (ghm_to_ghs_info.Ghs(Sector::Public) != ghs)
-                            continue;
-                        mco_DumpGhmToGhsTable(ghm_to_ghs_info);
+                        if (ghm_to_ghs_info.Ghs(Sector::Public) == ghs ||
+                                ghm_to_ghs_info.Ghs(Sector::Private) == ghs) {
+                            mco_DumpGhmToGhsTable(ghm_to_ghs_info);
+                        }
                     }
+                    PrintLn();
+
+                    if (pub_price_info) {
+                        PrintLn("      Public:");
+                        mco_DumpGhsPriceTable(*pub_price_info);
+                    }
+                    if (priv_price_info) {
+                        PrintLn("      Private:");
+                        mco_DumpGhsPriceTable(*priv_price_info);
+                    }
+
                     continue;
                 }
             }
