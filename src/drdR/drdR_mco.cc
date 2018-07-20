@@ -724,6 +724,177 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
     END_RCPP
 }
 
+RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
+{
+    BEGIN_RCPP
+    RCC_SETUP_LOG_HANDLER();
+
+    const ClassifierInstance *classifier =
+        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+
+    Date date = Rcc_Vector<Date>(date_xp).Value();
+    if (!date.value)
+        Rcc_StopWithLastError();
+    bool map = Rcpp::as<bool>(map_xp);
+
+    const mco_TableIndex *index = classifier->table_set.FindIndex(date);
+    if (!index) {
+        LogError("No table index available on '%1'", date);
+        Rcc_StopWithLastError();
+    }
+
+    HashTable<mco_GhmCode, mco_GhmConstraint> constraints;
+    if (map && !mco_ComputeGhmConstraints(*index, &constraints))
+        Rcc_StopWithLastError();
+
+    Rcc_AutoSexp ghm_ghs_df;
+    {
+        Size row_count = 0;
+        for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
+            Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+            row_count += compatible_ghs.len;
+        }
+
+        Rcc_DataFrameBuilder df_builder(row_count);
+        Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
+        Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+        Rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
+        Rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
+        Rcc_Vector<int> old_age_treshold = df_builder.Add<int>("old_age_treshold");
+        Rcc_Vector<int> old_severity_limit = df_builder.Add<int>("old_severity_limit");
+        Rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
+        Rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
+        Rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
+        Rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimal_duration");
+        Rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
+        Rcc_Vector<const char *> main_diagnosis = df_builder.Add<const char *>("main_diagnosis");
+        Rcc_Vector<const char *> diagnoses = df_builder.Add<const char *>("diagnoses");
+        Rcc_Vector<const char *> procedures = df_builder.Add<const char *>("procedures");
+        Rcc_Vector<int> ghs_cents = df_builder.Add<int>("ghs_cents");
+        Rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
+        Rcc_Vector<int> exh_treshold = df_builder.Add<int>("exb_treshold");
+        Rcc_Vector<int> exh_cents = df_builder.Add<int>("exh_cents");
+        Rcc_Vector<int> exb_treshold = df_builder.Add<int>("exb_treshold");
+        Rcc_Vector<int> exb_cents = df_builder.Add<int>("exb_cents");
+        Rcc_Vector<int> exb_once = df_builder.Add<int>("exb_once");
+        Rcc_Vector<int> durations;
+        Rcc_Vector<int> warn_cmd28;
+        if (map) {
+            durations = df_builder.Add<int>("durations");
+            warn_cmd28 = df_builder.Add<int>("warn_cmd28");
+        }
+
+        Size i = 0;
+        for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
+            Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+            for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+                mco_GhsCode ghs_code = ghm_to_ghs_info.Ghs(Sector::Public);
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_code, Sector::Public);
+
+                char buf[256];
+
+                ghm.Set(i, ghm_to_ghs_info.ghm.ToString(buf));
+                ghs[i] = ghs_code.number;
+                if (ghm_root_info.young_severity_limit) {
+                    young_age_treshold[i] = ghm_root_info.young_age_treshold;
+                    young_severity_limit[i] = ghm_root_info.young_severity_limit;
+                } else {
+                    young_age_treshold[i] = NA_INTEGER;
+                    young_severity_limit[i] = NA_INTEGER;
+                }
+                if (ghm_root_info.old_severity_limit) {
+                    old_age_treshold[i] = ghm_root_info.old_severity_limit;
+                    old_severity_limit[i] = ghm_root_info.old_severity_limit;
+                } else {
+                    old_age_treshold[i] = NA_INTEGER;
+                    old_severity_limit[i] = NA_INTEGER;
+                }
+                confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
+                unit_authorization[i] = ghm_to_ghs_info.unit_authorization ? ghm_to_ghs_info.unit_authorization : NA_INTEGER;
+                bed_authorization[i] = ghm_to_ghs_info.bed_authorization ? ghm_to_ghs_info.bed_authorization : NA_INTEGER;
+                minimum_duration[i] = ghm_to_ghs_info.minimal_duration ? ghm_to_ghs_info.minimal_duration : NA_INTEGER;
+                minimum_age[i] = ghm_to_ghs_info.minimal_age ? ghm_to_ghs_info.minimal_age : NA_INTEGER;
+                if (ghm_to_ghs_info.main_diagnosis_mask.value) {
+                    main_diagnosis.Set(i, Fmt(buf, "D$%1.%2",
+                                              ghm_to_ghs_info.main_diagnosis_mask.offset,
+                                              ghm_to_ghs_info.main_diagnosis_mask.value));
+                } else {
+                    main_diagnosis.Set(i, nullptr);
+                }
+                if (ghm_to_ghs_info.diagnosis_mask.value) {
+                    diagnoses.Set(i, Fmt(buf, "D$%1.%2",
+                                         ghm_to_ghs_info.diagnosis_mask.offset,
+                                         ghm_to_ghs_info.diagnosis_mask.value));
+                } else {
+                    diagnoses.Set(i, nullptr);
+                }
+                if (ghm_to_ghs_info.procedure_masks.len) {
+                    Size buf_len = 0;
+                    for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
+                        buf_len += Fmt(MakeSpan(buf + buf_len, SIZE(buf) - buf_len),
+                                       "|A$%1.%2", mask.offset, mask.value).len;
+                    }
+                    procedures.Set(i, buf + 1);
+                } else {
+                    procedures.Set(i, nullptr);
+                }
+
+                if (ghs_price_info) {
+                    ghs_cents[i] = ghs_price_info->ghs_cents;
+                    ghs_coefficient[i] = index->GhsCoefficient(Sector::Public);
+                    if (ghs_price_info->exh_treshold) {
+                        exh_treshold[i] = ghs_price_info->exb_treshold;
+                        exh_cents[i] = ghs_price_info->exh_cents;
+                    } else {
+                        exh_treshold[i] = NA_INTEGER;
+                        exh_cents[i] = NA_INTEGER;
+                    }
+                    if (ghs_price_info->exb_treshold) {
+                        exb_treshold[i] = ghs_price_info->exb_treshold;
+                        exb_cents[i] = ghs_price_info->exh_cents;
+                        exb_once[i] = !!(ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce);
+                    } else {
+                        exb_treshold[i] = NA_INTEGER;
+                        exb_cents[i] = NA_INTEGER;
+                        exb_once[i] = NA_INTEGER;
+                    }
+                } else {
+                    ghs_cents[i] = NA_INTEGER;
+                    ghs_coefficient[i] = NA_REAL;
+                    exh_treshold[i] = NA_INTEGER;
+                    exh_cents[i] = NA_INTEGER;
+                    exb_treshold[i] = NA_INTEGER;
+                    exb_cents[i] = NA_INTEGER;
+                    exb_once[i] = NA_INTEGER;
+                }
+
+                if (map) {
+                    mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
+                    if (constraint) {
+                        uint32_t combined_durations = constraint->durations &
+                                                      ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+
+                        durations[i] = combined_durations;
+                        warn_cmd28[i] = (combined_durations & 1) &&
+                                        !!(constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28);
+                    } else {
+                        durations[i] = NA_INTEGER;
+                        warn_cmd28[i] = NA_INTEGER;
+                    }
+                }
+
+                i++;
+            }
+        }
+
+        ghm_ghs_df = df_builder.Build();
+    }
+
+    return ghm_ghs_df;
+
+    END_RCPP
+}
+
 RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
 {
     BEGIN_RCPP
@@ -1139,6 +1310,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
         {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 8},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Indexes", (DL_FUNC)&drdR_mco_Indexes, 1},
+        {"drdR_mco_GhmGhs", (DL_FUNC)&drdR_mco_GhmGhs, 3},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
         {"drdR_mco_Exclusions", (DL_FUNC)&drdR_mco_Exclusions, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},

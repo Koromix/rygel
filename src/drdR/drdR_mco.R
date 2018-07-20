@@ -39,6 +39,10 @@ mco_indexes <- function(classifier) {
     .Call(`drdR_mco_Indexes`, classifier)
 }
 
+mco_ghm_ghs <- function(classifier, date, map = TRUE) {
+    .Call(`drdR_mco_GhmGhs`, classifier, date, map)
+}
+
 mco_diagnoses <- function(classifier, date) {
     .Call(`drdR_mco_Diagnoses`, classifier, date)
 }
