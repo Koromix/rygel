@@ -17,12 +17,12 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 10
+#define PACK_VERSION 11
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
-StaticAssert(SIZE(mco_Stay) == 104);
+StaticAssert(SIZE(mco_Stay) == 112);
 StaticAssert(SIZE(DiagnosisCode) == 8);
 StaticAssert(SIZE(mco_ProcedureRealisation) == 24);
 
@@ -851,31 +851,49 @@ bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_T
             }
 
             int type = 0;
-            int32_t admin_id = -1;
-            {
-                bool valid = true;
-
-                valid &= ParsePmsiInt(line.Take(9, 2), &type);
-                valid &= ParsePmsiInt(line.Take(11, 20), &admin_id);
-
-                if (UNLIKELY(!valid)) {
-                    LogError("Malformed FICHCOMP line");
-                    errors++;
-                    continue;
-                }
-            }
+            ParsePmsiInt(line.Take(9, 2), &type);
 
             switch (type) {
                 case 6:
                 case 9:
                 case 10: {
-                    ucd_set.Append(admin_id);
+                    FichCompData fc = {};
+                    bool valid = true;
+
+                    fc.type = FichCompData::Type::Ucd;
+                    valid &= ParsePmsiInt(line.Take(11, 20), &fc.admin_id) && fc.admin_id;
+                    valid &= ParsePmsiDate(line.Take(31, 8), &fc.start_date) && fc.start_date.value;
+
+                    if (LIKELY(valid)) {
+                        fichcomps.Append(fc);
+                    } else {
+                        LogError("Malformed DIP (FICHCOMP) line");
+                        errors++;
+                    }
+                } break;
+
+                case 7: {
+                    FichCompData fc = {};
+                    bool valid = true;
+
+                    fc.type = FichCompData::Type::Dip;
+                    valid &= ParsePmsiInt(line.Take(11, 20), &fc.admin_id) && fc.admin_id;
+                    valid &= ParsePmsiDate(line.Take(41, 8), &fc.start_date) && fc.start_date.value;
+                    valid &= ParsePmsiDate(line.Take(49, 8), &fc.end_date) && fc.end_date.value;
+                    valid &= ParsePmsiInt(line.Take(72, 10), &fc.count) && fc.count;
+                    valid &= (line.Take(57, 15) == "            DIP");
+
+                    if (LIKELY(valid)) {
+                        fichcomps.Append(fc);
+                    } else {
+                        LogError("Malformed MED (FICHCOMP) line");
+                        errors++;
+                    }
                 } break;
 
                 case 2:
                 case 3:
                 case 4:
-                case 7:
                 case 99: {} break;
 
                 default: {
@@ -935,15 +953,52 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
     for (mco_Stay &stay: set.stays) {
         stay.diagnoses.ptr = set.store.diagnoses.ptr + (Size)stay.diagnoses.ptr;
         stay.procedures.ptr = set.store.procedures.ptr + (Size)stay.procedures.ptr;
+    }
 
-        int32_t *ucd = ucd_set.Find(stay.admin_id);
-        if (ucd) {
-            stay.flags |= (int)mco_Stay::Flag::Ucd;
-            ucd_set.Remove(ucd);
+    // Build FICHCOMP map
+    HashMap<int32_t, const FichCompData *> fichcomps_map;
+    std::sort(fichcomps.begin(), fichcomps.end(),
+              [](const FichCompData &fc1, const FichCompData &fc2) {
+        return fc1.admin_id < fc2.admin_id;
+    });
+    for (const FichCompData &fc: fichcomps) {
+        fichcomps_map.Append(fc.admin_id, &fc);
+    }
+
+    // Add FICHCOMP data to stays
+    HashSet<Size> matched_fichcomps;
+    {
+        Span<mco_Stay> stays2 = set.stays;
+        while (stays2.len) {
+            Span<mco_Stay> sub_stays = mco_Split(stays2, &stays2);
+
+            const FichCompData *fc = fichcomps_map.FindValue(sub_stays[0].admin_id, nullptr);
+            while (fc && fc < fichcomps.end() && fc->admin_id == sub_stays[0].admin_id) {
+                if (fc->start_date >= sub_stays[0].entry.date &&
+                        (!fc->end_date.value || fc->end_date <= sub_stays[sub_stays.len - 1].exit.date)) {
+                    switch (fc->type) {
+                        case FichCompData::Type::Ucd: {
+                            sub_stays[0].flags |= (int)mco_Stay::Flag::Ucd;
+                        } break;
+
+                        case FichCompData::Type::Dip: {
+                            if (UNLIKELY(sub_stays[0].dip_count)) {
+                                LogError("Overwriting DIP count for stay %1", sub_stays[0].bill_id);
+                            }
+                            sub_stays[0].dip_count = fc->count;
+                        } break;
+                    }
+
+                    matched_fichcomps.Append(fc - fichcomps.ptr);
+                }
+
+                fc++;
+            }
         }
     }
-    if (ucd_set.table.count) {
-        LogError("Some UCD entries (%1) have no matching stay", ucd_set.table.count);
+    if (matched_fichcomps.table.count < fichcomps.len) {
+        LogError("Some FICHCOMP entries (%1) have no matching stay",
+                 fichcomps.len - matched_fichcomps.table.count);
     }
 
     SwapMemory(out_set, &set, SIZE(set));

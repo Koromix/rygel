@@ -57,22 +57,6 @@ static inline bool TestProcedure(const mco_ProcedureInfo &proc_info, int16_t off
     return GetProcedureByte(proc_info, offset) & value;
 }
 
-Span<const mco_Stay> mco_Split(Span<const mco_Stay> mono_stays, Span<const mco_Stay> *out_remainder)
-{
-    DebugAssert(mono_stays.len > 0);
-
-    Size agg_len = 1;
-    while (agg_len < mono_stays.len &&
-           mco_StaysAreCompatible(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id)) {
-        agg_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = mono_stays.Take(agg_len, mono_stays.len - agg_len);
-    }
-    return mono_stays.Take(0, agg_len);
-}
-
 static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_preps, int duration)
 {
     DebugAssert(duration >= 0);
@@ -2007,6 +1991,8 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
             }
         }
     }
+
+    AddToCounter(0, (int)mco_SupplementType::Dip, stay.dip_count);
 }
 
 static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)

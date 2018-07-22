@@ -259,6 +259,7 @@ enum class mco_SupplementType {
     Ant,
     Rap,
     Dia,
+    Dip,
     Ent1,
     Ent2,
     Ent3,
@@ -279,6 +280,7 @@ static const char *const mco_SupplementTypeNames[] = {
     "ANT",
     "RAP",
     "DIA",
+    "DIP",
     "ENT1",
     "ENT2",
     "ENT3",
@@ -303,6 +305,7 @@ union mco_SupplementCounters {
         T ant;
         T rap;
         T dia;
+        T dip;
         T ent1;
         T ent2;
         T ent3;
@@ -327,6 +330,7 @@ union mco_SupplementCounters {
         st.ant += other.st.ant;
         st.rap += other.st.rap;
         st.dia += other.st.dia;
+        st.dip += other.st.dip;
         st.ent1 += other.st.ent1;
         st.ent2 += other.st.ent2;
         st.ent3 += other.st.ent3;
@@ -345,23 +349,7 @@ union mco_SupplementCounters {
     template <typename U>
     bool operator==(const mco_SupplementCounters<U> &other) const
     {
-        return st.rea == other.st.rea &&
-               st.reasi == other.st.reasi &&
-               st.si == other.st.si &&
-               st.src == other.st.src &&
-               st.nn1 == other.st.nn1 &&
-               st.nn2 == other.st.nn2 &&
-               st.nn3 == other.st.nn3 &&
-               st.rep == other.st.rep &&
-               st.ohb == other.st.ohb &&
-               st.aph == other.st.aph &&
-               st.ant == other.st.ant &&
-               st.rap == other.st.rap &&
-               st.dia == other.st.dia &&
-               st.ent1 == other.st.ent1 &&
-               st.ent2 == other.st.ent2 &&
-               st.ent3 == other.st.ent3 &&
-               st.sdc == other.st.sdc;
+        return !memcmp(this, &other, SIZE(*this));
     }
     template <typename U>
     bool operator !=(const mco_SupplementCounters<U> &other) const { return !(*this == other); }

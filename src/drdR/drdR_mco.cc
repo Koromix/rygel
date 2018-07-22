@@ -101,6 +101,7 @@ struct StaysProxy {
 
     Rcc_NumericVector<int> confirm;
     Rcc_NumericVector<int> ucd;
+    Rcc_NumericVector<int> dip;
 };
 
 struct DiagnosesProxy {
@@ -192,6 +193,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         if (stays.ucd.Len() && stays.ucd[i] && stays.ucd[i] != NA_INTEGER) {
             stay.flags |= (int)mco_Stay::Flag::Ucd;
         }
+        stay.dip_count = stays.dip[i];
 
         stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
         if (diagnoses.type.Len()) {
@@ -512,6 +514,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         stays.confirm = stays_df["confirm"];
     }
     LOAD_OPTIONAL_COLUMN(stays, ucd);
+    LOAD_OPTIONAL_COLUMN(stays, dip);
 
     DiagnosesProxy diagnoses;
     diagnoses.nrow = diagnoses_df.nrow();
@@ -1013,6 +1016,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         Rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
         Rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
         Rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
+        Rcc_Vector<int> stays_dip = stays_builder.Add<int>("dip");
 
         Rcc_DataFrameBuilder diagnoses_builder(stay_set.store.diagnoses.len);
         Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
@@ -1066,6 +1070,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             }
             stays_confirm[i] = !!(stay.flags & (int)mco_Stay::Flag::Confirmed);
             stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::Ucd);
+            stays_dip[i] = stay.dip_count;
 
             for (DiagnosisCode diag: stay.diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);

@@ -84,9 +84,6 @@ struct mco_Result {
     mco_SupplementCounters<int16_t> supplement_days;
 };
 
-Span<const mco_Stay> mco_Split(Span<const mco_Stay> mono_stays,
-                               Span<const mco_Stay> *out_remainder = nullptr);
-
 mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
                         unsigned int flags, mco_PreparedSet *out_prepared_set,
                         mco_ErrorSet *out_errors);

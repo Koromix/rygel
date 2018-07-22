@@ -1035,7 +1035,9 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                         valid &= ParseDec(prop.value, &supplement_prices.st.rap);
                     } else if (prop.key == "SDC") {
                         valid &= ParseDec(prop.value, &supplement_prices.st.sdc);
-                    } else if (prop.key == "DIP" || prop.key == "TDE" || prop.key == "TSE") {
+                    } else if (prop.key == "DIP") {
+                        valid &= ParseDec(prop.value, &supplement_prices.st.dip);
+                    } else if (prop.key == "TDE" || prop.key == "TSE") {
                         // Unsupported (for now)
                     } else {
                         LogError("Unknown supplement '%1'", prop.key);

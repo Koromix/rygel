@@ -77,6 +77,7 @@ struct mco_Stay {
     Date last_menstrual_period;
     int16_t gestational_age;
     int16_t newborn_weight;
+    int16_t dip_count;
 
     DiagnosisCode main_diagnosis;
     DiagnosisCode linked_diagnosis;
@@ -95,6 +96,23 @@ struct mco_Stay {
 static inline bool mco_StaysAreCompatible(int32_t bill_id1, int32_t bill_id2)
 {
     return bill_id1 && bill_id1 == bill_id2;
+}
+
+template <typename T>
+Span<T> mco_Split(Span<T> mono_stays, Span<T> *out_remainder = nullptr)
+{
+    DebugAssert(mono_stays.len > 0);
+
+    Size agg_len = 1;
+    while (agg_len < mono_stays.len &&
+           mco_StaysAreCompatible(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id)) {
+        agg_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = mono_stays.Take(agg_len, mono_stays.len - agg_len);
+    }
+    return mono_stays.Take(0, agg_len);
 }
 
 struct mco_Test {
@@ -134,7 +152,20 @@ struct mco_StaySet {
 class mco_StaySetBuilder {
     mco_StaySet set;
 
-    HashSet<int32_t> ucd_set;
+    struct FichCompData {
+        enum class Type {
+            Ucd,
+            Dip
+        };
+
+        Type type;
+        int32_t admin_id;
+        Date start_date;
+        Date end_date;
+        int16_t count;
+    };
+
+    HeapArray<FichCompData> fichcomps;
 
 public:
     bool LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests = nullptr);
