@@ -229,6 +229,14 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
                     mono_pricing = &sub_mono_pricings[k];
                     double fraction = coefficients[k] / coefficients_total;
 
+                    // DIP rules are special
+                    if (pricing.supplement_cents.st.dip) {
+                        double dip_fraction = (mono_pricing->duration + 1) / (pricing.duration + coefficients.len);
+                        int64_t mono_dip_cents = (int64_t)round(pricing.supplement_cents.st.dip * dip_fraction);
+                        mono_pricing->total_cents += mono_dip_cents - mono_pricing->supplement_cents.st.dip;
+                        mono_pricing->supplement_cents.st.dip = mono_dip_cents;
+                    }
+
                     {
                         int64_t ghs_cents = (int64_t)round(pricing.ghs_cents * fraction);
                         int64_t price_cents = (int64_t)round(pricing.price_cents * fraction);
