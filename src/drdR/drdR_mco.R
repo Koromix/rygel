@@ -105,7 +105,6 @@ summary.mco_results <- function(results, by = NULL) {
                 return(agg)
             }
         ')
-        print(code)
         f <- eval(parse(text = code))
         attr(summary.mco_results, 'f') <- f
     }
