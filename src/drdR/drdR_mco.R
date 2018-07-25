@@ -20,8 +20,11 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                         options, details, dispense, apply_coefficient)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
-    if (details) {
+    if ('results' %in% names(result_set)) {
         class(result_set$results) <- c('mco_results', class(result_set$results))
+    }
+    if ('mono_results' %in% names(result_set)) {
+        class(result_set$mono_results) <- c('mco_results', class(result_set$results))
     }
     class(result_set) <- c('mco_result_set', class(result_set))
 
