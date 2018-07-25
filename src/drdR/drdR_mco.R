@@ -119,6 +119,65 @@ summary.mco_result_set <- function(result_set, by = NULL) {
     }
 }
 
+mco_dispense <- function(results, group = NULL, group_var = 'group',
+                        fixed = NULL, fixed_count = FALSE) {
+    if ('mco_result_set' %in% class(results)) {
+        results <- results$mono_results
+    }
+
+    agg <- setDT(summary.mco_results(results, by = 'unit'))
+
+    if (!is.null(fixed)) {
+        if (is.data.frame(fixed)) {
+            fixed_names <- fixed$supplement
+            fixed <- fixed$unit
+            names(fixed) <- fixed_names
+        }
+
+        for (supp in names(fixed)) {
+            unit <- fixed[[supp]]
+            if (fixed_count) {
+                agg[[paste0(supp, '_count')]] <- ifelse(agg$unit == unit, sum(agg[[paste0(supp, '_count')]]), 0)
+            }
+            agg[[paste0(supp, '_cents')]] <- ifelse(agg$unit == unit, sum(agg[[paste0(supp, '_cents')]]), 0)
+        }
+    }
+
+    if (!is.null(group)) {
+        if (!is.data.frame(group)) {
+            group <- data.frame(unit = as.integer(names(group)), group = group)
+            names(group) <- c('unit', group_var)
+        }
+
+        group <- merge(agg[, list(unit)], group, by = 'unit', all.x = TRUE)
+
+        f <- attr(mco_dispense, 'f')
+        if (is.null(f)) {
+            code <- paste0('
+                function(agg, group, group_var) {
+                    agg2 <- agg[, c(
+                        list(',
+                            paste(sapply(mco_summary_columns(),
+                                         function(col) { paste0(col, ' = sum(', col, ')') }), collapse = ', '),
+                       ')
+                    ), keyby = group]
+                    setnames(agg2, "group", group_var)
+
+                    class(agg2) <- class(agg)
+                    return(agg2)
+                }
+            ')
+            f <- eval(parse(text = code))
+            attr(mco_dispense, 'f') <- f
+        }
+
+        agg <- f(agg, group[[group_var]], group_var)
+    }
+
+    agg <- setDF(agg)
+    return(agg)
+}
+
 mco_summary_columns <- function() {
     c('results', 'stays', 'failures', 'total_cents', 'price_cents', 'ghs_cents',
       paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_cents'),
