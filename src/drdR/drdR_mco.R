@@ -9,7 +9,7 @@ mco_init <- function(data_dirs = character(0), table_dirs = character(0),
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                          sorted = TRUE, options = character(0), details = TRUE,
-                         dispense = NULL, apply_coefficient = FALSE) {
+                         dispense = NULL, apply_coefficient = FALSE, supplement_columns = 'both') {
     if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
         diagnoses <- stays$diagnoses
         procedures <- stays$procedures
@@ -17,7 +17,7 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     }
 
     result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
-                        options, details, dispense, apply_coefficient)
+                        options, details, dispense, apply_coefficient, supplement_columns)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if ('results' %in% names(result_set)) {
@@ -85,33 +85,27 @@ mco_compare <- function(summary1, summary2, ...) {
 }
 
 summary.mco_results <- function(results, by = NULL) {
-    f <- attr(summary.mco_results, 'f')
-    if (is.null(f)) {
-        code <- paste0('
-            function(results, by = NULL) {
-                agg <- setDF(setDT(results)[, c(
-                    list(
-                        results = .N,
-                        stays = sum(stays_count),
-                        failures = sum(startsWith(\'90Z\', ghm)),
-                        total_cents = sum(total_cents),
-                        price_cents = sum(price_cents),
-                        ghs_cents = sum(ghs_cents),',
-                        paste(sapply(tolower(.Call(`drdR_mco_SupplementTypes`)),
-                                     function(type) { paste0(type, '_cents = sum(', type, '_cents)') }), collapse = ', '), ', ',
-                        paste(sapply(tolower(.Call(`drdR_mco_SupplementTypes`)),
-                                     function(type) { paste0(type, '_count = sum(', type, '_count)') }), collapse = ', '),
-                   ')
-                ), keyby = by])
-                setDF(results)
+    sum_columns <- colnames(results)
+    sum_columns <- sum_columns[grepl('(_cents|_count)$', sum_columns)]
 
-                class(agg) <- c(\'mco_summary\', class(agg))
-                return(agg)
-            }
-        ')
-        f <- eval(parse(text = code))
-        attr(summary.mco_results, 'f') <- f
-    }
+    code <- paste0('
+        function(results, by = NULL) {
+            agg <- setDF(setDT(results)[, c(
+                list(
+                    results = .N,
+                    stays = sum(stays),
+                    failures = sum(startsWith(\'90Z\', ghm)),',
+                    paste(sapply(sum_columns,
+                                 function(col) { paste0(col, ' = sum(', col, ')') }), collapse = ', '),
+               ')
+            ), keyby = by])
+            setDF(results)
+
+            class(agg) <- c(\'mco_summary\', class(agg))
+            return(agg)
+        }
+    ')
+    f <- eval(parse(text = code))
 
     return(f(results, by = by))
 }
@@ -155,25 +149,22 @@ mco_dispense <- function(results, group = NULL, group_var = 'group',
 
         group <- merge(agg[, list(unit)], group, by = 'unit', all.x = TRUE)
 
-        f <- attr(mco_dispense, 'f')
-        if (is.null(f)) {
-            code <- paste0('
-                function(agg, group, group_var) {
-                    agg2 <- agg[, c(
-                        list(',
-                            paste(sapply(mco_summary_columns(),
-                                         function(col) { paste0(col, ' = sum(', col, ')') }), collapse = ', '),
-                       ')
-                    ), keyby = group]
-                    setnames(agg2, "group", group_var)
+        sum_columns <- intersect(mco_summary_columns(), colnames(agg))
+        code <- paste0('
+            function(agg, group, group_var) {
+                agg2 <- agg[, c(
+                    list(',
+                        paste(sapply(sum_columns,
+                                     function(col) { paste0(col, ' = sum(', col, ')') }), collapse = ', '),
+                   ')
+                ), keyby = group]
+                setnames(agg2, "group", group_var)
 
-                    class(agg2) <- class(agg)
-                    return(agg2)
-                }
-            ')
-            f <- eval(parse(text = code))
-            attr(mco_dispense, 'f') <- f
-        }
+                class(agg2) <- class(agg)
+                return(agg2)
+            }
+        ')
+        f <- eval(parse(text = code))
 
         agg <- f(agg, group[[group_var]], group_var)
     }

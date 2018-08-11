@@ -351,7 +351,8 @@ static void MakeSupplementColumnName(const char *supplement_type, const char *su
 
 static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets,
                                    Span<const HeapArray<mco_Pricing>> pricing_sets,
-                                   bool export_units)
+                                   bool export_units, bool export_supplement_cents,
+                                   bool export_supplement_counts)
 {
     Size results_count = 0;
     for (const HeapArray<mco_Result> &results: result_sets) {
@@ -365,7 +366,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
         unit = df_builder.Add<int>("unit");
     }
     Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
-    Rcc_Vector<int> stays_count = df_builder.Add<int>("stays_count");
+    Rcc_Vector<int> stays = df_builder.Add<int>("stays");
     Rcc_Vector<int> duration = df_builder.Add<int>("duration");
     Rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
     Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
@@ -379,15 +380,19 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
     Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
     Rcc_Vector<double> supplement_cents[ARRAY_SIZE(mco_SupplementTypeNames)];
     Rcc_Vector<int> supplement_count[ARRAY_SIZE(mco_SupplementTypeNames)];
-    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        char name_buf[32];
-        MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
-        supplement_cents[i] = df_builder.Add<double>(name_buf);
+    if (export_supplement_cents) {
+        for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+            char name_buf[32];
+            MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
+            supplement_cents[i] = df_builder.Add<double>(name_buf);
+        }
     }
-    for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-        char name_buf[32];
-        MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
-        supplement_count[i] = df_builder.Add<int>(name_buf);
+    if (export_supplement_counts) {
+        for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+            char name_buf[32];
+            MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
+            supplement_count[i] = df_builder.Add<int>(name_buf);
+        }
     }
 
     Size k = 0;
@@ -407,7 +412,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
                 unit[k] = result.stays[0].unit.number;
             }
             exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);
-            stays_count[k] = (int)result.stays.len;
+            stays[k] = (int)result.stays.len;
             duration[k] = (result.duration >= 0) ? result.duration : NA_INTEGER;
             main_stay[k] = (int)result.main_stay_idx + 1;
             if (result.ghm.IsValid()) {
@@ -425,8 +430,12 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             ghs_duration[k] = (result.ghs_duration >= 0) ? result.ghs_duration : NA_INTEGER;
             exb_exh[k] = pricing.exb_exh;
             for (Size l = 0; l < ARRAY_SIZE(mco_SupplementTypeNames); l++) {
-                supplement_cents[l][k] = pricing.supplement_cents.values[l];
-                supplement_count[l][k] = result.supplement_days.values[l];
+                if (export_supplement_cents) {
+                    supplement_cents[l][k] = pricing.supplement_cents.values[l];
+                }
+                if (export_supplement_counts) {
+                    supplement_count[l][k] = result.supplement_days.values[l];
+                }
             }
 
             k++;
@@ -438,7 +447,8 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
 RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
                                   SEXP procedures_xp, SEXP options_xp, SEXP details_xp,
-                                  SEXP dispense_mode_xp, SEXP apply_coefficient_xp)
+                                  SEXP dispense_mode_xp, SEXP apply_coefficient_xp,
+                                  SEXP supplement_columns_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -455,6 +465,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     const char *dispense_mode_str = !Rf_isNull(dispense_mode_xp) ?
                                     Rcpp::as<const char *>(dispense_mode_xp) : nullptr;
     bool apply_coefficient = Rcpp::as<bool>(apply_coefficient_xp);
+    const char *supplement_columns_str = Rcpp::as<const char *>(supplement_columns_xp);
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
@@ -479,6 +490,24 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         flags |= (int)mco_ClassifyFlag::Mono;
     } else {
         flags &= (int)mco_ClassifyFlag::Mono;
+    }
+
+    bool export_supplement_cents;
+    bool export_supplement_counts;
+    if (TestStr(supplement_columns_str, "both")) {
+        export_supplement_cents = true;
+        export_supplement_counts = true;
+    } else if (TestStr(supplement_columns_str, "cents")) {
+        export_supplement_cents = true;
+        export_supplement_counts = false;
+    } else if (TestStr(supplement_columns_str, "count")) {
+        export_supplement_cents = false;
+        export_supplement_counts = true;
+    } else if (TestStr(supplement_columns_str, "none")) {
+        export_supplement_cents = false;
+        export_supplement_counts = false;
+    } else {
+        Rcpp::stop("Invalid value for supplement_columns parameter");
     }
 
 #define LOAD_OPTIONAL_COLUMN(Var, Name) \
@@ -642,27 +671,33 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         df_builder.Set("total_cents", (double)summary.total_cents);
         df_builder.Set("price_cents", (double)summary.price_cents);
         df_builder.Set("ghs_cents", (double)summary.ghs_cents);
-        for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-            char name_buf[32];
-            MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
-            df_builder.Set(name_buf, (double)summary.supplement_cents.values[i]);
+        if (export_supplement_cents) {
+            for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+                char name_buf[32];
+                MakeSupplementColumnName(mco_SupplementTypeNames[i], "_cents", name_buf);
+                df_builder.Set(name_buf, (double)summary.supplement_cents.values[i]);
+            }
         }
-        for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
-            char name_buf[32];
-            MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
-            df_builder.Set(name_buf, (int)summary.supplement_days.values[i]);
+        if (export_supplement_counts) {
+            for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
+                char name_buf[32];
+                MakeSupplementColumnName(mco_SupplementTypeNames[i], "_count", name_buf);
+                df_builder.Set(name_buf, (int)summary.supplement_days.values[i]);
+            }
         }
         summary_df = df_builder.BuildDataFrame();
     }
 
     Rcc_AutoSexp results_df;
     if (details) {
-        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false);
+        results_df = ExportResultsDataFrame(result_sets, pricing_sets, false,
+                                            export_supplement_cents, export_supplement_counts);
     }
 
     Rcc_AutoSexp mono_results_df;
     if (flags & (int)mco_ClassifyFlag::Mono) {
-        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true);
+        mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true,
+                                                 export_supplement_cents, export_supplement_counts);
     }
 
     Rcc_AutoSexp ret_list;
@@ -1307,7 +1342,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
         {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
-        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 8},
+        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 9},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Indexes", (DL_FUNC)&drdR_mco_Indexes, 1},
         {"drdR_mco_GhmGhs", (DL_FUNC)&drdR_mco_GhmGhs, 3},
