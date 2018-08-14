@@ -2125,6 +2125,17 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_
     StreamReader st(filename);
     return st.ReadAll(max_len, out_buf);
 }
+static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
+                            HeapArray<char> *out_buf)
+{
+    StreamReader st(filename, compression_type);
+    return st.ReadAll(max_len, out_buf);
+}
+static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> *out_buf)
+{
+    StreamReader st(filename);
+    return st.ReadAll(max_len, out_buf);
+}
 
 class LineReader {
     HeapArray<char> buf;
