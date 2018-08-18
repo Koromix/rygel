@@ -6,7 +6,11 @@
 
 int main(void)
 {
+    InterfaceState render_state = {};
     HeapArray<ConceptSet> concept_sets;
     EntitySet entity_set = {};
-    return !Run(concept_sets, entity_set);
+
+    return !RunGuiApp(HEIMDALL_NAME, [&]() {
+        return Step(render_state, concept_sets, entity_set);
+    });
 }

@@ -7,9 +7,8 @@
 #include <windows.h>
 
 #include "../common/kutil.hh"
-#include "core.hh"
 #include "../common/opengl.hh"
-#include "runner.hh"
+#include "libgui.hh"
 
 static GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
                        const int *attribList);
@@ -172,12 +171,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     return DefWindowProc(hwnd, msg, wparam, lparam);
 }
 
-static HWND CreateMainWindow()
+static HWND CreateMainWindow(const char *application_name)
 {
     // Create Win32 main window class
-    static const char *const main_cls_name = APPLICATION_NAME "_main";
+    static char main_cls_name[256];
     static ATOM main_cls_atom;
     if (!main_cls_atom) {
+        Fmt(main_cls_name, "%1_main", application_name);
+
         WNDCLASSEX gl_cls = { SIZE(gl_cls) };
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = main_cls_name;
@@ -205,7 +206,7 @@ static HWND CreateMainWindow()
         rect.bottom = 720;
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0);
 
-        main_wnd = CreateWindowEx(0, main_cls_name, APPLICATION_TITLE, WS_OVERLAPPEDWINDOW,
+        main_wnd = CreateWindowEx(0, main_cls_name, application_name, WS_OVERLAPPEDWINDOW,
                                   CW_USEDEFAULT, CW_USEDEFAULT,
                                   rect.right - rect.left, rect.bottom - rect.top,
                                   nullptr, nullptr, GetModuleHandle(nullptr), nullptr);
@@ -226,7 +227,7 @@ static void DeleteMainWindow(HWND wnd)
     DestroyWindow(wnd);
 }
 
-static bool InitWGL()
+static bool InitWGL(const char *application_name)
 {
     if (wglCreateContextAttribsARB)
         return true;
@@ -234,7 +235,9 @@ static bool InitWGL()
     // First, we need a dummy window handle to create OpenGL context (...). I know
     // it is ugly, but not my fault.
 
-    static const char *const dummy_cls_name = APPLICATION_NAME "_init_gl";
+    char dummy_cls_name[256];
+    Fmt(dummy_cls_name, "%1_init_gl", application_name);
+
     {
         WNDCLASSEX dummy_cls = { SIZE(dummy_cls) };
         dummy_cls.hInstance = GetModuleHandle(nullptr);
@@ -311,9 +314,9 @@ void *GetGLProcAddress(const char *name)
     return (void *)wglGetProcAddress(name);
 }
 
-static HGLRC CreateGLContext(HDC dc)
+static HGLRC CreateGLContext(const char *application_name, HDC dc)
 {
-    if (!InitWGL())
+    if (!InitWGL(application_name))
         return nullptr;
 
     // Find GL-compatible pixel format
@@ -409,8 +412,8 @@ void SwapGLBuffers()
     SwapBuffers(g_window->hdc);
 }
 
-bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
-         bool *run_flag, std::mutex *lock)
+bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
+               bool *run_flag, std::mutex *lock)
 {
     DEFER_C(prev_window = g_window, prev_io = g_io) {
         g_window = prev_window;
@@ -422,19 +425,19 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
     g_window = &window;
     g_io = &io;
 
-    window.hwnd = CreateMainWindow();
+    window.hwnd = CreateMainWindow(application_name);
     if (!window.hwnd)
         return false;
     DEFER { DeleteMainWindow(window.hwnd); };
     window.hdc = GetDC(window.hwnd);
-    window.hgl = CreateGLContext(window.hdc);
+    window.hgl = CreateGLContext(application_name, window.hdc);
     if (!window.hgl)
         return false;
     DEFER { DeleteGLContext(window.hgl); };
     if (!SetGLContext(window.hdc, window.hgl))
         return false;
-
-    InterfaceState render_state = {};
+    if (!InitGLFunctions())
+        return false;
 
     io.main.run = true;
     while (io.main.run) {
@@ -481,10 +484,10 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
         // Run the real code
         if (lock) {
             std::lock_guard<std::mutex> locker(*lock);
-            if (!Step(render_state, concept_sets, entity_set))
+            if (!step_func())
                 return false;
         } else {
-            if (!Step(render_state, concept_sets, entity_set))
+            if (!step_func())
                 return false;
         }
 

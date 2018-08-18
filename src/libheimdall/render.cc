@@ -5,7 +5,7 @@
 #include "../packer/packer.hh"
 #include "../common/opengl.hh"
 #include "render.hh"
-#include "runner.hh"
+#include "../libgui/libgui.hh"
 
 extern const Span<const PackerAsset> packer_assets;
 #define IMGUI_FONT "Roboto-Medium.ttf"
@@ -190,8 +190,6 @@ static void ReleaseImGui()
 bool StartRender()
 {
     if (!g_io->main.iteration_count) {
-        if (!InitGLFunctions())
-            return false;
         if (!InitImGui())
             return false;
     }

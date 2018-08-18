@@ -5,7 +5,6 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "data.hh"
 
 struct RunIO {
     enum class Key {
@@ -67,5 +66,5 @@ struct RunIO {
 
 extern THREAD_LOCAL RunIO *g_io;
 
-bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
-         bool *run_flag = nullptr, std::mutex *lock = nullptr);
+bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
+               bool *run_flag = nullptr, std::mutex *lock = nullptr);

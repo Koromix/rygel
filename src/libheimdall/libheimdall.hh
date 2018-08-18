@@ -5,8 +5,7 @@
 #pragma once
 
 #include "../common/kutil.hh"
+#include "../libgui/libgui.hh"
 #include "core.hh"
 #include "data.hh"
-#include "../common/opengl.hh"
 #include "render.hh"
-#include "runner.hh"

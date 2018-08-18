@@ -3,6 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.cc"
-#include "../libgui/libgui.cc"
-#include "core.cc"
-#include "render.cc"
+#if defined(_WIN32)
+    #include "runner_win32.cc"
+#elif defined(__EMSCRIPTEN__)
+    #include "runner_emsdk.cc"
+#endif

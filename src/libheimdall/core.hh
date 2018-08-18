@@ -8,8 +8,7 @@
 #include "data.hh"
 #include "animation.hh"
 
-#define APPLICATION_NAME "heimdall"
-#define APPLICATION_TITLE "Heimdall"
+#define HEIMDALL_NAME "heimdall"
 
 enum class InterpolationMode {
     Linear,

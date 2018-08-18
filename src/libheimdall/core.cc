@@ -7,7 +7,7 @@
 #include "data.hh"
 #include "../common/opengl.hh"
 #include "render.hh"
-#include "runner.hh"
+#include "../libgui/libgui.hh"
 
 // Ideas:
 // - Multiple / Task-oriented concept trees

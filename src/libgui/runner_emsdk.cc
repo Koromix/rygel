@@ -8,7 +8,7 @@
 #include "../common/kutil.hh"
 #include "../libheimdall/core.hh"
 #include "../common/opengl.hh"
-#include "runner.hh"
+#include "libgui.hh"
 
 THREAD_LOCAL RunIO *g_io;
 
@@ -17,8 +17,7 @@ void SwapGLBuffers()
     // The browser does this automatically, we don't have control over it
 }
 
-bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
-         bool *run_flag, std::mutex *lock)
+bool RunGuiApp(std::function<bool()> step_func, bool *run_flag, std::mutex *lock)
 {
     DEFER_C(prev_io = g_io) { g_io = prev_io; };
 
@@ -40,6 +39,8 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
     }
 
     emscripten_webgl_make_context_current(webgl);
+    if (!InitGLFunctions())
+        return false;
 
     {
         EmscriptenFullscreenStrategy strat = {};
@@ -48,11 +49,12 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
         emscripten_enter_soft_fullscreen("canvas", &strat);
     }
 
+
     struct RunContext {
         Bitset<256> keys;
         int wheel_y;
 
-        InterfaceState render_state;
+        std::function<bool()> *step_func;
         const EntitySet *entity_set;
         Span<const ConceptSet> concept_sets;
         bool *run_flag;
@@ -60,6 +62,7 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
     };
 
     RunContext ctx = {};
+    ctx.step_func = &step_func;
     ctx.entity_set = &entity_set;
     ctx.concept_sets = concept_sets;
     ctx.run_flag = run_flag;
@@ -162,10 +165,10 @@ bool Run(HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set,
         // Run the real code
         if (ctx->lock) {
             std::lock_guard<std::mutex> locker(*ctx->lock);
-            if (!Step(ctx->render_state, *ctx->entity_set, ctx->concept_sets))
+            if (!(*ctx->step_func)())
                 return; // TODO: Abort somehow
         } else {
-            if (!Step(ctx->render_state, *ctx->entity_set, ctx->concept_sets))
+            if (!(*ctx->step_func)())
                 return;
         }
 
