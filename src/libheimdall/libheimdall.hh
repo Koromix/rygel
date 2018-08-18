@@ -7,6 +7,6 @@
 #include "../common/kutil.hh"
 #include "core.hh"
 #include "data.hh"
-#include "opengl.hh"
+#include "../common/opengl.hh"
 #include "render.hh"
 #include "runner.hh"

@@ -4,7 +4,7 @@
 
 #include "../common/kutil.cc"
 #include "core.cc"
-#include "opengl.cc"
+#include "../common/opengl.cc"
 #include "render.cc"
 
 #ifdef _WIN32

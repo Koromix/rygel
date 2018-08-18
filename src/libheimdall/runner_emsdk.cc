@@ -7,7 +7,7 @@
 
 #include "../common/kutil.hh"
 #include "../libheimdall/core.hh"
-#include "../libheimdall/opengl.hh"
+#include "../common/opengl.hh"
 #include "runner.hh"
 
 THREAD_LOCAL RunIO *g_io;

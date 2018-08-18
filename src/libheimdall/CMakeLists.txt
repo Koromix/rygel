@@ -11,9 +11,9 @@ set(LIBHEIMDALL_SRC ../common/kutil.cc
                     core.cc
                     core.hh
                     data.hh
-                    opengl.cc
-                    opengl.hh
-                    opengl_func.inc
+                    ../common/opengl.cc
+                    ../common/opengl.hh
+                    ../common/opengl_func.inc
                     render.cc
                     render.hh
                     runner.hh)

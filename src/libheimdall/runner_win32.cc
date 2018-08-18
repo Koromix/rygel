@@ -7,8 +7,8 @@
 #include <windows.h>
 
 #include "../common/kutil.hh"
-#include "../libheimdall/core.hh"
-#include "../libheimdall/opengl.hh"
+#include "core.hh"
+#include "../common/opengl.hh"
 #include "runner.hh"
 
 static GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
