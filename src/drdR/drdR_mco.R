@@ -182,3 +182,7 @@ mco_summary_columns <- function() {
 mco_clean_diagnoses <- function(diagnoses) {
     .Call(`drdR_mco_CleanDiagnoses`, diagnoses)
 }
+
+mco_clean_procedures <- function(procedures) {
+    .Call(`drdR_mco_CleanProcedures`, procedures)
+}

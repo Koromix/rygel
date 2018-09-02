@@ -1360,6 +1360,28 @@ RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
     return diagnoses2;
 }
 
+RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
+{
+    Rcc_Vector<const char *> procedures(procedures_xp);
+
+    Rcc_Vector<const char *> procedures2(procedures.Len());
+    for (Size i = 0; i < procedures.Len(); i++) {
+        Span<const char> str = procedures[i];
+        if (!procedures.IsNA(str)) {
+            ProcedureCode proc = ProcedureCode::FromString(procedures[i]);
+            if (LIKELY(proc.IsValid())) {
+                procedures2.Set(i, proc.str);
+            } else {
+                procedures2.Set(i, nullptr);
+            }
+        } else {
+            procedures2.Set(i, nullptr);
+        }
+    }
+
+    return procedures2;
+}
+
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
@@ -1374,6 +1396,7 @@ RcppExport void R_init_drdR(DllInfo *dll) {
         {"drdR_mco_LoadStays", (DL_FUNC)&drdR_mco_LoadStays, 1},
         {"drdR_mco_SupplementTypes", (DL_FUNC)&drdR_mco_SupplementTypes, 0},
         {"drdR_mco_CleanDiagnoses", (DL_FUNC)&drdR_mco_CleanDiagnoses, 1},
+        {"drdR_mco_CleanProcedures", (DL_FUNC)&drdR_mco_CleanProcedures, 1},
         {}
     };
 
