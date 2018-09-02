@@ -259,9 +259,7 @@ bool RunMcoClassify(Span<const char *> arguments)
         PrintLn(fp, mco_options_usage);
         PrintLn(fp, R"(
 Classify options:
-    -f, --flag <flags>           Classifier flags (see below)
-
-    -m, --mono                   Compute mono-stay results (same as -fmono)
+    -o, --option <options>       Classifier options (see below)
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
 
@@ -271,7 +269,7 @@ Classify options:
         --torture [N]            Run classifier N times
                                  (default = 1)
 
-Classifier flags:)");
+Classifier options:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
             PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
@@ -297,9 +295,7 @@ Dispensation modes:)");
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-m", "--mono")) {
-                flags |= (int)mco_ClassifyFlag::Mono;
-            } else if (TestOption(opt, "-f", "--flag")) {
+            } else if (TestOption(opt, "-o", "--option")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
                     return false;
