@@ -272,6 +272,7 @@ public:
 
     Size Len() const { return span.len; }
 
+    static bool IsNA(Span<const char> value) { return value.ptr == CHAR(NA_STRING); }
     static bool IsNA(const char *value) { return value == CHAR(NA_STRING); }
 
     const Span<const char> operator[](Size idx) const

@@ -178,3 +178,7 @@ mco_summary_columns <- function() {
       paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_cents'),
       paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_count'))
 }
+
+mco_clean_diagnoses <- function(diagnoses) {
+    .Call(`drdR_mco_CleanDiagnoses`, diagnoses)
+}
