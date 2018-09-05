@@ -2164,29 +2164,6 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         out_mono_results = nullptr;
     }
 
-    // Pessimistic assumption (no multi-stay)
-    out_results->Grow(mono_stays.len);
-    if (out_mono_results) {
-        out_mono_results->Grow(mono_stays.len);
-        out_results->len += ClassifyWithMono(table_set, authorization_set, mono_stays, flags,
-                                             out_results->end(), out_mono_results->end());
-        out_mono_results->len += mono_stays.len;
-    } else {
-        out_results->len += Classify(table_set, authorization_set, mono_stays, flags,
-                                     out_results->end());
-    }
-}
-
-void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                          Span<const mco_Stay> mono_stays, unsigned int flags,
-                          HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
-{
-    if (flags & (int)mco_ClassifyFlag::Mono) {
-        DebugAssert(out_mono_results);
-    } else {
-        out_mono_results = nullptr;
-    }
-
     if (!mono_stays.len)
         return;
 
@@ -2241,5 +2218,28 @@ void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_Authorization
     out_results->len += results_count;
     if (out_mono_results) {
         out_mono_results->len += mono_stays.len;
+    }
+}
+
+void mco_ClassifySerial(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                        Span<const mco_Stay> mono_stays, unsigned int flags,
+                        HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
+{
+    if (flags & (int)mco_ClassifyFlag::Mono) {
+        DebugAssert(out_mono_results);
+    } else {
+        out_mono_results = nullptr;
+    }
+
+    // Pessimistic assumption (no multi-stay)
+    out_results->Grow(mono_stays.len);
+    if (out_mono_results) {
+        out_mono_results->Grow(mono_stays.len);
+        out_results->len += ClassifyWithMono(table_set, authorization_set, mono_stays, flags,
+                                             out_results->end(), out_mono_results->end());
+        out_mono_results->len += mono_stays.len;
+    } else {
+        out_results->len += Classify(table_set, authorization_set, mono_stays, flags,
+                                     out_results->end());
     }
 }

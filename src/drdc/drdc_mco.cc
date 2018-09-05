@@ -386,8 +386,8 @@ Dispensation modes:)");
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        mco_ClassifyParallel(*table_set, *authorization_set, stay_set.stays, flags,
-                             &results, &mono_results);
+        mco_Classify(*table_set, *authorization_set, stay_set.stays, flags,
+                     &results, &mono_results);
 
         if (dispense_mode >= 0 || verbosity || test) {
             mco_Price(results, apply_coefficient, &pricings);

@@ -116,7 +116,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
                   HeapArray<mco_Result> *out_mono_results = nullptr);
-void mco_ClassifyParallel(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                          Span<const mco_Stay> stays, unsigned int flags,
-                          HeapArray<mco_Result> *out_results,
-                          HeapArray<mco_Result> *out_mono_results = nullptr);
+void mco_ClassifySerial(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                        Span<const mco_Stay> stays, unsigned int flags,
+                        HeapArray<mco_Result> *out_results,
+                        HeapArray<mco_Result> *out_mono_results = nullptr);
