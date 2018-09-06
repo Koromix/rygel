@@ -422,6 +422,20 @@ var casemix = {};
         if (ghm_root && mix_ghm_roots_map[ghm_root]) {
             var ghm_root_info = mix_ghm_roots_map[ghm_root];
 
+            // function duration_transform(x) { return x + 1; }
+            function duration_transform(x) { return Math.max(x, 1); }
+
+            let max_stays_count = 0;
+            let max_price_cents = 0;
+            for (let i = 0; i < ghm_root_info.ghs.length; i++) {
+                let ghs = ghm_root_info.ghs[i];
+                for (let j = 0; j < ghs.details.length; j++) {
+                    max_stays_count = Math.max(max_stays_count, ghs.details[j].stays_count);
+                    max_price_cents = Math.max(max_price_cents, ghs.details[j].ghs_price_cents /
+                                                                duration_transform(ghs.details[j].duration));
+                }
+            }
+
             let max_duration = Math.max(ghm_root_info.max_duration, 20);
             var table = pricing.createTable(pricing_info, main_index, diff_index,
                                             max_duration, false, true, function(col, duration) {
@@ -431,7 +445,7 @@ var casemix = {};
                     return null;
 
                 let content = '';
-                let style = 'filter: opacity(20%);';
+                let style = 'filter: opacity(50%);';
                 if (ghs) {
                     // FIXME: Ugly search loop
                     var info = null;
@@ -443,14 +457,28 @@ var casemix = {};
                     }
 
                     if (info) {
-                        let width = 60 + 40 * (info.ghs_price_cents / ghm_root_info.ghs_price_cents);
-                        style = 'filter: opacity(' + width + '%)';
+                        let width1 = 100 * (info.stays_count / max_stays_count);
+                        let width2 = 100 * (info.ghs_price_cents / duration_transform(duration) / max_price_cents);
+                        // let width = 100 * (info.ghs_price_cents / max_price_cents);
+                        style = 'padding: 0';
                         content = [
                             //createElement('div', {style: 'float: left; height: 1em; background: red; width: ' + width + '%;'}),
-                            createElement('div', {style: 'float: left; width: 50%; text-align: left;'},
+                            createElement('div', {style: 'float: left; width: calc(50% - 2px); text-align: left; padding: 1px;'},
                                           '' + info.stays_count),
-                            createElement('div', {style: 'float: right; width: 50%; text-align: right;'},
-                                          pricing.priceText(info.ghs_price_cents))
+                            createElement('div', {style: 'float: right; width: calc(50% - 2px); text-align: right; padding: 1px;'},
+                                          pricing.priceText(info.ghs_price_cents)),
+                            createElement('div', {style: 'clear: both; height: 3px; padding: 0;' +
+                                                          'background: linear-gradient(to right, ' +
+                                                                                      '#0000ff 0%, ' +
+                                                                                      '#0000ff ' + width1 + '%, ' +
+                                                                                      'rgba(0, 0, 0, 0) ' + width1 + '%, ' +
+                                                                                      'rgba(0, 0, 0, 0) 100%);'}),
+                            createElement('div', {style: 'clear: both; height: 3px; padding: 0;' +
+                                                          'background: linear-gradient(to right, ' +
+                                                                                      '#ff0000 0%, ' +
+                                                                                      '#ff0000 ' + width2 + '%, ' +
+                                                                                      'rgba(0, 0, 0, 0) ' + width2 + '%, ' +
+                                                                                      'rgba(0, 0, 0, 0) 100%);'})
                         ];
                     }
                 }

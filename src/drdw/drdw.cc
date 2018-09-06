@@ -689,7 +689,7 @@ int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: drdw [options]
+R"(Usage: drdw [options] [stay_file ..]
 
 Options:
     -p, --port <port>            Web server port
@@ -719,8 +719,8 @@ Options:
     {
         OptionParser opt_parser(argc, argv);
 
-        const char *opt;
         bool casemix = false;
+        const char *opt;
         while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);

@@ -29,7 +29,7 @@ var list = {};
                     } else {
                         return 0;
                     }
-                 }},
+                }},
                 {type: 'da', name: 'Domaines d\'activité',
                  func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
                     let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
