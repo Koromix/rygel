@@ -43,9 +43,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     }
                     changed_allow_default = true;
                 } else if (prop.key == "Allow") {
-                    user.allow = MakeString(&set.str_alloc, prop.value).ptr;
+                    user.allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
-                    user.deny = MakeString(&set.str_alloc, prop.value).ptr;
+                    user.deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -57,10 +57,10 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                 if (!changed_allow_default) {
                     user.allow_default = base_user.allow_default;
                 }
-                if (!user.allow) {
+                if (!user.allow.len) {
                     user.allow = base_user.allow;
                 }
-                if (!user.deny) {
+                if (!user.deny.len) {
                     user.deny = base_user.deny;
                 }
             }

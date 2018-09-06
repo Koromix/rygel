@@ -9,15 +9,23 @@ static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
     if (!user)
         return false;
 
+    const auto CheckNeedle = [&](const char *needle) {
+        return !!strstr(unit.path, needle);
+    };
+
     if (user->allow_default) {
-        if (user->deny && strstr(unit.path, user->deny)) {
-            if (!user->allow || !strstr(unit.path, user->allow))
+        bool deny = std::any_of(user->deny.begin(), user->deny.end(), CheckNeedle);
+        if (deny) {
+            bool allow = std::any_of(user->allow.begin(), user->allow.end(), CheckNeedle);
+            if (!allow)
                 return false;
         }
     } else {
-        if (!user->allow || !strstr(unit.path, user->allow))
+        bool allow = std::any_of(user->allow.begin(), user->allow.end(), CheckNeedle);
+        if (!allow)
             return false;
-        if (user->deny && strstr(unit.path, user->deny))
+        bool deny = std::any_of(user->deny.begin(), user->deny.end(), CheckNeedle);
+        if (deny)
             return false;
     }
 

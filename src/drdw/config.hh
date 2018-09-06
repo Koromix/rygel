@@ -6,13 +6,14 @@
 
 #include "drdw.hh"
 
+// TODO: Streamline storage of allow / deny rules
 struct User {
     const char *name;
     const char *password_hash;
 
     bool allow_default;
-    const char *allow;
-    const char *deny;
+    HeapArray<const char *> allow;
+    HeapArray<const char *> deny;
 
     HASH_TABLE_HANDLER(User, name);
 };
