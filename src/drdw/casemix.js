@@ -35,6 +35,8 @@ var casemix = {};
             route.cm_end = route.cm_end || null;
         }
         */
+        if (!user.getCurrentUser())
+            errors.add('Vous n\'êtes pas connecté(e)');
 
         // Resources
         indexes = getIndexes();
