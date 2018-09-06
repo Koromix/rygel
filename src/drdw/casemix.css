@@ -2,6 +2,7 @@
     width: 100%;
     border: 1px solid #a4a4a4;
     border-collapse: collapse;
+    margin-bottom: 1em;
 }
 #cm_cmds td {
     text-align: center;
@@ -13,7 +14,6 @@
 }
 
 #cm_roots {
-    margin-top: 1em;
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;

@@ -76,12 +76,13 @@ var casemix = {};
                     refreshRoots(route.cm_cmd);
                 } break;
                 case 'ghm_root': {
+                    refreshCmds(route.cm_cmd);
                     refreshGhmRoot(pricing.pricings_map[route.ghm_root],
                                    main_index, diff_index, route.ghm_root);
                 } break;
             }
 
-            _('#cm_cmds').classList.toggle('hide', route.cm_view !== 'global');
+            _('#cm_cmds').classList.remove('hide');
             _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
             _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
             _('#cm').classList.remove('hide');
@@ -321,7 +322,8 @@ var casemix = {};
                 }
 
                 var td = createElement('td', {style: td_style},
-                    stays_count ? createElement('a', {href: routeToUrl({cm_cmd: cmd_num})}, '' + valid_cmds[i])
+                    stays_count ? createElement('a', {href: routeToUrl({cm_view: 'global',
+                                                                        cm_cmd: cmd_num})}, '' + valid_cmds[i])
                                 : valid_cmds[i]
                 );
                 tr.appendChild(td);
