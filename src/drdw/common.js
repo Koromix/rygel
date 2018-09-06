@@ -164,6 +164,7 @@ function downloadJson(url, func)
         switch (status) {
             case 200: { /* Success */ } break;
             case 404: { error = 'Adresse \'' + url + '\'introuvable'; } break;
+            case 422: { error = 'Paramètres incorrects'; } break;
             case 502:
             case 503: { error = 'Service non accessible'; } break;
             case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
