@@ -2318,7 +2318,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
 
     DEFER_N(error_guard) { error = true; };
 
-    Span<const char> line;
+    Span<char> line;
     while (reader.Next(&line)) {
         line = TrimStr(line);
 
@@ -2346,7 +2346,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             current_section.Append(section);
             return LineType::Section;
         } else {
-            Span<const char> value;
+            Span<char> value;
             Span<const char> key = TrimStr(SplitStr(line, '=', &value));
             if (!key.len || key.end() == line.end()) {
                 LogError("%1(%2): Malformed key=value", reader.st->filename, reader.line_number);
@@ -2358,6 +2358,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 return LineType::Exit;
             }
             value = TrimStr(value);
+            *value.end() = 0;
 
             error_guard.disable();
             out_prop->section = current_section;
