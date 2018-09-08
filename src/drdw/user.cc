@@ -99,7 +99,7 @@ const User *CheckSessionUser(MHD_Connection *conn)
     return session ? session->user : nullptr;
 }
 
-Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type)
+Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
     if (conn->user) {
         Session *session = FindSession(conn->conn);
@@ -164,7 +164,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionT
     return response;
 }
 
-Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type)
+Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
     PruneStaleSessions();
