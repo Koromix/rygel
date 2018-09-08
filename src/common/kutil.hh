@@ -1463,8 +1463,8 @@ public:
 
         Iterator &operator++()
         {
-            DebugAssert(offset <= table->capacity);
-            while (offset < table->capacity && table->IsEmpty(++offset));
+            DebugAssert(offset < table->capacity);
+            while (++offset < table->capacity && table->IsEmpty(offset));
             return *this;
         }
 
