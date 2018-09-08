@@ -569,12 +569,21 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
 
                 return MHD_YES;
             }, conn);
+            if (!conn->pp) {
+                MHD_Response *response = CreateErrorPage(422).response;
+                DEFER { MHD_destroy_response(response); };
+                return MHD_queue_response(conn->conn, 422, response);
+            }
 
             return MHD_YES;
         } else if (*upload_data_size) {
-            MHD_post_process(conn->pp, upload_data, *upload_data_size);
-            *upload_data_size = 0;
+            if (MHD_post_process(conn->pp, upload_data, *upload_data_size) != MHD_YES) {
+                MHD_Response *response = CreateErrorPage(422).response;
+                DEFER { MHD_destroy_response(response); };
+                return MHD_queue_response(conn->conn, 422, response);
+            }
 
+            *upload_data_size = 0;
             return MHD_YES;
         }
     }
