@@ -1318,7 +1318,7 @@ public:
             return *this;
         }
 
-        Iterator operator++(int) const
+        Iterator operator++(int)
         {
             Iterator ret = *this;
             ++(*this);
@@ -1468,7 +1468,7 @@ public:
             return *this;
         }
 
-        Iterator operator++(int) const
+        Iterator operator++(int)
         {
             Iterator ret = *this;
             ++(*this);
