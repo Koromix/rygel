@@ -14,19 +14,25 @@
         <link rel="stylesheet" href="/static/list.css"/>
         <link rel="stylesheet" href="/static/tree.css"/>
         <link rel="stylesheet" href="/static/casemix.css"/>
+        <link rel="stylesheet" href="/static/user.css"/>
         <script type="text/javascript" src="/static/common.js"></script>
         <script type="text/javascript" src="/static/pricing.js"></script>
         <script type="text/javascript" src="/static/list.js"></script>
         <script type="text/javascript" src="/static/tree.js"></script>
         <script type="text/javascript" src="/static/casemix.js"></script>
+        <script type="text/javascript" src="/static/user.js"></script>
     </head>
 
     <body>
         <div id="side_bar">
             <a class="deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
+                <div id="side_user_box"></div>
+
                 <img id="logo" src="/static/logo.png" alt="drdw logo"/>
                 <ul>
+                    <li id="side_user_menu"><a class="category"></a></li>
+
                     <li><a class="category" data-url="list.routeToUrl({list: 'ghm_roots'});">Tarifs</a></li>
                     <li><a data-url="list.routeToUrl({list: 'ghm_roots'});">Racines de GHM</a></li>
                     <li><a data-url="pricing.routeToUrl({view: 'table'});">Grille</a></li>
@@ -80,7 +86,7 @@
 
                 <label id="opt_units">
                     Unités médicales
-                    <input type="text" style="width: 82%;" value=""/><br/>
+                    <select></select><br/>
                 </label>
                 <label id="opt_diff_casemix">
                     Comparer
@@ -101,9 +107,17 @@
                 <button id="opt_update"
                         onclick="module.route({cm_mode: _('#opt_algorithm > select').value,
                                                cm_diff: _('#opt_diff_casemix > select').value,
-                                               cm_units: _('#opt_units > input').value});">Mettre à jour</button>
+                                               cm_units: _('#opt_units > select').value});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
+
+            <div id="user">
+                <form id="user_login">
+                    <label>Utilisateur : <input id="user_username" type="text"/></label>
+                    <label>Mot de passe : <input id="user_password" type="password"/></label>
+                    <button onclick="user.login(); return false;">Se connecter</button>
+                </form>
+            </div>
 
             <div id="pr">
                 <table id="pr_table" class="pr_grid"></table>

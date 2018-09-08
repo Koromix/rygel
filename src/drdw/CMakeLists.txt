@@ -17,13 +17,19 @@ set(DRDW_RESOURCES drdw.html
                    pricing.js
                    tree.css
                    tree.js
+                   user.css
+                   user.js
                    images/favicon.ico
                    images/logo.png
                    ../../lib/chartjs/chart.min.js)
 set(DRDW_SRC drdw.cc
+             drdw.hh
              casemix.cc
+             config.cc
+             config.hh
              list.cc
-             tree.cc)
+             tree.cc
+             user.cc)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
@@ -42,4 +48,4 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
     target_link_libraries(drdw PRIVATE dl)
 endif()
 target_include_directories(drdw PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(drdw PUBLIC drd microhttpd)
+target_link_libraries(drdw PUBLIC drd microhttpd sodium)

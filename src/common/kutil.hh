@@ -1791,25 +1791,28 @@ static inline bool DefaultCompare(Span<const char> key1, const char *key2)
 static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
     { return key1 == key2; }
 
-#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, HashFunc, CompareFunc) \
+#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, CompareFunc) \
     class Name { \
     public: \
-        static decltype(ValueType::KeyMember) GetKey(const ValueType &value) \
-            { return value.KeyMember; } \
-        static decltype(ValueType::KeyMember) GetKey(const ValueType *value) \
-            { return value->KeyMember; } \
-        static uint64_t HashKey(decltype(ValueType::KeyMember) key) \
+        static KeyType GetKey(const ValueType &value) \
+            { return (KeyType)(value.KeyMember); } \
+        static KeyType GetKey(const ValueType *value) \
+            { return (KeyType)(value->KeyMember); } \
+        static uint64_t HashKey(KeyType key) \
             { return HashFunc(key); } \
-        static bool CompareKeys(decltype(ValueType::KeyMember) key1, \
-                                decltype(ValueType::KeyMember) key2) \
+        static bool CompareKeys(KeyType key1, KeyType key2) \
             { return CompareFunc((key1), (key2)); } \
     }
-#define HASH_TABLE_HANDLER_EX(ValueType, KeyMember, HashFunc, CompareFunc) \
-    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyMember, HashFunc, CompareFunc)
+#define HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, CompareFunc) \
+    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, CompareFunc)
 #define HASH_TABLE_HANDLER(ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, DefaultHash, DefaultCompare)
 #define HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, DefaultHash, DefaultCompare)
+#define HASH_TABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
+    HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, DefaultHash, DefaultCompare)
+#define HASH_TABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, DefaultHash, DefaultCompare)
 
 template <typename KeyType, typename ValueType>
 class HashMap {

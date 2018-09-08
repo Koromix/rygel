@@ -4,6 +4,7 @@ var casemix = {};
     var indexes = [];
     var ghm_roots = [];
     var ghm_roots_map = {};
+    var structures = [];
     var mix_url = null;
     var mix_cmds = [];
     var mix_cmds_map = {};
@@ -42,6 +43,7 @@ var casemix = {};
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.cm_diff; });
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
+        updateStructures();
         if (main_index >= 0) {
             let end_date = indexes[main_index].begin_date;
             for (let i = main_index + 1; i < indexes.length; i++) {
@@ -58,6 +60,7 @@ var casemix = {};
 
         // Refresh settings
         removeClass(__('#opt_indexes, #opt_diff_casemix, #opt_algorithm, #opt_units, #opt_update'), 'hide');
+        refreshStructures(route.cm_units);
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index, false);
         refreshIndexesDiff(diff_index, route.ghm_root);
         _('#opt_algorithm').value = route.cm_mode;
@@ -120,6 +123,14 @@ var casemix = {};
         go(routeToUrl(args), true, delay);
     }
     this.route = route;
+
+    function updateStructures()
+    {
+        let url = buildUrl(BaseUrl + 'api/structures.json');
+        downloadJson(url, function(json) {
+            structures = json;
+        });
+    }
 
     function updateCaseMix(start, end, units, mode, diff_start, diff_end)
     {
@@ -227,6 +238,58 @@ var casemix = {};
                 el.appendChild(opt);
             }
         }
+    }
+
+    // FIXME: Improve detection of malformed paths in config.cc
+    function refreshStructures(unit)
+    {
+        let select = createElement('select');
+
+        for (let i = 0; i < structures.length; i++) {
+            let structure = structures[i];
+
+            let optgroup = createElement('optgroup', {label: 'Structure : ' + structure.name});
+            select.appendChild(optgroup);
+
+            let optgroups = [optgroup];
+            let prev_parts = [];
+            for (let j = 0; j < structure.units.length; j++) {
+                let unit = structure.units[j];
+
+                let parts = unit.path.split('::');
+                for (let k = 1; k < parts.length - 1; k++) {
+                    if (k == prev_parts.length) {
+                        prev_parts.push(null);
+                        optgroups.push(null);
+                    }
+
+                    if (parts[k] !== prev_parts[k]) {
+                        prev_parts[k] = parts[k];
+                        let optgroup = createElement('optgroup', {label: '--'.repeat(k) + ' ' + parts[k]});
+                        // optgroups[k - 1].appendChild(optgroup);
+                        select.appendChild(optgroup);
+                        optgroups[k] = optgroup;
+                    }
+                }
+
+                let opt = createElement('option', {value: unit.unit}, parts[parts.length - 1]);
+                optgroups[parts.length - 2].appendChild(opt);
+            }
+        }
+
+        let disable = false;
+        if (!select.querySelectorAll('option').length) {
+            select.innerHTML = '';
+            select.appendChild(createElement('option', {}, 'Aucune unité'));
+            disable = true;
+        } else {
+            select.value = unit;
+        }
+
+        var old_select = _('#opt_units select');
+        cloneAttributes(old_select, select);
+        select.disabled = disable;
+        old_select.parentNode.replaceChild(select, old_select);
     }
 
     function refreshCmds(cmd)

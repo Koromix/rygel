@@ -178,7 +178,8 @@ function downloadJson(url, func)
 
         if (!--downloadJson.busy) {
             go();
-            downloadJson.queue.clear();
+            if (!downloadJson.busy)
+                downloadJson.queue.clear();
         }
     }
 
@@ -291,6 +292,29 @@ function go(new_url, mark_history, delay)
         }
     }
 
+    // Update user stuff
+    user.runUserBox();
+    {
+        let current_user = user.getCurrentUser();
+
+        let menu_item;
+        if (current_user) {
+            menu_item = createElement('li', {},
+                createElement('a', {href: '#',
+                                    click: function(e) { user.disconnect(); e.preventDefault(); }},
+                              'Se déconnecter (' + current_user.username + ')')
+            );
+        } else {
+            menu_item = createElement('li', {},
+                createElement('a', {href: user.routeToUrl()}, 'Se connecter')
+            );
+        }
+
+        let old_menu_item = _('#side_user_menu');
+        cloneAttributes(old_menu_item, menu_item);
+        old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
+    }
+
     // Find relevant module and run
     let new_module_name = app_url.split('/')[0];
     let new_module = window[new_module_name];
@@ -308,11 +332,13 @@ function go(new_url, mark_history, delay)
     route_url = real_url.substr(BaseUrl.length);
 
     // Update menu state and links
-    var menu_anchors = __('#side_menu a');
+    var menu_anchors = __('#side_menu li a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
 
-        anchor.href = eval(anchor.dataset.url);
+        if (anchor.dataset.url)
+            anchor.href = eval(anchor.dataset.url);
+
         let active = (route_url_parts.href.startsWith(anchor.href) &&
                       !anchor.classList.contains('category'));
         anchor.classList.toggle('active', active);
@@ -337,7 +363,7 @@ function initNavigation()
     if (window.location.pathname !== BaseUrl) {
         new_url = window.location.href;
     } else {
-        var first_anchor = _('#side_menu a');
+        var first_anchor = _('#side_menu a[data-url]');
         new_url = eval(first_anchor.dataset.url);
         window.history.replaceState(null, null, new_url);
     }

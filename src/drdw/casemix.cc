@@ -4,6 +4,55 @@
 
 #include "drdw.hh"
 
+static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
+{
+    if (!user)
+        return false;
+
+    if (user->allow_default) {
+        if (user->deny && strstr(unit.path, user->deny)) {
+            if (!user->allow || !strstr(unit.path, user->allow))
+                return false;
+        }
+    } else {
+        if (!user->allow || !strstr(unit.path, user->allow))
+            return false;
+        if (user->deny && strstr(unit.path, user->deny))
+            return false;
+    }
+
+    return true;
+}
+
+Response ProduceStructures(MHD_Connection *, const User *user, const char *,
+                           CompressionType compression_type)
+{
+    MHD_Response *response = BuildJson(compression_type,
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        writer.StartArray();
+        for (const Structure &structure: drdw_structure_set.structures) {
+            writer.StartObject();
+            writer.Key("name"); writer.String(structure.name);
+            writer.Key("units"); writer.StartArray();
+            for (const Unit &unit: structure.units) {
+                if (CheckUnitAgainstUser(user, unit)) {
+                    writer.StartObject();
+                    writer.Key("unit"); writer.Int(unit.unit.number);
+                    writer.Key("path"); writer.String(unit.path);
+                    writer.EndObject();
+                }
+            }
+            writer.EndArray();
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        return true;
+    });
+
+    return {200, response};
+}
+
 static bool ParseDateRange(Span<const char> date_str, Date *out_start_date, Date *out_end_date)
 {
     Date start_date = {};
@@ -30,7 +79,8 @@ invalid:
     return false;
 }
 
-Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType compression_type)
+Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
+                        CompressionType compression_type)
 {
     struct CellSummary {
         mco_GhmCode ghm;
@@ -49,6 +99,16 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
         int64_t value;
         StaticAssert(SIZE(SummaryMapKey::value) == SIZE(SummaryMapKey::st));
     };
+
+    HashSet<UnitCode> allowed_units;
+    if (user) {
+        for (const Structure &structure: drdw_structure_set.structures) {
+            for (const Unit &unit: structure.units) {
+                if (CheckUnitAgainstUser(user, unit))
+                    allowed_units.Append(unit.unit);
+            }
+        }
+    }
 
     Date dates[2] = {};
     Date diff_dates[2] = {};
@@ -72,7 +132,9 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
             if (!unit.IsValid())
                 return CreateErrorPage(422);
 
-            units.Append(unit);
+            if (allowed_units.Find(unit)) {
+                units.Append(unit);
+            }
         }
 
         const char *durations_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "durations");
@@ -148,7 +210,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const char *, CompressionType comp
                 const mco_Pricing &mono_pricing = sub_mono_pricings[k];
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-                if (!units.table.count || units.Find(mono_result.stays[0].unit)) {
+                if (units.Find(mono_result.stays[0].unit)) {
                     // TODO: Careful with duration overflow
                     SummaryMapKey key = {};
                     key.st.ghm = result.ghm;

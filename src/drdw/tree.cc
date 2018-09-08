@@ -333,7 +333,8 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionType compression_type)
+Response ProduceClassifierTree(MHD_Connection *conn, const User *user, const char *,
+                               CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "classifier_tree.json", &response);

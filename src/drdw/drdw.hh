@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../libdrd/libdrd.hh"
+#include "config.hh"
 #include "json.hh"
 
 PUSH_NO_WARNINGS()
@@ -19,7 +20,10 @@ struct Response {
 extern const mco_TableSet *drdw_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> drdw_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> drdw_index_to_constraints;
+
 extern const mco_AuthorizationSet *drdw_authorization_set;
+extern UserSet drdw_user_set;
+extern StructureSet drdw_structure_set;
 extern mco_StaySet drdw_stay_set;
 
 const mco_TableIndex *GetIndexFromQueryString(MHD_Connection *conn, const char *redirect_url,
@@ -29,10 +33,26 @@ Response CreateErrorPage(int code);
 MHD_Response *BuildJson(CompressionType compression_type,
                         std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
 
-Response ProduceIndexes(MHD_Connection *conn, const char *url, CompressionType compression_type);
-Response ProduceClassifierTree(MHD_Connection *conn, const char *, CompressionType compression_type);
-Response ProduceDiagnoses(MHD_Connection *conn, const char *url, CompressionType compression_type);
-Response ProduceProcedures(MHD_Connection *conn, const char *url, CompressionType compression_type);
-Response ProduceGhmGhs(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceIndexes(MHD_Connection *conn, const User *user, const char *url,
+                        CompressionType compression_type);
+Response ProduceClassifierTree(MHD_Connection *conn, const User *user, const char *url,
+                               CompressionType compression_type);
+Response ProduceDiagnoses(MHD_Connection *conn, const User *user, const char *url,
+                          CompressionType compression_type);
+Response ProduceProcedures(MHD_Connection *conn, const User *user, const char *url,
+                           CompressionType compression_type);
+Response ProduceGhmGhs(MHD_Connection *conn, const User *user, const char *url,
+                       CompressionType compression_type);
 
-Response ProduceCaseMix(MHD_Connection *conn, const char *url, CompressionType compression_type);
+Response ProduceStructures(MHD_Connection *conn, const User *user, const char *url,
+                           CompressionType compression_type);
+Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *url,
+                        CompressionType compression_type);
+
+const User *CheckSessionUser(MHD_Connection *conn);
+Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
+                       CompressionType compression_type);
+Response HandleDisconnect(MHD_Connection *conn, const User *user, const char *url,
+                          CompressionType compression_type);
+Response ProduceUser(MHD_Connection *conn, const User *user, const char *url,
+                     CompressionType compression_type);

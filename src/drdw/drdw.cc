@@ -5,6 +5,8 @@
 #include "drdw.hh"
 #include "../packer/packer.hh"
 
+#include "../../lib/libsodium/src/libsodium/include/sodium.h"
+
 #ifndef _WIN32
     #include <dlfcn.h>
     #include <signal.h>
@@ -27,6 +29,9 @@ struct Route {
         Exact,
         Walk
     };
+    enum class Flag {
+        NoCache = 1 << 0
+    };
 
     Span<const char> url;
     Matching matching;
@@ -38,19 +43,20 @@ struct Route {
             const char *mime_type;
         } st;
 
-        Response (*func)(MHD_Connection *conn, const char *url, CompressionType compression_type);
+        Response (*func)(MHD_Connection *conn, const User *user, const char *url, CompressionType compression_type);
     } u;
+    unsigned int flags;
 
     Route() = default;
-    Route(const char *url, Matching matching, const PackerAsset &asset, const char *mime_type)
-        : url(url), matching(matching), type(Type::Static)
+    Route(const char *url, Matching matching, unsigned int flags, const PackerAsset &asset, const char *mime_type)
+        : url(url), matching(matching), type(Type::Static), flags(flags)
     {
         u.st.asset = asset;
         u.st.mime_type = mime_type;
     }
-    Route(const char *url, Matching matching,
-          Response (*func)(MHD_Connection *conn, const char *url, CompressionType compression_type))
-        : url(url), matching(matching), type(Type::Function)
+    Route(const char *url, Matching matching, unsigned int flags,
+          Response (*func)(MHD_Connection *conn, const User *user, const char *url, CompressionType compression_type))
+        : url(url), matching(matching), type(Type::Function), flags(flags)
     {
         u.func = func;
     }
@@ -61,7 +67,10 @@ struct Route {
 const mco_TableSet *drdw_table_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> drdw_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> drdw_index_to_constraints;
+
 const mco_AuthorizationSet *drdw_authorization_set;
+UserSet drdw_user_set;
+StructureSet drdw_structure_set;
 mco_StaySet drdw_stay_set;
 
 static DescSet desc_set;
@@ -186,6 +195,76 @@ static bool InitDescSet(Span<const char *const> resource_directories,
         desc.compression_type = CompressionType::Gzip;
 
         out_set->descs.Append(desc);
+    }
+
+    return true;
+}
+
+static bool InitUserSet(Span<const char *const> resource_directories,
+                        const char *user_filename, UserSet *out_set)
+{
+    LogInfo("Loading users");
+
+    LinkedAllocator temp_alloc;
+
+    const char *filename = nullptr;
+    {
+        if (user_filename) {
+            filename = user_filename;
+        } else {
+            for (Size i = resource_directories.len; i-- > 0;) {
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config/users.ini",
+                                                resource_directories[i]).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (filename && filename[0]) {
+        UserSetBuilder user_set_builder;
+        if (!user_set_builder.LoadFiles(filename))
+            return false;
+        user_set_builder.Finish(out_set);
+    } else {
+        LogError("No users file specified or found");
+    }
+
+    return true;
+}
+
+static bool InitStructureSet(Span<const char *const> resource_directories,
+                             const char *structure_filename, StructureSet *out_set)
+{
+    LogInfo("Loading structures");
+
+    LinkedAllocator temp_alloc;
+
+    const char *filename = nullptr;
+    {
+        if (structure_filename) {
+            filename = structure_filename;
+        } else {
+            for (Size i = resource_directories.len; i-- > 0;) {
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config/structures.ini",
+                                                resource_directories[i]).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (filename && filename[0]) {
+        StructureSetBuilder structure_set_builder;
+        if (!structure_set_builder.LoadFiles(filename))
+            return false;
+        structure_set_builder.Finish(out_set);
+    } else {
+        LogError("No structures file specified or found");
     }
 
     return true;
@@ -318,38 +397,45 @@ static void InitRoutes()
     Assert(packer_assets.len > 0);
     for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        routes.Set({url, Route::Matching::Exact, asset, GetMimeType(asset.name)});
+        routes.Set({url, Route::Matching::Exact, 0, asset, GetMimeType(asset.name)});
     }
 
     // Special cases
     {
         Route *html = routes.Find("/static/drdw.html");
         Assert(html);
-        routes.Set({"/", Route::Matching::Exact, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/pricing", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/list", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/tree", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/casemix", Route::Matching::Walk, html->u.st.asset, html->u.st.mime_type});
-        routes.Remove(html);
+        routes.Set({"/", Route::Matching::Exact, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/pricing", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/list", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/tree", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/casemix", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/user", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        // FIXME: routes.Remove(html);
 
         Route *favicon = routes.Find("/static/favicon.ico");
         if (favicon) {
-            routes.Set({"/favicon.ico", Route::Matching::Exact, favicon->u.st.asset,
-                        favicon->u.st.mime_type});
-            routes.Remove(favicon);
+            routes.Set({"/favicon.ico", Route::Matching::Exact, 0,
+                        favicon->u.st.asset, favicon->u.st.mime_type});
+            // FIXME: routes.Remove(favicon);
         }
     }
 
     // API
-    routes.Set({"/api/indexes.json", Route::Matching::Exact, ProduceIndexes});
-    routes.Set({"/api/casemix.json", Route::Matching::Exact, ProduceCaseMix});
-    routes.Set({"/api/classifier_tree.json", Route::Matching::Exact, ProduceClassifierTree});
-    routes.Set({"/api/diagnoses.json", Route::Matching::Exact, ProduceDiagnoses});
-    routes.Set({"/api/procedures.json", Route::Matching::Exact, ProduceProcedures});
-    routes.Set({"/api/ghm_ghs.json", Route::Matching::Exact, ProduceGhmGhs});
+    routes.Set({"/api/indexes.json", Route::Matching::Exact, 0, ProduceIndexes});
+    routes.Set({"/api/structures.json", Route::Matching::Exact, (int)Route::Flag::NoCache,
+                ProduceStructures});
+    routes.Set({"/api/casemix.json", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceCaseMix});
+    routes.Set({"/api/classifier_tree.json", Route::Matching::Exact, 0, ProduceClassifierTree});
+    routes.Set({"/api/diagnoses.json", Route::Matching::Exact, 0, ProduceDiagnoses});
+    routes.Set({"/api/procedures.json", Route::Matching::Exact, 0, ProduceProcedures});
+    routes.Set({"/api/ghm_ghs.json", Route::Matching::Exact, 0, ProduceGhmGhs});
+    // FIXME: Improve caching behavior for user-dependent routes
+    routes.Set({"/api/connect.json", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleConnect});
+    routes.Set({"/api/disconnect.json", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleDisconnect});
+    routes.Set({"/api/user.json", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceUser});
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
-        routes.Set({url, Route::Matching::Exact, desc, GetMimeType(url)});
+        routes.Set({url, Route::Matching::Exact, 0, desc, GetMimeType(url)});
     }
 
     // We can use a global ETag because everything is in the binary
@@ -458,16 +544,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
     UpdateStaticAssets();
 #endif
 
-    // Handle server-side cache validation (ETag)
-    {
-        const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
-        if (client_etag && TestStr(client_etag, etag)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            DEFER { MHD_destroy_response(response); };
-
-            return MHD_queue_response(conn, 304, response);
-        }
-    }
+    // Find logged-in user
+    const User *user = CheckSessionUser(conn);
 
     // Negociate content encoding
     CompressionType compression_type;
@@ -510,6 +588,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         }
     }
 
+    // Handle server-side cache validation (ETag)
+    if (!(route->flags & (int)Route::Flag::NoCache)) {
+        const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
+        if (client_etag && TestStr(client_etag, etag)) {
+            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            DEFER { MHD_destroy_response(response); };
+
+            return MHD_queue_response(conn, 304, response);
+        }
+    }
+
     // Execute route
     Response response = {};
     switch (route->type) {
@@ -518,20 +607,22 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         } break;
 
         case Route::Type::Function: {
-            response = route->u.func(conn, url, compression_type);
+            response = route->u.func(conn, user, url, compression_type);
         } break;
     }
     DebugAssert(response.response);
     DEFER { MHD_destroy_response(response.response); };
 
     // Add caching information
+    if (!(route->flags & (int)Route::Flag::NoCache)) {
 #ifdef NDEBUG
-    MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
+        MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
 #else
-    MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
+        MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
 #endif
-    if (etag[0]) {
-        MHD_add_response_header(response.response, "ETag", etag);
+        if (etag[0]) {
+            MHD_add_response_header(response.response, "ETag", etag);
+        }
     }
 
     return MHD_queue_response(conn, (unsigned int)response.code, response.response);
@@ -610,12 +701,21 @@ Options:
         }
     }
 
+    if (sodium_init() < 0) {
+        LogError("Failed to initialize libsodium");
+        return 1;
+    }
+
     drdw_table_set = mco_GetMainTableSet();
     if (!drdw_table_set || !drdw_table_set->indexes.len)
         return 1;
     if (stays_filenames.len) {
         drdw_authorization_set = mco_GetMainAuthorizationSet();
         if (!drdw_authorization_set)
+            return 1;
+        if (!InitUserSet(mco_resource_directories, nullptr, &drdw_user_set))
+            return 1;
+        if (!InitStructureSet(mco_resource_directories, nullptr, &drdw_structure_set))
             return 1;
     }
     if (!InitDescSet(mco_resource_directories, desc_directories, &desc_set))
@@ -659,11 +759,18 @@ Options:
     InitRoutes();
 #endif
 
-    MHD_Daemon *daemon = MHD_start_daemon(
-        MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG, port,
-        nullptr, nullptr, HandleHttpConnection, nullptr, MHD_OPTION_END);
-    if (!daemon)
-        return 1;
+    MHD_Daemon *daemon;
+    {
+        int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+#ifndef NDEBUG
+        flags |= MHD_USE_DEBUG;
+#endif
+        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection,
+                                  nullptr, MHD_OPTION_END);
+
+        if (!daemon)
+            return 1;
+    }
     DEFER { MHD_stop_daemon(daemon); };
 
     LogInfo("Listening on port %1", MHD_get_daemon_info(daemon, MHD_DAEMON_INFO_BIND_PORT)->port);

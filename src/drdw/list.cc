@@ -4,7 +4,8 @@
 
 #include "drdw.hh"
 
-Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compression_type)
+Response ProduceIndexes(MHD_Connection *, const User *, const char *,
+                        CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -34,7 +35,8 @@ Response ProduceIndexes(MHD_Connection *, const char *, CompressionType compress
     return {200, response};
 }
 
-Response ProduceDiagnoses(MHD_Connection *conn, const char *, CompressionType compression_type)
+Response ProduceDiagnoses(MHD_Connection *conn, const User *, const char *,
+                          CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "diagnoses.json", &response);
@@ -108,7 +110,8 @@ Response ProduceDiagnoses(MHD_Connection *conn, const char *, CompressionType co
     return response;
 }
 
-Response ProduceProcedures(MHD_Connection *conn, const char *, CompressionType compression_type)
+Response ProduceProcedures(MHD_Connection *conn, const User *, const char *,
+                           CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "procedures.json", &response);
@@ -155,7 +158,8 @@ Response ProduceProcedures(MHD_Connection *conn, const char *, CompressionType c
 }
 
 // TODO: Add ghm_ghs export to drdR
-Response ProduceGhmGhs(MHD_Connection *conn, const char *, CompressionType compression_type)
+Response ProduceGhmGhs(MHD_Connection *conn, const User *, const char *,
+                       CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "ghm_ghs.json", &response);

@@ -1,0 +1,9 @@
+#user_login label {
+    display: block;
+    text-align: left;
+    width: 125px;
+}
+#user_login button {
+    display: block;
+    margin: 20px;
+};
