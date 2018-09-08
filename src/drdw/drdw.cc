@@ -403,21 +403,20 @@ static void InitRoutes()
 
     // Special cases
     {
-        Route *html = routes.Find("/static/drdw.html");
-        Assert(html);
-        routes.Set({"/", "GET", Route::Matching::Exact, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/pricing", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/list", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/tree", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/casemix", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/user", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        // FIXME: routes.Remove(html);
+        Route html = *routes.Find("/static/drdw.html");
+        routes.Set({"/", "GET", Route::Matching::Exact, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/pricing", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/list", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/tree", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/casemix", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/user", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Remove("/static/drdw.html");
 
         Route *favicon = routes.Find("/static/favicon.ico");
         if (favicon) {
             routes.Set({"/favicon.ico", "GET", Route::Matching::Exact, 0,
                         favicon->u.st.asset, favicon->u.st.mime_type});
-            // FIXME: routes.Remove(favicon);
+            routes.Remove("/static/favicon.ico");
         }
     }
 
