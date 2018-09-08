@@ -46,18 +46,18 @@ struct Route {
 
         Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
     } u;
-    unsigned int flags;
 
     Route() = default;
-    Route(const char *url, const char *method, Matching matching, unsigned int flags, const PackerAsset &asset, const char *mime_type)
-        : url(url), method(method), matching(matching), type(Type::Static), flags(flags)
+    Route(const char *url, const char *method, Matching matching,
+          const PackerAsset &asset, const char *mime_type)
+        : url(url), method(method), matching(matching), type(Type::Static)
     {
         u.st.asset = asset;
         u.st.mime_type = mime_type;
     }
-    Route(const char *url, const char *method, Matching matching, unsigned int flags,
+    Route(const char *url, const char *method, Matching matching,
           Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type))
-        : url(url), method(method), matching(matching), type(Type::Function), flags(flags)
+        : url(url), method(method), matching(matching), type(Type::Function)
     {
         u.func = func;
     }
@@ -398,45 +398,43 @@ static void InitRoutes()
     Assert(packer_assets.len > 0);
     for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        routes.Set({url, "GET", Route::Matching::Exact, 0, asset, GetMimeType(asset.name)});
+        routes.Set({url, "GET", Route::Matching::Exact, asset, GetMimeType(asset.name)});
     }
 
     // Special cases
     {
         Route html = *routes.Find("/static/drdw.html");
-        routes.Set({"/", "GET", Route::Matching::Exact, 0, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/pricing", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/list", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/tree", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/casemix", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/user", "GET", Route::Matching::Walk, 0, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/user", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
         routes.Remove("/static/drdw.html");
 
         Route *favicon = routes.Find("/static/favicon.ico");
         if (favicon) {
-            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact, 0,
+            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
                         favicon->u.st.asset, favicon->u.st.mime_type});
             routes.Remove("/static/favicon.ico");
         }
     }
 
     // API
-    routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, 0, ProduceIndexes});
-    routes.Set({"/api/structures.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache,
-                ProduceStructures});
-    routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache,
-                ProduceCaseMix});
-    routes.Set({"/api/classifier_tree.json", "GET", Route::Matching::Exact, 0, ProduceClassifierTree});
-    routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, 0, ProduceDiagnoses});
-    routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, 0, ProduceProcedures});
-    routes.Set({"/api/ghm_ghs.json", "GET", Route::Matching::Exact, 0, ProduceGhmGhs});
+    routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, ProduceIndexes});
+    routes.Set({"/api/structures.json", "GET", Route::Matching::Exact, ProduceStructures});
+    routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, ProduceCaseMix});
+    routes.Set({"/api/classifier_tree.json", "GET", Route::Matching::Exact, ProduceClassifierTree});
+    routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, ProduceDiagnoses});
+    routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, ProduceProcedures});
+    routes.Set({"/api/ghm_ghs.json", "GET", Route::Matching::Exact, ProduceGhmGhs});
     // FIXME: Improve caching behavior for user-dependent routes
-    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleConnect});
-    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleDisconnect});
-    routes.Set({"/api/user.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceUser});
+    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
+    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
+    routes.Set({"/api/user.json", "GET", Route::Matching::Exact, ProduceUser});
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
-        routes.Set({url, "GET", Route::Matching::Exact, 0, desc, GetMimeType(url)});
+        routes.Set({url, "GET", Route::Matching::Exact, desc, GetMimeType(url)});
     }
 
     // We can use a global ETag because everything is in the binary
@@ -607,6 +605,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
 
     // Find appropriate route
     Route *route;
+    bool cache;
     {
         Span<const char> url2 = url;
 
@@ -629,10 +628,12 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
                 return MHD_queue_response(conn->conn, 404, response);
             }
         }
+
+        cache = TestStr(method, "GET");
     }
 
     // Handle server-side cache validation (ETag)
-    if (!(route->flags & (int)Route::Flag::NoCache)) {
+    if (cache) {
         const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
@@ -657,7 +658,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     DEFER { MHD_destroy_response(response.response); };
 
     // Add caching information
-    if (!(route->flags & (int)Route::Flag::NoCache)) {
+    if (cache) {
 #ifdef NDEBUG
         MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
 #else
@@ -825,7 +826,6 @@ Options:
         daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);
-
         if (!daemon)
             return 1;
     }

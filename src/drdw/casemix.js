@@ -129,7 +129,7 @@ var casemix = {};
 
     function updateStructures()
     {
-        let url = buildUrl(BaseUrl + 'api/structures.json');
+        let url = buildUrl(BaseUrl + 'api/structures.json', {key: user.getUrlKey()});
         downloadJson(url, 'get', function(json) {
             structures = json;
         });
@@ -142,7 +142,8 @@ var casemix = {};
             units: units,
             mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
-            durations: 1
+            durations: 1,
+            key: user.getUrlKey()
         };
         let url = buildUrl(BaseUrl + 'api/casemix.json', params);
 

@@ -1,6 +1,7 @@
 var user = {};
 (function() {
     var user = null;
+    var url_key = 0;
 
     function run(route, url, parameters, hash)
     {
@@ -41,6 +42,8 @@ var user = {};
         let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
         downloadJson(url, 'post', function(json) {
             user = json;
+            url_key = generateRandomInt(1, 281474976710656);
+
             func();
         });
     }
@@ -49,7 +52,9 @@ var user = {};
     function disconnect()
     {
         let url = buildUrl(BaseUrl + 'api/disconnect.json');
-        downloadJson(url, 'post', function(json) {});
+        downloadJson(url, 'post', function(json) {
+            url_key = 0;
+        });
     }
     this.disconnect = disconnect;
 
@@ -66,9 +71,16 @@ var user = {};
 
     function refreshUser()
     {
-        let url = buildUrl(BaseUrl + 'api/user.json');
+        let url = buildUrl(BaseUrl + 'api/user.json', {key: url_key});
         downloadJson(url, 'get', function(json) {
-            user = json.username ? json : null;
+            if (json.username) {
+                if (!url_key)
+                    url_key = generateRandomInt(1, 281474976710656);
+                user = json;
+            } else {
+                user = null;
+                url_key = 0;
+            }
         });
     }
 
@@ -101,5 +113,7 @@ var user = {};
     }
 
     function getCurrentUser() { return user; }
+    function getUrlKey() { return url_key; }
     this.getCurrentUser = getCurrentUser;
+    this.getUrlKey = getUrlKey;
 }).call(user);

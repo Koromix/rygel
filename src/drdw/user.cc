@@ -118,6 +118,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
     char session_key[129];
     {
         uint64_t buf[8];
+
         randombytes_buf(buf, SIZE(buf));
         Fmt(session_key, "%1%2%3%4%5%6%7%8",
             FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
