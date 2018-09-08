@@ -168,9 +168,8 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *url, Compressi
     Session *session = FindSession(conn->conn);
     sessions.Remove(session);
 
-    // TODO: Check that the cookie gets removed with this
     Response response = ProduceUser(conn, url, compression_type);
-    MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=-1");
+    MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
 
     return response;
 }
