@@ -158,7 +158,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
             if (map.Append(structure.name).second) {
                 set.structures.Append(structure);
             } else {
-                LogError("Duplicate structure"); // TODO: Better message
+                LogError("Duplicate structure '%1'", structure.name);
                 valid = false;
             }
         }
