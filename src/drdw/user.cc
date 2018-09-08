@@ -154,7 +154,8 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 
     Response response;
     {
-        response = ProduceUser(conn, url, compression_type);
+        response.code = 200;
+        response.response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
 
         char buf[512];
         Fmt(buf, "session_key=%1; Max-Age=14400", session_key);
@@ -168,11 +169,10 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionT
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
     PruneStaleSessions();
-
     Session *session = FindSession(conn->conn);
     sessions.Remove(session);
 
-    Response response = ProduceUser(conn, url, compression_type);
+    Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
     MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
 
     return response;
