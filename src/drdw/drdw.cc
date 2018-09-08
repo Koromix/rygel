@@ -34,6 +34,7 @@ struct Route {
     };
 
     Span<const char> url;
+    const char *method;
     Matching matching;
 
     Type type;
@@ -43,20 +44,20 @@ struct Route {
             const char *mime_type;
         } st;
 
-        Response (*func)(MHD_Connection *conn, const User *user, const char *url, CompressionType compression_type);
+        Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
     } u;
     unsigned int flags;
 
     Route() = default;
-    Route(const char *url, Matching matching, unsigned int flags, const PackerAsset &asset, const char *mime_type)
-        : url(url), matching(matching), type(Type::Static), flags(flags)
+    Route(const char *url, const char *method, Matching matching, unsigned int flags, const PackerAsset &asset, const char *mime_type)
+        : url(url), method(method), matching(matching), type(Type::Static), flags(flags)
     {
         u.st.asset = asset;
         u.st.mime_type = mime_type;
     }
-    Route(const char *url, Matching matching, unsigned int flags,
-          Response (*func)(MHD_Connection *conn, const User *user, const char *url, CompressionType compression_type))
-        : url(url), matching(matching), type(Type::Function), flags(flags)
+    Route(const char *url, const char *method, Matching matching, unsigned int flags,
+          Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type))
+        : url(url), method(method), matching(matching), type(Type::Function), flags(flags)
     {
         u.func = func;
     }
@@ -85,12 +86,12 @@ static HashTable<Span<const char>, Route> routes;
 static LinkedAllocator routes_alloc;
 static char etag[64];
 
-const mco_TableIndex *GetIndexFromQueryString(MHD_Connection *conn, const char *redirect_url,
+const mco_TableIndex *GetIndexFromQueryString(const ConnectionInfo *conn, const char *redirect_url,
                                               Response *out_response)
 {
     Date date = {};
     {
-        const char *date_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "date");
+        const char *date_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "date");
         if (date_str) {
             date = Date::FromString(date_str);
         } else {
@@ -397,45 +398,46 @@ static void InitRoutes()
     Assert(packer_assets.len > 0);
     for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        routes.Set({url, Route::Matching::Exact, 0, asset, GetMimeType(asset.name)});
+        routes.Set({url, "GET", Route::Matching::Exact, 0, asset, GetMimeType(asset.name)});
     }
 
     // Special cases
     {
         Route *html = routes.Find("/static/drdw.html");
         Assert(html);
-        routes.Set({"/", Route::Matching::Exact, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/pricing", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/list", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/tree", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/casemix", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
-        routes.Set({"/user", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/", "GET", Route::Matching::Exact, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/pricing", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/list", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/tree", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/casemix", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
+        routes.Set({"/user", "GET", Route::Matching::Walk, 0, html->u.st.asset, html->u.st.mime_type});
         // FIXME: routes.Remove(html);
 
         Route *favicon = routes.Find("/static/favicon.ico");
         if (favicon) {
-            routes.Set({"/favicon.ico", Route::Matching::Exact, 0,
+            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact, 0,
                         favicon->u.st.asset, favicon->u.st.mime_type});
             // FIXME: routes.Remove(favicon);
         }
     }
 
     // API
-    routes.Set({"/api/indexes.json", Route::Matching::Exact, 0, ProduceIndexes});
-    routes.Set({"/api/structures.json", Route::Matching::Exact, (int)Route::Flag::NoCache,
+    routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, 0, ProduceIndexes});
+    routes.Set({"/api/structures.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache,
                 ProduceStructures});
-    routes.Set({"/api/casemix.json", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceCaseMix});
-    routes.Set({"/api/classifier_tree.json", Route::Matching::Exact, 0, ProduceClassifierTree});
-    routes.Set({"/api/diagnoses.json", Route::Matching::Exact, 0, ProduceDiagnoses});
-    routes.Set({"/api/procedures.json", Route::Matching::Exact, 0, ProduceProcedures});
-    routes.Set({"/api/ghm_ghs.json", Route::Matching::Exact, 0, ProduceGhmGhs});
+    routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache,
+                ProduceCaseMix});
+    routes.Set({"/api/classifier_tree.json", "GET", Route::Matching::Exact, 0, ProduceClassifierTree});
+    routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, 0, ProduceDiagnoses});
+    routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, 0, ProduceProcedures});
+    routes.Set({"/api/ghm_ghs.json", "GET", Route::Matching::Exact, 0, ProduceGhmGhs});
     // FIXME: Improve caching behavior for user-dependent routes
-    routes.Set({"/api/connect.json", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleConnect});
-    routes.Set({"/api/disconnect.json", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleDisconnect});
-    routes.Set({"/api/user.json", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceUser});
+    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleConnect});
+    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, (int)Route::Flag::NoCache, HandleDisconnect});
+    routes.Set({"/api/user.json", "GET", Route::Matching::Exact, (int)Route::Flag::NoCache, ProduceUser});
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
-        routes.Set({url, Route::Matching::Exact, 0, desc, GetMimeType(url)});
+        routes.Set({url, "GET", Route::Matching::Exact, 0, desc, GetMimeType(url)});
     }
 
     // We can use a global ETag because everything is in the binary
@@ -537,21 +539,52 @@ static bool UpdateStaticAssets()
 }
 #endif
 
-static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, const char *,
-                                const char *, const char *, size_t *, void **)
+static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, const char *method,
+                                const char *, const char *upload_data, size_t *upload_data_size,
+                                void **con_cls)
 {
 #ifndef NDEBUG
     UpdateStaticAssets();
 #endif
 
-    // Find logged-in user
-    const User *user = CheckSessionUser(conn);
+    ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
+    if (!conn) {
+        conn = new ConnectionInfo;
+        conn->conn = conn2;
+        conn->user = CheckSessionUser(conn2);
+        *con_cls = conn;
+    }
+
+    // Process POST data if any
+    if (TestStr(method, "POST")) {
+        if (!conn->pp) {
+            conn->pp = MHD_create_post_processor(conn->conn, Kibibytes(32),
+                                                 [](void *cls, enum MHD_ValueKind, const char *key,
+                                                    const char *, const char *, const char *,
+                                                    const char *data, uint64_t, size_t) {
+                ConnectionInfo *conn = (ConnectionInfo *)cls;
+
+                key = DuplicateString(&conn->temp_alloc, key).ptr;
+                data = DuplicateString(&conn->temp_alloc, data).ptr;
+                conn->post.Append(key, data);
+
+                return MHD_YES;
+            }, conn);
+
+            return MHD_YES;
+        } else if (*upload_data_size) {
+            MHD_post_process(conn->pp, upload_data, *upload_data_size);
+            *upload_data_size = 0;
+
+            return MHD_YES;
+        }
+    }
 
     // Negociate content encoding
     CompressionType compression_type;
     {
         uint32_t acceptable_encodings =
-            ParseAcceptableEncodings(MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding"));
+            ParseAcceptableEncodings(MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "Accept-Encoding"));
 
         if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
             compression_type = CompressionType::Gzip;
@@ -560,7 +593,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         } else {
             MHD_Response *response = CreateErrorPage(406).response;
             DEFER { MHD_destroy_response(response); };
-            return MHD_queue_response(conn, 406, response);
+            return MHD_queue_response(conn->conn, 406, response);
         }
     }
 
@@ -570,32 +603,34 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         Span<const char> url2 = url;
 
         route = routes.Find(url2);
-        if (!route) {
+        if (!route || !TestStr(route->method, method)) {
             while (url2.len > 1) {
                 SplitStrReverse(url2, '/', &url2);
 
                 Route *walk_route = routes.Find(url2);
-                if (walk_route && walk_route->matching == Route::Matching::Walk) {
+                if (walk_route && walk_route->matching == Route::Matching::Walk &&
+                        TestStr(walk_route->method, method)) {
                     route = walk_route;
                     break;
                 }
             }
+
             if (!route) {
                 MHD_Response *response = CreateErrorPage(404).response;
                 DEFER { MHD_destroy_response(response); };
-                return MHD_queue_response(conn, 404, response);
+                return MHD_queue_response(conn->conn, 404, response);
             }
         }
     }
 
     // Handle server-side cache validation (ETag)
     if (!(route->flags & (int)Route::Flag::NoCache)) {
-        const char *client_etag = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "If-None-Match");
+        const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             DEFER { MHD_destroy_response(response); };
 
-            return MHD_queue_response(conn, 304, response);
+            return MHD_queue_response(conn->conn, 304, response);
         }
     }
 
@@ -607,7 +642,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         } break;
 
         case Route::Type::Function: {
-            response = route->u.func(conn, user, url, compression_type);
+            response = route->u.func(conn, url, compression_type);
         } break;
     }
     DebugAssert(response.response);
@@ -625,7 +660,20 @@ static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, c
         }
     }
 
-    return MHD_queue_response(conn, (unsigned int)response.code, response.response);
+    return MHD_queue_response(conn->conn, (unsigned int)response.code, response.response);
+}
+
+static void ReleaseConnectionData(void *, struct MHD_Connection *,
+                                  void **con_cls, enum MHD_RequestTerminationCode)
+{
+    ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
+
+    if (conn) {
+        if (conn->pp) {
+            MHD_destroy_post_processor(conn->pp);
+        }
+        delete conn;
+    }
 }
 
 int main(int argc, char **argv)
@@ -765,8 +813,10 @@ Options:
 #ifndef NDEBUG
         flags |= MHD_USE_DEBUG;
 #endif
-        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection,
-                                  nullptr, MHD_OPTION_END);
+
+        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
+                                  MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
+                                  MHD_OPTION_END);
 
         if (!daemon)
             return 1;

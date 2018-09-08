@@ -151,7 +151,7 @@ function buildUrl(url, query_values)
 // JSON
 // ------------------------------------------------------------------------
 
-function downloadJson(url, func)
+function downloadJson(url, method, func)
 {
     if (downloadJson.queue.has(url))
         return;
@@ -185,13 +185,21 @@ function downloadJson(url, func)
     }
 
     var xhr = new XMLHttpRequest();
-    xhr.open('get', url, true);
     xhr.responseType = 'json';
     xhr.timeout = 14000;
     xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
     xhr.onerror = function(e) { handleFinishedRequest(503); };
     xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-    xhr.send();
+    if (method === 'post') {
+        parts = url.split('?', 2);
+        xhr.open(method, parts[0], true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.send(parts.length > 1 ? parts[1] : null);
+    } else {
+        xhr.open(method, url, true);
+        xhr.send();
+    }
+
 }
 downloadJson.errors = [];
 downloadJson.queue = new Set();
@@ -400,7 +408,7 @@ function getIndexes()
     var indexes = getIndexes.indexes;
 
     if (!indexes.length) {
-        downloadJson(BaseUrl + 'api/indexes.json', function(json) {
+        downloadJson(BaseUrl + 'api/indexes.json', 'get', function(json) {
             if (json.length > 0) {
                 indexes = json;
                 for (var i = 0; i < indexes.length; i++)
@@ -514,7 +522,7 @@ function getConcepts(name)
     var set = sets[name];
 
     if (!set.concepts.length) {
-        downloadJson(BaseUrl + 'concepts/' + name + '.json', function(json) {
+        downloadJson(BaseUrl + 'concepts/' + name + '.json', 'get', function(json) {
             set.concepts = json;
             set.map = {};
             for (var i = 0; i < json.length; i++) {

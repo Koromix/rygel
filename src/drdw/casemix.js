@@ -130,7 +130,7 @@ var casemix = {};
     function updateStructures()
     {
         let url = buildUrl(BaseUrl + 'api/structures.json');
-        downloadJson(url, function(json) {
+        downloadJson(url, 'get', function(json) {
             structures = json;
         });
     }
@@ -155,7 +155,7 @@ var casemix = {};
         mix_ghm_roots_map = {};
         mix_price_density_max = 0;
 
-        downloadJson(url, function(json) {
+        downloadJson(url, 'get', function(json) {
             for (var i = 0; i < json.length; i++) {
                 var cmd = parseInt(json[i].ghm.substr(0, 2), 10);
                 var ghm_root = json[i].ghm.substr(0, 5);

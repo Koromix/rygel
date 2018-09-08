@@ -4,8 +4,7 @@
 
 #include "drdw.hh"
 
-Response ProduceIndexes(MHD_Connection *, const User *, const char *,
-                        CompressionType compression_type)
+Response ProduceIndexes(const ConnectionInfo *, const char *, CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -35,8 +34,7 @@ Response ProduceIndexes(MHD_Connection *, const User *, const char *,
     return {200, response};
 }
 
-Response ProduceDiagnoses(MHD_Connection *conn, const User *, const char *,
-                          CompressionType compression_type)
+Response ProduceDiagnoses(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "diagnoses.json", &response);
@@ -45,7 +43,7 @@ Response ProduceDiagnoses(MHD_Connection *conn, const User *, const char *,
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
-        const char *spec_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
@@ -110,8 +108,7 @@ Response ProduceDiagnoses(MHD_Connection *conn, const User *, const char *,
     return response;
 }
 
-Response ProduceProcedures(MHD_Connection *conn, const User *, const char *,
-                           CompressionType compression_type)
+Response ProduceProcedures(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "procedures.json", &response);
@@ -120,7 +117,7 @@ Response ProduceProcedures(MHD_Connection *conn, const User *, const char *,
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
-        const char *spec_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
@@ -158,8 +155,7 @@ Response ProduceProcedures(MHD_Connection *conn, const User *, const char *,
 }
 
 // TODO: Add ghm_ghs export to drdR
-Response ProduceGhmGhs(MHD_Connection *conn, const User *, const char *,
-                       CompressionType compression_type)
+Response ProduceGhmGhs(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     Response response = {};
     const mco_TableIndex *index = GetIndexFromQueryString(conn, "ghm_ghs.json", &response);

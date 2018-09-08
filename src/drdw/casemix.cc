@@ -32,8 +32,7 @@ static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
     return true;
 }
 
-Response ProduceStructures(MHD_Connection *, const User *user, const char *,
-                           CompressionType compression_type)
+Response ProduceStructures(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -43,7 +42,7 @@ Response ProduceStructures(MHD_Connection *, const User *user, const char *,
             writer.Key("name"); writer.String(structure.name);
             writer.Key("units"); writer.StartArray();
             for (const Unit &unit: structure.units) {
-                if (CheckUnitAgainstUser(user, unit)) {
+                if (CheckUnitAgainstUser(conn->user, unit)) {
                     writer.StartObject();
                     writer.Key("unit"); writer.Int(unit.unit.number);
                     writer.Key("path"); writer.String(unit.path);
@@ -87,8 +86,7 @@ invalid:
     return false;
 }
 
-Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
-                        CompressionType compression_type)
+Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     struct CellSummary {
         mco_GhmCode ghm;
@@ -109,10 +107,10 @@ Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
     };
 
     HashSet<UnitCode> allowed_units;
-    if (user) {
+    if (conn->user) {
         for (const Structure &structure: drdw_structure_set.structures) {
             for (const Unit &unit: structure.units) {
-                if (CheckUnitAgainstUser(user, unit))
+                if (CheckUnitAgainstUser(conn->user, unit))
                     allowed_units.Append(unit.unit);
             }
         }
@@ -124,14 +122,14 @@ Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
     bool durations = false;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     {
-        if (!ParseDateRange(MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "dates"),
+        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
                             &dates[0], &dates[1]))
             return CreateErrorPage(422);
-        if (!ParseDateRange(MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "diff"),
+        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff"),
                             &diff_dates[0], &diff_dates[1]))
             return CreateErrorPage(422);
 
-        Span<const char> units_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "units");
+        Span<const char> units_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "units");
         while (units_str.len) {
             Span<const char> unit_str = SplitStrAny(units_str, " ,+", &units_str);
 
@@ -145,7 +143,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
             }
         }
 
-        const char *durations_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "durations");
+        const char *durations_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "durations");
         if (durations_str && durations_str[0]) {
             if (TestStr(durations_str, "1")) {
                 durations = true;
@@ -157,7 +155,7 @@ Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *,
             }
         }
 
-        const char *mode_str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "mode");
+        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "mode");
         if (mode_str && mode_str[0]) {
             const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                   std::end(mco_DispenseModeOptions),

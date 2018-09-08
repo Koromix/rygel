@@ -12,6 +12,15 @@ PUSH_NO_WARNINGS()
 #include "../../lib/libmicrohttpd/src/include/microhttpd.h"
 POP_NO_WARNINGS()
 
+struct ConnectionInfo {
+    MHD_Connection *conn;
+    const User *user;
+    HashMap<const char *, Span<const char>> post;
+
+    MHD_PostProcessor *pp = nullptr;
+    LinkedAllocator temp_alloc;
+};
+
 struct Response {
     int code;
     MHD_Response *response;
@@ -26,33 +35,23 @@ extern UserSet drdw_user_set;
 extern StructureSet drdw_structure_set;
 extern mco_StaySet drdw_stay_set;
 
-const mco_TableIndex *GetIndexFromQueryString(MHD_Connection *conn, const char *redirect_url,
+const mco_TableIndex *GetIndexFromQueryString(const ConnectionInfo *conn, const char *redirect_url,
                                               Response *out_response);
 
 Response CreateErrorPage(int code);
 MHD_Response *BuildJson(CompressionType compression_type,
                         std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
 
-Response ProduceIndexes(MHD_Connection *conn, const User *user, const char *url,
-                        CompressionType compression_type);
-Response ProduceClassifierTree(MHD_Connection *conn, const User *user, const char *url,
-                               CompressionType compression_type);
-Response ProduceDiagnoses(MHD_Connection *conn, const User *user, const char *url,
-                          CompressionType compression_type);
-Response ProduceProcedures(MHD_Connection *conn, const User *user, const char *url,
-                           CompressionType compression_type);
-Response ProduceGhmGhs(MHD_Connection *conn, const User *user, const char *url,
-                       CompressionType compression_type);
+Response ProduceIndexes(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceClassifierTree(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceDiagnoses(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceProcedures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceGhmGhs(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 
-Response ProduceStructures(MHD_Connection *conn, const User *user, const char *url,
-                           CompressionType compression_type);
-Response ProduceCaseMix(MHD_Connection *conn, const User *user, const char *url,
-                        CompressionType compression_type);
+Response ProduceStructures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceCaseMix(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 
 const User *CheckSessionUser(MHD_Connection *conn);
-Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
-                       CompressionType compression_type);
-Response HandleDisconnect(MHD_Connection *conn, const User *user, const char *url,
-                          CompressionType compression_type);
-Response ProduceUser(MHD_Connection *conn, const User *user, const char *url,
-                     CompressionType compression_type);
+Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceUser(const ConnectionInfo *conn, const char *url, CompressionType compression_type);

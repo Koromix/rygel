@@ -66,7 +66,7 @@ static Session *FindSession(MHD_Connection *conn)
         return nullptr;
 
     Session *session = sessions.Find(session_key);
-    if (!session )
+    if (!session)
         return nullptr;
     if (!TestStr(session->client_addr, address))
         return nullptr;
@@ -95,26 +95,24 @@ const User *CheckSessionUser(MHD_Connection *conn)
     return session ? session->user : nullptr;
 }
 
-Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
-                       CompressionType compression_type)
+Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type)
 {
-    if (user) {
-        Session *session = FindSession(conn);
+    if (conn->user) {
+        Session *session = FindSession(conn->conn);
         sessions.Remove(session);
     }
 
     char address[512];
-    if (!GetClientAddress(conn, address))
+    if (!GetClientAddress(conn->conn, address))
         return CreateErrorPage(500);
 
-    // FIXME: Switch to POST method
-    const char *username = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "username");
-    const char *password = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, "password");
-    const char *user_agent = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "User-Agent");
+    const char *username = conn->post.FindValue("username", nullptr).ptr;
+    const char *password = conn->post.FindValue("password", nullptr).ptr;
+    const char *user_agent = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "User-Agent");
     if (!username || !password || !user_agent)
         return CreateErrorPage(422);
 
-    user = drdw_user_set.FindUser(username);
+    const User *user = drdw_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
         return CreateErrorPage(404);
@@ -138,6 +136,7 @@ Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
         strncpy(session.session_key, session_key, SIZE(session.session_key) - 1);
         strncpy(session.client_addr, address, SIZE(session.client_addr) - 1);
         strncpy(session.user_agent, user_agent, SIZE(session.user_agent) - 1);
+        session.last_seen = GetMonotonicTime();
         session.user = user;
 
         std::lock_guard<std::mutex> lock(sessions_mutex);
@@ -151,7 +150,7 @@ Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
 
     Response response;
     {
-        response = ProduceUser(conn, user, url, compression_type);
+        response = ProduceUser(conn, url, compression_type);
 
         char buf[512];
         Fmt(buf, "session_key=%1; Max-Age=14400", session_key);
@@ -161,24 +160,22 @@ Response HandleConnect(MHD_Connection *conn, const User *user, const char *url,
     return response;
 }
 
-Response HandleDisconnect(MHD_Connection *conn, const User *user, const char *url,
-                          CompressionType compression_type)
+Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type)
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
     DropStaleSessions();
 
-    Session *session = FindSession(conn);
+    Session *session = FindSession(conn->conn);
     sessions.Remove(session);
 
     // TODO: Check that the cookie gets removed with this
-    Response response = ProduceUser(conn, nullptr, url, compression_type);
+    Response response = ProduceUser(conn, url, compression_type);
     MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=-1");
 
     return response;
 }
 
-Response ProduceUser(MHD_Connection *, const User *user, const char *,
-                     CompressionType compression_type)
+Response ProduceUser(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     Response response = {};
 
@@ -186,8 +183,8 @@ Response ProduceUser(MHD_Connection *, const User *user, const char *,
     response.response = BuildJson(compression_type,
                                   [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartObject();
-        if (user) {
-            writer.Key("username"); writer.String(user->name);
+        if (conn->user) {
+            writer.Key("username"); writer.String(conn->user->name);
         }
         writer.EndObject();
 

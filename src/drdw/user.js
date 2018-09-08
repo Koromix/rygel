@@ -39,7 +39,7 @@ var user = {};
     function connect(username, password, func)
     {
         let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
-        downloadJson(url, function(json) {
+        downloadJson(url, 'post', function(json) {
             user = json;
             func();
         });
@@ -49,7 +49,7 @@ var user = {};
     function disconnect()
     {
         let url = buildUrl(BaseUrl + 'api/disconnect.json');
-        downloadJson(url, function(json) {});
+        downloadJson(url, 'post', function(json) {});
     }
     this.disconnect = disconnect;
 
@@ -67,7 +67,7 @@ var user = {};
     function refreshUser()
     {
         let url = buildUrl(BaseUrl + 'api/user.json');
-        downloadJson(url, function(json) {
+        downloadJson(url, 'get', function(json) {
             user = json.username ? json : null;
         });
     }

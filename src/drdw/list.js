@@ -309,7 +309,7 @@ var list = {};
             };
             list = list_cache[list_name];
 
-            downloadJson(url, function(json) {
+            downloadJson(url, 'get', function(json) {
                 list.url = url;
                 list.items = json;
             });
