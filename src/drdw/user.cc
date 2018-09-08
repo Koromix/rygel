@@ -101,11 +101,6 @@ const User *CheckSessionUser(MHD_Connection *conn)
 
 Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
-    if (conn->user) {
-        Session *session = FindSession(conn->conn);
-        sessions.Remove(session);
-    }
-
     char address[512];
     if (!GetClientAddress(conn->conn, address))
         return CreateErrorPage(500);
@@ -134,6 +129,9 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 
     // Create session
     {
+        std::lock_guard<std::mutex> lock(sessions_mutex);
+        sessions.Remove(FindSession(conn->conn));
+
         Session session = {};
 
         StaticAssert(SIZE(session.session_key) >= SIZE(session_key));
@@ -142,9 +140,6 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
         strncpy(session.user_agent, user_agent, SIZE(session.user_agent) - 1);
         session.last_seen = GetMonotonicTime();
         session.user = user;
-
-        std::lock_guard<std::mutex> lock(sessions_mutex);
-        PruneStaleSessions();
 
         if (!sessions.Append(session).second) {
             LogError("Generated duplicate session key");
@@ -168,9 +163,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
-    PruneStaleSessions();
-    Session *session = FindSession(conn->conn);
-    sessions.Remove(session);
+    sessions.Remove(FindSession(conn->conn));
 
     Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
     MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
