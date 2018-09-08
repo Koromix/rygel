@@ -10,7 +10,7 @@
 #endif
 #include "../../lib/libsodium/src/libsodium/include/sodium.h"
 
-static const int64_t SessionIdleDelay = 4 * 3600000;
+static const int64_t IdleSessionDelay = 4 * 3600000;
 
 struct Session {
     char session_key[129];
@@ -72,24 +72,28 @@ static Session *FindSession(MHD_Connection *conn)
         return nullptr;
     if (!TestStr(session->user_agent, user_agent))
         return nullptr;
-    // TODO: Remove once DropStaleSessions() works
-    if (now - session->last_seen >= SessionIdleDelay)
-        return nullptr;
 
     session->last_seen = now;
     return session;
 }
 
 // Call with sessions_mutex locked
-static void DropStaleSessions()
+static void PruneStaleSessions()
 {
-    // FIXME: Don't have a good way to remove stuff from HashTable while iterating it
+    uint64_t now = GetMonotonicTime();
+
+    for (auto it = sessions.begin(); it != sessions.end(); it++) {
+        const Session &session = *it;
+        if (now - session.last_seen >= IdleSessionDelay) {
+            it.Remove();
+        }
+    }
 }
 
 const User *CheckSessionUser(MHD_Connection *conn)
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
-    DropStaleSessions();
+    PruneStaleSessions();
 
     Session *session = FindSession(conn);
     return session ? session->user : nullptr;
@@ -140,7 +144,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionT
         session.user = user;
 
         std::lock_guard<std::mutex> lock(sessions_mutex);
-        DropStaleSessions();
+        PruneStaleSessions();
 
         if (!sessions.Append(session).second) {
             LogError("Generated duplicate session key");
@@ -163,7 +167,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionT
 Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type)
 {
     std::lock_guard<std::mutex> lock(sessions_mutex);
-    DropStaleSessions();
+    PruneStaleSessions();
 
     Session *session = FindSession(conn->conn);
     sessions.Remove(session);
