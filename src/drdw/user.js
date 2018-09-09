@@ -120,4 +120,7 @@ var user = {};
     function getUrlKey() { return url_key; }
     this.getCurrentUser = getCurrentUser;
     this.getUrlKey = getUrlKey;
+
+    if (document.cookie.indexOf('session_key='))
+        url_key = generateRandomInt(1, 281474976710656);
 }).call(user);
