@@ -1,0 +1,16 @@
+diff --git a/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c b/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
+index 79916ea..8f2b472 100644
+--- a/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
++++ b/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
+@@ -71,7 +71,9 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+ #endif
+ 
+ #ifndef TLS
+-# ifdef _WIN32
++# ifdef _MSC_VER
+ #  define TLS __declspec(thread)
+ # else
+-#  define TLS
++#  define TLS __thread
+ # endif
+ #endif

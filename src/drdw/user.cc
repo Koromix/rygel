@@ -101,7 +101,7 @@ const User *CheckSessionUser(MHD_Connection *conn)
 
 Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
-    char address[512];
+    char address[65];
     if (!GetClientAddress(conn->conn, address))
         return CreateErrorPage(500);
 
@@ -134,9 +134,10 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 
         Session session = {};
 
-        StaticAssert(SIZE(session.session_key) >= SIZE(session_key));
-        strncpy(session.session_key, session_key, SIZE(session.session_key) - 1);
-        strncpy(session.client_addr, address, SIZE(session.client_addr) - 1);
+        StaticAssert(SIZE(session.session_key) == SIZE(session_key));
+        StaticAssert(SIZE(session.client_addr) == SIZE(address));
+        strcpy(session.session_key, session_key);
+        strcpy(session.client_addr, address);
         strncpy(session.user_agent, user_agent, SIZE(session.user_agent) - 1);
         session.last_seen = GetMonotonicTime();
         session.user = user;

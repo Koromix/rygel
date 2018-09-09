@@ -71,10 +71,10 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
 #endif
 
 #ifndef TLS
-# ifdef _WIN32
+# ifdef _MSC_VER
 #  define TLS __declspec(thread)
 # else
-#  define TLS
+#  define TLS __thread
 # endif
 #endif
 

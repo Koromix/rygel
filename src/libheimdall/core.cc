@@ -1039,8 +1039,8 @@ static bool DrawView(InterfaceState &state,
             }
         }
 
-        state.time_zoom = view_rect.GetWidth() / (max_time - min_time);
-        state.scroll_x = min_time * state.time_zoom;
+        state.time_zoom = (float)(view_rect.GetWidth() / (max_time - min_time));
+        state.scroll_x = (float)(min_time * state.time_zoom);
     }
 
     // Sync scroll from ImGui

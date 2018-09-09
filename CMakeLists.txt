@@ -16,16 +16,19 @@ endif()
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -Wno-unknown-warning-option")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -fvisibility=hidden \
-                                            -Wno-unknown-warning-option")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti -fno-exceptions -fvisibility=hidden")
+
     foreach(lang C CXX)
         set(CMAKE_${lang}_FLAGS_DEBUG "-O0 -g")
         set(CMAKE_${lang}_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
         set(CMAKE_${lang}_FLAGS_RELEASE "-O2 -DNDEBUG -flto")
     endforeach()
 
-    if(MINGW)
+    if(CMAKE_COMPILER_IS_CLANG)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unknown-warning-option")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
+    elseif(MINGW)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mno-ms-bitfields")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mno-ms-bitfields")
 
