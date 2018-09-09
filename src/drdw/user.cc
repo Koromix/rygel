@@ -42,7 +42,6 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
         }
     }
 
-    // TODO: Make sure inet_ntop always NUL-terminates
     if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
         LogError("Cannot convert network address to text");
         return false;
