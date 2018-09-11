@@ -52,6 +52,22 @@ a {
     font-size: 1.1em;
 }
 
+/* Forms */
+form {
+    width: 400px;
+    max-width: 400px;
+}
+form label {
+    display: block;
+    clear: both;
+    margin: 0 0 15px 0;
+}
+form input, form textarea, form select { float: right; }
+form button, form input[type=submit] {
+    display: block;
+    margin: 0 auto;
+}
+
 /* Utility */
 .hide { display: none !important; }
 .busy {
@@ -110,6 +126,14 @@ a {
         margin: 0;
     }
     main { padding-top: 40px; }
+
+    /* Forms */
+    form {
+        box-sizing: border-box;
+        width: 100%;
+        margin: 5px auto 0 auto;
+        padding: 0 5px;
+    }
 
     /* Utility */
     a.deploy {

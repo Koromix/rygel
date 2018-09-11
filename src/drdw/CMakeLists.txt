@@ -17,7 +17,6 @@ set(DRDW_RESOURCES drdw.html
                    pricing.js
                    tree.css
                    tree.js
-                   user.css
                    user.js
                    w_multiselector.css
                    w_multiselector.js
