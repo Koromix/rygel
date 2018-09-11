@@ -10,7 +10,8 @@
 #endif
 #include "../../lib/libsodium/src/libsodium/include/sodium.h"
 
-static const int64_t IdleSessionDelay = 4 * 3600000;
+static const int64_t PruneDelay = 20 * 60 * 1000;
+static const int64_t IdleSessionDelay = 4 * 3600 * 1000;
 
 struct Session {
     char session_key[129];
@@ -50,6 +51,27 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
     return true;
 }
 
+static void PruneStaleSessions()
+{
+    uint64_t now = GetMonotonicTime();
+
+    static std::mutex last_pruning_mutex;
+    static uint64_t last_pruning = 0;
+    {
+        std::lock_guard<std::mutex> lock(last_pruning_mutex);
+        if (now - last_pruning < PruneDelay)
+            return;
+        last_pruning = now;
+    }
+
+    for (auto it = sessions.begin(); it != sessions.end(); it++) {
+        const Session &session = *it;
+        if (now - session.last_seen >= IdleSessionDelay) {
+            it.Remove();
+        }
+    }
+}
+
 // Call with sessions_mutex locked
 static Session *FindSession(MHD_Connection *conn)
 {
@@ -76,24 +98,11 @@ static Session *FindSession(MHD_Connection *conn)
     return session;
 }
 
-// Call with sessions_mutex locked
-static void PruneStaleSessions()
-{
-    uint64_t now = GetMonotonicTime();
-
-    for (auto it = sessions.begin(); it != sessions.end(); it++) {
-        const Session &session = *it;
-        if (now - session.last_seen >= IdleSessionDelay) {
-            it.Remove();
-        }
-    }
-}
-
 const User *CheckSessionUser(MHD_Connection *conn)
 {
-    std::lock_guard<std::mutex> lock(sessions_mutex);
     PruneStaleSessions();
 
+    std::lock_guard<std::mutex> lock(sessions_mutex);
     Session *session = FindSession(conn);
     return session ? session->user : nullptr;
 }
