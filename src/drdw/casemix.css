@@ -4,9 +4,7 @@
 
 #cm_cmds {
     width: 100%;
-    border: 1px solid #a4a4a4;
     border-collapse: collapse;
-    margin-bottom: 1em;
 }
 #cm_cmds td {
     text-align: center;
@@ -35,4 +33,17 @@
 #cm_roots th {
     text-align: center;
     font-weight: bold;
+}
+
+@media screen and (min-width: 801px) {
+    #cm_cmds { margin-bottom: 1em; }
+    #cm_cmds td { border: 1px solid #a4a4a4; }
+}
+
+@media screen and (max-width: 800px) {
+    #cm_cmds { margin: 0; }
+    #cm_cmds td {
+        border-left: 1px solid #a4a4a4;
+        border-right: 1px solid #a4a4a4;
+    }
 }
