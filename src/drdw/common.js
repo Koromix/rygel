@@ -364,7 +364,7 @@ function go(new_url, mark_history, delay)
     route_url_parts = parseUrl(real_url);
     route_url = real_url.substr(BaseUrl.length);
 
-    // Update menu state and links
+    // Update side menu state and links
     var menu_anchors = __('#side_menu li a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
@@ -377,6 +377,19 @@ function go(new_url, mark_history, delay)
         anchor.classList.toggle('active', active);
     }
     toggleMenu('#side_menu', false);
+
+    // Hide page menu if empty
+    let opt_hide = true;
+    {
+        let els = __('#opt_menu > *');
+        for (let i = 0; i < els.length; i++) {
+            if (!els[i].classList.contains('hide')) {
+                opt_hide = false;
+                break;
+            }
+        }
+    }
+    toggleClass(__('#opt_deploy, #opt_menu'), 'hide', opt_hide);
 
     // Update scroll target
     var scroll_target = scroll_cache[route_url_parts.path];
