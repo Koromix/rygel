@@ -3,6 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "drdw.hh"
+#include <shared_mutex>
 #ifdef _WIN32
     #include <ws2tcpip.h>
 #else
@@ -17,14 +18,14 @@ struct Session {
     char session_key[129];
     char client_addr[65];
     char user_agent[134];
-    int64_t last_seen;
+    std::atomic_uint64_t last_seen;
 
     const User *user;
 
     HASH_TABLE_HANDLER_T(Session, const char *, session_key);
 };
 
-static std::mutex sessions_mutex;
+static std::shared_mutex sessions_mutex;
 static HashTable<const char *, Session> sessions;
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
@@ -64,6 +65,7 @@ static void PruneStaleSessions()
         last_pruning = now;
     }
 
+    std::unique_lock<std::shared_mutex> lock(sessions_mutex);
     for (auto it = sessions.begin(); it != sessions.end(); it++) {
         const Session &session = *it;
         if (now - session.last_seen >= IdleSessionDelay) {
@@ -102,7 +104,7 @@ const User *CheckSessionUser(MHD_Connection *conn)
 {
     PruneStaleSessions();
 
-    std::lock_guard<std::mutex> lock(sessions_mutex);
+    std::shared_lock<std::shared_mutex> lock(sessions_mutex);
     Session *session = FindSession(conn);
     return session ? session->user : nullptr;
 }
@@ -138,23 +140,27 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 
     // Create session
     {
-        std::lock_guard<std::mutex> lock(sessions_mutex);
+        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
         sessions.Remove(FindSession(conn->conn));
 
-        Session session = {};
-
-        StaticAssert(SIZE(session.session_key) == SIZE(session_key));
-        StaticAssert(SIZE(session.client_addr) == SIZE(address));
-        strcpy(session.session_key, session_key);
-        strcpy(session.client_addr, address);
-        strncpy(session.user_agent, user_agent, SIZE(session.user_agent) - 1);
-        session.last_seen = GetMonotonicTime();
-        session.user = user;
-
-        if (!sessions.Append(session).second) {
-            LogError("Generated duplicate session key");
-            return CreateErrorPage(500);
+        // std::atomic objects are not copyable so we can't use Append()
+        Session *session;
+        {
+            std::pair<Session *, bool> ret = sessions.AppendUninitialized(session_key);
+            if (!ret.second) {
+                LogError("Generated duplicate session key");
+                return CreateErrorPage(500);
+            }
+            session = ret.first;
         }
+
+        StaticAssert(SIZE(session->session_key) == SIZE(session_key));
+        StaticAssert(SIZE(session->client_addr) == SIZE(address));
+        strcpy(session->session_key, session_key);
+        strcpy(session->client_addr, address);
+        strncpy(session->user_agent, user_agent, SIZE(session->user_agent) - 1);
+        session->last_seen = GetMonotonicTime();
+        session->user = user;
     }
 
     Response response;
@@ -172,8 +178,11 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
 
 Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
-    std::lock_guard<std::mutex> lock(sessions_mutex);
-    sessions.Remove(FindSession(conn->conn));
+    // Drop session
+    {
+        std::unique_lock<std::shared_mutex> lock(sessions_mutex);
+        sessions.Remove(FindSession(conn->conn));
+    }
 
     Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
     MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
