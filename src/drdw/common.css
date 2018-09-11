@@ -196,11 +196,11 @@ form button, form input[type=submit] {
         left: calc(100vw - 42px);
         z-index: 20;
     }
-    #opt_menu input, #opt_menu select { float: right; }
+    #opt_menu > label input, #opt_menu > label select { float: right; }
     #opt_menu > label {
         display: block;
         clear: both;
-        padding-top: 5px;
+        margin-bottom: 12px;
         text-align: left;
     }
 }
