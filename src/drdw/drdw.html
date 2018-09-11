@@ -56,8 +56,10 @@
             <nav id="opt_menu">
                 <svg id="opt_indexes" class="indexes_line"></svg>
 
-                <select id="opt_ghm_roots" onchange="module.route({ghm_root: this.value});"
-                        style="width: 96%;"></select><br/>
+                <label id="opt_ghm_roots">
+                    <select onchange="module.route({ghm_root: this.value});"
+                            style="width: 96%;"></select><br/>
+                </label>
                 <label id="opt_diff_indexes">
                     Comparer
                     <select onchange="module.route({diff: this.value});"

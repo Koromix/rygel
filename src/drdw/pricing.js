@@ -202,7 +202,7 @@ var pricing = {};
 
     function refreshGhmRoots(index, select_ghm_root)
     {
-        var el = _('#opt_ghm_roots');
+        var el = _('#opt_ghm_roots > select');
         el.innerHTML = '';
 
         for (var i = 0; i < ghm_roots.length; i++) {
