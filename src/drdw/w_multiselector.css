@@ -1,0 +1,102 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.msel {
+    display: inline-block;
+    min-width: 14em;
+    margin: 2px;
+    vertical-align: middle;
+    background: white;
+    border: 1px solid #a4a4a4;
+    text-align: left;
+}
+.msel_main {
+    position: relative;
+    height: 24px;
+}
+
+.msel_summary {
+    width: calc(100% - 6px);
+    height: 24px;
+    padding: 4px 0 4px 4px;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAYAAAA7KqwyAAAAQUlEQVQokWNgoBKYycDA8J9EPJMSQzA0w8BESjTDQCsezTMIaYaBUiyae4jVDAOZSJrrSNUMA2kMDAz55GomCgAAnesxP7DwQQ0AAAAASUVORK5CYII=");
+    background-repeat: no-repeat;
+    background-position: right 7px;
+    overflow: hidden;
+}
+.msel_summary a {
+    display: inline-block;
+    padding-right: 6px;
+    color: black;
+    font-weight: normal;
+    font-style: italic;
+}
+
+.msel_view { display: none; }
+.msel_list {
+    overflow-x: hidden;
+    overflow-y: scroll;
+}
+.msel.active .msel_view { display: block; }
+
+.msel_list > label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.msel_list > label:hover { background: #ddd; }
+.msel_group { font-weight: bold; }
+.msel_option.disabled {
+    pointer-events: none;
+    filter: opacity(50%);
+}
+
+@media screen and (min-width: 801px) {
+    .msel_view {
+        position: absolute;
+        top: 25px;
+        left: -1px;
+        margin: 0;
+        width: 100%;
+        z-index: 100;
+        background: white;
+        border: 1px solid #a4a4a4;
+        border-top: 0;
+    }
+    .msel_list {
+        height: 100%;
+        max-height: 300px;
+    }
+
+    .msel_validate { display: none; }
+}
+
+@media screen and (max-width: 800px) {
+    .msel_view {
+        position: fixed;
+        top: 50px;
+        left: 10px;
+        width: calc(100vw - 20px);
+        height: calc(100vh - 100px);
+        z-index: 100;
+        background: white;
+        border: 1px solid #a4a4a4;
+    }
+
+    .msel_list {
+        height: calc(100% - 30px);
+        padding: 2px;
+    }
+    .msel_validate {
+        display: block;
+        position: fixed;
+        top: calc(100vh - 77px);
+        left: 9px;
+        width: calc(100vw - 16px);
+        height: 30px;
+    }
+
+    .msel_list > label { padding: 3px 0; }
+}

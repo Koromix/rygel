@@ -7,7 +7,9 @@
         <link rel="icon" href="/favicon.ico" />
         <title>drdw</title>
 
+        <link rel="stylesheet" href="/static/w_multiselector.css"/>
         <script type="text/javascript" src="/static/chart.min.js"></script>
+        <script type="text/javascript" src="/static/w_multiselector.js"></script>
 
         <link rel="stylesheet" href="/static/common.css"/>
         <link rel="stylesheet" href="/static/pricing.css"/>
@@ -87,8 +89,7 @@
                 </label>
 
                 <label id="opt_units">
-                    Unités médicales
-                    <select></select><br/>
+                    <div style="width: 90%;"></div><br/>
                 </label>
                 <label id="opt_diff_casemix">
                     Comparer
@@ -109,7 +110,7 @@
                 <button id="opt_update"
                         onclick="module.route({cm_mode: _('#opt_algorithm > select').value,
                                                cm_diff: _('#opt_diff_casemix > select').value,
-                                               cm_units: _('#opt_units > select').value});">Mettre à jour</button>
+                                               cm_units: multiSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
 

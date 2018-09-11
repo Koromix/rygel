@@ -19,6 +19,8 @@ set(DRDW_RESOURCES drdw.html
                    tree.js
                    user.css
                    user.js
+                   w_multiselector.css
+                   w_multiselector.js
                    images/favicon.ico
                    images/logo.png
                    ../../lib/chartjs/chart.min.js)

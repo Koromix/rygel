@@ -240,7 +240,7 @@ var route = {
 
     'cm_view': 'global',
     'cm_diff': null,
-    'cm_units': null,
+    'cm_units': [],
     'cm_mode': 'exj2',
     'cm_cmd': null
 };

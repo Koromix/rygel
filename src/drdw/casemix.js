@@ -143,7 +143,7 @@ var casemix = {};
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
-            units: units,
+            units: units.join('+'),
             mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             durations: 1,
@@ -248,55 +248,44 @@ var casemix = {};
         }
     }
 
-    // FIXME: Improve detection of malformed paths in config.cc
-    function refreshStructures(unit)
+    function refreshStructures(units)
     {
-        let select = createElement('select');
+        let builder = new MultiSelectorBuilder('Unités médicales : ');
 
         for (let i = 0; i < structures.length; i++) {
             let structure = structures[i];
 
-            let optgroup = createElement('optgroup', {label: 'Structure : ' + structure.name});
-            select.appendChild(optgroup);
-
-            let optgroups = [optgroup];
-            let prev_parts = [];
+            let prev_groups = [];
+            builder.beginGroup(structure.name);
             for (let j = 0; j < structure.units.length; j++) {
                 let unit = structure.units[j];
+                let parts = unit.path.substr(2).split('::');
 
-                let parts = unit.path.split('::');
-                for (let k = 1; k < parts.length - 1; k++) {
-                    if (k == prev_parts.length) {
-                        prev_parts.push(null);
-                        optgroups.push(null);
-                    }
-
-                    if (parts[k] !== prev_parts[k]) {
-                        prev_parts[k] = parts[k];
-                        let optgroup = createElement('optgroup', {label: '--'.repeat(k) + ' ' + parts[k]});
-                        // optgroups[k - 1].appendChild(optgroup);
-                        select.appendChild(optgroup);
-                        optgroups[k] = optgroup;
-                    }
+                let common_len = 0;
+                while (common_len < parts.length - 1 && common_len < prev_groups.length &&
+                       parts[common_len] === prev_groups[common_len])
+                    common_len++;
+                while (prev_groups.length > common_len) {
+                    builder.endGroup();
+                    prev_groups.pop();
+                }
+                for (let k = common_len; k < parts.length - 1; k++) {
+                    builder.beginGroup(parts[k]);
+                    prev_groups.push(parts[k]);
                 }
 
-                let opt = createElement('option', {value: unit.unit}, parts[parts.length - 1]);
-                optgroups[parts.length - 2].appendChild(opt);
+                builder.addOption(parts[parts.length - 1], unit.unit,
+                                  {selected: units.includes(unit.unit.toString())});
             }
+            for (let j = 0; j <= prev_groups.length; j++)
+                builder.endGroup();
         }
 
-        let disable = false;
-        if (!select.querySelectorAll('option').length) {
-            select.innerHTML = '';
-            select.appendChild(createElement('option', {}, 'Aucune unité'));
-            disable = true;
-        } else {
-            select.value = unit;
-        }
+        let select = builder.getWidget();
 
-        var old_select = _('#opt_units select');
+        let old_select = _('#opt_units > div');
         cloneAttributes(old_select, select);
-        select.disabled = disable;
+        select.classList.add('msel');
         old_select.parentNode.replaceChild(select, old_select);
     }
 
