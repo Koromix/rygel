@@ -9,14 +9,8 @@ var user = {};
 
     function runLogin(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
-
-        if (!downloadJson.busy) {
-            refreshErrors(Array.from(errors));
-            downloadJson.errors = [];
-
-            _('#user').classList.remove('hide');
-        }
+        refreshErrors(user ? ['Vous êtes déjà connecté(e)'] : []);
+        _('#user').classList.toggle('hide', !!user);
     }
     this.runLogin = runLogin;
 
