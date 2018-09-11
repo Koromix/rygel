@@ -225,6 +225,7 @@ function generateRandomInt(min, max)
 // ------------------------------------------------------------------------
 
 // Routing
+var route_modules = {};
 var route_url = null;
 var route_url_parts = null;
 var route = {
@@ -279,6 +280,14 @@ function buildRoute(args)
 function buildModuleUrl(module_name)
 {
     return BaseUrl + module_name;
+}
+
+function registerUrl(prefix, object, func)
+{
+    route_modules[prefix] = {
+        object: object,
+        func: func
+    };
 }
 
 var go_timer_id = null;
@@ -341,16 +350,16 @@ function go(new_url, mark_history, delay)
 
     // Find relevant module and run
     let new_module_name = app_url.split('/')[0];
-    let new_module = window[new_module_name];
-    if (new_module != module)
+    let new_module = route_modules[new_module_name];
+    if (new_module !== module)
         addClass(__('main > div'), 'hide');
     addClass(__('#opt_menu > *'), 'hide');
     module = new_module;
-    if (module !== undefined && module.run !== undefined)
-        module.run(route, app_url, url_parts.params, url_parts.hash);
+    if (module !== undefined)
+        module.func(route, app_url, url_parts.params, url_parts.hash);
 
     // Update URL to reflect real state (module may have set default values, etc.)
-    let real_url = module.routeToUrl({}) + (url_parts.hash ? ('#' + url_parts.hash) : '');
+    let real_url = module.object.routeToUrl({}) + (url_parts.hash ? ('#' + url_parts.hash) : '');
     window.history.replaceState(null, null, real_url);
     route_url_parts = parseUrl(real_url);
     route_url = real_url.substr(BaseUrl.length);
@@ -483,7 +492,7 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
 
             var click_function = (function() {
                 var index = i;
-                return function(e) { module.route({date: indexes[index].begin_date}); };
+                return function(e) { module.object.route({date: indexes[index].begin_date}); };
             })();
 
             var node = createElementNS('svg', 'circle',
@@ -523,7 +532,7 @@ function moveIndex(relative_index)
     if (new_index < 0 || new_index >= indexes.length)
         return;
 
-    module.route({date: indexes[new_index].begin_date});
+    module.object.route({date: indexes[new_index].begin_date});
 }
 this.moveIndex = moveIndex;
 

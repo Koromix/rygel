@@ -18,7 +18,7 @@ var casemix = {};
     var mix_end_date = null;
     var mix_price_density_max = 0;
 
-    function run(route, url, parameters, hash)
+    function runCasemix(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
@@ -95,7 +95,7 @@ var casemix = {};
         }
         markBusy('#cm', downloadJson.busy);
     }
-    this.run = run;
+    this.runCasemix = runCasemix;
 
     function routeToUrl(args)
     {
@@ -491,3 +491,5 @@ var casemix = {};
         old_table.parentNode.replaceChild(table, old_table);
     }
 }).call(casemix);
+
+registerUrl('casemix', casemix, casemix.runCasemix);

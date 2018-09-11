@@ -175,7 +175,7 @@ var list = {};
         }
     };
 
-    function run(route, url, parameters, hash)
+    function runList(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
@@ -257,7 +257,7 @@ var list = {};
         }
         markBusy('#ls', downloadJson.busy);
     }
-    this.run = run;
+    this.runList = runList;
 
     function routeToUrl(args)
     {
@@ -654,3 +654,5 @@ var list = {};
     }
     this.addSpecLinks = addSpecLinks;
 }).call(list);
+
+registerUrl('list', list, list.runList);

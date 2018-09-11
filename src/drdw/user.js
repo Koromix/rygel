@@ -7,7 +7,7 @@ var user = {};
     var user = null;
     var url_key = 0;
 
-    function run(route, url, parameters, hash)
+    function runLogin(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
@@ -18,7 +18,7 @@ var user = {};
             _('#user').classList.remove('hide');
         }
     }
-    this.run = run;
+    this.runLogin = runLogin;
 
     function runUserBox()
     {
@@ -31,7 +31,7 @@ var user = {};
 
     function routeToUrl(args)
     {
-        return buildModuleUrl('user');
+        return buildModuleUrl('login');
     }
     this.routeToUrl = routeToUrl;
 
@@ -107,7 +107,7 @@ var user = {};
             );
         } else {
             div = createElement('div', {},
-                createElement('a', {href: routeToUrl('user')}, 'Se connecter')
+                createElement('a', {href: routeToUrl('login')}, 'Se connecter')
             );
         }
 
@@ -124,3 +124,5 @@ var user = {};
     if (document.cookie.indexOf('session_key='))
         url_key = generateRandomInt(1, 281474976710656);
 }).call(user);
+
+registerUrl('login', user, user.runLogin);

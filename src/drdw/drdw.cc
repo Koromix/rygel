@@ -409,7 +409,7 @@ static void InitRoutes()
         routes.Set({"/list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
         routes.Set({"/tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
         routes.Set({"/casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/user", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+        routes.Set({"/login", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
         routes.Remove("/static/drdw.html");
 
         Route *favicon = routes.Find("/static/favicon.ico");

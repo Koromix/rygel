@@ -10,7 +10,7 @@ var tree = {};
     var nodes = [];
     var collapse_nodes = new Set();
 
-    function run(route, url, parameters, hash)
+    function runTree(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
@@ -45,7 +45,7 @@ var tree = {};
         }
         markBusy('#tr', downloadJson.busy);
     }
-    this.run = run;
+    this.runTree = runTree;
 
     function routeToUrl(args)
     {
@@ -260,3 +260,5 @@ var tree = {};
         e.preventDefault();
     };
 }).call(tree);
+
+registerUrl('tree', tree, tree.runTree);

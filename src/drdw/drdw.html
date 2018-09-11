@@ -59,33 +59,33 @@
                 <svg id="opt_indexes" class="indexes_line"></svg>
 
                 <label id="opt_ghm_roots">
-                    <select onchange="module.route({ghm_root: this.value});"
+                    <select onchange="module.object.route({ghm_root: this.value});"
                             style="width: 96%;"></select><br/>
                 </label>
                 <label id="opt_diff_indexes">
                     Comparer
-                    <select onchange="module.route({diff: this.value});"
+                    <select onchange="module.object.route({diff: this.value});"
                             style="width: 12em;"></select>
                 </label>
                 <label id="opt_max_duration">
                     Durée
-                    <input type="number" onchange="module.route();"
+                    <input type="number" onchange="module.object.route();"
                            value="200" min="0" max="500" step="5"/>
                 </label>
                 <label id="opt_apply_coefficient">
                     Coefficient prudentiel
                     <input type="checkbox"
-                           onchange="module.route({apply_coefficient: this.checked});"/>
+                           onchange="module.object.route({apply_coefficient: this.checked});"/>
                 </label>
 
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
-                           oninput="module.route({search: this.value}, 200);"/>
+                           oninput="module.object.route({search: this.value}, 200);"/>
                 </label>
                 <label id="opt_groups">
                     Tri
-                    <select onchange="module.route({group: this.value});"></select><br/>
+                    <select onchange="module.object.route({group: this.value});"></select><br/>
                 </label>
 
                 <label id="opt_units">
@@ -108,9 +108,9 @@
                 </label>
 
                 <button id="opt_update"
-                        onclick="module.route({cm_mode: _('#opt_algorithm > select').value,
-                                               cm_diff: _('#opt_diff_casemix > select').value,
-                                               cm_units: multiSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
+                        onclick="module.object.route({cm_mode: _('#opt_algorithm > select').value,
+                                                      cm_diff: _('#opt_diff_casemix > select').value,
+                                                      cm_units: multiSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
 

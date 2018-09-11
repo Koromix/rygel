@@ -13,7 +13,7 @@ var pricing = {};
 
     var chart = null;
 
-    function run(route, url, parameters, hash)
+    function runPricing(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
@@ -99,7 +99,7 @@ var pricing = {};
         }
         markBusy('#pr', downloadJson.busy);
     }
-    this.run = run;
+    this.runPricing = runPricing;
 
     function routeToUrl(args)
     {
@@ -604,3 +604,5 @@ var pricing = {};
     }
     this.priceText = priceText;
 }).call(pricing);
+
+registerUrl('pricing', pricing, pricing.runPricing);
