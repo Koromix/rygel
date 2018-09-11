@@ -154,7 +154,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
         response.response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
 
         char buf[512];
-        Fmt(buf, "session_key=%1; Max-Age=14400", session_key);
+        Fmt(buf, "session_key=%1; Max-Age=%2", session_key, IdleSessionDelay / 1000);
         MHD_add_response_header(response.response, "Set-Cookie", buf);
     }
 
