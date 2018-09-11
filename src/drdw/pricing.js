@@ -31,7 +31,7 @@ var pricing = {};
             }
         }
         route.ghm_root = url_parts[3] || route.ghm_root;
-        route.apply_coefficient = parameters.apply_coefficient || false;
+        route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
         indexes = getIndexes();
@@ -70,7 +70,7 @@ var pricing = {};
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
         refreshGhmRoots(main_index, route.ghm_root);
         refreshIndexesDiff(diff_index, route.ghm_root);
-        _('#opt_apply_coefficient').checked = route.apply_coefficient;
+        _('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
         if (!downloadJson.busy) {
