@@ -451,7 +451,7 @@ var list = {};
         let list = list_cache[list_name];
 
         let stats_text = '';
-        if (list.url) {
+        if (list && list.url) {
             let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
             // Pagination
