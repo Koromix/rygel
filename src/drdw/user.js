@@ -9,7 +9,14 @@ var user = {};
 
     function runLogin(route, url, parameters, hash)
     {
-        refreshErrors(user ? ['Vous êtes déjà connecté(e)'] : []);
+        let errors = new Set(downloadJson.errors);
+
+        if (user)
+            errors.add('Vous êtes déjà connecté(e)');
+
+        refreshErrors(Array.from(errors));
+        if (!downloadJson.busy)
+            downloadJson.errors = [];
         _('#user').classList.toggle('hide', !!user);
     }
     this.runLogin = runLogin;
@@ -80,14 +87,6 @@ var user = {};
                 url_key = 0;
             }
         });
-    }
-
-    function refreshErrors(errors)
-    {
-        var log = _('#log');
-
-        log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
     }
 
     function updateUserBox()

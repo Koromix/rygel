@@ -241,9 +241,11 @@ var list = {};
         } else {
             _('#ls').classList.add('hide');
         }
+        refreshErrors(Array.from(errors));
         if (!downloadJson.busy) {
-            refreshHeader(route.spec, Array.from(errors));
             downloadJson.errors = [];
+
+            refreshHeader(route.spec);
 
             let list_info = Lists[route.list];
             if (list_info) {
@@ -405,13 +407,9 @@ var list = {};
         });
     }
 
-    function refreshHeader(spec, errors)
+    function refreshHeader(spec)
     {
-        var log = _('#log');
         var h1 = _('#ls_spec');
-
-        log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
 
         if (spec) {
             h1.innerHTML = '';

@@ -72,8 +72,8 @@ var casemix = {};
         _('#opt_algorithm').value = route.cm_mode;
 
         // Refresh view
+        refreshErrors(Array.from(errors));
         if (!downloadJson.busy) {
-            refreshErrors(Array.from(errors));
             downloadJson.errors = [];
 
             switch (route.cm_view) {
@@ -217,14 +217,6 @@ var casemix = {};
 
             mix_url = url;
         });
-    }
-
-    function refreshErrors(errors)
-    {
-        var log = _('#log');
-
-        log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
     }
 
     function refreshIndexesDiff(diff_index, test_ghm_root)

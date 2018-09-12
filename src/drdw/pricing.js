@@ -73,8 +73,8 @@ var pricing = {};
         _('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
+        refreshErrors(Array.from(errors));
         if (!downloadJson.busy) {
-            refreshErrors(Array.from(errors));
             downloadJson.errors = [];
 
             let ghm_root_info = ghm_roots_map[route.ghm_root];
@@ -172,14 +172,6 @@ var pricing = {};
         });
     }
     this.updatePriceMap = updatePriceMap;
-
-    function refreshErrors(errors)
-    {
-        var log = _('#log');
-
-        log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
-    }
 
     function refreshIndexesDiff(diff_index, test_ghm_root)
     {

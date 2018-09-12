@@ -35,12 +35,11 @@ var tree = {};
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
 
         // Refresh view
+        refreshErrors(Array.from(errors));
         if (!downloadJson.busy) {
-            refreshErrors(Array.from(errors));
             downloadJson.errors = [];
 
             refreshTree(nodes, hash);
-
             _('#tr').classList.remove('hide');
         }
         markBusy('#tr', downloadJson.busy);
@@ -77,14 +76,6 @@ var tree = {};
             nodes = json;
             tree_url = url;
         });
-    }
-
-    function refreshErrors(errors)
-    {
-        var log = _('#log');
-
-        log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
     }
 
     function refreshTree(nodes, hash)

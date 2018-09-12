@@ -220,6 +220,14 @@ function generateRandomInt(min, max)
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
+function refreshErrors(errors)
+{
+    var log = _('#log');
+
+    log.innerHTML = errors.join('<br/>');
+    log.classList.toggle('hide', !errors.length);
+}
+
 // ------------------------------------------------------------------------
 // Navigation
 // ------------------------------------------------------------------------
