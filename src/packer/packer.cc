@@ -4,6 +4,17 @@
 
 #include "../common/kutil.hh"
 
+struct SourceInfo {
+    const char *prefix;
+    const char *suffix;
+    const char *filename;
+};
+
+struct PackFileInfo {
+    const char *filename;
+    HeapArray<SourceInfo> sources;
+};
+
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
     for (uint8_t byte: bytes) {
@@ -11,7 +22,8 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-static Size PackFile(const char *filename, CompressionType compression_type, StreamWriter *out_st)
+static Size PackFile(const char *filename, Span<const SourceInfo> sources,
+                     CompressionType compression_type, StreamWriter *out_st)
 {
     PrintLn(out_st, "    // %1", filename);
     Print(out_st, "    ");
@@ -20,18 +32,27 @@ static Size PackFile(const char *filename, CompressionType compression_type, Str
     {
         HeapArray<uint8_t> buf;
         StreamWriter writer(&buf, nullptr, compression_type);
+        for (const SourceInfo &src: sources) {
+            if (src.prefix) {
+                writer.Write(src.prefix);
+            }
 
-        StreamReader reader(filename);
-        while (!reader.eof) {
-            uint8_t read_buf[128 * 1024];
-            Size read_len = reader.Read(SIZE(read_buf), read_buf);
-            if (read_len < 0)
-                return false;
+            StreamReader reader(src.filename);
+            while (!reader.eof) {
+                uint8_t read_buf[128 * 1024];
+                Size read_len = reader.Read(SIZE(read_buf), read_buf);
+                if (read_len < 0)
+                    return false;
 
-            writer.Write(read_buf, read_len);
-            written_len += buf.len;
-            PrintAsHexArray(buf, out_st);
-            buf.RemoveFrom(0);
+                writer.Write(read_buf, read_len);
+                written_len += buf.len;
+                PrintAsHexArray(buf, out_st);
+                buf.RemoveFrom(0);
+            }
+
+            if (src.suffix) {
+                writer.Write(src.suffix);
+            }
         }
         writer.Close();
         written_len += buf.len;
@@ -42,8 +63,30 @@ static Size PackFile(const char *filename, CompressionType compression_type, Str
     return written_len;
 }
 
+static SourceInfo CreateSource(const char *filename, const char *extension, bool merge, Allocator *alloc)
+{
+    SourceInfo src = {};
+
+    src.filename = filename;
+    if (merge) {
+        if (TestStr(extension, ".css")) {
+            src.prefix = Fmt(alloc, "/* %1\n   ------------------------------------ */\n\n", filename).ptr;
+            src.suffix = "\n";
+        } else if (TestStr(extension, ".js")) {
+            src.prefix = Fmt(alloc, "// %1\n// ------------------------------------\n\n", filename).ptr;
+            src.suffix = "\n";
+        } else {
+            LogError("Doing naive merge for '%1' files", extension);
+        }
+    }
+
+    return src;
+}
+
 int main(int argc, char **argv)
 {
+    LinkedAllocator temp_alloc;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
 R"(Usage: packer <filename> ...
@@ -59,6 +102,10 @@ Options:
                                  (default: packer_assets)
     -e, --export                 Export span symbol
 
+    -M, --merge_name <name>      Base name for merged files
+                                 (default: packed)
+    -m, --merge <extensions>     Merge files with extensions together
+
 Available compression types:)", CompressionTypeNames[0]);
         for (const char *type: CompressionTypeNames) {
             PrintLn(fp, "    %1", type);
@@ -72,6 +119,8 @@ Available compression types:)", CompressionTypeNames[0]);
     const char *span_name = "packer_assets";
     bool export_span = false;
     CompressionType compression_type = CompressionType::None;
+    HashSet<const char *> merge_extensions;
+    const char *merge_name = "packed";
     HeapArray<const char *> filenames;
     {
         const char *opt;
@@ -92,17 +141,15 @@ Available compression types:)", CompressionTypeNames[0]);
                 }
                 depth = ret.first;
             } else if (TestOption(opt, "--span_name")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                span_name = opt_parser.RequireValue(PrintUsage);
+                if (!span_name)
                     return 1;
-
-                span_name = opt_parser.current_value;
             } else if (TestOption(opt, "--export", "-e")) {
                 export_span = true;
             } else if (TestOption(opt, "-O")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                output_path = opt_parser.RequireValue(PrintUsage);
+                if (!output_path)
                     return 1;
-
-                output_path = opt_parser.current_value;
             } else if (TestOption(opt, "-c", "--compress")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
@@ -118,6 +165,22 @@ Available compression types:)", CompressionTypeNames[0]);
                 }
 
                 compression_type = (CompressionType)i;
+            } else if (TestOption(opt, "-m", "--merge")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return 1;
+
+                Span<const char> remain = opt_parser.current_value;
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStrAny(remain, ", ", &remain));
+                    if (part.len) {
+                        const char *extension = Fmt(&temp_alloc, ".%1", part).ptr;
+                        merge_extensions.Append(extension);
+                    }
+                }
+            } else if (TestOption(opt, "-M", "--merge_name")) {
+                merge_name = opt_parser.RequireValue(PrintUsage);
+                if (!merge_name)
+                    return 1;
             } else {
                 LogError("Unknown option '%1'", opt);
                 return 1;
@@ -188,9 +251,43 @@ struct PackerAsset {
 
 static const uint8_t raw_data[] = {)");
 
+    HeapArray<PackFileInfo> files;
+    {
+        HashMap<const char *, Size> merge_map;
+        for (const char *filename: filenames) {
+            const char *extension = GetPathExtension(filename).ptr;
+
+            Size file_idx = merge_map.FindValue(extension, -1);
+            bool merge;
+            if (file_idx >= 0) {
+                merge = true;
+            } else if (merge_extensions.Find(extension)) {
+                file_idx = files.len;
+
+                PackFileInfo file = {};
+                file.filename = Fmt(&temp_alloc, "%1%2", merge_name, extension).ptr;
+                files.Append(file);
+
+                merge_map.Append(extension, file_idx);
+                merge = true;
+            } else {
+                file_idx = files.len;
+
+                PackFileInfo file = {};
+                file.filename = filename;
+                files.Append(file);
+
+                merge = false;
+            }
+
+            SourceInfo src = CreateSource(filename, extension, merge, &temp_alloc);
+            files[file_idx].sources.Append(src);
+        }
+    }
+
     HeapArray<Size> lengths;
-    for (const char *filename: filenames) {
-        Size file_len = PackFile(filename, compression_type, &st);
+    for (const PackFileInfo &file: files) {
+        Size file_len = PackFile(file.filename, file.sources, compression_type, &st);
         if (file_len < 0)
             return 1;
         lengths.Append(file_len);
@@ -201,9 +298,8 @@ R"(};
 
 static PackerAsset assets[] = {)");
 
-    // FIXME: Bug with empty files?
-    for (Size i = 0, cumulative_len = 0; i < filenames.len; i++) {
-        Span<const char> filename = filenames[i];
+    for (Size i = 0, cumulative_len = 0; i < files.len; i++) {
+        Span<const char> filename = files[i].filename;
 
         Span<const char> name = filename;
         {
