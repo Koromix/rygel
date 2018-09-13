@@ -167,7 +167,7 @@ function downloadJson(url, method, func)
         let error = null;
         switch (status) {
             case 200: { /* Success */ } break;
-            case 404: { error = 'Adresse \'' + url + '\'introuvable'; } break;
+            case 404: { error = 'Adresse \'' + url + '\' introuvable'; } break;
             case 422: { error = 'Paramètres incorrects'; } break;
             case 502:
             case 503: { error = 'Service non accessible'; } break;
