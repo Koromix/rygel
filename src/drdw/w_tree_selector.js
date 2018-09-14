@@ -2,31 +2,31 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function MultiSelectorBuilder(prefix)
+function TreeSelectorBuilder(prefix)
 {
     let root = null;
-    root = createElement('div', {class: 'msel', click: function(e) { e.stopPropagation(); }},
+    root = createElement('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
         // This dummy button catches click events that happen when a label encloses the widget
         createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
-        createElement('div', {class: 'msel_main'},
-            createElement('div', {class: 'msel_summary',
+        createElement('div', {class: 'tsel_main'},
+            createElement('div', {class: 'tsel_summary',
                                   click: function(e) { root.classList.toggle('active'); }}),
-            createElement('div', {class: 'msel_view'},
-                createElement('div', {class: 'msel_list'}),
-                createElement('button', {class: 'msel_validate',
+            createElement('div', {class: 'tsel_view'},
+                createElement('div', {class: 'tsel_list'}),
+                createElement('button', {class: 'tsel_validate',
                                          click: function(e) { root.classList.remove('active'); }},
                               'Fermer')
             )
         ),
     );
-    let summary = root.querySelector('.msel_summary');
-    let list = root.querySelector('.msel_list');
+    let summary = root.querySelector('.tsel_summary');
+    let list = root.querySelector('.tsel_list');
     let depth = 0;
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
     function syncGroupCheckboxes()
     {
-        let elements = root.querySelectorAll('.msel_list > label');
+        let elements = root.querySelectorAll('.tsel_list > label');
 
         let or_state = 0;
         let and_state = 0xFFFFFFFF;
@@ -35,7 +35,7 @@ function MultiSelectorBuilder(prefix)
             let depth = parseInt(el.dataset.depth);
             let checkbox = el.querySelector('input[type=checkbox]');
 
-            if (el.classList.contains('msel_group')) {
+            if (el.classList.contains('tsel_group')) {
                 let check = !!(or_state & (1 << (depth + 1)));
                 checkbox.indeterminate = check && !(and_state & (1 << (depth + 1)));
                 checkbox.checked = check && !checkbox.indeterminate;
@@ -63,7 +63,7 @@ function MultiSelectorBuilder(prefix)
 
     function updateSummary()
     {
-        let values = multiSelectorValues(root);
+        let values = treeSelectorValues(root);
 
         function handleSummaryOptionClick(e)
         {
@@ -84,7 +84,7 @@ function MultiSelectorBuilder(prefix)
                 summary.appendChild(span);
             }
         } else {
-            let total = list.querySelectorAll('.msel_option').length;
+            let total = list.querySelectorAll('.tsel_option').length;
             let span = createElement('a', {}, '' + values.length + ' / ' + total);
             summary.appendChild(span);
         }
@@ -112,7 +112,7 @@ function MultiSelectorBuilder(prefix)
     }
 
     this.beginGroup = function(name) {
-        let el = createElement('label', {class: 'msel_group', style: 'padding-left: ' + depth + 'em;',
+        let el = createElement('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
                                          'data-depth': depth},
             createElement('input', {type: 'checkbox', click: handleGroupClick}),
             name
@@ -132,7 +132,7 @@ function MultiSelectorBuilder(prefix)
         options.selected = options.selected || false;
 
         options.selected &= !options.disabled;
-        let el = createElement('label', {class: 'msel_option' + (options.disabled ? ' disabled' : ''),
+        let el = createElement('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
                                          style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
             createElement('input', {type: 'checkbox', click: handleOptionClick,
                                     'data-value': value, checked: options.selected ? 'checked' : null}),
@@ -151,14 +151,14 @@ function MultiSelectorBuilder(prefix)
 }
 
 document.addEventListener('click', function(e) {
-    let multiselectors = document.querySelectorAll('.msel');
-    removeClass(multiselectors, 'active');
+    let selectors = document.querySelectorAll('.tsel');
+    removeClass(selectors, 'active');
 });
 
-function multiSelectorValues(el)
+function treeSelectorValues(el)
 {
     let values = [];
-    let checkboxes = el.querySelectorAll('.msel_option input[type=checkbox]:checked');
+    let checkboxes = el.querySelectorAll('.tsel_option input[type=checkbox]:checked');
     for  (let i = 0; i < checkboxes.length; i++)
         values.push(checkboxes[i].dataset.value);
 

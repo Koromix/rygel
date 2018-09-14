@@ -18,8 +18,8 @@ set(DRDW_RESOURCES drdw.html
                    tree.css
                    tree.js
                    user.js
-                   w_multiselector.css
-                   w_multiselector.js
+                   w_tree_selector.css
+                   w_tree_selector.js
                    images/favicon.ico
                    images/logo.png
                    ../../lib/chartjs/chart.min.js)

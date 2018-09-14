@@ -242,7 +242,7 @@ var casemix = {};
 
     function refreshStructures(units)
     {
-        let builder = new MultiSelectorBuilder('Unités médicales : ');
+        let builder = new TreeSelectorBuilder('Unités médicales : ');
 
         for (let i = 0; i < structures.length; i++) {
             let structure = structures[i];
@@ -277,7 +277,7 @@ var casemix = {};
 
         let old_select = _('#opt_units > div');
         cloneAttributes(old_select, select);
-        select.classList.add('msel');
+        select.classList.add('tsel');
         old_select.parentNode.replaceChild(select, old_select);
     }
 

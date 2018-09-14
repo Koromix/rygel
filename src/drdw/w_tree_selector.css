@@ -2,7 +2,7 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-.msel {
+.tsel {
     display: inline-block;
     min-width: 14em;
     margin: 2px;
@@ -11,12 +11,12 @@
     border: 1px solid #a4a4a4;
     text-align: left;
 }
-.msel_main {
+.tsel_main {
     position: relative;
     height: 24px;
 }
 
-.msel_summary {
+.tsel_summary {
     width: calc(100% - 6px);
     height: 24px;
     padding: 4px 0 4px 4px;
@@ -25,7 +25,7 @@
     background-position: right 7px;
     overflow: hidden;
 }
-.msel_summary a {
+.tsel_summary a {
     display: inline-block;
     padding-right: 6px;
     color: black;
@@ -33,28 +33,28 @@
     font-style: italic;
 }
 
-.msel_view { display: none; }
-.msel_list {
+.tsel_view { display: none; }
+.tsel_list {
     overflow-x: hidden;
     overflow-y: scroll;
 }
-.msel.active .msel_view { display: block; }
+.tsel.active .tsel_view { display: block; }
 
-.msel_list > label {
+.tsel_list > label {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.msel_list > label:hover { background: #ddd; }
-.msel_group { font-weight: bold; }
-.msel_option.disabled {
+.tsel_list > label:hover { background: #ddd; }
+.tsel_group { font-weight: bold; }
+.tsel_option.disabled {
     pointer-events: none;
     filter: opacity(50%);
 }
 
 @media screen and (min-width: 801px) {
-    .msel_view {
+    .tsel_view {
         position: absolute;
         top: 25px;
         left: -1px;
@@ -65,16 +65,16 @@
         border: 1px solid #a4a4a4;
         border-top: 0;
     }
-    .msel_list {
+    .tsel_list {
         height: 100%;
         max-height: 300px;
     }
 
-    .msel_validate { display: none; }
+    .tsel_validate { display: none; }
 }
 
 @media screen and (max-width: 800px) {
-    .msel_view {
+    .tsel_view {
         position: fixed;
         top: 50px;
         left: 10px;
@@ -85,11 +85,11 @@
         border: 1px solid #a4a4a4;
     }
 
-    .msel_list {
+    .tsel_list {
         height: calc(100% - 30px);
         padding: 2px;
     }
-    .msel_validate {
+    .tsel_validate {
         display: block;
         position: fixed;
         top: calc(100vh - 77px);
@@ -98,5 +98,5 @@
         height: 30px;
     }
 
-    .msel_list > label { padding: 3px 0; }
+    .tsel_list > label { padding: 3px 0; }
 }
