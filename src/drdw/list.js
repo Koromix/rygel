@@ -315,7 +315,7 @@ var list = {};
             };
             list = list_cache[list_name];
 
-            downloadJson(url, 'get', function(json) {
+            downloadJson('GET', url, function(json) {
                 list.url = url;
                 list.items = json;
             });

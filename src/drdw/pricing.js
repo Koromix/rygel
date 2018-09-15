@@ -147,7 +147,7 @@ var pricing = {};
 
         let begin_date = indexes[index].begin_date;
         let url = buildUrl(BaseUrl + 'api/ghm_ghs.json', {date: begin_date});
-        downloadJson(url, 'get', function(json) {
+        downloadJson('GET', url, function(json) {
             for (var i = 0; i < json.length; i++) {
                 var ghm_root = json[i].ghm_root;
                 var ghm_ghs = json[i];

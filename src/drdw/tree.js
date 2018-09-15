@@ -72,7 +72,7 @@ var tree = {};
             return;
 
         nodes = [];
-        downloadJson(url, 'get', function(json) {
+        downloadJson('GET', url, function(json) {
             nodes = json;
             tree_url = url;
         });

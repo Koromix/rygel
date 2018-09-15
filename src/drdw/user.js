@@ -45,7 +45,7 @@ var user = {};
     function connect(username, password, func)
     {
         let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
-        downloadJson(url, 'post', function(json) {
+        downloadJson('POST', url, function(json) {
             user = json;
             url_key = generateRandomInt(1, 281474976710656);
 
@@ -57,7 +57,7 @@ var user = {};
     function disconnect()
     {
         let url = buildUrl(BaseUrl + 'api/disconnect.json');
-        downloadJson(url, 'post', function(json) {
+        downloadJson('POST', url, function(json) {
             url_key = 0;
         });
     }
@@ -77,7 +77,7 @@ var user = {};
     function refreshUser()
     {
         let url = buildUrl(BaseUrl + 'api/user.json', {key: url_key});
-        downloadJson(url, 'get', function(json) {
+        downloadJson('GET', url, function(json) {
             if (json.username) {
                 if (!url_key)
                     url_key = generateRandomInt(1, 281474976710656);
@@ -86,6 +86,9 @@ var user = {};
                 user = null;
                 url_key = 0;
             }
+        }, function(error) {
+            user = null;
+            url_key = 0;
         });
     }
 

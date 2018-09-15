@@ -155,7 +155,7 @@ function buildUrl(url, query_values)
 // JSON
 // ------------------------------------------------------------------------
 
-function downloadJson(url, method, func)
+function downloadJson(method, url, proceed, fail)
 {
     if (downloadJson.queue.has(url))
         return;
@@ -176,9 +176,11 @@ function downloadJson(url, method, func)
         }
 
         if (!error) {
-            func(response);
+            proceed(response);
         } else {
             downloadJson.errors.push(error);
+            if (fail)
+                fail(error);
         }
 
         if (!--downloadJson.busy) {
@@ -194,7 +196,7 @@ function downloadJson(url, method, func)
     xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
     xhr.onerror = function(e) { handleFinishedRequest(503); };
     xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-    if (method === 'post') {
+    if (method === 'POST') {
         parts = url.split('?', 2);
         xhr.open(method, parts[0], true);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -203,7 +205,6 @@ function downloadJson(url, method, func)
         xhr.open(method, url, true);
         xhr.send();
     }
-
 }
 downloadJson.errors = [];
 downloadJson.queue = new Set();
@@ -453,7 +454,8 @@ function getIndexes()
     var indexes = getIndexes.indexes;
 
     if (!indexes.length) {
-        downloadJson(BaseUrl + 'api/indexes.json', 'get', function(json) {
+        let url = BaseUrl + 'api/indexes.json';
+        downloadJson('GET', url, function(json) {
             if (json.length > 0) {
                 indexes = json;
                 for (var i = 0; i < indexes.length; i++)
@@ -567,7 +569,8 @@ function getConcepts(name)
     var set = sets[name];
 
     if (!set.concepts.length) {
-        downloadJson(BaseUrl + 'concepts/' + name + '.json', 'get', function(json) {
+        let url = BaseUrl + 'concepts/' + name + '.json';
+        downloadJson('GET', url, function(json) {
             set.concepts = json;
             set.map = {};
             for (var i = 0; i < json.length; i++) {
