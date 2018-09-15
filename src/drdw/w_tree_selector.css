@@ -18,7 +18,7 @@
 
 .tsel_summary {
     width: calc(100% - 6px);
-    height: 24px;
+    height: 16px;
     padding: 4px 0 4px 4px;
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAYAAAA7KqwyAAAAQUlEQVQokWNgoBKYycDA8J9EPJMSQzA0w8BESjTDQCsezTMIaYaBUiyae4jVDAOZSJrrSNUMA2kMDAz55GomCgAAnesxP7DwQQ0AAAAASUVORK5CYII=");
     background-repeat: no-repeat;
