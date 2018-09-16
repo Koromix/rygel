@@ -28,7 +28,7 @@ set(LIBMICROHTTPD_SRC libmicrohttpd/src/microhttpd/base64.c
                       libmicrohttpd/src/microhttpd/response.c
                       libmicrohttpd/src/microhttpd/sysfdsetsize.c
                       libmicrohttpd/src/microhttpd/tsearch.c)
-add_library(microhttpd STATIC EXCLUDE_FROM_ALL ${LIBMICROHTTPD_SRC})
+add_library(microhttpd STATIC ${LIBMICROHTTPD_SRC})
 target_include_directories(microhttpd PRIVATE libmicrohttpd libmicrohttpd/src/include)
 if(WIN32)
     target_link_libraries(microhttpd PUBLIC ws2_32)
@@ -38,7 +38,7 @@ if(NOT EMSCRIPTEN)
 endif()
 
 set(MINIZ_SRC miniz/miniz.c)
-add_library(miniz STATIC EXCLUDE_FROM_ALL ${MINIZ_SRC})
+add_library(miniz STATIC ${MINIZ_SRC})
 target_compile_definitions(miniz PRIVATE -DMINIZ_NO_STDIO
                                          -DMINIZ_NO_TIME
                                          -DMINIZ_NO_ARCHIVE_APIS
@@ -52,7 +52,7 @@ endif()
 set(IMGUI_SRC imgui/imgui.cpp
               imgui/imgui_draw.cpp
               imgui/imgui_demo.cpp)
-add_library(imgui STATIC EXCLUDE_FROM_ALL ${IMGUI_SRC})
+add_library(imgui STATIC ${IMGUI_SRC})
 
 set(LIBSODIUM_SRC libsodium/src/libsodium/crypto_generichash/crypto_generichash.c
                   libsodium/src/libsodium/crypto_generichash/blake2b/generichash_blake2.c
