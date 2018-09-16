@@ -46,29 +46,20 @@ var casemix = {};
         indexes = getIndexes();
         [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.cm_diff; });
+        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
         updateStructures();
-        if (main_index >= 0) {
-            let end_date = indexes[main_index].begin_date;
-            for (let i = main_index + 1; i < indexes.length; i++) {
-                if (indexes[i].changed_prices) {
-                    end_date = indexes[i].begin_date;
-                    break;
-                }
-            }
-
-            updateCaseMix(route.date, end_date, route.cm_units, route.cm_mode,
+        if (route.cm_period) {
+            updateCaseMix(route.cm_period[0], route.cm_period[1], route.cm_units, route.cm_mode,
                           diff_index >= 0 ? indexes[diff_index].begin_date : null,
                           diff_index >= 0 ? indexes[diff_index].end_date : null);
         }
 
         // Refresh settings
-        removeClass(__('#opt_indexes, #opt_diff_casemix, #opt_algorithm, #opt_units, #opt_update'), 'hide');
+        removeClass(__('#opt_units, #opt_periods, #opt_algorithm, #opt_update'), 'hide');
+        refreshPeriods(route.cm_period);
         refreshStructures(route.cm_units);
-        refreshIndexesLine(_('#opt_indexes'), indexes, main_index, false);
-        refreshIndexesDiff(diff_index, route.ghm_root);
         _('#opt_algorithm').value = route.cm_mode;
 
         // Refresh view
@@ -101,6 +92,8 @@ var casemix = {};
     {
         const KeepKeys = [
             'date',
+            'diff',
+            'cm_period',
             'cm_diff',
             'cm_units',
             'cm_mode',
@@ -219,24 +212,29 @@ var casemix = {};
         });
     }
 
-    function refreshIndexesDiff(diff_index, test_ghm_root)
+    function refreshPeriods(period)
     {
-        var el = _("#opt_diff_casemix > select");
-        el.innerHTML = '';
+        // Period
+        {
+            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01',
+                                                  period ? period[0] : null, period ? period[1] : null);
+            let picker = builder.getWidget();
 
-        el.appendChild(createElement('option', {value: ''}, 'Désactiver'));
-        for (var i = 0; i < indexes.length; i++) {
-            if (indexes[i].changed_prices) {
-                var opt = createElement('option', {value: indexes[i].begin_date},
-                                        indexes[i].begin_date);
-                if (i === diff_index)
-                    opt.setAttribute('selected', '');
-                /*if (!checkIndexGhmRoot(i, test_ghm_root)) {
-                    opt.setAttribute('disabled', '');
-                    opt.text += '*';
-                }*/
-                el.appendChild(opt);
-            }
+            let old_picker = _('#opt_periods > div:first-of-type');
+            cloneAttributes(old_picker, picker);
+            picker.classList.add('ppik');
+            old_picker.parentNode.replaceChild(picker, old_picker);
+        }
+
+        // Diff
+        {
+            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01');
+            let picker = builder.getWidget();
+
+            let old_picker = _('#opt_periods > div:last-of-type');
+            cloneAttributes(old_picker, picker);
+            picker.classList.add('ppik');
+            old_picker.parentNode.replaceChild(picker, old_picker);
         }
     }
 

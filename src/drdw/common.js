@@ -249,6 +249,7 @@ var route = {
     'spec': null,
 
     'cm_view': 'global',
+    'cm_period': null,
     'cm_diff': null,
     'cm_units': [],
     'cm_mode': 'exj2',

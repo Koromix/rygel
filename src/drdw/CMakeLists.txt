@@ -18,6 +18,8 @@ set(DRDW_RESOURCES drdw.html
                    tree.css
                    tree.js
                    user.js
+                   w_period_picker.css
+                   w_period_picker.js
                    w_tree_selector.css
                    w_tree_selector.js
                    images/favicon.ico

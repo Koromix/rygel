@@ -77,9 +77,9 @@
                 <label id="opt_units">
                     <div style="width: 100%;"></div><br/>
                 </label>
-                <label id="opt_diff_casemix">
-                    Comparer
-                    <select style="width: 12em;"></select>
+                <label id="opt_periods">
+                    <div style="width: 40%;"></div>
+                    <div style="width: 40%;"></div><br/>
                 </label>
                 <label id="opt_algorithm">
                     Algorithme
@@ -94,8 +94,8 @@
                 </label>
 
                 <button id="opt_update"
-                        onclick="module.object.route({cm_mode: _('#opt_algorithm > select').value,
-                                                      cm_diff: _('#opt_diff_casemix > select').value,
+                        onclick="module.object.route({cm_period: periodPickerValues(_('#opt_periods > div:first-of-type')),
+                                                      cm_mode: _('#opt_algorithm > select').value,
                                                       cm_units: treeSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
