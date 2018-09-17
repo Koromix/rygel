@@ -57,7 +57,8 @@ var casemix = {};
         }
 
         // Refresh settings
-        removeClass(__('#opt_units, #opt_periods, #opt_algorithm, #opt_update'), 'hide');
+        toggleClass(__('#opt_units, #opt_periods, #opt_algorithm, #opt_update'), 'hide',
+                    !user.getCurrentUser());
         refreshPeriods(route.cm_period);
         refreshStructures(route.cm_units);
         _('#opt_algorithm').value = route.cm_mode;
