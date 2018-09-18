@@ -61,7 +61,7 @@ var casemix = {};
                     !user.getCurrentUser());
         refreshPeriods(route.cm_period);
         refreshStructures(route.cm_units);
-        _('#opt_algorithm').value = route.cm_mode;
+        _('#opt_algorithm > select').value = route.cm_mode;
 
         // Refresh view
         refreshErrors(Array.from(errors));
