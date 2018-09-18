@@ -130,9 +130,7 @@ function TreeSelector(prefix)
         while (sibling && sibling.dataset.depth > group.dataset.depth) {
             if (sibling.classList.contains('tsel_option')) {
                 let checkbox = sibling.querySelector('input[type=checkbox]');
-                checkbox.checked = this.checked;
-                checkbox.indeterminate = false;
-                syncValue(this.dataset.value, this.checked);
+                syncValue(checkbox.dataset.value, this.checked);
             }
             sibling = sibling.nextSibling;
         }
