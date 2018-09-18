@@ -218,8 +218,8 @@ var pricing = {};
     {
         let table = null;
         if (pricing_info && pricing_info[main_index]) {
-            table = createTable(pricing_info, main_index, diff_index, max_duration, apply_coeff,
-                                merge_cells, function(col, duration) {
+            table = createTable(pricing_info, main_index, max_duration, apply_coeff, merge_cells,
+                                function(col, duration) {
                 if (diff_index < 0) {
                     var info = computePrice(col, duration, apply_coeff);
                 } else {
@@ -372,8 +372,7 @@ var pricing = {};
         return chart;
     }
 
-    function createTable(pricing_info, main_index, diff_index, max_duration,
-                         apply_coeff, merge_cells, row_func)
+    function createTable(pricing_info, main_index, max_duration, apply_coeff, merge_cells, row_func)
     {
         var ghs = pricing_info[main_index].ghs;
 

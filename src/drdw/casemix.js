@@ -30,33 +30,35 @@ var casemix = {};
             Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
         route.cm_view = url_parts[1] || route.cm_view;
 
-        // Validate
-        if (!(['global', 'ghm_root'].includes(route.cm_view)))
-            errors.add('Mode d\'affichage incorrect');
-        if (!(['none', 'absolute', 'relative'].includes(route.mode)))
-            errors.add('Mode de comparaison inconnu');
-        if (!user.getSession())
-            errors.add('Vous n\'êtes pas connecté(e)');
-
+        // Resources
+        updateCaseMix();
         let new_classify_url = null;
         if (route.period) {
             let prev_period = (route.prev_period && route.mode !== 'none') ? route.prev_period : [null, null];
             new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
                                                 route.algorithm, prev_period[0], prev_period[1]);
         }
-
-        // Resources
-        indexes = getIndexes();
-        [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
-        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
-        if (main_index >= 0 && !indexes[main_index].init)
-            pricing.updatePriceMap(main_index);
-        updateCaseMix();
         if ((!mix_url || route.apply) && new_classify_url) {
             updateResults(new_classify_url);
             route.apply = false;
         }
+        indexes = getIndexes();
+        [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
+        if (!route.date && indexes.length)
+            route.date = indexes[indexes.length - 1].begin_date;
+        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
+        if (main_index >= 0 && !indexes[main_index].init)
+            pricing.updatePriceMap(main_index);
+
+        // Errors
+        if (!(['global', 'ghm_root'].includes(route.cm_view)))
+            errors.add('Mode d\'affichage incorrect');
+        if (!(['none', 'absolute', 'relative'].includes(route.mode)))
+            errors.add('Mode de comparaison inconnu');
+        if (route.date !== null && indexes.length && main_index < 0)
+            errors.add('Date incorrecte');
+        if (!user.getSession())
+            errors.add('Vous n\'êtes pas connecté(e)');
 
         // Refresh settings
         toggleClass(__('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update'), 'hide',
@@ -79,8 +81,9 @@ var casemix = {};
                     } break;
                     case 'ghm_root': {
                         refreshCmds(route.cmd);
-                        refreshGhmRoot(pricing.pricings_map[route.ghm_root],
-                                       main_index, diff_index, route.ghm_root);
+                        if (main_index >= 0)
+                            refreshGhmRoot(pricing.pricings_map[route.ghm_root],
+                                           main_index, route.ghm_root);
                     } break;
                 }
 
@@ -442,7 +445,7 @@ var casemix = {};
         old_table.parentNode.replaceChild(table, old_table);
     }
 
-    function refreshGhmRoot(pricing_info, main_index, diff_index, ghm_root)
+    function refreshGhmRoot(pricing_info, main_index, ghm_root)
     {
         if (ghm_root && mix_ghm_roots_map[ghm_root]) {
             var ghm_root_info = mix_ghm_roots_map[ghm_root];
@@ -462,8 +465,8 @@ var casemix = {};
             }
 
             let max_duration = Math.max(ghm_root_info.max_duration, 20);
-            var table = pricing.createTable(pricing_info, main_index, diff_index,
-                                            max_duration, false, true, function(col, duration) {
+            var table = pricing.createTable(pricing_info, main_index, max_duration, false, true,
+                                            function(col, duration) {
                 let ghs = ghm_root_info.ghs_map[col.ghs];
 
                 if (!pricing.testDuration(col, duration))
