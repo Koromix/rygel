@@ -113,15 +113,23 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     {
         let handle = this.parentNode;
 
+        let call_change_handler = false;
         if (this.valueAsDate) {
             this.valueAsDate = clampHandleDate(handle, this.valueAsDate);
         } else {
             this.valueAsDate = (handle === handles[0]) ? min_date : max_date;
+            call_change_handler = true;
         }
 
         syncHandle(this.parentNode);
         syncBar();
 
+        if (call_change_handler && self.changeHandler)
+            setTimeout(function() { self.changeHandler.call(widget); }, 0);
+    }
+
+    function handleDateFocusOut(e)
+    {
         if (self.changeHandler)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
     }
@@ -187,12 +195,14 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
             createElement('div', {class: 'ppik_handle'},
                 createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
                                       pointerup: handlePointerUp}),
-                createElement('input', {type: 'date', style: 'bottom: 4px;', change: handleDateChange})
+                createElement('input', {type: 'date', style: 'bottom: 4px;',
+                                        change: handleDateChange, focusout: handleDateFocusOut})
             ),
             createElement('div', {class: 'ppik_handle'},
                 createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
                                       pointerup: handlePointerUp}),
-                createElement('input', {type: 'date', style: 'top: 18px;', change: handleDateChange})
+                createElement('input', {type: 'date', style: 'top: 18px;',
+                                        change: handleDateChange, focusout: handleDateFocusOut})
             )
         )
     );
