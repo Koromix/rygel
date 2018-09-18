@@ -2308,7 +2308,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
 
 static inline bool IsAsciiIdChar(char c)
 {
-    return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.';
+    return IsAsciiAlphaOrDigit(c) || c == '_' || c == '-' || c == '.' || c == ' ';
 }
 
 IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
@@ -2336,7 +2336,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 return LineType::Exit;
             }
             if (!std::all_of(section.begin(), section.end(), IsAsciiIdChar)) {
-                LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-' or '.'",
+                LogError("%1(%2): Section names can only contain alphanumeric characters, '_', '-', '.' or ' '",
                          reader.st->filename, reader.line_number);
                 return LineType::Exit;
             }
