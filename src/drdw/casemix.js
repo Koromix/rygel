@@ -51,14 +51,20 @@ var casemix = {};
             pricing.updatePriceMap(main_index);
 
         // Errors
-        if (!(['global', 'ghm_root'].includes(route.cm_view)))
-            errors.add('Mode d\'affichage incorrect');
-        if (!(['none', 'absolute', 'relative'].includes(route.mode)))
-            errors.add('Mode de comparaison inconnu');
-        if (route.date !== null && indexes.length && main_index < 0)
-            errors.add('Date incorrecte');
-        if (!user.getSession())
+        if (user.getSession()) {
+            if (!(['global', 'ghm_root'].includes(route.cm_view)))
+                errors.add('Mode d\'affichage incorrect');
+            if (!route.units.length && mix_url === new_classify_url)
+                errors.add('Aucune unité sélectionnée');
+            if (route.cm_view == 'ghm_root' && !route.ghm_root)
+                errors.add('Aucune racine de GHM sélectionnée');
+            if (!(['none', 'absolute', 'relative'].includes(route.mode)))
+                errors.add('Mode de comparaison inconnu');
+            if (route.date !== null && indexes.length && main_index < 0)
+                errors.add('Date incorrecte');
+        } else {
             errors.add('Vous n\'êtes pas connecté(e)');
+        }
 
         // Refresh settings
         toggleClass(__('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update'), 'hide',
