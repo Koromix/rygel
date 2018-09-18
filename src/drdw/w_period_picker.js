@@ -8,6 +8,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
 
     let self = this;
     let widget = null;
+    let main = null;
     let handles = null;
     let bar = null;
 
@@ -69,7 +70,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
         let date_delta;
         {
             let min_pos = 0;
-            let max_pos = widget.offsetWidth;
+            let max_pos = main.offsetWidth;
             if (pos < min_pos) {
                 pos = min_pos;
             } else if (pos > max_pos) {
@@ -99,7 +100,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
             let handle = this.parentNode;
             let input = handle.lastChild;
 
-            let new_date = positionToDate(e.clientX - this.parentNode.parentNode.offsetLeft);
+            let new_date = positionToDate(e.clientX - main.offsetLeft);
             new_date = clampHandleDate(handle, new_date, handle);
             input.valueAsDate = new_date;
 
@@ -142,7 +143,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     function handleBarMove(e)
     {
         if (this.hasPointerCapture(e.pointerId)) {
-            let new_start_date = positionToDate(e.clientX - this.parentNode.offsetLeft - grab_offset);
+            let new_start_date = positionToDate(e.clientX - main.offsetLeft - grab_offset);
             let new_end_date = new Date(new_start_date.getFullYear() + grab_diff_year,
                                         new_start_date.getMonth() + grab_diff_month,
                                         grab_end_day, 2);
@@ -179,20 +180,23 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
         // This dummy button catches click events that happen when a label encloses the widget
         createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
-        createElement('div', {class: 'ppik_line'}),
-        createElement('div', {class: 'ppik_bar', pointerdown: handleBarDown,
-                              pointermove: handleBarMove, pointerup: handlePointerUp}),
-        createElement('div', {class: 'ppik_handle'},
-            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                                  pointerup: handlePointerUp}),
-            createElement('input', {type: 'date', style: 'bottom: 4px;', change: handleDateChange})
-        ),
-        createElement('div', {class: 'ppik_handle'},
-            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                                  pointerup: handlePointerUp}),
-            createElement('input', {type: 'date', style: 'top: 18px;', change: handleDateChange})
+        createElement('div', {class: 'ppik_main'},
+            createElement('div', {class: 'ppik_line'}),
+            createElement('div', {class: 'ppik_bar', pointerdown: handleBarDown,
+                                  pointermove: handleBarMove, pointerup: handlePointerUp}),
+            createElement('div', {class: 'ppik_handle'},
+                createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                                      pointerup: handlePointerUp}),
+                createElement('input', {type: 'date', style: 'bottom: 4px;', change: handleDateChange})
+            ),
+            createElement('div', {class: 'ppik_handle'},
+                createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                                      pointerup: handlePointerUp}),
+                createElement('input', {type: 'date', style: 'top: 18px;', change: handleDateChange})
+            )
         )
     );
+    main = widget.querySelector('.ppik_main');
     handles = widget.querySelectorAll('.ppik_handle');
     bar = widget.querySelector('.ppik_bar');
 

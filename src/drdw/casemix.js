@@ -255,11 +255,11 @@ var casemix = {};
             let old_picker = _('#opt_periods > div:last-of-type');
             cloneAttributes(old_picker, prev_picker);
             prev_picker.classList.add('ppik');
-            prev_picker.style.width = '44%';
             old_picker.parentNode.replaceChild(prev_picker, old_picker);
         }
 
-        picker.style.width = (mode !== 'none') ? '44%' : '90%';
+        picker.style.width = (mode !== 'none') ? '49%' : '100%';
+        prev_picker.style.width = '49%';
         prev_picker.classList.toggle('hide', mode === 'none');
     }
 

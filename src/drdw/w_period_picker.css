@@ -4,8 +4,11 @@
 
 .ppik {
     display: inline-block;
-    position: relative;
     height: 72px;
+}
+.ppik_main {
+    position: relative;
+    margin: 0 60px;
 }
 
 .ppik_line {
@@ -48,7 +51,7 @@
 
 .ppik_handle > input {
     position: absolute;
-    left: -55px;
+    left: -58px;
     width: 110px;
     font-size: 0.8em;
 }
