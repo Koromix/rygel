@@ -40,6 +40,7 @@ extern const mco_AuthorizationSet *drdw_authorization_set;
 extern UserSet drdw_user_set;
 extern StructureSet drdw_structure_set;
 extern mco_StaySet drdw_stay_set;
+extern Date drdw_stay_set_dates[2];
 
 const mco_TableIndex *GetIndexFromQueryString(const ConnectionInfo *conn, const char *redirect_url,
                                               Response *out_response);
@@ -54,8 +55,8 @@ Response ProduceDiagnoses(const ConnectionInfo *conn, const char *url, Compressi
 Response ProduceProcedures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 Response ProduceGhmGhs(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 
-Response ProduceStructures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 Response ProduceCaseMix(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type);
 
 const User *CheckSessionUser(MHD_Connection *conn);
 Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);

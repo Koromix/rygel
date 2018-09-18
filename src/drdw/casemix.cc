@@ -32,6 +32,55 @@ static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
     return true;
 }
 
+Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+{
+    if (!drdw_stay_set.stays.len)
+        return CreateErrorPage(404);
+
+    MHD_Response *response = BuildJson(compression_type,
+                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        char buf[32];
+
+        writer.StartObject();
+
+        writer.Key("begin_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[0]).ptr);
+        writer.Key("end_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[1]).ptr);
+
+        writer.Key("algorithms"); writer.StartArray();
+        for (const OptionDesc &desc: mco_DispenseModeOptions) {
+            writer.StartObject();
+            writer.Key("name"); writer.String(desc.name);
+            writer.Key("title"); writer.String(desc.help);
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        writer.Key("structures"); writer.StartArray();
+        for (const Structure &structure: drdw_structure_set.structures) {
+            writer.StartObject();
+            writer.Key("name"); writer.String(structure.name);
+            writer.Key("units"); writer.StartArray();
+            for (const Unit &unit: structure.units) {
+                if (CheckUnitAgainstUser(conn->user, unit)) {
+                    writer.StartObject();
+                    writer.Key("unit"); writer.Int(unit.unit.number);
+                    writer.Key("path"); writer.String(unit.path);
+                    writer.EndObject();
+                }
+            }
+            writer.EndArray();
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        writer.EndObject();
+
+        return true;
+    });
+
+    return {200, response};
+}
+
 Response ProduceStructures(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     MHD_Response *response = BuildJson(compression_type,
@@ -86,8 +135,11 @@ invalid:
     return false;
 }
 
-Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
+    if (!drdw_stay_set.stays.len)
+        return CreateErrorPage(404);
+
     struct CellSummary {
         mco_GhmCode ghm;
         int16_t ghs;

@@ -73,6 +73,7 @@ const mco_AuthorizationSet *drdw_authorization_set;
 UserSet drdw_user_set;
 StructureSet drdw_structure_set;
 mco_StaySet drdw_stay_set;
+Date drdw_stay_set_dates[2];
 
 static DescSet desc_set;
 #ifndef NDEBUG
@@ -422,8 +423,8 @@ static void InitRoutes()
 
     // API
     routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, ProduceIndexes});
-    routes.Set({"/api/structures.json", "GET", Route::Matching::Exact, ProduceStructures});
     routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, ProduceCaseMix});
+    routes.Set({"/api/classify.json", "GET", Route::Matching::Exact, ProduceClassify});
     routes.Set({"/api/tree.json", "GET", Route::Matching::Exact, ProduceClassifierTree});
     routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, ProduceDiagnoses});
     routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, ProduceProcedures});
@@ -791,6 +792,22 @@ Options:
             return 1;
         if (!stay_set_builder.Finish(&drdw_stay_set))
             return 1;
+
+        if (drdw_stay_set.stays.len) {
+            Span<const mco_Stay> mono_stays = drdw_stay_set.stays;
+
+            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, &mono_stays);
+            drdw_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
+            drdw_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
+
+            while (mono_stays.len) {
+                sub_stays = mco_Split(mono_stays, &mono_stays);
+                drdw_stay_set_dates[0] = std::min(drdw_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
+                drdw_stay_set_dates[1] = std::max(drdw_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+            }
+
+            drdw_stay_set_dates[1]++;
+        }
     }
 
     LogInfo("Computing constraints");

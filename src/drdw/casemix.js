@@ -4,18 +4,20 @@
 
 var casemix = {};
 (function() {
-    // Casemix
     var indexes = [];
     var ghm_roots = [];
     var ghm_roots_map = {};
+
+    var start_date = null;
+    var end_date = null;
+    var algorithms = [];
     var structures = [];
+
     var mix_url = null;
     var mix_cmds = [];
     var mix_cmds_map = {};
     var mix_ghm_roots = [];
     var mix_ghm_roots_map = {};
-    var mix_start_date = null;
-    var mix_end_date = null;
     var mix_price_density_max = 0;
 
     function runCasemix(route, url, parameters, hash)
@@ -36,12 +38,12 @@ var casemix = {};
         if (!user.getSession())
             errors.add('Vous n\'êtes pas connecté(e)');
 
-        let new_mix_url;
+        let new_classify_url;
         {
             let period = route.period || [null, null];
             let prev_period = (route.prev_period && route.mode !== 'none') ? route.prev_period : [null, null];
-            new_mix_url = buildCaseMixUrl(route.period[0], route.period[1], route.units,
-                                          route.algorithm, prev_period[0], prev_period[1]);
+            new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
+                                                route.algorithm, prev_period[0], prev_period[1]);
         }
 
         // Resources
@@ -51,9 +53,9 @@ var casemix = {};
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
-        updateStructures();
+        updateCaseMix();
         if ((!mix_url || route.apply) && route.period) {
-            updateCaseMix(new_mix_url);
+            updateResults(new_classify_url);
             route.apply = false;
         }
 
@@ -63,7 +65,7 @@ var casemix = {};
         refreshPeriods(route.period, route.prev_period, route.mode);
         refreshStructures(route.units);
         _('#opt_mode > select').value = route.mode;
-        _('#opt_algorithm > select').value = route.algorithm;
+        refreshAlgorithms(route.algorithm);
 
         // Refresh view
         refreshErrors(Array.from(errors));
@@ -91,7 +93,7 @@ var casemix = {};
         } else {
             _('#cm').classList.add('hide');
         }
-        markBusy('#cm', downloadJson.busy || (mix_url !== new_mix_url));
+        markBusy('#cm', downloadJson.busy || (mix_url !== new_classify_url));
     }
     this.runCasemix = runCasemix;
 
@@ -134,15 +136,18 @@ var casemix = {};
     }
     this.route = route;
 
-    function updateStructures()
+    function updateCaseMix()
     {
-        let url = buildUrl(BaseUrl + 'api/structures.json', {key: user.getUrlKey()});
+        let url = buildUrl(BaseUrl + 'api/casemix.json', {key: user.getUrlKey()});
         downloadJson('GET', url, function(json) {
-            structures = json;
+            start_date = json.begin_date;
+            end_date = json.end_date;
+            algorithms = json.algorithms;
+            structures = json.structures;
         });
     }
 
-    function buildCaseMixUrl(start, end, units, mode, diff_start, diff_end)
+    function buildClassifyUrl(start, end, units, mode, diff_start, diff_end)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
@@ -152,12 +157,12 @@ var casemix = {};
             durations: 1,
             key: user.getUrlKey()
         };
-        let url = buildUrl(BaseUrl + 'api/casemix.json', params);
+        let url = buildUrl(BaseUrl + 'api/classify.json', params);
 
         return url;
     }
 
-    function updateCaseMix(url)
+    function updateResults(url)
     {
         mix_cmds = [];
         mix_cmds_map = {};
@@ -228,7 +233,7 @@ var casemix = {};
     {
         let picker;
         {
-            let builder = new PeriodPicker('2012-01-01', '2018-01-01',
+            let builder = new PeriodPicker(start_date, end_date,
                                            period ? period[0] : null, period ? period[1] : null);
 
             builder.changeHandler = function() {
@@ -244,7 +249,7 @@ var casemix = {};
 
         let prev_picker;
         {
-            let builder = new PeriodPicker('2012-01-01', '2018-01-01',
+            let builder = new PeriodPicker(start_date, end_date,
                                            prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
 
             builder.changeHandler = function() {
@@ -305,6 +310,20 @@ var casemix = {};
         cloneAttributes(old_select, select);
         select.classList.add('tsel');
         old_select.parentNode.replaceChild(select, old_select);
+    }
+
+    function refreshAlgorithms(algorithm)
+    {
+        let select = _('#opt_algorithm > select');
+
+        select.innerHTML = '';
+        for (let i = 0; i < algorithms.length; i++) {
+            let algorithm = algorithms[i];
+            let option = createElement('option', {value: algorithm.name},
+                                       'Algorithme ' + algorithm.title);
+            select.appendChild(option);
+        }
+        select.value = algorithm;
     }
 
     function refreshCmds(cmd)

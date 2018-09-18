@@ -91,14 +91,7 @@
                 </label>
                 <label id="opt_algorithm">
                     Algorithme
-                    <select onchange="module.object.route({algorithm: this.value});">
-                        <option value="e">Algorithme E</option>
-                        <option value="ex">Algorithme Ex</option>
-                        <option value="ex2">Algorithme Ex'</option>
-                        <option value="j">Algorithme J</option>
-                        <option value="exj">Algorithme ExJ</option>
-                        <option value="exj2">Algorithme Ex'J</option>
-                    </select>
+                    <select onchange="module.object.route({algorithm: this.value});"></select>
                 </label>
 
                 <button id="opt_update" onclick="module.object.route({apply: true});">Mettre à jour</button>
