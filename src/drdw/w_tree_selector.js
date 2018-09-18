@@ -61,7 +61,7 @@ function TreeSelector(prefix)
             e.preventDefault();
             e.stopPropagation();
 
-            if (self.changeHandler)
+            if (!widget.classList.contains('active') && self.changeHandler)
                 setTimeout(function() { self.changeHandler.call(widget); }, 0);
         }
 
