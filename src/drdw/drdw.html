@@ -91,7 +91,7 @@
                 </label>
                 <label id="opt_algorithm">
                     Algorithme
-                    <select onchange="module.object.route({algorithm: _('#opt_algorithm > select').value});">
+                    <select onchange="module.object.route({algorithm: this.value});">
                         <option value="e">Algorithme E</option>
                         <option value="ex">Algorithme Ex</option>
                         <option value="ex2">Algorithme Ex'</option>
@@ -101,11 +101,7 @@
                     </select>
                 </label>
 
-                <button id="opt_update"
-                        onclick="module.object.route({period: periodPickerValues(_('#opt_periods > div:first-of-type')),
-                                                      prev_period: periodPickerValues(_('#opt_periods > div:last-of-type')),
-                                                      algorithm: _('#opt_algorithm > select').value,
-                                                      units: treeSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
+                <button id="opt_update" onclick="module.object.route({apply: true});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
 

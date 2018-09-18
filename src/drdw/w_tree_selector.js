@@ -2,31 +2,21 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function TreeSelectorBuilder(prefix)
+function TreeSelector(prefix)
 {
-    let root = null;
-    root = createElement('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
-        // This dummy button catches click events that happen when a label encloses the widget
-        createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
-        createElement('div', {class: 'tsel_main'},
-            createElement('div', {class: 'tsel_summary',
-                                  click: function(e) { root.classList.toggle('active'); }}),
-            createElement('div', {class: 'tsel_view'},
-                createElement('div', {class: 'tsel_list'}),
-                createElement('button', {class: 'tsel_validate',
-                                         click: function(e) { root.classList.remove('active'); }},
-                              'Fermer')
-            )
-        ),
-    );
-    let summary = root.querySelector('.tsel_summary');
-    let list = root.querySelector('.tsel_list');
+    this.changeHandler = null;
+
+    let self = this;
+    let widget = null;
+    let summary = null;
+    let list = null;
+
     let depth = 0;
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
     function syncGroupCheckboxes()
     {
-        let elements = root.querySelectorAll('.tsel_list > label');
+        let elements = widget.querySelectorAll('.tsel_list > label');
 
         let or_state = 0;
         let and_state = 0xFFFFFFFF;
@@ -52,7 +42,7 @@ function TreeSelectorBuilder(prefix)
 
     function toggleSelection(value, select)
     {
-        let checkbox = root.querySelector('input[data-value="' + value + '"]');
+        let checkbox = widget.querySelector('input[data-value="' + value + '"]');
         if (checkbox) {
             checkbox.checked = (select !== undefined) ? select : !checkbox.checked;
 
@@ -63,13 +53,16 @@ function TreeSelectorBuilder(prefix)
 
     function updateSummary()
     {
-        let values = treeSelectorValues(root);
+        let values = self.getValues();
 
         function handleSummaryOptionClick(e)
         {
             toggleSelection(this.textContent);
             e.preventDefault();
             e.stopPropagation();
+
+            if (self.changeHandler)
+                setTimeout(function() { self.changeHandler.call(widget); }, 0);
         }
 
         summary.innerHTML = '';
@@ -142,25 +135,53 @@ function TreeSelectorBuilder(prefix)
         list.appendChild(el);
     };
 
+    this.open = function() { widget.classList.add('active'); };
+    this.toggle = function(state) {
+        if (!widget.classList.toggle('active', state) && self.changeHandler)
+             setTimeout(function() { self.changeHandler.call(widget); }, 0);
+    };
+    this.close = function() {
+        widget.classList.remove('active');
+        if (self.changeHandler)
+            setTimeout(function() { self.changeHandler.call(widget); }, 0);
+    };
+
+    this.getValues = function() {
+        let values = [];
+        let checkboxes = widget.querySelectorAll('.tsel_option input[type=checkbox]:checked');
+        for  (let i = 0; i < checkboxes.length; i++)
+            values.push(checkboxes[i].dataset.value);
+
+        return values;
+    }
+
     this.getWidget = function() {
         syncGroupCheckboxes();
         updateSummary();
 
-        return root;
-    }
+        return widget;
+    };
+
+    widget = createElement('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
+        // This dummy button catches click events that happen when a label encloses the widget
+        createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
+
+        createElement('div', {class: 'tsel_main'},
+            createElement('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
+            createElement('div', {class: 'tsel_view'},
+                createElement('div', {class: 'tsel_list'}),
+                createElement('button', {class: 'tsel_validate', click: this.close}, 'Fermer')
+            )
+        ),
+    );
+    summary = widget.querySelector('.tsel_summary');
+    list = widget.querySelector('.tsel_list');
+
+    widget.object = this;
 }
 
 document.addEventListener('click', function(e) {
-    let selectors = document.querySelectorAll('.tsel');
-    removeClass(selectors, 'active');
+    let selectors = document.querySelectorAll('.tsel.active');
+    for (let i = 0; i < selectors.length; i++)
+        selectors[i].object.close();
 });
-
-function treeSelectorValues(el)
-{
-    let values = [];
-    let checkboxes = el.querySelectorAll('.tsel_option input[type=checkbox]:checked');
-    for  (let i = 0; i < checkboxes.length; i++)
-        values.push(checkboxes[i].dataset.value);
-
-    return values;
-}

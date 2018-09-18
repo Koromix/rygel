@@ -254,7 +254,9 @@ var route = {
     'mode': 'none',
     'units': [],
     'algorithm': 'exj2',
-    'cmd': null
+    'cmd': null,
+
+    'apply': false
 };
 var scroll_cache = {};
 var module = null;

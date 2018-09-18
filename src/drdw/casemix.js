@@ -36,6 +36,14 @@ var casemix = {};
         if (!user.getSession())
             errors.add('Vous n\'êtes pas connecté(e)');
 
+        let new_mix_url;
+        {
+            let period = route.period || [null, null];
+            let prev_period = (route.prev_period && route.mode !== 'none') ? route.prev_period : [null, null];
+            new_mix_url = buildCaseMixUrl(route.period[0], route.period[1], route.units,
+                                          route.algorithm, prev_period[0], prev_period[1]);
+        }
+
         // Resources
         indexes = getIndexes();
         [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
@@ -44,10 +52,9 @@ var casemix = {};
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
         updateStructures();
-        if (route.period) {
-            let prev_period = (route.mode !== 'none') ? route.prev_period.slice() : null;
-            updateCaseMix(route.period[0], route.period[1], route.units, route.algorithm,
-                          prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
+        if ((!mix_url || route.apply) && route.period) {
+            updateCaseMix(new_mix_url);
+            route.apply = false;
         }
 
         // Refresh settings
@@ -80,7 +87,7 @@ var casemix = {};
             _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
             _('#cm').classList.remove('hide');
         }
-        markBusy('#cm', downloadJson.busy);
+        markBusy('#cm', downloadJson.busy || (mix_url !== new_mix_url));
     }
     this.runCasemix = runCasemix;
 
@@ -92,6 +99,7 @@ var casemix = {};
             'units',
             'mode',
             'algorithm',
+            'apply', // FIXME: Ugly?
 
             'cmd',
             'ghm_root',
@@ -130,7 +138,7 @@ var casemix = {};
         });
     }
 
-    function updateCaseMix(start, end, units, mode, diff_start, diff_end)
+    function buildCaseMixUrl(start, end, units, mode, diff_start, diff_end)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
@@ -142,9 +150,11 @@ var casemix = {};
         };
         let url = buildUrl(BaseUrl + 'api/casemix.json', params);
 
-        if (url == mix_url)
-            return;
+        return url;
+    }
 
+    function updateCaseMix(url)
+    {
         mix_cmds = [];
         mix_cmds_map = {};
         mix_ghm_roots = [];
@@ -214,11 +224,14 @@ var casemix = {};
     {
         let picker;
         {
-            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01',
-                                                  period ? period[0] : null,
-                                                  period ? period[1] : null);
-            picker = builder.getWidget();
+            let builder = new PeriodPicker('2012-01-01', '2018-01-01',
+                                           period ? period[0] : null, period ? period[1] : null);
 
+            builder.changeHandler = function() {
+                route({period: this.object.getValues()});
+            };
+
+            picker = builder.getWidget();
             let old_picker = _('#opt_periods > div:first-of-type');
             cloneAttributes(old_picker, picker);
             picker.classList.add('ppik');
@@ -227,11 +240,14 @@ var casemix = {};
 
         let prev_picker;
         {
-            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01',
-                                                  prev_period ? prev_period[0] : null,
-                                                  prev_period ? prev_period[1] : null);
-            prev_picker = builder.getWidget();
+            let builder = new PeriodPicker('2012-01-01', '2018-01-01',
+                                           prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
 
+            builder.changeHandler = function() {
+                route({prev_period: this.object.getValues()});
+            };
+
+            prev_picker = builder.getWidget();
             let old_picker = _('#opt_periods > div:last-of-type');
             cloneAttributes(old_picker, prev_picker);
             prev_picker.classList.add('ppik');
@@ -245,7 +261,7 @@ var casemix = {};
 
     function refreshStructures(units)
     {
-        let builder = new TreeSelectorBuilder('Unités médicales : ');
+        let builder = new TreeSelector('Unités médicales : ');
 
         for (let i = 0; i < structures.length; i++) {
             let structure = structures[i];
@@ -276,8 +292,11 @@ var casemix = {};
                 builder.endGroup();
         }
 
-        let select = builder.getWidget();
+        builder.changeHandler = function() {
+            route({units: this.object.getValues()});
+        };
 
+        let select = builder.getWidget();
         let old_select = _('#opt_units > div');
         cloneAttributes(old_select, select);
         select.classList.add('tsel');

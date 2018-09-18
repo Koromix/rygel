@@ -2,8 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function PeriodPickerBuilder(min_date, max_date, start_date, end_date)
+function PeriodPicker(min_date, max_date, start_date, end_date)
 {
+    this.changeHandler = null;
+
+    let self = this;
     let widget = null;
     let handles = null;
     let bar = null;
@@ -117,6 +120,9 @@ function PeriodPickerBuilder(min_date, max_date, start_date, end_date)
 
         syncHandle(this.parentNode);
         syncBar();
+
+        if (self.changeHandler)
+            setTimeout(function() { self.changeHandler.call(widget); }, 0);
     }
 
     function handleBarDown(e)
@@ -155,6 +161,16 @@ function PeriodPickerBuilder(min_date, max_date, start_date, end_date)
         }
     }
 
+    function handlePointerUp(e)
+    {
+        if (self.changeHandler)
+            setTimeout(function() { self.changeHandler.call(widget); }, 0);
+    }
+
+    this.getValues = function() {
+        return [handles[0].lastChild.value, handles[1].lastChild.value];
+    }
+
     this.getWidget = function() {
         return widget;
     }
@@ -164,14 +180,16 @@ function PeriodPickerBuilder(min_date, max_date, start_date, end_date)
         createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
         createElement('div', {class: 'ppik_line'}),
-        createElement('div', {class: 'ppik_bar',
-                              pointerdown: handleBarDown, pointermove: handleBarMove}),
+        createElement('div', {class: 'ppik_bar', pointerdown: handleBarDown,
+                              pointermove: handleBarMove, pointerup: handlePointerUp}),
         createElement('div', {class: 'ppik_handle'},
-            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove}),
+            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                                  pointerup: handlePointerUp}),
             createElement('input', {type: 'date', style: 'bottom: 4px;', change: handleDateChange})
         ),
         createElement('div', {class: 'ppik_handle'},
-            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove}),
+            createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                                  pointerup: handlePointerUp}),
             createElement('input', {type: 'date', style: 'top: 18px;', change: handleDateChange})
         )
     );
@@ -189,10 +207,6 @@ function PeriodPickerBuilder(min_date, max_date, start_date, end_date)
     syncHandle(handles[0]);
     syncHandle(handles[1]);
     syncBar();
-}
 
-function periodPickerValues(el)
-{
-    let inputs = el.querySelectorAll('input[type=date]');
-    return [inputs[0].value, inputs[1].value];
+    widget.object = this;
 }
