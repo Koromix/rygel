@@ -22,8 +22,14 @@ struct ConnectionInfo {
 };
 
 struct Response {
+    enum class Flag {
+        DisableCacheControl = 1 << 0,
+        DisableETag = 1 << 1
+    };
+
     int code;
     MHD_Response *response;
+    unsigned int flags;
 };
 
 extern const mco_TableSet *drdw_table_set;

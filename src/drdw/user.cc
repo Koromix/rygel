@@ -205,6 +205,7 @@ Response ProduceUser(const ConnectionInfo *conn, const char *, CompressionType c
 
         return true;
     });
+    response.flags = (int)Response::Flag::DisableETag;
 
     return response;
 }

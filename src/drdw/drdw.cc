@@ -605,7 +605,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
 
     // Find appropriate route
     Route *route;
-    bool cache;
+    bool try_cache;
     {
         Span<const char> url2 = url;
 
@@ -629,11 +629,11 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
             }
         }
 
-        cache = TestStr(method, "GET");
+        try_cache = TestStr(method, "GET");
     }
 
     // Handle server-side cache validation (ETag)
-    if (cache) {
+    if (try_cache) {
         const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
@@ -658,13 +658,18 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     DEFER { MHD_destroy_response(response.response); };
 
     // Add caching information
-    if (cache) {
-#ifdef NDEBUG
-        MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
-#else
-        MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
+    if (try_cache) {
+#ifndef NDEBUG
+        response.flags |= (int)Response::Flag::DisableCacheControl;
 #endif
-        if (etag[0]) {
+
+        if (!(response.flags & (int)Response::Flag::DisableCacheControl)) {
+            MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
+        } else {
+            MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
+        }
+
+        if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
             MHD_add_response_header(response.response, "ETag", etag);
         }
     }
