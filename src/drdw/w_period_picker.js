@@ -45,12 +45,12 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     {
         let min = min_date;
         let max = max_date;
-        if (handle !== handles[0]) {
+        if (handles[0].lastChild.valueAsDate && handle !== handles[0]) {
             min = handles[0].lastChild.valueAsDate;
             min.setDate(min.getDate() + 1);
             min.setHours(2);
         }
-        if (handle !== handles[1]) {
+        if (handles[1].lastChild.valueAsDate && handle !== handles[1]) {
             max = handles[1].lastChild.valueAsDate;
             max.setDate(min.getDate() - 1);
             max.setHours(2);
@@ -210,13 +210,13 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     handles = widget.querySelectorAll('.ppik_handle');
     bar = widget.querySelector('.ppik_bar');
 
-    min_date = strToDate(min_date) || new Date(1900, 1, 1);
-    max_date = strToDate(max_date) || new Date(2100, 1, 1);
+    min_date = min_date ? strToDate(min_date) : new Date(1900, 1, 1);
+    max_date = max_date ? strToDate(max_date) : new Date(2100, 1, 1);
     start_date = start_date ? strToDate(start_date) : min_date;
     end_date = end_date ? strToDate(end_date) : max_date;
 
-    handles[0].lastChild.valueAsDate = start_date;
-    handles[1].lastChild.valueAsDate = end_date;
+    handles[0].lastChild.valueAsDate = clampHandleDate(handles[0], start_date);
+    handles[1].lastChild.valueAsDate = clampHandleDate(handles[1], end_date);
 
     syncHandle(handles[0]);
     syncHandle(handles[1]);
