@@ -78,7 +78,11 @@ form button, form input[type=submit] {
     0% { filter: grayscale(0) opacity(100%); }
     100% { filter: grayscale(100%) opacity(50%); }
 }
-#log { color: red; }
+#log {
+    margin-bottom: 1em;
+    color: red;
+    padding: 2px;
+}
 
 /* Indexes line (svg) */
 .indexes_line {
