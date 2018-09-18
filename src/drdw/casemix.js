@@ -38,9 +38,8 @@ var casemix = {};
         if (!user.getSession())
             errors.add('Vous n\'êtes pas connecté(e)');
 
-        let new_classify_url;
-        {
-            let period = route.period || [null, null];
+        let new_classify_url = null;
+        if (route.period) {
             let prev_period = (route.prev_period && route.mode !== 'none') ? route.prev_period : [null, null];
             new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
                                                 route.algorithm, prev_period[0], prev_period[1]);
@@ -54,7 +53,7 @@ var casemix = {};
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
         updateCaseMix();
-        if ((!mix_url || route.apply) && route.period) {
+        if ((!mix_url || route.apply) && new_classify_url) {
             updateResults(new_classify_url);
             route.apply = false;
         }
