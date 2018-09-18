@@ -34,11 +34,34 @@
 }
 
 .tsel_view { display: none; }
+.tsel.active .tsel_view { display: block; }
+
+.tsel_tabbar {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+}
+.tsel_tab {
+    display: table-cell;
+    height: 2em;
+    text-align: center;
+    vertical-align: middle;
+    background: #eee;
+    font-weight: normal;
+    text-decoration: none;
+    color: black;
+}
+.tsel_tab.active {
+    background: #ddd;
+    font-weight: bold;
+}
+
 .tsel_list {
+    display: none;
     overflow-x: hidden;
     overflow-y: scroll;
 }
-.tsel.active .tsel_view { display: block; }
+.tsel_list.active { display: block; }
 
 .tsel_list > label {
     display: block;

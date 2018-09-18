@@ -278,13 +278,14 @@ var casemix = {};
 
     function refreshStructures(units)
     {
+
         let builder = new TreeSelector('Unités médicales : ');
 
         for (let i = 0; i < structures.length; i++) {
             let structure = structures[i];
 
             let prev_groups = [];
-            builder.beginGroup(structure.name);
+            builder.createTab(structure.name);
             for (let j = 0; j < structure.units.length; j++) {
                 let unit = structure.units[j];
                 let parts = unit.path.substr(2).split('::');
@@ -305,7 +306,7 @@ var casemix = {};
                 builder.addOption(parts[parts.length - 1], unit.unit,
                                   {selected: units.includes(unit.unit.toString())});
             }
-            for (let j = 0; j <= prev_groups.length; j++)
+            for (let j = 0; j < prev_groups.length; j++)
                 builder.endGroup();
         }
 
@@ -313,8 +314,10 @@ var casemix = {};
             route({units: this.object.getValues()});
         };
 
-        let select = builder.getWidget();
         let old_select = _('#opt_units > div');
+        if (old_select.object)
+            builder.setActiveTab(old_select.object.getActiveTab());
+        let select = builder.getWidget();
         cloneAttributes(old_select, select);
         select.classList.add('tsel');
         old_select.parentNode.replaceChild(select, old_select);

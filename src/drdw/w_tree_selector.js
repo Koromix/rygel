@@ -9,9 +9,19 @@ function TreeSelector(prefix)
     let self = this;
     let widget = null;
     let summary = null;
+    let tabbar = null;
+    let view = null;
     let list = null;
 
     let depth = 0;
+    let total = 0;
+
+    function syncValue(value, checked)
+    {
+        let checkboxes = widget.querySelectorAll('.tsel_option input[data-value="' + value + '"]');
+        for (let i = 0; i < checkboxes.length; i++)
+            checkboxes[i].checked = checked;
+    }
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
     function syncGroupCheckboxes()
@@ -40,24 +50,16 @@ function TreeSelector(prefix)
         }
     }
 
-    function toggleSelection(value, select)
-    {
-        let checkbox = widget.querySelector('input[data-value="' + value + '"]');
-        if (checkbox) {
-            checkbox.checked = (select !== undefined) ? select : !checkbox.checked;
-
-            syncGroupCheckboxes();
-            updateSummary();
-        }
-    }
-
     function updateSummary()
     {
         let values = self.getValues();
 
         function handleSummaryOptionClick(e)
         {
-            toggleSelection(this.textContent);
+            syncValue(this.textContent, false);
+            syncGroupCheckboxes();
+            updateSummary();
+
             e.preventDefault();
             e.stopPropagation();
 
@@ -77,10 +79,25 @@ function TreeSelector(prefix)
                 summary.appendChild(span);
             }
         } else {
-            let total = list.querySelectorAll('.tsel_option').length;
             let span = createElement('a', {}, '' + values.length + ' / ' + total);
             summary.appendChild(span);
         }
+    }
+
+    function selectTab(tab)
+    {
+        removeClass(widget.querySelectorAll('.tsel_tab.active, .tsel_list.active'), 'active');
+        tab.classList.add('active');
+        tab.list.classList.add('active');
+
+        syncGroupCheckboxes();
+        updateSummary();
+    }
+
+    function handleTabClick(e)
+    {
+        selectTab(this);
+        e.preventDefault();
     }
 
     function handleGroupClick(e)
@@ -88,21 +105,40 @@ function TreeSelector(prefix)
         let group = this.parentNode;
         let sibling = group.nextSibling;
         while (sibling && sibling.dataset.depth > group.dataset.depth) {
-            let checkbox = sibling.querySelector('input[type=checkbox]');
-            checkbox.checked = this.checked;
-            checkbox.indeterminate = false;
+            if (sibling.classList.contains('tsel_option')) {
+                let checkbox = sibling.querySelector('input[type=checkbox]');
+                checkbox.checked = this.checked;
+                checkbox.indeterminate = false;
+                syncValue(this.dataset.value, this.checked);
+            }
             sibling = sibling.nextSibling;
         }
 
         syncGroupCheckboxes();
         updateSummary();
-    };
+    }
 
     function handleOptionClick(e)
     {
+        syncValue(this.dataset.value, this.checked);
         syncGroupCheckboxes();
         updateSummary();
     }
+
+    this.createTab = function(name, active) {
+        if (tabbar.classList.contains('hide')) {
+            tabbar.classList.remove('hide');
+        } else {
+            list = createElement('div', {class: 'tsel_list'});
+            view.appendChild(list);
+        }
+
+        let tab = createElement('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
+        if (list.classList.contains('active'))
+            tab.classList.add('active');
+        tab.list = list;
+        tabbar.appendChild(tab);
+    };
 
     this.beginGroup = function(name) {
         let el = createElement('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
@@ -146,16 +182,40 @@ function TreeSelector(prefix)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
     };
 
-    this.getValues = function() {
+    this.getActiveTab = function() {
+        for (let i = 0; i < tabbar.childNodes.length; i++) {
+            if (tabbar.childNodes[i].classList.contains('active'))
+                return i;
+        }
+        return 0;
+    };
+    this.setActiveTab = function(idx) {
+        if (idx < tabbar.childNodes.length)
+            selectTab(tabbar.childNodes[idx]);
+    };
+
+    this.getValues = function(all) {
+        if (all === undefined)
+            all = false;
+
         let values = [];
-        let checkboxes = widget.querySelectorAll('.tsel_option input[type=checkbox]:checked');
-        for  (let i = 0; i < checkboxes.length; i++)
-            values.push(checkboxes[i].dataset.value);
+        let checkboxes = widget.querySelectorAll('.tsel_option input[type=checkbox]');
+        for  (let i = 0; i < checkboxes.length; i++) {
+            let checkbox = checkboxes[i];
+            if (checkbox.checked || all)
+                values.push(checkbox.dataset.value);
+        }
+
+        values = values.sort().filter(function(value, i) {
+            return !i || value !== values[i - 1];
+        });
 
         return values;
-    }
+    };
 
     this.getWidget = function() {
+        total = self.getValues(true).length;
+
         syncGroupCheckboxes();
         updateSummary();
 
@@ -169,12 +229,15 @@ function TreeSelector(prefix)
         createElement('div', {class: 'tsel_main'},
             createElement('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
             createElement('div', {class: 'tsel_view'},
-                createElement('div', {class: 'tsel_list'}),
-                createElement('button', {class: 'tsel_validate', click: this.close}, 'Fermer')
+                createElement('div', {class: 'tsel_tabbar hide'}),
+                createElement('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
+                createElement('div', {class: 'tsel_list active'})
             )
         ),
     );
     summary = widget.querySelector('.tsel_summary');
+    tabbar = widget.querySelector('.tsel_tabbar');
+    view = widget.querySelector('.tsel_view');
     list = widget.querySelector('.tsel_list');
 
     widget.object = this;
