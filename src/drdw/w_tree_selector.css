@@ -56,6 +56,17 @@
     font-weight: bold;
 }
 
+.tsel_shortcuts {
+    height: 1.4em;
+    text-align: center;
+}
+.tsel_shortcuts a {
+    font-weight: normal;
+    text-decoration: none;
+    color: #888;
+    font-size: 0.8em;
+}
+
 .tsel_list {
     display: none;
     overflow-x: hidden;

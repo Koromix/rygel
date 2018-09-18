@@ -94,9 +94,32 @@ function TreeSelector(prefix)
         updateSummary();
     }
 
+    function setVisibleState(checked)
+    {
+        let list = widget.querySelector('.tsel_list.active');
+        let checkboxes = list.querySelectorAll('.tsel_option input[type=checkbox]');
+        for (let i = 0; i < checkboxes.length; i++)
+            syncValue(checkboxes[i].dataset.value, checked);
+
+        syncGroupCheckboxes();
+        updateSummary();
+    }
+
     function handleTabClick(e)
     {
         selectTab(this);
+        e.preventDefault();
+    }
+
+    function handleCheckAll(e)
+    {
+        setVisibleState(true);
+        e.preventDefault();
+    }
+
+    function handleUncheckAll(e)
+    {
+        setVisibleState(false);
         e.preventDefault();
     }
 
@@ -230,6 +253,10 @@ function TreeSelector(prefix)
             createElement('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
             createElement('div', {class: 'tsel_view'},
                 createElement('div', {class: 'tsel_tabbar hide'}),
+                createElement('div', {class: 'tsel_shortcuts'},
+                    createElement('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
+                    createElement('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
+                ),
                 createElement('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
                 createElement('div', {class: 'tsel_list active'})
             )
