@@ -67,25 +67,29 @@ var casemix = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy) {
-            downloadJson.errors = [];
+        if (user.getSession()) {
+            if (!downloadJson.busy) {
+                downloadJson.errors = [];
 
-            switch (route.cm_view) {
-                case 'global': {
-                    refreshCmds(route.cmd);
-                    refreshRoots(route.cmd);
-                } break;
-                case 'ghm_root': {
-                    refreshCmds(route.cmd);
-                    refreshGhmRoot(pricing.pricings_map[route.ghm_root],
-                                   main_index, diff_index, route.ghm_root);
-                } break;
+                switch (route.cm_view) {
+                    case 'global': {
+                        refreshCmds(route.cmd);
+                        refreshRoots(route.cmd);
+                    } break;
+                    case 'ghm_root': {
+                        refreshCmds(route.cmd);
+                        refreshGhmRoot(pricing.pricings_map[route.ghm_root],
+                                       main_index, diff_index, route.ghm_root);
+                    } break;
+                }
+
+                _('#cm_cmds').classList.remove('hide');
+                _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
+                _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
+                _('#cm').classList.remove('hide');
             }
-
-            _('#cm_cmds').classList.remove('hide');
-            _('#cm_roots').classList.toggle('hide', route.cm_view !== 'global');
-            _('#cm_ghs').classList.toggle('hide', route.cm_view !== 'ghm_root');
-            _('#cm').classList.remove('hide');
+        } else {
+            _('#cm').classList.add('hide');
         }
         markBusy('#cm', downloadJson.busy || (mix_url !== new_mix_url));
     }
