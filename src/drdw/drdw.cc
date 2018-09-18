@@ -424,7 +424,7 @@ static void InitRoutes()
     routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, ProduceIndexes});
     routes.Set({"/api/structures.json", "GET", Route::Matching::Exact, ProduceStructures});
     routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, ProduceCaseMix});
-    routes.Set({"/api/classifier_tree.json", "GET", Route::Matching::Exact, ProduceClassifierTree});
+    routes.Set({"/api/tree.json", "GET", Route::Matching::Exact, ProduceClassifierTree});
     routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, ProduceDiagnoses});
     routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, ProduceProcedures});
     routes.Set({"/api/ghm_ghs.json", "GET", Route::Matching::Exact, ProduceGhmGhs});

@@ -67,7 +67,7 @@ var tree = {};
 
     function updateTree(index)
     {
-        let url = buildUrl(BaseUrl + 'api/classifier_tree.json', {date: indexes[index].begin_date});
+        let url = buildUrl(BaseUrl + 'api/tree.json', {date: indexes[index].begin_date});
         if (url === tree_url)
             return;
 
