@@ -249,8 +249,8 @@ var route = {
     'spec': null,
 
     'cm_view': 'global',
-    'period': null,
-    'prev_period': null,
+    'period': [null, null],
+    'prev_period': [null, null],
     'mode': 'none',
     'units': [],
     'algorithm': 'exj2',

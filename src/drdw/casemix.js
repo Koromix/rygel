@@ -29,12 +29,16 @@ var casemix = {};
         if (url_parts[2])
             Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
         route.cm_view = url_parts[1] || route.cm_view;
+        if (!route.period[0])
+            route.period = [start_date, end_date];
+        if (!route.prev_period[0])
+            route.prev_period = [start_date, end_date];
 
         // Resources
         updateCaseMix();
         let new_classify_url = null;
-        if (route.period) {
-            let prev_period = (route.prev_period && route.mode !== 'none') ? route.prev_period : [null, null];
+        if (start_date) {
+            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
             new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
                                                 route.algorithm, prev_period[0], prev_period[1]);
         }
