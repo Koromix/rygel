@@ -4,31 +4,31 @@
 
 var user = {};
 (function() {
-    var user = null;
+    var session = null;
     var url_key = 0;
 
     function runLogin(route, url, parameters, hash)
     {
         let errors = new Set(downloadJson.errors);
 
-        if (user)
+        if (session)
             errors.add('Vous êtes déjà connecté(e)');
 
         refreshErrors(Array.from(errors));
         if (!downloadJson.busy)
             downloadJson.errors = [];
-        _('#user').classList.toggle('hide', !!user);
+        _('#user').classList.toggle('hide', !!session);
     }
     this.runLogin = runLogin;
 
-    function runUserBox()
+    function runSessionBox()
     {
-        refreshUser();
+        refreshSession();
 
         if (!downloadJson.busy)
-            updateUserBox();
+            updateSessionBox();
     }
-    this.runUserBox = runUserBox;
+    this.runSessionBox = runSessionBox;
 
     function routeToUrl(args)
     {
@@ -46,7 +46,7 @@ var user = {};
     {
         let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
         downloadJson('POST', url, function(json) {
-            user = json;
+            session = json;
             url_key = generateRandomInt(1, 281474976710656);
 
             func();
@@ -74,30 +74,30 @@ var user = {};
     }
     this.login = login;
 
-    function refreshUser()
+    function refreshSession()
     {
-        let url = buildUrl(BaseUrl + 'api/user.json', {key: url_key});
+        let url = buildUrl(BaseUrl + 'api/session.json', {key: url_key});
         downloadJson('GET', url, function(json) {
             if (json.username) {
                 if (!url_key)
                     url_key = generateRandomInt(1, 281474976710656);
-                user = json;
+                session = json;
             } else {
-                user = null;
+                session = null;
                 url_key = 0;
             }
         }, function(error) {
-            user = null;
+            session = null;
             url_key = 0;
         });
     }
 
-    function updateUserBox()
+    function updateSessionBox()
     {
         let div = null;
-        if (user) {
+        if (session) {
             div = createElement('div', {},
-                'Connecté : ' + user.username + ' ',
+                'Connecté : ' + session.username + ' ',
                 createElement('a', {href: '#',
                                     click: function(e) { disconnect(); e.preventDefault(); }}, '(déconnexion)')
             );
@@ -107,14 +107,14 @@ var user = {};
             );
         }
 
-        let old_div = document.querySelector('#side_user_box');
+        let old_div = document.querySelector('#side_session_box');
         cloneAttributes(old_div, div);
         old_div.parentNode.replaceChild(div, old_div);
     }
 
-    function getCurrentUser() { return user; }
+    function getSession() { return session; }
     function getUrlKey() { return url_key; }
-    this.getCurrentUser = getCurrentUser;
+    this.getSession = getSession;
     this.getUrlKey = getUrlKey;
 
     if (document.cookie.indexOf('session_key='))

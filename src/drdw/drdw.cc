@@ -431,7 +431,7 @@ static void InitRoutes()
     // FIXME: Improve caching behavior for user-dependent routes
     routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
     routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
-    routes.Set({"/api/user.json", "GET", Route::Matching::Exact, ProduceUser});
+    routes.Set({"/api/session.json", "GET", Route::Matching::Exact, ProduceSession});
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
         routes.Set({url, "GET", Route::Matching::Exact, desc, GetMimeType(url)});

@@ -28,18 +28,12 @@ var casemix = {};
             Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
         route.cm_view = url_parts[1] || route.cm_view;
 
-        /*
         // Validate
-        // TODO: Enforce date format (yyyy-mm-dd)
-        if (route.cm_view !== 'roots' || route.cm_view !== 'ghs')
-            errors.push('Mode d\'affichage incorrect');
-        if (route.cm_start === undefined || route.cm_end === undefined) {
-            errors.push('Dates incorrectes');
-            route.cm_start = route.cm_start || null;
-            route.cm_end = route.cm_end || null;
-        }
-        */
-        if (!user.getCurrentUser())
+        if (!(['global', 'ghm_root'].includes(route.cm_view)))
+            errors.add('Mode d\'affichage incorrect');
+        if (!(['none', 'absolute', 'relative'].includes(route.mode)))
+            errors.add('Mode de comparaison inconnu');
+        if (!user.getSession())
             errors.add('Vous n\'êtes pas connecté(e)');
 
         // Resources
@@ -50,18 +44,19 @@ var casemix = {};
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
         updateStructures();
-        if (route.cm_period) {
-            updateCaseMix(route.cm_period[0], route.cm_period[1], route.cm_units, route.cm_mode,
-                          diff_index >= 0 ? indexes[diff_index].begin_date : null,
-                          diff_index >= 0 ? indexes[diff_index].end_date : null);
+        if (route.period) {
+            let prev_period = (route.mode !== 'none') ? route.prev_period.slice() : null;
+            updateCaseMix(route.period[0], route.period[1], route.units, route.algorithm,
+                          prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
         }
 
         // Refresh settings
-        toggleClass(__('#opt_units, #opt_periods, #opt_algorithm, #opt_update'), 'hide',
-                    !user.getCurrentUser());
-        refreshPeriods(route.cm_period);
-        refreshStructures(route.cm_units);
-        _('#opt_algorithm > select').value = route.cm_mode;
+        toggleClass(__('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update'), 'hide',
+                    !user.getSession());
+        refreshPeriods(route.period, route.prev_period, route.mode);
+        refreshStructures(route.units);
+        _('#opt_mode > select').value = route.mode;
+        _('#opt_algorithm > select').value = route.algorithm;
 
         // Refresh view
         refreshErrors(Array.from(errors));
@@ -70,11 +65,11 @@ var casemix = {};
 
             switch (route.cm_view) {
                 case 'global': {
-                    refreshCmds(route.cm_cmd);
-                    refreshRoots(route.cm_cmd);
+                    refreshCmds(route.cmd);
+                    refreshRoots(route.cmd);
                 } break;
                 case 'ghm_root': {
-                    refreshCmds(route.cm_cmd);
+                    refreshCmds(route.cmd);
                     refreshGhmRoot(pricing.pricings_map[route.ghm_root],
                                    main_index, diff_index, route.ghm_root);
                 } break;
@@ -92,14 +87,16 @@ var casemix = {};
     function routeToUrl(args)
     {
         const KeepKeys = [
-            'date',
-            'diff',
-            'cm_period',
-            'cm_diff',
-            'cm_units',
-            'cm_mode',
-            'cm_cmd',
-            'ghm_root'
+            'period',
+            'prev_period',
+            'units',
+            'mode',
+            'algorithm',
+
+            'cmd',
+            'ghm_root',
+
+            'date'
         ];
 
         let new_route = buildRoute(args);
@@ -213,13 +210,14 @@ var casemix = {};
         });
     }
 
-    function refreshPeriods(period)
+    function refreshPeriods(period, prev_period, mode)
     {
-        // Period
+        let picker;
         {
             let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01',
-                                                  period ? period[0] : null, period ? period[1] : null);
-            let picker = builder.getWidget();
+                                                  period ? period[0] : null,
+                                                  period ? period[1] : null);
+            picker = builder.getWidget();
 
             let old_picker = _('#opt_periods > div:first-of-type');
             cloneAttributes(old_picker, picker);
@@ -227,16 +225,22 @@ var casemix = {};
             old_picker.parentNode.replaceChild(picker, old_picker);
         }
 
-        // Diff
+        let prev_picker;
         {
-            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01');
-            let picker = builder.getWidget();
+            let builder = new PeriodPickerBuilder('2012-01-01', '2018-01-01',
+                                                  prev_period ? prev_period[0] : null,
+                                                  prev_period ? prev_period[1] : null);
+            prev_picker = builder.getWidget();
 
             let old_picker = _('#opt_periods > div:last-of-type');
-            cloneAttributes(old_picker, picker);
-            picker.classList.add('ppik');
-            old_picker.parentNode.replaceChild(picker, old_picker);
+            cloneAttributes(old_picker, prev_picker);
+            prev_picker.classList.add('ppik');
+            prev_picker.style.width = '44%';
+            old_picker.parentNode.replaceChild(prev_picker, old_picker);
         }
+
+        picker.style.width = (mode !== 'none') ? '44%' : '90%';
+        prev_picker.classList.toggle('hide', mode === 'none');
     }
 
     function refreshStructures(units)
@@ -310,7 +314,7 @@ var casemix = {};
 
                 var td = createElement('td', {style: td_style},
                     stays_count ? createElement('a', {href: routeToUrl({cm_view: 'global',
-                                                                        cm_cmd: cmd_num})}, '' + valid_cmds[i])
+                                                                        cmd: cmd_num})}, '' + valid_cmds[i])
                                 : valid_cmds[i]
                 );
                 tr.appendChild(td);

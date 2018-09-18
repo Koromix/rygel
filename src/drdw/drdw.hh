@@ -60,4 +60,4 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *url, Compression
 const User *CheckSessionUser(MHD_Connection *conn);
 Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceUser(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+Response ProduceSession(const ConnectionInfo *conn, const char *url, CompressionType compression_type);

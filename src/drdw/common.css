@@ -111,12 +111,12 @@ form button, form input[type=submit] {
         background: #ddd !important;
         color: black !important;
     }
-    #side_user_box {
+    #side_session_box {
         padding: 8px 2px 0 2px;
         text-align: center;
         font-size: 0.7em;
     }
-    #side_user_menu { display: none; }
+    #side_session_menu { display: none; }
 }
 
 @media screen and (max-width: 800px) {
@@ -174,7 +174,7 @@ form button, form input[type=submit] {
         font-style: normal;
     }
     #side_menu.active li a { display: block; }
-    #side_user_box { display: none; }
+    #side_session_box { display: none; }
 
     /* Top page-specific menu */
     #opt_menu {

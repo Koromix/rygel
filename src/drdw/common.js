@@ -249,11 +249,12 @@ var route = {
     'spec': null,
 
     'cm_view': 'global',
-    'cm_period': null,
-    'cm_diff': null,
-    'cm_units': [],
-    'cm_mode': 'exj2',
-    'cm_cmd': null
+    'period': null,
+    'prev_period': null,
+    'mode': 'none',
+    'units': [],
+    'algorithm': 'exj2',
+    'cmd': null
 };
 var scroll_cache = {};
 var module = null;
@@ -336,16 +337,16 @@ function go(new_url, mark_history, delay)
     }
 
     // Update user stuff
-    user.runUserBox();
+    user.runSessionBox();
     {
-        let current_user = user.getCurrentUser();
+        let session = user.getSession();
 
         let menu_item;
-        if (current_user) {
+        if (session) {
             menu_item = createElement('li', {},
                 createElement('a', {href: '#',
                                     click: function(e) { user.disconnect(); e.preventDefault(); }},
-                              'Se déconnecter (' + current_user.username + ')')
+                              'Se déconnecter (' + session.username + ')')
             );
         } else {
             menu_item = createElement('li', {},
@@ -353,7 +354,7 @@ function go(new_url, mark_history, delay)
             );
         }
 
-        let old_menu_item = _('#side_user_menu');
+        let old_menu_item = _('#side_session_menu');
         cloneAttributes(old_menu_item, menu_item);
         old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
     }

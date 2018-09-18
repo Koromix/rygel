@@ -15,11 +15,11 @@
         <div id="side_bar">
             <a class="deploy" href="#" onclick="toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
-                <div id="side_user_box"></div>
+                <div id="side_session_box"></div>
 
                 <img id="logo" src="/static/logo.png" alt="drdw logo"/>
                 <ul>
-                    <li id="side_user_menu"><a class="category"></a></li>
+                    <li id="side_session_menu"><a class="category"></a></li>
 
                     <li><a class="category" data-url="list.routeToUrl({list: 'ghm_roots'});">Tarifs</a></li>
                     <li><a data-url="list.routeToUrl({list: 'ghm_roots'});">Racines de GHM</a></li>
@@ -78,12 +78,20 @@
                     <div style="width: 100%;"></div><br/>
                 </label>
                 <label id="opt_periods">
-                    <div style="width: 40%;"></div>
-                    <div style="width: 40%;"></div><br/>
+                    <div style="width: 90%;"></div>
+                    <div style="margin-left: 2%;" class="hide"></div><br/>
+                </label>
+                <label id="opt_mode">
+                    Comparer
+                    <select onchange="module.object.route({mode: this.value});">
+                        <option value="none">Désactivé</option>
+                        <option value="relative">Relatif</option>
+                        <option value="absolute">Absolu</option>
+                    </select>
                 </label>
                 <label id="opt_algorithm">
                     Algorithme
-                    <select>
+                    <select onchange="module.object.route({algorithm: _('#opt_algorithm > select').value});">
                         <option value="e">Algorithme E</option>
                         <option value="ex">Algorithme Ex</option>
                         <option value="ex2">Algorithme Ex'</option>
@@ -94,9 +102,10 @@
                 </label>
 
                 <button id="opt_update"
-                        onclick="module.object.route({cm_period: periodPickerValues(_('#opt_periods > div:first-of-type')),
-                                                      cm_mode: _('#opt_algorithm > select').value,
-                                                      cm_units: treeSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
+                        onclick="module.object.route({period: periodPickerValues(_('#opt_periods > div:first-of-type')),
+                                                      prev_period: periodPickerValues(_('#opt_periods > div:last-of-type')),
+                                                      algorithm: _('#opt_algorithm > select').value,
+                                                      units: treeSelectorValues(_('#opt_units > div'))});">Mettre à jour</button>
             </nav>
             <div id="log"></div>
 

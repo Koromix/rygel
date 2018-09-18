@@ -190,7 +190,7 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionT
     return response;
 }
 
-Response ProduceUser(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     Response response = {};
 
