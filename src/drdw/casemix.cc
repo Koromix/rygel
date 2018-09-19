@@ -95,34 +95,6 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
     return {200, response};
 }
 
-Response ProduceStructures(const ConnectionInfo *conn, const char *, CompressionType compression_type)
-{
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        writer.StartArray();
-        for (const Structure &structure: drdw_structure_set.structures) {
-            writer.StartObject();
-            writer.Key("name"); writer.String(structure.name);
-            writer.Key("units"); writer.StartArray();
-            for (const Unit &unit: structure.units) {
-                if (CheckUnitAgainstUser(conn->user, unit)) {
-                    writer.StartObject();
-                    writer.Key("unit"); writer.Int(unit.unit.number);
-                    writer.Key("path"); writer.String(unit.path);
-                    writer.EndObject();
-                }
-            }
-            writer.EndArray();
-            writer.EndObject();
-        }
-        writer.EndArray();
-
-        return true;
-    });
-
-    return {200, response};
-}
-
 static bool ParseDateRange(Span<const char> date_str, Date *out_start_date, Date *out_end_date)
 {
     Date start_date = {};
