@@ -37,6 +37,15 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
     if (!drdw_stay_set.stays.len)
         return CreateErrorPage(404);
 
+    // TODO: Cache in session object (also neeeded in ProduceClassify)?
+    HashSet<UnitCode> allowed_units;
+    for (const Structure &structure: drdw_structure_set.structures) {
+        for (const Unit &unit: structure.units) {
+            if (CheckUnitAgainstUser(conn->user, unit))
+                allowed_units.Append(unit.unit);
+        }
+    }
+
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
@@ -75,7 +84,7 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
             writer.Key("name"); writer.String(structure.name);
             writer.Key("units"); writer.StartArray();
             for (const Unit &unit: structure.units) {
-                if (CheckUnitAgainstUser(conn->user, unit)) {
+                if (allowed_units.Find(unit.unit)) {
                     writer.StartObject();
                     writer.Key("unit"); writer.Int(unit.unit.number);
                     writer.Key("path"); writer.String(unit.path);
