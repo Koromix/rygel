@@ -352,13 +352,14 @@ var casemix = {};
         {
             let tr = createElement('tr', {},
                 createElement('th', {}, 'GHM'),
-                createElement('th', {colspan: 2}, 'Effectif'),
-                createElement('th', {colspan: 2}, 'Décès')
+                createElement('th', {colspan: 2}, 'Part'),
+                createElement('th', {colspan: 2}, 'Total')
             );
             for (let i = 0; i < ShortModes.length; i++) {
                 let th = createElement('th', {colspan: 2}, ShortModes[i]);
                 tr.appendChild(th);
             }
+            tr.appendChild(createElement('th', {colspan: 2}, 'Décès'));
             thead.appendChild(tr);
         }
 
@@ -368,6 +369,14 @@ var casemix = {};
             .sort(function(a, b) { return b.count - a.count; })
             .map(function(stat) { return stat.ghm_root; });
 
+        // FIXME: Ugly: precompute
+        let total_count = 0;
+        let total_price_cents = 0;
+        for (let i = 0; i < mix_rows.length; i++) {
+            total_count += mix_rows[i].count;
+            total_price_cents += mix_rows[i].price_cents;
+        }
+
         // Data
         for (let i = 0; i < ghm_roots.length; i++) {
             let stat1 = findAggregate(stats_map1, ghm_roots[i]);
@@ -376,21 +385,26 @@ var casemix = {};
                     createElement('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
                                   ghm_roots[i])
                 ),
-                createElement('td', {}, '' + stat1.count),
-                createElement('td', {}, relativeCountText(stat1.count, stat1.count)),
-                createElement('td', {}, '' + stat1.deaths),
-                createElement('td', {}, relativeCountText(stat1.deaths, stat1.count))
+                createElement('td', {class: 'cm_count'},
+                              relativeCountText(stat1.count, total_count)),
+                createElement('td', {class: 'cm_price'},
+                              relativeCountText(stat1.price_cents, total_price_cents)),
+                createElement('td', {class: 'cm_count'}, '' + stat1.count),
+                createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents))
             );
             for (let j = 0; j < ShortModes.length; j++) {
                 let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
                 if (stat2) {
-                    tr.appendChild(createElement('td', {}, '' + stat2.count));
-                    tr.appendChild(createElement('td', {}, relativeCountText(stat2.count, stat1.count)));
+                    tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
+                    tr.appendChild(createElement('td', {class: 'cm_price'},
+                                                 pricing.priceText(stat2.price_cents)));
                 } else {
-                    tr.appendChild(createElement('td'));
-                    tr.appendChild(createElement('td'));
+                    tr.appendChild(createElement('td', {colspan: 2}));
                 }
             }
+            tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat1.deaths));
+            tr.appendChild(createElement('td', {class: 'cm_price'},
+                                         relativeCountText(stat1.deaths, stat1.count)));
             tbody.appendChild(tr);
         }
 
