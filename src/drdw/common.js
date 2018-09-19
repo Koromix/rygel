@@ -253,7 +253,7 @@ var route = {
     'prev_period': [null, null],
     'mode': 'none',
     'units': [],
-    'algorithm': 'exj2',
+    'algorithm': null,
     'cmd': null,
 
     'apply': false

@@ -11,6 +11,7 @@ var casemix = {};
     var start_date = null;
     var end_date = null;
     var algorithms = [];
+    var default_algorithm = null;
     var structures = [];
 
     var mix_url = null;
@@ -53,6 +54,8 @@ var casemix = {};
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         if (main_index >= 0 && !indexes[main_index].init)
             pricing.updatePriceMap(main_index);
+        if (!route.algorithm)
+            route.algorithm = default_algorithm;
 
         // Errors
         if (user.getSession()) {
@@ -66,6 +69,9 @@ var casemix = {};
                 errors.add('Mode de comparaison inconnu');
             if (route.date !== null && indexes.length && main_index < 0)
                 errors.add('Date incorrecte');
+            if (algorithms.length &&
+                    !algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
+                errors.add('Algorithme inconnu');
         } else {
             errors.add('Vous n\'êtes pas connecté(e)');
         }
@@ -155,6 +161,7 @@ var casemix = {};
             start_date = json.begin_date;
             end_date = json.end_date;
             algorithms = json.algorithms;
+            default_algorithm = json.default_algorithm;
             structures = json.structures;
         });
     }
@@ -334,8 +341,11 @@ var casemix = {};
         select.innerHTML = '';
         for (let i = 0; i < algorithms.length; i++) {
             let algorithm = algorithms[i];
-            let option = createElement('option', {value: algorithm.name},
-                                       'Algorithme ' + algorithm.title);
+
+            let text ='Algorithme ' + algorithm.title;
+            if (algorithm.name === default_algorithm)
+                text += ' *';
+            let option = createElement('option', {value: algorithm.name}, text);
             select.appendChild(option);
         }
         select.value = algorithm;

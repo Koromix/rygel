@@ -46,14 +46,28 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
         writer.Key("begin_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[0]).ptr);
         writer.Key("end_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[1]).ptr);
 
-        writer.Key("algorithms"); writer.StartArray();
-        for (const OptionDesc &desc: mco_DispenseModeOptions) {
-            writer.StartObject();
-            writer.Key("name"); writer.String(desc.name);
-            writer.Key("title"); writer.String(desc.help);
-            writer.EndObject();
+        // Algorithms
+        {
+            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)drdw_structure_set.dispense_mode];
+
+            writer.Key("algorithms"); writer.StartArray();
+            if (conn->user && conn->user->allow_other_algorithms) {
+                for (const OptionDesc &desc: mco_DispenseModeOptions) {
+                    writer.StartObject();
+                    writer.Key("name"); writer.String(desc.name);
+                    writer.Key("title"); writer.String(desc.help);
+                    writer.EndObject();
+                }
+            } else {
+                writer.StartObject();
+                writer.Key("name"); writer.String(default_desc.name);
+                writer.Key("title"); writer.String(default_desc.help);
+                writer.EndObject();
+            }
+            writer.EndArray();
+
+            writer.Key("default_algorithm"); writer.String(default_desc.name);
         }
-        writer.EndArray();
 
         writer.Key("structures"); writer.StartArray();
         for (const Structure &structure: drdw_structure_set.structures) {
@@ -220,6 +234,7 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
         }
     }
 
+    // FIXME: Explicit reject if non-allowed units are present
     if (diff_dates[0].value && !dates[0].value) {
         LogError("Parameter 'diff' specified but 'dates' is missing");
         return CreateErrorPage(422);
@@ -227,6 +242,11 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
     if (dates[0].value && diff_dates[0].value &&
                dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
         LogError("Parameters 'dates' and 'diff' must not overlap");
+        return CreateErrorPage(422);
+    }
+    if ((!conn->user || !conn->user->allow_other_algorithms) &&
+            dispense_mode != drdw_structure_set.dispense_mode) {
+        LogError("User cannot use non-default dispensation mode");
         return CreateErrorPage(422);
     }
 
@@ -290,7 +310,7 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
                         summary[*ret.first].count += multiplier;
                         counted_rss = true;
                     }
-                    summary[*ret.first].ghs_price_cents += multiplier * mono_pricing.price_cents;
+                    summary[*ret.first].price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
         }
@@ -315,7 +335,7 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
                 writer.Key("duration"); writer.Int(cs.duration);
             }
             writer.Key("stays_count"); writer.Int(cs.count);
-            writer.Key("ghs_price_cents"); writer.Int64(cs.ghs_price_cents);
+            writer.Key("price_cents"); writer.Int64(cs.price_cents);
             writer.EndObject();
         }
         writer.EndArray();

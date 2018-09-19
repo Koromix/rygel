@@ -19,6 +19,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
             User user = {};
             Size copy_from_idx = -1;
             bool changed_allow_default = false;
+            bool changed_allow_other_algorithms = false;
 
             // TODO: Check validity, or maybe the INI parser checks are enough?
             user.name = MakeString(&set.str_alloc, prop.section).ptr;
@@ -46,6 +47,16 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     user.allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
                     user.deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                } else if (prop.key == "Algorithms") {
+                    if (prop.value == "All") {
+                        user.allow_other_algorithms = true;
+                    } else if (prop.value == "Default") {
+                        user.allow_other_algorithms = false;
+                    } else {
+                        LogError("Incorrect value '%1' for Algorithms attribute", prop.value);
+                        valid = false;
+                    }
+                    changed_allow_other_algorithms = true;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -62,6 +73,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                 }
                 if (!user.deny.len) {
                     user.deny = base_user.deny;
+                }
+                if (!changed_allow_other_algorithms) {
+                    user.allow_other_algorithms = base_user.allow_other_algorithms;
                 }
             }
 
@@ -135,31 +149,47 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            Structure structure = {};
-
-            // TODO: Check validity, or maybe the INI parser checks are enough?
-            structure.name = MakeString(&set.str_alloc, prop.section).ptr;
-
-            do {
-                Unit unit = {};
-
-                unit.unit = UnitCode::FromString(prop.key);
-                valid &= unit.unit.IsValid();
-
-                unit.path = MakeString(&set.str_alloc, prop.value).ptr;
-                if (unit.path[0] != ':' || unit.path[1] != ':' || !unit.path[2]) {
-                    LogError("Unit path does not start with '::'");
+            if (!prop.section.len) {
+                if (prop.key == "DispenseMode") {
+                    const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                                          std::end(mco_DispenseModeOptions),
+                                                          [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
+                    if (desc == std::end(mco_DispenseModeOptions)) {
+                        LogError("Unknown dispensation mode '%1'", prop.value);
+                        valid = false;
+                    }
+                    set.dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
-
-                structure.units.Append(unit);
-            } while (ini.NextInSection(&prop));
-
-            if (map.Append(structure.name).second) {
-                set.structures.Append(structure);
             } else {
-                LogError("Duplicate structure '%1'", structure.name);
-                valid = false;
+                Structure structure = {};
+
+                // TODO: Check validity, or maybe the INI parser checks are enough?
+                structure.name = MakeString(&set.str_alloc, prop.section).ptr;
+
+                do {
+                    Unit unit = {};
+
+                    unit.unit = UnitCode::FromString(prop.key);
+                    valid &= unit.unit.IsValid();
+
+                    unit.path = MakeString(&set.str_alloc, prop.value).ptr;
+                    if (unit.path[0] != ':' || unit.path[1] != ':' || !unit.path[2]) {
+                        LogError("Unit path does not start with '::'");
+                        valid = false;
+                    }
+
+                    structure.units.Append(unit);
+                } while (ini.NextInSection(&prop));
+
+                if (map.Append(structure.name).second) {
+                    set.structures.Append(structure);
+                } else {
+                    LogError("Duplicate structure '%1'", structure.name);
+                    valid = false;
+                }
             }
         }
     }
