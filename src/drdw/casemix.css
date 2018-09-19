@@ -15,24 +15,13 @@
     text-decoration: none;
 }
 
-#cm_roots {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+#cm_summary td:nth-child(2n+1):not(:first-child) {
+    border-left: 0;
+    color: #888;
 }
-#cm_roots thead { background: #ccc; }
-#cm_roots tbody { background: #fafafa; }
-#cm_roots th, #cm_roots td {
-    border: 1px solid #a4a4a4;
-    padding: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 64px;
-}
-#cm_roots th {
-    text-align: center;
-    font-weight: bold;
+#cm_summary td:nth-child(2n) {
+    text-align: right;
+    border-right: 0;
 }
 
 @media screen and (min-width: 801px) {

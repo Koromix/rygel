@@ -248,13 +248,12 @@ var route = {
     'page': 1,
     'spec': null,
 
-    'cm_view': 'global',
+    'cm_view': 'summary',
     'period': [null, null],
     'prev_period': [null, null],
     'mode': 'none',
     'units': [],
     'algorithm': null,
-    'cmd': null,
 
     'apply': false
 };
@@ -541,7 +540,7 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
                 var text = createElementNS('svg', 'text',
                                            {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
                                             style: 'cursor: pointer; font-weight: ' + weight,
-                                            click: click_function}, date);
+                                            click: click_function}, short_date);
                 g.appendChild(text);
             }
         }

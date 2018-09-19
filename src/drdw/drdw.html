@@ -32,9 +32,9 @@
                     <li><a data-url="list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
                     <li><a data-url="list.routeToUrl({list: 'procedures'});">Actes</a></li>
 
-                    <li><a class="category" data-url="casemix.routeToUrl({cm_view: 'global'});">Activité</a></li>
-                    <li><a data-url="casemix.routeToUrl({cm_view: 'global'});">Globale</a></li>
-                    <li><a data-url="casemix.routeToUrl({cm_view: 'ghm_root'});">Racine de GHM</a></li>
+                    <li><a class="category" data-url="casemix.routeToUrl({cm_view: 'summary'});">Activité</a></li>
+                    <li><a data-url="casemix.routeToUrl({cm_view: 'summary'});">Synthèse</a></li>
+                    <li><a data-url="casemix.routeToUrl({cm_view: 'table'});">Grille</a></li>
                 </ul>
             </nav>
         </div>
@@ -43,26 +43,6 @@
             <a id="opt_deploy" class="deploy" href="#" onclick="toggleMenu('#opt_menu'); return false;"></a>
             <nav id="opt_menu">
                 <svg id="opt_indexes" class="indexes_line"></svg>
-
-                <label id="opt_ghm_roots">
-                    <select onchange="module.object.route({ghm_root: this.value});"
-                            style="width: 100%;"></select><br/>
-                </label>
-                <label id="opt_diff_indexes">
-                    Comparer
-                    <select onchange="module.object.route({diff: this.value});"
-                            style="width: 12em;"></select>
-                </label>
-                <label id="opt_max_duration">
-                    Durée
-                    <input type="number" onchange="module.object.route();"
-                           value="200" min="0" max="500" step="5"/>
-                </label>
-                <label id="opt_apply_coefficient">
-                    Coefficient prudentiel
-                    <input type="checkbox"
-                           onchange="module.object.route({apply_coefficient: this.checked});"/>
-                </label>
 
                 <label id="opt_search">
                     Recherche
@@ -85,7 +65,6 @@
                     Comparer
                     <select onchange="module.object.route({mode: this.value});">
                         <option value="none">Désactiver</option>
-                        <option value="relative">Relatif</option>
                         <option value="absolute">Absolu</option>
                     </select>
                 </label>
@@ -94,7 +73,28 @@
                     <select onchange="module.object.route({algorithm: this.value});"></select>
                 </label>
 
-                <button id="opt_update" onclick="module.object.route({apply: true});">Mettre à jour</button>
+                <button id="opt_update" onclick="module.object.route({apply: true});"
+                        style="margin-bottom: 1em;">Mettre à jour</button>
+
+                <label id="opt_ghm_roots">
+                    <select onchange="module.object.route({ghm_root: this.value});"
+                            style="width: 100%;"></select><br/>
+                </label>
+                <label id="opt_diff_indexes">
+                    Comparer
+                    <select onchange="module.object.route({diff: this.value});"
+                            style="width: 12em;"></select>
+                </label>
+                <label id="opt_max_duration">
+                    Durée
+                    <input type="number" onchange="module.object.route();"
+                           value="200" min="0" max="500" step="5"/>
+                </label>
+                <label id="opt_apply_coefficient">
+                    Coefficient prudentiel
+                    <input type="checkbox"
+                           onchange="module.object.route({apply_coefficient: this.checked});"/>
+                </label>
             </nav>
             <div id="log"></div>
 
@@ -128,8 +128,8 @@
 
             <div id="cm">
                 <table id="cm_cmds"></table>
-                <table id="cm_roots"></table>
-                <table id="cm_ghs" class="pr_grid"></table>
+                <table id="cm_summary"></table>
+                <table id="cm_table" class="pr_grid"></table>
             </div>
         </main>
     </body>

@@ -140,7 +140,9 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
         int16_t ghs;
         int16_t duration;
         int count;
-        int64_t ghs_price_cents;
+        int mono_count;
+        int64_t price_cents;
+        int deaths;
     };
 
     union SummaryMapKey {
@@ -289,8 +291,12 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
 
                     if (!counted_rss) {
                         summary[*ret.first].count += multiplier;
+                        if (result.stays[result.stays.len - 1].exit.mode == '9') {
+                            summary[*ret.first].deaths += multiplier;
+                        }
                         counted_rss = true;
                     }
+                    summary[*ret.first].mono_count += multiplier;
                     summary[*ret.first].price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
@@ -315,7 +321,9 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
             if (durations) {
                 writer.Key("duration"); writer.Int(cs.duration);
             }
-            writer.Key("stays_count"); writer.Int(cs.count);
+            writer.Key("count"); writer.Int(cs.count);
+            writer.Key("mono_count"); writer.Int(cs.mono_count);
+            writer.Key("deaths"); writer.Int64(cs.deaths);
             writer.Key("price_cents"); writer.Int64(cs.price_cents);
             writer.EndObject();
         }
