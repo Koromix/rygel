@@ -534,11 +534,14 @@ function refreshIndexesLine(el, indexes, main_index, show_table_changes)
                 var text_y = text_above ? 10 : 40;
                 text_above = !text_above;
 
+                let short_date = indexes[i].begin_date;
+                if (short_date.endsWith('-01'))
+                    short_date = short_date.substr(0, short_date.length - 3);
+
                 var text = createElementNS('svg', 'text',
                                            {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
                                             style: 'cursor: pointer; font-weight: ' + weight,
-                                            click: click_function},
-                                           indexes[i].begin_date);
+                                            click: click_function}, date);
                 g.appendChild(text);
             }
         }
