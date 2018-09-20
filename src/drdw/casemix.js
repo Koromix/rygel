@@ -384,25 +384,25 @@ var casemix = {};
                                   ghm_roots[i])
                 ),
                 createElement('td', {class: 'cm_count'},
-                              relativeCountText(stat1.count, total_count)),
+                              percentText(stat1.count / total_count)),
                 createElement('td', {class: 'cm_price'},
-                              relativeCountText(stat1.price_cents, total_price_cents)),
+                              percentText(stat1.price_cents / total_price_cents)),
                 createElement('td', {class: 'cm_count'}, '' + stat1.count),
-                createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents))
+                createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents, false))
             );
             for (let j = 0; j < ShortModes.length; j++) {
                 let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
                 if (stat2) {
                     tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
                     tr.appendChild(createElement('td', {class: 'cm_price'},
-                                                 pricing.priceText(stat2.price_cents)));
+                                                 pricing.priceText(stat2.price_cents, false)));
                 } else {
                     tr.appendChild(createElement('td', {colspan: 2}));
                 }
             }
             tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat1.deaths));
             tr.appendChild(createElement('td', {class: 'cm_price'},
-                                         relativeCountText(stat1.deaths, stat1.count)));
+                                         percentText(stat1.deaths / stat1.count)));
             tbody.appendChild(tr);
         }
 
@@ -411,9 +411,10 @@ var casemix = {};
         old_table.parentNode.replaceChild(table, old_table);
     }
 
-    function relativeCountText(count, total)
+    function percentText(fraction)
     {
-        return (100 * count / total).toFixed(1) + '%';
+        return fraction.toLocaleString('fr-FR',
+                                       {style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1});
     }
 
     function refreshCmds(cmd)

@@ -584,11 +584,15 @@ var pricing = {};
     }
     this.durationText = durationText;
 
-    function priceText(price_cents)
+    function priceText(price_cents, format_cents)
     {
+        if (format_cents === undefined)
+            format_cents = true;
+
         if (price_cents !== undefined) {
-            // The replace() is a bit dirty, but it gets the job done
-            return (price_cents / 100.0).toFixed(2).replace('.', ',');
+            let digits = format_cents ? 2 : 0;
+            return (price_cents / 100.0).toLocaleString('fr-FR',
+                                                        {minimumFractionDigits: digits, maximumFractionDigits: digits});
         } else {
             return '';
         }
