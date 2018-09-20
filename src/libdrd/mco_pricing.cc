@@ -144,34 +144,34 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
         double coefficient = -1;
         switch (mode) {
             case mco_DispenseMode::E: {
-                coefficient = mono_pricing.ghs_cents;
+                coefficient = (double)mono_pricing.ghs_cents;
             } break;
 
             case mco_DispenseMode::Ex: {
-                coefficient = mono_pricing.price_cents;
+                coefficient = (double)mono_pricing.price_cents;
             } break;
 
             case mco_DispenseMode::Ex2: {
                 if (pricing.exb_exh < 0) {
-                    coefficient = mono_pricing.price_cents;
+                    coefficient = (double)mono_pricing.price_cents;
                 } else {
-                    coefficient = mono_pricing.ghs_cents;
+                    coefficient = (double)mono_pricing.ghs_cents;
                 }
             } break;
 
             case mco_DispenseMode::J: {
-                coefficient = std::max(mono_pricing.duration, (int64_t)1);
+                coefficient = std::max((int)mono_pricing.duration, 1);
             } break;
 
             case mco_DispenseMode::ExJ: {
-                coefficient = std::max(mono_pricing.duration, (int64_t)1) * mono_pricing.price_cents;
+                coefficient = std::max((int)mono_pricing.duration, 1) * (double)mono_pricing.price_cents;
             } break;
 
             case mco_DispenseMode::ExJ2: {
                 if (pricing.exb_exh < 0) {
-                    coefficient = std::max(mono_pricing.duration, (int64_t)1) * mono_pricing.price_cents;
+                    coefficient = std::max((int)mono_pricing.duration, 1) * (double)mono_pricing.price_cents;
                 } else {
-                    coefficient = std::max(mono_pricing.duration, (int64_t)1) * mono_pricing.ghs_cents;
+                    coefficient = std::max((int)mono_pricing.duration, 1) * (double)mono_pricing.ghs_cents;
                 }
             } break;
         }
@@ -231,7 +231,8 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
 
                     // DIP rules are special
                     if (pricing.supplement_cents.st.dip) {
-                        double dip_fraction = (mono_pricing->duration + 1) / (pricing.duration + coefficients.len);
+                        double dip_fraction = (double)(mono_pricing->duration + 1) /
+                                                      (pricing.duration + coefficients.len);
                         int64_t mono_dip_cents = (int64_t)round(pricing.supplement_cents.st.dip * dip_fraction);
                         mono_pricing->total_cents += mono_dip_cents - mono_pricing->supplement_cents.st.dip;
                         mono_pricing->supplement_cents.st.dip = mono_dip_cents;

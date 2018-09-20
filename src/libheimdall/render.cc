@@ -119,8 +119,10 @@ static bool InitImGui()
         if (font_data != std::end(packer_assets)) {
             ImFontConfig font_config;
             font_config.FontDataOwnedByAtlas = false;
-            io->Fonts->AddFontFromMemoryTTF((void *)font_data->data.ptr, font_data->data.len, 16,
-                                            &font_config);
+
+            DebugAssert(font_data->data.len <= INT_MAX);
+            io->Fonts->AddFontFromMemoryTTF((void *)font_data->data.ptr, (int)font_data->data.len,
+                                            16, &font_config);
         }
 
         uint8_t *pixels;

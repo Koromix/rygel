@@ -51,7 +51,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                 for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
                     Size child_idx = ghm_node.u.test.children_idx + i;
 
-                    ctx.cmd = i;
+                    ctx.cmd = (int8_t)i;
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1",
                                                           FmtArg(ctx.cmd).Pad0(-2)).ptr;
                     if (UNLIKELY(!ProcessGhmNode(ctx, child_idx)))

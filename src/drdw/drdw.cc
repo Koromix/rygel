@@ -2,9 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "drdw.hh"
-#include "../packer/packer.hh"
-
 #include "../../lib/libsodium/src/libsodium/include/sodium.h"
 
 #ifndef _WIN32
@@ -14,6 +11,9 @@
     #include <sys/stat.h>
     #include <unistd.h>
 #endif
+
+#include "drdw.hh"
+#include "../packer/packer.hh"
 
 struct DescSet {
     HeapArray<PackerAsset> descs;

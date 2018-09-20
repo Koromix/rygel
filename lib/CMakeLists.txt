@@ -6,6 +6,9 @@ if((CMAKE_COMPILER_IS_GNUCC AND CMAKE_C_COMPILER_VERSION VERSION_GREATER 7) OR
         CMAKE_COMPILER_IS_CLANG)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstringop-overflow=0")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wstringop-overflow=0")
+elseif(MSVC)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W0")
 endif()
 
 set(LIBMICROHTTPD_SRC libmicrohttpd/src/microhttpd/base64.c

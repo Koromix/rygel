@@ -1835,7 +1835,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
     int ambu_priority = 0;
     int16_t ambu_type = -1;
 
-    const auto AddToCounter = [&](int stay_idx, int type, int count) {
+    const auto AddToCounter = [&](Size stay_idx, int type, int count) {
         out_counters->values[type] += count;
         if (out_mono_counters.ptr) {
             out_mono_counters[stay_idx].values[type] += count;

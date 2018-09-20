@@ -4,7 +4,6 @@
 
 #pragma once
 
-#define __STDC_FORMAT_MACROS
 #include <algorithm>
 #include <atomic>
 #include <errno.h>
@@ -2781,7 +2780,7 @@ bool ParseDec(Span<const char> str, T *out_value, int flags = DEFAULT_PARSE_FLAG
             goto overflow;
         value = new_value;
     }
-    if (UNLIKELY(value > std::numeric_limits<T>::max()))
+    if (UNLIKELY(value > (uint64_t)std::numeric_limits<T>::max()))
         goto overflow;
     value = ((value ^ neg) - neg);
 

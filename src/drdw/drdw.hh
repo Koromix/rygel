@@ -4,13 +4,11 @@
 
 #pragma once
 
+#include "../../lib/libmicrohttpd/src/include/microhttpd.h"
+
 #include "../libdrd/libdrd.hh"
 #include "config.hh"
 #include "json.hh"
-
-PUSH_NO_WARNINGS()
-#include "../../lib/libmicrohttpd/src/include/microhttpd.h"
-POP_NO_WARNINGS()
 
 struct ConnectionInfo {
     MHD_Connection *conn;

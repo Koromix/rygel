@@ -831,7 +831,7 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> 
     return LoadAtih(st, ParseRsaLine, out_tests);
 }
 
-bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> */*out_tests*/)
+bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> *)
 {
     Size lines = 0;
     Size errors = 0;
