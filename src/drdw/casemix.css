@@ -16,12 +16,15 @@
 }
 
 #cm_summary th { min-width: 90px; }
-#cm_summary td { min-width: 0; }
-#cm_summary th:first-child, #cm_summary td:first-child { min-width: 50px; }
-#cm_summary .cm_count {
+#cm_summary td {
+    min-width: 0;
     text-align: right;
-    border-right: 0;
 }
+#cm_summary th:first-child, #cm_summary td:first-child {
+    min-width: 50px;
+    text-align: left;
+}
+#cm_summary .cm_count { border-right: 0; }
 #cm_summary .cm_price {
     border-left: 0;
     color: #888;
