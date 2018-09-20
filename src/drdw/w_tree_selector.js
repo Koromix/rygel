@@ -159,6 +159,8 @@ function TreeSelector(prefix)
             tab.classList.add('active');
         tab.list = list;
         tabbar.appendChild(tab);
+
+        depth = 0;
     };
 
     this.beginGroup = function(name) {

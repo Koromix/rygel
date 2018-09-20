@@ -282,8 +282,6 @@ var casemix = {};
                 builder.addOption(parts[parts.length - 1], unit.unit,
                                   {selected: units.includes(unit.unit.toString())});
             }
-            for (let j = 0; j < prev_groups.length; j++)
-                builder.endGroup();
         }
 
         builder.changeHandler = function() {
