@@ -622,7 +622,7 @@ var list = {};
         } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
             url = pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
             cls = 'ghm';
-        } else if (str.match(/noeud [0-9]+/)) {
+        } else if (str.match(/[Nn]oeud [0-9]+/)) {
             url = tree.routeToUrl() + '#n' + str.substr(6);
         } else {
             return str;
@@ -638,7 +638,7 @@ var list = {};
     {
         var elements = [];
         for (;;) {
-            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|noeud [0-9]+)/);
+            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
             if (!m)
                 break;
 

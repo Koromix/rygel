@@ -192,7 +192,7 @@ var tree = {};
                 if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                     if (node.children_idx != parent_next_indices[0]) {
                         let pseudo_idx = '' + node_idx + '-2';
-                        let pseudo_text = 'Saut vers noeud ' + node.children_idx;
+                        let pseudo_text = 'Saut noeud ' + node.children_idx;
                         var goto_li = createNodeLi(pseudo_idx, pseudo_text, null);
                         ul.appendChild(goto_li);
                     }

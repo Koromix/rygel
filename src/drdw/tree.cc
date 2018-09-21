@@ -179,7 +179,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 20: {
-            out_node->text = Fmt(ctx.str_alloc, "Saut vers noeud %1",
+            out_node->text = Fmt(ctx.str_alloc, "Saut noeud %1",
                                  ghm_node.u.test.children_idx).ptr;
         } break;
 
