@@ -4,27 +4,24 @@
 
 #include "drdw.hh"
 
-static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
+static bool CheckUnitAgainstUser(const User &user, const Unit &unit)
 {
-    if (!user)
-        return false;
-
     const auto CheckNeedle = [&](const char *needle) {
         return !!strstr(unit.path, needle);
     };
 
-    if (user->allow_default) {
-        bool deny = std::any_of(user->deny.begin(), user->deny.end(), CheckNeedle);
+    if (user.allow_default) {
+        bool deny = std::any_of(user.deny.begin(), user.deny.end(), CheckNeedle);
         if (deny) {
-            bool allow = std::any_of(user->allow.begin(), user->allow.end(), CheckNeedle);
+            bool allow = std::any_of(user.allow.begin(), user.allow.end(), CheckNeedle);
             if (!allow)
                 return false;
         }
     } else {
-        bool allow = std::any_of(user->allow.begin(), user->allow.end(), CheckNeedle);
+        bool allow = std::any_of(user.allow.begin(), user.allow.end(), CheckNeedle);
         if (!allow)
             return false;
-        bool deny = std::any_of(user->deny.begin(), user->deny.end(), CheckNeedle);
+        bool deny = std::any_of(user.deny.begin(), user.deny.end(), CheckNeedle);
         if (deny)
             return false;
     }
@@ -32,22 +29,22 @@ static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
     return true;
 }
 
-static bool CheckDispenseModeAgainstUser(const User *user, mco_DispenseMode dispense_mode)
+static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode dispense_mode)
 {
     return dispense_mode == drdw_structure_set.dispense_mode ||
-           (user && (user->dispense_modes & (1 << (int)dispense_mode)));
+           (user.dispense_modes & (1 << (int)dispense_mode));
 }
 
 Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
-    if (!drdw_stay_set.stays.len)
+    if (!drdw_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404);
 
     // TODO: Cache in session object (also neeeded in ProduceClassify)?
     HashSet<UnitCode> allowed_units;
     for (const Structure &structure: drdw_structure_set.structures) {
         for (const Unit &unit: structure.units) {
-            if (CheckUnitAgainstUser(conn->user, unit))
+            if (CheckUnitAgainstUser(*conn->user, unit))
                 allowed_units.Append(unit.unit);
         }
     }
@@ -67,7 +64,7 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
 
             writer.Key("algorithms"); writer.StartArray();
             for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
-                if (CheckDispenseModeAgainstUser(conn->user, (mco_DispenseMode)i)) {
+                if (CheckDispenseModeAgainstUser(*conn->user, (mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
 
                     writer.StartObject();
@@ -135,7 +132,7 @@ invalid:
 
 Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
-    if (!drdw_stay_set.stays.len)
+    if (!drdw_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404);
 
     struct CellSummary {
@@ -159,12 +156,10 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
     };
 
     HashSet<UnitCode> allowed_units;
-    if (conn->user) {
-        for (const Structure &structure: drdw_structure_set.structures) {
-            for (const Unit &unit: structure.units) {
-                if (CheckUnitAgainstUser(conn->user, unit))
-                    allowed_units.Append(unit.unit);
-            }
+    for (const Structure &structure: drdw_structure_set.structures) {
+        for (const Unit &unit: structure.units) {
+            if (CheckUnitAgainstUser(*conn->user, unit))
+                allowed_units.Append(unit.unit);
         }
     }
 
@@ -232,7 +227,7 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
         LogError("Parameters 'dates' and 'diff' must not overlap");
         return CreateErrorPage(422);
     }
-    if (!CheckDispenseModeAgainstUser(conn->user, dispense_mode)) {
+    if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(422);
     }
