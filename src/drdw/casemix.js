@@ -226,7 +226,7 @@ var casemix = {};
             };
 
             picker = builder.getWidget();
-            let old_picker = _('#opt_periods > div:first-of-type');
+            let old_picker = _('#opt_periods > div:last-of-type');
             cloneAttributes(old_picker, picker);
             picker.classList.add('ppik');
             old_picker.parentNode.replaceChild(picker, old_picker);
@@ -242,7 +242,7 @@ var casemix = {};
             };
 
             prev_picker = builder.getWidget();
-            let old_picker = _('#opt_periods > div:last-of-type');
+            let old_picker = _('#opt_periods > div:first-of-type');
             cloneAttributes(old_picker, prev_picker);
             prev_picker.classList.add('ppik');
             old_picker.parentNode.replaceChild(prev_picker, old_picker);
