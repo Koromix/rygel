@@ -101,7 +101,7 @@
     }
     .tsel_list {
         height: 100%;
-        max-height: 300px;
+        max-height: 500px;
     }
 
     .tsel_validate { display: none; }
