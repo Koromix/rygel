@@ -32,6 +32,12 @@ static bool CheckUnitAgainstUser(const User *user, const Unit &unit)
     return true;
 }
 
+static bool CheckDispenseModeAgainstUser(const User *user, mco_DispenseMode dispense_mode)
+{
+    return dispense_mode == drdw_structure_set.dispense_mode ||
+           (user && (user->dispense_modes & (1 << (int)dispense_mode)));
+}
+
 Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
     if (!drdw_stay_set.stays.len)
@@ -60,18 +66,15 @@ Response ProduceCaseMix(const ConnectionInfo *conn, const char *, CompressionTyp
             const OptionDesc &default_desc = mco_DispenseModeOptions[(int)drdw_structure_set.dispense_mode];
 
             writer.Key("algorithms"); writer.StartArray();
-            if (conn->user && conn->user->allow_other_algorithms) {
-                for (const OptionDesc &desc: mco_DispenseModeOptions) {
+            for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
+                if (CheckDispenseModeAgainstUser(conn->user, (mco_DispenseMode)i)) {
+                    const OptionDesc &desc = mco_DispenseModeOptions[i];
+
                     writer.StartObject();
                     writer.Key("name"); writer.String(desc.name);
                     writer.Key("title"); writer.String(desc.help);
                     writer.EndObject();
                 }
-            } else {
-                writer.StartObject();
-                writer.Key("name"); writer.String(default_desc.name);
-                writer.Key("title"); writer.String(default_desc.help);
-                writer.EndObject();
             }
             writer.EndArray();
 
@@ -227,9 +230,8 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
         LogError("Parameters 'dates' and 'diff' must not overlap");
         return CreateErrorPage(422);
     }
-    if ((!conn->user || !conn->user->allow_other_algorithms) &&
-            dispense_mode != drdw_structure_set.dispense_mode) {
-        LogError("User cannot use non-default dispensation mode");
+    if (!CheckDispenseModeAgainstUser(conn->user, dispense_mode)) {
+        LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(422);
     }
 

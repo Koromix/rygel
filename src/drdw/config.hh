@@ -15,7 +15,7 @@ struct User {
     HeapArray<const char *> allow;
     HeapArray<const char *> deny;
 
-    bool allow_other_algorithms;
+    unsigned int dispense_modes;
 
     HASH_TABLE_HANDLER(User, name);
 };

@@ -19,7 +19,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
             User user = {};
             Size copy_from_idx = -1;
             bool changed_allow_default = false;
-            bool changed_allow_other_algorithms = false;
+            bool changed_dispense_modes = false;
 
             // TODO: Check validity, or maybe the INI parser checks are enough?
             user.name = MakeString(&set.str_alloc, prop.section).ptr;
@@ -47,16 +47,31 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     user.allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
                     user.deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
-                } else if (prop.key == "Algorithms") {
+                } else if (prop.key == "DispenseModes") {
                     if (prop.value == "All") {
-                        user.allow_other_algorithms = true;
+                        user.dispense_modes = UINT_MAX;
                     } else if (prop.value == "Default") {
-                        user.allow_other_algorithms = false;
+                        user.dispense_modes = 0;
+                    } else if (prop.value.len) {
+                        while (prop.value.len) {
+                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
+                            if (part.len) {
+                                const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                                                      std::end(mco_DispenseModeOptions),
+                                                                      [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
+                                if (desc == std::end(mco_DispenseModeOptions)) {
+                                    LogError("Unknown dispensation mode '%1'", part);
+                                    valid = false;
+                                }
+
+                                user.dispense_modes |= 1 << (int)(desc - mco_DispenseModeOptions);
+                            }
+                        }
                     } else {
-                        LogError("Incorrect value '%1' for Algorithms attribute", prop.value);
+                        LogError("Incorrect value '%1' for DispenseModes attribute", prop.value);
                         valid = false;
                     }
-                    changed_allow_other_algorithms = true;
+                    changed_dispense_modes = true;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -74,8 +89,8 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                 if (!user.deny.len) {
                     user.deny = base_user.deny;
                 }
-                if (!changed_allow_other_algorithms) {
-                    user.allow_other_algorithms = base_user.allow_other_algorithms;
+                if (!changed_dispense_modes) {
+                    user.dispense_modes = base_user.dispense_modes;
                 }
             }
 
