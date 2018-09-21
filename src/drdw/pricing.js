@@ -469,7 +469,7 @@ var pricing = {};
 
         for (var duration = 0; duration < max_duration; duration++) {
             if (duration % 10 == 0) {
-                let text = '' + duration + ' - ' + durationText(duration + 9);
+                let text = '' + duration + ' - ' + durationText(Math.min(max_duration - 1, duration + 9));
                 var tr = createElement('tr', {},
                     createElement('th', {class: 'repeat', colspan: ghs.length}, text)
                 );
