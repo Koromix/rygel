@@ -152,6 +152,17 @@ function buildUrl(url, query_values)
 }
 
 // ------------------------------------------------------------------------
+// Random
+// ------------------------------------------------------------------------
+
+function generateRandomInt(min, max)
+{
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
+}
+
+// ------------------------------------------------------------------------
 // JSON
 // ------------------------------------------------------------------------
 
@@ -209,25 +220,6 @@ function downloadJson(method, url, proceed, fail)
 downloadJson.errors = [];
 downloadJson.queue = new Set();
 downloadJson.busy = 0;
-
-// ------------------------------------------------------------------------
-// Misc
-// ------------------------------------------------------------------------
-
-function generateRandomInt(min, max)
-{
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
-function refreshErrors(errors)
-{
-    var log = _('#log');
-
-    log.innerHTML = errors.join('<br/>');
-    log.classList.toggle('hide', !errors.length);
-}
 
 // ------------------------------------------------------------------------
 // Navigation
@@ -449,7 +441,7 @@ if (document.readyState === 'complete') {
 }
 
 // ------------------------------------------------------------------------
-// Indexes
+// Resources
 // ------------------------------------------------------------------------
 
 function getIndexes()
@@ -475,100 +467,6 @@ function getIndexes()
 }
 getIndexes.indexes = [];
 
-function refreshIndexesLine(el, indexes, main_index, show_table_changes)
-{
-    if (show_table_changes === undefined)
-        show_table_changes = true;
-
-    var old_g = el.querySelector('g');
-    if (!old_g) {
-        el.appendChild(createElementNS('svg', 'line',
-                                       {x1: '2%', y1: 20, x2: '98%', y2: 20, style: 'stroke: #888; stroke-width: 1;'}));
-        el.appendChild(createElementNS('svg', 'g'));
-
-        old_g = el.querySelector('g');
-    }
-
-    var g = createElementNS('svg', 'g', {});
-
-    if (indexes.length >= 2) {
-        var first_date = new Date(indexes[0].begin_date);
-        var last_date = new Date(indexes[indexes.length - 1].begin_date);
-        var max_delta = last_date - first_date;
-
-        var text_above = true;
-        for (var i = 0; i < indexes.length; i++) {
-            var date = new Date(indexes[i].begin_date);
-
-            var x = (6.0 + (date - first_date) / max_delta * 88.0).toFixed(1) + '%';
-            var radius = indexes[i].changed_prices ? 5 : 4;
-            if (i == main_index) {
-                radius++;
-                var color = '#ed6d0a';
-                var weight = 'bold';
-            } else if (indexes[i].changed_prices) {
-                var color = '#000';
-                var weight = 'normal';
-            } else if (show_table_changes) {
-                var color = '#888';
-                var weight = 'normal';
-            } else {
-                continue;
-            }
-
-            var click_function = (function() {
-                var index = i;
-                return function(e) { module.object.route({date: indexes[index].begin_date}); };
-            })();
-
-            var node = createElementNS('svg', 'circle',
-                                       {cx: x, cy: 20, r: radius, fill: color,
-                                        style: 'cursor: pointer;',
-                                        click: click_function},
-                createElementNS('svg', 'title', {}, indexes[i].begin_date)
-            );
-            g.appendChild(node);
-
-            if (indexes[i].changed_prices) {
-                var text_y = text_above ? 10 : 40;
-                text_above = !text_above;
-
-                let short_date = indexes[i].begin_date;
-                if (short_date.endsWith('-01'))
-                    short_date = short_date.substr(0, short_date.length - 3);
-
-                var text = createElementNS('svg', 'text',
-                                           {x: x, y: text_y, 'text-anchor': 'middle', fill: color,
-                                            style: 'cursor: pointer; font-weight: ' + weight,
-                                            click: click_function}, short_date);
-                g.appendChild(text);
-            }
-        }
-    }
-
-    old_g.parentNode.replaceChild(g, old_g);
-}
-
-function moveIndex(relative_index)
-{
-    let indexes = getIndexes.indexes;
-
-    let index = indexes.findIndex(function(index) { return index.begin_date === route.date; });
-    if (index < 0)
-        index = indexes.length - 1;
-
-    let new_index = index + relative_index;
-    if (new_index < 0 || new_index >= indexes.length)
-        return;
-
-    module.object.route({date: indexes[new_index].begin_date});
-}
-this.moveIndex = moveIndex;
-
-// ------------------------------------------------------------------------
-// Concepts
-// ------------------------------------------------------------------------
-
 function getConcepts(name)
 {
     var sets = getConcepts.sets;
@@ -593,3 +491,35 @@ getConcepts.sets = {
     'cim10': {key: 'diagnosis', concepts: [], map: {}},
     'ghm_roots': {key: 'ghm_root', concepts: [], map: {}}
 };
+
+// ------------------------------------------------------------------------
+// View
+// ------------------------------------------------------------------------
+
+function refreshIndexesLine(el, indexes, main_index)
+{
+    let builder = new VersionLine;
+
+    for (let i = 0; i < indexes.length; i++) {
+        let index = indexes[i];
+        builder.addVersion(index.begin_date, index.begin_date, index.changed_prices);
+    }
+    if (main_index >= 0)
+        builder.setValue(indexes[main_index].begin_date);
+
+    builder.changeHandler = function() {
+        module.object.route({date: this.object.getValue()});
+    };
+
+    let svg = builder.getWidget();
+    cloneAttributes(el, svg);
+    el.parentNode.replaceChild(svg, el);
+}
+
+function refreshErrors(errors)
+{
+    var log = _('#log');
+
+    log.innerHTML = errors.join('<br/>');
+    log.classList.toggle('hide', !errors.length);
+}

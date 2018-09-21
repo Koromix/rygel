@@ -22,6 +22,8 @@ set(DRDW_RESOURCES drdw.html
                    w_period_picker.js
                    w_tree_selector.css
                    w_tree_selector.js
+                   w_version_line.css
+                   w_version_line.js
                    images/favicon.ico
                    images/logo.png
                    ../../lib/chartjs/chart.min.js)
