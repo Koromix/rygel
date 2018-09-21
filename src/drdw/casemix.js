@@ -346,64 +346,66 @@ var casemix = {};
         let thead = table.querySelector('thead');
         let tbody = table.querySelector('tbody');
 
-        // Header
-        {
-            let tr = createElement('tr', {},
-                createElement('th', {}, 'GHM'),
-                createElement('th', {colspan: 2}, 'Part'),
-                createElement('th', {colspan: 2}, 'Total')
-            );
-            for (let i = 0; i < ShortModes.length; i++) {
-                let th = createElement('th', {colspan: 2}, ShortModes[i]);
-                tr.appendChild(th);
-            }
-            tr.appendChild(createElement('th', {colspan: 2}, 'Décès'));
-            thead.appendChild(tr);
-        }
-
-        let [stats1, stats_map1] = aggregate(mix_rows, ['ghm_root']);
-        let [stats2, stats_map2] = aggregate(mix_rows, ['ghm_root', 'short_mode']);
-        let ghm_roots = stats1
-            .sort(function(a, b) { return b.count - a.count; })
-            .map(function(stat) { return stat.ghm_root; });
-
-        // FIXME: Ugly: precompute
-        let total_count = 0;
-        let total_price_cents = 0;
-        for (let i = 0; i < mix_rows.length; i++) {
-            total_count += mix_rows[i].count;
-            total_price_cents += mix_rows[i].price_cents;
-        }
-
-        // Data
-        for (let i = 0; i < ghm_roots.length; i++) {
-            let stat1 = findAggregate(stats_map1, ghm_roots[i]);
-            let tr = createElement('tr', {},
-                createElement('td', {},
-                    createElement('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
-                                  ghm_roots[i])
-                ),
-                createElement('td', {class: 'cm_count'},
-                              percentText(stat1.count / total_count)),
-                createElement('td', {class: 'cm_price'},
-                              percentText(stat1.price_cents / total_price_cents)),
-                createElement('td', {class: 'cm_count'}, '' + stat1.count),
-                createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents, false))
-            );
-            for (let j = 0; j < ShortModes.length; j++) {
-                let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
-                if (stat2) {
-                    tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
-                    tr.appendChild(createElement('td', {class: 'cm_price'},
-                                                 pricing.priceText(stat2.price_cents, false)));
-                } else {
-                    tr.appendChild(createElement('td', {colspan: 2}));
+        if (mix_rows.length) {
+            // Header
+            {
+                let tr = createElement('tr', {},
+                    createElement('th', {}, 'GHM'),
+                    createElement('th', {colspan: 2}, 'Part'),
+                    createElement('th', {colspan: 2}, 'Total')
+                );
+                for (let i = 0; i < ShortModes.length; i++) {
+                    let th = createElement('th', {colspan: 2}, ShortModes[i]);
+                    tr.appendChild(th);
                 }
+                tr.appendChild(createElement('th', {colspan: 2}, 'Décès'));
+                thead.appendChild(tr);
             }
-            tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat1.deaths));
-            tr.appendChild(createElement('td', {class: 'cm_price'},
-                                         percentText(stat1.deaths / stat1.count)));
-            tbody.appendChild(tr);
+
+            let [stats1, stats_map1] = aggregate(mix_rows, ['ghm_root']);
+            let [stats2, stats_map2] = aggregate(mix_rows, ['ghm_root', 'short_mode']);
+            let ghm_roots = stats1
+                .sort(function(a, b) { return b.count - a.count; })
+                .map(function(stat) { return stat.ghm_root; });
+
+            // FIXME: Ugly: precompute
+            let total_count = 0;
+            let total_price_cents = 0;
+            for (let i = 0; i < mix_rows.length; i++) {
+                total_count += mix_rows[i].count;
+                total_price_cents += mix_rows[i].price_cents;
+            }
+
+            // Data
+            for (let i = 0; i < ghm_roots.length; i++) {
+                let stat1 = findAggregate(stats_map1, ghm_roots[i]);
+                let tr = createElement('tr', {},
+                    createElement('td', {},
+                        createElement('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
+                                      ghm_roots[i])
+                    ),
+                    createElement('td', {class: 'cm_count'},
+                                  percentText(stat1.count / total_count)),
+                    createElement('td', {class: 'cm_price'},
+                                  percentText(stat1.price_cents / total_price_cents)),
+                    createElement('td', {class: 'cm_count'}, '' + stat1.count),
+                    createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents, false))
+                );
+                for (let j = 0; j < ShortModes.length; j++) {
+                    let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
+                    if (stat2) {
+                        tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
+                        tr.appendChild(createElement('td', {class: 'cm_price'},
+                                                     pricing.priceText(stat2.price_cents, false)));
+                    } else {
+                        tr.appendChild(createElement('td', {colspan: 2}));
+                    }
+                }
+                tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat1.deaths));
+                tr.appendChild(createElement('td', {class: 'cm_price'},
+                                             percentText(stat1.deaths / stat1.count)));
+                tbody.appendChild(tr);
+            }
         }
 
         let old_table = _('#cm_summary');
