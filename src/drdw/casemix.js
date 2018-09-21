@@ -88,10 +88,10 @@ var casemix = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
+        if (!downloadJson.busy)
+            downloadJson.errors = [];
         if (user.getSession()) {
             if (!downloadJson.busy) {
-                downloadJson.errors = [];
-
                 switch (route.cm_view) {
                     case 'summary': {
                         refreshSummary();
