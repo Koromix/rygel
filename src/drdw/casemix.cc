@@ -183,15 +183,17 @@ Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionTy
 
         Span<const char> units_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "units");
         while (units_str.len) {
-            Span<const char> unit_str = SplitStrAny(units_str, " ,+", &units_str);
+            Span<const char> part = SplitStrAny(units_str, " ,+", &units_str);
 
-            UnitCode unit;
-            unit.number = ParseDec<int16_t>(unit_str).first;
-            if (!unit.IsValid())
-                return CreateErrorPage(422);
+            if (part.len) {
+                UnitCode unit;
+                unit.number = ParseDec<int16_t>(part).first;
+                if (!unit.IsValid())
+                    return CreateErrorPage(422);
 
-            if (allowed_units.Find(unit)) {
-                units.Append(unit);
+                if (allowed_units.Find(unit)) {
+                    units.Append(unit);
+                }
             }
         }
 
