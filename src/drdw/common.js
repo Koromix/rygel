@@ -321,17 +321,13 @@ function go(new_url, mark_history, delay)
     if (!route_url_parts || url_parts.href !== route_url_parts.href) {
         if (route_url_parts)
             scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-
-        if (mark_history) {
+        if (mark_history)
             window.history.pushState(null, null, url_parts.href);
-        } else {
-            window.history.replaceState(null, null, url_parts.href);
-        }
     }
 
     // Update user stuff
-    user.runSessionBox();
     {
+        user.runSessionBox();
         let session = user.getSession();
 
         let menu_item;
@@ -353,28 +349,48 @@ function go(new_url, mark_history, delay)
     }
 
     // Find relevant module and run
-    let new_module_name = app_url.split('/')[0];
-    let new_module = route_modules[new_module_name];
-    if (new_module !== module)
-        addClass(__('main > div'), 'hide');
-    addClass(__('#opt_menu > *'), 'hide');
-    module = new_module;
-    if (module !== undefined)
-        module.func(route, app_url, url_parts.params, url_parts.hash);
+    {
+        let new_module_name = app_url.split('/')[0];
+        let new_module = route_modules[new_module_name];
+
+        if (new_module !== module)
+            addClass(__('main > div'), 'hide');
+        addClass(__('#opt_menu > *'), 'hide');
+
+        module = new_module;
+        if (module)
+            module.func(route, app_url, url_parts.params, url_parts.hash);
+    }
 
     // Update URL to reflect real state (module may have set default values, etc.)
-    let real_url = module.object.routeToUrl({}) + (url_parts.hash ? ('#' + url_parts.hash) : '');
-    window.history.replaceState(null, null, real_url);
-    route_url_parts = parseUrl(real_url);
-    route_url = real_url.substr(BaseUrl.length);
+    {
+        let real_url = null;
+        if (module)
+            real_url = module.object.routeToUrl({});
+        if (real_url) {
+            if (url_parts.hash)
+                real_url += '#' + url_parts.hash;
+
+            window.history.replaceState(null, null, real_url);
+            route_url_parts = parseUrl(real_url);
+            route_url = real_url.substr(BaseUrl.length);
+        } else {
+            route_url_parts = url_parts;
+            route_url = app_url;
+        }
+    }
 
     // Update side menu state and links
     var menu_anchors = __('#side_menu li a');
     for (var i = 0; i < menu_anchors.length; i++) {
         let anchor = menu_anchors[i];
 
-        if (anchor.dataset.url)
-            anchor.href = eval(anchor.dataset.url);
+        if (anchor.dataset.url) {
+            let url = eval(anchor.dataset.url);
+            anchor.classList.toggle('hide', !url);
+            if (url)
+                anchor.href = url;
+        }
 
         let active = (route_url_parts.href.startsWith(anchor.href) &&
                       !anchor.classList.contains('category'));
