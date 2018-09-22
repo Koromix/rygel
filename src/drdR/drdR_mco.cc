@@ -601,7 +601,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         while (stays_offset < stays.nrow) {
             Size stays_end = std::min(stays.nrow, stays_offset + task_size);
             while (stays_end < stays.nrow &&
-                   mco_StaysAreCompatible(stays.bill_id[stays_end - 1], stays.bill_id[stays_end])) {
+                   !mco_SplitTest(stays.bill_id[stays_end - 1], stays.bill_id[stays_end])) {
                 stays_end++;
             }
 

@@ -2020,7 +2020,7 @@ static Size Classify(const mco_TableSet &table_set,
 
         // Prepare
         errors.main_error = 0;
-        result.stays = mco_Split(mono_stays, &mono_stays);
+        result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
         result.duration = prepared_set.prep.duration;
@@ -2071,7 +2071,7 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
 
         // Prepare
         errors.main_error = 0;
-        result.stays = mco_Split(mono_stays, &mono_stays);
+        result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
         result.duration = prepared_set.prep.duration;
@@ -2201,7 +2201,7 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         Size results_offset = out_results->len;
         Span<const mco_Stay> task_stays = mono_stays[0];
         for (Size i = 1; i < mono_stays.len; i++) {
-            if (!mco_StaysAreCompatible(mono_stays[i - 1].bill_id, mono_stays[i].bill_id)) {
+            if (mco_SplitTest(mono_stays[i - 1].bill_id, mono_stays[i].bill_id)) {
                 if (results_count % task_size == 0) {
                     AddClassifierTask(task_stays, results_offset);
                     results_offset += task_size;

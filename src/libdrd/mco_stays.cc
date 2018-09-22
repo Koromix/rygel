@@ -970,7 +970,7 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
     {
         Span<mco_Stay> stays2 = set.stays;
         while (stays2.len) {
-            Span<mco_Stay> sub_stays = mco_Split(stays2, &stays2);
+            Span<mco_Stay> sub_stays = mco_Split(stays2, 1, &stays2);
 
             const FichCompData *fc = fichcomps_map.FindValue(sub_stays[0].admin_id, nullptr);
             while (fc && fc < fichcomps.end() && fc->admin_id == sub_stays[0].admin_id) {

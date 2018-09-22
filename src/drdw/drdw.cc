@@ -796,12 +796,12 @@ Options:
         if (drdw_stay_set.stays.len) {
             Span<const mco_Stay> mono_stays = drdw_stay_set.stays;
 
-            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, &mono_stays);
+            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
             drdw_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
             drdw_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
 
             while (mono_stays.len) {
-                sub_stays = mco_Split(mono_stays, &mono_stays);
+                sub_stays = mco_Split(mono_stays, 1, &mono_stays);
                 drdw_stay_set_dates[0] = std::min(drdw_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
                 drdw_stay_set_dates[1] = std::max(drdw_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
             }

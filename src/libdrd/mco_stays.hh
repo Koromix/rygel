@@ -93,20 +93,19 @@ struct mco_Stay {
 };
 
 // Some paths (e.g. drdR) need to test for this before building Stay
-static inline bool mco_StaysAreCompatible(int32_t bill_id1, int32_t bill_id2)
+static inline bool mco_SplitTest(int32_t bill_id1, int32_t bill_id2)
 {
-    return bill_id1 && bill_id1 == bill_id2;
+    return !bill_id1 || bill_id1 != bill_id2;
 }
 
 template <typename T>
-Span<T> mco_Split(Span<T> mono_stays, Span<T> *out_remainder = nullptr)
+Span<T> mco_Split(Span<T> mono_stays, Size count, Span<T> *out_remainder = nullptr)
 {
     DebugAssert(mono_stays.len > 0);
 
-    Size agg_len = 1;
-    while (agg_len < mono_stays.len &&
-           mco_StaysAreCompatible(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id)) {
-        agg_len++;
+    Size agg_len = 0;
+    while (count && ++agg_len < mono_stays.len) {
+        count -= mco_SplitTest(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id);
     }
 
     if (out_remainder) {
