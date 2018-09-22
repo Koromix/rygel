@@ -117,6 +117,9 @@ var casemix = {};
 
     function routeToUrl(args)
     {
+        if (!user.getSession())
+            return null;
+
         const KeepKeys = [
             'period',
             'prev_period',
