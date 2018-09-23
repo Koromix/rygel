@@ -23,12 +23,16 @@ var user = {};
 
     function runSession()
     {
-        refreshSession();
+        if (ShowUser) {
+            refreshSession();
 
-        if (!downloadJson.busy) {
-            updateSessionBox();
-            updateSessionMenu();
+            if (!downloadJson.busy) {
+                updateSessionBox();
+                updateSessionMenu();
+            }
         }
+
+        toggleClass(__('#side_session_box, #side_session_menu'), 'hide', !ShowUser);
     }
     this.runSession = runSession;
 
