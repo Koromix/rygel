@@ -21,14 +21,16 @@ var user = {};
     }
     this.runLogin = runLogin;
 
-    function runSessionBox()
+    function runSession()
     {
         refreshSession();
 
-        if (!downloadJson.busy)
+        if (!downloadJson.busy) {
             updateSessionBox();
+            updateSessionMenu();
+        }
     }
-    this.runSessionBox = runSessionBox;
+    this.runSession = runSession;
 
     function routeToUrl(args)
     {
@@ -110,6 +112,26 @@ var user = {};
         let old_div = document.querySelector('#side_session_box');
         cloneAttributes(old_div, div);
         old_div.parentNode.replaceChild(div, old_div);
+    }
+
+    function updateSessionMenu()
+    {
+        let menu_item;
+        if (session) {
+            menu_item = createElement('li', {},
+                createElement('a', {href: '#',
+                                    click: function(e) { user.disconnect(); e.preventDefault(); }},
+                              'Se déconnecter (' + session.username + ')')
+            );
+        } else {
+            menu_item = createElement('li', {},
+                createElement('a', {href: user.routeToUrl()}, 'Se connecter')
+            );
+        }
+
+        let old_menu_item = _('#side_session_menu');
+        cloneAttributes(old_menu_item, menu_item);
+        old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
     }
 
     function getSession() { return session; }

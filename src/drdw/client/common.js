@@ -326,27 +326,7 @@ function go(new_url, mark_history, delay)
     }
 
     // Update user stuff
-    {
-        user.runSessionBox();
-        let session = user.getSession();
-
-        let menu_item;
-        if (session) {
-            menu_item = createElement('li', {},
-                createElement('a', {href: '#',
-                                    click: function(e) { user.disconnect(); e.preventDefault(); }},
-                              'Se déconnecter (' + session.username + ')')
-            );
-        } else {
-            menu_item = createElement('li', {},
-                createElement('a', {href: user.routeToUrl()}, 'Se connecter')
-            );
-        }
-
-        let old_menu_item = _('#side_session_menu');
-        cloneAttributes(old_menu_item, menu_item);
-        old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
-    }
+    user.runSession();
 
     // Find relevant module and run
     {
