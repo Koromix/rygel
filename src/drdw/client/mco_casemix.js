@@ -53,8 +53,9 @@ var mco_casemix = {};
         if (!route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        if (main_index >= 0 && !indexes[main_index].init)
-            mco_pricing.updatePriceMap(main_index);
+        let pricings_map = null;
+        if (main_index >= 0)
+            pricings_map = mco_pricing.updatePriceMap(main_index);
 
         // Errors
         if (user.getSession()) {
@@ -102,8 +103,7 @@ var mco_casemix = {};
                     } break;
                     case 'table': {
                         if (main_index >= 0)
-                            refreshTable(mco_pricing.pricings_map[route.ghm_root],
-                                         main_index, route.ghm_root);
+                            refreshTable(pricings_map[route.ghm_root], main_index, route.ghm_root);
                     } break;
                 }
 

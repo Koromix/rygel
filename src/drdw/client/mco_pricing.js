@@ -7,8 +7,8 @@ var mco_pricing = {};
     // Cache
     var ghm_roots = [];
     var ghm_roots_map = {};
+    var available_dates = new Set;
     var pricings_map = {};
-    this.pricings_map = pricings_map;
 
     var chart = null;
 
@@ -41,9 +41,9 @@ var mco_pricing = {};
             route.ghm_root = ghm_roots[0].ghm_root;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
-        if (main_index >= 0 && !indexes[main_index].init)
+        if (main_index >= 0)
             updatePriceMap(main_index);
-        if (diff_index >= 0 && !indexes[diff_index].init)
+        if (diff_index >= 0)
             updatePriceMap(diff_index);
 
         // Errors
@@ -133,34 +133,37 @@ var mco_pricing = {};
     function updatePriceMap(index)
     {
         let indexes = mco_common.updateIndexes();
-        if (indexes[index].init)
-            return;
-
         let begin_date = indexes[index].begin_date;
-        let url = buildUrl(BaseUrl + 'api/mco_ghm_ghs.json', {date: begin_date});
-        downloadJson('GET', url, function(json) {
-            for (var i = 0; i < json.length; i++) {
-                var ghm_root = json[i].ghm_root;
-                var ghm_ghs = json[i];
 
-                var pricing_info = pricings_map[ghm_root];
-                if (pricing_info === undefined) {
-                    pricing_info = Array.apply(null, Array(indexes.length));
-                    pricings_map[ghm_root] = pricing_info;
+        if (!available_dates.has(begin_date)) {
+            let url = buildUrl(BaseUrl + 'api/mco_ghm_ghs.json', {date: begin_date});
+            downloadJson('GET', url, function(json) {
+                for (var i = 0; i < json.length; i++) {
+                    var ghm_root = json[i].ghm_root;
+                    var ghm_ghs = json[i];
+
+                    var pricing_info = pricings_map[ghm_root];
+                    if (pricing_info === undefined) {
+                        pricing_info = Array.apply(null, Array(indexes.length));
+                        pricings_map[ghm_root] = pricing_info;
+                    }
+
+                    if (pricing_info[index] === undefined) {
+                        pricing_info[index] = {
+                            'ghm_root': ghm_ghs.ghm_root,
+                            'ghs': [],
+                            'ghs_map': {}
+                        };
+                    }
+                    pricing_info[index].ghs.push(ghm_ghs);
+                    pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
                 }
 
-                if (pricing_info[index] === undefined) {
-                    pricing_info[index] = {
-                        'ghm_root': ghm_ghs.ghm_root,
-                        'ghs': [],
-                        'ghs_map': {}
-                    };
-                }
-                pricing_info[index].ghs.push(ghm_ghs);
-                pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
-            }
-            indexes[index].init = true;
-        });
+                available_dates.add(begin_date);
+            });
+        }
+
+        return pricings_map;
     }
     this.updatePriceMap = updatePriceMap;
 
