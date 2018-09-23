@@ -7,6 +7,8 @@ if (EMSCRIPTEN)
 endif()
 
 set(DRDW_RESOURCES client/drdw.html
+                   # Keep config.js first
+                   client/config.js
                    client/common.css
                    client/common.js
                    client/mco_common.js
