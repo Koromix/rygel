@@ -1491,6 +1491,10 @@ void Async::StealAndRunTasks()
 // Streams
 // ------------------------------------------------------------------------
 
+StreamReader stdin_st(stdin);
+StreamWriter stdout_st(stdout);
+StreamWriter stderr_st(stderr);
+
 #ifdef MZ_VERSION
 struct MinizInflateContext {
     tinfl_decompressor inflator;

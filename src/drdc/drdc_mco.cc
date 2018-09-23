@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libdrd/libdrd.hh"
-#include "drdc_mco_dump.hh"
 
 static void PrintSummary(const mco_Pricing &summary)
 {
@@ -458,9 +457,9 @@ Dump options:
     const mco_TableSet *table_set = mco_GetMainTableSet();
     if (!table_set || !table_set->indexes.len)
         return false;
-    mco_DumpTableSetHeaders(*table_set);
+    mco_DumpTableSetHeaders(*table_set, &stdout_st);
     if (dump) {
-        mco_DumpTableSetContent(*table_set);
+        mco_DumpTableSetContent(*table_set, &stdout_st);
     }
 
     return true;
@@ -744,7 +743,7 @@ bool RunMcoShow(Span<const char *> arguments)
             if (diag.IsValid()) {
                 const mco_DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (diag_info) {
-                    mco_DumpDiagnosisTable(*diag_info, index->exclusions);
+                    mco_DumpDiagnosisTable(*diag_info, index->exclusions, &stdout_st);
                     continue;
                 }
             }
@@ -757,7 +756,7 @@ bool RunMcoShow(Span<const char *> arguments)
             if (proc.IsValid()) {
                 Span<const mco_ProcedureInfo> proc_info = index->FindProcedure(proc);
                 if (proc_info.len) {
-                    mco_DumpProcedureTable(proc_info);
+                    mco_DumpProcedureTable(proc_info, &stdout_st);
                     continue;
                 }
             }
@@ -770,11 +769,11 @@ bool RunMcoShow(Span<const char *> arguments)
             if (ghm_root.IsValid()) {
                 const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
-                    mco_DumpGhmRootTable(*ghm_root_info);
+                    mco_DumpGhmRootTable(*ghm_root_info, &stdout_st);
                     PrintLn();
 
                     Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root);
-                    mco_DumpGhmToGhsTable(compatible_ghs);
+                    mco_DumpGhmToGhsTable(compatible_ghs, &stdout_st);
 
                     continue;
                 }
@@ -791,18 +790,18 @@ bool RunMcoShow(Span<const char *> arguments)
                     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs) {
                         if (ghm_to_ghs_info.Ghs(Sector::Public) == ghs ||
                                 ghm_to_ghs_info.Ghs(Sector::Private) == ghs) {
-                            mco_DumpGhmToGhsTable(ghm_to_ghs_info);
+                            mco_DumpGhmToGhsTable(ghm_to_ghs_info, &stdout_st);
                         }
                     }
                     PrintLn();
 
                     if (pub_price_info) {
                         PrintLn("      Public:");
-                        mco_DumpGhsPriceTable(*pub_price_info);
+                        mco_DumpGhsPriceTable(*pub_price_info, &stdout_st);
                     }
                     if (priv_price_info) {
                         PrintLn("      Private:");
-                        mco_DumpGhsPriceTable(*priv_price_info);
+                        mco_DumpGhsPriceTable(*priv_price_info, &stdout_st);
                     }
 
                     continue;

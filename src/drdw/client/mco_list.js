@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var list = {};
+var mco_list = {};
 (function() {
     const PageLen = 200;
 
@@ -18,8 +18,8 @@ var list = {};
 
     const Lists = {
         'ghm_roots': {
-            'table': 'ghm_ghs',
-            'concepts': 'ghm_roots',
+            'table': 'mco_ghm_ghs',
+            'concepts': 'mco_ghm_roots',
 
             'groups': [
                 {type: 'ghm_roots', name: 'Racines',
@@ -92,7 +92,8 @@ var list = {};
         },
 
         'ghm_ghs': {
-            'concepts': 'ghm_roots',
+            'table': 'mco_ghm_ghs',
+            'concepts': 'mco_ghm_roots',
 
             'columns': [
                 {func: function(ghm_ghs, ghm_roots_map) {
@@ -138,6 +139,7 @@ var list = {};
         },
 
         'diagnoses': {
+            'table': 'mco_diagnoses',
             'concepts': 'cim10',
 
             'columns': [
@@ -158,6 +160,7 @@ var list = {};
         },
 
         'procedures': {
+            'table': 'mco_procedures',
             'concepts': 'ccam',
 
             'columns': [
@@ -273,7 +276,7 @@ var list = {};
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
-        let url_parts = [buildModuleUrl('list'), new_route.list, new_route.date, new_route.spec];
+        let url_parts = [buildModuleUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -301,7 +304,7 @@ var list = {};
 
     function updateList(list_name, index, spec, group_info, search)
     {
-        let url = buildUrl(BaseUrl + 'api/' + (Lists[list_name].table || list_name) + '.json',
+        let url = buildUrl(BaseUrl + 'api/' + Lists[list_name].table + '.json',
                            {date: indexes[index].begin_date, spec: spec});
         let list = list_cache[list_name];
 
@@ -620,10 +623,10 @@ var list = {};
         } else if (str[0] === 'D') {
             url = routeToUrl({list: 'diagnoses', spec: str});
         } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            url = pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
+            url = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
             cls = 'ghm';
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
-            url = tree.routeToUrl() + '#n' + str.substr(6);
+            url = mco_tree.routeToUrl() + '#n' + str.substr(6);
         } else {
             return str;
         }
@@ -651,6 +654,6 @@ var list = {};
         return elements;
     }
     this.addSpecLinks = addSpecLinks;
-}).call(list);
+}).call(mco_list);
 
-registerUrl('list', list, list.runList);
+registerUrl('mco_list', mco_list, mco_list.runList);

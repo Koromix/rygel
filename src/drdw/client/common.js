@@ -465,7 +465,7 @@ function getIndexes()
     var indexes = getIndexes.indexes;
 
     if (!indexes.length) {
-        let url = BaseUrl + 'api/indexes.json';
+        let url = BaseUrl + 'api/mco_indexes.json';
         downloadJson('GET', url, function(json) {
             if (json.length > 0) {
                 indexes = json;
@@ -505,7 +505,7 @@ function getConcepts(name)
 getConcepts.sets = {
     'ccam': {key: 'procedure', concepts: [], map: {}},
     'cim10': {key: 'diagnosis', concepts: [], map: {}},
-    'ghm_roots': {key: 'ghm_root', concepts: [], map: {}}
+    'mco_ghm_roots': {key: 'ghm_root', concepts: [], map: {}}
 };
 
 // ------------------------------------------------------------------------

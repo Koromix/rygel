@@ -2,14 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "drdw.hh"
+#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
+
 #include <shared_mutex>
 #ifdef _WIN32
     #include <ws2tcpip.h>
 #else
     #include <arpa/inet.h>
 #endif
-#include "../../lib/libsodium/src/libsodium/include/sodium.h"
+
+#include "drdw.hh"
 
 static const int64_t PruneDelay = 20 * 60 * 1000;
 static const int64_t IdleSessionDelay = 4 * 3600 * 1000;
@@ -109,6 +111,26 @@ const User *CheckSessionUser(MHD_Connection *conn)
     return session ? session->user : nullptr;
 }
 
+Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+{
+    Response response = {};
+
+    response.code = 200;
+    response.response = BuildJson(compression_type,
+                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        writer.StartObject();
+        if (conn->user) {
+            writer.Key("username"); writer.String(conn->user->name);
+        }
+        writer.EndObject();
+
+        return true;
+    });
+    response.flags = (int)Response::Flag::DisableETag;
+
+    return response;
+}
+
 Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
     char address[65];
@@ -186,26 +208,6 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionT
 
     Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
     MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
-
-    return response;
-}
-
-Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
-{
-    Response response = {};
-
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        writer.StartObject();
-        if (conn->user) {
-            writer.Key("username"); writer.String(conn->user->name);
-        }
-        writer.EndObject();
-
-        return true;
-    });
-    response.flags = (int)Response::Flag::DisableETag;
 
     return response;
 }

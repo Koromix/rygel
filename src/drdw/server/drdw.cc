@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../lib/libsodium/src/libsodium/include/sodium.h"
+#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
 
 #ifndef _WIN32
     #include <dlfcn.h>
@@ -13,7 +13,8 @@
 #endif
 
 #include "drdw.hh"
-#include "../packer/packer.hh"
+#include "drdw_mco.hh"
+#include "../../packer/packer.hh"
 
 struct DescSet {
     HeapArray<PackerAsset> descs;
@@ -86,47 +87,6 @@ extern const Span<const PackerAsset> packer_assets;
 static HashTable<Span<const char>, Route> routes;
 static LinkedAllocator routes_alloc;
 static char etag[64];
-
-const mco_TableIndex *GetIndexFromQueryString(const ConnectionInfo *conn, const char *redirect_url,
-                                              Response *out_response)
-{
-    Date date = {};
-    {
-        const char *date_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "date");
-        if (date_str) {
-            date = Date::FromString(date_str);
-        } else {
-            LogError("Missing 'date' parameter");
-        }
-        if (!date.value) {
-            *out_response = CreateErrorPage(422);
-            return nullptr;
-        }
-    }
-
-    const mco_TableIndex *index = drdw_table_set->FindIndex(date);
-    if (!index) {
-        LogError("No table index available on '%1'", date);
-        *out_response = CreateErrorPage(404);
-        return nullptr;
-    }
-
-    // Redirect to the canonical URL for this version, to improve client-side caching
-    if (redirect_url && date != index->limit_dates[0]) {
-        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-
-        {
-            char url_buf[64];
-            Fmt(url_buf, "%1?date=%2", redirect_url, index->limit_dates[0]);
-            MHD_add_response_header(response, "Location", url_buf);
-        }
-
-        *out_response = {303, response};
-        return nullptr;
-    }
-
-    return index;
-}
 
 static const char *GetMimeType(Span<const char> path)
 {
@@ -402,41 +362,44 @@ static void InitRoutes()
         routes.Set({url, "GET", Route::Matching::Exact, asset, GetMimeType(asset.name)});
     }
 
-    // Special cases
-    {
-        Route html = *routes.Find("/static/drdw.html");
-        routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Set({"/login", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-        routes.Remove("/static/drdw.html");
-
-        Route *favicon = routes.Find("/static/favicon.ico");
-        if (favicon) {
-            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
-                        favicon->u.st.asset, favicon->u.st.mime_type});
-            routes.Remove("/static/favicon.ico");
-        }
-    }
-
-    // API
-    routes.Set({"/api/indexes.json", "GET", Route::Matching::Exact, ProduceIndexes});
-    routes.Set({"/api/casemix.json", "GET", Route::Matching::Exact, ProduceCaseMix});
-    routes.Set({"/api/classify.json", "GET", Route::Matching::Exact, ProduceClassify});
-    routes.Set({"/api/tree.json", "GET", Route::Matching::Exact, ProduceClassifierTree});
-    routes.Set({"/api/diagnoses.json", "GET", Route::Matching::Exact, ProduceDiagnoses});
-    routes.Set({"/api/procedures.json", "GET", Route::Matching::Exact, ProduceProcedures});
-    routes.Set({"/api/ghm_ghs.json", "GET", Route::Matching::Exact, ProduceGhmGhs});
-    // FIXME: Improve caching behavior for user-dependent routes
-    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
-    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
-    routes.Set({"/api/session.json", "GET", Route::Matching::Exact, ProduceSession});
+    // Concepts
     for (const PackerAsset &desc: desc_set.descs) {
         const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
         routes.Set({url, "GET", Route::Matching::Exact, desc, GetMimeType(url)});
     }
+
+    // Root
+    Route html = *routes.Find("/static/drdw.html");
+    routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
+
+    // User
+    routes.Set({"/login", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/api/session.json", "GET", Route::Matching::Exact, ProduceSession});
+    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
+    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
+
+    // MCO
+    routes.Set({"/mco_casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/mco_list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/api/mco_casemix.json", "GET", Route::Matching::Exact, ProduceMcoCaseMix});
+    routes.Set({"/api/mco_classify.json", "GET", Route::Matching::Exact, ProduceMcoClassify});
+    routes.Set({"/api/mco_indexes.json", "GET", Route::Matching::Exact, ProduceMcoIndexes});
+    routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
+    routes.Set({"/api/mco_procedures.json", "GET", Route::Matching::Exact, ProduceMcoProcedures});
+    routes.Set({"/api/mco_ghm_ghs.json", "GET", Route::Matching::Exact, ProduceMcoGhmGhs});
+    routes.Set({"/api/mco_tree.json", "GET", Route::Matching::Exact, ProduceMcoTree});
+
+    // Special cases
+    {
+        Route *favicon = routes.Find("/static/favicon.ico");
+        if (favicon) {
+            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
+                        favicon->u.st.asset, favicon->u.st.mime_type});
+        }
+    }
+    routes.Remove("/static/drdw.html");
 
     // We can use a global ETag because everything is in the binary
     {

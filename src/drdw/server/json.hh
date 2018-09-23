@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../../common/kutil.hh"
 
 PUSH_NO_WARNINGS()
-#include "../../lib/rapidjson/writer.h"
-#include "../../lib/rapidjson/error/en.h"
+#include "../../../lib/rapidjson/writer.h"
+#include "../../../lib/rapidjson/error/en.h"
 POP_NO_WARNINGS()
 
 class JsonStreamWriter {

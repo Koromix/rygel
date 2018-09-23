@@ -2233,6 +2233,11 @@ private:
 
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer);
 
+// For convenience, don't close them
+extern StreamReader stdin_st;
+extern StreamWriter stdout_st;
+extern StreamWriter stderr_st;
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------

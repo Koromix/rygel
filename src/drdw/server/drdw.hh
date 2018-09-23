@@ -4,9 +4,9 @@
 
 #pragma once
 
-#include "../../lib/libmicrohttpd/src/include/microhttpd.h"
+#include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 
-#include "../libdrd/libdrd.hh"
+#include "../../libdrd/libdrd.hh"
 #include "config.hh"
 #include "json.hh"
 
@@ -40,21 +40,9 @@ extern StructureSet drdw_structure_set;
 extern mco_StaySet drdw_stay_set;
 extern Date drdw_stay_set_dates[2];
 
-const mco_TableIndex *GetIndexFromQueryString(const ConnectionInfo *conn, const char *redirect_url,
-                                              Response *out_response);
-
 Response CreateErrorPage(int code);
 MHD_Response *BuildJson(CompressionType compression_type,
                         std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
-
-Response ProduceIndexes(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceClassifierTree(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceDiagnoses(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceProcedures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceGhmGhs(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-
-Response ProduceCaseMix(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type);
 
 const User *CheckSessionUser(MHD_Connection *conn);
 Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);

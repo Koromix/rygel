@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var casemix = {};
+var mco_casemix = {};
 (function() {
     var indexes = [];
     var ghm_roots = [];
@@ -47,14 +47,14 @@ var casemix = {};
             route.apply = false;
         }
         indexes = getIndexes();
-        [ghm_roots, ghm_roots_map] = pricing.updateGhmRoots();
+        [ghm_roots, ghm_roots_map] = mco_pricing.updateGhmRoots();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         if (main_index >= 0 && !indexes[main_index].init)
-            pricing.updatePriceMap(main_index);
+            mco_pricing.updatePriceMap(main_index);
 
         // Errors
         if (user.getSession()) {
@@ -99,7 +99,7 @@ var casemix = {};
                     case 'table': {
                         // refreshCmds(route.cmd);
                         if (main_index >= 0)
-                            refreshTable(pricing.pricings_map[route.ghm_root],
+                            refreshTable(mco_pricing.pricings_map[route.ghm_root],
                                          main_index, route.ghm_root);
                     } break;
                 }
@@ -140,7 +140,7 @@ var casemix = {};
             short_route[k] = new_route[k] || null;
         }
 
-        let url_parts = [buildModuleUrl('casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
+        let url_parts = [buildModuleUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -157,7 +157,7 @@ var casemix = {};
 
     function updateCaseMix()
     {
-        let url = buildUrl(BaseUrl + 'api/casemix.json', {key: user.getUrlKey()});
+        let url = buildUrl(BaseUrl + 'api/mco_casemix.json', {key: user.getUrlKey()});
         downloadJson('GET', url, function(json) {
             start_date = json.begin_date;
             end_date = json.end_date;
@@ -177,7 +177,7 @@ var casemix = {};
             durations: 1,
             key: user.getUrlKey()
         };
-        let url = buildUrl(BaseUrl + 'api/classify.json', params);
+        let url = buildUrl(BaseUrl + 'api/mco_classify.json', params);
 
         return url;
     }
@@ -392,14 +392,14 @@ var casemix = {};
                     createElement('td', {class: 'cm_price'},
                                   percentText(stat1.price_cents / total_price_cents)),
                     createElement('td', {class: 'cm_count'}, '' + stat1.count),
-                    createElement('td', {class: 'cm_price'}, pricing.priceText(stat1.price_cents, false))
+                    createElement('td', {class: 'cm_price'}, mco_pricing.priceText(stat1.price_cents, false))
                 );
                 for (let j = 0; j < ShortModes.length; j++) {
                     let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
                     if (stat2) {
                         tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
                         tr.appendChild(createElement('td', {class: 'cm_price'},
-                                                     pricing.priceText(stat2.price_cents, false)));
+                                                     mco_pricing.priceText(stat2.price_cents, false)));
                     } else {
                         tr.appendChild(createElement('td', {colspan: 2}));
                     }
@@ -484,9 +484,9 @@ var casemix = {};
                 max_price_cents = Math.max(max_price_cents, stat.price_cents);
             }
 
-            table = pricing.createTable(pricing_info, main_index, max_duration, false, true,
-                                        function(col, duration) {
-                if (!pricing.testDuration(col, duration))
+            table = mco_pricing.createTable(pricing_info, main_index, max_duration, false, true,
+                                            function(col, duration) {
+                if (!mco_pricing.testDuration(col, duration))
                     return null;
 
                 let stat = findAggregate(stats_map, col.ghs, duration);
@@ -499,7 +499,7 @@ var casemix = {};
                         createElement('div', {style: 'float: left; width: calc(50% - 2px); text-align: left; padding: 1px;'},
                                       '' + stat.count),
                         createElement('div', {style: 'float: right; width: calc(50% - 2px); text-align: right; padding: 1px;'},
-                                      pricing.priceText(stat.price_cents))
+                                      mco_pricing.priceText(stat.price_cents))
                     ];
                 } else {
                     style = 'filter: opacity(50%);';
@@ -575,6 +575,6 @@ var casemix = {};
 
         return ptr;
     }
-}).call(casemix);
+}).call(mco_casemix);
 
-registerUrl('casemix', casemix, casemix.runCasemix);
+registerUrl('mco_casemix', mco_casemix, mco_casemix.runCasemix);

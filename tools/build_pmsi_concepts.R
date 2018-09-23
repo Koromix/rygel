@@ -11,7 +11,7 @@ library(jsonlite)
 library(optparse)
 library(enc) # UTF-8 support in R on Windows is completely fucked up
 
-load_ghm_roots <- function(root) {
+load_mco_ghm_roots <- function(root) {
     files <- list.files(root, pattern = 'regroup.*\\.xlsx?', full.names = TRUE)
     if (!length(files))
         stop('Cannot find any GHM catalog file')
@@ -78,12 +78,12 @@ args <- parse_args(opt_parser, positional_arguments = 1)
 if (is.null(args$options$destination))
     stop('Missing destination directory');
 
-ghm_roots <- load_ghm_roots(args$args[1])
+mco_ghm_roots <- load_mco_ghm_roots(args$args[1])
 ccam <- load_ccam(str_interp('${args$args[1]}/ccam.csv'))
 cim10 <- load_cim10(str_interp('${args$args[1]}/cim10.csv'))
 
-write_lines_enc(toJSON(ghm_roots, pretty = 4),
-                path = str_interp('${args$options$destination}/ghm_roots.json'))
+write_lines_enc(toJSON(mco_ghm_roots, pretty = 4),
+                path = str_interp('${args$options$destination}/mco_ghm_roots.json'))
 write_lines_enc(toJSON(ccam, pretty = 4),
                 path = str_interp('${args$options$destination}/ccam.json'))
 write_lines_enc(toJSON(cim10, pretty = 4),

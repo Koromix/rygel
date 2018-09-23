@@ -14,3 +14,4 @@
 #include "mco_mapper.hh"
 #include "mco_pricing.hh"
 #include "mco_init.hh"
+#include "mco_dump.hh"

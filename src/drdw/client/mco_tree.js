@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var tree = {};
+var mco_tree = {};
 (function() {
     // Cache
     var indexes = [];
@@ -50,7 +50,7 @@ var tree = {};
     {
         let new_route = buildRoute(args);
 
-        let url_parts = [buildModuleUrl('tree'), new_route.date];
+        let url_parts = [buildModuleUrl('mco_tree'), new_route.date];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -67,7 +67,7 @@ var tree = {};
 
     function updateTree(index)
     {
-        let url = buildUrl(BaseUrl + 'api/tree.json', {date: indexes[index].begin_date});
+        let url = buildUrl(BaseUrl + 'api/mco_tree.json', {date: indexes[index].begin_date});
         if (url === tree_url)
             return;
 
@@ -215,7 +215,7 @@ var tree = {};
 
     function createNodeLi(idx, text, chain_str)
     {
-        var content = list.addSpecLinks(text);
+        var content = mco_list.addSpecLinks(text);
 
         if (chain_str) {
             var li = createElement('li', {id: 'n' + idx, class: 'parent'},
@@ -250,6 +250,6 @@ var tree = {};
         }
         e.preventDefault();
     };
-}).call(tree);
+}).call(mco_tree);
 
-registerUrl('tree', tree, tree.runTree);
+registerUrl('mco_tree', mco_tree, mco_tree.runTree);

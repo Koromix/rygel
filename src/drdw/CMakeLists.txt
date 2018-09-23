@@ -6,35 +6,35 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(DRDW_RESOURCES drdw.html
-                   common.css
-                   common.js
-                   casemix.css
-                   casemix.js
-                   list.css
-                   list.js
-                   pricing.css
-                   pricing.js
-                   tree.css
-                   tree.js
-                   user.js
-                   w_period_picker.css
-                   w_period_picker.js
-                   w_tree_selector.css
-                   w_tree_selector.js
-                   w_version_line.css
-                   w_version_line.js
-                   images/favicon.ico
-                   images/logo.png
+set(DRDW_RESOURCES client/drdw.html
+                   client/common.css
+                   client/common.js
+                   client/mco_casemix.css
+                   client/mco_casemix.js
+                   client/mco_list.css
+                   client/mco_list.js
+                   client/mco_pricing.css
+                   client/mco_pricing.js
+                   client/mco_tree.css
+                   client/mco_tree.js
+                   client/user.js
+                   client/wt_period_picker.css
+                   client/wt_period_picker.js
+                   client/wt_tree_selector.css
+                   client/wt_tree_selector.js
+                   client/wt_version_line.css
+                   client/wt_version_line.js
+                   client/images/favicon.ico
+                   client/images/logo.png
                    ../../lib/chartjs/chart.min.js)
-set(DRDW_SRC drdw.cc
-             drdw.hh
-             casemix.cc
-             config.cc
-             config.hh
-             list.cc
-             tree.cc
-             user.cc)
+set(DRDW_SRC server/drdw.cc
+             server/drdw.hh
+             server/config.cc
+             server/config.hh
+             server/json.hh
+             server/user.cc
+             server/drdw_mco.cc
+             server/drdw_mco.hh)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
