@@ -9,3 +9,7 @@
 
 .vlin_node { cursor: pointer; }
 .vlin_text { cursor: pointer; }
+
+@media screen and (max-width: 800px) {
+    .vlin_text { font-size: 0.85em; }
+}
