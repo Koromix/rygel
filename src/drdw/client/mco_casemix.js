@@ -97,7 +97,6 @@ var mco_casemix = {};
                         refreshSummary();
                     } break;
                     case 'table': {
-                        // refreshCmds(route.cmd);
                         if (main_index >= 0)
                             refreshTable(mco_pricing.pricings_map[route.ghm_root],
                                          main_index, route.ghm_root);
@@ -420,49 +419,6 @@ var mco_casemix = {};
     {
         return fraction.toLocaleString('fr-FR',
                                        {style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1});
-    }
-
-    function refreshCmds(cmd)
-    {
-        // FIXME: Avoid hard-coded CMD list
-        const ValidCmds = ['01', '02', '03', '04', '05', '06', '07',
-                           '08', '09', '10', '11', '12', '13', '14',
-                           '15', '16', '17', '18', '19', '20', '21',
-                           '22', '23', '25', '26', '27', '28', '90'];
-
-        let table = createElement('table', {},
-            createElement('tbody', {},
-                createElement('tr')
-            )
-        );
-        let tr = table.querySelector('tr');
-
-        let density_max = 0;
-        for (let i = 0; i < mix_rows.length; i++)
-            density_max += Math.abs(mix_rows[i].price_cents);
-
-        let [stats, stats_map] = aggregate(mix_rows, ['cmd']);
-        for (let i = 0; i < ValidCmds.length; i++) {
-            let cmd_num = parseInt(ValidCmds[i], 10);
-            let stat = findAggregate(stats_map, cmd_num);
-
-            if (stat) {
-                let alpha = Math.abs(stat.price_cents) / density_max;
-                let style = 'background: rgba(' + (stat.count > 0 ? '0, 255, 0, ' : '255, 0, 0, ') + alpha + ');';
-
-                let td = createElement('td', {style: style},
-                    createElement('a', {href: routeToUrl({cm_view: 'cmd', cmd: cmd_num})}, ValidCmds[i])
-                );
-                tr.appendChild(td);
-            } else {
-                let td = createElement('td', {}, ValidCmds[i]);
-                tr.appendChild(td);
-            }
-        }
-
-        let old_table = _('#cm_cmds');
-        cloneAttributes(old_table, table);
-        old_table.parentNode.replaceChild(table, old_table);
     }
 
     function refreshTable(pricing_info, main_index, ghm_root)

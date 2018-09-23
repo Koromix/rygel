@@ -2,19 +2,6 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#cm_cmds {
-    width: 100%;
-    border-collapse: collapse;
-}
-#cm_cmds td {
-    text-align: center;
-    color: #ccc;
-}
-#cm_cmds a {
-    color: black;
-    text-decoration: none;
-}
-
 #cm_summary th { min-width: 90px; }
 #cm_summary td {
     min-width: 0;
