@@ -12,8 +12,8 @@ var mco_list = {};
             'concept_set': 'mco_ghm_roots',
 
             'groups': [
-                {type: 'ghm_roots', name: 'Racines',
-                 func: function(ghm_ghs1, ghm_ghs2) {
+                {type: 'cmd', name: 'Catégories majeures de diagnostic',
+                 func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
                     if (ghm_ghs1.ghm_root !== ghm_ghs2.ghm_root) {
                         return (ghm_ghs1.ghm_root < ghm_ghs2.ghm_root) ? -1 : 1;
                     } else {
@@ -53,6 +53,16 @@ var mco_list = {};
             'columns': [
                 {func: function(ghm_ghs, ghm_roots_map, group) {
                     switch (group) {
+                        case 'cmd': {
+                            let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
+                            if (ghm_root_info && ghm_root_info.cmd) {
+                                return 'CMD ' + (ghm_root_info.cmd < 10 ? '0' : '') + ghm_root_info.cmd +
+                                                ' - ' + ghm_root_info.cmd_desc;
+                            } else {
+                                return 'CMD inconnue ??';
+                            }
+                        } break;
+
                         case 'da': {
                             let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
                             if (ghm_root_info && ghm_root_info.da) {
@@ -70,8 +80,6 @@ var mco_list = {};
                                 return 'GA inconnu ??';
                             }
                         } break;
-
-                        case 'ghm_roots': { return null; } break;
                     }
                 }},
                 {header: 'Racine de GHM', func: function(ghm_ghs, ghm_roots_map) {
