@@ -62,8 +62,12 @@ var mco_casemix = {};
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_url === new_classify_url)
                 errors.add('Aucune unité sélectionnée');
-            if (route.cm_view == 'table' && !route.ghm_root)
-                errors.add('Aucune racine de GHM sélectionnée');
+            if (route.cm_view == 'table') {
+                if (!route.ghm_root)
+                    errors.add('Aucune racine de GHM sélectionnée');
+                if (mix_ghm_roots.size && !mix_ghm_roots.has(route.ghm_root))
+                    errors.add('Aucun séjour dans cette racine');
+            }
             if (!(['none', 'absolute'].includes(route.mode)))
                 errors.add('Mode de comparaison inconnu');
             if (route.date !== null && indexes.length && main_index < 0)
