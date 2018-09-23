@@ -862,8 +862,12 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
         } break;
 
         case 38: {
-            out_node->text = Fmt(ctx.str_alloc, "GNN ≥ %1 et ≤ %2",
-                                 ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
+            if (ghm_node.u.test.params[0] == ghm_node.u.test.params[1]) {
+                out_node->text = Fmt(ctx.str_alloc, "GNN = %1", ghm_node.u.test.params[0]).ptr;
+            } else {
+                out_node->text = Fmt(ctx.str_alloc, "GNN %1 à %2",
+                                     ghm_node.u.test.params[0], ghm_node.u.test.params[1]).ptr;
+            }
         } break;
 
         case 39: {
@@ -878,7 +882,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
 
         case 42: {
             uint16_t param = MakeUInt16(ghm_node.u.test.params[0], ghm_node.u.test.params[1]);
-            out_node->text = Fmt(ctx.str_alloc, "Poids (NN) > 0 et < %1", param).ptr;
+            out_node->text = Fmt(ctx.str_alloc, "Poids NN 1 à %1", param).ptr;
         } break;
 
         case 43: {
