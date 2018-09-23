@@ -5,7 +5,6 @@
 var mco_pricing = {};
 (function() {
     // Cache
-    var indexes = [];
     var ghm_roots = [];
     var ghm_roots_map = {};
     var pricings_map = {};
@@ -34,7 +33,7 @@ var mco_pricing = {};
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
-        indexes = getIndexes();
+        let indexes = mco_list.updateIndexes();
         updateGhmRoots();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
@@ -58,9 +57,9 @@ var mco_pricing = {};
             if (!ghm_roots_map[route.ghm_root]) {
                 errors.add('Racine de GHM inconnue');
             } else {
-                if (!checkIndexGhmRoot(main_index, route.ghm_root))
+                if (!checkIndexGhmRoot(indexes, main_index, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
-                if (!checkIndexGhmRoot(diff_index, route.ghm_root))
+                if (!checkIndexGhmRoot(indexes, diff_index, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
@@ -68,8 +67,8 @@ var mco_pricing = {};
         // Refresh settings
         removeClass(__('#opt_indexes, #opt_ghm_roots, #opt_diff_indexes, #opt_max_duration, #opt_apply_coefficient'), 'hide');
         refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
-        refreshGhmRoots(main_index, route.ghm_root);
-        refreshIndexesDiff(diff_index, route.ghm_root);
+        refreshGhmRoots(indexes, main_index, route.ghm_root);
+        refreshIndexesDiff(indexes, diff_index, route.ghm_root);
         _('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
@@ -124,7 +123,7 @@ var mco_pricing = {};
     this.route = route;
 
     // A true result actually means maybe (if we haven't download the relevant index yet)
-    function checkIndexGhmRoot(index, ghm_root)
+    function checkIndexGhmRoot(indexes, index, ghm_root)
     {
         return index < 0 ||
                !indexes[index].init ||
@@ -141,7 +140,7 @@ var mco_pricing = {};
 
     function updatePriceMap(index)
     {
-        let indexes = getIndexes();
+        let indexes = mco_list.updateIndexes();
         if (indexes[index].init)
             return;
 
@@ -173,7 +172,28 @@ var mco_pricing = {};
     }
     this.updatePriceMap = updatePriceMap;
 
-    function refreshIndexesDiff(diff_index, test_ghm_root)
+    function refreshGhmRoots(indexes, main_index, select_ghm_root)
+    {
+        var el = _('#opt_ghm_roots > select');
+        el.innerHTML = '';
+
+        for (var i = 0; i < ghm_roots.length; i++) {
+            var ghm_root_info = ghm_roots[i];
+
+            var opt = createElement('option', {value: ghm_root_info.ghm_root},
+                                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
+            if (!checkIndexGhmRoot(indexes, main_index, ghm_root_info.ghm_root)) {
+                opt.setAttribute('disabled', '');
+                opt.text += '*';
+            }
+
+            el.appendChild(opt);
+        }
+        if (select_ghm_root)
+            el.value = select_ghm_root;
+    }
+
+    function refreshIndexesDiff(indexes, diff_index, test_ghm_root)
     {
         var el = _("#opt_diff_indexes > select");
         el.innerHTML = '';
@@ -184,33 +204,12 @@ var mco_pricing = {};
                                     indexes[i].begin_date);
             if (i === diff_index)
                 opt.setAttribute('selected', '');
-            if (!checkIndexGhmRoot(i, test_ghm_root)) {
+            if (!checkIndexGhmRoot(indexes, i, test_ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
             el.appendChild(opt);
         }
-    }
-
-    function refreshGhmRoots(index, select_ghm_root)
-    {
-        var el = _('#opt_ghm_roots > select');
-        el.innerHTML = '';
-
-        for (var i = 0; i < ghm_roots.length; i++) {
-            var ghm_root_info = ghm_roots[i];
-
-            var opt = createElement('option', {value: ghm_root_info.ghm_root},
-                                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-            if (!checkIndexGhmRoot(index, ghm_root_info.ghm_root)) {
-                opt.setAttribute('disabled', '');
-                opt.text += '*';
-            }
-
-            el.appendChild(opt);
-        }
-        if (select_ghm_root)
-            el.value = select_ghm_root;
     }
 
     function refreshPriceTable(pricing_info, main_index, diff_index, max_duration,

@@ -460,29 +460,6 @@ if (document.readyState === 'complete') {
 // Resources
 // ------------------------------------------------------------------------
 
-function getIndexes()
-{
-    var indexes = getIndexes.indexes;
-
-    if (!indexes.length) {
-        let url = BaseUrl + 'api/mco_indexes.json';
-        downloadJson('GET', url, function(json) {
-            if (json.length > 0) {
-                indexes = json;
-                for (var i = 0; i < indexes.length; i++)
-                    indexes[i].init = false;
-            } else {
-                error = 'Aucune table disponible';
-            }
-
-            getIndexes.indexes = indexes;
-        });
-    }
-
-    return indexes;
-}
-getIndexes.indexes = [];
-
 function getConcepts(name)
 {
     var sets = getConcepts.sets;

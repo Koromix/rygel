@@ -4,7 +4,6 @@
 
 var mco_casemix = {};
 (function() {
-    var indexes = [];
     var ghm_roots = [];
     var ghm_roots_map = {};
 
@@ -32,7 +31,7 @@ var mco_casemix = {};
         if (!route.prev_period[0])
             route.prev_period = [start_date, end_date];
 
-        // Resources
+        // Casemix
         updateCaseMix();
         if (!route.algorithm)
             route.algorithm = default_algorithm;
@@ -46,7 +45,9 @@ var mco_casemix = {};
             updateResults(new_classify_url);
             route.apply = false;
         }
-        indexes = getIndexes();
+
+        // Resources
+        let indexes = mco_list.updateIndexes();
         [ghm_roots, ghm_roots_map] = mco_pricing.updateGhmRoots();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;

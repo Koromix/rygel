@@ -196,7 +196,7 @@ var mco_list = {};
         pages[route.list + route.spec] = route.page;
 
         // Resources
-        indexes = getIndexes();
+        updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
@@ -211,7 +211,8 @@ var mco_list = {};
             }
         }
         if (main_index >= 0 && Lists[route.list])
-            updateList(route.list, main_index, route.spec, group_info, route.search);
+            updateList(route.list, indexes[main_index].begin_date,
+                       route.spec, group_info, route.search);
 
         // Errors
         if (!Lists[route.list])
@@ -302,10 +303,29 @@ var mco_list = {};
     }
     this.route = route;
 
-    function updateList(list_name, index, spec, group_info, search)
+    function updateIndexes()
+    {
+        if (!indexes.length) {
+            let url = BaseUrl + 'api/mco_indexes.json';
+            downloadJson('GET', url, function(json) {
+                if (json.length > 0) {
+                    indexes = json;
+                    for (var i = 0; i < indexes.length; i++)
+                        indexes[i].init = false;
+                } else {
+                    error = 'Aucune table disponible';
+                }
+            });
+        }
+
+        return indexes;
+    }
+    this.updateIndexes = updateIndexes;
+
+    function updateList(list_name, date, spec, group_info, search)
     {
         let url = buildUrl(BaseUrl + 'api/' + Lists[list_name].table + '.json',
-                           {date: indexes[index].begin_date, spec: spec});
+                           {date: date, spec: spec});
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {

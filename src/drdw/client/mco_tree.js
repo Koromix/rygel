@@ -5,7 +5,6 @@
 var mco_tree = {};
 (function() {
     // Cache
-    var indexes = [];
     var tree_url = null;
     var nodes = [];
     var collapse_nodes = new Set();
@@ -19,12 +18,12 @@ var mco_tree = {};
         route.date = url_parts[1] || route.date;
 
         // Resources
-        indexes = getIndexes();
+        let indexes = mco_list.updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         if (main_index >= 0)
-            updateTree(main_index);
+            updateTree(indexes[main_index].begin_date);
 
         // Errors
         if (route.date !== null && indexes.length && main_index < 0)
@@ -65,9 +64,9 @@ var mco_tree = {};
     }
     this.route = route;
 
-    function updateTree(index)
+    function updateTree(date)
     {
-        let url = buildUrl(BaseUrl + 'api/mco_tree.json', {date: indexes[index].begin_date});
+        let url = buildUrl(BaseUrl + 'api/mco_tree.json', {date: date});
         if (url === tree_url)
             return;
 
