@@ -330,7 +330,7 @@ var mco_casemix = {};
 
             var opt = createElement('option', {value: ghm_root_info.ghm_root},
                                     ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-            if (!mix_ghm_roots.has(ghm_root_info.ghm_root)) {
+            if (mix_ghm_roots.size && !mix_ghm_roots.has(ghm_root_info.ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
