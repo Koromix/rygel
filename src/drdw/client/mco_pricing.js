@@ -33,8 +33,8 @@ var mco_pricing = {};
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
-        let indexes = mco_list.updateIndexes();
-        updateGhmRoots();
+        let indexes = mco_common.updateIndexes();
+        ({concepts: ghm_roots, map: ghm_roots_map} = mco_common.updateConceptSet('mco_ghm_roots'));
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
@@ -66,7 +66,7 @@ var mco_pricing = {};
 
         // Refresh settings
         removeClass(__('#opt_indexes, #opt_ghm_roots, #opt_diff_indexes, #opt_max_duration, #opt_apply_coefficient'), 'hide');
-        refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
+        mco_common.refreshIndexes(indexes, main_index);
         refreshGhmRoots(indexes, main_index, route.ghm_root);
         refreshIndexesDiff(indexes, diff_index, route.ghm_root);
         _('#opt_apply_coefficient > input').checked = route.apply_coefficient;
@@ -82,8 +82,8 @@ var mco_pricing = {};
 
             switch (route.view) {
                 case 'table': {
-                    refreshPriceTable(pricing_info, main_index, diff_index, max_duration,
-                                      route.apply_coefficient, true);
+                    refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
+                                      max_duration, route.apply_coefficient, true);
                 } break;
                 case 'chart': {
                     let chart_ctx = _('#pr_chart').getContext('2d');
@@ -130,17 +130,9 @@ var mco_pricing = {};
                (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
     }
 
-    function updateGhmRoots()
-    {
-        if (!ghm_roots.length)
-            [ghm_roots, ghm_roots_map] = getConcepts('mco_ghm_roots');
-        return [ghm_roots, ghm_roots_map];
-    }
-    this.updateGhmRoots = updateGhmRoots;
-
     function updatePriceMap(index)
     {
-        let indexes = mco_list.updateIndexes();
+        let indexes = mco_common.updateIndexes();
         if (indexes[index].init)
             return;
 
@@ -212,12 +204,13 @@ var mco_pricing = {};
         }
     }
 
-    function refreshPriceTable(pricing_info, main_index, diff_index, max_duration,
-                               apply_coeff, merge_cells)
+    function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
+                               max_duration, apply_coeff, merge_cells)
     {
         let table = null;
         if (pricing_info && pricing_info[main_index]) {
-            table = createTable(pricing_info, main_index, max_duration, apply_coeff, merge_cells,
+            table = createTable(ghm_root, pricing_info[main_index].ghs,
+                                max_duration, apply_coeff, merge_cells,
                                 function(col, duration) {
                 if (diff_index < 0) {
                     var info = computePrice(col, duration, apply_coeff);
@@ -371,10 +364,8 @@ var mco_pricing = {};
         return chart;
     }
 
-    function createTable(pricing_info, main_index, max_duration, apply_coeff, merge_cells, row_func)
+    function createTable(ghm_root, ghs, max_duration, apply_coeff, merge_cells, row_func)
     {
-        var ghs = pricing_info[main_index].ghs;
-
         if (max_duration === undefined)
             max_duration = 200;
         if (merge_cells === undefined)
@@ -417,10 +408,17 @@ var mco_pricing = {};
         var thead = table.querySelector('thead');
         var tbody = table.querySelector('tbody');
 
+        let title;
+        {
+            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
+            title = ghm_root;
+            if (ghm_roots_map[ghm_root])
+                title += ' - '  + ghm_roots_map[ghm_root].desc;
+        }
+
         thead.appendChild(createElement('tr', {},
-            createElement('td', {colspan: 1 + ghs.length, class: 'ghm_root'},
-                          pricing_info[main_index].ghm_root + ' - ' +
-                          (ghm_roots_map[pricing_info[main_index].ghm_root].desc || ''))
+            createElement('td', {colspan: 1 + ghs.length, class: 'ghm_root'}, title)
         ));
 
         appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, true]; });

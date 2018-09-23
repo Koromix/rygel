@@ -6,20 +6,10 @@ var mco_list = {};
 (function() {
     const PageLen = 200;
 
-    // Routes
-    var specs = {};
-    var groups = {};
-    var search = {};
-    var pages = {};
-
-    // Cache
-    var indexes = [];
-    var list_cache = {};
-
     const Lists = {
         'ghm_roots': {
-            'table': 'mco_ghm_ghs',
-            'concepts': 'mco_ghm_roots',
+            'path': 'api/mco_ghm_ghs.json',
+            'concept_set': 'mco_ghm_roots',
 
             'groups': [
                 {type: 'ghm_roots', name: 'Racines',
@@ -92,8 +82,8 @@ var mco_list = {};
         },
 
         'ghm_ghs': {
-            'table': 'mco_ghm_ghs',
-            'concepts': 'mco_ghm_roots',
+            'path': 'api/mco_ghm_ghs.json',
+            'concept_set': 'mco_ghm_roots',
 
             'columns': [
                 {func: function(ghm_ghs, ghm_roots_map) {
@@ -139,8 +129,8 @@ var mco_list = {};
         },
 
         'diagnoses': {
-            'table': 'mco_diagnoses',
-            'concepts': 'cim10',
+            'path': 'api/mco_diagnoses.json',
+            'concept_set': 'cim10',
 
             'columns': [
                 {header: 'Diagnostic', func: function(diag, cim10_map) {
@@ -160,8 +150,8 @@ var mco_list = {};
         },
 
         'procedures': {
-            'table': 'mco_procedures',
-            'concepts': 'ccam',
+            'path': 'api/mco_procedures.json',
+            'concept_set': 'ccam',
 
             'columns': [
                 {header: 'Acte', func: function(proc, ccam_map) {
@@ -177,6 +167,15 @@ var mco_list = {};
             ]
         }
     };
+
+    // Routes
+    var specs = {};
+    var groups = {};
+    var search = {};
+    var pages = {};
+
+    // Cache
+    var list_cache = {};
 
     function runList(route, url, parameters, hash)
     {
@@ -196,7 +195,7 @@ var mco_list = {};
         pages[route.list + route.spec] = route.page;
 
         // Resources
-        updateIndexes();
+        let indexes = mco_common.updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
@@ -224,7 +223,7 @@ var mco_list = {};
 
         // Refresh settings
         removeClass(__('#opt_indexes'), 'hide');
-        refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
+        mco_common.refreshIndexes(indexes, main_index);
         _('#opt_search').classList.remove('hide');
         {
             let search_input = _('#opt_search > input');
@@ -236,7 +235,7 @@ var mco_list = {};
             refreshGroups(Lists[route.list], route.group);
         }
 
-        // Refresh view
+        // Limit 'blinking' behavior
         let list_table = _('#ls_' + route.list);
         let show_table = list_table && !list_table.classList.contains('hide');
         addClass(__('.ls_table'), 'hide');
@@ -245,6 +244,8 @@ var mco_list = {};
         } else {
             _('#ls').classList.add('hide');
         }
+
+        // Refresh view
         refreshErrors(Array.from(errors));
         if (!downloadJson.busy) {
             downloadJson.errors = [];
@@ -253,10 +254,9 @@ var mco_list = {};
 
             let list_info = Lists[route.list];
             if (list_info) {
-                list_table.classList.remove('hide');
-                refreshTable(list_table, route.list,
-                             list_info.concepts ? getConcepts(list_info.concepts)[1] : null,
-                             route.page);
+                let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
+                refreshTable(route.list, concepts_map, route.page);
+                _('#ls_' + route.list).classList.remove('hide');
             }
 
             _('#ls').classList.remove('hide');
@@ -303,34 +303,13 @@ var mco_list = {};
     }
     this.route = route;
 
-    function updateIndexes()
-    {
-        if (!indexes.length) {
-            let url = BaseUrl + 'api/mco_indexes.json';
-            downloadJson('GET', url, function(json) {
-                if (json.length > 0) {
-                    indexes = json;
-                    for (var i = 0; i < indexes.length; i++)
-                        indexes[i].init = false;
-                } else {
-                    error = 'Aucune table disponible';
-                }
-            });
-        }
-
-        return indexes;
-    }
-    this.updateIndexes = updateIndexes;
-
     function updateList(list_name, date, spec, group_info, search)
     {
-        let url = buildUrl(BaseUrl + 'api/' + Lists[list_name].table + '.json',
-                           {date: date, spec: spec});
+        let url = buildUrl(BaseUrl + Lists[list_name].path, {date: date, spec: spec});
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {
-            if (Lists[list_name].concepts)
-                getConcepts(Lists[list_name].concepts);
+            mco_common.updateConceptSet(Lists[list_name].concept_set);
 
             list_cache[list_name] = {
                 url: null, items: [], match_count: 0,
@@ -348,9 +327,7 @@ var mco_list = {};
 
             let list_info = Lists[list_name];
             let columns = list_info.columns;
-            let concepts_map = undefined;
-            if (list_info.concepts)
-                concepts_map = getConcepts(list_info.concepts)[1];
+            let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
 
             // Groups
             if (group_info)
@@ -459,7 +436,7 @@ var mco_list = {};
             el.value = select_group;
     }
 
-    function refreshTable(old_table, list_name, concepts_map, page)
+    function refreshTable(list_name, concepts_map, page)
     {
         var table = createElement('table', {},
             createElement('thead'),
@@ -552,6 +529,7 @@ var mco_list = {};
 
         _('#ls_stats').innerText = stats_text;
 
+        let old_table = _('#ls_' + list_name);
         cloneAttributes(old_table, table);
         old_table.parentNode.replaceChild(table, old_table);
     }

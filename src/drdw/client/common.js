@@ -457,57 +457,8 @@ if (document.readyState === 'complete') {
 }
 
 // ------------------------------------------------------------------------
-// Resources
-// ------------------------------------------------------------------------
-
-function getConcepts(name)
-{
-    var sets = getConcepts.sets;
-    var set = sets[name];
-
-    if (!set.concepts.length) {
-        let url = BaseUrl + 'concepts/' + name + '.json';
-        downloadJson('GET', url, function(json) {
-            set.concepts = json;
-            set.map = {};
-            for (var i = 0; i < json.length; i++) {
-                var concept = json[i];
-                set.map[concept[set.key]] = concept;
-            }
-        });
-    }
-
-    return [set.concepts, set.map];
-}
-getConcepts.sets = {
-    'ccam': {key: 'procedure', concepts: [], map: {}},
-    'cim10': {key: 'diagnosis', concepts: [], map: {}},
-    'mco_ghm_roots': {key: 'ghm_root', concepts: [], map: {}}
-};
-
-// ------------------------------------------------------------------------
 // View
 // ------------------------------------------------------------------------
-
-function refreshIndexesLine(el, indexes, main_index)
-{
-    let builder = new VersionLine;
-
-    for (let i = 0; i < indexes.length; i++) {
-        let index = indexes[i];
-        builder.addVersion(index.begin_date, index.begin_date, index.changed_prices);
-    }
-    if (main_index >= 0)
-        builder.setValue(indexes[main_index].begin_date);
-
-    builder.changeHandler = function() {
-        module.object.route({date: this.object.getValue()});
-    };
-
-    let svg = builder.getWidget();
-    cloneAttributes(el, svg);
-    el.parentNode.replaceChild(svg, el);
-}
 
 function refreshErrors(errors)
 {

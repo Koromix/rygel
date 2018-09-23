@@ -9,6 +9,7 @@ endif()
 set(DRDW_RESOURCES client/drdw.html
                    client/common.css
                    client/common.js
+                   client/mco_common.js
                    client/mco_casemix.css
                    client/mco_casemix.js
                    client/mco_list.css

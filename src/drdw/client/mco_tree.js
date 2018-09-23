@@ -18,7 +18,7 @@ var mco_tree = {};
         route.date = url_parts[1] || route.date;
 
         // Resources
-        let indexes = mco_list.updateIndexes();
+        let indexes = mco_common.updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
@@ -31,7 +31,7 @@ var mco_tree = {};
 
         // Refresh settings
         removeClass(__('#opt_indexes'), 'hide');
-        refreshIndexesLine(_('#opt_indexes'), indexes, main_index);
+        mco_common.refreshIndexes(indexes, main_index);
 
         // Refresh view
         refreshErrors(Array.from(errors));

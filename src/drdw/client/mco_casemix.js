@@ -4,15 +4,14 @@
 
 var mco_casemix = {};
 (function() {
-    var ghm_roots = [];
-    var ghm_roots_map = {};
-
+    // Route
     var start_date = null;
     var end_date = null;
     var algorithms = [];
     var default_algorithm = null;
     var structures = [];
 
+    // Cache
     var mix_url = null;
     var mix_rows = [];
     var mix_ghm_roots = new Set;
@@ -21,7 +20,7 @@ var mco_casemix = {};
     {
         let errors = new Set(downloadJson.errors);
 
-        // Parse route (model: casemix/<view>/<start>..<end>/<units>/<cmd>)
+        // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
         let url_parts = url.split('/', 3);
         if (url_parts[2])
             Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
@@ -47,8 +46,8 @@ var mco_casemix = {};
         }
 
         // Resources
-        let indexes = mco_list.updateIndexes();
-        [ghm_roots, ghm_roots_map] = mco_pricing.updateGhmRoots();
+        let indexes = mco_common.updateIndexes();
+        let ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
@@ -85,7 +84,7 @@ var mco_casemix = {};
         refreshStructures(route.units);
         _('#opt_mode > select').value = route.mode;
         refreshAlgorithms(route.algorithm);
-        refreshGhmRoots(main_index, route.ghm_root);
+        refreshGhmRoots(ghm_roots, route.ghm_root);
 
         // Refresh view
         refreshErrors(Array.from(errors));
@@ -318,7 +317,7 @@ var mco_casemix = {};
         select.value = algorithm;
     }
 
-    function refreshGhmRoots(index, select_ghm_root)
+    function refreshGhmRoots(ghm_roots, select_ghm_root)
     {
         var el = _('#opt_ghm_roots > select');
         el.innerHTML = '';
@@ -485,7 +484,8 @@ var mco_casemix = {};
                 max_price_cents = Math.max(max_price_cents, stat.price_cents);
             }
 
-            table = mco_pricing.createTable(pricing_info, main_index, max_duration, false, true,
+            table = mco_pricing.createTable(ghm_root, pricing_info[main_index].ghs,
+                                            max_duration, false, true,
                                             function(col, duration) {
                 if (!mco_pricing.testDuration(col, duration))
                     return null;
