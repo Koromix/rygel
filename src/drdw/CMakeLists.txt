@@ -7,6 +7,7 @@ if (EMSCRIPTEN)
 endif()
 
 set(DRDW_RESOURCES client/drdw.html
+
                    # Keep config.js first
                    client/config.js
                    client/util.js
@@ -21,7 +22,9 @@ set(DRDW_RESOURCES client/drdw.html
                    client/wt_period_picker.js
                    client/wt_tree_selector.js
                    client/wt_version_line.js
-                   client/common.css
+                   ../../lib/chartjs/chart.min.js
+
+                   client/drdw.css
                    client/mco_casemix.css
                    client/mco_list.css
                    client/mco_pricing.css
@@ -29,9 +32,10 @@ set(DRDW_RESOURCES client/drdw.html
                    client/wt_period_picker.css
                    client/wt_tree_selector.css
                    client/wt_version_line.css
+
                    client/images/favicon.ico
-                   client/images/logo.png
-                   ../../lib/chartjs/chart.min.js)
+                   client/images/logo.png)
+
 set(DRDW_SRC server/drdw.cc
              server/drdw.hh
              server/config.cc
