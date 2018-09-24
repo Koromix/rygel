@@ -111,26 +111,6 @@ const User *CheckSessionUser(MHD_Connection *conn)
     return session ? session->user : nullptr;
 }
 
-Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
-{
-    Response response = {};
-
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        writer.StartObject();
-        if (conn->user) {
-            writer.Key("username"); writer.String(conn->user->name);
-        }
-        writer.EndObject();
-
-        return true;
-    });
-    response.flags = (int)Response::Flag::DisableETag;
-
-    return response;
-}
-
 Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
 {
     char address[65];
@@ -191,7 +171,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
         response.response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
 
         char buf[512];
-        Fmt(buf, "session_key=%1; Max-Age=%2", session_key, IdleSessionDelay / 1000);
+        Fmt(buf, "session_key=%1; Max-Age=%2; HttpOnly", session_key, IdleSessionDelay / 1000);
         MHD_add_response_header(response.response, "Set-Cookie", buf);
     }
 
@@ -207,7 +187,29 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionT
     }
 
     Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
-    MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0");
+    MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0; HttpOnly");
+
+    return response;
+}
+
+Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+{
+    Response response = {};
+
+    response.code = 200;
+    response.response = BuildJson(compression_type,
+                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        if (conn->user) {
+            writer.StartObject();
+            writer.Key("username"); writer.String(conn->user->name);
+            writer.EndObject();
+        } else {
+            writer.Null();
+        }
+
+        return true;
+    });
+    response.flags = (int)Response::Flag::DisableETag;
 
     return response;
 }

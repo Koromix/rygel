@@ -31,18 +31,21 @@ var mco_casemix = {};
             route.prev_period = [start_date, end_date];
 
         // Casemix
-        updateCaseMix();
-        if (!route.algorithm)
-            route.algorithm = default_algorithm;
         let new_classify_url = null;
-        if (start_date) {
-            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-            new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
-                                                route.algorithm, prev_period[0], prev_period[1]);
-        }
-        if ((!mix_url || route.apply) && new_classify_url) {
-            updateResults(new_classify_url);
-            route.apply = false;
+        if (user.getSession()) {
+            updateCaseMix();
+            if (!route.algorithm)
+                route.algorithm = default_algorithm;
+            if (start_date) {
+                let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
+                new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
+                                                    route.algorithm, prev_period[0], prev_period[1]);
+            }
+            if ((!mix_url || route.apply) && new_classify_url) {
+                clearResults();
+                updateResults(new_classify_url);
+                route.apply = false;
+            }
         }
 
         // Resources
@@ -187,13 +190,11 @@ var mco_casemix = {};
 
     function updateResults(url)
     {
-        mix_rows = [];
-
         downloadJson('GET', url, function(json) {
-            mix_url = url;
+            clearResults();
 
+            mix_url = url;
             mix_rows = json;
-            mix_ghm_roots.clear();
             for (let i = 0; i < mix_rows.length; i++) {
                 let row = mix_rows[i];
 
@@ -218,6 +219,12 @@ var mco_casemix = {};
                 mix_ghm_roots.add(row.ghm_root);
             }
         });
+    }
+
+    function clearResults()
+    {
+        mix_rows = [];
+        mix_ghm_roots.clear();
     }
 
     function refreshPeriods(period, prev_period, mode)

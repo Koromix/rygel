@@ -4,6 +4,8 @@
 
 var user = {};
 (function() {
+    var change_handlers = [];
+
     var session = null;
     var url_key = 0;
 
@@ -51,12 +53,7 @@ var user = {};
     function connect(username, password, func)
     {
         let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
-        downloadJson('POST', url, function(json) {
-            session = json;
-            url_key = generateRandomInt(1, 281474976710656);
-
-            func();
-        });
+        downloadJson('POST', url, randomizeUrlKey);
     }
     this.connect = connect;
 
@@ -64,7 +61,9 @@ var user = {};
     {
         let url = buildUrl(BaseUrl + 'api/disconnect.json');
         downloadJson('POST', url, function(json) {
-            url_key = 0;
+            session = null;
+            randomizeUrlKey();
+            notifyChange();
         });
     }
     this.disconnect = disconnect;
@@ -73,10 +72,7 @@ var user = {};
     {
         let username = _('#user_username').value;
         let password = _('#user_password').value;
-
-        connect(username, password, function() {
-            window.history.back();
-        });
+        connect(username, password);
     }
     this.login = login;
 
@@ -84,17 +80,14 @@ var user = {};
     {
         let url = buildUrl(BaseUrl + 'api/session.json', {key: url_key});
         downloadJson('GET', url, function(json) {
-            if (json.username) {
-                if (!url_key)
-                    url_key = generateRandomInt(1, 281474976710656);
-                session = json;
-            } else {
-                session = null;
-                url_key = 0;
-            }
+            let prev_username = session ? session.username : null;
+            let new_username = json ? json.username : null;
+            session = json;
+            if (new_username !== prev_username)
+                notifyChange();
         }, function(error) {
             session = null;
-            url_key = 0;
+            notifyChange();
         });
     }
 
@@ -138,13 +131,22 @@ var user = {};
         old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
     }
 
-    function getSession() { return session; }
-    function getUrlKey() { return url_key; }
-    this.getSession = getSession;
-    this.getUrlKey = getUrlKey;
-
-    if (document.cookie.indexOf('session_key='))
+    function randomizeUrlKey()
+    {
         url_key = generateRandomInt(1, 281474976710656);
+    }
+
+    function notifyChange()
+    {
+        for (let i = 0; i < change_handlers.length; i++)
+            change_handlers[i]();
+    }
+
+    this.addChangeHandler = function(func) { change_handlers.push(func); }
+    this.getSession = function() { return session; }
+    this.getUrlKey = function() { return url_key; }
+
+    randomizeUrlKey();
 }).call(user);
 
 registerUrl('login', user, user.runLogin);

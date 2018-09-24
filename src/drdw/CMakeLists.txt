@@ -11,6 +11,7 @@ set(DRDW_RESOURCES client/drdw.html
                    client/config.js
                    client/common.css
                    client/common.js
+                   client/user.js
                    client/mco_common.js
                    client/mco_casemix.css
                    client/mco_casemix.js
@@ -20,7 +21,6 @@ set(DRDW_RESOURCES client/drdw.html
                    client/mco_pricing.js
                    client/mco_tree.css
                    client/mco_tree.js
-                   client/user.js
                    client/wt_period_picker.css
                    client/wt_period_picker.js
                    client/wt_tree_selector.css
@@ -36,6 +36,7 @@ set(DRDW_SRC server/drdw.cc
              server/config.hh
              server/json.hh
              server/user.cc
+             server/user.hh
              server/drdw_mco.cc
              server/drdw_mco.hh)
 

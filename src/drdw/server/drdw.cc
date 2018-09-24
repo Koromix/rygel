@@ -14,6 +14,7 @@
 
 #include "drdw.hh"
 #include "drdw_mco.hh"
+#include "user.hh"
 #include "../../packer/packer.hh"
 
 struct DescSet {

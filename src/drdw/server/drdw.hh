@@ -43,8 +43,3 @@ extern Date drdw_stay_set_dates[2];
 Response CreateErrorPage(int code);
 MHD_Response *BuildJson(CompressionType compression_type,
                         std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
-
-const User *CheckSessionUser(MHD_Connection *conn);
-Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceSession(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
