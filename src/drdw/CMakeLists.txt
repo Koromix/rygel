@@ -11,6 +11,7 @@ set(DRDW_RESOURCES client/drdw.html
                    client/config.js
                    client/common.css
                    client/common.js
+                   client/data.js
                    client/user.js
                    client/mco_common.js
                    client/mco_casemix.css

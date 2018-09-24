@@ -18,7 +18,7 @@ var mco_casemix = {};
 
     function runCasemix(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
+        let errors = new Set(data.getErrors());
 
         // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
         let url_parts = url.split('/', 3);
@@ -96,10 +96,10 @@ var mco_casemix = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy)
-            downloadJson.errors = [];
+        if (!data.isBusy())
+            data.clearErrors();
         if (user.getSession()) {
-            if (!downloadJson.busy) {
+            if (!data.isBusy()) {
                 switch (route.cm_view) {
                     case 'summary': {
                         refreshSummary();
@@ -117,7 +117,7 @@ var mco_casemix = {};
         } else {
             _('#cm').classList.add('hide');
         }
-        markBusy('#cm', downloadJson.busy || (mix_url !== new_classify_url));
+        markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
     }
     this.runCasemix = runCasemix;
 
@@ -164,7 +164,7 @@ var mco_casemix = {};
     function updateCaseMix()
     {
         let url = buildUrl(BaseUrl + 'api/mco_casemix.json', {key: user.getUrlKey()});
-        downloadJson('GET', url, function(json) {
+        data.get(url, function(json) {
             start_date = json.begin_date;
             end_date = json.end_date;
             algorithms = json.algorithms;
@@ -190,7 +190,7 @@ var mco_casemix = {};
 
     function updateResults(url)
     {
-        downloadJson('GET', url, function(json) {
+        data.get(url, function(json) {
             clearResults();
 
             mix_url = url;

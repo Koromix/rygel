@@ -161,65 +161,6 @@ function generateRandomInt(min, max)
 }
 
 // ------------------------------------------------------------------------
-// JSON
-// ------------------------------------------------------------------------
-
-function downloadJson(method, url, proceed, fail)
-{
-    if (downloadJson.queue.has(url))
-        return;
-    downloadJson.queue.add(url);
-    downloadJson.busy++;
-
-    function handleFinishedRequest(status, response)
-    {
-        let error = null;
-        switch (status) {
-            case 200: { /* Success */ } break;
-            case 404: { error = 'Adresse \'' + url + '\' introuvable'; } break;
-            case 422: { error = 'Paramètres incorrects'; } break;
-            case 502:
-            case 503: { error = 'Service non accessible'; } break;
-            case 504: { error = 'Délai d\'attente dépassé, réessayez'; } break;
-            default: { error = 'Erreur inconnue ' + status; } break;
-        }
-
-        if (!error) {
-            proceed(response);
-        } else {
-            downloadJson.errors.push(error);
-            if (fail)
-                fail(error);
-        }
-
-        if (!--downloadJson.busy) {
-            go();
-            if (!downloadJson.busy)
-                downloadJson.queue.clear();
-        }
-    }
-
-    var xhr = new XMLHttpRequest();
-    xhr.responseType = 'json';
-    xhr.timeout = 14000;
-    xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
-    xhr.onerror = function(e) { handleFinishedRequest(503); };
-    xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-    if (method === 'POST') {
-        parts = url.split('?', 2);
-        xhr.open(method, parts[0], true);
-        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        xhr.send(parts.length > 1 ? parts[1] : null);
-    } else {
-        xhr.open(method, url, true);
-        xhr.send();
-    }
-}
-downloadJson.errors = [];
-downloadJson.queue = new Set();
-downloadJson.busy = 0;
-
-// ------------------------------------------------------------------------
 // Navigation
 // ------------------------------------------------------------------------
 
@@ -426,6 +367,8 @@ function initNavigation()
             }
         }
     });
+
+    data.idleHandler = go;
 }
 
 if (document.readyState === 'complete') {

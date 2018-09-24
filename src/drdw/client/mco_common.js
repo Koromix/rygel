@@ -18,7 +18,7 @@ var mco_common = {};
     {
         if (!indexes.length) {
             let url = BaseUrl + 'api/mco_indexes.json';
-            downloadJson('GET', url, function(json) {
+            data.get(url, function(json) {
                 indexes = json;
             });
         }
@@ -40,7 +40,7 @@ var mco_common = {};
             concept_sets[name] = set;
 
             let url = BaseUrl + info.path;
-            downloadJson('GET', url, function(json) {
+            data.get(url, function(json) {
                 set.concepts = json;
                 for (var i = 0; i < json.length; i++) {
                     var concept = json[i];

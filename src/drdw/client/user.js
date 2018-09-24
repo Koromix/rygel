@@ -11,14 +11,14 @@ var user = {};
 
     function runLogin(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
+        let errors = new Set(data.getErrors());
 
         if (session)
             errors.add('Vous êtes déjà connecté(e)');
 
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy)
-            downloadJson.errors = [];
+        if (!data.isBusy())
+            data.clearErrors();
         _('#user').classList.toggle('hide', !!session);
     }
     this.runLogin = runLogin;
@@ -28,7 +28,7 @@ var user = {};
         if (ShowUser) {
             refreshSession();
 
-            if (!downloadJson.busy) {
+            if (!data.isBusy()) {
                 updateSessionBox();
                 updateSessionMenu();
             }
@@ -52,15 +52,15 @@ var user = {};
 
     function connect(username, password, func)
     {
-        let url = buildUrl(BaseUrl + 'api/connect.json', {username: username, password: password});
-        downloadJson('POST', url, randomizeUrlKey);
+        let url = buildUrl(BaseUrl + 'api/connect.json');
+        data.post(url, {username: username, password: password}, randomizeUrlKey);
     }
     this.connect = connect;
 
     function disconnect()
     {
         let url = buildUrl(BaseUrl + 'api/disconnect.json');
-        downloadJson('POST', url, function(json) {
+        data.post(url, {}, function(json) {
             session = null;
             randomizeUrlKey();
             notifyChange();
@@ -79,7 +79,7 @@ var user = {};
     function refreshSession()
     {
         let url = buildUrl(BaseUrl + 'api/session.json', {key: url_key});
-        downloadJson('GET', url, function(json) {
+        data.get(url, function(json) {
             let prev_username = session ? session.username : null;
             let new_username = json ? json.username : null;
             session = json;

@@ -14,7 +14,7 @@ var mco_pricing = {};
 
     function runPricing(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
+        let errors = new Set(data.getErrors());
 
         // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
         let url_parts = url.split('/');
@@ -73,8 +73,8 @@ var mco_pricing = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy) {
-            downloadJson.errors = [];
+        if (!data.isBusy()) {
+            data.clearErrors();
 
             let ghm_root_info = ghm_roots_map[route.ghm_root];
             let pricing_info = pricings_map[route.ghm_root];
@@ -96,7 +96,7 @@ var mco_pricing = {};
             _('#pr_chart').classList.toggle('hide', route.view !== 'chart');
             _('#pr').classList.remove('hide');
         }
-        markBusy('#pr', downloadJson.busy);
+        markBusy('#pr', data.isBusy());
     }
     this.runPricing = runPricing;
 
@@ -137,7 +137,7 @@ var mco_pricing = {};
 
         if (!available_dates.has(begin_date)) {
             let url = buildUrl(BaseUrl + 'api/mco_ghm_ghs.json', {date: begin_date});
-            downloadJson('GET', url, function(json) {
+            data.get(url, function(json) {
                 for (var i = 0; i < json.length; i++) {
                     var ghm_root = json[i].ghm_root;
                     var ghm_ghs = json[i];

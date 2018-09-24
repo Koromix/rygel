@@ -11,7 +11,7 @@ var mco_tree = {};
 
     function runTree(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
+        let errors = new Set(data.getErrors());
 
         // Parse route (model: tree/<date>)
         let url_parts = url.split('/');
@@ -35,13 +35,13 @@ var mco_tree = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy) {
-            downloadJson.errors = [];
+        if (!data.isBusy()) {
+            data.clearErrors();
 
             refreshTree(nodes, hash);
             _('#tr').classList.remove('hide');
         }
-        markBusy('#tr', downloadJson.busy);
+        markBusy('#tr', data.isBusy());
     }
     this.runTree = runTree;
 
@@ -71,7 +71,7 @@ var mco_tree = {};
             return;
 
         nodes = [];
-        downloadJson('GET', url, function(json) {
+        data.get(url, function(json) {
             nodes = json;
             tree_url = url;
         });

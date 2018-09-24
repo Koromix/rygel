@@ -187,7 +187,7 @@ var mco_list = {};
 
     function runList(route, url, parameters, hash)
     {
-        let errors = new Set(downloadJson.errors);
+        let errors = new Set(data.getErrors());
 
         // Parse route (model: list/<table>/<date>[/<spec>])
         let url_parts = url.split('/');
@@ -255,8 +255,8 @@ var mco_list = {};
 
         // Refresh view
         refreshErrors(Array.from(errors));
-        if (!downloadJson.busy) {
-            downloadJson.errors = [];
+        if (!data.isBusy()) {
+            data.clearErrors();
 
             refreshHeader(route.spec);
 
@@ -269,7 +269,7 @@ var mco_list = {};
 
             _('#ls').classList.remove('hide');
         }
-        markBusy('#ls', downloadJson.busy);
+        markBusy('#ls', data.isBusy());
     }
     this.runList = runList;
 
@@ -325,7 +325,7 @@ var mco_list = {};
             };
             list = list_cache[list_name];
 
-            downloadJson('GET', url, function(json) {
+            data.get(url, function(json) {
                 list.url = url;
                 list.items = json;
             });
