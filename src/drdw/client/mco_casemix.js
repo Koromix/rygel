@@ -543,5 +543,12 @@ var mco_casemix = {};
         return ptr;
     }
 
+    // Clear casemix data when user changes or disconnects
+    user.addChangeHandler(function() {
+        clearResults();
+        refreshSummary();
+        refreshTable();
+    });
+
     drdw.registerUrl('mco_casemix', this, runCasemix);
 }).call(mco_casemix);
