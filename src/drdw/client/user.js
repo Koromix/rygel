@@ -16,12 +16,11 @@ var user = {};
         if (session)
             errors.add('Vous êtes déjà connecté(e)');
 
-        refreshErrors(Array.from(errors));
+        drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
         _('#user').classList.toggle('hide', !!session);
     }
-    this.runLogin = runLogin;
 
     function runSession()
     {
@@ -40,26 +39,26 @@ var user = {};
 
     function routeToUrl(args)
     {
-        return buildModuleUrl('login');
+        return drdw.baseUrl('login');
     }
     this.routeToUrl = routeToUrl;
 
-    function route(args, delay)
+    function go(args, delay)
     {
-        go(routeToUrl(args), true, delay);
+        drdw.route(routeToUrl(args), delay);
     }
-    this.route = route;
+    this.go = go;
 
     function connect(username, password, func)
     {
-        let url = buildUrl(BaseUrl + 'api/connect.json');
+        let url = buildUrl(drdw.baseUrl('api/connect.json'));
         data.post(url, {username: username, password: password}, randomizeUrlKey);
     }
     this.connect = connect;
 
     function disconnect()
     {
-        let url = buildUrl(BaseUrl + 'api/disconnect.json');
+        let url = buildUrl(drdw.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
             session = null;
             randomizeUrlKey();
@@ -72,13 +71,16 @@ var user = {};
     {
         let username = _('#user_username').value;
         let password = _('#user_password').value;
+        _('#user_username').value = '';
+        _('#user_password').value = '';
+
         connect(username, password);
     }
     this.login = login;
 
     function refreshSession()
     {
-        let url = buildUrl(BaseUrl + 'api/session.json', {key: url_key});
+        let url = buildUrl(drdw.baseUrl('api/session.json'), {key: url_key});
         data.get(url, function(json) {
             let prev_username = session ? session.username : null;
             let new_username = json ? json.username : null;
@@ -147,6 +149,6 @@ var user = {};
     this.getUrlKey = function() { return url_key; }
 
     randomizeUrlKey();
-}).call(user);
 
-registerUrl('login', user, user.runLogin);
+    drdw.registerUrl('login', this, runLogin);
+}).call(user);

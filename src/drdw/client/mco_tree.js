@@ -34,22 +34,21 @@ var mco_tree = {};
         mco_common.refreshIndexes(indexes, main_index);
 
         // Refresh view
-        refreshErrors(Array.from(errors));
+        drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
             data.clearErrors();
 
             refreshTree(nodes, hash);
             _('#tr').classList.remove('hide');
         }
-        markBusy('#tr', data.isBusy());
+        drdw.markBusy('#tr', data.isBusy());
     }
-    this.runTree = runTree;
 
     function routeToUrl(args)
     {
-        let new_route = buildRoute(args);
+        let new_route = drdw.buildRoute(args);
 
-        let url_parts = [buildModuleUrl('mco_tree'), new_route.date];
+        let url_parts = [drdw.baseUrl('mco_tree'), new_route.date];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -58,15 +57,15 @@ var mco_tree = {};
     }
     this.routeToUrl = routeToUrl;
 
-    function route(args, delay)
+    function go(args, delay)
     {
-        go(routeToUrl(args), true, delay);
+        drdw.route(routeToUrl(args), delay);
     }
-    this.route = route;
+    this.go = go;
 
     function updateTree(date)
     {
-        let url = buildUrl(BaseUrl + 'api/mco_tree.json', {date: date});
+        let url = buildUrl(drdw.baseUrl('api/mco_tree.json'), {date: date});
         if (url === tree_url)
             return;
 
@@ -249,6 +248,6 @@ var mco_tree = {};
         }
         e.preventDefault();
     };
-}).call(mco_tree);
 
-registerUrl('mco_tree', mco_tree, mco_tree.runTree);
+    drdw.registerUrl('mco_tree', this, runTree);
+}).call(mco_tree);

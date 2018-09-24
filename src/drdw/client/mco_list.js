@@ -254,7 +254,7 @@ var mco_list = {};
         }
 
         // Refresh view
-        refreshErrors(Array.from(errors));
+        drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
             data.clearErrors();
 
@@ -269,13 +269,12 @@ var mco_list = {};
 
             _('#ls').classList.remove('hide');
         }
-        markBusy('#ls', data.isBusy());
+        drdw.markBusy('#ls', data.isBusy());
     }
-    this.runList = runList;
 
     function routeToUrl(args)
     {
-        let new_route = buildRoute(args);
+        let new_route = drdw.buildRoute(args);
         if (args.spec === undefined)
             new_route.spec = specs[new_route.list];
         if (args.search === undefined)
@@ -285,7 +284,7 @@ var mco_list = {};
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
-        let url_parts = [buildModuleUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
+        let url_parts = [drdw.baseUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -305,15 +304,15 @@ var mco_list = {};
     }
     this.routeToUrl = routeToUrl;
 
-    function route(args, delay)
+    function go(args, delay)
     {
-        go(routeToUrl(args), true, delay);
+        drdw.route(routeToUrl(args), delay);
     }
-    this.route = route;
+    this.go = go;
 
     function updateList(list_name, date, spec, group_info, search)
     {
-        let url = buildUrl(BaseUrl + Lists[list_name].path, {date: date, spec: spec});
+        let url = buildUrl(drdw.baseUrl(Lists[list_name].path), {date: date, spec: spec});
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {
@@ -660,6 +659,6 @@ var mco_list = {};
         return elements;
     }
     this.addSpecLinks = addSpecLinks;
-}).call(mco_list);
 
-registerUrl('mco_list', mco_list, mco_list.runList);
+    drdw.registerUrl('mco_list', this, runList);
+}).call(mco_list);

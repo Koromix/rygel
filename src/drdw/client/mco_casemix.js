@@ -23,7 +23,7 @@ var mco_casemix = {};
         // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
         let url_parts = url.split('/', 3);
         if (url_parts[2])
-            Object.assign(route, buildRoute(JSON.parse(window.atob(url_parts[2]))));
+            Object.assign(route, drdw.buildRoute(JSON.parse(window.atob(url_parts[2]))));
         route.cm_view = url_parts[1] || route.cm_view;
         if (!route.period[0])
             route.period = [start_date, end_date];
@@ -95,7 +95,7 @@ var mco_casemix = {};
         refreshGhmRoots(ghm_roots, route.ghm_root);
 
         // Refresh view
-        refreshErrors(Array.from(errors));
+        drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
         if (user.getSession()) {
@@ -117,9 +117,8 @@ var mco_casemix = {};
         } else {
             _('#cm').classList.add('hide');
         }
-        markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
+        drdw.markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
     }
-    this.runCasemix = runCasemix;
 
     function routeToUrl(args)
     {
@@ -138,7 +137,7 @@ var mco_casemix = {};
             'ghm_root'
         ];
 
-        let new_route = buildRoute(args);
+        let new_route = drdw.buildRoute(args);
 
         let short_route = {};
         for (let i = 0; i < KeepKeys.length; i++) {
@@ -146,7 +145,7 @@ var mco_casemix = {};
             short_route[k] = new_route[k] || null;
         }
 
-        let url_parts = [buildModuleUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
+        let url_parts = [drdw.baseUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -155,15 +154,15 @@ var mco_casemix = {};
     }
     this.routeToUrl = routeToUrl;
 
-    function route(args, delay)
+    function go(args, delay)
     {
-        go(routeToUrl(args), true, delay);
+        drdw.route(routeToUrl(args), delay);
     }
-    this.route = route;
+    this.go = go;
 
     function updateCaseMix()
     {
-        let url = buildUrl(BaseUrl + 'api/mco_casemix.json', {key: user.getUrlKey()});
+        let url = buildUrl(drdw.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
         data.get(url, function(json) {
             start_date = json.begin_date;
             end_date = json.end_date;
@@ -183,7 +182,7 @@ var mco_casemix = {};
             durations: 1,
             key: user.getUrlKey()
         };
-        let url = buildUrl(BaseUrl + 'api/mco_classify.json', params);
+        let url = buildUrl(drdw.baseUrl('api/mco_classify.json'), params);
 
         return url;
     }
@@ -235,7 +234,7 @@ var mco_casemix = {};
                                            period ? period[0] : null, period ? period[1] : null);
 
             builder.changeHandler = function() {
-                route({period: this.object.getValues()});
+                go({period: this.object.getValues()});
             };
 
             picker = builder.getWidget();
@@ -251,7 +250,7 @@ var mco_casemix = {};
                                            prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
 
             builder.changeHandler = function() {
-                route({prev_period: this.object.getValues()});
+                go({prev_period: this.object.getValues()});
             };
 
             prev_picker = builder.getWidget();
@@ -298,7 +297,7 @@ var mco_casemix = {};
         }
 
         builder.changeHandler = function() {
-            route({units: this.object.getValues()});
+            go({units: this.object.getValues()});
         };
 
         let old_select = _('#opt_units > div');
@@ -543,6 +542,6 @@ var mco_casemix = {};
 
         return ptr;
     }
-}).call(mco_casemix);
 
-registerUrl('mco_casemix', mco_casemix, mco_casemix.runCasemix);
+    drdw.registerUrl('mco_casemix', this, runCasemix);
+}).call(mco_casemix);

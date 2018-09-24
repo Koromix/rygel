@@ -72,7 +72,7 @@ var mco_pricing = {};
         _('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
-        refreshErrors(Array.from(errors));
+        drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
             data.clearErrors();
 
@@ -96,16 +96,15 @@ var mco_pricing = {};
             _('#pr_chart').classList.toggle('hide', route.view !== 'chart');
             _('#pr').classList.remove('hide');
         }
-        markBusy('#pr', data.isBusy());
+        drdw.markBusy('#pr', data.isBusy());
     }
-    this.runPricing = runPricing;
 
     function routeToUrl(args)
     {
-        let new_route = buildRoute(args);
+        let new_route = drdw.buildRoute(args);
 
         let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-        let url_parts = [buildModuleUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
+        let url_parts = [drdw.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -116,11 +115,11 @@ var mco_pricing = {};
     }
     this.routeToUrl = routeToUrl;
 
-    function route(args)
+    function go(args, delay)
     {
-        go(routeToUrl(args));
+        drdw.route(routeToUrl(args), delay);
     }
-    this.route = route;
+    this.go = go;
 
     // A true result actually means maybe (if we haven't download the relevant index yet)
     function checkIndexGhmRoot(indexes, index, ghm_root)
@@ -136,7 +135,7 @@ var mco_pricing = {};
         let begin_date = indexes[index].begin_date;
 
         if (!available_dates.has(begin_date)) {
-            let url = buildUrl(BaseUrl + 'api/mco_ghm_ghs.json', {date: begin_date});
+            let url = buildUrl(drdw.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
             data.get(url, function(json) {
                 for (var i = 0; i < json.length; i++) {
                     var ghm_root = json[i].ghm_root;
@@ -598,6 +597,6 @@ var mco_pricing = {};
         }
     }
     this.priceText = priceText;
-}).call(mco_pricing);
 
-registerUrl('mco_pricing', mco_pricing, mco_pricing.runPricing);
+    drdw.registerUrl('mco_pricing', this, runPricing);
+}).call(mco_pricing);
