@@ -143,7 +143,7 @@ function buildUrl(url, query_values)
             query_fragments.push(arg);
         }
     }
-    if (query_fragments)
+    if (query_fragments.length)
         url += '?' + query_fragments.sort().join('&');
 
     return url;
