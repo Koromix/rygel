@@ -358,7 +358,8 @@ var mco_pricing = {};
                         yAxes: [
                             {ticks: {suggestedMin: min_price, suggestedMax: max_price}}
                         ]
-                    }
+                    },
+                    legend: {onClick: null}
                 },
             });
         }
