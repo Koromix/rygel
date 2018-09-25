@@ -4,6 +4,8 @@
 
 function VersionLine()
 {
+    'use strict';
+
     this.changeHandler = null;
 
     let self = this;

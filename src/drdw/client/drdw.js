@@ -4,6 +4,8 @@
 
 var drdw = {};
 (function() {
+    'use strict';
+
     var route_modules = {};
 
     var route_timer_id = null;

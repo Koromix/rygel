@@ -4,6 +4,8 @@
 
 var mco_tree = {};
 (function() {
+    'use strict';
+
     // Cache
     var tree_url = null;
     var nodes = [];

@@ -4,6 +4,8 @@
 
 function TreeSelector(prefix)
 {
+    'use strict';
+
     this.changeHandler = null;
 
     let self = this;

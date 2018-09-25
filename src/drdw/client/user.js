@@ -4,6 +4,8 @@
 
 var user = {};
 (function() {
+    'use strict';
+
     var change_handlers = [];
 
     var session = null;

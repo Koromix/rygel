@@ -4,6 +4,8 @@
 
 var mco_pricing = {};
 (function() {
+    'use strict';
+
     // Cache
     var ghm_roots = [];
     var ghm_roots_map = {};
@@ -326,7 +328,7 @@ var mco_pricing = {};
                     continue;
 
                 for (var j = 0; j < pricing_info[i].ghs.length; j++) {
-                    p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
+                    let p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
                     if (p && p[0] > max_price)
                         max_price = p[0];
                 }

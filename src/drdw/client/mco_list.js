@@ -4,6 +4,8 @@
 
 var mco_list = {};
 (function() {
+    'use strict';
+
     const PageLen = 200;
 
     const Lists = {

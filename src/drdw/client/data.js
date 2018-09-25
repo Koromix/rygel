@@ -4,6 +4,8 @@
 
 var data = {};
 (function() {
+    'use strict';
+
     this.idleHandler = null;
 
     let self = this;

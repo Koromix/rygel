@@ -4,6 +4,8 @@
 
 var mco_casemix = {};
 (function() {
+    'use strict';
+
     // Route
     var start_date = null;
     var end_date = null;

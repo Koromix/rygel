@@ -4,6 +4,8 @@
 
 var mco_common = {};
 (function() {
+    'use strict';
+
     const ConceptSets = {
         'ccam': {path: 'concepts/ccam.json', key: 'procedure'},
         'cim10': {path: 'concepts/cim10.json', key: 'diagnosis'},
