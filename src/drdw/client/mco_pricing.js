@@ -132,7 +132,7 @@ var mco_pricing = {};
     function checkIndexGhmRoot(indexes, index, ghm_root)
     {
         return index < 0 ||
-               !indexes[index].init ||
+               !(available_dates.has(indexes[index].begin_date)) ||
                (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
     }
 
@@ -216,15 +216,16 @@ var mco_pricing = {};
                                max_duration, apply_coeff, merge_cells)
     {
         let table = null;
-        if (pricing_info && pricing_info[main_index]) {
+        if (pricing_info && pricing_info[main_index] &&
+                (diff_index < 0 || pricing_info[diff_index])) {
             table = createTable(ghm_root, pricing_info[main_index].ghs,
                                 max_duration, apply_coeff, merge_cells,
                                 function(col, duration) {
                 if (diff_index < 0) {
                     var info = computePrice(col, duration, apply_coeff);
                 } else {
-                    var info = computePriceDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
-                                                 duration, apply_coeff);
+                    let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
+                    var info = computePriceDelta(col, prev_ghs, duration, apply_coeff);
                 }
                 if (info === null)
                     return null;
