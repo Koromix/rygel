@@ -18,7 +18,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     let grab_start_day;
     let grab_end_day;
 
-    let parser = createElement('input', {type: 'date'});
+    let parser = html('input', {type: 'date'});
     function strToDate(str)
     {
         // Put a few hours into the day to avoid DST problems
@@ -184,31 +184,31 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
         return widget;
     }
 
-    widget = createElement('div', {class: 'ppik'},
+    widget = html('div', {class: 'ppik'},
         // This dummy button catches click events that happen when a label encloses the widget
-        createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
+        html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
-        createElement('div', {class: 'ppik_main'},
-            createElement('div', {class: 'ppik_line'}),
-            createElement('div', {class: 'ppik_bar', pointerdown: handleBarDown,
-                                  pointermove: handleBarMove, pointerup: handlePointerUp}),
-            createElement('div', {class: 'ppik_handle'},
-                createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                                      pointerup: handlePointerUp}),
-                createElement('input', {type: 'date', style: 'bottom: 4px;',
-                                        change: handleDateChange, focusout: handleDateFocusOut})
+        html('div', {class: 'ppik_main'},
+            html('div', {class: 'ppik_line'}),
+            html('div', {class: 'ppik_bar', pointerdown: handleBarDown,
+                         pointermove: handleBarMove, pointerup: handlePointerUp}),
+            html('div', {class: 'ppik_handle'},
+                html('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                             pointerup: handlePointerUp}),
+                html('input', {type: 'date', style: 'bottom: 4px;',
+                               change: handleDateChange, focusout: handleDateFocusOut})
             ),
-            createElement('div', {class: 'ppik_handle'},
-                createElement('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                                      pointerup: handlePointerUp}),
-                createElement('input', {type: 'date', style: 'top: 18px;',
-                                        change: handleDateChange, focusout: handleDateFocusOut})
+            html('div', {class: 'ppik_handle'},
+                html('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
+                             pointerup: handlePointerUp}),
+                html('input', {type: 'date', style: 'top: 18px;',
+                               change: handleDateChange, focusout: handleDateFocusOut})
             )
         )
     );
-    main = widget.querySelector('.ppik_main');
-    handles = widget.querySelectorAll('.ppik_handle');
-    bar = widget.querySelector('.ppik_bar');
+    main = widget.query('.ppik_main');
+    handles = widget.queryAll('.ppik_handle');
+    bar = widget.query('.ppik_bar');
 
     min_date = min_date ? strToDate(min_date) : new Date(1900, 1, 1);
     max_date = max_date ? strToDate(max_date) : new Date(2100, 1, 1);

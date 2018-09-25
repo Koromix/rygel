@@ -84,13 +84,12 @@ var mco_casemix = {};
         }
 
         // Refresh settings
-        toggleClass(__('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update'), 'hide',
-                    !user.getSession());
-        _('#opt_ghm_roots').classList.toggle('hide',
-                                             !user.getSession() || route.cm_view !== 'table');
+        queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update')
+            .toggleClass('hide', !user.getSession());
+        query('#opt_ghm_roots').toggleClass('hide', !user.getSession() || route.cm_view !== 'table');
         refreshPeriods(route.period, route.prev_period, route.mode);
         refreshStructures(route.units);
-        _('#opt_mode > select').value = route.mode;
+        query('#opt_mode > select').value = route.mode;
         refreshAlgorithms(route.algorithm);
         refreshGhmRoots(ghm_roots, route.ghm_root);
 
@@ -110,12 +109,12 @@ var mco_casemix = {};
                     } break;
                 }
 
-                _('#cm_summary').classList.toggle('hide', route.cm_view !== 'summary');
-                _('#cm_table').classList.toggle('hide', route.cm_view !== 'table');
-                _('#cm').classList.remove('hide');
+                query('#cm_summary').toggleClass('hide', route.cm_view !== 'summary');
+                query('#cm_table').toggleClass('hide', route.cm_view !== 'table');
+                query('#cm').removeClass('hide');
             }
         } else {
-            _('#cm').classList.add('hide');
+            query('#cm').addClass('hide');
         }
         drdw.markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
     }
@@ -238,10 +237,10 @@ var mco_casemix = {};
             };
 
             picker = builder.getWidget();
-            let old_picker = _('#opt_periods > div:last-of-type');
-            cloneAttributes(old_picker, picker);
-            picker.classList.add('ppik');
-            old_picker.parentNode.replaceChild(picker, old_picker);
+            let old_picker = query('#opt_periods > div:last-of-type');
+            picker.copyAttributesFrom(old_picker);
+            picker.addClass('ppik');
+            old_picker.replaceWith(picker);
         }
 
         let prev_picker;
@@ -254,15 +253,15 @@ var mco_casemix = {};
             };
 
             prev_picker = builder.getWidget();
-            let old_picker = _('#opt_periods > div:first-of-type');
-            cloneAttributes(old_picker, prev_picker);
-            prev_picker.classList.add('ppik');
-            old_picker.parentNode.replaceChild(prev_picker, old_picker);
+            let old_picker = query('#opt_periods > div:first-of-type');
+            prev_picker.copyAttributesFrom(old_picker);
+            prev_picker.addClass('ppik');
+            old_picker.replaceWith(prev_picker);
         }
 
         picker.style.width = (mode !== 'none') ? '49%' : '100%';
         prev_picker.style.width = '49%';
-        prev_picker.classList.toggle('hide', mode === 'none');
+        prev_picker.toggleClass('hide', mode === 'none');
     }
 
     function refreshStructures(units)
@@ -300,18 +299,18 @@ var mco_casemix = {};
             go({units: this.object.getValues()});
         };
 
-        let old_select = _('#opt_units > div');
+        let old_select = query('#opt_units > div');
         if (old_select.object)
             builder.setActiveTab(old_select.object.getActiveTab());
         let select = builder.getWidget();
-        cloneAttributes(old_select, select);
-        select.classList.add('tsel');
-        old_select.parentNode.replaceChild(select, old_select);
+        select.copyAttributesFrom(old_select);
+        select.addClass('tsel');
+        old_select.replaceWith(select);
     }
 
     function refreshAlgorithms(algorithm)
     {
-        let select = _('#opt_algorithm > select');
+        let select = query('#opt_algorithm > select');
 
         select.innerHTML = '';
         for (let i = 0; i < algorithms.length; i++) {
@@ -320,7 +319,7 @@ var mco_casemix = {};
             let text ='Algorithme ' + algorithm.title;
             if (algorithm.name === default_algorithm)
                 text += ' *';
-            let option = createElement('option', {value: algorithm.name}, text);
+            let option = html('option', {value: algorithm.name}, text);
             select.appendChild(option);
         }
         select.value = algorithm;
@@ -328,14 +327,14 @@ var mco_casemix = {};
 
     function refreshGhmRoots(ghm_roots, select_ghm_root)
     {
-        var el = _('#opt_ghm_roots > select');
+        var el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
 
         for (var i = 0; i < ghm_roots.length; i++) {
             var ghm_root_info = ghm_roots[i];
 
-            var opt = createElement('option', {value: ghm_root_info.ghm_root},
-                                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
+            var opt = html('option', {value: ghm_root_info.ghm_root},
+                           ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
             if (mix_ghm_roots.size && !mix_ghm_roots.has(ghm_root_info.ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
@@ -351,26 +350,26 @@ var mco_casemix = {};
     {
         const ShortModes = ['J/T', '1', '2/3/4', 'Z/E'];
 
-        let table = createElement('table', {class: 'ls_table'},
-            createElement('thead'),
-            createElement('tbody')
+        let table = html('table', {class: 'ls_table'},
+            html('thead'),
+            html('tbody')
         );
-        let thead = table.querySelector('thead');
-        let tbody = table.querySelector('tbody');
+        let thead = table.query('thead');
+        let tbody = table.query('tbody');
 
         if (mix_rows.length) {
             // Header
             {
-                let tr = createElement('tr', {},
-                    createElement('th', {}, 'GHM'),
-                    createElement('th', {colspan: 2}, 'Part'),
-                    createElement('th', {colspan: 2}, 'Total')
+                let tr = html('tr',
+                    html('th', 'GHM'),
+                    html('th', {colspan: 2}, 'Part'),
+                    html('th', {colspan: 2}, 'Total')
                 );
                 for (let i = 0; i < ShortModes.length; i++) {
-                    let th = createElement('th', {colspan: 2}, ShortModes[i]);
+                    let th = html('th', {colspan: 2}, ShortModes[i]);
                     tr.appendChild(th);
                 }
-                tr.appendChild(createElement('th', {colspan: 2}, 'Décès'));
+                tr.appendChild(html('th', {colspan: 2}, 'Décès'));
                 thead.appendChild(tr);
             }
 
@@ -391,38 +390,36 @@ var mco_casemix = {};
             // Data
             for (let i = 0; i < ghm_roots.length; i++) {
                 let stat1 = findAggregate(stats_map1, ghm_roots[i]);
-                let tr = createElement('tr', {},
-                    createElement('td', {},
-                        createElement('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
-                                      ghm_roots[i])
+                let tr = html('tr',
+                    html('td',
+                        html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
+                             ghm_roots[i])
                     ),
-                    createElement('td', {class: 'cm_count'},
-                                  percentText(stat1.count / total_count)),
-                    createElement('td', {class: 'cm_price'},
-                                  percentText(stat1.price_cents / total_price_cents)),
-                    createElement('td', {class: 'cm_count'}, '' + stat1.count),
-                    createElement('td', {class: 'cm_price'}, mco_pricing.priceText(stat1.price_cents, false))
+                    html('td', {class: 'cm_count'}, percentText(stat1.count / total_count)),
+                    html('td', {class: 'cm_price'}, percentText(stat1.price_cents / total_price_cents)),
+                    html('td', {class: 'cm_count'}, '' + stat1.count),
+                    html('td', {class: 'cm_price'}, mco_pricing.priceText(stat1.price_cents, false))
                 );
                 for (let j = 0; j < ShortModes.length; j++) {
                     let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
                     if (stat2) {
-                        tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat2.count));
-                        tr.appendChild(createElement('td', {class: 'cm_price'},
-                                                     mco_pricing.priceText(stat2.price_cents, false)));
+                        tr.appendChild(html('td', {class: 'cm_count'}, '' + stat2.count));
+                        tr.appendChild(html('td', {class: 'cm_price'},
+                                            mco_pricing.priceText(stat2.price_cents, false)));
                     } else {
-                        tr.appendChild(createElement('td', {colspan: 2}));
+                        tr.appendChild(html('td', {colspan: 2}));
                     }
                 }
-                tr.appendChild(createElement('td', {class: 'cm_count'}, '' + stat1.deaths));
-                tr.appendChild(createElement('td', {class: 'cm_price'},
-                                             percentText(stat1.deaths / stat1.count)));
+                tr.appendChild(html('td', {class: 'cm_count'}, '' + stat1.deaths));
+                tr.appendChild(html('td', {class: 'cm_price'},
+                                    percentText(stat1.deaths / stat1.count)));
                 tbody.appendChild(tr);
             }
         }
 
-        let old_table = _('#cm_summary');
-        cloneAttributes(old_table, table);
-        old_table.parentNode.replaceChild(table, old_table);
+        let old_table = query('#cm_summary');
+        table.copyAttributesFrom(old_table);
+        old_table.replaceWith(table);
     }
 
     function percentText(fraction)
@@ -463,10 +460,10 @@ var mco_casemix = {};
                 if (stat) {
                     style = 'padding: 0';
                     content = [
-                        createElement('div', {style: 'float: left; width: calc(50% - 2px); text-align: left; padding: 1px;'},
-                                      '' + stat.count),
-                        createElement('div', {style: 'float: right; width: calc(50% - 2px); text-align: right; padding: 1px;'},
-                                      mco_pricing.priceText(stat.price_cents))
+                        html('div', {style: 'float: left; width: calc(50% - 2px); text-align: left; padding: 1px;'},
+                             '' + stat.count),
+                        html('div', {style: 'float: right; width: calc(50% - 2px); text-align: right; padding: 1px;'},
+                             mco_pricing.priceText(stat.price_cents))
                     ];
                 } else {
                     style = 'filter: opacity(50%);';
@@ -485,12 +482,12 @@ var mco_casemix = {};
                 return [content, {class: mode, style: style}, false];
             });
         } else {
-            table = createElement('table');
+            table = html('table');
         }
 
-        let old_table = _('#cm_table');
-        cloneAttributes(old_table, table);
-        old_table.parentNode.replaceChild(table, old_table);
+        let old_table = query('#cm_table');
+        table.copyAttributesFrom(old_table);
+        old_table.replaceWith(table);
     }
 
     function aggregate(rows, by)

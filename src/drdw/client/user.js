@@ -19,7 +19,7 @@ var user = {};
         drdw.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
-        _('#user').classList.toggle('hide', !!session);
+        query('#user').toggleClass('hide', !!session);
     }
 
     function runSession()
@@ -33,7 +33,7 @@ var user = {};
             }
         }
 
-        toggleClass(__('#side_session_box, #side_session_menu'), 'hide', !ShowUser);
+        queryAll('#side_session_box, #side_session_menu').toggleClass('hide', !ShowUser);
     }
     this.runSession = runSession;
 
@@ -69,10 +69,10 @@ var user = {};
 
     function login()
     {
-        let username = _('#user_username').value;
-        let password = _('#user_password').value;
-        _('#user_username').value = '';
-        _('#user_password').value = '';
+        let username = query('#user_username').value;
+        let password = query('#user_password').value;
+        query('#user_username').value = '';
+        query('#user_password').value = '';
 
         connect(username, password);
     }
@@ -97,40 +97,39 @@ var user = {};
     {
         let div = null;
         if (session) {
-            div = createElement('div', {},
+            div = html('div',
                 'Connecté : ' + session.username + ' ',
-                createElement('a', {href: '#',
-                                    click: function(e) { disconnect(); e.preventDefault(); }}, '(déconnexion)')
+                html('a', {href: '#', click: function(e) { disconnect(); e.preventDefault(); }},
+                     '(déconnexion)')
             );
         } else {
-            div = createElement('div', {},
-                createElement('a', {href: routeToUrl('login')}, 'Se connecter')
+            div = html('div',
+                html('a', {href: routeToUrl('login')}, 'Se connecter')
             );
         }
 
-        let old_div = document.querySelector('#side_session_box');
-        cloneAttributes(old_div, div);
-        old_div.parentNode.replaceChild(div, old_div);
+        let old_div = query('#side_session_box');
+        div.copyAttributesFrom(old_div);
+        old_div.replaceWith(div);
     }
 
     function updateSessionMenu()
     {
         let menu_item;
         if (session) {
-            menu_item = createElement('li', {},
-                createElement('a', {href: '#',
-                                    click: function(e) { user.disconnect(); e.preventDefault(); }},
-                              'Se déconnecter (' + session.username + ')')
+            menu_item = html('li',
+                html('a', {href: '#', click: function(e) { user.disconnect(); e.preventDefault(); }},
+                     'Se déconnecter (' + session.username + ')')
             );
         } else {
-            menu_item = createElement('li', {},
-                createElement('a', {href: user.routeToUrl()}, 'Se connecter')
+            menu_item = html('li',
+                html('a', {href: user.routeToUrl()}, 'Se connecter')
             );
         }
 
-        let old_menu_item = _('#side_session_menu');
-        cloneAttributes(old_menu_item, menu_item);
-        old_menu_item.parentNode.replaceChild(menu_item, old_menu_item);
+        let old_menu_item = query('#side_session_menu');
+        menu_item.copyAttributesFrom(old_menu_item);
+        old_menu_item.replaceWith(menu_item);
     }
 
     function randomizeUrlKey()

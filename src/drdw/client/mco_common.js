@@ -69,9 +69,9 @@ var mco_common = {};
         };
 
         let svg = builder.getWidget();
-        let old_svg = _('#opt_indexes');
-        cloneAttributes(old_svg, svg);
-        old_svg.parentNode.replaceChild(svg, old_svg);
+        let old_svg = query('#opt_indexes');
+        svg.copyAttributesFrom(old_svg);
+        old_svg.replaceWith(svg);
     }
     this.refreshIndexes = refreshIndexes;
 }).call(mco_common);

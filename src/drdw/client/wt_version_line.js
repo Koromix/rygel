@@ -27,7 +27,7 @@ function VersionLine()
     {
         if (g)
             g.parentNode.removeChild(g);
-        g = createElementNS('svg', 'g');
+        g = svg('g');
         widget.appendChild(g);
 
         if (versions.length < 2)
@@ -56,9 +56,9 @@ function VersionLine()
                 weight = 'normal';
             }
 
-            let node = createElementNS('svg', 'circle', {class: 'vlin_node', cx: x, cy: 20, r: radius,
-                                                         fill: color, click: handleNodeClick},
-                createElementNS('svg', 'title', {}, version.label)
+            let node = svg('circle', {class: 'vlin_node', cx: x, cy: 20, r: radius,
+                                      fill: color, click: handleNodeClick},
+                svg('title', version.label)
             );
             node.value = version.date;
             g.appendChild(node);
@@ -67,10 +67,9 @@ function VersionLine()
                 let text_y = text_above ? 10 : 40;
                 text_above = !text_above;
 
-                let text = createElementNS('svg', 'text', {class: 'vlin_text', x: x, y: text_y,
-                                                           'text-anchor': 'middle', fill: color,
-                                                           style: 'font-weight: ' + weight + ';',
-                                                           click: handleNodeClick}, version.label);
+                let text = svg('text', {class: 'vlin_text', x: x, y: text_y, 'text-anchor': 'middle',
+                                        fill: color, style: 'font-weight: ' + weight + ';',
+                                        click: handleNodeClick}, version.label);
                 text.value = version.date;
                 g.appendChild(text);
             }
@@ -93,8 +92,8 @@ function VersionLine()
         return widget;
     };
 
-    widget = createElementNS('svg', 'svg', {},
-        createElementNS('svg', 'line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
+    widget = svg('svg',
+        svg('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
     );
 
     widget.object = this;

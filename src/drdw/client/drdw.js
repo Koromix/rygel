@@ -35,23 +35,21 @@ var drdw = {};
 
     function markBusy(selector, busy)
     {
-        var elements = __(selector);
-        for (var i = 0; i < elements.length; i++)
-            elements[i].classList.toggle('busy', busy);
+        queryAll(selector).toggleClass('busy', busy);
     }
     this.markBusy = markBusy;
 
     function toggleMenu(selector, enable)
     {
-        var el = _(selector);
+        var el = query(selector);
         if (enable === undefined)
             enable = !el.classList.contains('active');
         if (enable) {
-            var els = __('nav');
+            var els = queryAll('nav');
             for (var i = 0; i < els.length; i++)
-                els[i].classList.toggle('active', els[i] == el);
+                els[i].toggleClass('active', els[i] == el);
         } else {
-            el.classList.remove('active');
+            el.removeClass('active');
         }
     }
     this.toggleMenu = toggleMenu;
@@ -116,8 +114,8 @@ var drdw = {};
             let new_module = route_modules[new_module_name];
 
             if (new_module !== module)
-                addClass(__('main > div'), 'hide');
-            addClass(__('#opt_menu > *'), 'hide');
+                queryAll('main > div').addClass('hide');
+            queryAll('#opt_menu > *').addClass('hide');
 
             module = new_module;
             if (module)
@@ -143,7 +141,7 @@ var drdw = {};
         }
 
         // Update side menu state and links
-        var menu_anchors = __('#side_menu li a');
+        var menu_anchors = queryAll('#side_menu li a');
         for (var i = 0; i < menu_anchors.length; i++) {
             let anchor = menu_anchors[i];
 
@@ -155,23 +153,23 @@ var drdw = {};
             }
 
             let active = (route_url_parts.href.startsWith(anchor.href) &&
-                          !anchor.classList.contains('category'));
-            anchor.classList.toggle('active', active);
+                          !anchor.hasClass('category'));
+            anchor.toggleClass('active', active);
         }
         toggleMenu('#side_menu', false);
 
         // Hide page menu if empty
         let opt_hide = true;
         {
-            let els = __('#opt_menu > *');
+            let els = queryAll('#opt_menu > *');
             for (let i = 0; i < els.length; i++) {
-                if (!els[i].classList.contains('hide')) {
+                if (!els[i].hasClass('hide')) {
                     opt_hide = false;
                     break;
                 }
             }
         }
-        toggleClass(__('#opt_deploy, #opt_menu'), 'hide', opt_hide);
+        queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
 
         // Update scroll target
         var scroll_target = scroll_cache[route_url_parts.path];
@@ -192,10 +190,10 @@ var drdw = {};
 
     function refreshErrors(errors)
     {
-        var log = _('#log');
+        var log = query('#log');
 
         log.innerHTML = errors.join('<br/>');
-        log.classList.toggle('hide', !errors.length);
+        log.toggleClass('hide', !errors.length);
     }
     this.refreshErrors = refreshErrors;
 
@@ -205,7 +203,7 @@ var drdw = {};
         if (window.location.pathname !== BaseUrl) {
             new_url = window.location.href;
         } else {
-            var first_anchor = _('#side_menu a[data-url]');
+            var first_anchor = query('#side_menu a[data-url]');
             new_url = eval(first_anchor.dataset.url);
             window.history.replaceState(null, null, new_url);
         }

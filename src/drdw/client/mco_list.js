@@ -230,27 +230,27 @@ var mco_list = {};
             errors.add('Critère de tri inconnu');
 
         // Refresh settings
-        removeClass(__('#opt_indexes'), 'hide');
+        queryAll('#opt_indexes').removeClass('hide');
         mco_common.refreshIndexes(indexes, main_index);
-        _('#opt_search').classList.remove('hide');
+        query('#opt_search').removeClass('hide');
         {
-            let search_input = _('#opt_search > input');
+            let search_input = query('#opt_search > input');
             if (route.search != search_input.value)
                 search_input.value = route.search || '';
         }
         if (Lists[route.list] && Lists[route.list].groups !== undefined) {
-            _('#opt_groups').classList.remove('hide');
+            query('#opt_groups').removeClass('hide');
             refreshGroups(Lists[route.list], route.group);
         }
 
         // Limit 'blinking' behavior
-        let list_table = _('#ls_' + route.list);
-        let show_table = list_table && !list_table.classList.contains('hide');
-        addClass(__('.ls_table'), 'hide');
+        let list_table = query('#ls_' + route.list);
+        let show_table = list_table && !list_table.hasClass('hide');
+        queryAll('.ls_table').addClass('hide');
         if (show_table) {
-            list_table.classList.remove('hide');
+            list_table.removeClass('hide');
         } else {
-            _('#ls').classList.add('hide');
+            query('#ls').addClass('hide');
         }
 
         // Refresh view
@@ -264,10 +264,10 @@ var mco_list = {};
             if (list_info) {
                 let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
                 refreshTable(route.list, concepts_map, route.page);
-                _('#ls_' + route.list).classList.remove('hide');
+                query('#ls_' + route.list).removeClass('hide');
             }
 
-            _('#ls').classList.remove('hide');
+            query('#ls').removeClass('hide');
         }
         drdw.markBusy('#ls', data.isBusy());
     }
@@ -416,27 +416,27 @@ var mco_list = {};
 
     function refreshHeader(spec)
     {
-        var h1 = _('#ls_spec');
+        var h1 = query('#ls_spec');
 
         if (spec) {
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(createElement('a', {href: routeToUrl({spec: null})}, '(retirer)'));
-            h1.classList.remove('hide');
+            h1.appendChild(html('a', {href: routeToUrl({spec: null})}, '(retirer)'));
+            h1.removeClass('hide');
         } else {
             h1.innerText = '';
-            h1.classList.add('hide');
+            h1.addClass('hide');
         }
     }
 
     function refreshGroups(list_info, select_group)
     {
-        var el = _('#opt_groups > select');
+        var el = query('#opt_groups > select');
         el.innerHTML = '';
 
         for (let i = 0; i < list_info.groups.length; i++) {
             let group_info = list_info.groups[i];
-            let opt = createElement('option', {value: group_info.type}, group_info.name);
+            let opt = html('option', {value: group_info.type}, group_info.name);
             el.appendChild(opt);
         }
         if (select_group)
@@ -445,14 +445,14 @@ var mco_list = {};
 
     function refreshTable(list_name, concepts_map, page)
     {
-        var table = createElement('table', {},
-            createElement('thead'),
-            createElement('tbody')
+        var table = html('table',
+            html('thead'),
+            html('tbody')
         );
-        var thead = table.querySelector('thead');
-        var tbody = table.querySelector('tbody');
+        var thead = table.query('thead');
+        var tbody = table.query('tbody');
 
-        var pages = createElement('table');
+        var pages = html('table');
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
@@ -473,11 +473,11 @@ var mco_list = {};
 
             // Header
             if (list_info.header === undefined || list_info.header) {
-                var tr = createElement('tr');
+                var tr = html('tr');
                 for (var i = first_column; i < list_info.columns.length; i++) {
                     let title = list_info.columns[i].title ? list_info.columns[i].title : list_info.columns[i].header;
-                    var th = createElement('th', {title: title, style: list_info.columns[i].style},
-                                           list_info.columns[i].header);
+                    var th = html('th', {title: title, style: list_info.columns[i].style},
+                                  list_info.columns[i].header);
                     tr.appendChild(th);
                 }
                 thead.appendChild(tr);
@@ -491,19 +491,19 @@ var mco_list = {};
                 if (!list_info.columns[0].header) {
                     let content = list.cells[i];
                     if (content && content !== prev_heading_content) {
-                        var tr = createElement('tr', {class: 'heading'},
-                            createElement('td', {colspan: list_info.columns.length - 1,
-                                                 title: content}, addSpecLinks(content))
+                        var tr = html('tr', {class: 'heading'},
+                            html('td', {colspan: list_info.columns.length - 1, title: content},
+                                 addSpecLinks(content))
                         );
                         tbody.appendChild(tr);
                         prev_heading_content = content;
                     }
                 }
 
-                var tr = createElement('tr');
+                var tr = html('tr');
                 for (var j = first_column; j < list_info.columns.length; j++) {
                     let content = list.cells[i + j];
-                    let td = createElement('td', {title: content}, addSpecLinks(content));
+                    let td = html('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
                 }
                 tbody.appendChild(tr);
@@ -512,9 +512,8 @@ var mco_list = {};
 
             if (!visible_count) {
                 let message = list.match_count ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
-                tbody.appendChild(createElement('tr', {},
-                    createElement('td', {colspan: list_info.columns.length - first_column},
-                                  message)
+                tbody.appendChild(html('tr',
+                    html('td', {colspan: list_info.columns.length - first_column}, message)
                 ));
             }
 
@@ -526,36 +525,36 @@ var mco_list = {};
             stats_text += ')';
         }
 
-        let old_pages = __('.ls_pages');
+        let old_pages = queryAll('.ls_pages');
         for (let i = 0; i < old_pages.length; i++) {
-            let pages_copy = pages.cloneNode(true);
-            cloneAttributes(old_pages[i], pages_copy);
-            pages_copy.classList.toggle('hide', !pages.children.length);
-            old_pages[i].parentNode.replaceChild(pages_copy, old_pages[i]);
+            let pages2 = pages.cloneNode(true);
+            pages2.copyAttributesFrom(old_pages[i]);
+            pages2.toggleClass('hide', !pages.children.length);
+            old_pages[i].replaceWith(pages2);
         }
 
-        _('#ls_stats').innerText = stats_text;
+        query('#ls_stats').innerText = stats_text;
 
-        let old_table = _('#ls_' + list_name);
-        cloneAttributes(old_table, table);
-        old_table.parentNode.replaceChild(table, old_table);
+        let old_table = query('#ls_' + list_name);
+        table.copyAttributesFrom(old_table);
+        old_table.replaceWith(table);
     }
 
     function createPagination(page, last_page)
     {
-        let pages = createElement('table', {},
-            createElement('tr')
+        let pages = html('table',
+            html('tr')
         );
-        let tr = pages.querySelector('tr');
+        let tr = pages.query('tr');
 
         function addPageLink(text, page)
         {
             if (page) {
-                tr.appendChild(createElement('td', {},
-                    createElement('a', {href: routeToUrl({page: page})}, '' + text)
+                tr.appendChild(html('td',
+                    html('a', {href: routeToUrl({page: page})}, '' + text)
                 ));
             } else {
-                tr.appendChild(createElement('td', {}, '' + text));
+                tr.appendChild(html('td', '' + text));
             }
         }
 
@@ -636,7 +635,7 @@ var mco_list = {};
             return str;
         }
 
-        let anchor = createElement('a', {href: url, class: cls}, str);
+        let anchor = html('a', {href: url, class: cls}, str);
 
         return anchor;
     }

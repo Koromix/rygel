@@ -18,7 +18,7 @@ function TreeSelector(prefix)
 
     function syncValue(value, checked)
     {
-        let checkboxes = widget.querySelectorAll('.tsel_option input[data-value="' + value + '"]');
+        let checkboxes = widget.queryAll('.tsel_option input[data-value="' + value + '"]');
         for (let i = 0; i < checkboxes.length; i++)
             checkboxes[i].checked = checked;
     }
@@ -26,16 +26,16 @@ function TreeSelector(prefix)
     // Does not work correctly for deep hierarchies (more than 32 levels)
     function syncGroupCheckboxes()
     {
-        let elements = widget.querySelectorAll('.tsel_list > label');
+        let elements = widget.queryAll('.tsel_list > label');
 
         let or_state = 0;
         let and_state = 0xFFFFFFFF;
         for (let i = elements.length - 1; i >= 0; i--) {
             let el = elements[i];
             let depth = parseInt(el.dataset.depth);
-            let checkbox = el.querySelector('input[type=checkbox]');
+            let checkbox = el.query('input[type=checkbox]');
 
-            if (el.classList.contains('tsel_group')) {
+            if (el.hasClass('tsel_group')) {
                 let check = !!(or_state & (1 << (depth + 1)));
                 checkbox.indeterminate = check && !(and_state & (1 << (depth + 1)));
                 checkbox.checked = check && !checkbox.indeterminate;
@@ -63,32 +63,31 @@ function TreeSelector(prefix)
             e.preventDefault();
             e.stopPropagation();
 
-            if (!widget.classList.contains('active') && self.changeHandler)
+            if (!widget.hasClass('active') && self.changeHandler)
                 setTimeout(function() { self.changeHandler.call(widget); }, 0);
         }
 
         summary.innerHTML = '';
         summary.appendChild(document.createTextNode(prefix));
         if (!values.length) {
-            let span = createElement('a', {}, 'Aucune option sélectionnée');
-            summary.appendChild(span);
+            let a = html('a', 'Aucune option sélectionnée');
+            summary.appendChild(a);
         } else if (values.length < 8) {
             for (let i = 0; i < values.length; i++) {
-                let span = createElement('a', {href: '#', click: handleSummaryOptionClick},
-                                         values[i]);
-                summary.appendChild(span);
+                let a = html('a', {href: '#', click: handleSummaryOptionClick}, values[i]);
+                summary.appendChild(a);
             }
         } else {
-            let span = createElement('a', {}, '' + values.length + ' / ' + total);
-            summary.appendChild(span);
+            let a = html('a', '' + values.length + ' / ' + total);
+            summary.appendChild(a);
         }
     }
 
     function selectTab(tab)
     {
-        removeClass(widget.querySelectorAll('.tsel_tab.active, .tsel_list.active'), 'active');
-        tab.classList.add('active');
-        tab.list.classList.add('active');
+        widget.queryAll('.tsel_tab.active, .tsel_list.active').removeClass('active');
+        tab.addClass('active');
+        tab.list.addClass('active');
 
         syncGroupCheckboxes();
         updateSummary();
@@ -96,8 +95,8 @@ function TreeSelector(prefix)
 
     function setVisibleState(checked)
     {
-        let list = widget.querySelector('.tsel_list.active');
-        let checkboxes = list.querySelectorAll('.tsel_option input[type=checkbox]');
+        let list = widget.query('.tsel_list.active');
+        let checkboxes = list.queryAll('.tsel_option input[type=checkbox]');
         for (let i = 0; i < checkboxes.length; i++)
             syncValue(checkboxes[i].dataset.value, checked);
 
@@ -128,8 +127,8 @@ function TreeSelector(prefix)
         let group = this.parentNode;
         let sibling = group.nextSibling;
         while (sibling && sibling.dataset.depth > group.dataset.depth) {
-            if (sibling.classList.contains('tsel_option')) {
-                let checkbox = sibling.querySelector('input[type=checkbox]');
+            if (sibling.hasClass('tsel_option')) {
+                let checkbox = sibling.query('input[type=checkbox]');
                 syncValue(checkbox.dataset.value, this.checked);
             }
             sibling = sibling.nextSibling;
@@ -147,16 +146,16 @@ function TreeSelector(prefix)
     }
 
     this.createTab = function(name, active) {
-        if (tabbar.classList.contains('hide')) {
-            tabbar.classList.remove('hide');
+        if (tabbar.hasClass('hide')) {
+            tabbar.removeClass('hide');
         } else {
-            list = createElement('div', {class: 'tsel_list'});
+            list = html('div', {class: 'tsel_list'});
             view.appendChild(list);
         }
 
-        let tab = createElement('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
-        if (list.classList.contains('active'))
-            tab.classList.add('active');
+        let tab = html('a', {class: 'tsel_tab', href: '#', click: handleTabClick}, name);
+        if (list.hasClass('active'))
+            tab.addClass('active');
         tab.list = list;
         tabbar.appendChild(tab);
 
@@ -164,9 +163,9 @@ function TreeSelector(prefix)
     };
 
     this.beginGroup = function(name) {
-        let el = createElement('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
+        let el = html('label', {class: 'tsel_group', style: 'padding-left: ' + depth + 'em;',
                                          'data-depth': depth},
-            createElement('input', {type: 'checkbox', click: handleGroupClick}),
+            html('input', {type: 'checkbox', click: handleGroupClick}),
             name
         );
 
@@ -184,30 +183,30 @@ function TreeSelector(prefix)
         options.selected = options.selected || false;
 
         options.selected &= !options.disabled;
-        let el = createElement('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
-                                         style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
-            createElement('input', {type: 'checkbox', click: handleOptionClick,
-                                    'data-value': value, checked: options.selected ? 'checked' : null}),
+        let el = html('label', {class: 'tsel_option' + (options.disabled ? ' disabled' : ''),
+                                style: 'padding-left: ' + depth + 'em;', 'data-depth': depth},
+            html('input', {type: 'checkbox', click: handleOptionClick,
+                           'data-value': value, checked: options.selected ? 'checked' : null}),
             name
         );
 
         list.appendChild(el);
     };
 
-    this.open = function() { widget.classList.add('active'); };
+    this.open = function() { widget.addClass('active'); };
     this.toggle = function(state) {
-        if (!widget.classList.toggle('active', state) && self.changeHandler)
+        if (!widget.toggleClass('active', state) && self.changeHandler)
              setTimeout(function() { self.changeHandler.call(widget); }, 0);
     };
     this.close = function() {
-        widget.classList.remove('active');
+        widget.removeClass('active');
         if (self.changeHandler)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
     };
 
     this.getActiveTab = function() {
         for (let i = 0; i < tabbar.childNodes.length; i++) {
-            if (tabbar.childNodes[i].classList.contains('active'))
+            if (tabbar.childNodes[i].hasClass('active'))
                 return i;
         }
         return 0;
@@ -222,7 +221,7 @@ function TreeSelector(prefix)
             all = false;
 
         let values = [];
-        let checkboxes = widget.querySelectorAll('.tsel_option input[type=checkbox]');
+        let checkboxes = widget.queryAll('.tsel_option input[type=checkbox]');
         for  (let i = 0; i < checkboxes.length; i++) {
             let checkbox = checkboxes[i];
             if (checkbox.checked || all)
@@ -245,33 +244,33 @@ function TreeSelector(prefix)
         return widget;
     };
 
-    widget = createElement('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
+    widget = html('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
         // This dummy button catches click events that happen when a label encloses the widget
-        createElement('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
+        html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
-        createElement('div', {class: 'tsel_main'},
-            createElement('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
-            createElement('div', {class: 'tsel_view'},
-                createElement('div', {class: 'tsel_tabbar hide'}),
-                createElement('div', {class: 'tsel_shortcuts'},
-                    createElement('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
-                    createElement('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
+        html('div', {class: 'tsel_main'},
+            html('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
+            html('div', {class: 'tsel_view'},
+                html('div', {class: 'tsel_tabbar hide'}),
+                html('div', {class: 'tsel_shortcuts'},
+                    html('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
+                    html('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
                 ),
-                createElement('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
-                createElement('div', {class: 'tsel_list active'})
+                html('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
+                html('div', {class: 'tsel_list active'})
             )
         ),
     );
-    summary = widget.querySelector('.tsel_summary');
-    tabbar = widget.querySelector('.tsel_tabbar');
-    view = widget.querySelector('.tsel_view');
-    list = widget.querySelector('.tsel_list');
+    summary = widget.query('.tsel_summary');
+    tabbar = widget.query('.tsel_tabbar');
+    view = widget.query('.tsel_view');
+    list = widget.query('.tsel_list');
 
     widget.object = this;
 }
 
 document.addEventListener('click', function(e) {
-    let selectors = document.querySelectorAll('.tsel.active');
+    let selectors = queryAll('.tsel.active');
     for (let i = 0; i < selectors.length; i++)
         selectors[i].object.close();
 });

@@ -30,7 +30,7 @@ var mco_tree = {};
             errors.add('Date incorrecte');
 
         // Refresh settings
-        removeClass(__('#opt_indexes'), 'hide');
+        queryAll('#opt_indexes').removeClass('hide');
         mco_common.refreshIndexes(indexes, main_index);
 
         // Refresh view
@@ -39,7 +39,7 @@ var mco_tree = {};
             data.clearErrors();
 
             refreshTree(nodes, hash);
-            _('#tr').classList.remove('hide');
+            query('#tr').removeClass('hide');
         }
         drdw.markBusy('#tr', data.isBusy());
     }
@@ -81,29 +81,29 @@ var mco_tree = {};
         if (nodes.length) {
             var ul = recurseNodes(0, '', []);
         } else {
-            var ul = createElement('ul', {});
+            var ul = html('ul');
         }
 
         // Make sure the corresponding node is visible
         if (hash && hash.match(/^n[0-9]+$/)) {
-            var el = ul.querySelector('#' + hash);
+            var el = ul.query('#' + hash);
             while (el && el !== ul) {
                 if (el.tagName === 'LI' && el.dataset.chain) {
-                    el.classList.remove('collapse');
+                    el.removeClass('collapse');
                     collapse_nodes.delete(el.dataset.chain);
                 }
                 el = el.parentNode;
             }
         }
 
-        var old_ul = _('#tr_tree');
-        cloneAttributes(old_ul, ul);
-        old_ul.parentNode.replaceChild(ul, old_ul);
+        var old_ul = query('#tr_tree');
+        ul.copyAttributesFrom(old_ul);
+        old_ul.replaceWith(ul);
     }
 
     function recurseNodes(start_idx, chain_str, parent_next_indices)
     {
-        var ul = createElement('ul');
+        var ul = html('ul');
 
         var indices = [];
         for (var node_idx = start_idx;;) {
@@ -140,7 +140,7 @@ var mco_tree = {};
                     var li = createNodeLi(pseudo_idx, pseudo_text,
                                           children.tagName === 'UL' ? recurse_str : null);
 
-                    appendChildren(li, children);
+                    li.appendChildren(children);
                     ul.appendChild(li);
                 }
             } else if (node.children_count === 2 && node.reverse) {
@@ -150,7 +150,7 @@ var mco_tree = {};
                 var li = createNodeLi(node_idx, node.reverse,
                                       children.tagName === 'UL' ? recurse_str  : null);
 
-                appendChildren(li, children);
+                li.appendChildren(children);
                 ul.appendChild(li);
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
@@ -163,16 +163,16 @@ var mco_tree = {};
                 while (indices.length && nodes[indices[0]].children_count === 2 &&
                        nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
                        nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
-                    li.appendChild(createElement('br'));
+                    li.appendChild(html('br'));
 
                     var li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
                     li2.children[0].id = li2.id;
-                    appendChildren(li, li2.childNodes);
+                    li.appendChildren(li2.childNodes);
 
                     indices.shift();
                 }
 
-                appendChildren(li, children);
+                li.appendChildren(children);
                 ul.appendChild(li);
             } else {
                 let recurse_str = chain_str + node.key;
@@ -183,7 +183,7 @@ var mco_tree = {};
 
                 for (var j = 1; j < node.children_count; j++) {
                     var children = recurseNodes(node.children_idx + j, recurse_str, indices);
-                    appendChildren(li, children);
+                    li.appendChildren(children);
                 }
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
@@ -201,10 +201,9 @@ var mco_tree = {};
         }
 
         // Simplify when there is only one leaf children
-        if (ul.querySelectorAll('li').length === 1) {
-            ul = ul.querySelector('li').childNodes;
-            for (var i = 0; i < ul.length; i++)
-                ul[i].classList.add('direct');
+        if (ul.queryAll('li').length === 1) {
+            ul = ul.query('li').childNodes;
+            ul.addClass('direct');
             ul = Array.prototype.slice.call(ul);
         }
 
@@ -216,20 +215,19 @@ var mco_tree = {};
         var content = mco_list.addSpecLinks(text);
 
         if (chain_str) {
-            var li = createElement('li', {id: 'n' + idx, class: 'parent'},
-                createElement('span', {},
-                    createElement('span', {class: 'n',
-                                           click: handleNodeClick}, '' + idx + ' '),
+            var li = html('li', {id: 'n' + idx, class: 'parent'},
+                html('span',
+                    html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
                     content
                 )
             );
             if (collapse_nodes.has(chain_str))
-                li.classList.add('collapse');
+                li.addClass('collapse');
             li.dataset.chain = chain_str;
         } else {
-            var li = createElement('li', {id: 'n' + idx, class: 'leaf'},
-                createElement('span', {},
-                    createElement('span', {class: 'n'}, '' + idx + ' '),
+            var li = html('li', {id: 'n' + idx, class: 'leaf'},
+                html('span',
+                    html('span', {class: 'n'}, '' + idx + ' '),
                     content
                 )
             );
@@ -241,7 +239,7 @@ var mco_tree = {};
     function handleNodeClick(e)
     {
         var li = this.parentNode.parentNode;
-        if (li.classList.toggle('collapse')) {
+        if (li.toggleClass('collapse')) {
             collapse_nodes.add(li.dataset.chain);
         } else {
             collapse_nodes.delete(li.dataset.chain);

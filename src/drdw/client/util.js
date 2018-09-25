@@ -6,25 +6,57 @@
 // DOM
 // ------------------------------------------------------------------------
 
-function addClass(elements, cls)
+Element.prototype.query = function(selector) { return this.querySelector(selector); }
+Element.prototype.queryAll = function(selector) { return this.querySelectorAll(selector); }
+function query(selector) { return document.querySelector(selector); }
+function queryAll(selector) { return document.querySelectorAll(selector); }
+
+NodeList.prototype.addClass = function(cls) {
+    for (let i = 0; i < this.length; i++)
+        this[i].classList.add(cls);
+};
+
+Element.prototype.addClass = function(cls) {
+    this.classList.add(cls);
+};
+
+NodeList.prototype.removeClass = function(cls) {
+    for (let i = 0; i < this.length; i++)
+        this[i].classList.remove(cls);
+};
+
+Element.prototype.removeClass = function(cls, value) {
+    this.classList.remove(cls);
+};
+
+NodeList.prototype.toggleClass = function(cls, value) {
+    for (let i = 0; i < this.length; i++)
+        this[i].classList.toggle(cls, value);
+};
+
+Element.prototype.toggleClass = function(cls, value) {
+    return this.classList.toggle(cls, value);
+};
+
+Element.prototype.hasClass = function(cls) {
+    return this.classList.contains(cls);
+};
+
+Element.prototype.appendChildren = function(els)
 {
-    for (var i = 0; i < elements.length; i++)
-        elements[i].classList.add(cls);
+    if (els === null || els === undefined) {
+        // Skip
+    } else if (typeof els === 'string') {
+        this.appendChild(document.createTextNode(els));
+    } else if (Array.isArray(els) || els instanceof NodeList) {
+        for (var i = 0; i < els.length; i++)
+            this.appendChildren(els[i]);
+    } else {
+        this.appendChild(els);
+    }
 }
 
-function removeClass(elements, cls)
-{
-    for (var i = 0; i < elements.length; i++)
-        elements[i].classList.remove(cls);
-}
-
-function toggleClass(elements, cls, value)
-{
-    for (var i = 0; i < elements.length; i++)
-        elements[i].classList.toggle(cls, value);
-}
-
-function getFullNamespace(ns)
+function expandNamespace(ns)
 {
     return ({
         svg: 'http://www.w3.org/2000/svg',
@@ -32,67 +64,57 @@ function getFullNamespace(ns)
     })[ns] || ns;
 }
 
-function createElement(tag, attr)
+function createElement(ns, tag, attributes, children)
 {
-    var args = [].slice.call(arguments);
-    args.unshift('html');
-    return createElementNS.apply(this, args);
-}
+    ns = expandNamespace(ns);
+    let el = document.createElementNS(ns, tag);
 
-function appendChildren(el, children)
-{
-    if (children === null || children === undefined) {
-        // Skip
-    } else if (typeof children === 'string') {
-        el.appendChild(document.createTextNode(children));
-    } else if (Array.isArray(children) || children instanceof NodeList) {
-        for (var i = 0; i < children.length; i++)
-            appendChildren(el, children[i]);
-    } else {
-        el.appendChild(children);
-    }
-}
-
-function createElementNS(ns, tag, attr)
-{
-    ns = getFullNamespace(ns);
-    var el = document.createElementNS(ns, tag);
-
-    if (attr) {
-        for (var key in attr) {
-            value = attr[key];
-            if (value !== null && value !== undefined) {
-                if (typeof value === 'function') {
-                    el.addEventListener(key, value.bind(el));
-                } else {
-                    el.setAttribute(key, value);
-                }
+    for (let key in attributes) {
+        value = attributes[key];
+        if (value !== null && value !== undefined) {
+            if (typeof value === 'function') {
+                el.addEventListener(key, value.bind(el));
+            } else {
+                el.setAttribute(key, value);
             }
         }
     }
 
-    for (var i = 3; i < arguments.length; i++)
-        appendChildren(el, arguments[i]);
+    el.appendChildren(children);
 
     return el;
 }
 
-function cloneAttributes(src_node, element)
+function createElementProxy(ns, tag, args, args_idx)
 {
-    var attributes = src_node.attributes;
+    let attributes;
+    if (arguments.length > args_idx &&
+            args[args_idx] instanceof Object && !(args[args_idx] instanceof Element)) {
+        attributes = args[args_idx++];
+    } else {
+        attributes = {};
+    }
+
+    let el = createElement(ns, tag, attributes, []);
+    for (let i = args_idx; i < args.length; i++)
+        el.appendChildren(args[i]);
+
+    return el;
+}
+
+function elem(ns, tag) { return createElementProxy(ns, tag, arguments, 2); }
+function html(tag) { return createElementProxy('html', tag, arguments, 1); }
+function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
+
+Element.prototype.copyAttributesFrom = function(el) {
+    let attributes = el.attributes;
     for (var i = 0; i < attributes.length; i++) {
-        element.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
+        this.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
     }
 }
 
-function _(selector)
-{
-    return document.querySelector(selector);
-}
-
-function __(selector)
-{
-    return document.querySelectorAll(selector);
+Element.prototype.replaceWith = function(el) {
+    this.parentNode.replaceChild(el, this);
 }
 
 // ------------------------------------------------------------------------
