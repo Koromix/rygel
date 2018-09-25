@@ -186,6 +186,7 @@ var mco_list = {};
 
     // Cache
     var list_cache = {};
+    var reactor = {};
 
     function runList(route, url, parameters, hash)
     {

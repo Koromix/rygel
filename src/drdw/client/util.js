@@ -172,6 +172,40 @@ function buildUrl(url, query_values)
 }
 
 // ------------------------------------------------------------------------
+// Reactor
+// ------------------------------------------------------------------------
+
+function Reactor()
+{
+    let values = {};
+
+    this.changed = function(mode) {
+        let ret = false;
+
+        let mode_values = values[mode];
+        if (mode_values === undefined) {
+            mode_values = [];
+            values[mode] = mode_values;
+        }
+
+        let common_length = Math.min(arguments.length - 1, mode_values.length);
+        for (let i = 0; i < common_length; i++) {
+            if (arguments[i + 1] !== mode_values[i]) {
+                mode_values[i] = arguments[i + 1];
+                ret = true;
+            }
+        }
+
+        for (let i = mode_values.length; i < arguments.length - 1; i++) {
+            mode_values.push(arguments[i + 1]);
+            ret = true;
+        }
+
+        return ret;
+    }
+}
+
+// ------------------------------------------------------------------------
 // Misc
 // ------------------------------------------------------------------------
 

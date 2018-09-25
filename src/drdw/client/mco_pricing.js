@@ -7,6 +7,7 @@ var mco_pricing = {};
     'use strict';
 
     // Cache
+    var reactor = new Reactor;
     var ghm_roots = [];
     var ghm_roots_map = {};
     var available_dates = new Set;
@@ -83,16 +84,19 @@ var mco_pricing = {};
             let pricing_info = pricings_map[route.ghm_root];
             let max_duration = parseInt(query('#opt_max_duration > input').value);
 
-            switch (route.view) {
-                case 'table': {
-                    refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
-                                      max_duration, route.apply_coefficient, true);
-                } break;
-                case 'chart': {
-                    let chart_ctx = query('#pr_chart').getContext('2d');
-                    chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
-                                         diff_index, max_duration, route.apply_coefficient);
-                } break;
+            if (reactor.changed(route.view, route.ghm_root, indexes.length, main_index, diff_index,
+                                max_duration, route.apply_coefficient)) {
+                switch (route.view) {
+                    case 'table': {
+                        refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
+                                          max_duration, route.apply_coefficient, true);
+                    } break;
+                    case 'chart': {
+                        let chart_ctx = query('#pr_chart').getContext('2d');
+                        chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
+                                             diff_index, max_duration, route.apply_coefficient);
+                    } break;
+                }
             }
 
             query('#pr_table').toggleClass('hide', route.view !== 'table');

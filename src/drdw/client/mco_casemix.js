@@ -17,6 +17,7 @@ var mco_casemix = {};
     var mix_url = null;
     var mix_rows = [];
     var mix_ghm_roots = new Set;
+    var reactor = new Reactor;
 
     function runCasemix(route, url, parameters, hash)
     {
@@ -103,10 +104,12 @@ var mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.cm_view) {
                     case 'summary': {
-                        refreshSummary();
+                        if (reactor.changed('summary', mix_url, mix_rows.length))
+                            refreshSummary();
                     } break;
                     case 'table': {
-                        if (main_index >= 0)
+                        if (main_index >= 0 &&
+                                reactor.changed('table', mix_url, mix_rows.length, main_index, route.ghm_root))
                             refreshTable(pricings_map[route.ghm_root], main_index, route.ghm_root);
                     } break;
                 }
