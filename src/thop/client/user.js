@@ -18,6 +18,7 @@ let user = {};
         thop.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
+        query('#user button').disabled = false;
         query('#user').removeClass('hide');
     }
 
@@ -72,6 +73,7 @@ let user = {};
         let password = query('#user_password').value;
         query('#user_username').value = '';
         query('#user_password').value = '';
+        query('#user button').disabled = true;
 
         connect(username, password);
     }
