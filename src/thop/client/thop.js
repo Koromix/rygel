@@ -80,10 +80,12 @@ let thop = {};
     }
     this.registerUrl = registerUrl;
 
-    function route(new_url, delay)
+    function route(new_url, delay, mark_history)
     {
         if (new_url === undefined)
             new_url = null;
+        if (mark_history === undefined)
+            mark_history = true;
 
         if (route_timer_id) {
             clearTimeout(route_timer_id);
@@ -91,7 +93,7 @@ let thop = {};
         }
         if (delay) {
             route_timer_id = setTimeout(function() {
-                route(new_url);
+                route(new_url, 0, mark_history);
             }, delay);
             return;
         }
@@ -104,7 +106,8 @@ let thop = {};
         if (!route_url_parts || url_parts.href !== route_url_parts.href) {
             if (route_url_parts)
                 scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-            window.history.pushState(null, null, url_parts.href);
+            if (mark_history)
+                window.history.pushState(null, null, url_parts.href);
         }
 
         // Update user stuff
@@ -212,7 +215,7 @@ let thop = {};
         route(new_url, false);
 
         window.addEventListener('popstate', function(e) {
-            route(window.location.href, false);
+            route(window.location.href, 0, false);
         });
         document.body.addEventListener('click', function(e) {
             if (e.target && e.target.tagName == 'A') {
