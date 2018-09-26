@@ -44,7 +44,7 @@
     width: 14px;
     left: -7px;
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAiElEQVQokaWSsQrDMAxENea0dvTvhWJi+UP8e/mG0iXnNR7TpbSldUJqHxxoeZyQTuRD9HA0pGw601BoKM850cNJTUsYRkasOepWMyPWJQzjD7QHfPsF08MdJdWS6eGEhnQWylE3mk73q6hk0/kf6H1JQzkL3oJc+sGeVduO0/yO5gJ0Va6l5A8tTnAg3xtIJAAAAABJRU5ErkJggg==');
-    cursor: w-resize;
+    cursor: ew-resize;
 }
 
 .ppik_handle > input {
