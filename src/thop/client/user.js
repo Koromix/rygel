@@ -15,13 +15,10 @@ let user = {};
     {
         let errors = new Set(data.getErrors());
 
-        if (session)
-            errors.add('Vous êtes déjà connecté(e)');
-
         thop.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
-        query('#user').toggleClass('hide', !!session);
+        query('#user').removeClass('hide');
     }
 
     function runSession()
@@ -100,9 +97,12 @@ let user = {};
         let div = null;
         if (session) {
             div = html('div',
-                'Connecté : ' + session.username + ' ',
+                session.username + ' (',
+                html('a', {href: routeToUrl()}, 'changer'),
+                ', ',
                 html('a', {href: '#', click: function(e) { disconnect(); e.preventDefault(); }},
-                     '(déconnexion)')
+                     'déconnexion'),
+                ')'
             );
         } else {
             div = html('div',
