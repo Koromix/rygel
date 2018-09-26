@@ -7,17 +7,6 @@
     text-align: center;
 }
 
-.ls_pages {
-    margin: 0.5em auto;
-    text-align: center;
-    font-size: 1.1em;
-    table-layout: fixed;
-}
-.ls_pages td {
-    width: 28px;
-    vertical-align: bottom;
-}
-
 #ls_stats {
     margin: 3px;
     font-size: 0.9em;

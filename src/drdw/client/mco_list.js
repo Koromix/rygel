@@ -455,20 +455,18 @@ var mco_list = {};
         var thead = table.query('thead');
         var tbody = table.query('tbody');
 
-        var pages = html('table');
-
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
 
         let stats_text = '';
+        let last_page = null;
         if (list && list.url) {
+            // Pagination
             let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
             // Pagination
-            if (list.match_count && (list.match_count > PageLen || offset)) {
-                let last_page = Math.floor((list.match_count - 1) / PageLen + 1);
-                pages = createPagination(page, last_page);
-            }
+            if (list.match_count && (list.match_count > PageLen || offset))
+                last_page = Math.floor((list.match_count - 1) / PageLen + 1);
 
             let first_column = 0;
             if (!list_info.columns[0].header)
@@ -528,12 +526,18 @@ var mco_list = {};
             stats_text += ')';
         }
 
-        let old_pages = queryAll('.ls_pages');
-        for (let i = 0; i < old_pages.length; i++) {
-            let pages2 = pages.cloneNode(true);
-            pages2.copyAttributesFrom(old_pages[i]);
-            pages2.toggleClass('hide', !pages.children.length);
-            old_pages[i].replaceWith(pages2);
+        let old_pagers = queryAll('.ls_pager');
+        for (let i = 0; i < old_pagers.length; i++) {
+            if (last_page) {
+                let pager = createPagination(page, last_page);
+                pager.copyAttributesFrom(old_pagers[i]);
+                pager.addClass('pagr');
+                pager.removeClass('hide');
+                old_pagers[i].replaceWith(pager);
+            } else {
+                old_pagers[i].innerHTML = '';
+                old_pagers[i].addClass('hide');
+            }
         }
 
         query('#ls_stats').innerText = stats_text;
@@ -545,51 +549,11 @@ var mco_list = {};
 
     function createPagination(page, last_page)
     {
-        let pages = html('table',
-            html('tr')
-        );
-        let tr = pages.query('tr');
-
-        function addPageLink(text, page)
-        {
-            if (page) {
-                tr.appendChild(html('td',
-                    html('a', {href: routeToUrl({page: page})}, '' + text)
-                ));
-            } else {
-                tr.appendChild(html('td', '' + text));
-            }
+        let builder = new Pager(page, last_page);
+        builder.anchorBuilder = function(text, page) {
+            return html('a', {href: routeToUrl({page: page})}, '' + text);
         }
-
-        let start_page, end_page;
-        if (last_page < 8) {
-            start_page = 1;
-            end_page = last_page;
-        } else if (page < 5) {
-            start_page = 1;
-            end_page = 5;
-        } else if (page > last_page - 4) {
-            start_page = last_page - 4;
-            end_page = last_page;
-        } else {
-            start_page = page - 1;
-            end_page = page + 1;
-        }
-
-        addPageLink('≪', (page > 1) ? (page - 1) : null);
-        if (start_page > 1) {
-            addPageLink(1, 1);
-            addPageLink(' … ');
-        }
-        for (let i = start_page; i <= end_page; i++)
-            addPageLink(i, (page !== i) ? i : null);
-        if (end_page < last_page) {
-            addPageLink(' … ');
-            addPageLink(last_page, last_page);
-        }
-        addPageLink('≫', (page < last_page) ? (page + 1) : null);
-
-        return pages;
+        return builder.getWidget();
     }
 
     function maskToRanges(mask)
