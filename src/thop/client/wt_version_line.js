@@ -60,7 +60,7 @@ function VersionLine()
 
             let node = svg('circle', {class: 'vlin_node', cx: x, cy: 20, r: radius,
                                       fill: color, click: handleNodeClick},
-                svg('title', version.label)
+                svg('title', version.tooltip)
             );
             node.value = version.date;
             g.appendChild(node);
@@ -78,10 +78,11 @@ function VersionLine()
         }
     }
 
-    this.addVersion = function(date, label, major) {
+    this.addVersion = function(date, label, tooltip, major) {
         versions.push({
             date: date,
             label: label,
+            tooltip: tooltip,
             major: major
         });
     };

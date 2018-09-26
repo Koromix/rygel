@@ -61,7 +61,12 @@ let mco_common = {};
 
         for (let i = 0; i < indexes.length; i++) {
             let index = indexes[i];
-            builder.addVersion(index.begin_date, index.begin_date, index.changed_prices);
+
+            let label = index.begin_date;
+            if (label.endsWith('-01'))
+                label = label.substr(0, label.length - 3);
+
+            builder.addVersion(index.begin_date, label, index.begin_date, index.changed_prices);
         }
         if (main_index >= 0)
             builder.setValue(indexes[main_index].begin_date);
