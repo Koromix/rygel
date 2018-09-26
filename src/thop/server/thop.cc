@@ -12,8 +12,8 @@
     #include <unistd.h>
 #endif
 
-#include "drdw.hh"
-#include "drdw_mco.hh"
+#include "thop.hh"
+#include "thop_mco.hh"
 #include "user.hh"
 #include "../../packer/packer.hh"
 
@@ -67,15 +67,15 @@ struct Route {
     HASH_TABLE_HANDLER(Route, url);
 };
 
-const mco_TableSet *drdw_table_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> drdw_constraints_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> drdw_index_to_constraints;
+const mco_TableSet *thop_table_set;
+HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
+HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
-const mco_AuthorizationSet *drdw_authorization_set;
-UserSet drdw_user_set;
-StructureSet drdw_structure_set;
-mco_StaySet drdw_stay_set;
-Date drdw_stay_set_dates[2];
+const mco_AuthorizationSet *thop_authorization_set;
+UserSet thop_user_set;
+StructureSet thop_structure_set;
+mco_StaySet thop_stay_set;
+Date thop_stay_set_dates[2];
 
 static DescSet desc_set;
 #ifndef NDEBUG
@@ -105,6 +105,8 @@ static const char *GetMimeType(Span<const char> path)
         return "application/json";
     } else if (extension == ".png") {
         return "image/png";
+    } else if (extension == ".svg") {
+        return "image/svg+xml";
     } else {
         LogError("Unknown MIME type for path '%1'", path);
         return "application/octet-stream";
@@ -370,7 +372,7 @@ static void InitRoutes()
     }
 
     // Root
-    Route html = *routes.Find("/static/drdw.html");
+    Route html = *routes.Find("/static/thop.html");
     routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
 
     // User
@@ -400,7 +402,7 @@ static void InitRoutes()
                         favicon->u.st.asset, favicon->u.st.mime_type});
         }
     }
-    routes.Remove("/static/drdw.html");
+    routes.Remove("/static/thop.html");
 
     // We can use a global ETag because everything is in the binary
     {
@@ -419,7 +421,7 @@ static bool UpdateStaticAssets()
     const Span<const PackerAsset> *lib_assets = nullptr;
 #ifdef _WIN32
     Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_assets.dll", GetApplicationDirectory()).ptr;
+    filename = Fmt(&temp_alloc, "%1%/thop_assets.dll", GetApplicationDirectory()).ptr;
     {
         static FILETIME last_time;
 
@@ -445,7 +447,7 @@ static bool UpdateStaticAssets()
     lib_assets = (const Span<const PackerAsset> *)GetProcAddress(h, "packer_assets");
 #else
     Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/drdw_assets.so", GetApplicationDirectory()).ptr;
+    filename = Fmt(&temp_alloc, "%1%/thop_assets.so", GetApplicationDirectory()).ptr;
     {
         static struct timespec last_time;
 
@@ -659,7 +661,7 @@ int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: drdw [options] [stay_file ..]
+R"(Usage: thop [options] [stay_file ..]
 
 Options:
     -p, --port <port>            Web server port
@@ -733,16 +735,16 @@ Options:
         return 1;
     }
 
-    drdw_table_set = mco_GetMainTableSet();
-    if (!drdw_table_set || !drdw_table_set->indexes.len)
+    thop_table_set = mco_GetMainTableSet();
+    if (!thop_table_set || !thop_table_set->indexes.len)
         return 1;
     if (stays_filenames.len) {
-        drdw_authorization_set = mco_GetMainAuthorizationSet();
-        if (!drdw_authorization_set)
+        thop_authorization_set = mco_GetMainAuthorizationSet();
+        if (!thop_authorization_set)
             return 1;
-        if (!InitUserSet(mco_resource_directories, nullptr, &drdw_user_set))
+        if (!InitUserSet(mco_resource_directories, nullptr, &thop_user_set))
             return 1;
-        if (!InitStructureSet(mco_resource_directories, nullptr, &drdw_structure_set))
+        if (!InitStructureSet(mco_resource_directories, nullptr, &thop_structure_set))
             return 1;
     }
     if (!InitDescSet(mco_resource_directories, desc_directories, &desc_set))
@@ -754,42 +756,42 @@ Options:
         mco_StaySetBuilder stay_set_builder;
         if (!stay_set_builder.LoadFiles(stays_filenames))
             return 1;
-        if (!stay_set_builder.Finish(&drdw_stay_set))
+        if (!stay_set_builder.Finish(&thop_stay_set))
             return 1;
 
-        if (drdw_stay_set.stays.len) {
-            Span<const mco_Stay> mono_stays = drdw_stay_set.stays;
+        if (thop_stay_set.stays.len) {
+            Span<const mco_Stay> mono_stays = thop_stay_set.stays;
 
             Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-            drdw_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
-            drdw_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
+            thop_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
+            thop_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
 
             while (mono_stays.len) {
                 sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-                drdw_stay_set_dates[0] = std::min(drdw_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
-                drdw_stay_set_dates[1] = std::max(drdw_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
+                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
             }
 
-            drdw_stay_set_dates[1]++;
+            thop_stay_set_dates[1]++;
         }
     }
 
     LogInfo("Computing constraints");
     Async async;
-    drdw_constraints_set.Reserve(drdw_table_set->indexes.len);
-    for (Size i = 0; i < drdw_table_set->indexes.len; i++) {
-        if (drdw_table_set->indexes[i].valid) {
+    thop_constraints_set.Reserve(thop_table_set->indexes.len);
+    for (Size i = 0; i < thop_table_set->indexes.len; i++) {
+        if (thop_table_set->indexes[i].valid) {
             // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-            if (drdw_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
-                    !drdw_index_to_constraints[drdw_index_to_constraints.len - 1]) {
-                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = drdw_constraints_set.AppendDefault();
+            if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
+                    !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
+                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
                 async.AddTask([=]() {
-                    return mco_ComputeGhmConstraints(drdw_table_set->indexes[i], constraints);
+                    return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
                 });
             }
-            drdw_index_to_constraints.Append(&drdw_constraints_set[drdw_constraints_set.len - 1]);
+            thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
         } else {
-            drdw_index_to_constraints.Append(nullptr);
+            thop_index_to_constraints.Append(nullptr);
         }
     }
     if (!async.Sync())

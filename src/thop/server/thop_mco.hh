@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "drdw.hh"
+#include "thop.hh"
 
 Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
 Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type);

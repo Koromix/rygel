@@ -19,7 +19,7 @@ let mco_common = {};
     function updateIndexes()
     {
         if (!indexes.length) {
-            let url = drdw.baseUrl('api/mco_indexes.json');
+            let url = thop.baseUrl('api/mco_indexes.json');
             data.get(url, function(json) {
                 indexes = json;
             });
@@ -41,7 +41,7 @@ let mco_common = {};
             };
             concept_sets[name] = set;
 
-            let url = drdw.baseUrl(info.path);
+            let url = thop.baseUrl(info.path);
             data.get(url, function(json) {
                 set.concepts = json;
                 for (let i = 0; i < json.length; i++) {
@@ -67,7 +67,7 @@ let mco_common = {};
             builder.setValue(indexes[main_index].begin_date);
 
         builder.changeHandler = function() {
-            drdw.go({date: this.object.getValue()});
+            thop.go({date: this.object.getValue()});
         };
 
         let svg = builder.getWidget();

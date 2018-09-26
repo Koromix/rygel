@@ -11,7 +11,7 @@
     #include <arpa/inet.h>
 #endif
 
-#include "drdw.hh"
+#include "thop.hh"
 
 static const int64_t PruneDelay = 20 * 60 * 1000;
 static const int64_t IdleSessionDelay = 4 * 3600 * 1000;
@@ -123,7 +123,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
     if (!username || !password || !user_agent)
         return CreateErrorPage(422);
 
-    const User *user = drdw_user_set.FindUser(username);
+    const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
         return CreateErrorPage(404);

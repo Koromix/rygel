@@ -37,7 +37,7 @@ let mco_tree = {};
         mco_common.refreshIndexes(indexes, main_index);
 
         // Refresh view
-        drdw.refreshErrors(Array.from(errors));
+        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
             data.clearErrors();
 
@@ -47,14 +47,14 @@ let mco_tree = {};
 
             query('#tr').removeClass('hide');
         }
-        drdw.markBusy('#tr', data.isBusy());
+        thop.markBusy('#tr', data.isBusy());
     }
 
     function routeToUrl(args)
     {
-        let new_route = drdw.buildRoute(args);
+        let new_route = thop.buildRoute(args);
 
-        let url_parts = [drdw.baseUrl('mco_tree'), new_route.date];
+        let url_parts = [thop.baseUrl('mco_tree'), new_route.date];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -65,13 +65,13 @@ let mco_tree = {};
 
     function go(args, delay)
     {
-        drdw.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args), delay);
     }
     this.go = go;
 
     function updateTree(date)
     {
-        let url = buildUrl(drdw.baseUrl('api/mco_tree.json'), {date: date});
+        let url = buildUrl(thop.baseUrl('api/mco_tree.json'), {date: date});
         if (url === tree_url)
             return;
 
@@ -261,5 +261,5 @@ let mco_tree = {};
         e.preventDefault();
     };
 
-    drdw.registerUrl('mco_tree', this, runTree);
+    thop.registerUrl('mco_tree', this, runTree);
 }).call(mco_tree);

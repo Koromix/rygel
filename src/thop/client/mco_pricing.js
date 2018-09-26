@@ -77,7 +77,7 @@ let mco_pricing = {};
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
-        drdw.refreshErrors(Array.from(errors));
+        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
             data.clearErrors();
 
@@ -104,15 +104,15 @@ let mco_pricing = {};
             query('#pr_chart').toggleClass('hide', route.view !== 'chart');
             query('#pr').removeClass('hide');
         }
-        drdw.markBusy('#pr', data.isBusy());
+        thop.markBusy('#pr', data.isBusy());
     }
 
     function routeToUrl(args)
     {
-        let new_route = drdw.buildRoute(args);
+        let new_route = thop.buildRoute(args);
 
         let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-        let url_parts = [drdw.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
+        let url_parts = [thop.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -125,7 +125,7 @@ let mco_pricing = {};
 
     function go(args, delay)
     {
-        drdw.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args), delay);
     }
     this.go = go;
 
@@ -143,7 +143,7 @@ let mco_pricing = {};
         let begin_date = indexes[index].begin_date;
 
         if (!available_dates.has(begin_date)) {
-            let url = buildUrl(drdw.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
+            let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
             data.get(url, function(json) {
                 for (let i = 0; i < json.length; i++) {
                     let ghm_root = json[i].ghm_root;
@@ -605,5 +605,5 @@ let mco_pricing = {};
     }
     this.priceText = priceText;
 
-    drdw.registerUrl('mco_pricing', this, runPricing);
+    thop.registerUrl('mco_pricing', this, runPricing);
 }).call(mco_pricing);

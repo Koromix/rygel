@@ -5,19 +5,19 @@
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
         <link rel="icon" href="/favicon.ico" />
-        <title>drdw</title>
+        <title>THOP</title>
 
-        <link rel="stylesheet" href="/static/drdw.css"/>
-        <script type="text/javascript" src="/static/drdw.js"></script>
+        <link rel="stylesheet" href="/static/thop.css"/>
+        <script type="text/javascript" src="/static/thop.js"></script>
     </head>
 
     <body>
         <div id="side_bar">
-            <a class="deploy" href="#" onclick="drdw.toggleMenu('#side_menu'); return false;"></a>
+            <a class="deploy" href="#" onclick="thop.toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
                 <div id="side_session_box" class="hide"></div>
 
-                <img id="logo" src="/static/logo.png" alt="drdw logo"/>
+                <img id="logo" src="/static/thop_logo.svg" height="160" alt="THOP logo"/>
                 <ul>
                     <li id="side_session_menu" class="hide"><a class="category"></a></li>
 
@@ -40,18 +40,18 @@
         </div>
 
         <main>
-            <a id="opt_deploy" class="deploy" href="#" onclick="drdw.toggleMenu('#opt_menu'); return false;"></a>
+            <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
             <nav id="opt_menu">
                 <svg id="opt_indexes" class="indexes_line"></svg>
 
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
-                           oninput="drdw.go({search: this.value}, 200);"/>
+                           oninput="thop.go({search: this.value}, 200);"/>
                 </label>
                 <label id="opt_groups">
                     Tri
-                    <select onchange="drdw.go({group: this.value});"></select><br/>
+                    <select onchange="thop.go({group: this.value});"></select><br/>
                 </label>
 
                 <label id="opt_units">
@@ -63,37 +63,37 @@
                 </label>
                 <label id="opt_mode">
                     Comparer
-                    <select onchange="drdw.go({mode: this.value});">
+                    <select onchange="thop.go({mode: this.value});">
                         <option value="none">Désactiver</option>
                         <option value="absolute">Absolu</option>
                     </select>
                 </label>
                 <label id="opt_algorithm">
                     Algorithme
-                    <select onchange="drdw.go({algorithm: this.value});"></select>
+                    <select onchange="thop.go({algorithm: this.value});"></select>
                 </label>
 
-                <button id="opt_update" onclick="drdw.go({apply: true});"
+                <button id="opt_update" onclick="thop.go({apply: true});"
                         style="margin-bottom: 1em;">Mettre à jour</button>
 
                 <label id="opt_ghm_roots">
-                    <select onchange="drdw.go({ghm_root: this.value});"
+                    <select onchange="thop.go({ghm_root: this.value});"
                             style="width: 100%; margin-bottom: 4px;"></select><br/>
                 </label>
                 <label id="opt_diff_indexes">
                     Comparer
-                    <select onchange="drdw.go({diff: this.value});"
+                    <select onchange="thop.go({diff: this.value});"
                             style="width: 12em;"></select>
                 </label>
                 <label id="opt_max_duration">
                     Durée
-                    <input type="number" onchange="drdw.go();"
+                    <input type="number" onchange="thop.go();"
                            value="200" min="0" max="500" step="5"/>
                 </label>
                 <label id="opt_apply_coefficient">
                     Coefficient prudentiel
                     <input type="checkbox"
-                           onchange="drdw.go({apply_coefficient: this.checked});"/>
+                           onchange="thop.go({apply_coefficient: this.checked});"/>
                 </label>
             </nav>
             <div id="log"></div>

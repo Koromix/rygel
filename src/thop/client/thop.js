@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-let drdw = {};
+let thop = {};
 (function() {
     'use strict';
 
@@ -232,4 +232,4 @@ let drdw = {};
     } else {
         document.addEventListener('DOMContentLoaded', init);
     }
-}).call(drdw);
+}).call(thop);

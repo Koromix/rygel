@@ -28,7 +28,7 @@ let mco_casemix = {};
         // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
         let url_parts = url.split('/', 3);
         if (url_parts[2])
-            Object.assign(route, drdw.buildRoute(JSON.parse(window.atob(url_parts[2]))));
+            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(url_parts[2]))));
         route.cm_view = url_parts[1] || route.cm_view;
         if (!route.period[0])
             route.period = [start_date, end_date];
@@ -99,7 +99,7 @@ let mco_casemix = {};
         refreshGhmRoots(ghm_roots, route.ghm_root);
 
         // Refresh view
-        drdw.refreshErrors(Array.from(errors));
+        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
         if (user.getSession()) {
@@ -123,7 +123,7 @@ let mco_casemix = {};
         } else {
             query('#cm').addClass('hide');
         }
-        drdw.markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
+        thop.markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
     }
 
     function routeToUrl(args)
@@ -143,7 +143,7 @@ let mco_casemix = {};
             'ghm_root'
         ];
 
-        let new_route = drdw.buildRoute(args);
+        let new_route = thop.buildRoute(args);
 
         let short_route = {};
         for (let i = 0; i < KeepKeys.length; i++) {
@@ -151,7 +151,7 @@ let mco_casemix = {};
             short_route[k] = new_route[k] || null;
         }
 
-        let url_parts = [drdw.baseUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
+        let url_parts = [thop.baseUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -162,13 +162,13 @@ let mco_casemix = {};
 
     function go(args, delay)
     {
-        drdw.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args), delay);
     }
     this.go = go;
 
     function updateCaseMix()
     {
-        let url = buildUrl(drdw.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
+        let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
         data.get(url, function(json) {
             start_date = json.begin_date;
             end_date = json.end_date;
@@ -188,7 +188,7 @@ let mco_casemix = {};
             durations: 1,
             key: user.getUrlKey()
         };
-        let url = buildUrl(drdw.baseUrl('api/mco_classify.json'), params);
+        let url = buildUrl(thop.baseUrl('api/mco_classify.json'), params);
 
         return url;
     }
@@ -554,5 +554,5 @@ let mco_casemix = {};
         refreshTable();
     });
 
-    drdw.registerUrl('mco_casemix', this, runCasemix);
+    thop.registerUrl('mco_casemix', this, runCasemix);
 }).call(mco_casemix);

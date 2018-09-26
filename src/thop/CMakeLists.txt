@@ -6,12 +6,12 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(DRDW_RESOURCES client/drdw.html
+set(THOP_RESOURCES client/thop.html
 
                    # Keep config.js first
                    client/config.js
                    client/util.js
-                   client/drdw.js
+                   client/thop.js
                    client/data.js
                    client/user.js
                    client/mco_common.js
@@ -25,7 +25,7 @@ set(DRDW_RESOURCES client/drdw.html
                    client/wt_version_line.js
                    ../../lib/chartjs/chart.min.js
 
-                   client/drdw.css
+                   client/thop.css
                    client/mco_casemix.css
                    client/mco_list.css
                    client/mco_pricing.css
@@ -35,34 +35,34 @@ set(DRDW_RESOURCES client/drdw.html
                    client/wt_tree_selector.css
                    client/wt_version_line.css
 
-                   client/images/favicon.ico
-                   client/images/logo.png)
+                   client/images/thop_logo.svg
+                   client/images/favicon.ico)
 
-set(DRDW_SRC server/drdw.cc
-             server/drdw.hh
+set(THOP_SRC server/thop.cc
+             server/thop.hh
              server/config.cc
              server/config.hh
              server/json.hh
              server/user.cc
              server/user.hh
-             server/drdw_mco.cc
-             server/drdw_mco.hh)
+             server/thop_mco.cc
+             server/thop_mco.hh)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
-                   ARGS -Mdrdw -mcss,js -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${DRDW_RESOURCES}
+                   ARGS -Mthop -mcss,js -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                   DEPENDS packer ${DRDW_RESOURCES})
+                   DEPENDS packer ${THOP_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_library(drdw_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
-    set_target_properties(drdw_assets PROPERTIES PREFIX "")
+    add_library(thop_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
+    set_target_properties(thop_assets PROPERTIES PREFIX "")
 else()
-    list(APPEND DRDW_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
+    list(APPEND THOP_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
 endif()
 
-add_executable(drdw ${DRDW_SRC} ${DRDW_RESOURCES})
+add_executable(thop ${THOP_SRC} ${THOP_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
-    target_link_libraries(drdw PRIVATE dl)
+    target_link_libraries(thop PRIVATE dl)
 endif()
-target_include_directories(drdw PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(drdw PUBLIC drd microhttpd sodium)
+target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+target_link_libraries(thop PUBLIC drd microhttpd sodium)

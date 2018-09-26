@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "drdw.hh"
-#include "drdw_mco.hh"
+#include "thop.hh"
+#include "thop_mco.hh"
 
 static bool CheckUnitAgainstUser(const User &user, const Unit &unit)
 {
@@ -32,18 +32,18 @@ static bool CheckUnitAgainstUser(const User &user, const Unit &unit)
 
 static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode dispense_mode)
 {
-    return dispense_mode == drdw_structure_set.dispense_mode ||
+    return dispense_mode == thop_structure_set.dispense_mode ||
            (user.dispense_modes & (1 << (int)dispense_mode));
 }
 
 Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
-    if (!drdw_stay_set.stays.len || !conn->user)
+    if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404);
 
     // TODO: Cache in session object (also neeeded in ProduceClassify)?
     HashSet<UnitCode> allowed_units;
-    for (const Structure &structure: drdw_structure_set.structures) {
+    for (const Structure &structure: thop_structure_set.structures) {
         for (const Unit &unit: structure.units) {
             if (CheckUnitAgainstUser(*conn->user, unit))
                 allowed_units.Append(unit.unit);
@@ -56,12 +56,12 @@ Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Compression
 
         writer.StartObject();
 
-        writer.Key("begin_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[0]).ptr);
-        writer.Key("end_date"); writer.String(Fmt(buf, "%1", drdw_stay_set_dates[1]).ptr);
+        writer.Key("begin_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[0]).ptr);
+        writer.Key("end_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[1]).ptr);
 
         // Algorithms
         {
-            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)drdw_structure_set.dispense_mode];
+            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_structure_set.dispense_mode];
 
             writer.Key("algorithms"); writer.StartArray();
             for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
@@ -80,7 +80,7 @@ Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Compression
         }
 
         writer.Key("structures"); writer.StartArray();
-        for (const Structure &structure: drdw_structure_set.structures) {
+        for (const Structure &structure: thop_structure_set.structures) {
             writer.StartObject();
             writer.Key("name"); writer.String(structure.name);
             writer.Key("units"); writer.StartArray();
@@ -133,7 +133,7 @@ invalid:
 
 Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type)
 {
-    if (!drdw_stay_set.stays.len || !conn->user)
+    if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404);
 
     struct CellSummary {
@@ -157,7 +157,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
     };
 
     HashSet<UnitCode> allowed_units;
-    for (const Structure &structure: drdw_structure_set.structures) {
+    for (const Structure &structure: thop_structure_set.structures) {
         for (const Unit &unit: structure.units) {
             if (CheckUnitAgainstUser(*conn->user, unit))
                 allowed_units.Append(unit.unit);
@@ -235,7 +235,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
 
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
-    mco_Classify(*drdw_table_set, *drdw_authorization_set, drdw_stay_set.stays,
+    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
                  (int)mco_ClassifyFlag::Mono, &results, &mono_results);
 
     HeapArray<mco_Pricing> pricings;
@@ -353,7 +353,7 @@ static const mco_TableIndex *GetIndexFromRequest(const ConnectionInfo *conn,
         }
     }
 
-    const mco_TableIndex *index = drdw_table_set->FindIndex(date);
+    const mco_TableIndex *index = thop_table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         *out_response = CreateErrorPage(404);
@@ -382,7 +382,7 @@ Response ProduceMcoIndexes(const ConnectionInfo *, const char *, CompressionType
     MHD_Response *response = BuildJson(compression_type,
                                        [&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
-        for (const mco_TableIndex &index: drdw_table_set->indexes) {
+        for (const mco_TableIndex &index: thop_table_set->indexes) {
             if (!index.valid)
                 continue;
 
@@ -535,7 +535,7 @@ Response ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *, CompressionT
         return response;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-        *drdw_index_to_constraints[index - drdw_table_set->indexes.ptr];
+        *thop_index_to_constraints[index - thop_table_set->indexes.ptr];
 
     response.code = 200;
     response.response = BuildJson(compression_type,

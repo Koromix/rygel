@@ -18,7 +18,7 @@ let user = {};
         if (session)
             errors.add('Vous êtes déjà connecté(e)');
 
-        drdw.refreshErrors(Array.from(errors));
+        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
         query('#user').toggleClass('hide', !!session);
@@ -41,26 +41,26 @@ let user = {};
 
     function routeToUrl(args)
     {
-        return drdw.baseUrl('login');
+        return thop.baseUrl('login');
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        drdw.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args), delay);
     }
     this.go = go;
 
     function connect(username, password, func)
     {
-        let url = buildUrl(drdw.baseUrl('api/connect.json'));
+        let url = buildUrl(thop.baseUrl('api/connect.json'));
         data.post(url, {username: username, password: password}, randomizeUrlKey);
     }
     this.connect = connect;
 
     function disconnect()
     {
-        let url = buildUrl(drdw.baseUrl('api/disconnect.json'));
+        let url = buildUrl(thop.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
             session = null;
             randomizeUrlKey();
@@ -82,7 +82,7 @@ let user = {};
 
     function refreshSession()
     {
-        let url = buildUrl(drdw.baseUrl('api/session.json'), {key: url_key});
+        let url = buildUrl(thop.baseUrl('api/session.json'), {key: url_key});
         data.get(url, function(json) {
             let prev_username = session ? session.username : null;
             let new_username = json ? json.username : null;
@@ -151,5 +151,5 @@ let user = {};
 
     randomizeUrlKey();
 
-    drdw.registerUrl('login', this, runLogin);
+    thop.registerUrl('login', this, runLogin);
 }).call(user);
