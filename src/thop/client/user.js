@@ -52,17 +52,25 @@ let user = {};
     function connect(username, password, func)
     {
         let url = buildUrl(thop.baseUrl('api/connect.json'));
-        data.post(url, {username: username, password: password}, randomizeUrlKey);
+        data.post(url, {username: username, password: password}, function() {
+            randomizeUrlKey();
+
+            if (func)
+                func();
+        });
     }
     this.connect = connect;
 
-    function disconnect()
+    function disconnect(func)
     {
         let url = buildUrl(thop.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
             session = null;
             randomizeUrlKey();
             notifyChange();
+
+            if (func)
+                func();
         });
     }
     this.disconnect = disconnect;
@@ -75,7 +83,9 @@ let user = {};
         query('#user_password').value = '';
         query('#user button').disabled = true;
 
-        connect(username, password);
+        connect(username, password, function() {
+            setTimeout(thop.goBackOrHome, 0);
+        });
     }
     this.login = login;
 

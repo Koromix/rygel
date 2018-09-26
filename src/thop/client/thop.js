@@ -9,6 +9,7 @@ let thop = {};
     let route_modules = {};
 
     let route_timer_id = null;
+    let history_count = 0;
 
     let route_url = null;
     let route_url_parts = null;
@@ -106,8 +107,10 @@ let thop = {};
         if (!route_url_parts || url_parts.href !== route_url_parts.href) {
             if (route_url_parts)
                 scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-            if (mark_history)
+            if (mark_history) {
+                history_count++;
                 window.history.pushState(null, null, url_parts.href);
+            }
         }
 
         // Update user stuff
@@ -193,6 +196,17 @@ let thop = {};
     }
     this.go = go;
 
+    function goBackOrHome()
+    {
+        if (history_count) {
+            window.history.back();
+        } else {
+            let first_anchor = query('#side_menu a[data-url]');
+            route(first_anchor.href);
+        }
+    }
+    this.goBackOrHome = goBackOrHome;
+
     function refreshErrors(errors)
     {
         let log = query('#log');
@@ -210,11 +224,11 @@ let thop = {};
         } else {
             let first_anchor = query('#side_menu a[data-url]');
             new_url = eval(first_anchor.dataset.url);
-            window.history.replaceState(null, null, new_url);
         }
-        route(new_url, false);
+        route(new_url, 0, false);
 
         window.addEventListener('popstate', function(e) {
+            history_count--;
             route(window.location.href, 0, false);
         });
         document.body.addEventListener('click', function(e) {
