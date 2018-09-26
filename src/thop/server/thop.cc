@@ -498,7 +498,7 @@ static bool UpdateStaticAssets()
 
     InitRoutes();
 
-    LogInfo("Loaded assets from '%1'", filename);
+    LogInfo("Loaded assets from '%1'", SplitStrReverseAny(filename, PATH_SEPARATORS));
     return true;
 }
 #endif
