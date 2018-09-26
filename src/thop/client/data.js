@@ -6,7 +6,7 @@ let data = {};
 (function() {
     'use strict';
 
-    this.idleHandler = null;
+    this.busyHandler = null;
 
     let self = this;
     let errors = [];
@@ -22,9 +22,9 @@ let data = {};
 
         function handleFinishedRequest(status, response)
         {
-            busy--;
             callRequestHandlers(url, proceed, fail, status, response);
-            callIdleHandler();
+            if (!--busy)
+                callIdleHandler();
         }
 
         let xhr = new XMLHttpRequest();
@@ -36,6 +36,9 @@ let data = {};
         xhr.open('GET', url, true);
 
         xhr.send();
+
+        if (self.busyHandler)
+            self.busyHandler(true);
     }
     this.get = get;
 
@@ -48,9 +51,9 @@ let data = {};
 
         function handleFinishedRequest(status, response)
         {
-            busy--;
             callRequestHandlers(url, proceed, fail, status, response);
-            callIdleHandler();
+            if (!--busy)
+                callIdleHandler();
         }
 
         let xhr = new XMLHttpRequest();
@@ -64,6 +67,9 @@ let data = {};
         let encoded_parameters = buildUrl('', parameters).substr(1);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.send(encoded_parameters || null);
+
+        if (self.busyHandler)
+            self.busyHandler(true);
     }
     this.post = post;
 
@@ -91,16 +97,14 @@ let data = {};
 
     function callIdleHandler()
     {
-        if (!busy) {
-            if (self.idleHandler) {
-                setTimeout(function() {
-                    self.idleHandler();
-                    if (!busy)
-                        queue.clear();
-                }, 0);
-            } else {
-                queue.clear();
-            }
+        if (self.busyHandler) {
+            setTimeout(function() {
+                self.busyHandler(false);
+                if (!busy)
+                    queue.clear();
+            }, 0);
+        } else {
+            queue.clear();
         }
     }
 

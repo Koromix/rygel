@@ -227,7 +227,14 @@ let thop = {};
             }
         });
 
-        data.idleHandler = route;
+        data.busyHandler = function(busy) {
+            if (busy) {
+                document.body.style.cursor = 'wait';
+            } else {
+                document.body.style.cursor = 'default';
+                route();
+            }
+        }
     }
 
     if (document.readyState === 'complete') {
