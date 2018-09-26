@@ -2,18 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var mco_pricing = {};
+let mco_pricing = {};
 (function() {
     'use strict';
 
     // Cache
-    var reactor = new Reactor;
-    var ghm_roots = [];
-    var ghm_roots_map = {};
-    var available_dates = new Set;
-    var pricings_map = {};
+    let reactor = new Reactor;
+    let ghm_roots = [];
+    let ghm_roots_map = {};
+    let available_dates = new Set;
+    let pricings_map = {};
 
-    var chart = null;
+    // Chart.js
+    let chart = null;
 
     function runPricing(route, url, parameters, hash)
     {
@@ -144,11 +145,11 @@ var mco_pricing = {};
         if (!available_dates.has(begin_date)) {
             let url = buildUrl(drdw.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
             data.get(url, function(json) {
-                for (var i = 0; i < json.length; i++) {
-                    var ghm_root = json[i].ghm_root;
-                    var ghm_ghs = json[i];
+                for (let i = 0; i < json.length; i++) {
+                    let ghm_root = json[i].ghm_root;
+                    let ghm_ghs = json[i];
 
-                    var pricing_info = pricings_map[ghm_root];
+                    let pricing_info = pricings_map[ghm_root];
                     if (pricing_info === undefined) {
                         pricing_info = Array.apply(null, Array(indexes.length));
                         pricings_map[ghm_root] = pricing_info;
@@ -175,13 +176,13 @@ var mco_pricing = {};
 
     function refreshGhmRoots(indexes, main_index, select_ghm_root)
     {
-        var el = query('#opt_ghm_roots > select');
+        let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
 
-        for (var i = 0; i < ghm_roots.length; i++) {
-            var ghm_root_info = ghm_roots[i];
+        for (let i = 0; i < ghm_roots.length; i++) {
+            let ghm_root_info = ghm_roots[i];
 
-            var opt = html('option', {value: ghm_root_info.ghm_root},
+            let opt = html('option', {value: ghm_root_info.ghm_root},
                            ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
             if (!checkIndexGhmRoot(indexes, main_index, ghm_root_info.ghm_root)) {
                 opt.setAttribute('disabled', '');
@@ -196,12 +197,12 @@ var mco_pricing = {};
 
     function refreshIndexesDiff(indexes, diff_index, test_ghm_root)
     {
-        var el = query("#opt_diff_indexes > select");
+        let el = query("#opt_diff_indexes > select");
         el.innerHTML = '';
 
         el.appendChild(html('option', {value: ''}, 'Désactiver'));
-        for (var i = 0; i < indexes.length; i++) {
-            var opt = html('option', {value: indexes[i].begin_date}, indexes[i].begin_date);
+        for (let i = 0; i < indexes.length; i++) {
+            let opt = html('option', {value: indexes[i].begin_date}, indexes[i].begin_date);
             if (i === diff_index)
                 opt.setAttribute('selected', '');
             if (!checkIndexGhmRoot(indexes, i, test_ghm_root)) {
@@ -215,26 +216,28 @@ var mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
-        let table = null;
+        let table;
         if (pricing_info && pricing_info[main_index] &&
                 (diff_index < 0 || pricing_info[diff_index])) {
             table = createTable(ghm_root, pricing_info[main_index].ghs,
                                 max_duration, apply_coeff, merge_cells,
                                 function(col, duration) {
+                let info;
                 if (diff_index < 0) {
-                    var info = computePrice(col, duration, apply_coeff);
+                    info = computePrice(col, duration, apply_coeff);
                 } else {
                     let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
-                    var info = computePriceDelta(col, prev_ghs, duration, apply_coeff);
+                    info = computePriceDelta(col, prev_ghs, duration, apply_coeff);
                 }
                 if (info === null)
                     return null;
 
-                var props = [priceText(info[0]), {class: info[1]}, false];
+                let props = [priceText(info[0]), {class: info[1]}, false];
                 if (duration == 0 && col.warn_cmd28) {
                     props[1].class += ' warn';
                     props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
                 }
+
                 return props;
             });
         } else {
@@ -258,7 +261,7 @@ var mco_pricing = {};
             return;
         }
 
-        var ghs = pricing_info[main_index].ghs;
+        let ghs = pricing_info[main_index].ghs;
 
         function ghsLabel(ghs, conditions)
         {
@@ -283,18 +286,18 @@ var mco_pricing = {};
             }[mode] || "black";
         }
 
-        var data = {
+        let data = {
             labels: [],
             datasets: []
         };
-        for (var i = 0; i < max_duration; i++)
+        for (let i = 0; i < max_duration; i++)
             data.labels.push(durationText(i));
 
-        var max_price = 0.0;
-        for (var i = 0; i < ghs.length; i++) {
-            var conditions = buildConditionsArray(ghs[i]);
+        let max_price = 0.0;
+        for (let i = 0; i < ghs.length; i++) {
+            let conditions = buildConditionsArray(ghs[i]);
 
-            var dataset = {
+            let dataset = {
                 label: ghsLabel(ghs[i], conditions),
                 data: [],
                 borderColor: modeToColor(ghs[i].ghm.substr(5, 1)),
@@ -302,12 +305,13 @@ var mco_pricing = {};
                 borderDash: (conditions.length ? [5, 5] : undefined),
                 fill: false
             };
-            for (var duration = 0; duration < max_duration; duration++) {
+            for (let duration = 0; duration < max_duration; duration++) {
+                let info;
                 if (diff_index < 0) {
-                    var info = computePrice(ghs[i], duration, apply_coeff);
+                    info = computePrice(ghs[i], duration, apply_coeff);
                 } else {
-                    var info = computePriceDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
-                                                 duration, apply_coeff);
+                    info = computePriceDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
+                                             duration, apply_coeff);
                 }
 
                 if (info !== null) {
@@ -323,16 +327,16 @@ var mco_pricing = {};
             data.datasets.push(dataset);
         }
 
-        var min_price;
+        let min_price;
         if (diff_index < 0) {
             min_price = 0.0;
 
             // Recalculate maximum price across all (loaded) indexes to stabilize Y axis
-            for (var i = 0; i < pricing_info.length; i++) {
+            for (let i = 0; i < pricing_info.length; i++) {
                 if (i === main_index || !pricing_info[i])
                     continue;
 
-                for (var j = 0; j < pricing_info[i].ghs.length; j++) {
+                for (let j = 0; j < pricing_info[i].ghs.length; j++) {
                     let p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
                     if (p && p[0] > max_price)
                         max_price = p[0];
@@ -383,38 +387,40 @@ var mco_pricing = {};
 
         function appendRow(parent, name, func)
         {
-            var tr = html('tr',
+            let tr = html('tr',
                 html('th', name)
             );
 
-            var prev_cell = [document.createTextNode(''), {}, false];
-            var prev_td = null;
-            for (var i = 0; i < ghs.length; i++) {
-                var cell = func(ghs[i], i) || [null, {}, false];
+            let prev_cell = [document.createTextNode(''), {}, false];
+            let prev_td = null;
+            for (let i = 0; i < ghs.length; i++) {
+                let cell = func(ghs[i], i) || [null, {}, false];
                 if (cell[0] === null) {
                     cell[0] = document.createTextNode('');
                 } else if (typeof cell[0] === 'string') {
                     cell[0] = document.createTextNode(cell[0]);
                 }
+
                 if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
                         cell[1].class === prev_cell[1].class) {
-                    var colspan = parseInt(prev_td.getAttribute('colspan') || 1);
+                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1);
                     prev_td.setAttribute('colspan', colspan + 1);
                 } else {
                     prev_td = tr.appendChild(html('td', cell[1], cell[0]));
                 }
+
                 prev_cell = cell;
             }
 
             parent.appendChild(tr);
         }
 
-        var table = html('table',
+        let table = html('table',
             html('thead'),
             html('tbody')
         );
-        var thead = table.query('thead');
-        var tbody = table.query('tbody');
+        let thead = table.query('thead');
+        let tbody = table.query('tbody');
 
         let title;
         {
@@ -433,9 +439,9 @@ var mco_pricing = {};
         appendRow(thead, 'GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
         appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
         appendRow(thead, 'Conditions', function(col) {
-            var conditions = buildConditionsArray(col);
+            let conditions = buildConditionsArray(col);
 
-            var el = html('div', {title: conditions.join('\n')},
+            let el = html('div', {title: conditions.join('\n')},
                           conditions.length ? conditions.length.toString() : '');
             return [el, {class: 'conditions'}, true];
         });
@@ -443,37 +449,38 @@ var mco_pricing = {};
         appendRow(thead, 'Borne haute',
                   function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
         appendRow(thead, 'Tarif €', function(col) {
-            var cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
+            let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
             return [priceText(cents), {class: 'price'}, true];
         });
         appendRow(thead, 'Forfait EXB €', function(col) {
-            var cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
             return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow(thead, 'Tarif EXB €', function(col) {
-            var cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
             return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow(thead, 'Tarif EXH €', function(col) {
-            var cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
+            let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
             return [priceText(cents), {class: 'exh'}, true];
         });
         appendRow(thead, 'Age', function(col) {
-            var texts = [];
-            var severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+            let texts = [];
+            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
             if (severity >= 0 && severity < 4) {
                 if (severity < col.young_severity_limit)
                     texts.push('< ' + col.young_age_treshold.toString());
                 if (severity < col.old_severity_limit)
                     texts.push('≥ ' + col.old_age_treshold.toString());
             }
+
             return [texts.join(', '), {class: 'age'}, true];
         });
 
         for (var duration = 0; duration < max_duration; duration++) {
             if (duration % 10 == 0) {
                 let text = '' + duration + ' - ' + durationText(Math.min(max_duration - 1, duration + 9));
-                var tr = html('tr',
+                let tr = html('tr',
                     html('th', {class: 'repeat', colspan: ghs.length}, text)
                 );
                 tbody.appendChild(tr);
@@ -489,13 +496,7 @@ var mco_pricing = {};
 
     function testDuration(ghs, duration)
     {
-        var duration_mask;
-        if (duration < 32) {
-            duration_mask = 1 << duration;
-        } else {
-            duration_mask = 1 << 31;
-        }
-
+        let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
         return !!(ghs.durations & duration_mask);
     }
     this.testDuration = testDuration;
@@ -507,20 +508,22 @@ var mco_pricing = {};
         if (!testDuration(ghs, duration))
             return null;
 
+        let price_cents;
+        let mode;
         if (ghs.exb_treshold && duration < ghs.exb_treshold) {
-            var price_cents = ghs.ghs_cents;
+            price_cents = ghs.ghs_cents;
             if (ghs.exb_once) {
                 price_cents -= ghs.exb_cents;
             } else {
                 price_cents -= (ghs.exb_treshold - duration) * ghs.exb_cents;
             }
-            var mode = 'exb';
+            mode = 'exb';
         } else if (ghs.exh_treshold && duration >= ghs.exh_treshold) {
-            var price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
-            var mode = 'exh';
+            price_cents = ghs.ghs_cents + (duration - ghs.exh_treshold + 1) * ghs.exh_cents;
+            mode = 'exh';
         } else {
-            var price_cents = ghs.ghs_cents;
-            var mode = 'price';
+            price_cents = ghs.ghs_cents;
+            mode = 'price';
         }
 
         price_cents = applyGhsCoefficient(ghs, price_cents, apply_coeff);
@@ -529,11 +532,11 @@ var mco_pricing = {};
 
     function computePriceDelta(ghs, prev_ghs, duration, apply_coeff)
     {
-        var p1 = ghs ? computePrice(ghs, duration, apply_coeff) : null;
-        var p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
+        let p1 = ghs ? computePrice(ghs, duration, apply_coeff) : null;
+        let p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
 
         if (p1 !== null && p2 !== null) {
-            var delta = p1[0] - p2[0];
+            let delta = p1[0] - p2[0];
             if (delta < 0) {
                 return [delta, 'lower'];
             } else if (delta > 0) {
@@ -557,7 +560,7 @@ var mco_pricing = {};
 
     function buildConditionsArray(ghs)
     {
-        var conditions = [];
+        let conditions = [];
 
         if (ghs.unit_authorization)
             conditions.push('Autorisation Unité ' + ghs.unit_authorization);

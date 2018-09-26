@@ -2,22 +2,24 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var mco_casemix = {};
+let mco_casemix = {};
 (function() {
     'use strict';
 
-    // Route
-    var start_date = null;
-    var end_date = null;
-    var algorithms = [];
-    var default_algorithm = null;
-    var structures = [];
+    // Casemix
+    let start_date = null;
+    let end_date = null;
+    let algorithms = [];
+    let default_algorithm = null;
+    let structures = [];
+
+    // Results
+    let mix_url = null;
+    let mix_rows = [];
+    let mix_ghm_roots = new Set;
 
     // Cache
-    var mix_url = null;
-    var mix_rows = [];
-    var mix_ghm_roots = new Set;
-    var reactor = new Reactor;
+    let reactor = new Reactor;
 
     function runCasemix(route, url, parameters, hash)
     {
@@ -332,13 +334,13 @@ var mco_casemix = {};
 
     function refreshGhmRoots(ghm_roots, select_ghm_root)
     {
-        var el = query('#opt_ghm_roots > select');
+        let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
 
-        for (var i = 0; i < ghm_roots.length; i++) {
-            var ghm_root_info = ghm_roots[i];
+        for (let i = 0; i < ghm_roots.length; i++) {
+            let ghm_root_info = ghm_roots[i];
 
-            var opt = html('option', {value: ghm_root_info.ghm_root},
+            let opt = html('option', {value: ghm_root_info.ghm_root},
                            ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
             if (mix_ghm_roots.size && !mix_ghm_roots.has(ghm_root_info.ghm_root)) {
                 opt.setAttribute('disabled', '');

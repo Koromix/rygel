@@ -2,15 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var mco_tree = {};
+let mco_tree = {};
 (function() {
     'use strict';
 
     // Cache
-    var tree_url = null;
-    var nodes = [];
-    var reactor = new Reactor;
-    var collapse_nodes = new Set();
+    let tree_url = null;
+    let nodes = [];
+    let reactor = new Reactor;
+    let collapse_nodes = new Set();
 
     function runTree(route, url, parameters, hash)
     {
@@ -84,26 +84,27 @@ var mco_tree = {};
 
     function refreshTree(nodes)
     {
+        let ul;
         if (nodes.length) {
-            var ul = recurseNodes(0, '', []);
+            ul = recurseNodes(0, '', []);
         } else {
-            var ul = html('ul');
+            ul = html('ul');
         }
 
-        var old_ul = query('#tr_tree');
+        let old_ul = query('#tr_tree');
         ul.copyAttributesFrom(old_ul);
         old_ul.replaceWith(ul);
     }
 
     function recurseNodes(start_idx, chain_str, parent_next_indices)
     {
-        var ul = html('ul');
+        let ul = html('ul');
 
-        var indices = [];
-        for (var node_idx = start_idx;;) {
+        let indices = [];
+        for (let node_idx = start_idx;;) {
             indices.push(node_idx);
 
-            var node = nodes[node_idx];
+            let node = nodes[node_idx];
             if (nodes[node_idx].test === 20)
                 break;
 
@@ -114,8 +115,8 @@ var mco_tree = {};
         }
 
         while (indices.length) {
-            var node_idx = indices[0];
-            var node = nodes[node_idx];
+            let node_idx = indices[0];
+            let node = nodes[node_idx];
             indices.shift();
 
             // Hide GOTO nodes at the end of a chain, the classifier uses those to
@@ -125,13 +126,13 @@ var mco_tree = {};
 
             if (node.children_count > 2 && nodes[node.children_idx + 1].header) {
                 // Here we deal with jump lists (mainly D-xx and D-xxxx)
-                for (var j = 1; j < node.children_count; j++) {
+                for (let j = 1; j < node.children_count; j++) {
                     let recurse_str = chain_str + node.key + ('0' + j).slice(-2);
 
-                    var pseudo_idx = (j > 1) ? ('' + node_idx + '-' + j) : node_idx;
-                    var pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
-                    var children = recurseNodes(node.children_idx + j, recurse_str, indices);
-                    var li = createNodeLi(pseudo_idx, pseudo_text,
+                    let pseudo_idx = (j > 1) ? ('' + node_idx + '-' + j) : node_idx;
+                    let pseudo_text = node.text + ' ' + nodes[node.children_idx + j].header;
+                    let children = recurseNodes(node.children_idx + j, recurse_str, indices);
+                    let li = createNodeLi(pseudo_idx, pseudo_text,
                                           children.tagName === 'UL' ? recurse_str : null);
 
                     li.appendChildren(children);
@@ -140,8 +141,8 @@ var mco_tree = {};
             } else if (node.children_count === 2 && node.reverse) {
                 let recurse_str = chain_str + node.key;
 
-                var children = recurseNodes(node.children_idx, recurse_str, indices);
-                var li = createNodeLi(node_idx, node.reverse,
+                let children = recurseNodes(node.children_idx, recurse_str, indices);
+                let li = createNodeLi(node_idx, node.reverse,
                                       children.tagName === 'UL' ? recurse_str  : null);
 
                 li.appendChildren(children);
@@ -149,8 +150,8 @@ var mco_tree = {};
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
-                var children = recurseNodes(node.children_idx + 1, recurse_str, indices);
-                var li = createNodeLi(node_idx, node.text,
+                let children = recurseNodes(node.children_idx + 1, recurse_str, indices);
+                let li = createNodeLi(node_idx, node.text,
                                       children.tagName === 'UL' ? recurse_str : null);
 
                 // Simplify OR GOTO chains
@@ -159,7 +160,7 @@ var mco_tree = {};
                        nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
                     li.appendChild(html('br'));
 
-                    var li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
+                    let li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
                     li2.children[0].id = li2.id;
                     li.appendChildren(li2.childNodes);
 
@@ -171,12 +172,12 @@ var mco_tree = {};
             } else {
                 let recurse_str = chain_str + node.key;
 
-                var li = createNodeLi(node_idx, node.text,
+                let li = createNodeLi(node_idx, node.text,
                                       (node.children_count && node.children_count > 1) ? recurse_str : null);
                 ul.appendChild(li);
 
-                for (var j = 1; j < node.children_count; j++) {
-                    var children = recurseNodes(node.children_idx + j, recurse_str, indices);
+                for (let j = 1; j < node.children_count; j++) {
+                    let children = recurseNodes(node.children_idx + j, recurse_str, indices);
                     li.appendChildren(children);
                 }
 
@@ -185,7 +186,7 @@ var mco_tree = {};
                     if (node.children_idx != parent_next_indices[0]) {
                         let pseudo_idx = '' + node_idx + '-2';
                         let pseudo_text = 'Saut noeud ' + node.children_idx;
-                        var goto_li = createNodeLi(pseudo_idx, pseudo_text, null);
+                        let goto_li = createNodeLi(pseudo_idx, pseudo_text, null);
                         ul.appendChild(goto_li);
                     }
 
@@ -210,7 +211,7 @@ var mco_tree = {};
 
         // Make sure the corresponding node is visible
         if (hash && hash.match(/^n[0-9]+$/)) {
-            var el = ul.query('#' + hash);
+            let el = ul.query('#' + hash);
             while (el && el !== ul) {
                 if (el.tagName === 'LI' && el.dataset.chain) {
                     el.removeClass('collapse');
@@ -223,10 +224,11 @@ var mco_tree = {};
 
     function createNodeLi(idx, text, chain_str)
     {
-        var content = mco_list.addSpecLinks(text);
+        let content = mco_list.addSpecLinks(text);
 
+        let li;
         if (chain_str) {
-            var li = html('li', {id: 'n' + idx, class: 'parent'},
+            li = html('li', {id: 'n' + idx, class: 'parent'},
                 html('span',
                     html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
                     content
@@ -236,7 +238,7 @@ var mco_tree = {};
                 li.addClass('collapse');
             li.dataset.chain = chain_str;
         } else {
-            var li = html('li', {id: 'n' + idx, class: 'leaf'},
+            li = html('li', {id: 'n' + idx, class: 'leaf'},
                 html('span',
                     html('span', {class: 'n'}, '' + idx + ' '),
                     content
@@ -249,12 +251,13 @@ var mco_tree = {};
 
     function handleNodeClick(e)
     {
-        var li = this.parentNode.parentNode;
+        let li = this.parentNode.parentNode;
         if (li.toggleClass('collapse')) {
             collapse_nodes.add(li.dataset.chain);
         } else {
             collapse_nodes.delete(li.dataset.chain);
         }
+
         e.preventDefault();
     };
 

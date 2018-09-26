@@ -2,14 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var user = {};
+let user = {};
 (function() {
     'use strict';
 
-    var change_handlers = [];
+    let change_handlers = [];
 
-    var session = null;
-    var url_key = 0;
+    let session = null;
+    let url_key = 0;
 
     function runLogin(route, url, parameters, hash)
     {

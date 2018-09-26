@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var mco_common = {};
+let mco_common = {};
 (function() {
     'use strict';
 
@@ -13,8 +13,8 @@ var mco_common = {};
     };
 
     // Cache
-    var indexes = [];
-    var concept_sets = {};
+    let indexes = [];
+    let concept_sets = {};
 
     function updateIndexes()
     {
@@ -44,8 +44,8 @@ var mco_common = {};
             let url = drdw.baseUrl(info.path);
             data.get(url, function(json) {
                 set.concepts = json;
-                for (var i = 0; i < json.length; i++) {
-                    var concept = json[i];
+                for (let i = 0; i < json.length; i++) {
+                    let concept = json[i];
                     set.map[concept[info.key]] = concept;
                 }
             });

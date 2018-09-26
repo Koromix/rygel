@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var data = {};
+let data = {};
 (function() {
     'use strict';
 
@@ -27,7 +27,7 @@ var data = {};
             callIdleHandler();
         }
 
-        var xhr = new XMLHttpRequest();
+        let xhr = new XMLHttpRequest();
         xhr.responseType = 'json';
         xhr.timeout = 14000;
         xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
@@ -53,7 +53,7 @@ var data = {};
             callIdleHandler();
         }
 
-        var xhr = new XMLHttpRequest();
+        let xhr = new XMLHttpRequest();
         xhr.responseType = 'json';
         xhr.timeout = 14000;
         xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };

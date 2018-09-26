@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var mco_list = {};
+let mco_list = {};
 (function() {
     'use strict';
 
@@ -112,7 +112,7 @@ var mco_list = {};
                 {header: 'Diagnostics', variable: 'diagnoses'},
                 {header: 'Actes', variable: 'procedures'},
                 {header: 'Autorisations', title: 'Autorisations (unités et lits)', func: function(ghm_ghs) {
-                    var ret = [];
+                    let ret = [];
                     if (ghm_ghs.unit_authorization)
                         ret.push('Unité ' + ghm_ghs.unit_authorization);
                     if (ghm_ghs.bed_authorization)
@@ -165,7 +165,7 @@ var mco_list = {};
 
             'columns': [
                 {header: 'Acte', func: function(proc, ccam_map) {
-                    var proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
+                    let proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
                 {header: 'Dates', title: 'Date de début incluse, date de fin exclue',
@@ -179,14 +179,14 @@ var mco_list = {};
     };
 
     // Routes
-    var specs = {};
-    var groups = {};
-    var search = {};
-    var pages = {};
+    let specs = {};
+    let groups = {};
+    let search = {};
+    let pages = {};
 
     // Cache
-    var list_cache = {};
-    var reactor = {};
+    let list_cache = {};
+    let reactor = {};
 
     function runList(route, url, parameters, hash)
     {
@@ -360,7 +360,7 @@ var mco_list = {};
 
                     let show = false;
                     let prev_length = list.cells.length;
-                    for (var j = 0; j < columns.length; j++) {
+                    for (let j = 0; j < columns.length; j++) {
                         let content = createContent(columns[j], list.items[i], concepts_map,
                                                     group_info ? group_info.type : null);
                         if (!search || simplifyForSearch(content).indexOf(search) >= 0)
@@ -386,10 +386,11 @@ var mco_list = {};
 
     function createContent(column, item, concepts_map, group)
     {
+        let content;
         if (column.variable) {
-            var content = item[column.variable];
+            content = item[column.variable];
         } else if (column.func) {
-            var content = column.func(item, concepts_map, group);
+            content = column.func(item, concepts_map, group);
         }
 
         if (content === undefined || content === null) {
@@ -419,7 +420,7 @@ var mco_list = {};
 
     function refreshHeader(spec)
     {
-        var h1 = query('#ls_spec');
+        let h1 = query('#ls_spec');
 
         if (spec) {
             h1.innerHTML = '';
@@ -434,7 +435,7 @@ var mco_list = {};
 
     function refreshGroups(list_info, select_group)
     {
-        var el = query('#opt_groups > select');
+        let el = query('#opt_groups > select');
         el.innerHTML = '';
 
         for (let i = 0; i < list_info.groups.length; i++) {
@@ -448,12 +449,12 @@ var mco_list = {};
 
     function refreshTable(list_name, concepts_map, page)
     {
-        var table = html('table',
+        let table = html('table',
             html('thead'),
             html('tbody')
         );
-        var thead = table.query('thead');
-        var tbody = table.query('tbody');
+        let thead = table.query('thead');
+        let tbody = table.query('tbody');
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
@@ -474,10 +475,10 @@ var mco_list = {};
 
             // Header
             if (list_info.header === undefined || list_info.header) {
-                var tr = html('tr');
-                for (var i = first_column; i < list_info.columns.length; i++) {
+                let tr = html('tr');
+                for (let i = first_column; i < list_info.columns.length; i++) {
                     let title = list_info.columns[i].title ? list_info.columns[i].title : list_info.columns[i].header;
-                    var th = html('th', {title: title, style: list_info.columns[i].style},
+                    let th = html('th', {title: title, style: list_info.columns[i].style},
                                   list_info.columns[i].header);
                     tr.appendChild(th);
                 }
@@ -488,11 +489,11 @@ var mco_list = {};
             let visible_count = 0;
             let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
             let prev_heading_content = null;
-            for (var i = offset; i < end; i += list_info.columns.length) {
+            for (let i = offset; i < end; i += list_info.columns.length) {
                 if (!list_info.columns[0].header) {
                     let content = list.cells[i];
                     if (content && content !== prev_heading_content) {
-                        var tr = html('tr', {class: 'heading'},
+                        let tr = html('tr', {class: 'heading'},
                             html('td', {colspan: list_info.columns.length - 1, title: content},
                                  addSpecLinks(content))
                         );
@@ -501,8 +502,8 @@ var mco_list = {};
                     }
                 }
 
-                var tr = html('tr');
-                for (var j = first_column; j < list_info.columns.length; j++) {
+                let tr = html('tr');
+                for (let j = first_column; j < list_info.columns.length; j++) {
                     let content = list.cells[i + j];
                     let td = html('td', {title: content}, addSpecLinks(content));
                     tr.appendChild(td);
@@ -558,16 +559,16 @@ var mco_list = {};
 
     function maskToRanges(mask)
     {
-        var ranges = [];
+        let ranges = [];
 
-        var i = 0;
+        let i = 0;
         for (;;) {
             while (i < 32 && !(mask & (1 << i)))
                 i++;
             if (i >= 32)
                 break;
 
-            var j = i + 1;
+            let j = i + 1;
             while (j < 32 && (mask & (1 << j)))
                 j++;
             j--;
@@ -610,9 +611,9 @@ var mco_list = {};
 
     function addSpecLinks(str)
     {
-        var elements = [];
+        let elements = [];
         for (;;) {
-            var m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
+            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
             if (!m)
                 break;
 

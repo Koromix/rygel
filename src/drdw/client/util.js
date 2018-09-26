@@ -49,7 +49,7 @@ Element.prototype.appendChildren = function(els)
     } else if (typeof els === 'string') {
         this.appendChild(document.createTextNode(els));
     } else if (Array.isArray(els) || els instanceof NodeList) {
-        for (var i = 0; i < els.length; i++)
+        for (let i = 0; i < els.length; i++)
             this.appendChildren(els[i]);
     } else {
         this.appendChild(els);
@@ -108,9 +108,8 @@ function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
 
 Element.prototype.copyAttributesFrom = function(el) {
     let attributes = el.attributes;
-    for (var i = 0; i < attributes.length; i++) {
+    for (let i = 0; i < attributes.length; i++)
         this.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
-    }
 }
 
 Element.prototype.replaceWith = function(el) {
@@ -123,7 +122,7 @@ Element.prototype.replaceWith = function(el) {
 
 function parseUrl(url)
 {
-    var a = document.createElement('a');
+    let a = document.createElement('a');
     a.href = url;
 
     return {
@@ -135,11 +134,11 @@ function parseUrl(url)
         port: a.port,
         query: a.search,
         params: (function(){
-            var ret = {};
-            var seg = a.search.replace(/^\?/, '').split('&');
-            var len = seg.length;
-            var s;
-            for (var i = 0; i < len; i++) {
+            let ret = {};
+            let seg = a.search.replace(/^\?/, '').split('&');
+            let len = seg.length;
+            let s;
+            for (let i = 0; i < len; i++) {
                 if (!seg[i])
                     continue;
                 s = seg[i].split('=');

@@ -2,17 +2,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-var drdw = {};
+let drdw = {};
 (function() {
     'use strict';
 
-    var route_modules = {};
+    let route_modules = {};
 
-    var route_timer_id = null;
+    let route_timer_id = null;
 
-    var route_url = null;
-    var route_url_parts = null;
-    var route_values = {
+    let route_url = null;
+    let route_url_parts = null;
+    let route_values = {
         'view': 'table',
         'date': null,
         'ghm_root': null,
@@ -32,8 +32,8 @@ var drdw = {};
 
         'apply': false
     };
-    var scroll_cache = {};
-    var module = null;
+    let scroll_cache = {};
+    let module = null;
 
     function markBusy(selector, busy)
     {
@@ -43,12 +43,12 @@ var drdw = {};
 
     function toggleMenu(selector, enable)
     {
-        var el = query(selector);
+        let el = query(selector);
         if (enable === undefined)
             enable = !el.classList.contains('active');
         if (enable) {
-            var els = queryAll('nav');
-            for (var i = 0; i < els.length; i++)
+            let els = queryAll('nav');
+            for (let i = 0; i < els.length; i++)
                 els[i].toggleClass('active', els[i] == el);
         } else {
             el.removeClass('active');
@@ -143,8 +143,8 @@ var drdw = {};
         }
 
         // Update side menu state and links
-        var menu_anchors = queryAll('#side_menu li a');
-        for (var i = 0; i < menu_anchors.length; i++) {
+        let menu_anchors = queryAll('#side_menu li a');
+        for (let i = 0; i < menu_anchors.length; i++) {
             let anchor = menu_anchors[i];
 
             if (anchor.dataset.url) {
@@ -174,7 +174,7 @@ var drdw = {};
         queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
 
         // Update scroll target
-        var scroll_target = scroll_cache[route_url_parts.path];
+        let scroll_target = scroll_cache[route_url_parts.path];
         if (route_url_parts.hash) {
             window.location.hash = route_url_parts.hash;
         } else if (scroll_target) {
@@ -192,7 +192,7 @@ var drdw = {};
 
     function refreshErrors(errors)
     {
-        var log = query('#log');
+        let log = query('#log');
 
         log.innerHTML = errors.join('<br/>');
         log.toggleClass('hide', !errors.length);
@@ -205,7 +205,7 @@ var drdw = {};
         if (window.location.pathname !== BaseUrl) {
             new_url = window.location.href;
         } else {
-            var first_anchor = query('#side_menu a[data-url]');
+            let first_anchor = query('#side_menu a[data-url]');
             new_url = eval(first_anchor.dataset.url);
             window.history.replaceState(null, null, new_url);
         }
