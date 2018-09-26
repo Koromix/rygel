@@ -365,11 +365,14 @@ let mco_casemix = {};
         let tbody = table.query('tbody');
 
         if (mix_rows.length) {
+            // FIXME: Ugly as hell
+            let diff = (mix_url.indexOf('diff=') >= 0);
+
             // Header
             {
                 let tr = html('tr',
                     html('th', 'GHM'),
-                    html('th', {colspan: 2}, 'Part'),
+                    !diff ? html('th', {colspan: 2}, 'Part') : null,
                     html('th', {colspan: 2}, 'Total')
                 );
                 for (let i = 0; i < ShortModes.length; i++) {
@@ -386,12 +389,14 @@ let mco_casemix = {};
                 .sort(function(a, b) { return b.count - a.count; })
                 .map(function(stat) { return stat.ghm_root; });
 
-            // FIXME: Ugly: precompute
+            // TODO: Precompute basic stats
             let total_count = 0;
             let total_price_cents = 0;
-            for (let i = 0; i < mix_rows.length; i++) {
-                total_count += mix_rows[i].count;
-                total_price_cents += mix_rows[i].price_cents;
+            if (!diff) {
+                for (let i = 0; i < mix_rows.length; i++) {
+                    total_count += mix_rows[i].count;
+                    total_price_cents += mix_rows[i].price_cents;
+                }
             }
 
             // Data
@@ -402,8 +407,8 @@ let mco_casemix = {};
                         html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
                              ghm_roots[i])
                     ),
-                    html('td', {class: 'cm_count'}, percentText(stat1.count / total_count)),
-                    html('td', {class: 'cm_price'}, percentText(stat1.price_cents / total_price_cents)),
+                    !diff ? html('td', {class: 'cm_count'}, percentText(stat1.count / total_count)) : null,
+                    !diff ? html('td', {class: 'cm_price'}, percentText(stat1.price_cents / total_price_cents)) : null,
                     html('td', {class: 'cm_count'}, '' + stat1.count),
                     html('td', {class: 'cm_price'}, mco_pricing.priceText(stat1.price_cents, false))
                 );
