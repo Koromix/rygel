@@ -27,7 +27,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
             do {
                 if (prop.key == "PasswordHash") {
                     user.password_hash = MakeString(&set.str_alloc, prop.value).ptr;
-                } else if (prop.key == "Copy") {
+                } else if (prop.key == "Template") {
                     copy_from_idx = map.FindValue(prop.value.ptr, -1);
                     if (copy_from_idx < 0) {
                         LogError("Cannot copy from non-existent user '%1'", prop.value);
