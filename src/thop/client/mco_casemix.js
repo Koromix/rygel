@@ -371,22 +371,23 @@ let mco_casemix = {};
             // Header
             {
                 let tr = html('tr',
-                    html('th', 'GHM'),
-                    !diff ? html('th', {colspan: 2}, 'Part') : null,
-                    html('th', {colspan: 2}, 'Total')
+                    html('th', {'data-sort-default': ''}, 'GHM'),
+                    !diff ? html('th', {colspan: 2, 'data-sort-method': 'none', class: 'no-sort'}, 'Part') : null,
+                    html('th', {'data-sort-method': 'number'}, 'Effectif'),
+                    html('th', {'data-sort-method': 'number'}, 'Valorisation')
                 );
                 for (let i = 0; i < ShortModes.length; i++) {
-                    let th = html('th', {colspan: 2}, ShortModes[i]);
-                    tr.appendChild(th);
+                    tr.appendChild(html('th', {colspan: 2, 'data-sort-method': 'none', class: 'no-sort'},
+                                        ShortModes[i]));
                 }
-                tr.appendChild(html('th', {colspan: 2}, 'Décès'));
+                tr.appendChild(html('th', {colspan: 2, 'data-sort-method': 'number'}, 'Décès'));
                 thead.appendChild(tr);
             }
 
             let [stats1, stats_map1] = aggregate(mix_rows, ['ghm_root']);
             let [stats2, stats_map2] = aggregate(mix_rows, ['ghm_root', 'short_mode']);
             let ghm_roots = stats1
-                .sort(function(a, b) { return b.count - a.count; })
+                // .sort(function(a, b) { return b.count - a.count; })
                 .map(function(stat) { return stat.ghm_root; });
 
             // TODO: Precompute basic stats
@@ -407,10 +408,13 @@ let mco_casemix = {};
                         html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
                              ghm_roots[i])
                     ),
-                    !diff ? html('td', {class: 'cm_count'}, percentText(stat1.count / total_count)) : null,
-                    !diff ? html('td', {class: 'cm_price'}, percentText(stat1.price_cents / total_price_cents)) : null,
+                    !diff ? html('td', {class: 'cm_count', 'data-sort': stat1.count / total_count},
+                                 percentText(stat1.count / total_count)) : null,
+                    !diff ? html('td', {class: 'cm_price', 'data-sort': stat1.price_cents / total_price_cents},
+                                 percentText(stat1.price_cents / total_price_cents)) : null,
                     html('td', {class: 'cm_count'}, '' + stat1.count),
-                    html('td', {class: 'cm_price'}, mco_pricing.priceText(stat1.price_cents, false))
+                    html('td', {class: 'cm_price', 'data-sort': stat1.price_cents},
+                         mco_pricing.priceText(stat1.price_cents, false))
                 );
                 for (let j = 0; j < ShortModes.length; j++) {
                     let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
@@ -419,7 +423,8 @@ let mco_casemix = {};
                         tr.appendChild(html('td', {class: 'cm_price'},
                                             mco_pricing.priceText(stat2.price_cents, false)));
                     } else {
-                        tr.appendChild(html('td', {colspan: 2}));
+                        tr.appendChild(html('td', {class: 'cm_count'}));
+                        tr.appendChild(html('td', {class: 'cm_price'}));
                     }
                 }
                 tr.appendChild(html('td', {class: 'cm_count'}, '' + stat1.deaths));
@@ -432,6 +437,8 @@ let mco_casemix = {};
         let old_table = query('#cm_summary');
         table.copyAttributesFrom(old_table);
         old_table.replaceWith(table);
+
+        new Tablesort(table);
     }
 
     function percentText(fraction)

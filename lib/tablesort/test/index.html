@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset=utf-8 />
+<title></title>
+</head>
+<link href='../demo/style.css' rel='stylesheet'>
+<link href='../tablesort.css' rel='stylesheet'>
+<body>
+
+<table id='sort'>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Birthday</th>
+      <th>Grocery item</th>
+      <th>Price</th>
+      <th>Version</th>
+      <th>Filesize</th>
+      <th>Insensitive</th>
+      <th>data-sort</th>
+      <th data-sort-method="monthname">Monthname</th>
+      <th aria-sort="descending">Descending</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>Gonzo the Great</td>
+      <td>12-2-70</td>
+      <td>Radishes</td>
+      <td>63€</td>
+      <td>31.0.1650.57</td>
+      <td>124k</td>
+      <td>B</td>
+      <td data-sort='b'>3</td>
+      <td>February</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Ernie</td>
+      <td>10/11/69</td>
+      <td>Fish</td>
+      <td>£2.79</td>
+      <td>11.0.1</td>
+      <td>134.56 GB</td>
+      <td>1</td>
+      <td data-sort='a'>2</td>
+      <td>April</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Bert</td>
+      <td>10/11/1969</td>
+      <td>Broccoli</td>
+      <td>$0.79</td>
+      <td>18.0.1284.49</td>
+      <td>134 B</td>
+      <td>A</td>
+      <td data-sort='c'>1</td>
+      <td>January</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<table id='sort-descend'>
+  <thead>
+    <tr>
+      <th>Numbers descending</th>
+      <th aria-sort="ascending">Ascending column</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<table id='sort-exclude'>
+  <thead>
+    <tr>
+      <th data-sort-method='none'>Column exclusion</th>
+      <th>Row exclusion</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2</td>
+      <td>2</td>
+    </tr>
+    <tr data-sort-method='none'>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>3</td>
+    </tr>
+  </tbody>
+</table>
+
+<table id='sort-default'>
+  <thead>
+    <tr><th data-sort-default>Sort on initialization</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2</td></tr>
+    <tr><td>1</td></tr>
+    <tr><td>3</td></tr>
+  </tbody>
+</table>
+
+<table id='sort-refresh'>
+  <thead>
+    <tr><th data-sort-default>Refresh method</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2</td></tr>
+    <tr><td>1</td></tr>
+    <tr><td>3</td></tr>
+  </tbody>
+</table>
+
+<table id="sort-multi">
+  <thead>
+    <tr><th>Multi</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2</td></tr>
+    <tr><td>1</td></tr>
+    <tr><td>3</td></tr>
+  </tbody>
+  <tbody>
+    <tr><td>3</td></tr>
+    <tr><td>2</td></tr>
+    <tr><td>4</td></tr>
+  </tbody>
+</table>
+
+<table id="sort-row-set">
+  <thead>
+    <tr data-sort-method='thead'><th>Sort Row</th></tr>
+    <tr><th>Not Sort Row</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2</td></tr>
+    <tr><td>1</td></tr>
+    <tr><td>3</td></tr>
+  </tbody>
+</table>
+
+<table id="sort-row-auto">
+  <thead>
+    <tr><th>Not Sort Row</th></tr>
+    <tr><th>Sort Row</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>2</td></tr>
+    <tr><td>1</td></tr>
+    <tr><td>3</td></tr>
+  </tbody>
+</table>
+
+<script src='tape.js'></script>
+
+<script src='../src/tablesort.js'></script>
+<script src='../src/sorts/tablesort.dotsep.js'></script>
+<script src='../src/sorts/tablesort.filesize.js'></script>
+<script src='../src/sorts/tablesort.date.js'></script>
+<script src='../src/sorts/tablesort.number.js'></script>
+<script src='../src/sorts/tablesort.monthname.js'></script>
+
+<!-- Tests -->
+<script>
+table = document.getElementById('sort');
+tableDescend = document.getElementById('sort-descend');
+tableExclude = document.getElementById('sort-exclude');
+tableDefault = document.getElementById('sort-default');
+tableRefresh = document.getElementById('sort-refresh');
+tableMulti = document.getElementById('sort-multi');
+tableSortRowSet = document.getElementById('sort-row-set');
+tableSortRowAuto = document.getElementById('sort-row-auto');
+new Tablesort(table);
+new Tablesort(tableDescend, { descending: true });
+new Tablesort(tableExclude);
+new Tablesort(tableDefault);
+new Tablesort(tableMulti);
+new Tablesort(tableSortRowSet);
+new Tablesort(tableSortRowAuto);
+var refresh = new Tablesort(tableRefresh);
+
+var rowCount = tableRefresh.rows.length;
+var row = tableRefresh.insertRow(rowCount);
+var cellName = row.insertCell(0);
+    cellName.innerHTML = 0;
+
+refresh.refresh();
+</script>
+
+<script src='spec/tablesort.js'></script>
+<script src='spec/dotsep.js'></script>
+<script src='spec/multibody.js'></script>
+<script src='spec/filesize.js'></script>
+<script src='spec/date.js'></script>
+<script src='spec/number.js'></script>
+<script src='spec/monthname.js'></script>
+
+</body>
+</html>

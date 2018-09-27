@@ -24,6 +24,8 @@ set(THOP_RESOURCES client/thop.html
                    client/wt_tree_selector.js
                    client/wt_version_line.js
                    ../../lib/chartjs/chart.min.js
+                   ../../lib/tablesort/src/tablesort.js
+                   ../../lib/tablesort/src/sorts/tablesort.number.js
 
                    client/thop.css
                    client/mco_casemix.css
@@ -34,6 +36,7 @@ set(THOP_RESOURCES client/thop.html
                    client/wt_period_picker.css
                    client/wt_tree_selector.css
                    client/wt_version_line.css
+                   ../../lib/tablesort/tablesort.css
 
                    client/images/thop_logo.svg
                    client/images/favicon.ico)
