@@ -84,3 +84,4 @@ endif()
 
 add_projects("src/lib*" EXCLUDE_FROM_ALL)
 add_projects("src/*")
+add_subdirectory(tools)
