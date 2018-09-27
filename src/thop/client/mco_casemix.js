@@ -430,10 +430,18 @@ let mco_casemix = {};
                 let tbody = html('tbody');
                 table.appendChild(tbody);
 
+                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
                 for (let i = 0; i < ghm_roots.length; i++) {
-                    let stat2 = findAggregate(stats2_map, ghm_roots[i]);
-                    let ghm_root_elem = html('a', {href: routeToUrl({cm_view: 'table',
-                                                                     ghm_root: ghm_roots[i]})}, ghm_roots[i]);
+                    let ghm_root = ghm_roots[i];
+                    let ghm_root_info = ghm_roots_map[ghm_roots[i]];
+                    let href = routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]});
+
+                    let ghm_root_elem = html('a', {href: href,
+                                                   title: ghm_root_info ? ghm_root_info.desc : null},
+                                             ghm_roots[i]);
+                    let stat2 = findAggregate(stats2_map, ghm_root);
+
                     addRow(tbody, ghm_root_elem, stat2);
                 }
             }
