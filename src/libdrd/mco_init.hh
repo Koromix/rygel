@@ -12,12 +12,12 @@ static const char *const mco_options_usage =
 R"(Common options:
     -D, --resource_dir <dir>     Add resource directory
                                  (default: <executable_dir>%/resources)
-        --table_dir <dir>        Add table directory
-                                 (default: <resource_dir>%/tables)
-        --table_file <path>      Add table file
-        --auth_file <path>       Set authorization file
-                                 (default: <resource_dir>%/config%/authorizations.ini
-                                           <resource_dir>%/config%/authorizations.txt)
+        --mco_dir <dir>          Add MCO table directory
+                                 (default: <resource_dir>%/mco)
+        --mco_file <path>        Add MCO table file
+        --mco_auth <path>        Set authorization file
+                                 (default: <resource_dir>%/config%/mco_authorizations.ini
+                                           <resource_dir>%/config%/mco_authorizations.txt)
 
     -O, --output <path>          Dump information to file
                                  (default: stdout))";
