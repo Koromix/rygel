@@ -17,6 +17,26 @@
     color: #888;
 }
 
+#cm_table .lower:before {
+    float: left;
+    content: '↘';
+    background: #ff8888;
+    color: black;
+}
+#cm_table .higher:before {
+    float: left;
+    content: '↗';
+    background: #a2d4b6;
+    color: black;
+}
+#cm_table .neutral:before {
+    float: left;
+    content: '=';
+    background: #d7d7d7;
+    color: black;
+}
+#cm_table .empty { filter: opacity(50%); }
+
 @media screen and (min-width: 801px) {
     #cm_cmds { margin-bottom: 1em; }
     #cm_cmds td { border: 1px solid #a4a4a4; }

@@ -148,6 +148,7 @@ let mco_pricing = {};
                 for (let i = 0; i < json.length; i++) {
                     let ghm_root = json[i].ghm_root;
                     let ghm_ghs = json[i];
+                    ghm_ghs.conditions = buildConditionsArray(ghm_ghs);
 
                     let pricing_info = pricings_map[ghm_root];
                     if (pricing_info === undefined) {
@@ -216,30 +217,57 @@ let mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
-        let table;
+        let table = html('table',
+            html('thead'),
+            html('tbody')
+        );
+
         if (pricing_info && pricing_info[main_index] &&
                 (diff_index < 0 || pricing_info[diff_index])) {
-            table = createTable(ghm_root, pricing_info[main_index].ghs,
-                                max_duration, apply_coeff, merge_cells,
-                                function(col, duration) {
-                let info;
-                if (diff_index < 0) {
-                    info = computePrice(col, duration, apply_coeff);
-                } else {
-                    let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
-                    info = computePriceDelta(col, prev_ghs, duration, apply_coeff);
-                }
-                if (info === null)
-                    return null;
+            let thead = table.query('thead');
+            let tbody = table.query('tbody');
 
-                let props = [priceText(info[0]), {class: info[1]}, false];
-                if (duration == 0 && col.warn_cmd28) {
-                    props[1].class += ' warn';
-                    props[1].title = 'Devrait être orienté dans la CMD 28 (séance)';
+            let ghs = pricing_info[main_index].ghs;
+
+            addPricingHeader(thead, ghm_root, pricing_info[main_index].ghs, apply_coeff, merge_cells);
+
+            for (let duration = 0; duration < max_duration; duration++) {
+                if (duration % 10 == 0) {
+                    let text = '' + duration + ' - ' + durationText(Math.min(max_duration - 1, duration + 9));
+                    let tr = html('tr',
+                        html('th', {class: 'repeat', colspan: ghs.length}, text)
+                    );
+                    tbody.appendChild(tr);
                 }
 
-                return props;
-            });
+                let tr = html('tr',
+                    html('th', durationText(duration))
+                );
+                for (let i = 0; i < ghs.length; i++) {
+                    let col = ghs[i];
+
+                    let info;
+                    if (diff_index < 0) {
+                        info = computePrice(col, duration, apply_coeff);
+                    } else {
+                        let prev_ghs = pricing_info[diff_index].ghs_map[col.ghs];
+                        info = computeDelta(col, prev_ghs, duration, apply_coeff);
+                    }
+
+                    let td;
+                    if (info) {
+                        td = html('td', {class: info.mode}, priceText(info.price));
+                        if (!duration && col.warn_cmd28) {
+                            td.addClass('warn');
+                            td.title = 'Devrait être orienté dans la CMD 28 (séance)';
+                        }
+                    } else {
+                        td = html('td');
+                    }
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            }
         } else {
             table = html('table');
         }
@@ -248,6 +276,98 @@ let mco_pricing = {};
         table.copyAttributesFrom(old_table);
         old_table.replaceWith(table);
     }
+
+    function addPricingHeader(thead, ghm_root, columns, apply_coeff, merge_cells)
+    {
+        if (apply_coeff === undefined)
+            apply_coeff = false;
+        if (merge_cells === undefined)
+            merge_cells = true;
+
+        let title;
+        {
+            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
+            title = ghm_root;
+            if (ghm_roots_map[ghm_root])
+                title += ' - '  + ghm_roots_map[ghm_root].desc;
+        }
+
+        thead.appendChild(html('tr',
+            html('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
+        ));
+
+        function appendRow(name, func)
+        {
+            let tr = html('tr',
+                html('th', name)
+            );
+
+            let prev_cell = [document.createTextNode(''), {}, false];
+            let prev_td = null;
+            for (let i = 0; i < columns.length; i++) {
+                let cell = func(columns[i], i) || [null, {}, false];
+                if (cell[0] === null) {
+                    cell[0] = document.createTextNode('');
+                } else if (typeof cell[0] === 'string') {
+                    cell[0] = document.createTextNode(cell[0]);
+                }
+
+                if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
+                        cell[1].class === prev_cell[1].class) {
+                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1);
+                    prev_td.setAttribute('colspan', colspan + 1);
+                } else {
+                    prev_td = tr.appendChild(html('td', cell[1], cell[0]));
+                }
+
+                prev_cell = cell;
+            }
+
+            thead.appendChild(tr);
+        }
+
+        appendRow('GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, false]; });
+        appendRow('GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
+        appendRow('Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
+        appendRow('Conditions', function(col) {
+            let el = html('div', {title: col.conditions.join('\n')},
+                          col.conditions.length ? col.conditions.length.toString() : '');
+            return [el, {class: 'conditions'}, true];
+        });
+        appendRow('Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
+        appendRow('Borne haute',
+                  function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+        appendRow('Tarif €', function(col) {
+            let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
+            return [priceText(cents), {class: 'price'}, true];
+        });
+        appendRow('Forfait EXB €', function(col) {
+            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+        });
+        appendRow('Tarif EXB €', function(col) {
+            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+        });
+        appendRow('Tarif EXH €', function(col) {
+            let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
+            return [priceText(cents), {class: 'exh'}, true];
+        });
+        appendRow('Age', function(col) {
+            let texts = [];
+            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+            if (severity >= 0 && severity < 4) {
+                if (severity < col.young_severity_limit)
+                    texts.push('< ' + col.young_age_treshold.toString());
+                if (severity < col.old_severity_limit)
+                    texts.push('≥ ' + col.old_age_treshold.toString());
+            }
+
+            return [texts.join(', '), {class: 'age'}, true];
+        });
+    }
+    this.addPricingHeader = addPricingHeader;
 
     function refreshChart(chart, chart_ctx, pricing_info, main_index, diff_index,
                           max_duration, apply_coeff)
@@ -310,16 +430,16 @@ let mco_pricing = {};
                 if (diff_index < 0) {
                     info = computePrice(ghs[i], duration, apply_coeff);
                 } else {
-                    info = computePriceDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
-                                             duration, apply_coeff);
+                    info = computeDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
+                                        duration, apply_coeff);
                 }
 
                 if (info !== null) {
                     dataset.data.push({
                         x: durationText(duration),
-                        y: info[0] / 100
+                        y: info.price / 100
                     });
-                    max_price = Math.max(max_price, Math.abs(info[0]));
+                    max_price = Math.max(max_price, Math.abs(info.price));
                 } else {
                     dataset.data.push(null);
                 }
@@ -338,8 +458,8 @@ let mco_pricing = {};
 
                 for (let j = 0; j < pricing_info[i].ghs.length; j++) {
                     let p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
-                    if (p && p[0] > max_price)
-                        max_price = p[0];
+                    if (p && p.price > max_price)
+                        max_price = p.price;
                 }
             }
             max_price /= 100.0;
@@ -378,122 +498,6 @@ let mco_pricing = {};
         return chart;
     }
 
-    function createTable(ghm_root, ghs, max_duration, apply_coeff, merge_cells, row_func)
-    {
-        if (max_duration === undefined)
-            max_duration = 200;
-        if (merge_cells === undefined)
-            merge_cells = true;
-
-        function appendRow(parent, name, func)
-        {
-            let tr = html('tr',
-                html('th', name)
-            );
-
-            let prev_cell = [document.createTextNode(''), {}, false];
-            let prev_td = null;
-            for (let i = 0; i < ghs.length; i++) {
-                let cell = func(ghs[i], i) || [null, {}, false];
-                if (cell[0] === null) {
-                    cell[0] = document.createTextNode('');
-                } else if (typeof cell[0] === 'string') {
-                    cell[0] = document.createTextNode(cell[0]);
-                }
-
-                if (merge_cells && cell[2] && cell[0].isEqualNode(prev_cell[0]) &&
-                        cell[1].class === prev_cell[1].class) {
-                    let colspan = parseInt(prev_td.getAttribute('colspan') || 1);
-                    prev_td.setAttribute('colspan', colspan + 1);
-                } else {
-                    prev_td = tr.appendChild(html('td', cell[1], cell[0]));
-                }
-
-                prev_cell = cell;
-            }
-
-            parent.appendChild(tr);
-        }
-
-        let table = html('table',
-            html('thead'),
-            html('tbody')
-        );
-        let thead = table.query('thead');
-        let tbody = table.query('tbody');
-
-        let title;
-        {
-            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
-
-            title = ghm_root;
-            if (ghm_roots_map[ghm_root])
-                title += ' - '  + ghm_roots_map[ghm_root].desc;
-        }
-
-        thead.appendChild(html('tr',
-            html('td', {colspan: 1 + ghs.length, class: 'ghm_root'}, title)
-        ));
-
-        appendRow(thead, 'GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, true]; });
-        appendRow(thead, 'GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
-        appendRow(thead, 'Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
-        appendRow(thead, 'Conditions', function(col) {
-            let conditions = buildConditionsArray(col);
-
-            let el = html('div', {title: conditions.join('\n')},
-                          conditions.length ? conditions.length.toString() : '');
-            return [el, {class: 'conditions'}, true];
-        });
-        appendRow(thead, 'Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
-        appendRow(thead, 'Borne haute',
-                  function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
-        appendRow(thead, 'Tarif €', function(col) {
-            let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-            return [priceText(cents), {class: 'price'}, true];
-        });
-        appendRow(thead, 'Forfait EXB €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
-        });
-        appendRow(thead, 'Tarif EXB €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
-        });
-        appendRow(thead, 'Tarif EXH €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-            return [priceText(cents), {class: 'exh'}, true];
-        });
-        appendRow(thead, 'Age', function(col) {
-            let texts = [];
-            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
-            if (severity >= 0 && severity < 4) {
-                if (severity < col.young_severity_limit)
-                    texts.push('< ' + col.young_age_treshold.toString());
-                if (severity < col.old_severity_limit)
-                    texts.push('≥ ' + col.old_age_treshold.toString());
-            }
-
-            return [texts.join(', '), {class: 'age'}, true];
-        });
-
-        for (var duration = 0; duration < max_duration; duration++) {
-            if (duration % 10 == 0) {
-                let text = '' + duration + ' - ' + durationText(Math.min(max_duration - 1, duration + 9));
-                let tr = html('tr',
-                    html('th', {class: 'repeat', colspan: ghs.length}, text)
-                );
-                tbody.appendChild(tr);
-            }
-
-            appendRow(tbody, durationText(duration),
-                      function(col, i) { return row_func(col, duration); });
-        }
-
-        return table;
-    }
-    this.createTable = createTable;
-
     function testDuration(ghs, duration)
     {
         let duration_mask = (duration < 32) ? (1 << duration) : (1 << 31);
@@ -527,36 +531,43 @@ let mco_pricing = {};
         }
 
         price_cents = applyGhsCoefficient(ghs, price_cents, apply_coeff);
-        return [price_cents, mode];
+        return {price: price_cents, mode: mode};
     }
 
-    function computePriceDelta(ghs, prev_ghs, duration, apply_coeff)
+    function computeDelta(ghs, prev_ghs, duration, apply_coeff)
     {
         let p1 = ghs ? computePrice(ghs, duration, apply_coeff) : null;
         let p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
 
+        let delta;
+        let mode;
         if (p1 !== null && p2 !== null) {
-            let delta = p1[0] - p2[0];
+            delta = p1.price - p2.price;
             if (delta < 0) {
-                return [delta, 'lower'];
+                mode = 'lower';
             } else if (delta > 0) {
-                return [delta, 'higher'];
+                mode = 'higher';
             } else {
-                return [0, 'neutral'];
+                mode = 'neutral';
             }
         } else if (p1 !== null) {
-            return [p1[0], 'added'];
+            delta = p1.price;
+            mode = 'added';
         } else if (p2 !== null) {
-            return [-p2[0], 'removed'];
+            delta = -p2.price;
+            mode = 'removed';
         } else {
             return null;
         }
+
+        return {price: delta, mode: mode};
     }
 
     function applyGhsCoefficient(ghs, cents, apply_coeff)
     {
         return apply_coeff && cents ? (ghs.ghs_coefficient * cents) : cents;
     }
+    this.applyGhsCoefficient = applyGhsCoefficient;
 
     function buildConditionsArray(ghs)
     {
@@ -579,6 +590,7 @@ let mco_pricing = {};
 
         return conditions;
     }
+    this.buildConditionsArray = buildConditionsArray;
 
     function durationText(duration)
     {

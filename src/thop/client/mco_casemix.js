@@ -111,8 +111,10 @@ let mco_casemix = {};
                     } break;
                     case 'table': {
                         if (main_index >= 0 &&
-                                reactor.changed('table', mix_url, mix_rows.length, main_index, route.ghm_root))
-                            refreshTable(pricings_map[route.ghm_root], main_index, route.ghm_root);
+                                reactor.changed('table', mix_url, mix_rows.length, main_index,
+                                                route.ghm_root, route.apply_coefficient))
+                            refreshTable(pricings_map[route.ghm_root], main_index, route.ghm_root,
+                                         route.apply_coefficient, true);
                     } break;
                 }
 
@@ -137,10 +139,12 @@ let mco_casemix = {};
             'units',
             'mode',
             'algorithm',
-            'apply', // FIXME: Ugly?
 
             'date',
-            'ghm_root'
+            'ghm_root',
+            'apply_coefficient',
+
+            'apply', // FIXME: Ugly?
         ];
 
         let new_route = thop.buildRoute(args);
@@ -460,13 +464,23 @@ let mco_casemix = {};
                                        {style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1});
     }
 
-    function refreshTable(pricing_info, main_index, ghm_root)
+    function refreshTable(pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
     {
+        let table = html('table',
+            html('thead'),
+            html('tbody')
+        );
+
         let rows = mix_rows.filter(function(row) { return row.ghm_root === ghm_root; });
 
-        let table;
         if (rows.length) {
-            let [stats, stats_map] = aggregate(rows, ['ghs', 'duration']);
+            let thead = table.query('thead');
+            let tbody = table.query('tbody');
+
+            // FIXME: Ugly as hell
+            let diff = (mix_url.indexOf('diff=') >= 0);
+
+            let [stats, stats_map] = aggregate(rows, ['ghm', 'duration']);
 
             let max_duration = 20;
             let max_count = 0;
@@ -479,42 +493,71 @@ let mco_casemix = {};
                 max_price_cents = Math.max(max_price_cents, stat.price_cents);
             }
 
-            table = mco_pricing.createTable(ghm_root, pricing_info[main_index].ghs,
-                                            max_duration, false, true,
-                                            function(col, duration) {
-                if (!mco_pricing.testDuration(col, duration))
-                    return null;
-
-                let stat = findAggregate(stats_map, col.ghs, duration);
-
-                let style;
-                let content;
-                if (stat) {
-                    style = 'padding: 0';
-                    content = [
-                        html('div', {style: 'float: left; width: calc(50% - 2px); text-align: left; padding: 1px;'},
-                             '' + stat.count),
-                        html('div', {style: 'float: right; width: calc(50% - 2px); text-align: right; padding: 1px;'},
-                             mco_pricing.priceText(stat.price_cents))
-                    ];
+            let ghs = pricing_info[main_index].ghs;
+            let ghms = [Object.assign({}, ghs[0])];
+            for (let i = 1; i < ghs.length; i++) {
+                if (ghs[i].ghm !== ghms[ghms.length - 1].ghm) {
+                    ghms.push(Object.assign({}, ghs[i]));
                 } else {
-                    style = 'filter: opacity(50%);';
-                    content = '';
+                    ghms[ghms.length - 1].ghs = '2+';
+                    ghms[ghms.length - 1].conditions = [];
+                }
+            }
+
+            mco_pricing.addPricingHeader(thead, ghm_root, ghms, apply_coeff, merge_cells);
+            for (let td of thead.queryAll('td'))
+                td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
+
+            for (let duration = 0; duration < max_duration; duration++) {
+                if (duration % 10 == 0) {
+                    let text = '' + duration + ' - ' +
+                                    mco_pricing.durationText(Math.min(max_duration - 1, duration + 9));
+                    let tr = html('tr',
+                        html('th', {class: 'repeat', colspan: ghs.length}, text)
+                    );
+                    tbody.appendChild(tr);
                 }
 
-                let mode;
-                if (col.exb_treshold && duration < col.exb_treshold) {
-                    mode = 'exb';
-                } else if (col.exh_treshold && duration >= col.exh_treshold) {
-                    mode = 'exh';
-                } else {
-                    mode = 'price';
-                }
+                let tr = html('tr',
+                    html('th',  mco_pricing.durationText(duration))
+                );
+                for (let i = 0; i < ghms.length; i++) {
+                    let col = ghs[i];
+                    let stat = findAggregate(stats_map, col.ghm, duration);
 
-                return [content, {class: mode, style: style}, false];
-            });
-        } else {
-            table = html('table');
+                    let cls;
+                    if (col.exb_treshold && duration < col.exb_treshold) {
+                        cls = 'exb';
+                    } else if (col.exh_treshold && duration >= col.exh_treshold) {
+                        cls = 'exh';
+                    } else {
+                        cls = 'price';
+                    }
+
+                    if (stat) {
+                        if (diff) {
+                            if (stat.count > 0) {
+                                cls += ' higher';
+                            } else if (stat.count < 0) {
+                                cls += ' lower';
+                            } else {
+                                cls += ' neutral';
+                            }
+                        }
+
+                        tr.appendChildren([
+                            html('td', {class: cls}, '' + (stat ? stat.count : '')),
+                            html('td', {class: cls}, mco_pricing.priceText(stat.price_cents))
+                        ]);
+                    } else if (mco_pricing.testDuration(col, duration)) {
+                        cls += ' empty';
+                        tr.appendChild(html('td', {class: cls, colspan: 2}));
+                    } else {
+                        tr.appendChild(html('td', {colspan: 2}));
+                    }
+                }
+                tbody.appendChild(tr);
+            }
         }
 
         let old_table = query('#cm_table');
