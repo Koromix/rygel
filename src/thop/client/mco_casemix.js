@@ -357,80 +357,85 @@ let mco_casemix = {};
     {
         const ShortModes = ['J/T', '1', '2/3/4', 'Z/E'];
 
-        let table = html('table', {class: 'ls_table'},
-            html('thead'),
-            html('tbody')
-        );
-        let thead = table.query('thead');
-        let tbody = table.query('tbody');
+        let table = html('table', {class: 'ls_table'});
 
         if (mix_rows.length) {
             // FIXME: Ugly as hell
             let diff = (mix_url.indexOf('diff=') >= 0);
 
-            // Header
-            {
-                let tr = html('tr',
-                    html('th', {'data-sort-default': ''}, 'GHM'),
-                    !diff ? html('th', {colspan: 2, 'data-sort-method': 'none', class: 'no-sort'}, 'Part') : null,
-                    html('th', {'data-sort-method': 'number'}, 'Effectif'),
-                    html('th', {'data-sort-method': 'number'}, 'Valorisation')
-                );
-                for (let i = 0; i < ShortModes.length; i++) {
-                    tr.appendChild(html('th', {colspan: 2, 'data-sort-method': 'none', class: 'no-sort'},
-                                        ShortModes[i]));
-                }
-                tr.appendChild(html('th', {colspan: 2, 'data-sort-method': 'number'}, 'Décès'));
-                thead.appendChild(tr);
-            }
-
-            let [stats1, stats_map1] = aggregate(mix_rows, ['ghm_root']);
-            let [stats2, stats_map2] = aggregate(mix_rows, ['ghm_root', 'short_mode']);
-            let ghm_roots = stats1
+            // Aggregate
+            let stat1 = aggregate(mix_rows)[0][0];
+            let [stats2, stats2_map] = aggregate(mix_rows, ['ghm_root']);
+            let ghm_roots = stats2
                 // .sort(function(a, b) { return b.count - a.count; })
                 .map(function(stat) { return stat.ghm_root; });
 
-            // TODO: Precompute basic stats
-            let total_count = 0;
-            let total_price_cents = 0;
-            if (!diff) {
-                for (let i = 0; i < mix_rows.length; i++) {
-                    total_count += mix_rows[i].count;
-                    total_price_cents += mix_rows[i].price_cents;
-                }
+            // Header
+            {
+                let thead = html('thead');
+                table.appendChild(thead);
+
+                let tr = html('tr',
+                    html('th', {}, 'GHM'),
+                    html('th', {'data-sort-method': 'number'}, 'RSS'),
+                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
+
+                    html('th', {'data-sort-default': '', 'data-sort-method': 'number'}, 'Total'),
+                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
+                    html('th', {'data-sort-method': 'number'}, 'Partiel'),
+                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
+
+                    html('th', {colspan: 1 + !diff, 'data-sort-method': 'number'}, 'Décès')
+                );
+                thead.appendChild(tr);
+            }
+
+            function addRow(tbody, ghm_root_elem, stat)
+            {
+                let tr = html('tr',
+                    html('td', ghm_root_elem),
+
+                    html('td', '' + stat.count),
+                    !diff ? html('td', {'data-sort': stat.count / stat1.count},
+                                 percentText(stat.count / stat1.count)) : null,
+
+                    html('td', {'data-sort': stat.price_cents},
+                         mco_pricing.priceText(stat.price_cents, false)),
+                    !diff ? html('td', {'data-sort': stat.price_cents / stat1.price_cents},
+                                 percentText(stat.price_cents / stat1.price_cents)) : null,
+                    html('td', {'data-sort': stat.partial_price_cents},
+                         mco_pricing.priceText(stat.partial_price_cents, false)),
+                    !diff ? html('td', {'data-sort': stat.partial_price_cents / stat1.partial_price_cents},
+                                 percentText(stat.partial_price_cents / stat1.partial_price_cents)) : null,
+
+                    html('td', '' + stat.deaths),
+                    !diff ? html('td', percentText(stat.deaths / stat.count)) : null
+                );
+                tbody.appendChild(tr);
+
+                return tr;
+            }
+
+            // Total
+            {
+                let tbody = html('tbody');
+                table.appendChild(tbody);
+
+                let tr = addRow(tbody, html('b', 'Total'), stat1);
+                tr.addClass('ls_total');
             }
 
             // Data
-            for (let i = 0; i < ghm_roots.length; i++) {
-                let stat1 = findAggregate(stats_map1, ghm_roots[i]);
-                let tr = html('tr',
-                    html('td',
-                        html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]})},
-                             ghm_roots[i])
-                    ),
-                    !diff ? html('td', {class: 'cm_count', 'data-sort': stat1.count / total_count},
-                                 percentText(stat1.count / total_count)) : null,
-                    !diff ? html('td', {class: 'cm_price', 'data-sort': stat1.price_cents / total_price_cents},
-                                 percentText(stat1.price_cents / total_price_cents)) : null,
-                    html('td', {class: 'cm_count'}, '' + stat1.count),
-                    html('td', {class: 'cm_price', 'data-sort': stat1.price_cents},
-                         mco_pricing.priceText(stat1.price_cents, false))
-                );
-                for (let j = 0; j < ShortModes.length; j++) {
-                    let stat2 = findAggregate(stats_map2, ghm_roots[i], ShortModes[j]);
-                    if (stat2) {
-                        tr.appendChild(html('td', {class: 'cm_count'}, '' + stat2.count));
-                        tr.appendChild(html('td', {class: 'cm_price'},
-                                            mco_pricing.priceText(stat2.price_cents, false)));
-                    } else {
-                        tr.appendChild(html('td', {class: 'cm_count'}));
-                        tr.appendChild(html('td', {class: 'cm_price'}));
-                    }
+            {
+                let tbody = html('tbody');
+                table.appendChild(tbody);
+
+                for (let i = 0; i < ghm_roots.length; i++) {
+                    let stat2 = findAggregate(stats2_map, ghm_roots[i]);
+                    let ghm_root_elem = html('a', {href: routeToUrl({cm_view: 'table',
+                                                                     ghm_root: ghm_roots[i]})}, ghm_roots[i]);
+                    addRow(tbody, ghm_root_elem, stat2);
                 }
-                tr.appendChild(html('td', {class: 'cm_count'}, '' + stat1.deaths));
-                tr.appendChild(html('td', {class: 'cm_price'},
-                                    percentText(stat1.deaths / stat1.count)));
-                tbody.appendChild(tr);
             }
         }
 
@@ -438,7 +443,7 @@ let mco_casemix = {};
         table.copyAttributesFrom(old_table);
         old_table.replaceWith(table);
 
-        new Tablesort(table);
+        new Tablesort(table, {descending: true});
     }
 
     function percentText(fraction)
@@ -511,6 +516,9 @@ let mco_casemix = {};
 
     function aggregate(rows, by)
     {
+        if (by === undefined)
+            by = [];
+
         let list = [];
         let map = {};
 
@@ -529,8 +537,10 @@ let mco_casemix = {};
                 ptr.duration = 0;
                 ptr.count = 0;
                 ptr.mono_count = 0;
+                ptr.partial_mono_count = 0;
                 ptr.deaths = 0;
                 ptr.price_cents = 0;
+                ptr.partial_price_cents = 0;
 
                 list.push(ptr);
             }
@@ -538,8 +548,10 @@ let mco_casemix = {};
             ptr.duration += row.duration;
             ptr.count += row.count;
             ptr.mono_count += row.mono_count;
+            ptr.partial_mono_count += row.partial_mono_count;
             ptr.deaths += row.deaths;
             ptr.price_cents += row.price_cents;
+            ptr.partial_price_cents += row.partial_price_cents;
         }
 
         return [list, map];

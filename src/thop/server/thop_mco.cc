@@ -141,7 +141,9 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
         int16_t ghs;
         int16_t duration;
         int count;
+        int partial_mono_count;
         int mono_count;
+        int64_t partial_price_cents;
         int64_t price_cents;
         int deaths;
     };
@@ -247,7 +249,10 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
     {
         Size j = 0;
         HashMap<int64_t, Size> summary_map;
-        for (const mco_Result &result: results) {
+        for (Size i = 0; i < results.len; i++) {
+            const mco_Result &result = results[i];
+            const mco_Pricing &pricing = pricings[i];
+
             Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
             Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
@@ -280,24 +285,31 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                         key.st.duration = (int16_t)result.duration;
                     }
 
-                    std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
-                    if (ret.second) {
-                        CellSummary cell_summary = {};
-                        cell_summary.ghm = result.ghm;
-                        cell_summary.ghs = result.ghs.number;
-                        cell_summary.duration = key.st.duration;
-                        summary.Append(cell_summary);
+                    CellSummary *cell;
+                    {
+                        std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
+                        if (ret.second) {
+                            CellSummary cell_summary = {};
+                            cell_summary.ghm = result.ghm;
+                            cell_summary.ghs = result.ghs.number;
+                            cell_summary.duration = key.st.duration;
+                            summary.Append(cell_summary);
+                        }
+
+                        cell = &summary[*ret.first];
                     }
 
                     if (!counted_rss) {
-                        summary[*ret.first].count += multiplier;
+                        cell->count += multiplier;
+                        cell->mono_count += multiplier * result.stays.len;
+                        cell->price_cents += multiplier * pricing.price_cents;
                         if (result.stays[result.stays.len - 1].exit.mode == '9') {
-                            summary[*ret.first].deaths += multiplier;
+                            cell->deaths += multiplier;
                         }
                         counted_rss = true;
                     }
-                    summary[*ret.first].mono_count += multiplier;
-                    summary[*ret.first].price_cents += multiplier * mono_pricing.price_cents;
+                    cell->partial_mono_count += multiplier;
+                    cell->partial_price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
         }
@@ -322,8 +334,10 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                 writer.Key("duration"); writer.Int(cs.duration);
             }
             writer.Key("count"); writer.Int(cs.count);
+            writer.Key("partial_mono_count"); writer.Int(cs.partial_mono_count);
             writer.Key("mono_count"); writer.Int(cs.mono_count);
             writer.Key("deaths"); writer.Int64(cs.deaths);
+            writer.Key("partial_price_cents"); writer.Int64(cs.partial_price_cents);
             writer.Key("price_cents"); writer.Int64(cs.price_cents);
             writer.EndObject();
         }

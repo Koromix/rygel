@@ -35,6 +35,11 @@
 }
 .ls_table tr.heading { background: #eee; }
 
+.ls_total {
+    background: #ddd;
+    font-style: italic;
+}
+
 #ls_diagnoses td:nth-child(2) { text-align: center; }
 
 @media screen and (min-width: 800px) {
