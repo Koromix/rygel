@@ -26,25 +26,37 @@
     background: #969696;
     text-align: right;
 }
-.pr_grid .desc { background: #ffc634; }
-.pr_grid .conditions {
-    background: #b70202;
-    color: white;
-}
-.pr_grid .age { background: #99ffff; }
 
-.pr_grid .price { background: #68dc33; }
-.pr_grid .exb { background: #ff8900; }
-.pr_grid .exh {
-    background: #6b1b6a;
-    color: #b4cdff;
+.pr_grid .desc {
+    background: var(--mco_desc_bg);
+    color: var(--mco_desc_fg);
 }
-.pr_grid .warn {
+.pr_grid .conditions {
+    background: var(--mco_conditions_bg);
+    color: var(--mco_conditions_fg);
+}
+.pr_grid .price {
+    background: var(--mco_price_bg);
+    color: var(--mco_price_fg);
+}
+.pr_grid .exb {
+    background: var(--mco_exb_bg);
+    color: var(--mco_exb_fg);
+}
+.pr_grid .exh {
+    background: var(--mco_exh_bg);
+    color: var(--mco_exh_fg);
+}
+.pr_grid .age {
+    background: var(--mco_age_bg);
+    color: var(--mco_age_fg);
+}
+
+#pr_table .warn {
     filter: grayscale(90%) !important;
     color: #555;
 }
-.pr_grid .warn:before { content: "⚠ "; }
-
+#pr_table .warn:before { content: "⚠ "; }
 #pr_table .lower { background: #ff8888; }
 #pr_table .higher { background: #a2d4b6; }
 #pr_table .neutral { background: #d7d7d7; }

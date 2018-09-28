@@ -217,3 +217,19 @@ form button, form input[type=submit] {
         text-align: left;
     }
 }
+
+/* Theming */
+:root {
+    --mco_desc_bg: #ffc634;
+    --mco_desc_fg: black;
+    --mco_conditions_bg: #b70202;
+    --mco_conditions_fg: white;
+    --mco_price_bg: #6cc943;
+    --mco_price_fg: black;
+    --mco_exh_bg: #6b1b6a;
+    --mco_exh_fg: #b4cdff;
+    --mco_exb_bg: #ff8900;
+    --mco_exb_fg: black;
+    --mco_age_bg: #99ffff;
+    --mco_age_fg: black;
+}
