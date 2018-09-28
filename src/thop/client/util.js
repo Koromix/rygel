@@ -12,8 +12,8 @@ function query(selector) { return document.querySelector(selector); }
 function queryAll(selector) { return document.querySelectorAll(selector); }
 
 NodeList.prototype.addClass = function(cls) {
-    for (let i = 0; i < this.length; i++)
-        this[i].classList.add(cls);
+    for (let el of this)
+        el.classList.add(cls);
 };
 
 Element.prototype.addClass = function(cls) {
@@ -21,8 +21,8 @@ Element.prototype.addClass = function(cls) {
 };
 
 NodeList.prototype.removeClass = function(cls) {
-    for (let i = 0; i < this.length; i++)
-        this[i].classList.remove(cls);
+    for (let el of this)
+        el.classList.remove(cls);
 };
 
 Element.prototype.removeClass = function(cls, value) {
@@ -30,8 +30,8 @@ Element.prototype.removeClass = function(cls, value) {
 };
 
 NodeList.prototype.toggleClass = function(cls, value) {
-    for (let i = 0; i < this.length; i++)
-        this[i].classList.toggle(cls, value);
+    for (let el of this)
+        el.classList.toggle(cls, value);
 };
 
 Element.prototype.toggleClass = function(cls, value) {
@@ -49,8 +49,8 @@ Element.prototype.appendChildren = function(els)
     } else if (typeof els === 'string') {
         this.appendChild(document.createTextNode(els));
     } else if (Array.isArray(els) || els instanceof NodeList) {
-        for (let i = 0; i < els.length; i++)
-            this.appendChildren(els[i]);
+        for (let el of els)
+            this.appendChildren(el);
     } else {
         this.appendChild(els);
     }
@@ -107,9 +107,8 @@ function html(tag) { return createElementProxy('html', tag, arguments, 1); }
 function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
 
 Element.prototype.copyAttributesFrom = function(el) {
-    let attributes = el.attributes;
-    for (let i = 0; i < attributes.length; i++)
-        this.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
+    for (const attr of el.attributes)
+        this.setAttribute(attr.nodeName, attr.nodeValue);
 }
 
 Element.prototype.replaceWith = function(el) {
@@ -157,7 +156,7 @@ function buildUrl(url, query_values)
         query_values = {};
 
     let query_fragments = [];
-    for (k in query_values) {
+    for (const k in query_values) {
         let value = query_values[k];
         if (value !== null && value !== undefined) {
             let arg = escape(k) + '=' + escape(value);

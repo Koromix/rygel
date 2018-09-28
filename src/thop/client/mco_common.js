@@ -44,10 +44,8 @@ let mco_common = {};
             let url = thop.baseUrl(info.path);
             data.get(url, function(json) {
                 set.concepts = json;
-                for (let i = 0; i < json.length; i++) {
-                    let concept = json[i];
+                for (const concept of json)
                     set.map[concept[info.key]] = concept;
-                }
             });
         }
 
@@ -59,9 +57,7 @@ let mco_common = {};
     {
         let builder = new VersionLine;
 
-        for (let i = 0; i < indexes.length; i++) {
-            let index = indexes[i];
-
+        for (const index of indexes) {
             let label = index.begin_date;
             if (label.endsWith('-01'))
                 label = label.substr(0, label.length - 3);

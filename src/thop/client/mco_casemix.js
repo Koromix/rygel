@@ -150,10 +150,8 @@ let mco_casemix = {};
         let new_route = thop.buildRoute(args);
 
         let short_route = {};
-        for (let i = 0; i < KeepKeys.length; i++) {
-            let k = KeepKeys[i];
+        for (const k of KeepKeys)
             short_route[k] = new_route[k] || null;
-        }
 
         let url_parts = [thop.baseUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
         while (!url_parts[url_parts.length - 1])
@@ -204,9 +202,7 @@ let mco_casemix = {};
 
             mix_url = url;
             mix_rows = json;
-            for (let i = 0; i < mix_rows.length; i++) {
-                let row = mix_rows[i];
-
+            for (let row of mix_rows) {
                 row.cmd = parseInt(row.ghm.substr(0, 2), 10);
                 row.type = row.ghm.substr(2, 1);
                 row.ghm_root = row.ghm.substr(0, 5);
@@ -279,13 +275,10 @@ let mco_casemix = {};
     {
         let builder = new TreeSelector('Unités médicales : ');
 
-        for (let i = 0; i < structures.length; i++) {
-            let structure = structures[i];
-
+        for (const structure of structures) {
             let prev_groups = [];
             builder.createTab(structure.name);
-            for (let j = 0; j < structure.units.length; j++) {
-                let unit = structure.units[j];
+            for (const unit of structure.units) {
                 let parts = unit.path.substr(2).split('::');
 
                 let common_len = 0;
@@ -324,9 +317,7 @@ let mco_casemix = {};
         let select = query('#opt_algorithm > select');
 
         select.innerHTML = '';
-        for (let i = 0; i < algorithms.length; i++) {
-            let algorithm = algorithms[i];
-
+        for (const algorithm of algorithms) {
             let text ='Algorithme ' + algorithm.title;
             if (algorithm.name === default_algorithm)
                 text += ' *';
@@ -341,12 +332,11 @@ let mco_casemix = {};
         let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
 
-        for (let i = 0; i < ghm_roots.length; i++) {
-            let ghm_root_info = ghm_roots[i];
+        for (const ghm_root of ghm_roots) {
+            let opt = html('option', {value: ghm_root.ghm_root},
+                           ghm_root.ghm_root + ' – ' + ghm_root.desc);
 
-            let opt = html('option', {value: ghm_root_info.ghm_root},
-                           ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-            if (mix_ghm_roots.size && !mix_ghm_roots.has(ghm_root_info.ghm_root)) {
+            if (mix_ghm_roots.size && !mix_ghm_roots.has(ghm_root.ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
@@ -485,9 +475,7 @@ let mco_casemix = {};
             let max_duration = 20;
             let max_count = 0;
             let max_price_cents = 0;
-            for (let i = 0; i < stats.length; i++) {
-                let stat = stats[i];
-
+            for (const stat of stats) {
                 max_duration = Math.max(max_duration, stat.duration + 1);
                 max_count = Math.max(max_count, stat.count);
                 max_price_cents = Math.max(max_price_cents, stat.price_cents);
@@ -521,8 +509,7 @@ let mco_casemix = {};
                 let tr = html('tr',
                     html('th',  mco_pricing.durationText(duration))
                 );
-                for (let i = 0; i < ghms.length; i++) {
-                    let col = ghs[i];
+                for (const col of ghms) {
                     let stat = findAggregate(stats_map, col.ghm, duration);
 
                     let cls;
@@ -573,18 +560,16 @@ let mco_casemix = {};
         let list = [];
         let map = {};
 
-        for (let i = 0; i < rows.length; i++) {
-            let row = rows[i];
-
+        for (const row of rows) {
             let ptr = map;
-            for (let j = 0; j < by.length; j++) {
-                if (ptr[row[by[j]]] === undefined)
-                    ptr[row[by[j]]] = {};
-                ptr = ptr[row[by[j]]];
+            for (const k of by) {
+                if (ptr[row[k]] === undefined)
+                    ptr[row[k]] = {};
+                ptr = ptr[row[k]];
             }
             if (ptr.duration === undefined) {
-                for (let k = 0; k < by.length; k++)
-                    ptr[by[k]] = row[by[k]];
+                for (const k of by)
+                    ptr[k] = row[k];
                 ptr.duration = 0;
                 ptr.count = 0;
                 ptr.mono_count = 0;

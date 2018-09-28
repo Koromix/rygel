@@ -153,8 +153,8 @@ let user = {};
 
     function notifyChange()
     {
-        for (let i = 0; i < change_handlers.length; i++)
-            change_handlers[i]();
+        for (let handler of change_handlers)
+            handler();
     }
 
     this.addChangeHandler = function(func) { change_handlers.push(func); }

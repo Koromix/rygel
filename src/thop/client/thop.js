@@ -48,9 +48,8 @@ let thop = {};
         if (enable === undefined)
             enable = !el.classList.contains('active');
         if (enable) {
-            let els = queryAll('nav');
-            for (let i = 0; i < els.length; i++)
-                els[i].toggleClass('active', els[i] == el);
+            for (let nav of queryAll('nav'))
+                nav.toggleClass('active', nav === el);
         } else {
             el.removeClass('active');
         }
@@ -149,10 +148,7 @@ let thop = {};
         }
 
         // Update side menu state and links
-        let menu_anchors = queryAll('#side_menu li a');
-        for (let i = 0; i < menu_anchors.length; i++) {
-            let anchor = menu_anchors[i];
-
+        for (let anchor of queryAll('#side_menu li a')) {
             if (anchor.dataset.url) {
                 let url = eval(anchor.dataset.url);
                 anchor.classList.toggle('hide', !url);
@@ -168,13 +164,10 @@ let thop = {};
 
         // Hide page menu if empty
         let opt_hide = true;
-        {
-            let els = queryAll('#opt_menu > *');
-            for (let i = 0; i < els.length; i++) {
-                if (!els[i].hasClass('hide')) {
-                    opt_hide = false;
-                    break;
-                }
+        for (let el of queryAll('#opt_menu > *')) {
+            if (!el.hasClass('hide')) {
+                opt_hide = false;
+                break;
             }
         }
         queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);

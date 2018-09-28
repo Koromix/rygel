@@ -39,9 +39,7 @@ function VersionLine()
         let max_date = new Date(versions[versions.length - 1].date);
 
         let text_above = true;
-        for (let i = 0; i < versions.length; i++) {
-            let version = versions[i];
-
+        for (const version of versions) {
             let x = (6.0 + (new Date(version.date) - min_date) / (max_date - min_date) * 88.0).toFixed(1) + '%';
             let radius = 4 + !!version.major + (version.date === value);
 

@@ -21,8 +21,8 @@ function TreeSelector(prefix)
     function syncValue(value, checked)
     {
         let checkboxes = widget.queryAll('.tsel_option input[data-value="' + value + '"]');
-        for (let i = 0; i < checkboxes.length; i++)
-            checkboxes[i].checked = checked;
+        for (let checkbox of checkboxes)
+            checkbox.checked = checked;
     }
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
@@ -34,6 +34,7 @@ function TreeSelector(prefix)
         let and_state = 0xFFFFFFFF;
         for (let i = elements.length - 1; i >= 0; i--) {
             let el = elements[i];
+
             let depth = parseInt(el.dataset.depth);
             let checkbox = el.query('input[type=checkbox]');
 
@@ -75,8 +76,8 @@ function TreeSelector(prefix)
             let a = html('a', 'Aucune option sélectionnée');
             summary.appendChild(a);
         } else if (values.length < 8) {
-            for (let i = 0; i < values.length; i++) {
-                let a = html('a', {href: '#', click: handleSummaryOptionClick}, values[i]);
+            for (const value of values) {
+                let a = html('a', {href: '#', click: handleSummaryOptionClick}, value);
                 summary.appendChild(a);
             }
         } else {
@@ -99,8 +100,8 @@ function TreeSelector(prefix)
     {
         let list = widget.query('.tsel_list.active');
         let checkboxes = list.queryAll('.tsel_option input[type=checkbox]');
-        for (let i = 0; i < checkboxes.length; i++)
-            syncValue(checkboxes[i].dataset.value, checked);
+        for (const checkbox of checkboxes)
+            syncValue(checkbox.dataset.value, checked);
 
         syncGroupCheckboxes();
         updateSummary();
@@ -224,8 +225,7 @@ function TreeSelector(prefix)
 
         let values = [];
         let checkboxes = widget.queryAll('.tsel_option input[type=checkbox]');
-        for  (let i = 0; i < checkboxes.length; i++) {
-            let checkbox = checkboxes[i];
+        for (const checkbox of checkboxes) {
             if (checkbox.checked || all)
                 values.push(checkbox.dataset.value);
         }
@@ -272,7 +272,6 @@ function TreeSelector(prefix)
 }
 
 document.addEventListener('click', function(e) {
-    let selectors = queryAll('.tsel.active');
-    for (let i = 0; i < selectors.length; i++)
-        selectors[i].object.close();
+    for (let tsel of queryAll('.tsel.active'))
+        tsel.object.close();
 });

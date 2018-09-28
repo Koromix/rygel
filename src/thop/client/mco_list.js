@@ -349,9 +349,9 @@ let mco_list = {};
             list.match_count = 0;
             {
                 let prev_deduplicate_key = null;
-                for (let i = 0; i < list.items.length; i++) {
+                for (const item of list.items) {
                     if (list_info.deduplicate) {
-                        let deduplicate_key = list_info.deduplicate(list.items[i], concepts_map);
+                        let deduplicate_key = list_info.deduplicate(item, concepts_map);
                         if (deduplicate_key === prev_deduplicate_key)
                             continue;
                         prev_deduplicate_key = deduplicate_key;
@@ -360,8 +360,8 @@ let mco_list = {};
 
                     let show = false;
                     let prev_length = list.cells.length;
-                    for (let j = 0; j < columns.length; j++) {
-                        let content = createContent(columns[j], list.items[i], concepts_map,
+                    for (const col of columns) {
+                        let content = createContent(col, item, concepts_map,
                                                     group_info ? group_info.type : null);
                         if (!search || simplifyForSearch(content).indexOf(search) >= 0)
                             show = true;
@@ -438,9 +438,8 @@ let mco_list = {};
         let el = query('#opt_groups > select');
         el.innerHTML = '';
 
-        for (let i = 0; i < list_info.groups.length; i++) {
-            let group_info = list_info.groups[i];
-            let opt = html('option', {value: group_info.type}, group_info.name);
+        for (const group of list_info.groups) {
+            let opt = html('option', {value: group.type}, group.name);
             el.appendChild(opt);
         }
         if (select_group)
@@ -477,9 +476,10 @@ let mco_list = {};
             if (list_info.header === undefined || list_info.header) {
                 let tr = html('tr');
                 for (let i = first_column; i < list_info.columns.length; i++) {
-                    let title = list_info.columns[i].title ? list_info.columns[i].title : list_info.columns[i].header;
-                    let th = html('th', {title: title, style: list_info.columns[i].style},
-                                  list_info.columns[i].header);
+                    let col = list_info.columns[i];
+
+                    let title = col.title ? col.title : col.header;
+                    let th = html('th', {title: title, style: col.style}, col.header);
                     tr.appendChild(th);
                 }
                 thead.appendChild(tr);
@@ -527,17 +527,16 @@ let mco_list = {};
             stats_text += ')';
         }
 
-        let old_pagers = queryAll('.ls_pager');
-        for (let i = 0; i < old_pagers.length; i++) {
+        for (let old_pager of queryAll('.ls_pager')) {
             if (last_page) {
                 let pager = createPagination(page, last_page);
-                pager.copyAttributesFrom(old_pagers[i]);
+                pager.copyAttributesFrom(old_pager);
                 pager.addClass('pagr');
                 pager.removeClass('hide');
-                old_pagers[i].replaceWith(pager);
+                old_pager.replaceWith(pager);
             } else {
-                old_pagers[i].innerHTML = '';
-                old_pagers[i].addClass('hide');
+                old_pager.innerHTML = '';
+                old_pager.addClass('hide');
             }
         }
 

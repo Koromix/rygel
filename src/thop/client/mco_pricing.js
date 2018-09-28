@@ -145,9 +145,9 @@ let mco_pricing = {};
         if (!available_dates.has(begin_date)) {
             let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
             data.get(url, function(json) {
-                for (let i = 0; i < json.length; i++) {
-                    let ghm_root = json[i].ghm_root;
-                    let ghm_ghs = json[i];
+                for (let ghm_ghs of json) {
+                    let ghm_root = ghm_ghs.ghm_root;
+
                     ghm_ghs.conditions = buildConditionsArray(ghm_ghs);
 
                     let pricing_info = pricings_map[ghm_root];
@@ -180,12 +180,11 @@ let mco_pricing = {};
         let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
 
-        for (let i = 0; i < ghm_roots.length; i++) {
-            let ghm_root_info = ghm_roots[i];
+        for (const ghm_root of ghm_roots) {
+            let opt = html('option', {value: ghm_root.ghm_root},
+                           ghm_root.ghm_root + ' – ' + ghm_root.desc);
 
-            let opt = html('option', {value: ghm_root_info.ghm_root},
-                           ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc);
-            if (!checkIndexGhmRoot(indexes, main_index, ghm_root_info.ghm_root)) {
+            if (!checkIndexGhmRoot(indexes, main_index, ghm_root.ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
@@ -243,9 +242,7 @@ let mco_pricing = {};
                 let tr = html('tr',
                     html('th', durationText(duration))
                 );
-                for (let i = 0; i < ghs.length; i++) {
-                    let col = ghs[i];
-
+                for (const col of ghs) {
                     let info;
                     if (diff_index < 0) {
                         info = computePrice(col, duration, apply_coeff);
@@ -414,23 +411,22 @@ let mco_pricing = {};
             data.labels.push(durationText(i));
 
         let max_price = 0.0;
-        for (let i = 0; i < ghs.length; i++) {
-            let conditions = buildConditionsArray(ghs[i]);
-
+        for (const col of ghs) {
             let dataset = {
-                label: ghsLabel(ghs[i], conditions),
+                label: ghsLabel(col, col.conditions),
                 data: [],
-                borderColor: modeToColor(ghs[i].ghm.substr(5, 1)),
-                backgroundColor: modeToColor(ghs[i].ghm.substr(5, 1)),
-                borderDash: (conditions.length ? [5, 5] : undefined),
+                borderColor: modeToColor(col.ghm.substr(5, 1)),
+                backgroundColor: modeToColor(col.ghm.substr(5, 1)),
+                borderDash: (col.conditions.length ? [5, 5] : undefined),
                 fill: false
             };
+
             for (let duration = 0; duration < max_duration; duration++) {
                 let info;
-                if (diff_index < 0) {
-                    info = computePrice(ghs[i], duration, apply_coeff);
+                if (diff_index < 0 || !pricing_info[diff_index]) {
+                    info = computePrice(col, duration, apply_coeff);
                 } else {
-                    info = computeDelta(ghs[i], pricing_info[diff_index].ghs_map[ghs[i].ghs],
+                    info = computeDelta(col, pricing_info[diff_index].ghs_map[col.ghs],
                                         duration, apply_coeff);
                 }
 
@@ -456,8 +452,8 @@ let mco_pricing = {};
                 if (i === main_index || !pricing_info[i])
                     continue;
 
-                for (let j = 0; j < pricing_info[i].ghs.length; j++) {
-                    let p = computePrice(pricing_info[i].ghs[j], max_duration - 1, apply_coeff);
+                for (const col of pricing_info[i].ghs) {
+                    let p = computePrice(col, max_duration - 1, apply_coeff);
                     if (p && p.price > max_price)
                         max_price = p.price;
                 }
