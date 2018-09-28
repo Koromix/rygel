@@ -189,9 +189,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                 if (!unit.IsValid())
                     return CreateErrorPage(422);
 
-                if (allowed_units.Find(unit)) {
-                    units.Append(unit);
-                }
+                units.Append(unit);
             }
         }
 
@@ -220,7 +218,11 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
         }
     }
 
-    // FIXME: Explicit reject if non-allowed units are present
+    if (!std::all_of(units.table.begin(), units.table.end(),
+                     [&](UnitCode unit) { return allowed_units.Find(unit); })) {
+        LogError("User is not allowed to view these units");
+        return CreateErrorPage(422);
+    }
     if (diff_dates[0].value && !dates[0].value) {
         LogError("Parameter 'diff' specified but 'dates' is missing");
         return CreateErrorPage(422);
