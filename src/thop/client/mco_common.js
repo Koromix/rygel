@@ -67,6 +67,9 @@ let mco_common = {};
         if (main_index >= 0)
             builder.setValue(indexes[main_index].begin_date);
 
+        builder.anchorBuilder = function(version) {
+            return thop.routeToUrl({date: version.date});
+        };
         builder.changeHandler = function() {
             thop.go({date: this.object.getValue()});
         };

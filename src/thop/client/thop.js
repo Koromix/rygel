@@ -184,7 +184,14 @@ let thop = {};
     }
     this.route = route;
 
-    function go(args, delay) {
+    function routeToUrl(args)
+    {
+        return module.object.routeToUrl(args);
+    }
+    this.routeToUrl = routeToUrl;
+
+    function go(args, delay)
+    {
         module.object.go(args, delay);
     }
     this.go = go;

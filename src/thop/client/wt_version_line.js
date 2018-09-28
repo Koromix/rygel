@@ -6,6 +6,7 @@ function VersionLine()
 {
     'use strict';
 
+    this.anchorBuilder = null;
     this.changeHandler = null;
 
     let self = this;
@@ -23,6 +24,8 @@ function VersionLine()
 
         if (self.changeHandler)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
+
+        e.preventDefault();
     }
 
     function render()
@@ -56,23 +59,33 @@ function VersionLine()
                 weight = 'normal';
             }
 
-            let node = svg('circle', {class: 'vlin_node', cx: x, cy: 20, r: radius,
-                                      fill: color, click: handleNodeClick},
+            let href;
+            if (self.anchorBuilder) {
+                href = self.anchorBuilder(version);
+            } else {
+                href = '#';
+            }
+
+            let anchor = svg('a', {click: handleNodeClick});
+            anchor.setAttributeNS('http://www.w3.org/1999/xlink', 'href', href);
+            anchor.value = version.date;
+
+            let node = svg('circle', {class: 'vlin_node', cx: x, cy: 20, r: radius, fill: color},
                 svg('title', version.tooltip)
             );
-            node.value = version.date;
-            g.appendChild(node);
+            anchor.appendChild(node);
 
             if (version.major) {
                 let text_y = text_above ? 10 : 40;
                 text_above = !text_above;
 
                 let text = svg('text', {class: 'vlin_text', x: x, y: text_y, 'text-anchor': 'middle',
-                                        fill: color, style: 'font-weight: ' + weight + ';',
-                                        click: handleNodeClick}, version.label);
-                text.value = version.date;
-                g.appendChild(text);
+                                        fill: color, style: 'font-weight: ' + weight + ';'},
+                               version.label);
+                anchor.appendChild(text);
             }
+
+            g.appendChild(anchor);
         }
     }
 
