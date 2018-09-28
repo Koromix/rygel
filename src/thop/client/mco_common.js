@@ -77,4 +77,35 @@ let mco_common = {};
         old_svg.replaceWith(svg);
     }
     this.refreshIndexes = refreshIndexes;
+
+    function numberText(n)
+    {
+        return n.toLocaleString('fr-FR');
+    }
+    this.numberText = numberText;
+
+    function durationText(duration)
+    {
+        if (duration !== undefined) {
+            return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
+        } else {
+            return '';
+        }
+    }
+    this.durationText = durationText;
+
+    function priceText(price_cents, format_cents)
+    {
+        if (format_cents === undefined)
+            format_cents = true;
+
+        if (price_cents !== undefined) {
+            let digits = format_cents ? 2 : 0;
+            return (price_cents / 100.0).toLocaleString('fr-FR',
+                                                        {minimumFractionDigits: digits, maximumFractionDigits: digits});
+        } else {
+            return '';
+        }
+    }
+    this.priceText = priceText;
 }).call(mco_common);

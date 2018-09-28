@@ -389,20 +389,20 @@ let mco_casemix = {};
                 let tr = html('tr',
                     html('td', ghm_root_elem),
 
-                    html('td', '' + stat.count),
+                    html('td', mco_common.numberText(stat.count)),
                     !diff ? html('td', {'data-sort': stat.count / stat1.count},
                                  percentText(stat.count / stat1.count)) : null,
 
                     html('td', {'data-sort': stat.price_cents},
-                         mco_pricing.priceText(stat.price_cents, false)),
+                         mco_common.priceText(stat.price_cents, false)),
                     !diff ? html('td', {'data-sort': stat.price_cents / stat1.price_cents},
                                  percentText(stat.price_cents / stat1.price_cents)) : null,
                     html('td', {'data-sort': stat.partial_price_cents},
-                         mco_pricing.priceText(stat.partial_price_cents, false)),
+                         mco_common.priceText(stat.partial_price_cents, false)),
                     !diff ? html('td', {'data-sort': stat.partial_price_cents / stat1.partial_price_cents},
                                  percentText(stat.partial_price_cents / stat1.partial_price_cents)) : null,
 
-                    html('td', '' + stat.deaths),
+                    html('td', mco_common.numberText(stat.deaths)),
                     !diff ? html('td', percentText(stat.deaths / stat.count)) : null
                 );
                 tbody.appendChild(tr);
@@ -499,7 +499,7 @@ let mco_casemix = {};
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
-                                    mco_pricing.durationText(Math.min(max_duration - 1, duration + 9));
+                                    mco_common.durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: ghs.length}, text)
                     );
@@ -507,7 +507,7 @@ let mco_casemix = {};
                 }
 
                 let tr = html('tr',
-                    html('th',  mco_pricing.durationText(duration))
+                    html('th',  mco_common.durationText(duration))
                 );
                 for (const col of ghms) {
                     let stat = findAggregate(stats_map, col.ghm, duration);
@@ -541,7 +541,7 @@ let mco_casemix = {};
                             html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
                                  '' + stat.count),
                             html('td', {class: addDiffClass(cls, stat.price_cents)},
-                                 mco_pricing.priceText(stat.price_cents, false))
+                                 mco_common.priceText(stat.price_cents, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';

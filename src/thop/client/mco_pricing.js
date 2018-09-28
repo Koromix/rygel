@@ -232,7 +232,8 @@ let mco_pricing = {};
 
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
-                    let text = '' + duration + ' - ' + durationText(Math.min(max_duration - 1, duration + 9));
+                    let text = '' + duration + ' - ' +
+                                    mco_common.durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: ghs.length}, text)
                     );
@@ -240,7 +241,7 @@ let mco_pricing = {};
                 }
 
                 let tr = html('tr',
-                    html('th', durationText(duration))
+                    html('th', mco_common.durationText(duration))
                 );
                 for (const col of ghs) {
                     let info;
@@ -253,7 +254,7 @@ let mco_pricing = {};
 
                     let td;
                     if (info) {
-                        td = html('td', {class: info.mode}, priceText(info.price));
+                        td = html('td', {class: info.mode}, mco_common.priceText(info.price));
                         if (!duration && col.warn_cmd28) {
                             td.addClass('warn');
                             td.title = 'Devrait être orienté dans la CMD 28 (séance)';
@@ -332,24 +333,24 @@ let mco_pricing = {};
                           col.conditions.length ? col.conditions.length.toString() : '');
             return [el, {class: 'conditions'}, true];
         });
-        appendRow('Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
+        appendRow('Borne basse', function(col) { return [mco_common.durationText(col.exb_treshold), {class: 'exb'}, true]; });
         appendRow('Borne haute',
-                  function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+                  function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
         appendRow('Tarif €', function(col) {
             let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-            return [priceText(cents), {class: 'price'}, true];
+            return [mco_common.priceText(cents), {class: 'price'}, true];
         });
         appendRow('Forfait EXB €', function(col) {
             let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+            return [col.exb_once ? mco_common.priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow('Tarif EXB €', function(col) {
             let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+            return [!col.exb_once ? mco_common.priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow('Tarif EXH €', function(col) {
             let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-            return [priceText(cents), {class: 'exh'}, true];
+            return [mco_common.priceText(cents), {class: 'exh'}, true];
         });
         appendRow('Age', function(col) {
             let texts = [];
@@ -408,7 +409,7 @@ let mco_pricing = {};
             datasets: []
         };
         for (let i = 0; i < max_duration; i++)
-            data.labels.push(durationText(i));
+            data.labels.push(mco_common.durationText(i));
 
         let max_price = 0.0;
         for (const col of ghs) {
@@ -432,7 +433,7 @@ let mco_pricing = {};
 
                 if (info !== null) {
                     dataset.data.push({
-                        x: durationText(duration),
+                        x: mco_common.durationText(duration),
                         y: info.price / 100
                     });
                     max_price = Math.max(max_price, Math.abs(info.price));
@@ -585,31 +586,6 @@ let mco_pricing = {};
         return conditions;
     }
     this.buildConditionsArray = buildConditionsArray;
-
-    function durationText(duration)
-    {
-        if (duration !== undefined) {
-            return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
-        } else {
-            return '';
-        }
-    }
-    this.durationText = durationText;
-
-    function priceText(price_cents, format_cents)
-    {
-        if (format_cents === undefined)
-            format_cents = true;
-
-        if (price_cents !== undefined) {
-            let digits = format_cents ? 2 : 0;
-            return (price_cents / 100.0).toLocaleString('fr-FR',
-                                                        {minimumFractionDigits: digits, maximumFractionDigits: digits});
-        } else {
-            return '';
-        }
-    }
-    this.priceText = priceText;
 
     thop.registerUrl('mco_pricing', this, runPricing);
 }).call(mco_pricing);
