@@ -17,23 +17,20 @@
     color: #888;
 }
 
-#cm_table .lower:before {
-    float: left;
-    content: '↘';
-    background: #ff8888;
-    color: black;
+#cm_table .count.lower { padding-right: 19px; }
+#cm_table .count.lower:before {
+    float: right;
+    margin-right: -19px;
 }
-#cm_table .higher:before {
-    float: left;
-    content: '↗';
-    background: #a2d4b6;
-    color: black;
+#cm_table .count.higher { padding-right: 19px; }
+#cm_table .count.higher:before {
+    float: right;
+    margin-right: -19px;
 }
-#cm_table .neutral:before {
-    float: left;
-    content: '=';
-    background: #d7d7d7;
-    color: black;
+#cm_table .count.neutral { padding-right: 19px; }
+#cm_table .count.neutral:before {
+    float: right;
+    margin-right: -19px;
 }
 #cm_table .empty { filter: opacity(50%); }
 

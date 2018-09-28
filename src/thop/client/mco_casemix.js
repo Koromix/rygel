@@ -522,19 +522,26 @@ let mco_casemix = {};
                     }
 
                     if (stat) {
-                        if (diff) {
-                            if (stat.count > 0) {
-                                cls += ' higher';
-                            } else if (stat.count < 0) {
-                                cls += ' lower';
+                        function addDiffClass(cls, value)
+                        {
+                            if (diff) {
+                                if (value > 0) {
+                                    return cls + ' higher';
+                                } else if (value < 0) {
+                                    return cls + ' lower';
+                                } else {
+                                    return cls + ' neutral';
+                                }
                             } else {
-                                cls += ' neutral';
+                                return cls;
                             }
                         }
 
                         tr.appendChildren([
-                            html('td', {class: cls}, '' + (stat ? stat.count : '')),
-                            html('td', {class: cls}, mco_pricing.priceText(stat.price_cents))
+                            html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
+                                 '' + stat.count),
+                            html('td', {class: addDiffClass(cls, stat.price_cents)},
+                                 mco_pricing.priceText(stat.price_cents))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';

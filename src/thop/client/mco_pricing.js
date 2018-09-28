@@ -532,31 +532,29 @@ let mco_pricing = {};
 
     function computeDelta(ghs, prev_ghs, duration, apply_coeff)
     {
-        let p1 = ghs ? computePrice(ghs, duration, apply_coeff) : null;
+        let p = ghs ? computePrice(ghs, duration, apply_coeff) : null;
         let p2 = prev_ghs ? computePrice(prev_ghs, duration, apply_coeff) : null;
 
         let delta;
         let mode;
-        if (p1 !== null && p2 !== null) {
-            delta = p1.price - p2.price;
-            if (delta < 0) {
-                mode = 'lower';
-            } else if (delta > 0) {
-                mode = 'higher';
+        if (p !== null && p2 !== null) {
+            p.price -= p2.price;
+            if (p.price < 0) {
+                p.mode += ' lower';
+            } else if (p.price > 0) {
+                p.mode += ' higher';
             } else {
-                mode = 'neutral';
+                p.mode += ' neutral';
             }
-        } else if (p1 !== null) {
-            delta = p1.price;
-            mode = 'added';
+        } else if (p !== null) {
+            p.mode += ' added';
         } else if (p2 !== null) {
-            delta = -p2.price;
-            mode = 'removed';
+            p = {price: -p2.price, mode: p2.mode + ' removed'};
         } else {
             return null;
         }
 
-        return {price: delta, mode: mode};
+        return p;
     }
 
     function applyGhsCoefficient(ghs, cents, apply_coeff)
