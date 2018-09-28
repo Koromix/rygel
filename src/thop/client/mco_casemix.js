@@ -541,7 +541,7 @@ let mco_casemix = {};
                             html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
                                  '' + stat.count),
                             html('td', {class: addDiffClass(cls, stat.price_cents)},
-                                 mco_pricing.priceText(stat.price_cents))
+                                 mco_pricing.priceText(stat.price_cents, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
