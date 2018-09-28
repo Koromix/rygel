@@ -1053,9 +1053,16 @@ public:
     template <typename U>
     class Iterator {
     public:
-        U *queue;
+        typedef std::bidirectional_iterator_tag iterator_category;
+        typedef Size value_type;
+        typedef Size difference_type;
+        typedef Iterator *pointer;
+        typedef Iterator &reference;
+
+        U *queue = nullptr;
         Size idx;
 
+        Iterator() = default;
         Iterator(U *queue, Size idx)
             : queue(queue), idx(idx) {}
 
@@ -1281,11 +1288,18 @@ public:
     template <typename T>
     class Iterator {
     public:
-        T *bitset;
+        typedef std::input_iterator_tag iterator_category;
+        typedef Size value_type;
+        typedef Size difference_type;
+        typedef Iterator *pointer;
+        typedef Iterator &reference;
+
+        T *bitset = nullptr;
         Size offset;
         size_t bits = 0;
         int ctz;
 
+        Iterator() = default;
         Iterator(T *bitset, Size offset)
             : bitset(bitset), offset(offset - 1)
         {
@@ -1443,9 +1457,16 @@ public:
     template <typename T>
     class Iterator {
     public:
-        T *table;
+        typedef std::forward_iterator_tag iterator_category;
+        typedef ValueType value_type;
+        typedef Size difference_type;
+        typedef Iterator *pointer;
+        typedef Iterator &reference;
+
+        T *table = nullptr;
         Size offset;
 
+        Iterator() = default;
         Iterator(T *table, Size offset)
             : table(table), offset(offset - 1) { operator++(); }
 
