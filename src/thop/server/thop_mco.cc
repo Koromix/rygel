@@ -36,10 +36,10 @@ static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode disp
            (user.dispense_modes & (1 << (int)dispense_mode));
 }
 
-Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
-        return CreateErrorPage(404);
+        return CreateErrorPage(404, out_response);
 
     // TODO: Cache in session object (also neeeded in ProduceClassify)?
     HashSet<UnitCode> allowed_units;
@@ -50,8 +50,7 @@ Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Compression
         }
     }
 
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
 
         writer.StartObject();
@@ -100,9 +99,7 @@ Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Compression
         writer.EndObject();
 
         return true;
-    });
-
-    return {200, response};
+    }, conn->compression_type, out_response);
 }
 
 static bool ParseDateRange(Span<const char> date_str, Date *out_start_date, Date *out_end_date)
@@ -131,10 +128,10 @@ invalid:
     return false;
 }
 
-Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoClassify(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
-        return CreateErrorPage(404);
+        return CreateErrorPage(404, out_response);
 
     struct CellSummary {
         mco_GhmCode ghm;
@@ -174,10 +171,10 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
     {
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
                             &dates[0], &dates[1]))
-            return CreateErrorPage(422);
+            return CreateErrorPage(422, out_response);
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff"),
                             &diff_dates[0], &diff_dates[1]))
-            return CreateErrorPage(422);
+            return CreateErrorPage(422, out_response);
 
         Span<const char> units_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "units");
         while (units_str.len) {
@@ -187,7 +184,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                 UnitCode unit;
                 unit.number = ParseDec<int16_t>(part).first;
                 if (!unit.IsValid())
-                    return CreateErrorPage(422);
+                    return CreateErrorPage(422, out_response);
 
                 units.Append(unit);
             }
@@ -201,7 +198,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                 durations = false;
             } else {
                 LogError("Invalid 'durations' parameter value '%1'", durations_str);
-                return CreateErrorPage(422);
+                return CreateErrorPage(422, out_response);
             }
         }
 
@@ -212,7 +209,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                                                   [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
             if (desc == std::end(mco_DispenseModeOptions)) {
                 LogError("Invalid 'mode' parameter value '%1'", mode_str);
-                return CreateErrorPage(422);
+                return CreateErrorPage(422, out_response);
             }
             dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
         }
@@ -221,20 +218,20 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
     if (!std::all_of(units.table.begin(), units.table.end(),
                      [&](UnitCode unit) { return allowed_units.Find(unit); })) {
         LogError("User is not allowed to view these units");
-        return CreateErrorPage(422);
+        return CreateErrorPage(422, out_response);
     }
     if (diff_dates[0].value && !dates[0].value) {
         LogError("Parameter 'diff' specified but 'dates' is missing");
-        return CreateErrorPage(422);
+        return CreateErrorPage(422, out_response);
     }
     if (dates[0].value && diff_dates[0].value &&
                dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
         LogError("Parameters 'dates' and 'diff' must not overlap");
-        return CreateErrorPage(422);
+        return CreateErrorPage(422, out_response);
     }
     if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        return CreateErrorPage(422);
+        return CreateErrorPage(422, out_response);
     }
 
     HeapArray<mco_Result> results;
@@ -323,8 +320,7 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
                         cs1.duration - cs2.duration) < 0;
     });
 
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
         for (const CellSummary &cs: summary) {
             char buf[32];
@@ -346,14 +342,11 @@ Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, Compressio
         writer.EndArray();
 
         return true;
-    });
-
-    return {200, response};
+    }, conn->compression_type, out_response);
 }
 
-static const mco_TableIndex *GetIndexFromRequest(const ConnectionInfo *conn,
-                                                 const char *redirect_url,
-                                                 Response *out_response)
+static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
+                               Response *out_response, const mco_TableIndex **out_index)
 {
     Date date = {};
     {
@@ -363,22 +356,20 @@ static const mco_TableIndex *GetIndexFromRequest(const ConnectionInfo *conn,
         } else {
             LogError("Missing 'date' parameter");
         }
-        if (!date.value) {
-            *out_response = CreateErrorPage(422);
-            return nullptr;
-        }
+        if (!date.value)
+            return CreateErrorPage(422, out_response);
     }
 
     const mco_TableIndex *index = thop_table_set->FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        *out_response = CreateErrorPage(404);
-        return nullptr;
+        return CreateErrorPage(404, out_response);
     }
 
     // Redirect to the canonical URL for this version, to improve client-side caching
     if (redirect_url && date != index->limit_dates[0]) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+        out_response->response.reset(response);
 
         {
             char url_buf[64];
@@ -386,17 +377,16 @@ static const mco_TableIndex *GetIndexFromRequest(const ConnectionInfo *conn,
             MHD_add_response_header(response, "Location", url_buf);
         }
 
-        *out_response = {303, response};
-        return nullptr;
+        return 303;
     }
 
-    return index;
+    *out_index = index;
+    return 0;
 }
 
-Response ProduceMcoIndexes(const ConnectionInfo *, const char *, CompressionType compression_type)
+int ProduceMcoIndexes(const ConnectionInfo *conn, const char *, Response *out_response)
 {
-    MHD_Response *response = BuildJson(compression_type,
-                                       [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
         for (const mco_TableIndex &index: thop_table_set->indexes) {
             if (!index.valid)
@@ -418,17 +408,17 @@ Response ProduceMcoIndexes(const ConnectionInfo *, const char *, CompressionType
         writer.EndArray();
 
         return true;
-    });
-
-    return {200, response};
+    }, conn->compression_type, out_response);
 }
 
-Response ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
-    Response response = {};
-    const mco_TableIndex *index = GetIndexFromRequest(conn, "diagnoses.json", &response);
-    if (!index)
-        return response;
+    const mco_TableIndex *index;
+    {
+        int code = GetIndexFromRequest(conn, url, out_response, &index);
+        if (code)
+            return code;
+    }
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
@@ -437,14 +427,12 @@ Response ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *, Compressi
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
                 LogError("Invalid diagnosis list specifier '%1'", spec_str);
-                return CreateErrorPage(422);
+                return CreateErrorPage(422, out_response);
             }
         }
     }
 
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];
 
         const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
@@ -492,17 +480,17 @@ Response ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *, Compressi
         }
         writer.EndArray();
         return true;
-    });
-
-    return response;
+    }, conn->compression_type, out_response);
 }
 
-Response ProduceMcoProcedures(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
-    Response response = {};
-    const mco_TableIndex *index = GetIndexFromRequest(conn, "procedures.json", &response);
-    if (!index)
-        return response;
+    const mco_TableIndex *index;
+    {
+        int code = GetIndexFromRequest(conn, url, out_response, &index);
+        if (code)
+            return code;
+    }
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
@@ -511,14 +499,12 @@ Response ProduceMcoProcedures(const ConnectionInfo *conn, const char *, Compress
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
                 LogError("Invalid procedure list specifier '%1'", spec_str);
-                return CreateErrorPage(422);
+                return CreateErrorPage(422, out_response);
             }
         }
     }
 
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -538,24 +524,22 @@ Response ProduceMcoProcedures(const ConnectionInfo *conn, const char *, Compress
         }
         writer.EndArray();
         return true;
-    });
-
-    return response;
+    }, conn->compression_type, out_response);
 }
 
-Response ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
-    Response response = {};
-    const mco_TableIndex *index = GetIndexFromRequest(conn, "ghm_ghs.json", &response);
-    if (!index)
-        return response;
+    const mco_TableIndex *index;
+    {
+        int code = GetIndexFromRequest(conn, url, out_response, &index);
+        if (code)
+            return code;
+    }
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *thop_index_to_constraints[index - thop_table_set->indexes.ptr];
 
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -647,9 +631,7 @@ Response ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *, CompressionT
         }
         writer.EndArray();
         return true;
-    });
-
-    return response;
+    }, conn->compression_type, out_response);
 }
 
 struct ReadableGhmDecisionNode {
@@ -985,22 +967,22 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-Response ProduceMcoTree(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
-    Response response = {};
-    const mco_TableIndex *index = GetIndexFromRequest(conn, "tree.json", &response);
-    if (!index)
-        return response;
+    const mco_TableIndex *index;
+    {
+        int code = GetIndexFromRequest(conn, url, out_response, &index);
+        if (code)
+            return code;
+    }
 
     // TODO: Generate ahead of time
     LinkedAllocator readable_nodes_alloc;
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
-        return CreateErrorPage(500);
+        return CreateErrorPage(500, out_response);
 
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         LinkedAllocator temp_alloc;
 
         writer.StartArray();
@@ -1023,7 +1005,5 @@ Response ProduceMcoTree(const ConnectionInfo *conn, const char *, CompressionTyp
         }
         writer.EndArray();
         return true;
-    });
-
-    return response;
+    }, conn->compression_type, out_response);
 }

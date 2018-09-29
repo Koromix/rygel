@@ -6,12 +6,12 @@
 
 #include "thop.hh"
 
-Response ProduceMcoCaseMix(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceMcoClassify(const ConnectionInfo *conn, const char *, CompressionType compression_type);
+int ProduceMcoCaseMix(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoClassify(const ConnectionInfo *conn, const char *, Response *out_response);
 
-Response ProduceMcoIndexes(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+int ProduceMcoIndexes(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response);
 
-Response ProduceMcoTree(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_response);

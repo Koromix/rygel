@@ -13,6 +13,7 @@
 #include <limits.h>
 #include <limits>
 #include <math.h>
+#include <memory>
 #include <mutex>
 #include <stddef.h>
 #include <stdint.h>

@@ -12,10 +12,13 @@
 
 struct ConnectionInfo {
     MHD_Connection *conn;
+
     const User *user;
     HashMap<const char *, Span<const char>> post;
+    CompressionType compression_type;
 
     MHD_PostProcessor *pp = nullptr;
+
     LinkedAllocator temp_alloc;
 };
 
@@ -25,9 +28,12 @@ struct Response {
         DisableETag = 1 << 1
     };
 
-    int code;
-    MHD_Response *response;
-    unsigned int flags;
+    struct ResponseDeleter {
+        void operator()(MHD_Response *response) { MHD_destroy_response(response); }
+    };
+
+    std::unique_ptr<MHD_Response, ResponseDeleter> response;
+    unsigned int flags = 0;
 };
 
 extern const mco_TableSet *thop_table_set;
@@ -40,6 +46,7 @@ extern StructureSet thop_structure_set;
 extern mco_StaySet thop_stay_set;
 extern Date thop_stay_set_dates[2];
 
-Response CreateErrorPage(int code);
-MHD_Response *BuildJson(CompressionType compression_type,
-                        std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func);
+int CreateErrorPage(int code, Response *out_response);
+
+int BuildJson(std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func,
+              CompressionType compression_type, Response *out_response);

@@ -113,22 +113,22 @@ const User *CheckSessionUser(MHD_Connection *conn)
     return session ? session->user : nullptr;
 }
 
-Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType)
+int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     char address[65];
     if (!GetClientAddress(conn->conn, address))
-        return CreateErrorPage(500);
+        return CreateErrorPage(500, out_response);
 
     const char *username = conn->post.FindValue("username", nullptr).ptr;
     const char *password = conn->post.FindValue("password", nullptr).ptr;
     const char *user_agent = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "User-Agent");
     if (!username || !password || !user_agent)
-        return CreateErrorPage(422);
+        return CreateErrorPage(422, out_response);
 
     const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
-        return CreateErrorPage(404);
+        return CreateErrorPage(404, out_response);
 
     char session_key[129];
     {
@@ -153,7 +153,7 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
             std::pair<Session *, bool> ret = sessions.AppendUninitialized(session_key);
             if (!ret.second) {
                 LogError("Generated duplicate session key");
-                return CreateErrorPage(500);
+                return CreateErrorPage(500, out_response);
             }
             session = ret.first;
         }
@@ -167,20 +167,20 @@ Response HandleConnect(const ConnectionInfo *conn, const char *, CompressionType
         session->user = user;
     }
 
-    Response response;
-    {
-        response.code = 200;
-        response.response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    out_response->response.reset(response);
 
+    // Set session cookie
+    {
         char buf[512];
         Fmt(buf, "session_key=%1; Max-Age=%2; HttpOnly", session_key, IdleSessionDelay / 1000);
-        MHD_add_response_header(response.response, "Set-Cookie", buf);
+        MHD_add_response_header(response, "Set-Cookie", buf);
     }
 
-    return response;
+    return 200;
 }
 
-Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionType)
+int HandleDisconnect(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     // Drop session
     {
@@ -188,19 +188,20 @@ Response HandleDisconnect(const ConnectionInfo *conn, const char *, CompressionT
         sessions.Remove(FindSession(conn->conn));
     }
 
-    Response response = {200, MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT) };
-    MHD_add_response_header(response.response, "Set-Cookie", "session_key=; Max-Age=0; HttpOnly");
+    MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    out_response->response.reset(response);
 
-    return response;
+    // Delete session cookie
+    MHD_add_response_header(response, "Set-Cookie", "session_key=; Max-Age=0; HttpOnly");
+
+    return 200;
 }
 
-Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionType compression_type)
+int ProduceSession(const ConnectionInfo *conn, const char *, Response *out_response)
 {
-    Response response = {};
+    out_response->flags = (int)Response::Flag::DisableETag;
 
-    response.code = 200;
-    response.response = BuildJson(compression_type,
-                                  [&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         if (conn->user) {
             writer.StartObject();
             writer.Key("username"); writer.String(conn->user->name);
@@ -210,8 +211,5 @@ Response ProduceSession(const ConnectionInfo *conn, const char *, CompressionTyp
         }
 
         return true;
-    });
-    response.flags = (int)Response::Flag::DisableETag;
-
-    return response;
+    }, conn->compression_type, out_response);
 }

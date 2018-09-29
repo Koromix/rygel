@@ -8,6 +8,6 @@
 
 const User *CheckSessionUser(MHD_Connection *conn);
 
-Response ProduceSession(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response HandleConnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
-Response HandleDisconnect(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+int ProduceSession(const ConnectionInfo *conn, const char *url, Response *out_response);
+int HandleConnect(const ConnectionInfo *conn, const char *url, Response *out_response);
+int HandleDisconnect(const ConnectionInfo *conn, const char *url, Response *out_response);

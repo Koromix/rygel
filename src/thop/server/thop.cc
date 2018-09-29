@@ -46,7 +46,7 @@ struct Route {
             const char *mime_type;
         } st;
 
-        Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type);
+        int (*func)(const ConnectionInfo *conn, const char *url, Response *out_response);
     } u;
 
     Route() = default;
@@ -58,7 +58,7 @@ struct Route {
         u.st.mime_type = mime_type;
     }
     Route(const char *url, const char *method, Matching matching,
-          Response (*func)(const ConnectionInfo *conn, const char *url, CompressionType compression_type))
+          int (*func)(const ConnectionInfo *conn, const char *url, Response *out_response))
         : url(url), method(method), matching(matching), type(Type::Function)
     {
         u.func = func;
@@ -251,39 +251,44 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
     }
 }
 
-Response CreateErrorPage(int code)
+int CreateErrorPage(int code, Response *out_response)
 {
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2", code,
                           MHD_get_reason_phrase_for((unsigned int)code));
+
     MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
                                                            ReleaseCallback);
-    return {code, response};
+    out_response->response.reset(response);
+
+    return code;
 }
 
-MHD_Response *BuildJson(CompressionType compression_type,
-                        std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func)
+int BuildJson(std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func,
+              CompressionType compression_type, Response *out_response)
 {
-    HeapArray<uint8_t> buffer;
+    HeapArray<uint8_t> buf;
     {
-        StreamWriter st(&buffer, nullptr, compression_type);
+        StreamWriter st(&buf, nullptr, compression_type);
         JsonStreamWriter json_stream(&st);
         rapidjson::Writer<JsonStreamWriter> writer(json_stream);
 
         if (!func(writer))
-            return nullptr;
+            return CreateErrorPage(500, out_response);
     }
 
-    MHD_Response *response = MHD_create_response_from_heap((size_t)buffer.len, buffer.ptr,
+    MHD_Response *response = MHD_create_response_from_heap((size_t)buf.len, buf.ptr,
                                                            ReleaseCallback);
-    buffer.Leak();
+    buf.Leak();
+    out_response->response.reset(response);
 
-    MHD_add_response_header(response, "Content-Type", "application/json");
     AddContentEncodingHeader(response, compression_type);
+    MHD_add_response_header(response, "Content-Type", "application/json");
 
-    return response;
+    return 200;
 }
 
-static Response ProduceStaticAsset(const Route &route, CompressionType compression_type)
+static int ProduceStaticAsset(const Route &route, CompressionType compression_type,
+                              Response *out_response)
 {
     DebugAssert(route.type == Route::Type::Static);
 
@@ -294,9 +299,9 @@ static Response ProduceStaticAsset(const Route &route, CompressionType compressi
             StreamReader reader(route.u.st.asset.data, nullptr, route.u.st.asset.compression_type);
             StreamWriter writer(&buf, nullptr, compression_type);
             if (!SpliceStream(&reader, Megabytes(8), &writer))
-                return CreateErrorPage(500);
+                return CreateErrorPage(500, out_response);
             if (!writer.Close())
-                return CreateErrorPage(500);
+                return CreateErrorPage(500, out_response);
         }
 
         response = MHD_create_response_from_heap((size_t)buf.len, (void *)buf.ptr, ReleaseCallback);
@@ -306,13 +311,14 @@ static Response ProduceStaticAsset(const Route &route, CompressionType compressi
                                                    (void *)route.u.st.asset.data.ptr,
                                                    MHD_RESPMEM_PERSISTENT);
     }
+    out_response->response.reset(response);
 
     AddContentEncodingHeader(response, compression_type);
     if (route.u.st.mime_type) {
         MHD_add_response_header(response, "Content-Type", route.u.st.mime_type);
     }
 
-    return {200, response};
+    return 200;
 }
 
 // Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
@@ -535,17 +541,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
                 return MHD_YES;
             }, conn);
             if (!conn->pp) {
-                MHD_Response *response = CreateErrorPage(422).response;
-                DEFER { MHD_destroy_response(response); };
-                return MHD_queue_response(conn->conn, 422, response);
+                Response response;
+                CreateErrorPage(422, &response);
+                return MHD_queue_response(conn->conn, 422, response.response.get());
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(conn->pp, upload_data, *upload_data_size) != MHD_YES) {
-                MHD_Response *response = CreateErrorPage(422).response;
-                DEFER { MHD_destroy_response(response); };
-                return MHD_queue_response(conn->conn, 422, response);
+                Response response;
+                CreateErrorPage(422, &response);
+                return MHD_queue_response(conn->conn, 422, response.response.get());
             }
 
             *upload_data_size = 0;
@@ -554,19 +560,18 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     }
 
     // Negociate content encoding
-    CompressionType compression_type;
     {
         uint32_t acceptable_encodings =
             ParseAcceptableEncodings(MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "Accept-Encoding"));
 
         if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
-            compression_type = CompressionType::Gzip;
+            conn->compression_type = CompressionType::Gzip;
         } else if (acceptable_encodings) {
-            compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
+            conn->compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
         } else {
-            MHD_Response *response = CreateErrorPage(406).response;
-            DEFER { MHD_destroy_response(response); };
-            return MHD_queue_response(conn->conn, 406, response);
+            Response response;
+            CreateErrorPage(406, &response);
+            return MHD_queue_response(conn->conn, 406, response.response.get());
         }
     }
 
@@ -590,9 +595,9 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
             }
 
             if (!route) {
-                MHD_Response *response = CreateErrorPage(404).response;
-                DEFER { MHD_destroy_response(response); };
-                return MHD_queue_response(conn->conn, 404, response);
+                Response response;
+                CreateErrorPage(404, &response);
+                return MHD_queue_response(conn->conn, 404, response.response.get());
             }
         }
 
@@ -605,24 +610,23 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         if (client_etag && TestStr(client_etag, etag)) {
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             DEFER { MHD_destroy_response(response); };
-
             return MHD_queue_response(conn->conn, 304, response);
         }
     }
 
     // Execute route
-    Response response = {};
+    int code = 0;
+    Response response;
     switch (route->type) {
         case Route::Type::Static: {
-            response = ProduceStaticAsset(*route, compression_type);
+            code = ProduceStaticAsset(*route, conn->compression_type, &response);
         } break;
 
         case Route::Type::Function: {
-            response = route->u.func(conn, url, compression_type);
+            code = route->u.func(conn, url, &response);
         } break;
     }
     DebugAssert(response.response);
-    DEFER { MHD_destroy_response(response.response); };
 
     // Add caching information
     if (try_cache) {
@@ -631,17 +635,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
 #endif
 
         if (!(response.flags & (int)Response::Flag::DisableCacheControl)) {
-            MHD_add_response_header(response.response, "Cache-Control", "max-age=3600");
+            MHD_add_response_header(response.response.get(), "Cache-Control", "max-age=3600");
         } else {
-            MHD_add_response_header(response.response, "Cache-Control", "max-age=0");
+            MHD_add_response_header(response.response.get(), "Cache-Control", "max-age=0");
         }
 
         if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
-            MHD_add_response_header(response.response, "ETag", etag);
+            MHD_add_response_header(response.response.get(), "ETag", etag);
         }
     }
 
-    return MHD_queue_response(conn->conn, (unsigned int)response.code, response.response);
+    return MHD_queue_response(conn->conn, (unsigned int)code, response.response.get());
 }
 
 static void ReleaseConnectionData(void *, struct MHD_Connection *,
