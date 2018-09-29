@@ -694,12 +694,9 @@ Options:
     LinkedAllocator temp_alloc;
 
     // Add default resource directory
-    {
-        const char *app_dir = GetApplicationDirectory();
-        if (app_dir) {
-            const char *default_resource_dir = Fmt(&temp_alloc, "%1%/resources", app_dir).ptr;
-            mco_resource_directories.Append(default_resource_dir);
-        }
+    if (const char *app_dir = GetApplicationDirectory(); app_dir) {
+        const char *default_resource_dir = Fmt(&temp_alloc, "%1%/resources", app_dir).ptr;
+        mco_resource_directories.Append(default_resource_dir);
     }
 
     HeapArray<const char *> desc_directories;

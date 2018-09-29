@@ -416,11 +416,8 @@ int ProduceMcoIndexes(const ConnectionInfo *conn, const char *, Response *out_re
 int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
     const mco_TableIndex *index;
-    {
-        int code = GetIndexFromRequest(conn, url, out_response, &index);
-        if (code)
-            return code;
-    }
+    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+        return code;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
@@ -488,11 +485,8 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *o
 int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
     const mco_TableIndex *index;
-    {
-        int code = GetIndexFromRequest(conn, url, out_response, &index);
-        if (code)
-            return code;
-    }
+    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+        return code;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
@@ -532,11 +526,8 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
 int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
     const mco_TableIndex *index;
-    {
-        int code = GetIndexFromRequest(conn, url, out_response, &index);
-        if (code)
-            return code;
-    }
+    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+        return code;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *thop_index_to_constraints[index - thop_table_set->indexes.ptr];
@@ -972,11 +963,8 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
 int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
     const mco_TableIndex *index;
-    {
-        int code = GetIndexFromRequest(conn, url, out_response, &index);
-        if (code)
-            return code;
-    }
+    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+        return code;
 
     // TODO: Generate ahead of time
     LinkedAllocator readable_nodes_alloc;
