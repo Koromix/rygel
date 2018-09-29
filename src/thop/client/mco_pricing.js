@@ -254,7 +254,7 @@ let mco_pricing = {};
 
                     let td;
                     if (info) {
-                        td = html('td', {class: info.mode}, mco_common.priceText(info.price));
+                        td = html('td', {class: info.mode}, priceText(info.price));
                         if (!duration && col.warn_cmd28) {
                             td.addClass('warn');
                             td.title = 'Devrait être orienté dans la CMD 28 (séance)';
@@ -338,19 +338,19 @@ let mco_pricing = {};
                   function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
         appendRow('Tarif €', function(col) {
             let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-            return [mco_common.priceText(cents), {class: 'price'}, true];
+            return [priceText(cents), {class: 'price'}, true];
         });
         appendRow('Forfait EXB €', function(col) {
             let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [col.exb_once ? mco_common.priceText(cents) : '', {class: 'exb'}, true];
+            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow('Tarif EXB €', function(col) {
             let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [!col.exb_once ? mco_common.priceText(cents) : '', {class: 'exb'}, true];
+            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
         });
         appendRow('Tarif EXH €', function(col) {
             let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-            return [mco_common.priceText(cents), {class: 'exh'}, true];
+            return [priceText(cents), {class: 'exh'}, true];
         });
         appendRow('Age', function(col) {
             let texts = [];

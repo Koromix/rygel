@@ -116,6 +116,35 @@ Element.prototype.replaceWith = function(el) {
 }
 
 // ------------------------------------------------------------------------
+// Text
+// ------------------------------------------------------------------------
+
+function numberText(n)
+{
+    return n.toLocaleString('fr-FR');
+}
+
+function percentText(fraction)
+{
+    return fraction.toLocaleString('fr-FR',
+                                   {style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1});
+}
+
+function priceText(price_cents, format_cents)
+{
+    if (format_cents === undefined)
+        format_cents = true;
+
+    if (price_cents !== undefined) {
+        let digits = format_cents ? 2 : 0;
+        return (price_cents / 100.0).toLocaleString('fr-FR',
+                                                    {minimumFractionDigits: digits, maximumFractionDigits: digits});
+    } else {
+        return '';
+    }
+}
+
+// ------------------------------------------------------------------------
 // URL
 // ------------------------------------------------------------------------
 

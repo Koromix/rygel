@@ -388,21 +388,21 @@ let mco_casemix = {};
 
             function addStatCells(stat)
             {
-                builder.addCell(stat.count, mco_common.numberText(stat.count));
+                builder.addCell(stat.count, numberText(stat.count));
                 if (!diff)
                     builder.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
-                builder.addCell(stat.price_cents, mco_common.priceText(stat.price_cents, false));
+                builder.addCell(stat.price_cents, priceText(stat.price_cents, false));
                 if (!diff)
                     builder.addCell(stat.price_cents / stat1.price_cents,
                                     percentText(stat.price_cents / stat1.price_cents));
                 builder.addCell(stat.partial_price_cents,
-                                mco_common.priceText(stat.partial_price_cents, false));
+                                priceText(stat.partial_price_cents, false));
                 if (!diff)
                     builder.addCell(stat.partial_price_cents / stat1.partial_price_cents,
                                     percentText(stat.partial_price_cents / stat1.partial_price_cents));
-                builder.addCell(stat.deaths, mco_common.numberText(stat.deaths));
+                builder.addCell(stat.deaths, numberText(stat.deaths));
                 if (!diff)
-                    builder.addCell(stat.deaths / stat.count, mco_common.numberText(stat.deaths / stat.count));
+                    builder.addCell(stat.deaths / stat.count, numberText(stat.deaths / stat.count));
             }
 
             builder.beginRow();
@@ -455,12 +455,6 @@ let mco_casemix = {};
             return html('a', {href: routeToUrl({page: page})}, '' + text);
         }
         return builder.getWidget();
-    }
-
-    function percentText(fraction)
-    {
-        return fraction.toLocaleString('fr-FR',
-                                       {style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1});
     }
 
     function refreshTable(pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
@@ -516,7 +510,7 @@ let mco_casemix = {};
                 }
 
                 let tr = html('tr',
-                    html('th',  mco_common.durationText(duration))
+                    html('th', mco_common.durationText(duration))
                 );
                 for (const col of ghms) {
                     let stat = findAggregate(stats_map, col.ghm, duration);
@@ -550,7 +544,7 @@ let mco_casemix = {};
                             html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
                                  '' + stat.count),
                             html('td', {class: addDiffClass(cls, stat.price_cents)},
-                                 mco_common.priceText(stat.price_cents, false))
+                                 priceText(stat.price_cents, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
