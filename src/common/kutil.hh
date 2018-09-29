@@ -1113,17 +1113,12 @@ public:
         Bucket *first_bucket = *buckets.Append(CreateBucket());
         bucket_allocator = &first_bucket->allocator;
     }
-    ~DynamicQueue()
-    {
-        for (Bucket *bucket: buckets) {
-            DeleteBucket(bucket);
-        }
-    }
+    ~DynamicQueue() { ClearBucketsAndValues(); }
 
     DynamicQueue(DynamicQueue &&other) { *this = std::move(other); }
     DynamicQueue &operator=(DynamicQueue &&other)
     {
-        Clear();
+        ClearBucketsAndValues();
         memmove(this, &other, SIZE(other));
         memset(&other, 0, SIZE(other));
         return *this;
@@ -1133,10 +1128,7 @@ public:
 
     void Clear()
     {
-        for (Bucket *bucket: buckets) {
-            DeleteBucket(bucket);
-        }
-        buckets.Clear();
+        ClearBucketsAndValues();
 
         Bucket *first_bucket = *buckets.Append(CreateBucket());
         offset = 0;
@@ -1201,16 +1193,7 @@ public:
         Size start_bucket_idx = start_idx / BucketSize;
         Size end_bucket_idx = end_idx / BucketSize;
 
-#if __cplusplus >= 201703L
-        if constexpr(!std::is_trivial<T>::value) {
-#else
-        if (true) {
-#endif
-            iterator_type end_it = end();
-            for (iterator_type it(this, from); it != end_it; ++it) {
-                it->~T();
-            }
-        }
+        DeleteValues(iterator_type(this, from), end());
 
         for (Size i = start_bucket_idx + 1; i <= end_bucket_idx; i++) {
             DeleteBucket(buckets[i]);
@@ -1242,16 +1225,7 @@ public:
         Size end_idx = offset + count;
         Size end_bucket_idx = end_idx / BucketSize;
 
-#if __cplusplus >= 201703L
-        if constexpr(!std::is_trivial<T>::value) {
-#else
-        if (true) {
-#endif
-            iterator_type end_it(this, count);
-            for (iterator_type it = begin(); it != end_it; ++it) {
-                it->~T();
-            }
-        }
+        DeleteValues(begin(), iterator_type(this, count));
 
         if (end_bucket_idx) {
             for (Size i = 0; i < end_bucket_idx; i++) {
@@ -1267,6 +1241,29 @@ public:
     }
 
 private:
+    void ClearBucketsAndValues()
+    {
+        DeleteValues(begin(), end());
+
+        for (Bucket *bucket: buckets) {
+            DeleteBucket(bucket);
+        }
+        buckets.Clear();
+    }
+
+    void DeleteValues(iterator_type begin MAYBE_UNUSED, iterator_type end MAYBE_UNUSED)
+    {
+#if __cplusplus >= 201703L
+        if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
+            for (iterator_type it = begin; it != end; ++it) {
+                it->~T();
+            }
+        }
+    }
+
     Bucket *CreateBucket()
     {
         Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, SIZE(Bucket));
