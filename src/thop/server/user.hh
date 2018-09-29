@@ -6,7 +6,8 @@
 
 #include "thop.hh"
 
-const User *CheckSessionUser(MHD_Connection *conn);
+const User *CheckSessionUser(MHD_Connection *conn, int64_t *out_url_key);
+void AddSessionHeaders(MHD_Connection *conn, const User *user, MHD_Response *response);
 
 int ProduceSession(const ConnectionInfo *conn, const char *url, Response *out_response);
 int HandleConnect(const ConnectionInfo *conn, const char *url, Response *out_response);

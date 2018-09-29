@@ -235,12 +235,7 @@ static bool InitStructureSet(Span<const char *const> resource_directories,
     return true;
 }
 
-static void ReleaseCallback(void *ptr)
-{
-    Allocator::Release(nullptr, ptr, -1);
-}
-
-static void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
+void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
 {
     switch (compression_type) {
         case CompressionType::None: {} break;
@@ -249,6 +244,20 @@ static void AddContentEncodingHeader(MHD_Response *response, CompressionType com
         case CompressionType::Gzip:
             { MHD_add_response_header(response, "Content-Encoding", "gzip"); } break;
     }
+}
+
+void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
+                     int max_age, bool http_only)
+{
+    char buf[512];
+    Fmt(buf, "%1=%2; Path=/; Max-Age=%3;%4",
+        name, value ? value : "", max_age, http_only ? " HttpOnly;" : "");
+    MHD_add_response_header(response, "Set-Cookie", buf);
+}
+
+static void ReleaseCallback(void *ptr)
+{
+    Allocator::Release(nullptr, ptr, -1);
 }
 
 int CreateErrorPage(int code, Response *out_response)
@@ -523,7 +532,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     if (!conn) {
         conn = new ConnectionInfo;
         conn->conn = conn2;
-        conn->user = CheckSessionUser(conn2);
+        conn->user = CheckSessionUser(conn2, &conn->url_key);
         *con_cls = conn;
     }
 
@@ -629,6 +638,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         } break;
     }
     DebugAssert(response.response);
+
+    AddSessionHeaders(conn->conn, conn->user, response.response.get());
 
     // Add caching information
     if (try_cache) {

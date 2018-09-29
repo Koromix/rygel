@@ -8,8 +8,8 @@ let user = {};
 
     let change_handlers = [];
 
+    let session_init = false;
     let session = null;
-    let url_key = 0;
 
     function runLogin(route, url, parameters, hash)
     {
@@ -53,7 +53,7 @@ let user = {};
     {
         let url = buildUrl(thop.baseUrl('api/connect.json'));
         data.post(url, {username: username, password: password}, function() {
-            randomizeUrlKey();
+            refreshSession(true);
 
             if (func)
                 func();
@@ -66,7 +66,6 @@ let user = {};
         let url = buildUrl(thop.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
             session = null;
-            randomizeUrlKey();
             notifyChange();
 
             if (func)
@@ -89,19 +88,32 @@ let user = {};
     }
     this.login = login;
 
-    function refreshSession()
+    function refreshSession(force)
     {
-        let url = buildUrl(thop.baseUrl('api/session.json'), {key: url_key});
-        data.get(url, function(json) {
-            let prev_username = session ? session.username : null;
-            let new_username = json ? json.username : null;
-            session = json;
-            if (new_username !== prev_username)
+        if (!!session !== (document.cookie.indexOf('connected=1') >= 0)) {
+            if (session) {
+                session = null;
                 notifyChange();
-        }, function(error) {
-            session = null;
-            notifyChange();
-        });
+            }
+
+            force = true;
+        }
+
+        if (!session_init || force) {
+            let url = thop.baseUrl('api/session.json');
+            data.get(url, function(json) {
+                let prev_username = session ? session.username : null;
+                let new_username = json ? json.username : null;
+                session = json;
+                if (new_username !== prev_username)
+                    notifyChange();
+            }, function(error) {
+                session = null;
+                notifyChange();
+            });
+
+            session_init = true;
+        }
     }
 
     function updateSessionBox()
@@ -146,11 +158,6 @@ let user = {};
         old_menu_item.replaceWith(menu_item);
     }
 
-    function randomizeUrlKey()
-    {
-        url_key = generateRandomInt(1, 281474976710656);
-    }
-
     function notifyChange()
     {
         for (let handler of change_handlers)
@@ -159,9 +166,7 @@ let user = {};
 
     this.addChangeHandler = function(func) { change_handlers.push(func); }
     this.getSession = function() { return session; }
-    this.getUrlKey = function() { return url_key; }
-
-    randomizeUrlKey();
+    this.getUrlKey = function() { return session ? session.url_key : 0; }
 
     thop.registerUrl('login', this, runLogin);
 }).call(user);
