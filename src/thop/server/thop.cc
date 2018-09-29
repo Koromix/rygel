@@ -250,7 +250,7 @@ void AddCookieHeader(MHD_Response *response, const char *name, const char *value
                      int max_age, bool http_only)
 {
     char buf[512];
-    Fmt(buf, "%1=%2; Path=/; Max-Age=%3;%4",
+    Fmt(buf, "%1=%2; Path=" THOP_BASE_URL "; Max-Age=%3;%4",
         name, value ? value : "", max_age, http_only ? " HttpOnly;" : "");
     MHD_add_response_header(response, "Set-Cookie", buf);
 }

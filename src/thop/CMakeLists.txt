@@ -6,12 +6,21 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(THOP_RESOURCES client/thop.html
+set(THOP_BASE_URL / CACHE STRING "Base URL used to access THOP")
+set(THOP_SHOW_USER ON CACHE BOOL "Enable user support in THOP")
 
-                   # Keep config.js first
-                   client/config.js
+if(THOP_SHOW_USER)
+    set(THOP_SHOW_USER 1)
+else()
+    set(THOP_SHOW_USER 0)
+endif()
+configure_file(client/thop.html "${CMAKE_CURRENT_BINARY_DIR}/thop.html")
+configure_file(client/thop.js "${CMAKE_CURRENT_BINARY_DIR}/thop.js")
+
+set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
+
                    client/util.js
-                   client/thop.js
+                   "${CMAKE_CURRENT_BINARY_DIR}/thop.js"
                    client/data.js
                    client/user.js
                    client/mco_common.js
@@ -67,5 +76,6 @@ add_executable(thop ${THOP_SRC} ${THOP_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
     target_link_libraries(thop PRIVATE dl)
 endif()
+target_compile_definitions(thop PRIVATE -DTHOP_BASE_URL="${THOP_BASE_URL}")
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(thop PUBLIC drd microhttpd sodium)
