@@ -50,6 +50,7 @@ int ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Response *out_re
         }
     }
 
+    out_response->flags |= (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
 
@@ -320,6 +321,7 @@ int ProduceMcoClassify(const ConnectionInfo *conn, const char *, Response *out_r
                         cs1.duration - cs2.duration) < 0;
     });
 
+    out_response->flags |= (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
         for (const CellSummary &cs: summary) {
