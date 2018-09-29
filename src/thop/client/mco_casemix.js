@@ -6,6 +6,9 @@ let mco_casemix = {};
 (function() {
     'use strict';
 
+    // Route
+    let pages = {};
+
     // Casemix
     let start_date = null;
     let end_date = null;
@@ -34,6 +37,8 @@ let mco_casemix = {};
             route.period = [start_date, end_date];
         if (!route.prev_period[0])
             route.prev_period = [start_date, end_date];
+        route.page = route.page || 1;
+        pages[route.cm_view] = route.page;
 
         // Casemix
         let new_classify_url = null;
@@ -106,8 +111,8 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.cm_view) {
                     case 'summary': {
-                        if (reactor.changed('summary', mix_url, mix_rows.length))
-                            refreshSummary();
+                        if (reactor.changed('summary', mix_url, mix_rows.length, route.page))
+                            refreshSummary(route.page);
                     } break;
                     case 'table': {
                         if (main_index >= 0 &&
@@ -140,6 +145,8 @@ let mco_casemix = {};
             'mode',
             'algorithm',
 
+            'page',
+
             'date',
             'ghm_root',
             'apply_coefficient',
@@ -148,6 +155,8 @@ let mco_casemix = {};
         ];
 
         let new_route = thop.buildRoute(args);
+        if (args.page === undefined)
+            new_route.page = pages[new_route.cm_view];
 
         let short_route = {};
         for (const k of KeepKeys)
@@ -347,11 +356,12 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshSummary()
+    function refreshSummary(page)
     {
         const ShortModes = ['J/T', '1', '2/3/4', 'Z/E'];
 
-        let table = html('table', {class: 'ls_table'});
+        let table = query('#cm_summary');
+        let builder = new DataTable(table);
 
         if (mix_rows.length) {
             // FIXME: Ugly as hell
@@ -364,88 +374,87 @@ let mco_casemix = {};
                 // .sort(function(a, b) { return b.count - a.count; })
                 .map(function(stat) { return stat.ghm_root; });
 
+            // Resources
+            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
             // Header
+            builder.addColumns([
+                'GHM',
+                'RSS', !diff ? '%' : null,
+                'Total', !diff ? '%' : null,
+                'Partiel', !diff ? '%' : null,
+                'Décès', !diff ? '%' : null
+            ]);
+
+            function addStatCells(stat)
             {
-                let thead = html('thead');
-                table.appendChild(thead);
-
-                let tr = html('tr',
-                    html('th', {}, 'GHM'),
-                    html('th', {'data-sort-method': 'number'}, 'RSS'),
-                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
-
-                    html('th', {'data-sort-default': '', 'data-sort-method': 'number'}, 'Total'),
-                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
-                    html('th', {'data-sort-method': 'number'}, 'Partiel'),
-                    !diff ? html('th', {'data-sort-method': 'none', class: 'no-sort'}, '%') : null,
-
-                    html('th', {colspan: 1 + !diff, 'data-sort-method': 'number'}, 'Décès')
-                );
-                thead.appendChild(tr);
+                builder.addCell(stat.count, mco_common.numberText(stat.count));
+                if (!diff)
+                    builder.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
+                builder.addCell(stat.price_cents, mco_common.priceText(stat.price_cents, false));
+                if (!diff)
+                    builder.addCell(stat.price_cents / stat1.price_cents,
+                                    percentText(stat.price_cents / stat1.price_cents));
+                builder.addCell(stat.partial_price_cents,
+                                mco_common.priceText(stat.partial_price_cents, false));
+                if (!diff)
+                    builder.addCell(stat.partial_price_cents / stat1.partial_price_cents,
+                                    percentText(stat.partial_price_cents / stat1.partial_price_cents));
+                builder.addCell(stat.deaths, mco_common.numberText(stat.deaths));
+                if (!diff)
+                    builder.addCell(stat.deaths / stat.count, mco_common.numberText(stat.deaths / stat.count));
             }
 
-            function addRow(tbody, ghm_root_elem, stat)
-            {
-                let tr = html('tr',
-                    html('td', ghm_root_elem),
+            builder.beginRow();
 
-                    html('td', mco_common.numberText(stat.count)),
-                    !diff ? html('td', {'data-sort': stat.count / stat1.count},
-                                 percentText(stat.count / stat1.count)) : null,
+            builder.addCell('Total');
+            addStatCells(stat1);
 
-                    html('td', {'data-sort': stat.price_cents},
-                         mco_common.priceText(stat.price_cents, false)),
-                    !diff ? html('td', {'data-sort': stat.price_cents / stat1.price_cents},
-                                 percentText(stat.price_cents / stat1.price_cents)) : null,
-                    html('td', {'data-sort': stat.partial_price_cents},
-                         mco_common.priceText(stat.partial_price_cents, false)),
-                    !diff ? html('td', {'data-sort': stat.partial_price_cents / stat1.partial_price_cents},
-                                 percentText(stat.partial_price_cents / stat1.partial_price_cents)) : null,
+            for (let ghm_root of ghm_roots) {
+                builder.beginRow();
 
-                    html('td', mco_common.numberText(stat.deaths)),
-                    !diff ? html('td', percentText(stat.deaths / stat.count)) : null
-                );
-                tbody.appendChild(tr);
+                let ghm_root_desc = ghm_roots_map[ghm_root];
+                let header = html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_root}),
+                                        title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
+                builder.addCell(ghm_root, header);
 
-                return tr;
+                let stat2 = findAggregate(stats2_map, ghm_root);
+                addStatCells(stat2);
+
+                builder.endRow();
             }
 
-            // Total
-            {
-                let tbody = html('tbody');
-                table.appendChild(tbody);
-
-                let tr = addRow(tbody, html('b', 'Total'), stat1);
-                tr.addClass('ls_total');
-            }
-
-            // Data
-            {
-                let tbody = html('tbody');
-                table.appendChild(tbody);
-
-                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
-
-                for (let i = 0; i < ghm_roots.length; i++) {
-                    let ghm_root = ghm_roots[i];
-                    let ghm_root_info = ghm_roots_map[ghm_roots[i]];
-                    let href = routeToUrl({cm_view: 'table', ghm_root: ghm_roots[i]});
-
-                    let ghm_root_elem = html('a', {href: href,
-                                                   title: ghm_root_info ? ghm_root_info.desc : null},
-                                             ghm_roots[i]);
-                    let stat2 = findAggregate(stats2_map, ghm_root);
-
-                    addRow(tbody, ghm_root_elem, stat2);
-                }
-            }
+            builder.endRow();
         }
 
-        let old_table = query('#cm_summary');
-        table.copyAttributesFrom(old_table);
-        old_table.replaceWith(table);
+        let render_count = builder.render((page - 1) * TableLen, TableLen);
+        let row_count = builder.getRowCount();
 
-        new Tablesort(table, {descending: true});
+        let last_page = Math.floor((row_count - 1) / TableLen + 1);
+        if (last_page === 1 && render_count === row_count)
+            last_page = null;
+
+        for (let old_pager of queryAll('.cm_pager')) {
+            if (last_page) {
+                let pager = createPagination(page, last_page);
+                pager.copyAttributesFrom(old_pager);
+                pager.addClass('pagr');
+                pager.removeClass('hide');
+                old_pager.replaceWith(pager);
+            } else {
+                old_pager.innerHTML = '';
+                old_pager.addClass('hide');
+            }
+        }
+    }
+
+    function createPagination(page, last_page)
+    {
+        let builder = new Pager(page, last_page);
+        builder.anchorBuilder = function(text, page) {
+            return html('a', {href: routeToUrl({page: page})}, '' + text);
+        }
+        return builder.getWidget();
     }
 
     function percentText(fraction)
@@ -617,7 +626,7 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearResults();
-        refreshSummary();
+        refreshSummary(1);
         refreshTable();
     });
 

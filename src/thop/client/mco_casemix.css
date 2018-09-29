@@ -11,11 +11,6 @@
     min-width: 50px;
     text-align: left;
 }
-#cm_summary .cm_count { border-right: 0; }
-#cm_summary .cm_price {
-    border-left: 0;
-    color: #888;
-}
 
 #cm_table .count.lower { padding-right: 19px; }
 #cm_table .count.lower:before {

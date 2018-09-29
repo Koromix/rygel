@@ -6,8 +6,6 @@ let mco_list = {};
 (function() {
     'use strict';
 
-    const PageLen = 200;
-
     const Lists = {
         'ghm_roots': {
             'path': 'api/mco_ghm_ghs.json',
@@ -369,7 +367,7 @@ let mco_list = {};
                     }
 
                     if (show) {
-                        if (list.match_count % PageLen === 0)
+                        if (list.match_count % TableLen === 0)
                             list.offsets.push(prev_length);
                         list.match_count++;
                     } else {
@@ -465,8 +463,8 @@ let mco_list = {};
             let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
 
             // Pagination
-            if (list.match_count && (list.match_count > PageLen || offset))
-                last_page = Math.floor((list.match_count - 1) / PageLen + 1);
+            if (list.match_count && (list.match_count > TableLen || offset))
+                last_page = Math.floor((list.match_count - 1) / TableLen + 1);
 
             let first_column = 0;
             if (!list_info.columns[0].header)
@@ -487,7 +485,7 @@ let mco_list = {};
 
             // Data
             let visible_count = 0;
-            let end = Math.min(offset + PageLen * list_info.columns.length, list.cells.length);
+            let end = Math.min(offset + TableLen * list_info.columns.length, list.cells.length);
             let prev_heading_content = null;
             for (let i = offset; i < end; i += list_info.columns.length) {
                 if (!list_info.columns[0].header) {
@@ -520,7 +518,7 @@ let mco_list = {};
             }
 
             if (visible_count)
-                stats_text += ((page - 1) * PageLen + 1) + ' - ' + ((page - 1) * PageLen + visible_count) + ' ';
+                stats_text += ((page - 1) * TableLen + 1) + ' - ' + ((page - 1) * TableLen + visible_count) + ' ';
             stats_text += '(' + list.match_count + ' ' + (list.match_count > 1 ? 'lignes' : 'ligne');
             if (list.match_count < list.items_count)
                 stats_text += ' sur ' + list.items_count;

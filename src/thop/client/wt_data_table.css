@@ -1,0 +1,38 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+.dtab th { cursor: pointer; }
+
+.dtab {
+    width: 100%;
+    border-collapse: collapse;
+}
+.dtab thead { background: #ccc; }
+.dtab tbody { background: #fafafa; }
+.dtab th, .dtab td {
+    min-width: 60px;
+    max-width: 260px;
+    border: 1px solid #a4a4a4;
+    padding: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.dtab th {
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+}
+.dtab .parent { background: #eee; }
+
+.dtab .ascending {
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAFCAYAAABxeg0vAAAAOUlEQVQImWNgwARODAwM8VjEsYIkBgaGXwwMDP8ZGBjSCClOgypExjg1YVOMU5MtAwPDGQLYFqYYAH3dFcttYcRhAAAAAElFTkSuQmCC');
+    background-repeat: no-repeat;
+    background-position: right center;
+}
+.dtab .descending {
+    background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAFCAYAAABxeg0vAAAANklEQVQImWNgYGCwZWBgOEMA2zKggTQGBob/OHAaumJ8mnAqhoEkBgaGX8QqhgEnBgaGeFySAMvFFcvEu6Q2AAAAAElFTkSuQmCC');
+    background-repeat: no-repeat;
+    background-position: right center;
+}

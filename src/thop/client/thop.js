@@ -4,6 +4,7 @@
 
 const BaseUrl = '${THOP_BASE_URL}';
 const ShowUser = ${THOP_SHOW_USER};
+const TableLen = 200;
 
 let thop = {};
 (function() {
