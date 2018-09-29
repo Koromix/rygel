@@ -260,6 +260,8 @@ int CreateErrorPage(int code, Response *out_response)
                                                            ReleaseCallback);
     out_response->response.reset(response);
 
+    MHD_add_response_header(response, "Content-Type", "text/plain");
+
     return code;
 }
 
