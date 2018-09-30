@@ -22,7 +22,7 @@ let mco_pricing = {};
 
         // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
         let url_parts = url.split('/');
-        route.view = url_parts[1] || route.view;
+        route.view = url_parts[1] || 'table';
         if (url_parts[2]) {
             let date_parts = url_parts[2].split('..', 2);
             if (date_parts.length === 2) {
@@ -33,7 +33,7 @@ let mco_pricing = {};
                 route.diff = null;
             }
         }
-        route.ghm_root = url_parts[3] || route.ghm_root;
+        route.ghm_root = url_parts[3] || null;
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources

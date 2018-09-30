@@ -32,9 +32,9 @@
                     <li><a data-url="mco_list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
                     <li><a data-url="mco_list.routeToUrl({list: 'procedures'});">Actes</a></li>
 
-                    <li><a class="category" data-url="mco_casemix.routeToUrl({cm_view: 'summary'});">Activité</a></li>
-                    <li><a data-url="mco_casemix.routeToUrl({cm_view: 'summary'});">Synthèse</a></li>
-                    <li><a data-url="mco_casemix.routeToUrl({cm_view: 'table'});">Grille</a></li>
+                    <li><a class="category" data-url="mco_casemix.routeToUrl({view: 'summary'});">Activité</a></li>
+                    <li><a data-url="mco_casemix.routeToUrl({view: 'summary'});">Synthèse</a></li>
+                    <li><a data-url="mco_casemix.routeToUrl({view: 'table'});">Grille</a></li>
                 </ul>
             </nav>
         </div>
@@ -73,7 +73,7 @@
                     <select onchange="thop.go({algorithm: this.value});"></select>
                 </label>
 
-                <button id="opt_update" onclick="thop.go({apply: true});"
+                <button id="opt_update" onclick="thop.go({refresh: true});"
                         style="margin-bottom: 1em;">Mettre à jour</button>
 
                 <label id="opt_ghm_roots">

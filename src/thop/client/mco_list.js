@@ -192,12 +192,12 @@ let mco_list = {};
 
         // Parse route (model: list/<table>/<date>[/<spec>])
         let url_parts = url.split('/');
-        route.list = url_parts[1] || route.list;
-        route.date = url_parts[2] || route.date;
+        route.list = url_parts[1] || 'ghm_roots';
+        route.date = url_parts[2] || null;
         route.page = parseInt(parameters.page) || 1;
         route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
-        route.group = parameters.group;
-        route.search = parameters.search;
+        route.group = parameters.group || null;
+        route.search = parameters.search || null;
         specs[route.list] = route.spec;
         search[route.list] = route.search;
         groups[route.list] = route.group;

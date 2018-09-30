@@ -32,13 +32,18 @@ let mco_casemix = {};
         let url_parts = url.split('/', 3);
         if (url_parts[2])
             Object.assign(route, thop.buildRoute(JSON.parse(window.atob(url_parts[2]))));
-        route.cm_view = url_parts[1] || route.cm_view;
-        if (!route.period[0])
-            route.period = [start_date, end_date];
-        if (!route.prev_period[0])
-            route.prev_period = [start_date, end_date];
+        route.view = url_parts[1] || 'summary';
+        route.period = (route.period && route.period[0]) ? route.period : [start_date, end_date];
+        route.prev_period = (route.prev_period && route.prev_period[0]) ?
+                            route.prev_period : [start_date, end_date];
+        route.units = route.units || [];
+        route.mode = route.mode || 'none';
+        route.algorithm = route.algorithm || null;
+        route.refresh = route.refresh || false;
+        route.ghm_root = route.ghm_root || null;
+        route.apply_coefficient = route.apply_coefficient || false;
         route.page = route.page || 1;
-        pages[route.cm_view] = route.page;
+        pages[route.view] = route.page;
 
         // Casemix
         let new_classify_url = null;
@@ -51,12 +56,12 @@ let mco_casemix = {};
                 new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
                                                     route.algorithm, prev_period[0], prev_period[1]);
             }
-            if ((!mix_url || route.apply) && new_classify_url) {
+            if ((!mix_url || route.refresh) && new_classify_url) {
                 clearResults();
                 updateResults(new_classify_url);
-                route.apply = false;
             }
         }
+        delete route.refresh;
 
         // Resources
         let indexes = mco_common.updateIndexes();
@@ -72,11 +77,11 @@ let mco_casemix = {};
 
         // Errors
         if (user.getSession()) {
-            if (!(['summary', 'table'].includes(route.cm_view)))
+            if (!(['summary', 'table'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_url === new_classify_url)
                 errors.add('Aucune unité sélectionnée');
-            if (route.cm_view == 'table') {
+            if (route.view == 'table') {
                 if (!route.ghm_root)
                     errors.add('Aucune racine de GHM sélectionnée');
                 if (mix_ghm_roots.size && !mix_ghm_roots.has(route.ghm_root))
@@ -96,7 +101,7 @@ let mco_casemix = {};
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update')
             .toggleClass('hide', !user.getSession());
-        query('#opt_ghm_roots').toggleClass('hide', !user.getSession() || route.cm_view !== 'table');
+        query('#opt_ghm_roots').toggleClass('hide', !user.getSession() || route.view !== 'table');
         refreshPeriods(route.period, route.prev_period, route.mode);
         refreshStructures(route.units);
         query('#opt_mode > select').value = route.mode;
@@ -109,7 +114,7 @@ let mco_casemix = {};
             data.clearErrors();
         if (user.getSession()) {
             if (!data.isBusy()) {
-                switch (route.cm_view) {
+                switch (route.view) {
                     case 'summary': {
                         if (reactor.changed('summary', mix_url, mix_rows.length, route.page))
                             refreshSummary(route.page);
@@ -123,8 +128,8 @@ let mco_casemix = {};
                     } break;
                 }
 
-                query('#cm_summary').toggleClass('hide', route.cm_view !== 'summary');
-                query('#cm_table').toggleClass('hide', route.cm_view !== 'table');
+                query('#cm_summary').toggleClass('hide', route.view !== 'summary');
+                query('#cm_table').toggleClass('hide', route.view !== 'table');
                 query('#cm').removeClass('hide');
             }
         } else {
@@ -144,25 +149,21 @@ let mco_casemix = {};
             'units',
             'mode',
             'algorithm',
-
             'page',
-
-            'date',
             'ghm_root',
             'apply_coefficient',
-
-            'apply', // FIXME: Ugly?
+            'refresh'
         ];
 
         let new_route = thop.buildRoute(args);
         if (args.page === undefined)
-            new_route.page = pages[new_route.cm_view];
+            new_route.page = pages[new_route.view];
 
         let short_route = {};
         for (const k of KeepKeys)
             short_route[k] = new_route[k] || null;
 
-        let url_parts = [thop.baseUrl('mco_casemix'), new_route.cm_view, window.btoa(JSON.stringify(short_route))];
+        let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, window.btoa(JSON.stringify(short_route))];
         while (!url_parts[url_parts.length - 1])
             url_parts.pop();
         let url = url_parts.join('/');
@@ -414,7 +415,7 @@ let mco_casemix = {};
                 builder.beginRow();
 
                 let ghm_root_desc = ghm_roots_map[ghm_root];
-                let header = html('a', {href: routeToUrl({cm_view: 'table', ghm_root: ghm_root}),
+                let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
                                         title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
                 builder.addCell(ghm_root, header);
 

@@ -17,26 +17,7 @@ let thop = {};
 
     let route_url = null;
     let route_url_parts = null;
-    let route_values = {
-        'view': 'table',
-        'date': null,
-        'ghm_root': null,
-        'diff': null,
-        'apply_coefficient': false,
-
-        'list': 'classifier_tree',
-        'page': 1,
-        'spec': null,
-
-        'cm_view': 'summary',
-        'period': [null, null],
-        'prev_period': [null, null],
-        'mode': 'none',
-        'units': [],
-        'algorithm': null,
-
-        'apply': false
-    };
+    let route_values = {};
     let scroll_cache = {};
     let module = null;
 

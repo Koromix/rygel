@@ -18,7 +18,7 @@ let mco_tree = {};
 
         // Parse route (model: tree/<date>)
         let url_parts = url.split('/');
-        route.date = url_parts[1] || route.date;
+        route.date = url_parts[1] || null;
 
         // Resources
         let indexes = mco_common.updateIndexes();
