@@ -10,6 +10,7 @@ let mco_casemix = {};
     let pages = {};
 
     // Casemix
+    let prev_url_key = null;
     let start_date = null;
     let end_date = null;
     let algorithms = [];
@@ -189,14 +190,18 @@ let mco_casemix = {};
 
     function updateCaseMix()
     {
-        let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
-        data.get(url, function(json) {
-            start_date = json.begin_date;
-            end_date = json.end_date;
-            algorithms = json.algorithms;
-            default_algorithm = json.default_algorithm;
-            structures = json.structures;
-        });
+        if (user.getUrlKey() !== prev_url_key) {
+            let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
+            data.get(url, function(json) {
+                start_date = json.begin_date;
+                end_date = json.end_date;
+                algorithms = json.algorithms;
+                default_algorithm = json.default_algorithm;
+                structures = json.structures;
+
+                prev_url_key = user.getUrlKey();
+            });
+        }
     }
 
     function buildClassifyUrl(start, end, units, mode, diff_start, diff_end)
