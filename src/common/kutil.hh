@@ -2214,7 +2214,7 @@ public:
     } compression;
 
     bool open = false;
-    bool error;
+    bool error = false;
 
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
