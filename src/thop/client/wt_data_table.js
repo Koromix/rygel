@@ -45,6 +45,7 @@ function DataTable(widget)
 
     this.beginRow = function() {
         let row = {
+            insert_idx: rows_flat.length,
             parent: ptr,
             depth: ptr ? (ptr.depth + 1) : 0,
             values: [],
@@ -97,7 +98,7 @@ function DataTable(widget)
                 } else if (row1.values[col_idx] > row2.values[col_idx]) {
                     return order;
                 } else {
-                    return 0;
+                    return row1.insert_idx - row2.insert_idx;
                 }
             });
 
