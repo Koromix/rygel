@@ -163,10 +163,14 @@ let mco_casemix = {};
         for (const k of KeepKeys)
             short_route[k] = new_route[k] || null;
 
-        let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, window.btoa(JSON.stringify(short_route))];
-        while (!url_parts[url_parts.length - 1])
-            url_parts.pop();
-        let url = url_parts.join('/');
+        let url;
+        {
+            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, window.btoa(JSON.stringify(short_route))];
+            while (!url_parts[url_parts.length - 1])
+                url_parts.pop();
+
+            url = url_parts.join('/');
+        }
 
         return url;
     }

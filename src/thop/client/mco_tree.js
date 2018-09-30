@@ -54,10 +54,14 @@ let mco_tree = {};
     {
         let new_route = thop.buildRoute(args);
 
-        let url_parts = [thop.baseUrl('mco_tree'), new_route.date];
-        while (!url_parts[url_parts.length - 1])
-            url_parts.pop();
-        let url = url_parts.join('/');
+        let url;
+        {
+            let url_parts = [thop.baseUrl('mco_tree'), new_route.date];
+            while (!url_parts[url_parts.length - 1])
+                url_parts.pop();
+
+            url = url_parts.join('/');
+        }
 
         return url;
     }

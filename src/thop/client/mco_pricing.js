@@ -111,13 +111,19 @@ let mco_pricing = {};
     {
         let new_route = thop.buildRoute(args);
 
-        let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-        let url_parts = [thop.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
-        while (!url_parts[url_parts.length - 1])
-            url_parts.pop();
-        let url = url_parts.join('/');
-        if (new_route.apply_coefficient)
-            url += '?apply_coefficient=1';
+        let url;
+        {
+            let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
+            let url_parts = [thop.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
+            while (!url_parts[url_parts.length - 1])
+                url_parts.pop();
+
+            url = url_parts.join('/');
+        }
+
+        url = buildUrl(url, {
+            apply_coefficient: new_route.apply_coefficient ? 1 : null
+        });
 
         return url;
     }

@@ -285,21 +285,25 @@ let mco_list = {};
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
 
-        let url_parts = [thop.baseUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
-        while (!url_parts[url_parts.length - 1])
-            url_parts.pop();
-        let url = url_parts.join('/');
+        let url;
+        {
+            let url_parts = [thop.baseUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
+            while (!url_parts[url_parts.length - 1])
+                url_parts.pop();
 
-        let query = [];
-        if (new_route.search)
-            query.push('search=' + encodeURI(new_route.search));
-        if (new_route.page && new_route.page !== 1)
-            query.push('page=' + encodeURI(new_route.page));
-        if (new_route.group && (!Lists[new_route.list] || !Lists[new_route.list].groups ||
-                                new_route.group !== Lists[new_route.list].groups[0].type))
-            query.push('group=' + encodeURI(new_route.group));
-        if (query.length)
-            url += '?' + query.join('&');
+            url = url_parts.join('/');
+        }
+
+        if (new_route.page && new_route.page === 1)
+            new_route.page = null;
+        if (new_route.group && Lists[new_route.list] && Lists[new_route.list].groups &&
+                new_route.group === Lists[new_route.list].groups[0].type)
+            new_route.group = null;
+        url = buildUrl(url, {
+            search: new_route.search,
+            page: new_route.page,
+            group: new_route.group
+        });
 
         return url;
     }
