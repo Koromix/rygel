@@ -8,8 +8,8 @@ let user = {};
 
     let change_handlers = [];
 
-    let session_init = false;
-    let session = null;
+    let url_key = 0;
+    let username = null;
 
     function runLogin(route, url, parameters, hash)
     {
@@ -53,8 +53,7 @@ let user = {};
     {
         let url = buildUrl(thop.baseUrl('api/connect.json'));
         data.post(url, {username: username, password: password}, function() {
-            refreshSession(true);
-
+            refreshSession();
             if (func)
                 func();
         });
@@ -65,9 +64,7 @@ let user = {};
     {
         let url = buildUrl(thop.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
-            session = null;
-            notifyChange();
-
+            refreshSession();
             if (func)
                 func();
         });
@@ -88,40 +85,25 @@ let user = {};
     }
     this.login = login;
 
-    function refreshSession(force)
+    function refreshSession()
     {
-        if (!!session !== (document.cookie.indexOf('connected=1') >= 0)) {
-            if (session) {
-                session = null;
-                notifyChange();
-            }
+        let prev_url_key = url_key;
 
-            force = true;
-        }
+        url_key = getCookie('url_key');
+        username = getCookie('username');
 
-        if (!session_init || force) {
-            let url = thop.baseUrl('api/session.json');
-            data.get(url, function(json) {
-                let prev_username = session ? session.username : null;
-                let new_username = json ? json.username : null;
-                session = json;
-                if (new_username !== prev_username)
-                    notifyChange();
-            }, function(error) {
-                session = null;
-                notifyChange();
-            });
-
-            session_init = true;
+        if (url_key !== prev_url_key) {
+            for (let handler of change_handlers)
+                handler();
         }
     }
 
     function updateSessionBox()
     {
         let div = null;
-        if (session) {
+        if (url_key) {
             div = html('div',
-                session.username + ' (',
+                username + ' (',
                 html('a', {href: routeToUrl()}, 'changer'),
                 ', ',
                 html('a', {href: '#', click: function(e) { disconnect(); e.preventDefault(); }},
@@ -142,10 +124,10 @@ let user = {};
     function updateSessionMenu()
     {
         let menu_item;
-        if (session) {
+        if (url_key) {
             menu_item = html('li',
                 html('a', {href: '#', click: function(e) { user.disconnect(); e.preventDefault(); }},
-                     'Se déconnecter (' + session.username + ')')
+                     'Se déconnecter (' + username + ')')
             );
         } else {
             menu_item = html('li',
@@ -158,15 +140,11 @@ let user = {};
         old_menu_item.replaceWith(menu_item);
     }
 
-    function notifyChange()
-    {
-        for (let handler of change_handlers)
-            handler();
-    }
-
     this.addChangeHandler = function(func) { change_handlers.push(func); }
-    this.getSession = function() { return session; }
-    this.getUrlKey = function() { return session ? session.url_key : 0; }
+
+    this.isConnected = function() { return !!url_key; }
+    this.getUrlKey = function() { return url_key; }
+    this.getUsername = function() { return username; }
 
     thop.registerUrl('login', this, runLogin);
 }).call(user);

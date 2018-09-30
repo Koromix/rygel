@@ -23,7 +23,6 @@ struct Session {
     std::atomic_uint64_t last_seen;
 
     const User *user;
-    uint64_t url_key;
 
     HASH_TABLE_HANDLER_T(Session, const char *, session_key);
 };
@@ -87,14 +86,17 @@ static Session *FindSession(MHD_Connection *conn)
         return nullptr;
 
     const char *session_key = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "session_key");
+    const char *username = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "username");
     const char *user_agent = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "User-Agent");
-    if (!session_key || !user_agent)
+    if (!session_key || !username || !user_agent)
         return nullptr;
 
     Session *session = sessions.Find(session_key);
     if (!session)
         return nullptr;
     if (!TestStr(session->client_addr, address))
+        return nullptr;
+    if (!TestStr(session->user->name, username))
         return nullptr;
     if (strncmp(session->user_agent, user_agent, SIZE(session->user_agent) - 1))
         return nullptr;
@@ -105,28 +107,27 @@ static Session *FindSession(MHD_Connection *conn)
     return session;
 }
 
-const User *CheckSessionUser(MHD_Connection *conn, int64_t *out_url_key)
+static void DeleteSessionCookies(MHD_Response *response)
+{
+    AddCookieHeader(response, "session_key", nullptr, 0, true);
+    AddCookieHeader(response, "url_key", nullptr, 0, false);
+    AddCookieHeader(response, "username", nullptr, 0, false);
+}
+
+const User *CheckSessionUser(MHD_Connection *conn)
 {
     PruneStaleSessions();
 
     std::shared_lock<std::shared_mutex> lock(sessions_mutex);
     Session *session = FindSession(conn);
 
-    if (session) {
-        if (out_url_key) {
-            *out_url_key = session->url_key;
-        }
-        return session->user;
-    } else {
-        return nullptr;
-    }
+    return session ? session->user : nullptr;
 }
 
 void AddSessionHeaders(MHD_Connection *conn, const User *user, MHD_Response *response)
 {
     if (!user && MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "session_key")) {
-        AddCookieHeader(response, "session_key", nullptr, 0, true);
-        AddCookieHeader(response, "connected", nullptr, 0, false);
+        DeleteSessionCookies(response);
     }
 }
 
@@ -151,7 +152,6 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     char session_key[129];
     {
         uint64_t buf[8];
-
         randombytes_buf(buf, SIZE(buf));
         Fmt(session_key, "%1%2%3%4%5%6%7%8",
             FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16),
@@ -161,9 +161,12 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     }
 
     // Create URL key
-    uint64_t url_key;
-    randombytes_buf(&url_key, SIZE(url_key));
-    url_key &= 0xFFFFFFFFFFFFull;
+    char url_key[33];
+    {
+        uint64_t buf[2];
+        randombytes_buf(&buf, SIZE(buf));
+        Fmt(url_key, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
+    }
 
     // Register session
     {
@@ -184,20 +187,19 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
         StaticAssert(SIZE(session->session_key) == SIZE(session_key));
         StaticAssert(SIZE(session->client_addr) == SIZE(address));
         strcpy(session->session_key, session_key);
-        session->url_key = url_key;
         strcpy(session->client_addr, address);
         strncpy(session->user_agent, user_agent, SIZE(session->user_agent) - 1);
         session->last_seen = GetMonotonicTime();
         session->user = user;
     }
 
-
     MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
     out_response->response.reset(response);
 
     // Set session cookies
     AddCookieHeader(response, "session_key", session_key, IdleSessionDelay / 1000, true);
-    AddCookieHeader(response, "connected", "1", IdleSessionDelay / 1000, false);
+    AddCookieHeader(response, "url_key", url_key, IdleSessionDelay / 1000, false);
+    AddCookieHeader(response, "username", user->name, IdleSessionDelay / 1000, false);
 
     return 200;
 }
@@ -214,27 +216,7 @@ int HandleDisconnect(const ConnectionInfo *conn, const char *, Response *out_res
     out_response->response.reset(response);
 
     // Delete session cookies
-    AddCookieHeader(response, "session_key", nullptr, 0, true);
-    AddCookieHeader(response, "connected", nullptr, 0, false);
+    DeleteSessionCookies(response);
 
     return 200;
-}
-
-int ProduceSession(const ConnectionInfo *conn, const char *, Response *out_response)
-{
-    out_response->flags = (int)Response::Flag::DisableCacheControl |
-                          (int)Response::Flag::DisableETag;
-
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        if (conn->user) {
-            writer.StartObject();
-            writer.Key("username"); writer.String(conn->user->name);
-            writer.Key("url_key"); writer.Int64(conn->url_key);
-            writer.EndObject();
-        } else {
-            writer.Null();
-        }
-
-        return true;
-    }, conn->compression_type, out_response);
 }

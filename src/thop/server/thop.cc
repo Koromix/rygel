@@ -249,9 +249,15 @@ void AddContentEncodingHeader(MHD_Response *response, CompressionType compressio
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
                      int max_age, bool http_only)
 {
+    if (!value) {
+        value = "";
+        max_age = 0;
+        http_only = false;
+    }
+
     char buf[512];
     Fmt(buf, "%1=%2; Path=" THOP_BASE_URL "; Max-Age=%3;%4",
-        name, value ? value : "", max_age, http_only ? " HttpOnly;" : "");
+        name, value, max_age, http_only ? " HttpOnly;" : "");
     MHD_add_response_header(response, "Set-Cookie", buf);
 }
 
@@ -394,7 +400,6 @@ static void InitRoutes()
 
     // User
     routes.Set({"/login", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/session.json", "GET", Route::Matching::Exact, ProduceSession});
     routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
     routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
 
@@ -532,7 +537,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     if (!conn) {
         conn = new ConnectionInfo;
         conn->conn = conn2;
-        conn->user = CheckSessionUser(conn2, &conn->url_key);
+        conn->user = CheckSessionUser(conn2);
         *con_cls = conn;
     }
 

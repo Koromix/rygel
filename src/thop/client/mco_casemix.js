@@ -48,7 +48,7 @@ let mco_casemix = {};
 
         // Casemix
         let new_classify_url = null;
-        if (user.getSession()) {
+        if (user.isConnected()) {
             updateCaseMix();
             if (!route.algorithm)
                 route.algorithm = default_algorithm;
@@ -77,7 +77,7 @@ let mco_casemix = {};
             pricings_map = mco_pricing.updatePriceMap(main_index);
 
         // Errors
-        if (user.getSession()) {
+        if (user.isConnected()) {
             if (!(['summary', 'table'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_url === new_classify_url)
@@ -101,8 +101,8 @@ let mco_casemix = {};
 
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update')
-            .toggleClass('hide', !user.getSession());
-        query('#opt_ghm_roots').toggleClass('hide', !user.getSession() || route.view !== 'table');
+            .toggleClass('hide', !user.isConnected());
+        query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'table');
         refreshPeriods(route.period, route.prev_period, route.mode);
         refreshStructures(route.units);
         query('#opt_mode > select').value = route.mode;
@@ -113,7 +113,7 @@ let mco_casemix = {};
         thop.refreshErrors(Array.from(errors));
         if (!data.isBusy())
             data.clearErrors();
-        if (user.getSession()) {
+        if (user.isConnected()) {
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
@@ -143,7 +143,7 @@ let mco_casemix = {};
 
     function routeToUrl(args)
     {
-        if (!user.getSession())
+        if (!user.isConnected())
             return null;
 
         const KeepKeys = [

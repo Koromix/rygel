@@ -145,6 +145,29 @@ function priceText(price_cents, format_cents)
 }
 
 // ------------------------------------------------------------------------
+// Cookies
+// ------------------------------------------------------------------------
+
+// Why the f*ck is there still no good cookie API?
+function getCookie(name)
+{
+    let cookie = ' ' + document.cookie;
+
+    let start = cookie.indexOf(' ' + name + '=');
+    if (start < 0)
+        return null;
+
+    start = cookie.indexOf('=', start) + 1;
+    let end = cookie.indexOf(';', start);
+    if (end < 0)
+        end = cookie.length;
+
+    let value = unescape(cookie.substring(start, end));
+
+    return value;
+}
+
+// ------------------------------------------------------------------------
 // URL
 // ------------------------------------------------------------------------
 

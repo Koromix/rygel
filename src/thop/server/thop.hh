@@ -14,7 +14,6 @@ struct ConnectionInfo {
     MHD_Connection *conn;
 
     const User *user;
-    int64_t url_key;
     HashMap<const char *, Span<const char>> post;
     CompressionType compression_type;
 
@@ -49,7 +48,7 @@ extern Date thop_stay_set_dates[2];
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
-                     int max_age, bool http_only);
+                     int max_age = -1, bool http_only = false);
 
 int CreateErrorPage(int code, Response *out_response);
 
