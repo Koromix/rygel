@@ -129,7 +129,9 @@ let mco_casemix = {};
                     } break;
                 }
 
-                query('#cm_summary').toggleClass('hide', route.view !== 'summary');
+                queryAll('#cm_summary').toggleClass('hide', route.view !== 'summary');
+                queryAll('.cm_pager').toggleClass('hide', route.view !== 'summary' ||
+                                                  !query('.cm_pager').childNodes.length);
                 query('#cm_table').toggleClass('hide', route.view !== 'table');
                 query('#cm').removeClass('hide');
             }
