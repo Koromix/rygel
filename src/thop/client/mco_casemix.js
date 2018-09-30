@@ -42,7 +42,7 @@ let mco_casemix = {};
         route.refresh = route.refresh || false;
         route.ghm_root = route.ghm_root || null;
         route.apply_coefficient = route.apply_coefficient || false;
-        route.page = route.page || 1;
+        route.page = parseInt(parameters.page, 10) || 1;
         pages[route.view] = route.page;
 
         // Casemix
@@ -149,7 +149,6 @@ let mco_casemix = {};
             'units',
             'mode',
             'algorithm',
-            'page',
             'ghm_root',
             'apply_coefficient',
             'refresh'
@@ -171,6 +170,12 @@ let mco_casemix = {};
 
             url = url_parts.join('/');
         }
+
+        if (new_route.page && new_route.page === 1)
+            new_route.page = null;
+        url = buildUrl(url, {
+            page: new_route.page
+        });
 
         return url;
     }
