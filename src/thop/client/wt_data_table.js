@@ -57,8 +57,12 @@ function DataTable(widget)
         } else {
             rows_rec.push(row);
         }
-        rows_flat.push(row);
-        max_depth = Math.max(row.depth, max_depth);
+        if (row.depth > max_depth) {
+            rows_flat = [];
+            max_depth = row.depth;
+        }
+        if (row.depth === max_depth)
+            rows_flat.push(row);
 
         ptr = row;
     };
@@ -98,7 +102,8 @@ function DataTable(widget)
             });
 
             for (let row of rows) {
-                rows_flat.push(row);
+                if (row.depth === max_depth)
+                    rows_flat.push(row);
                 recursiveSort(row.children, col_idx);
             }
         }
@@ -135,11 +140,9 @@ function DataTable(widget)
             thead.appendChild(tr);
         }
 
-        let end = Math.min(offset + len, rows_flat.length);
-        for (let i = offset; i < end; i++) {
-            let row = rows_flat[i];
-
-            let tr = html('tr', {class: (row.depth < max_depth) ? 'parent' : null});
+        function addRow(row, parent)
+        {
+            let tr = html('tr', {class: parent ? 'parent' : null});
             for (let j = 0; j < row.cells.length; j++) {
                 let td = html('td', row.cells[j]);
                 if (row.depth && !j)
@@ -147,6 +150,22 @@ function DataTable(widget)
                 tr.appendChild(td);
             }
             tbody.appendChild(tr);
+        }
+
+        let end = Math.min(offset + len, rows_flat.length);
+
+        let prev_parents = Array.apply(null, Array(max_depth));
+        for (let i = offset; i < end; i++) {
+            let row = rows_flat[i];
+
+            let parent = row.parent;
+            while (parent && parent !== prev_parents[parent.depth]) {
+                addRow(parent, true);
+                prev_parents[parent.depth] = parent;
+                parent = parent.parent;
+            }
+
+            addRow(row, false);
         }
 
         render_offset = offset;
