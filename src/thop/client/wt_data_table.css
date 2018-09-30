@@ -36,3 +36,10 @@
     background-repeat: no-repeat;
     background-position: right center;
 }
+
+@media screen and (max-width: 800px) {
+    .dtab th, .dtab td {
+        font-size: 0.8em;
+        border: 0;
+    }
+}
