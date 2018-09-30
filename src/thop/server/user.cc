@@ -96,7 +96,7 @@ static Session *FindSession(MHD_Connection *conn)
         return nullptr;
     if (!TestStr(session->client_addr, address))
         return nullptr;
-    if (!TestStr(session->user_agent, user_agent))
+    if (strncmp(session->user_agent, user_agent, SIZE(session->user_agent) - 1))
         return nullptr;
     if (now - session->last_seen > IdleSessionDelay)
         return nullptr;
