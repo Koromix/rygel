@@ -160,7 +160,9 @@ let thop = {};
         // Update scroll target
         let scroll_target = scroll_cache[route_url_parts.path];
         if (route_url_parts.hash) {
-            window.location.hash = route_url_parts.hash;
+            let el = query('#' + route_url_parts.hash);
+            if (el && el.offsetTop)
+                window.scrollTo(0, el.offsetTop - 5);
         } else if (scroll_target) {
             window.scrollTo(scroll_target[0], scroll_target[1]);
         } else {
