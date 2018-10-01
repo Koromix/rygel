@@ -26,6 +26,7 @@ let mco_casemix = {};
 
     // Cache
     let reactor = new Reactor;
+    let summary_table = null;
 
     function runCasemix(route, url, parameters, hash)
     {
@@ -245,23 +246,11 @@ let mco_casemix = {};
                 row.cmd = parseInt(row.ghm.substr(0, 2), 10);
                 row.type = row.ghm.substr(2, 1);
                 row.ghm_root = row.ghm.substr(0, 5);
-                switch (row.ghm.substr(5, 1)) {
-                    case 'J':
-                    case 'T': { row.short_mode = 'J/T'; } break;
-                    case '1':
-                    case 'A': { row.short_mode = '1'; } break;
-                    case '2':
-                    case '3':
-                    case '4':
-                    case 'B':
-                    case 'C':
-                    case 'D': { row.short_mode = '2/3/4'; } break;
-                    case 'Z':
-                    case 'E': { row.short_mode = 'Z/E'; } break;
-                }
 
                 mix_ghm_roots.add(row.ghm_root);
             }
+
+            initSummaryTable();
         });
     }
 
@@ -386,86 +375,87 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshSummary(page, sort, descending)
+    function initSummaryTable()
     {
-        const ShortModes = ['J/T', '1', '2/3/4', 'Z/E'];
+        // FIXME: Ugly as hell
+        let diff = (mix_url.indexOf('diff=') >= 0);
 
-        let table = query('#cm_summary');
-        let builder = new DataTable(table);
-
-        builder.sortHandler = function(col_idx, descending) {
+        summary_table = new DataTable(query('#cm_summary'));
+        summary_table.sortHandler = function(col_idx, descending) {
             go({sort: col_idx, descending: descending});
         };
 
-        if (mix_rows.length) {
-            // FIXME: Ugly as hell
-            let diff = (mix_url.indexOf('diff=') >= 0);
+        // Avoid headers with no data
+        if (!mix_rows.length)
+            return;
 
-            // Aggregate
-            let stat1 = aggregate(mix_rows)[0][0];
-            let [stats2, stats2_map] = aggregate(mix_rows, ['ghm_root']);
-            let ghm_roots = stats2
-                // .sort(function(a, b) { return b.count - a.count; })
-                .map(function(stat) { return stat.ghm_root; });
+        // Header
+        summary_table.addColumns([
+            'GHM',
+            'RSS', !diff ? '%' : null,
+            'Total', !diff ? '%' : null,
+            'Partiel', !diff ? '%' : null,
+            'Décès', !diff ? '%' : null
+        ]);
 
-            // Resources
-            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+        // Aggregate
+        let stat1 = aggregate(mix_rows)[0][0];
+        let [stats2, stats2_map] = aggregate(mix_rows, ['ghm_root']);
+        let ghm_roots = stats2
+            // .sort(function(a, b) { return b.count - a.count; })
+            .map(function(stat) { return stat.ghm_root; });
 
-            // Header
-            builder.addColumns([
-                'GHM',
-                'RSS', !diff ? '%' : null,
-                'Total', !diff ? '%' : null,
-                'Partiel', !diff ? '%' : null,
-                'Décès', !diff ? '%' : null
-            ]);
+        // Resources
+        let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
-            function addStatCells(stat)
-            {
-                builder.addCell(stat.count, numberText(stat.count));
-                if (!diff)
-                    builder.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
-                builder.addCell(stat.price_cents, priceText(stat.price_cents, false));
-                if (!diff)
-                    builder.addCell(stat.price_cents / stat1.price_cents,
-                                    percentText(stat.price_cents / stat1.price_cents));
-                builder.addCell(stat.partial_price_cents,
-                                priceText(stat.partial_price_cents, false));
-                if (!diff)
-                    builder.addCell(stat.partial_price_cents / stat1.partial_price_cents,
-                                    percentText(stat.partial_price_cents / stat1.partial_price_cents));
-                builder.addCell(stat.deaths, numberText(stat.deaths));
-                if (!diff)
-                    builder.addCell(stat.deaths / stat.count, numberText(stat.deaths / stat.count));
-            }
-
-            builder.beginRow();
-
-            builder.addCell('Total');
-            addStatCells(stat1);
-
-            for (let ghm_root of ghm_roots) {
-                builder.beginRow();
-
-                let ghm_root_desc = ghm_roots_map[ghm_root];
-                let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
-                                        title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
-                builder.addCell(ghm_root, header);
-
-                let stat2 = findAggregate(stats2_map, ghm_root);
-                addStatCells(stat2);
-
-                builder.endRow();
-            }
-
-            builder.endRow();
+        function addStatCells(stat)
+        {
+            summary_table.addCell(stat.count, numberText(stat.count));
+            if (!diff)
+                summary_table.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
+            summary_table.addCell(stat.price_cents, priceText(stat.price_cents, false));
+            if (!diff)
+                summary_table.addCell(stat.price_cents / stat1.price_cents,
+                                      percentText(stat.price_cents / stat1.price_cents));
+            summary_table.addCell(stat.partial_price_cents,
+                                  priceText(stat.partial_price_cents, false));
+            if (!diff)
+                summary_table.addCell(stat.partial_price_cents / stat1.partial_price_cents,
+                                      percentText(stat.partial_price_cents / stat1.partial_price_cents));
+            summary_table.addCell(stat.deaths, numberText(stat.deaths));
+            if (!diff)
+                summary_table.addCell(stat.deaths / stat.count, numberText(stat.deaths / stat.count));
         }
 
-        if (sort !== null && sort !== undefined)
-            builder.sort(sort, descending);
+        // Add stats
+        summary_table.beginRow();
+        summary_table.addCell('Total');
+        addStatCells(stat1);
+        for (let ghm_root of ghm_roots) {
+            let ghm_root_desc = ghm_roots_map[ghm_root];
+            let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
+                                    title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
 
-        let render_count = builder.render((page - 1) * TableLen, TableLen);
-        let row_count = builder.getRowCount();
+            let stat2 = findAggregate(stats2_map, ghm_root);
+
+            summary_table.beginRow();
+            summary_table.addCell(ghm_root, header);
+            addStatCells(stat2);
+            summary_table.endRow();
+        }
+        summary_table.endRow();
+    }
+
+    function refreshSummary(page, sort, descending)
+    {
+        if (!summary_table)
+            return;
+
+        if (sort !== null && sort !== undefined)
+            summary_table.sort(sort, descending);
+
+        let render_count = summary_table.render((page - 1) * TableLen, TableLen);
+        let row_count = summary_table.getRowCount();
 
         let last_page = Math.floor((row_count - 1) / TableLen + 1);
         if (last_page === 1 && render_count === row_count)
