@@ -7,6 +7,8 @@ function DataTable(widget)
     if (widget === undefined)
         widget = html('table');
 
+    this.sortHandler = null;
+
     let self = this;
 
     let columns = [];
@@ -27,8 +29,12 @@ function DataTable(widget)
         let col_idx = this.col_idx;
         let descending = (sort_idx === col_idx) ? !sort_descending : false;
 
-        self.sort(col_idx, descending);
-        self.render(render_offset, render_len);
+        if (self.sortHandler) {
+            self.sortHandler(col_idx, descending);
+        } else {
+            self.sort(col_idx, descending);
+            self.render(render_offset, render_len);
+        }
 
         e.preventDefault();
     }
@@ -88,6 +94,9 @@ function DataTable(widget)
     };
 
     this.sort = function(col_idx, descending) {
+        if (col_idx === sort_idx && descending === sort_descending)
+            return false;
+
         let order = descending ? -1 : 1;
 
         function recursiveSort(rows, col_idx)
@@ -115,6 +124,8 @@ function DataTable(widget)
 
         sort_idx = col_idx;
         sort_descending = descending;
+
+        return true;
     };
 
     this.render = function(offset, len) {

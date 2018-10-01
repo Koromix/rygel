@@ -8,6 +8,8 @@ let mco_casemix = {};
 
     // Route
     let pages = {};
+    let sorts = {};
+    let descendings = {};
 
     // Casemix
     let prev_url_key = null;
@@ -44,7 +46,11 @@ let mco_casemix = {};
         route.ghm_root = route.ghm_root || null;
         route.apply_coefficient = route.apply_coefficient || false;
         route.page = parseInt(parameters.page, 10) || 1;
+        route.sort = parseInt(parameters.sort, 10) || null;
+        route.descending = !!parseInt(parameters.descending, 10) || false;
         pages[route.view] = route.page;
+        sorts[route.view] = route.sort;
+        descendings[route.view] = route.descending;
 
         // Casemix
         let new_classify_url = null;
@@ -117,8 +123,9 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
-                        if (reactor.changed('summary', mix_url, mix_rows.length, route.page))
-                            refreshSummary(route.page);
+                        if (reactor.changed('summary', mix_url, mix_rows.length, route.page,
+                                            route.sort, route.descending))
+                            refreshSummary(route.page, route.sort, route.descending);
                     } break;
                     case 'table': {
                         if (main_index >= 0 &&
@@ -160,6 +167,10 @@ let mco_casemix = {};
         let new_route = thop.buildRoute(args);
         if (args.page === undefined)
             new_route.page = pages[new_route.view];
+        if (args.sort === undefined)
+            new_route.sort = sorts[new_route.view];
+        if (args.descending === undefined)
+            new_route.descending = descendings[new_route.view];
 
         let short_route = {};
         for (const k of KeepKeys)
@@ -177,7 +188,9 @@ let mco_casemix = {};
         if (new_route.page && new_route.page === 1)
             new_route.page = null;
         url = buildUrl(url, {
-            page: new_route.page
+            page: new_route.page,
+            sort: new_route.sort,
+            descending: new_route.descending ? 1 : null
         });
 
         return url;
@@ -373,12 +386,16 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshSummary(page)
+    function refreshSummary(page, sort, descending)
     {
         const ShortModes = ['J/T', '1', '2/3/4', 'Z/E'];
 
         let table = query('#cm_summary');
         let builder = new DataTable(table);
+
+        builder.sortHandler = function(col_idx, descending) {
+            go({sort: col_idx, descending: descending});
+        };
 
         if (mix_rows.length) {
             // FIXME: Ugly as hell
@@ -443,6 +460,9 @@ let mco_casemix = {};
 
             builder.endRow();
         }
+
+        if (sort !== null && sort !== undefined)
+            builder.sort(sort, descending);
 
         let render_count = builder.render((page - 1) * TableLen, TableLen);
         let row_count = builder.getRowCount();
