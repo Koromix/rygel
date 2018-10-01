@@ -424,7 +424,7 @@ let mco_casemix = {};
                                       percentText(stat.partial_price_cents / stat1.partial_price_cents));
             summary_table.addCell(stat.deaths, numberText(stat.deaths));
             if (!diff)
-                summary_table.addCell(stat.deaths / stat.count, numberText(stat.deaths / stat.count));
+                summary_table.addCell(stat.deaths / stat.count, percentText(stat.deaths / stat.count));
         }
 
         // Add stats
