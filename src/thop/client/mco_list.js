@@ -270,7 +270,6 @@ let mco_list = {};
 
             query('#ls').removeClass('hide');
         }
-        thop.markBusy('#ls', data.isBusy());
     }
 
     function routeToUrl(args)

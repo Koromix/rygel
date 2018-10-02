@@ -143,10 +143,16 @@ let mco_casemix = {};
                 query('#cm_table').toggleClass('hide', route.view !== 'table');
                 query('#cm').removeClass('hide');
             }
+
+
+            if (!data.isBusy() && mix_url !== new_classify_url) {
+                query('#cm').addClass('busy');
+            } else if (!data.isBusy()) {
+                query('#cm').removeClass('busy');
+            }
         } else {
             query('#cm').addClass('hide');
         }
-        thop.markBusy('#cm', data.isBusy() || (mix_url !== new_classify_url));
     }
 
     function routeToUrl(args)

@@ -104,7 +104,6 @@ let mco_pricing = {};
             query('#pr_chart').toggleClass('hide', route.view !== 'chart');
             query('#pr').removeClass('hide');
         }
-        thop.markBusy('#pr', data.isBusy());
     }
 
     function routeToUrl(args)

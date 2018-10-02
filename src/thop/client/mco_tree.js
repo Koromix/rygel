@@ -47,7 +47,6 @@ let mco_tree = {};
 
             query('#tr').removeClass('hide');
         }
-        thop.markBusy('#tr', data.isBusy());
     }
 
     function routeToUrl(args)

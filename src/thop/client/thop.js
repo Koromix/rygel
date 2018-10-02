@@ -21,12 +21,6 @@ let thop = {};
     let scroll_cache = {};
     let module = null;
 
-    function markBusy(selector, busy)
-    {
-        queryAll(selector).toggleClass('busy', busy);
-    }
-    this.markBusy = markBusy;
-
     function toggleMenu(selector, enable)
     {
         let el = query(selector);
@@ -113,6 +107,9 @@ let thop = {};
             if (module)
                 module.func(route_values, app_url, url_parts.params, url_parts.hash);
         }
+
+        // Busy state
+        query('main').toggleClass('busy', data.isBusy());
 
         // Update URL to reflect real state (module may have set default values, etc.)
         {
@@ -229,12 +226,8 @@ let thop = {};
         });
 
         data.busyHandler = function(busy) {
-            if (busy) {
-                document.body.style.cursor = 'wait';
-            } else {
-                document.body.style.cursor = 'default';
+            if (!busy)
                 route();
-            }
         }
     }
 
