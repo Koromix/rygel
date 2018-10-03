@@ -593,8 +593,10 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
     HeapArray<mco_Pricing> summaries(sets_count);
 
-    Async async;
+    // Parallel transform and classify
     {
+        Async async;
+
         Size stays_offset = 0;
         Size diagnoses_offset = 0;
         Size procedures_offset = 0;
@@ -652,9 +654,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             diagnoses_offset = diagnoses_end;
             procedures_offset = procedures_end;
         }
-    }
-    if (!async.Sync()) {
-        Rcpp::stop("The 'id' column must be ordered in all data.frames");
+
+        if (!async.Sync())
+            Rcpp::stop("The 'id' column must be ordered in all data.frames");
     }
 
     LogDebug("Export");

@@ -796,25 +796,29 @@ Options:
     }
 
     LogInfo("Computing constraints");
-    Async async;
-    thop_constraints_set.Reserve(thop_table_set->indexes.len);
-    for (Size i = 0; i < thop_table_set->indexes.len; i++) {
-        if (thop_table_set->indexes[i].valid) {
-            // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-            if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
-                    !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
-                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
-                async.AddTask([=]() {
-                    return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
-                });
+    {
+        Async async;
+
+        thop_constraints_set.Reserve(thop_table_set->indexes.len);
+        for (Size i = 0; i < thop_table_set->indexes.len; i++) {
+            if (thop_table_set->indexes[i].valid) {
+                // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
+                if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
+                        !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
+                    HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
+                    async.AddTask([=]() {
+                        return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
+                    });
+                }
+                thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
+            } else {
+                thop_index_to_constraints.Append(nullptr);
             }
-            thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
-        } else {
-            thop_index_to_constraints.Append(nullptr);
         }
+
+        if (!async.Sync())
+            return 1;
     }
-    if (!async.Sync())
-        return 1;
 
 #ifndef NDEBUG
     if (!UpdateStaticAssets())

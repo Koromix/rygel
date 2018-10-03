@@ -2176,9 +2176,10 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         out_mono_results->Grow(mono_stays.len);
     }
 
-    Async async;
     Size results_count = 1;
     {
+        Async async;
+
         const auto AddClassifierTask = [&](Span<const mco_Stay> task_stays, Size results_offset) {
             mco_Result *task_out_results = out_results->ptr + results_offset;
             if (out_mono_results) {
@@ -2212,8 +2213,9 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
             task_stays.len++;
         }
         AddClassifierTask(task_stays, results_offset);
+
+        async.Sync();
     }
-    async.Sync();
 
     out_results->len += results_count;
     if (out_mono_results) {
