@@ -197,9 +197,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
         stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
         if (diagnoses.type.Len()) {
-            for (; j < diagnoses_end && diagnoses.id[j] <= stays.id[i]; j++) {
-                if (UNLIKELY(diagnoses.id[j] < stays.id[i]))
-                    continue;
+            while (UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
+                j++;
+            }
+            for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
@@ -258,9 +259,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
 
-            for (; j < diagnoses_end && diagnoses.id[j] <= stays.id[i]; j++) {
-                if (UNLIKELY(diagnoses.id[j] < stays.id[i]))
-                    continue;
+            while (UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
+                j++;
+            }
+            for (; j < diagnoses_end && diagnoses.id[j] == stays.id[i]; j++) {
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
@@ -282,9 +284,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         stay.diagnoses.len = out_stay_set->store.diagnoses.end() - stay.diagnoses.ptr;
 
         stay.procedures.ptr = out_stay_set->store.procedures.end();
-        for (; k < procedures_end && procedures.id[k] <= stays.id[i]; k++) {
-            if (UNLIKELY(procedures.id[k] < stays.id[i]))
-                continue;
+        while (UNLIKELY(k < procedures_end && procedures.id[k] < stays.id[i])) {
+            k++;
+        }
+        for (; k < procedures_end && procedures.id[k] == stays.id[i]; k++) {
             if (UNLIKELY(procedures.proc[k] == CHAR(NA_STRING)))
                 continue;
 
@@ -330,6 +333,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
         out_stay_set->stays.Append(stay);
     }
+    if (j < diagnoses_end || k < procedures_end)
+        return false;
 
     // We're already running in parallel, using ClassifyParallel would slow us down,
     // because it has some overhead caused by multi-stays.
