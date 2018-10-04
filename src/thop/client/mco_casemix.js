@@ -56,17 +56,17 @@ let mco_casemix = {};
         // Casemix
         let new_classify_url = null;
         if (user.isConnected()) {
-            updateCaseMix();
+            updateSettings();
             if (!route.algorithm)
                 route.algorithm = default_algorithm;
             if (start_date) {
                 let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-                new_classify_url = buildClassifyUrl(route.period[0], route.period[1], route.units,
-                                                    route.algorithm, prev_period[0], prev_period[1]);
+                new_classify_url = buildCasemixUrl(route.period[0], route.period[1], route.units,
+                                                   route.algorithm, prev_period[0], prev_period[1]);
             }
             if ((!mix_url || route.refresh) && new_classify_url) {
-                clearResults();
-                updateResults(new_classify_url);
+                clearCasemix();
+                updateCasemix(new_classify_url);
             }
         }
         delete route.refresh;
@@ -210,10 +210,10 @@ let mco_casemix = {};
     }
     this.go = go;
 
-    function updateCaseMix()
+    function updateSettings()
     {
         if (user.getUrlKey() !== prev_url_key) {
-            let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), {key: user.getUrlKey()});
+            let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, function(json) {
                 start_date = json.begin_date;
                 end_date = json.end_date;
@@ -226,7 +226,7 @@ let mco_casemix = {};
         }
     }
 
-    function buildClassifyUrl(start, end, units, mode, diff_start, diff_end)
+    function buildCasemixUrl(start, end, units, mode, diff_start, diff_end)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
@@ -236,15 +236,15 @@ let mco_casemix = {};
             durations: 1,
             key: user.getUrlKey()
         };
-        let url = buildUrl(thop.baseUrl('api/mco_classify.json'), params);
+        let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
 
         return url;
     }
 
-    function updateResults(url)
+    function updateCasemix(url)
     {
         data.get(url, function(json) {
-            clearResults();
+            clearCasemix();
 
             mix_url = url;
             mix_rows = json;
@@ -260,7 +260,7 @@ let mco_casemix = {};
         });
     }
 
-    function clearResults()
+    function clearCasemix()
     {
         mix_rows = [];
         mix_ghm_roots.clear();
@@ -652,7 +652,7 @@ let mco_casemix = {};
 
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
-        clearResults();
+        clearCasemix();
         refreshSummary(1);
         refreshTable();
     });

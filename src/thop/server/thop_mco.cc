@@ -36,7 +36,7 @@ static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode disp
            (user.dispense_modes & (1 << (int)dispense_mode));
 }
 
-int ProduceMcoCaseMix(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404, out_response);
@@ -129,7 +129,7 @@ invalid:
     return false;
 }
 
-int ProduceMcoClassify(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404, out_response);
