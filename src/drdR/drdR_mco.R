@@ -10,9 +10,13 @@ mco_init <- function(data_dirs = character(0), table_dirs = character(0),
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
                          sorted = TRUE, options = character(0), details = TRUE,
                          dispense = NULL, apply_coefficient = FALSE, supplement_columns = 'both') {
-    if (!is.data.frame(stays) && is.list(stays) && is.null(diagnoses) && is.null(procedures)) {
-        diagnoses <- stays$diagnoses
-        procedures <- stays$procedures
+    if (!is.data.frame(stays) && is.list(stays)) {
+        if (is.null(diagnoses)) {
+            diagnoses <- stays$diagnoses
+        }
+        if (is.null(procedures)) {
+            procedures <- stays$procedures
+        }
         stays <- stays$stays
     }
 
