@@ -610,10 +610,9 @@ let mco_casemix = {};
                     ptr[row[k]] = {};
                 ptr = ptr[row[k]];
             }
-            if (ptr.duration === undefined) {
+            if (ptr.count === undefined) {
                 for (const k of by)
                     ptr[k] = row[k];
-                ptr.duration = 0;
                 ptr.count = 0;
                 ptr.mono_count = 0;
                 ptr.partial_mono_count = 0;
@@ -624,7 +623,6 @@ let mco_casemix = {};
                 list.push(ptr);
             }
 
-            ptr.duration += row.duration;
             ptr.count += row.count;
             ptr.mono_count += row.mono_count;
             ptr.partial_mono_count += row.partial_mono_count;
@@ -644,7 +642,7 @@ let mco_casemix = {};
             if (ptr === undefined)
                 return null;
         }
-        if (ptr.duration === undefined)
+        if (ptr.count === undefined)
             return null;
 
         return ptr;
