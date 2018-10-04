@@ -137,13 +137,9 @@ struct AggregateKey {
 
 static inline uint64_t DefaultHash(const AggregateKey &key)
 {
-    uint64_t hash = 0;
-
-    hash |= DefaultHash(key.ghm) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash |= DefaultHash(key.ghs) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-    hash |= DefaultHash(key.duration) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-
-    return hash;
+    return DefaultHash(key.ghm) ^
+           DefaultHash(key.ghs) ^
+           DefaultHash(key.duration);
 }
 
 static inline bool DefaultCompare(const AggregateKey &key1, const AggregateKey &key2)
