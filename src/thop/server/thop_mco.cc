@@ -129,32 +129,54 @@ invalid:
     return false;
 }
 
+struct AggregateKey {
+    mco_GhmCode ghm;
+    mco_GhsCode ghs;
+    int duration;
+
+    bool operator<(const AggregateKey &other) const
+    {
+        return ghm.value < other.ghm.value &&
+               ghs.number < other.ghs.number &&
+               duration < other.duration;
+    }
+} key;
+
+static inline uint64_t DefaultHash(const AggregateKey &key)
+{
+    uint64_t hash = 0;
+
+    hash |= DefaultHash(key.ghm) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash |= DefaultHash(key.ghs) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    hash |= DefaultHash(key.duration) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+
+    return hash;
+}
+
+static inline bool DefaultCompare(const AggregateKey &key1, const AggregateKey &key2)
+{
+    return key1.ghm == key2.ghm &&
+           key1.ghs == key2.ghs &&
+           key1.duration == key2.duration;
+}
+
+struct AggregateStatistics {
+    AggregateKey key;
+
+    int count;
+    int partial_mono_count;
+    int mono_count;
+    int64_t partial_price_cents;
+    int64_t price_cents;
+    int deaths;
+
+    HASH_TABLE_HANDLER(AggregateStatistics, key);
+};
+
 int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404, out_response);
-
-    struct CellSummary {
-        mco_GhmCode ghm;
-        int16_t ghs;
-        int16_t duration;
-        int count;
-        int partial_mono_count;
-        int mono_count;
-        int64_t partial_price_cents;
-        int64_t price_cents;
-        int deaths;
-    };
-
-    union SummaryMapKey {
-        struct {
-            mco_GhmCode ghm;
-            mco_GhsCode ghs;
-            int16_t duration;
-        } st;
-        int64_t value;
-        StaticAssert(SIZE(SummaryMapKey::value) == SIZE(SummaryMapKey::st));
-    };
 
     HashSet<UnitCode> allowed_units;
     for (const Structure &structure: thop_structure_set.structures) {
@@ -245,10 +267,10 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
     mco_Price(results, false, &pricings);
     mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-    HeapArray<CellSummary> summary;
+    HeapArray<AggregateStatistics> statistics;
     {
         Size j = 0;
-        HashMap<int64_t, Size> summary_map;
+        HashMap<AggregateKey, Size> statistics_map;
         for (Size i = 0; i < results.len; i++) {
             const mco_Result &result = results[i];
             const mco_Pricing &pricing = pricings[i];
@@ -277,68 +299,62 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
                 if (units.Find(mono_result.stays[0].unit)) {
-                    // TODO: Careful with duration overflow
-                    SummaryMapKey key = {};
-                    key.st.ghm = result.ghm;
-                    key.st.ghs = result.ghs;
-                    if (durations) {
-                        key.st.duration = (int16_t)result.duration;
-                    }
-
-                    CellSummary *cell;
+                    AggregateStatistics *agg;
                     {
-                        std::pair<Size *, bool> ret = summary_map.Append(key.value, summary.len);
-                        if (ret.second) {
-                            CellSummary cell_summary = {};
-                            cell_summary.ghm = result.ghm;
-                            cell_summary.ghs = result.ghs.number;
-                            cell_summary.duration = key.st.duration;
-                            summary.Append(cell_summary);
-                        }
+                        AggregateKey key;
+                        key.ghm = result.ghm;
+                        key.ghs = result.ghs;
+                        // TODO: Careful with duration overflow
+                        key.duration = durations ? (int16_t)result.duration : 0;
 
-                        cell = &summary[*ret.first];
+                        std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
+                        if (ret.first) {
+                            agg = statistics.AppendDefault();
+                            agg->key = key;
+                        } else {
+                            agg = &statistics[*ret.first];
+                        }
                     }
 
                     if (!counted_rss) {
-                        cell->count += multiplier;
-                        cell->mono_count += multiplier * result.stays.len;
-                        cell->price_cents += multiplier * pricing.price_cents;
+                        agg->count += multiplier;
+                        agg->mono_count += multiplier * result.stays.len;
+                        agg->price_cents += multiplier * pricing.price_cents;
                         if (result.stays[result.stays.len - 1].exit.mode == '9') {
-                            cell->deaths += multiplier;
+                            agg->deaths += multiplier;
                         }
                         counted_rss = true;
                     }
-                    cell->partial_mono_count += multiplier;
-                    cell->partial_price_cents += multiplier * mono_pricing.price_cents;
+                    agg->partial_mono_count += multiplier;
+                    agg->partial_price_cents += multiplier * mono_pricing.price_cents;
                 }
             }
         }
     }
 
-    std::sort(summary.begin(), summary.end(), [](const CellSummary &cs1, const CellSummary &cs2) {
-        return MultiCmp(cs1.ghm.value - cs2.ghm.value,
-                        cs1.ghs - cs2.ghs,
-                        cs1.duration - cs2.duration) < 0;
+    std::sort(statistics.begin(), statistics.end(),
+              [](const AggregateStatistics &agg1, const AggregateStatistics &agg2) {
+        return agg1.key < agg2.key;
     });
 
     out_response->flags |= (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
-        for (const CellSummary &cs: summary) {
+        for (const AggregateStatistics &agg: statistics) {
             char buf[32];
 
             writer.StartObject();
-            writer.Key("ghm"); writer.String(Fmt(buf, "%1", cs.ghm).ptr);
-            writer.Key("ghs"); writer.Int(cs.ghs);
+            writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
+            writer.Key("ghs"); writer.Int(agg.key.ghs.number);
             if (durations) {
-                writer.Key("duration"); writer.Int(cs.duration);
+                writer.Key("duration"); writer.Int(agg.key.duration);
             }
-            writer.Key("count"); writer.Int(cs.count);
-            writer.Key("partial_mono_count"); writer.Int(cs.partial_mono_count);
-            writer.Key("mono_count"); writer.Int(cs.mono_count);
-            writer.Key("deaths"); writer.Int64(cs.deaths);
-            writer.Key("partial_price_cents"); writer.Int64(cs.partial_price_cents);
-            writer.Key("price_cents"); writer.Int64(cs.price_cents);
+            writer.Key("count"); writer.Int(agg.count);
+            writer.Key("partial_mono_count"); writer.Int(agg.partial_mono_count);
+            writer.Key("mono_count"); writer.Int(agg.mono_count);
+            writer.Key("deaths"); writer.Int64(agg.deaths);
+            writer.Key("partial_price_cents"); writer.Int64(agg.partial_price_cents);
+            writer.Key("price_cents"); writer.Int64(agg.price_cents);
             writer.EndObject();
         }
         writer.EndArray();
