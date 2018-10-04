@@ -56,7 +56,8 @@ set(THOP_SRC server/thop.cc
              server/json.hh
              server/user.cc
              server/user.hh
-             server/thop_mco.cc
+             server/thop_mco_casemix.cc
+             server/thop_mco_tables.cc
              server/thop_mco.hh)
 
 add_custom_command(OUTPUT assets.cc
