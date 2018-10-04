@@ -133,13 +133,6 @@ struct AggregateKey {
     mco_GhmCode ghm;
     mco_GhsCode ghs;
     int duration;
-
-    bool operator<(const AggregateKey &other) const
-    {
-        return ghm.value < other.ghm.value &&
-               ghs.number < other.ghs.number &&
-               duration < other.duration;
-    }
 } key;
 
 static inline uint64_t DefaultHash(const AggregateKey &key)
@@ -334,7 +327,9 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
     std::sort(statistics.begin(), statistics.end(),
               [](const AggregateStatistics &agg1, const AggregateStatistics &agg2) {
-        return agg1.key < agg2.key;
+        return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
+                        agg1.key.ghs.number - agg2.key.ghs.number,
+                        agg1.key.duration - agg2.key.duration) < 0;
     });
 
     out_response->flags |= (int)Response::Flag::DisableETag;
