@@ -88,6 +88,9 @@ summary.mco_results <- function(results, by = NULL) {
     sum_columns <- colnames(results)
     sum_columns <- sum_columns[grepl('(_cents|_count)$', sum_columns)]
 
+    # Much faster than alternatives because the list of columns to summarize is flexible,
+    # and doing it this way we give complete control to data.table. If you find a cleaner
+    # way, it has to be as fast or faster than this version.
     code <- paste0('
         function(results, by = NULL) {
             agg <- setDF(setDT(results)[, c(
@@ -149,6 +152,7 @@ mco_dispense <- function(results, group = NULL, group_var = 'group',
 
         group <- merge(agg[, list(unit)], group, by = 'unit', all.x = TRUE)
 
+        # Read comment in summary.mco_results for information about use of eval
         sum_columns <- intersect(mco_summary_columns(), colnames(agg))
         code <- paste0('
             function(agg, group, group_var) {
