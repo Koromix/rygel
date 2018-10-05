@@ -112,6 +112,7 @@ enum class Endianness {
     #else
         #define THREAD_LOCAL __thread
     #endif
+    #define NORETURN __attribute__((noreturn))
     #define MAYBE_UNUSED __attribute__((unused))
     #define FORCE_INLINE __attribute__((always_inline)) inline
     #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
@@ -133,6 +134,7 @@ enum class Endianness {
     #define POP_NO_WARNINGS()
 
     #define THREAD_LOCAL thread_local
+    #define NORETURN __declspec(noreturn)
     #define MAYBE_UNUSED
     #define FORCE_INLINE __forceinline
     #define LIKELY(Cond) (Cond)
@@ -143,12 +145,12 @@ enum class Endianness {
     #error Compiler not supported
 #endif
 
+extern "C" void NORETURN AssertFail(const char *cond);
+
 #define Assert(Cond) \
     do { \
-        if (!LIKELY(Cond)) { \
-            fputs("Assertion '" STRINGIFY(Cond) "' failed\n", stderr); \
-            abort(); \
-        } \
+        if (!LIKELY(Cond)) \
+            AssertFail(STRINGIFY(Cond)); \
     } while (false)
 #ifndef NDEBUG
     #define DebugAssert(Cond) Assert(Cond)
