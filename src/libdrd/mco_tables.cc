@@ -1585,7 +1585,7 @@ Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler>
     ret.ptr = map->FindValue(code, nullptr);
     if (ret.ptr) {
         const T *end_it = ret.ptr + 1;
-        while (end_it < arr.end() && Handler::CompareKeys(Handler::GetKey(end_it), code)) {
+        while (end_it < arr.end() && Handler::TestKeys(Handler::GetKey(end_it), code)) {
             end_it++;
         }
         ret.len = end_it - ret.ptr;

@@ -1641,7 +1641,7 @@ private:
         if constexpr(std::is_pointer<ValueType>::value) {
             while (data[*idx]) {
                 const KeyType &it_key = Handler::GetKey(data[*idx]);
-                if (Handler::CompareKeys(it_key, key))
+                if (Handler::TestKeys(it_key, key))
                     return &data[*idx];
                 *idx = (*idx + 1) & (capacity - 1);
             }
@@ -1651,7 +1651,7 @@ private:
 
         while (!IsEmpty(*idx)) {
             const KeyType &it_key = Handler::GetKey(data[*idx]);
-            if (Handler::CompareKeys(it_key, key))
+            if (Handler::TestKeys(it_key, key))
                 return &data[*idx];
             *idx = (*idx + 1) & (capacity - 1);
         }
@@ -1753,72 +1753,79 @@ private:
     }
 };
 
-// Stole this from Java's HashMap
-static inline uint64_t DefaultHash(unsigned long long key)
-{
-    key ^= (key >> 20) ^ (key >> 12);
-    key = key ^ (key >> 7) ^ (key >> 4);
-    return key;
-}
-static inline uint64_t DefaultHash(char key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(unsigned char key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(short key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(unsigned short key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(int key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(unsigned int key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(long key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(unsigned long key) { return DefaultHash((unsigned long long)key); }
-static inline uint64_t DefaultHash(long long key) { return DefaultHash((unsigned long long)key); }
+template <typename T>
+class HashTraits {
+public:
+    static uint64_t Hash(const T &key) { return key.Hash(); }
+    static bool Test(const T &key1, const T &key2) { return key1 == key2; }
+};
 
-// FNV-1a
-static inline uint64_t DefaultHash(const char *key)
-{
-    uint64_t hash = 0xCBF29CE484222325ull;
-    for (Size i = 0; key[i]; i++) {
-        hash ^= (uint64_t)key[i];
-        hash *= 0x100000001B3ull;
+// Stole the Hash function from Java's HashMap
+#define DEFINE_INTEGER_HASH_TRAITS(Type) \
+    template <> \
+    class HashTraits<Type> { \
+    public: \
+        static uint64_t Hash(Type key) \
+        { \
+            key ^= (key >> 20) ^ (key >> 12); \
+            key = key ^ (key >> 7) ^ (key >> 4); \
+            return key; \
+        } \
+         \
+        static bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
-    return hash;
-}
-static inline uint64_t DefaultHash(Span<const char> key)
-{
-    uint64_t hash = 0xCBF29CE484222325ull;
-    for (char c: key) {
-        hash ^= (uint64_t)c;
-        hash *= 0x100000001B3ull;
+
+DEFINE_INTEGER_HASH_TRAITS(char);
+DEFINE_INTEGER_HASH_TRAITS(unsigned char);
+DEFINE_INTEGER_HASH_TRAITS(short);
+DEFINE_INTEGER_HASH_TRAITS(unsigned short);
+DEFINE_INTEGER_HASH_TRAITS(int);
+DEFINE_INTEGER_HASH_TRAITS(unsigned int);
+DEFINE_INTEGER_HASH_TRAITS(long);
+DEFINE_INTEGER_HASH_TRAITS(unsigned long);
+DEFINE_INTEGER_HASH_TRAITS(long long);
+DEFINE_INTEGER_HASH_TRAITS(unsigned long long);
+
+#undef DEFINE_INTEGER_HASH_TRAITS
+
+template <>
+class HashTraits<const char *> {
+public:
+    // FNV-1a
+    static uint64_t Hash(const char *key)
+    {
+        uint64_t hash = 0xCBF29CE484222325ull;
+        for (Size i = 0; key[i]; i++) {
+            hash ^= (uint64_t)key[i];
+            hash *= 0x100000001B3ull;
+        }
+
+        return hash;
     }
-    return hash;
-}
 
-static inline bool DefaultCompare(char key1, char key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(unsigned char key1, unsigned char key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(short key1, short key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(unsigned short key1, unsigned short key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(int key1, int key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(unsigned int key1, unsigned int key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(long key1, long key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(unsigned long key1, unsigned long key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(long long key1, long long key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(unsigned long long key1, unsigned long long key2)
-    { return key1 == key2; }
+    static bool Test(const char *key1, const char *key2) { return !strcmp(key1, key2); }
+};
 
-static inline bool DefaultCompare(const char *key1, const char *key2)
-    { return !strcmp(key1, key2); }
-static inline bool DefaultCompare(Span<const char> key1, const char *key2)
-    { return key1 == key2; }
-static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
-    { return key1 == key2; }
+template <>
+class HashTraits<Span<const char>> {
+public:
+    // FNV-1a
+    static uint64_t Hash(Span<const char> key)
+    {
+        uint64_t hash = 0xCBF29CE484222325ull;
+        for (char c: key) {
+            hash ^= (uint64_t)c;
+            hash *= 0x100000001B3ull;
+        }
 
-#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, CompareFunc) \
+        return hash;
+    }
+
+    static bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
+    static bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
+};
+
+#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
         static KeyType GetKey(const ValueType &value) \
@@ -1827,19 +1834,19 @@ static inline bool DefaultCompare(Span<const char> key1, Span<const char> key2)
             { return (KeyType)(value->KeyMember); } \
         static uint64_t HashKey(KeyType key) \
             { return HashFunc(key); } \
-        static bool CompareKeys(KeyType key1, KeyType key2) \
-            { return CompareFunc((key1), (key2)); } \
+        static bool TestKeys(KeyType key1, KeyType key2) \
+            { return TestFunc((key1), (key2)); } \
     }
-#define HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, CompareFunc) \
-    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, CompareFunc)
+#define HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
 #define HASH_TABLE_HANDLER(ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
 #define HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
 #define HASH_TABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
 #define HASH_TABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, DefaultHash, DefaultCompare)
+    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
@@ -1908,9 +1915,10 @@ class HashSet {
     public:
         static ValueType GetKey(const ValueType &value) { return value; }
         static ValueType GetKey(const ValueType *value) { return *value; }
-        static uint64_t HashKey(const ValueType &value) { return DefaultHash(value); }
-        static bool CompareKeys(const ValueType &value1, const ValueType &value2)
-            { return DefaultCompare(value1, value2); }
+        static uint64_t HashKey(const ValueType &value)
+            { return HashTraits<ValueType>::Hash(value); }
+        static bool TestKeys(const ValueType &value1, const ValueType &value2)
+            { return HashTraits<ValueType>::Test(value1, value2); }
     };
 
 public:
@@ -2026,9 +2034,9 @@ union Date {
     Date operator++(int) { Date date = *this; ++(*this); return date; }
     Date &operator--();
     Date operator--(int) { Date date = *this; --(*this); return date; }
+
+    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
-static inline uint64_t DefaultHash(Date date) { return DefaultHash(date.value); }
-static inline bool DefaultCompare(Date date1, Date date2) { return date1 == date2; }
 
 // ------------------------------------------------------------------------
 // Time

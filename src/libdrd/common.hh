@@ -78,10 +78,9 @@ union DiagnosisCode {
     bool Matches(DiagnosisCode other) const { return Matches(other.str); }
 
     operator FmtArg() const { return FmtArg(str); }
+
+    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
-static inline uint64_t DefaultHash(DiagnosisCode code) { return DefaultHash(code.str); }
-static inline bool DefaultCompare(DiagnosisCode code1, DiagnosisCode code2)
-    { return code1 == code2; }
 
 union ProcedureCode {
     int64_t value;
@@ -125,10 +124,9 @@ union ProcedureCode {
     bool operator!=(ProcedureCode other) const { return value != other.value; }
 
     operator FmtArg() const { return FmtArg(str); }
+
+    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
-static inline uint64_t DefaultHash(ProcedureCode code) { return DefaultHash(code.str); }
-static inline bool DefaultCompare(ProcedureCode code1, ProcedureCode code2)
-    { return code1 == code2; }
 
 struct UnitCode {
     int16_t number;
@@ -158,10 +156,9 @@ struct UnitCode {
     bool operator!=(const UnitCode &other) const { return number != other.number; }
 
     operator FmtArg() const { return FmtArg(number); }
+
+    uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
-static inline uint64_t DefaultHash(UnitCode code) { return DefaultHash(code.number); }
-static inline bool DefaultCompare(UnitCode code1, UnitCode code2)
-    { return code1 == code2; }
 
 struct ListMask {
     int16_t offset;

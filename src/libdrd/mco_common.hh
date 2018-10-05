@@ -92,10 +92,9 @@ union mco_GhmRootCode {
         ToString(arg.value.str_buf);
         return arg;
     }
+
+    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
-static inline uint64_t DefaultHash(mco_GhmRootCode code) { return DefaultHash(code.value); }
-static inline bool DefaultCompare(mco_GhmRootCode code1, mco_GhmRootCode code2)
-    { return code1 == code2; }
 
 union mco_GhmCode {
     int32_t value;
@@ -206,10 +205,9 @@ union mco_GhmCode {
         ghm_root.parts.seq = parts.seq;
         return ghm_root;
     }
+
+    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
-static inline uint64_t DefaultHash(mco_GhmCode code) { return DefaultHash(code.value); }
-static inline bool DefaultCompare(mco_GhmCode code1, mco_GhmCode code2)
-    { return code1 == code2; }
 
 struct mco_GhsCode {
     int16_t number;
@@ -239,10 +237,9 @@ struct mco_GhsCode {
     bool operator!=(mco_GhsCode other) const { return number != other.number; }
 
     operator FmtArg() const { return FmtArg(number); }
+
+    uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
-static inline uint64_t DefaultHash(mco_GhsCode code) { return code.number; }
-static inline bool DefaultCompare(mco_GhsCode code1, mco_GhsCode code2)
-    { return code1 == code2; }
 
 enum class mco_SupplementType {
     Rea,

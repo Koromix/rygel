@@ -133,21 +133,22 @@ struct AggregateKey {
     mco_GhmCode ghm;
     mco_GhsCode ghs;
     int duration;
+
+    bool operator==(const AggregateKey &other) const
+    {
+        return ghm == other.ghm &&
+               ghs == other.ghs &&
+               duration == other.duration;
+    }
+    bool operator!=(const AggregateKey &other) const { return !(*this == other); }
+
+    uint64_t Hash() const
+    {
+        return HashTraits<mco_GhmCode>::Hash(ghm) ^
+               HashTraits<mco_GhsCode>::Hash(ghs) ^
+               HashTraits<int>::Hash(duration);
+    }
 } key;
-
-static inline uint64_t DefaultHash(const AggregateKey &key)
-{
-    return DefaultHash(key.ghm) ^
-           DefaultHash(key.ghs) ^
-           DefaultHash(key.duration);
-}
-
-static inline bool DefaultCompare(const AggregateKey &key1, const AggregateKey &key2)
-{
-    return key1.ghm == key2.ghm &&
-           key1.ghs == key2.ghs &&
-           key1.duration == key2.duration;
-}
 
 struct AggregateStatistics {
     AggregateKey key;
