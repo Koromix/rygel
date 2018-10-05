@@ -64,7 +64,7 @@ let mco_casemix = {};
                 new_classify_url = buildCasemixUrl(route.period[0], route.period[1], route.units,
                                                    route.algorithm, prev_period[0], prev_period[1]);
             }
-            if ((!mix_url || route.refresh) && new_classify_url) {
+            if (route.refresh && new_classify_url) {
                 clearCasemix();
                 updateCasemix(new_classify_url);
             }
@@ -144,12 +144,12 @@ let mco_casemix = {};
                 query('#cm').removeClass('hide');
             }
 
-
             if (!data.isBusy() && mix_url !== new_classify_url) {
                 query('#cm').addClass('busy');
             } else if (!data.isBusy()) {
                 query('#cm').removeClass('busy');
             }
+            query('#opt_update').disabled = (mix_url === new_classify_url);
         } else {
             query('#cm').addClass('hide');
         }
