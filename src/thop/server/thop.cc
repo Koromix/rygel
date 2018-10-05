@@ -417,12 +417,9 @@ static void InitRoutes()
     routes.Set({"/api/mco_tree.json", "GET", Route::Matching::Exact, ProduceMcoTree});
 
     // Special cases
-    {
-        Route *favicon = routes.Find("/static/favicon.ico");
-        if (favicon) {
-            routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
-                        favicon->u.st.asset, favicon->u.st.mime_type});
-        }
+    if (Route *favicon = routes.Find("/static/favicon.ico"); favicon) {
+        routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
+                    favicon->u.st.asset, favicon->u.st.mime_type});
     }
     routes.Remove("/static/thop.html");
 
