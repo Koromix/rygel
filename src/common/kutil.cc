@@ -1342,7 +1342,7 @@ struct Task {
 struct WorkerThread {
     std::mutex mutex;
     bool running = false;
-    DynamicQueue<Task> tasks;
+    BlockQueue<Task> tasks;
 };
 
 struct ThreadPool {

@@ -9,7 +9,7 @@
 #include <Rcpp.h>
 
 extern std::mutex rcc_log_mutex;
-extern DynamicQueue<const char *> rcc_log_messages;
+extern BlockQueue<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
 #define RCC_SETUP_LOG_HANDLER() \

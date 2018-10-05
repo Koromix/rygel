@@ -343,30 +343,30 @@ public:
     HeapArray<mco_TableIndex> indexes;
 
     struct {
-        DynamicQueue<HeapArray<mco_GhmDecisionNode>, 16> ghm_nodes;
-        DynamicQueue<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
-        DynamicQueue<HeapArray<mco_ExclusionInfo>, 16> exclusions;
-        DynamicQueue<HeapArray<mco_ProcedureInfo>, 16> procedures;
-        DynamicQueue<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
-        DynamicQueue<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
-        DynamicQueue<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];
-        DynamicQueue<HeapArray<mco_GhmToGhsInfo>, 16> ghs;
-        DynamicQueue<HeapArray<mco_AuthorizationInfo>, 16> authorizations;
-        DynamicQueue<HeapArray<mco_SrcPair>, 16> src_pairs[2];
+        BlockQueue<HeapArray<mco_GhmDecisionNode>, 16> ghm_nodes;
+        BlockQueue<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
+        BlockQueue<HeapArray<mco_ExclusionInfo>, 16> exclusions;
+        BlockQueue<HeapArray<mco_ProcedureInfo>, 16> procedures;
+        BlockQueue<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
+        BlockQueue<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
+        BlockQueue<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];
+        BlockQueue<HeapArray<mco_GhmToGhsInfo>, 16> ghs;
+        BlockQueue<HeapArray<mco_AuthorizationInfo>, 16> authorizations;
+        BlockQueue<HeapArray<mco_SrcPair>, 16> src_pairs[2];
 
-        DynamicQueue<HeapArray<mco_GhsPriceInfo>, 16> ghs_prices[2];
+        BlockQueue<HeapArray<mco_GhsPriceInfo>, 16> ghs_prices[2];
     } store;
 
     struct {
-        DynamicQueue<HashTable<DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
-        DynamicQueue<HashTable<ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
-        DynamicQueue<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
-        DynamicQueue<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
-        DynamicQueue<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
+        BlockQueue<HashTable<DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
+        BlockQueue<HashTable<ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
+        BlockQueue<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
+        BlockQueue<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
+        BlockQueue<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
                                mco_GhmToGhsInfo::GhmRootHandler>, 16> ghm_root_to_ghs;
-        DynamicQueue<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
+        BlockQueue<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
 
-        DynamicQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
+        BlockQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;
 
     LinkedAllocator str_alloc;

@@ -1045,7 +1045,7 @@ public:
 };
 
 template <typename T, Size BucketSize = 1024>
-class DynamicQueue {
+class BlockQueue {
 public:
     struct Bucket {
         T *values;
@@ -1109,25 +1109,25 @@ public:
     Allocator *bucket_allocator;
 
     typedef T value_type;
-    typedef Iterator<DynamicQueue> iterator_type;
+    typedef Iterator<BlockQueue> iterator_type;
 
-    DynamicQueue()
+    BlockQueue()
     {
         Bucket *first_bucket = *buckets.Append(CreateBucket());
         bucket_allocator = &first_bucket->allocator;
     }
-    ~DynamicQueue() { ClearBucketsAndValues(); }
+    ~BlockQueue() { ClearBucketsAndValues(); }
 
-    DynamicQueue(DynamicQueue &&other) { *this = std::move(other); }
-    DynamicQueue &operator=(DynamicQueue &&other)
+    BlockQueue(BlockQueue &&other) { *this = std::move(other); }
+    BlockQueue &operator=(BlockQueue &&other)
     {
         ClearBucketsAndValues();
         memmove(this, &other, SIZE(other));
         memset(&other, 0, SIZE(other));
         return *this;
     }
-    DynamicQueue(DynamicQueue &) = delete;
-    DynamicQueue &operator=(const DynamicQueue &) = delete;
+    BlockQueue(BlockQueue &) = delete;
+    BlockQueue &operator=(const BlockQueue &) = delete;
 
     void Clear()
     {
@@ -1140,9 +1140,9 @@ public:
     }
 
     iterator_type begin() { return iterator_type(this, 0); }
-    Iterator<const DynamicQueue<T, BucketSize>> begin() const { return iterator_type(this, 0); }
+    Iterator<const BlockQueue<T, BucketSize>> begin() const { return iterator_type(this, 0); }
     iterator_type end() { return iterator_type(this, len); }
-    Iterator<const DynamicQueue<T, BucketSize>> end() const { return iterator_type(this, len); }
+    Iterator<const BlockQueue<T, BucketSize>> end() const { return iterator_type(this, len); }
 
     const T &operator[](Size idx) const
     {
@@ -1154,7 +1154,7 @@ public:
 
         return buckets[bucket_idx]->values[bucket_offset];
     }
-    T &operator[](Size idx) { return (T &)(*(const DynamicQueue *)this)[idx]; }
+    T &operator[](Size idx) { return (T &)(*(const BlockQueue *)this)[idx]; }
 
     T *AppendDefault()
     {
