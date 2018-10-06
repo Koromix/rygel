@@ -138,9 +138,6 @@ void Allocator::Release(Allocator *alloc, void *ptr, Size size)
     alloc->Release(ptr, size);
 }
 
-#define PTR_TO_BUCKET(Ptr) \
-    ((Bucket *)((uint8_t *)(Ptr) - OFFSET_OF(Bucket, data)))
-
 void LinkedAllocator::ReleaseAll()
 {
     Node *head = list.next;
@@ -179,7 +176,7 @@ void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned 
         Release(*ptr, old_size);
         *ptr = nullptr;
     } else {
-        Bucket *bucket = PTR_TO_BUCKET(*ptr);
+        Bucket *bucket = PointerToBucket(*ptr);
         Allocator::Resize(allocator, (void **)&bucket, SIZE(*bucket) + old_size,
                           SIZE(*bucket) + new_size, flags);
 
@@ -201,7 +198,7 @@ void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned 
 void LinkedAllocator::Release(void *ptr, Size size)
 {
     if (ptr) {
-        Bucket *bucket = PTR_TO_BUCKET(ptr);
+        Bucket *bucket = PointerToBucket(ptr);
 
         if (bucket->head.next) {
             bucket->head.next->prev = bucket->head.prev;
@@ -218,7 +215,96 @@ void LinkedAllocator::Release(void *ptr, Size size)
     }
 }
 
-#undef PTR_TO_BUCKET
+void BlockAllocator::ReleaseAll()
+{
+    allocator.ReleaseAll();
+    current_bucket = nullptr;
+    last_alloc = nullptr;
+}
+
+void *BlockAllocator::Allocate(Size size, unsigned int flags)
+{
+    // Keep alignement requirements
+    Size aligned_size = AlignSizeValue(size);
+
+    if (AllocateSeparately(aligned_size)) {
+        uint8_t *ptr = (uint8_t *)Allocator::Allocate(&allocator, size, flags);
+        return ptr;
+    } else {
+        if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
+            current_bucket = (Bucket *)Allocator::Allocate(&allocator, SIZE(Bucket) + block_size,
+                                                           flags & ~(int)Allocator::Flag::Zero);
+            current_bucket->used = 0;
+        }
+
+        uint8_t *ptr = current_bucket->data + current_bucket->used;
+        current_bucket->used += aligned_size;
+
+        if (flags & (int)Allocator::Flag::Zero) {
+            memset(ptr, 0, size);
+        }
+
+        last_alloc = ptr;
+        return ptr;
+    }
+}
+
+void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+{
+    if (!new_size) {
+        Release(*ptr, old_size);
+    } else {
+        if (!*ptr) {
+            old_size = 0;
+        }
+
+        Size aligned_old_size = AlignSizeValue(old_size);
+        Size aligned_new_size = AlignSizeValue(new_size);
+        Size aligned_delta = aligned_new_size - aligned_old_size;
+
+        // Try fast path
+        if (*ptr && *ptr == last_alloc && (current_bucket->used + aligned_delta) <= block_size) {
+            current_bucket->used += aligned_delta;
+
+            if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
+                memset(ptr + old_size, 0, new_size - old_size);
+            }
+        } else if (AllocateSeparately(aligned_old_size)) {
+            Allocator::Resize(&allocator, ptr, old_size, new_size, flags);
+        } else {
+            void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
+            if (new_size > old_size) {
+                memcpy(new_ptr, *ptr, old_size);
+
+                if (flags & (int)Allocator::Flag::Zero) {
+                    memset(ptr + old_size, 0, new_size - old_size);
+                }
+            } else {
+                memcpy(new_ptr, *ptr, new_size);
+            }
+
+            *ptr = new_ptr;
+        }
+    }
+}
+
+void BlockAllocator::Release(void *ptr, Size size)
+{
+    if (ptr) {
+        Size aligned_size = AlignSizeValue(size);
+
+        if (ptr == last_alloc) {
+            current_bucket->used -= aligned_size;
+            if (!current_bucket->used) {
+                Allocator::Release(&allocator, current_bucket, SIZE(Bucket) + block_size);
+                current_bucket = nullptr;
+            }
+            last_alloc = nullptr;
+        } else if (AllocateSeparately(aligned_size)) {
+            Allocator::Release(&allocator, ptr, size);
+        }
+    }
+}
 
 // ------------------------------------------------------------------------
 // Date

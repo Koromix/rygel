@@ -533,6 +533,44 @@ protected:
     void *Allocate(Size size, unsigned int flags = 0) override;
     void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(void *ptr, Size size) override;
+
+private:
+    static Bucket *PointerToBucket(void *ptr)
+        { return (Bucket *)((uint8_t *)ptr - OFFSET_OF(Bucket, data)); }
+};
+
+class BlockAllocator: public Allocator {
+    struct Bucket {
+        Size used;
+        alignas(8) uint8_t data[];
+    };
+
+    LinkedAllocator allocator;
+    Size block_size;
+
+    Bucket *current_bucket = nullptr;
+    uint8_t *last_alloc = nullptr;
+
+public:
+    BlockAllocator(Allocator *alloc, Size block_size)
+        : allocator(alloc), block_size(block_size)
+    {
+        DebugAssert(block_size > 0);
+    }
+    BlockAllocator(Size block_size) : BlockAllocator(nullptr, block_size) {}
+
+    void ReleaseAll();
+
+protected:
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void Resize(void **ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(void *ptr, Size size) override;
+
+private:
+    bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
+
+    static Size AlignSizeValue(Size size)
+        { return (SIZE(Bucket) + size + 7) / 8 * 8 - SIZE(Bucket); }
 };
 
 // ------------------------------------------------------------------------
