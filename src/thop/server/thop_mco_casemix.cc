@@ -249,11 +249,10 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
-    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
-                 (int)mco_ClassifyFlag::Mono, &results, &mono_results);
-
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
+    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+                 (int)mco_ClassifyFlag::Mono, &results, &mono_results);
     mco_Price(results, false, &pricings);
     mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
