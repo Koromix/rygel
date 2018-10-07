@@ -24,7 +24,7 @@ struct UserSet {
     HeapArray<User> users;
     HashTable<const char *, const User *> map;
 
-    LinkedAllocator str_alloc;
+    BlockAllocator str_alloc {Kibibytes(32)};
 
     const User *FindUser(const char *name) const { return map.FindValue(name, nullptr); }
 };
@@ -54,7 +54,7 @@ struct StructureSet {
     mco_DispenseMode dispense_mode;
     HeapArray<Structure> structures;
 
-    LinkedAllocator str_alloc;
+    BlockAllocator str_alloc {Kibibytes(32)};
 };
 
 class StructureSetBuilder {

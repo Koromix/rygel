@@ -86,7 +86,7 @@ extern const Span<const PackerAsset> packer_assets;
 #endif
 
 static HashTable<Span<const char>, Route> routes;
-static LinkedAllocator routes_alloc;
+static BlockAllocator routes_alloc(Kibibytes(16));
 static char etag[64];
 
 static const char *GetMimeType(Span<const char> path)
@@ -117,7 +117,7 @@ static bool InitDescSet(Span<const char *const> resource_directories,
                         Span<const char *const> desc_directories,
                         DescSet *out_set)
 {
-    LinkedAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(8));
 
     HeapArray<const char *> filenames;
     {
@@ -170,7 +170,7 @@ static bool InitUserSet(Span<const char *const> resource_directories,
 {
     LogInfo("Loading users");
 
-    LinkedAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(8));
 
     const char *filename = nullptr;
     {
@@ -205,7 +205,7 @@ static bool InitStructureSet(Span<const char *const> resource_directories,
 {
     LogInfo("Loading structures");
 
-    LinkedAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(8));
 
     const char *filename = nullptr;
     {
@@ -432,7 +432,7 @@ static void InitRoutes()
 #ifndef NDEBUG
 static bool UpdateStaticAssets()
 {
-    LinkedAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(8));
 
     const char *filename = nullptr;
     const Span<const PackerAsset> *lib_assets = nullptr;
@@ -691,7 +691,7 @@ Options:
         PrintLn(fp, mco_options_usage);
     };
 
-    LinkedAllocator temp_alloc;
+    BlockAllocator temp_alloc(Kibibytes(8));
 
     // Add default resource directory
     if (const char *app_dir = GetApplicationDirectory(); app_dir) {

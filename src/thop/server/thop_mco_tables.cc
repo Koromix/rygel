@@ -625,14 +625,12 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_re
         return code;
 
     // TODO: Generate ahead of time
-    LinkedAllocator readable_nodes_alloc;
+    BlockAllocator readable_nodes_alloc(Kibibytes(128));
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
         return CreateErrorPage(500, out_response);
 
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        LinkedAllocator temp_alloc;
-
         writer.StartArray();
         for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
             writer.StartObject();
