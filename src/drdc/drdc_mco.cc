@@ -377,7 +377,7 @@ Dispensation modes:)");
     HeapArray<mco_Result> mono_results;
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
-    mco_Pricing summary;
+    mco_Pricing summary = {};
     for (int j = 0; j < torture; j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
