@@ -213,9 +213,9 @@ void LinkedAllocator::Release(void *ptr, Size size)
         } else {
             list.next = bucket->head.next;
         }
-    }
 
-    Allocator::Release(allocator, ptr, size);
+        Allocator::Release(allocator, bucket, size);
+    }
 }
 
 #undef PTR_TO_BUCKET
