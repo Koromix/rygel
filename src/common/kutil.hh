@@ -617,6 +617,20 @@ struct Span {
 
     operator Span<const T>() const { return Span<const T>(ptr, len); }
 
+    bool operator==(const Span &other) const
+    {
+        if (len != other.len)
+            return false;
+
+        for (Size i = 0; i < len; i++) {
+            if (ptr[i] != other.ptr[i])
+                return false;
+        }
+
+        return true;
+    }
+    bool operator!=(const Span &other) const { return !(*this == other); }
+
     Span Take(Size offset, Size sub_len) const
     {
         DebugAssert(sub_len >= 0 && sub_len <= len);
@@ -758,6 +772,17 @@ public:
         return data[idx];
     }
 
+    bool operator==(const FixedArray &other) const
+    {
+        for (Size i = 0; i < N; i++) {
+            if (data[i] != other.data[i])
+                return false;
+        }
+
+        return true;
+    }
+    bool operator!=(const FixedArray &other) const { return !(*this == other); }
+
     Span<T> Take(Size offset, Size len) const
         { return Span<T>((T *)data, this->len).Take(offset, len); }
 };
@@ -808,6 +833,20 @@ public:
         DebugAssert(idx >= 0 && idx < len);
         return data[idx];
     }
+
+    bool operator==(const LocalArray &other) const
+    {
+        if (len != other.len)
+            return false;
+
+        for (Size i = 0; i < len; i++) {
+            if (data[i] != other.data[i])
+                return false;
+        }
+
+        return true;
+    }
+    bool operator!=(const LocalArray &other) const { return !(*this == other); }
 
     T *AppendDefault(Size count = 1)
     {
@@ -946,6 +985,20 @@ public:
         DebugAssert(idx >= 0 && idx < len);
         return ptr[idx];
     }
+
+    bool operator==(const HeapArray &other) const
+    {
+        if (len != other.len)
+            return false;
+
+        for (Size i = 0; i < len; i++) {
+            if (ptr[i] != other.ptr[i])
+                return false;
+        }
+
+        return true;
+    }
+    bool operator!=(const HeapArray &other) const { return !(*this == other); }
 
     void SetCapacity(Size new_capacity)
     {
