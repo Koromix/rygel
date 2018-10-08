@@ -1140,6 +1140,11 @@ public:
 
         return span;
     }
+    Span<T> TrimAndLeak()
+    {
+        Trim();
+        return Leak();
+    }
 };
 
 template <typename T, Size BucketSize = 1024>
