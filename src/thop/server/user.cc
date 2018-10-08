@@ -109,9 +109,9 @@ static Session *FindSession(MHD_Connection *conn)
 
 static void DeleteSessionCookies(MHD_Response *response)
 {
-    AddCookieHeader(response, "session_key", nullptr, 0, true);
-    AddCookieHeader(response, "url_key", nullptr, 0, false);
-    AddCookieHeader(response, "username", nullptr, 0, false);
+    AddCookieHeader(response, "session_key", nullptr);
+    AddCookieHeader(response, "url_key", nullptr);
+    AddCookieHeader(response, "username", nullptr);
 }
 
 const User *CheckSessionUser(MHD_Connection *conn)
@@ -197,9 +197,9 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     out_response->response.reset(response);
 
     // Set session cookies
-    AddCookieHeader(response, "session_key", session_key, IdleSessionDelay / 1000, true);
-    AddCookieHeader(response, "url_key", url_key, IdleSessionDelay / 1000, false);
-    AddCookieHeader(response, "username", user->name, IdleSessionDelay / 1000, false);
+    AddCookieHeader(response, "session_key", session_key, true);
+    AddCookieHeader(response, "url_key", url_key, false);
+    AddCookieHeader(response, "username", user->name, false);
 
     return 200;
 }

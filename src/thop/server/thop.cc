@@ -246,19 +246,17 @@ void AddContentEncodingHeader(MHD_Response *response, CompressionType compressio
     }
 }
 
-void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
-                     int max_age, bool http_only)
+void AddCookieHeader(MHD_Response *response, const char *name, const char *value, bool http_only)
 {
-    if (!value) {
-        value = "";
-        max_age = 0;
-        http_only = false;
+    char cookie_buf[512];
+    if (value) {
+        Fmt(cookie_buf, "%1=%2; Path=" THOP_BASE_URL ";%3", name, value,
+            http_only ? " HttpOnly;" : "");
+    } else {
+        Fmt(cookie_buf, "%1=; Path=" THOP_BASE_URL "; Max-Age=0;", name);
     }
 
-    char buf[512];
-    Fmt(buf, "%1=%2; Path=" THOP_BASE_URL "; Max-Age=%3;%4",
-        name, value, max_age, http_only ? " HttpOnly;" : "");
-    MHD_add_response_header(response, "Set-Cookie", buf);
+    MHD_add_response_header(response, "Set-Cookie", cookie_buf);
 }
 
 static void ReleaseCallback(void *ptr)

@@ -48,7 +48,7 @@ extern Date thop_stay_set_dates[2];
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
-                     int max_age = -1, bool http_only = false);
+                     bool http_only = false);
 
 int CreateErrorPage(int code, Response *out_response);
 
