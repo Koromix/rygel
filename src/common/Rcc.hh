@@ -120,8 +120,10 @@ public:
 
     operator SEXP() const { return xp; }
 
-    double *begin() const { return span.begin(); }
-    double *end() const { return span.end(); }
+    double *begin() { return span.begin(); }
+    const double *begin() const { return span.begin(); }
+    double *end() { return span.end(); }
+    const double *end() const { return span.end(); }
 
     Size Len() const { return span.len; }
 
@@ -159,8 +161,10 @@ public:
 
     operator SEXP() const { return xp; }
 
-    int *begin() const { return span.begin(); }
-    int *end() const { return span.end(); }
+    int *begin() { return span.begin(); }
+    const int *begin() const { return span.begin(); }
+    int *end() { return span.end(); }
+    const int *end() const { return span.end(); }
 
     Size Len() const { return span.len; }
 
@@ -179,10 +183,10 @@ class Rcc_Vector<bool> {
 
 public:
     class Iterator {
-        int *ptr;
+        const int *ptr;
 
     public:
-        Iterator(int *ptr) : ptr(ptr) {}
+        Iterator(const int *ptr) : ptr(ptr) {}
 
         bool operator*() { return *ptr; }
 
@@ -235,10 +239,10 @@ class Rcc_Vector<const char *> {
 
 public:
     class Iterator {
-        SEXP *xp;
+        const SEXP *xp;
 
     public:
-        Iterator(SEXP *xp) : xp(xp) {}
+        Iterator(const SEXP *xp) : xp(xp) {}
 
         const char *operator*() { return CHAR(*xp); }
 

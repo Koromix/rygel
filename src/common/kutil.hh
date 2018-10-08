@@ -597,12 +597,19 @@ struct Span {
         len = 0;
     }
 
-    T *begin() const { return ptr; }
-    T *end() const { return ptr + len; }
+    T *begin() { return ptr; }
+    const T *begin() const { return ptr; }
+    T *end() { return ptr + len; }
+    const T *end() const { return ptr + len; }
 
     bool IsValid() const { return ptr; }
 
-    T &operator[](Size idx) const
+    T &operator[](Size idx)
+    {
+        DebugAssert(idx >= 0 && idx < len);
+        return ptr[idx];
+    }
+    const T &operator[](Size idx) const
     {
         DebugAssert(idx >= 0 && idx < len);
         return ptr[idx];
