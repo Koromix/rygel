@@ -60,8 +60,13 @@ union mco_GhmRootCode {
     bool IsValid() const { return value; }
     bool IsError() const { return parts.cmd == 90; }
 
-    bool operator==(const mco_GhmRootCode &other) const { return value == other.value; }
-    bool operator!=(const mco_GhmRootCode &other) const { return value != other.value; }
+    bool operator==(mco_GhmRootCode other) const { return value == other.value; }
+    bool operator!=(mco_GhmRootCode other) const { return value != other.value; }
+
+    bool operator<(mco_GhmRootCode other) const { return value < other.value; }
+    bool operator<=(mco_GhmRootCode other) const { return value <= other.value; }
+    bool operator>(mco_GhmRootCode other) const { return value > other.value; }
+    bool operator>=(mco_GhmRootCode other) const { return value >= other.value; }
 
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
@@ -164,8 +169,13 @@ union mco_GhmCode {
         }
     }
 
-    bool operator==(const mco_GhmCode &other) const { return value == other.value; }
-    bool operator!=(const mco_GhmCode &other) const { return value != other.value; }
+    bool operator==(mco_GhmCode other) const { return value == other.value; }
+    bool operator!=(mco_GhmCode other) const { return value != other.value; }
+
+    bool operator<(mco_GhmCode other) const { return value < other.value; }
+    bool operator<=(mco_GhmCode other) const { return value <= other.value; }
+    bool operator>(mco_GhmCode other) const { return value > other.value; }
+    bool operator>=(mco_GhmCode other) const { return value >= other.value; }
 
     template <Size N>
     Span<char> ToString(char (&buf)[N]) const
@@ -235,6 +245,11 @@ struct mco_GhsCode {
 
     bool operator==(mco_GhsCode other) const { return number == other.number; }
     bool operator!=(mco_GhsCode other) const { return number != other.number; }
+
+    bool operator<(mco_GhsCode other) const { return number < other.number; }
+    bool operator<=(mco_GhsCode other) const { return number <= other.number; }
+    bool operator>(mco_GhsCode other) const { return number > other.number; }
+    bool operator>=(mco_GhsCode other) const { return number >= other.number; }
 
     operator FmtArg() const { return FmtArg(number); }
 

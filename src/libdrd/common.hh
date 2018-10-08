@@ -67,6 +67,11 @@ union DiagnosisCode {
     bool operator==(DiagnosisCode other) const { return value == other.value; }
     bool operator!=(DiagnosisCode other) const { return value != other.value; }
 
+    bool operator<(DiagnosisCode other) const { return CmpStr(str, other.str) < 0; }
+    bool operator<=(DiagnosisCode other) const { return CmpStr(str, other.str) <= 0; }
+    bool operator>(DiagnosisCode other) const { return CmpStr(str, other.str) > 0; }
+    bool operator>=(DiagnosisCode other) const { return CmpStr(str, other.str) >= 0; }
+
     bool Matches(const char *other_str) const
     {
         Size i = 0;
@@ -123,6 +128,11 @@ union ProcedureCode {
     bool operator==(ProcedureCode other) const { return value == other.value; }
     bool operator!=(ProcedureCode other) const { return value != other.value; }
 
+    bool operator<(ProcedureCode other) const { return CmpStr(str, other.str) < 0; }
+    bool operator<=(ProcedureCode other) const { return CmpStr(str, other.str) <= 0; }
+    bool operator>(ProcedureCode other) const { return CmpStr(str, other.str) > 0; }
+    bool operator>=(ProcedureCode other) const { return CmpStr(str, other.str) >= 0; }
+
     operator FmtArg() const { return FmtArg(str); }
 
     uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
@@ -152,8 +162,13 @@ struct UnitCode {
 
     bool IsValid() const { return number > 0 && number <= 9999; }
 
-    bool operator==(const UnitCode &other) const { return number == other.number; }
-    bool operator!=(const UnitCode &other) const { return number != other.number; }
+    bool operator==(UnitCode other) const { return number == other.number; }
+    bool operator!=(UnitCode other) const { return number != other.number; }
+
+    bool operator<(UnitCode other) const { return number < other.number; }
+    bool operator<=(UnitCode other) const { return number <= other.number; }
+    bool operator>(UnitCode other) const { return number > other.number; }
+    bool operator>=(UnitCode other) const { return number >= other.number; }
 
     operator FmtArg() const { return FmtArg(number); }
 
