@@ -129,36 +129,43 @@ invalid:
     return false;
 }
 
-struct AggregateKey {
-    mco_GhmCode ghm;
-    mco_GhsCode ghs;
-    int duration;
-
-    bool operator==(const AggregateKey &other) const
-    {
-        return ghm == other.ghm &&
-               ghs == other.ghs &&
-               duration == other.duration;
-    }
-    bool operator!=(const AggregateKey &other) const { return !(*this == other); }
-
-    uint64_t Hash() const
-    {
-        return HashTraits<mco_GhmCode>::Hash(ghm) ^
-               HashTraits<mco_GhsCode>::Hash(ghs) ^
-               HashTraits<int>::Hash(duration);
-    }
-} key;
-
 struct AggregateStatistics {
-    AggregateKey key;
+    struct Key {
+        mco_GhmCode ghm;
+        mco_GhsCode ghs;
+        Span<UnitCode> units;
 
-    int count;
-    int partial_mono_count;
-    int mono_count;
-    int64_t partial_price_cents;
+        bool operator==(const Key &other) const
+        {
+            return ghm == other.ghm &&
+                   ghs == other.ghs &&
+                   units == other.units;
+        }
+        bool operator !=(const Key &other) const { return !(*this == other); }
+
+        uint64_t Hash() const
+        {
+            uint64_t hash = HashTraits<mco_GhmCode>::Hash(ghm) ^
+                            HashTraits<mco_GhsCode>::Hash(ghs);
+            for (UnitCode unit: units) {
+                hash ^= HashTraits<UnitCode>::Hash(unit);
+            }
+
+            return hash;
+        }
+    };
+
+    struct Part {
+        int32_t mono_count;
+        int64_t price_cents;
+    };
+
+    Key key;
+    int32_t count;
+    int32_t deaths;
+    int32_t mono_count;
     int64_t price_cents;
-    int deaths;
+    Span<Part> parts;
 
     HASH_TABLE_HANDLER(AggregateStatistics, key);
 };
@@ -178,8 +185,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
     Date dates[2] = {};
     Date diff_dates[2] = {};
-    HashSet<UnitCode> units;
-    bool durations = false;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     {
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
@@ -188,31 +193,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff"),
                             &diff_dates[0], &diff_dates[1]))
             return CreateErrorPage(422, out_response);
-
-        Span<const char> units_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "units");
-        while (units_str.len) {
-            Span<const char> part = SplitStrAny(units_str, " ,+", &units_str);
-
-            if (part.len) {
-                UnitCode unit = UnitCode::FromString(part);
-                if (!unit.IsValid())
-                    return CreateErrorPage(422, out_response);
-
-                units.Append(unit);
-            }
-        }
-
-        const char *durations_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "durations");
-        if (durations_str && durations_str[0]) {
-            if (TestStr(durations_str, "1")) {
-                durations = true;
-            } else if (TestStr(durations_str, "0")) {
-                durations = false;
-            } else {
-                LogError("Invalid 'durations' parameter value '%1'", durations_str);
-                return CreateErrorPage(422, out_response);
-            }
-        }
 
         const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "mode");
         if (mode_str && mode_str[0]) {
@@ -227,11 +207,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
         }
     }
 
-    if (!std::all_of(units.table.begin(), units.table.end(),
-                     [&](UnitCode unit) { return allowed_units.Find(unit); })) {
-        LogError("User is not allowed to view these units");
-        return CreateErrorPage(422, out_response);
-    }
     if (diff_dates[0].value && !dates[0].value) {
         LogError("Parameter 'diff' specified but 'dates' is missing");
         return CreateErrorPage(422, out_response);
@@ -252,10 +227,17 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
     mco_Dispense(pricings, thop_mono_results, dispense_mode, &mono_pricings);
 
     HeapArray<AggregateStatistics> statistics;
+    BlockAllocator statistics_units_alloc(Kibibytes(4));
+    BlockAllocator statistics_parts_alloc(Kibibytes(16));
     {
+        HashMap<AggregateStatistics::Key, Size> statistics_map;
+        // Reuse for performance
+        HashMap<UnitCode, AggregateStatistics::Part> agg_parts_map;
+
         Size j = 0;
-        HashMap<AggregateKey, Size> statistics_map;
         for (Size i = 0; i < thop_results.len; i++) {
+            agg_parts_map.RemoveAll();
+
             const mco_Result &result = thop_results[i];
             const mco_Pricing &pricing = pricings[i];
 
@@ -276,41 +258,65 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
                 continue;
             }
 
-            bool counted_rss = false;
+            HeapArray<UnitCode> agg_units(&statistics_units_alloc);
             for (Size k = 0; k < sub_mono_results.len; k++) {
                 const mco_Result &mono_result = sub_mono_results[k];
                 const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+                UnitCode unit = mono_result.stays[0].unit;
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-                if (units.Find(mono_result.stays[0].unit)) {
-                    AggregateStatistics *agg;
-                    {
-                        AggregateKey key;
-                        key.ghm = result.ghm;
-                        key.ghs = result.ghs;
-                        // TODO: Careful with duration overflow
-                        key.duration = durations ? (int16_t)result.duration : 0;
+                if (allowed_units.Find(unit)) {
+                    std::pair<AggregateStatistics::Part *, bool> ret =
+                        agg_parts_map.AppendDefault(mono_result.stays[0].unit);
 
-                        std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
-                        if (ret.first) {
-                            agg = statistics.AppendDefault();
-                            agg->key = key;
-                        } else {
-                            agg = &statistics[*ret.first];
-                        }
-                    }
+                    ret.first->mono_count += multiplier;
+                    ret.first->price_cents += multiplier * mono_pricing.price_cents;
 
-                    if (!counted_rss) {
-                        agg->count += multiplier;
-                        agg->mono_count += multiplier * result.stays.len;
-                        agg->price_cents += multiplier * pricing.price_cents;
-                        if (result.stays[result.stays.len - 1].exit.mode == '9') {
-                            agg->deaths += multiplier;
-                        }
-                        counted_rss = true;
+                    if (ret.second) {
+                        agg_units.Append(unit);
                     }
-                    agg->partial_mono_count += multiplier;
-                    agg->partial_price_cents += multiplier * mono_pricing.price_cents;
+                }
+            }
+
+            if (agg_units.len) {
+                std::sort(agg_units.begin(), agg_units.end());
+
+                HeapArray<AggregateStatistics::Part> agg_parts(&statistics_parts_alloc);
+                for (UnitCode unit: agg_units) {
+                    AggregateStatistics::Part *part = agg_parts_map.Find(unit);
+                    if (part) {
+                        agg_parts.Append(*part);
+                    }
+                }
+
+                AggregateStatistics::Key key = {};
+                key.ghm = result.ghm;
+                key.ghs = result.ghs;
+                key.units = agg_units.TrimAndLeak();
+
+                AggregateStatistics *agg;
+                {
+                    std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
+                    if (ret.second) {
+                        agg = statistics.AppendDefault();
+                        agg->key = key;
+                    } else {
+                        agg = &statistics[*ret.first];
+                    }
+                }
+
+                agg->count += multiplier;
+                agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
+                agg->mono_count += multiplier * (int32_t)result.stays.len;
+                agg->price_cents += multiplier * pricing.price_cents;
+                if (agg->parts.ptr) {
+                    DebugAssert(agg->parts.len == agg_parts.len);
+                    for (Size k = 0; k < agg->parts.len; k++) {
+                        agg->parts[k].mono_count += agg_parts[k].mono_count;
+                        agg->parts[k].price_cents += agg_parts[k].price_cents;
+                    }
+                } else {
+                    agg->parts = agg_parts.TrimAndLeak();
                 }
             }
         }
@@ -319,8 +325,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
     std::sort(statistics.begin(), statistics.end(),
               [](const AggregateStatistics &agg1, const AggregateStatistics &agg2) {
         return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
-                        agg1.key.ghs.number - agg2.key.ghs.number,
-                        agg1.key.duration - agg2.key.duration) < 0;
+                        agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
 
     out_response->flags |= (int)Response::Flag::DisableETag;
@@ -332,15 +337,25 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
             writer.Key("ghs"); writer.Int(agg.key.ghs.number);
-            if (durations) {
-                writer.Key("duration"); writer.Int(agg.key.duration);
+            writer.Key("units"); writer.StartArray();
+            for (UnitCode unit: agg.key.units) {
+                writer.Int(unit.number);
             }
+            writer.EndArray();
             writer.Key("count"); writer.Int(agg.count);
-            writer.Key("partial_mono_count"); writer.Int(agg.partial_mono_count);
-            writer.Key("mono_count"); writer.Int(agg.mono_count);
             writer.Key("deaths"); writer.Int64(agg.deaths);
-            writer.Key("partial_price_cents"); writer.Int64(agg.partial_price_cents);
-            writer.Key("price_cents"); writer.Int64(agg.price_cents);
+            writer.Key("mono_count_total"); writer.Int(agg.mono_count);
+            writer.Key("price_cents_total"); writer.Int64(agg.price_cents);
+            writer.Key("mono_count"); writer.StartArray();
+            for (const AggregateStatistics::Part &part: agg.parts) {
+                writer.Int(part.mono_count);
+            }
+            writer.EndArray();
+            writer.Key("price_cents"); writer.StartArray();
+            for (const AggregateStatistics::Part &part: agg.parts) {
+                writer.Int64(part.price_cents);
+            }
+            writer.EndArray();
             writer.EndObject();
         }
         writer.EndArray();

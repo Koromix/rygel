@@ -54,9 +54,6 @@
                     <select onchange="thop.go({group: this.value});"></select><br/>
                 </label>
 
-                <label id="opt_units">
-                    <div style="width: 100%;"></div><br/>
-                </label>
                 <label id="opt_periods">
                     <div></div>
                     <div></div><br/>
@@ -72,9 +69,11 @@
                     Algorithme
                     <select onchange="thop.go({algorithm: this.value});"></select>
                 </label>
-
                 <button id="opt_update" onclick="thop.go({refresh: true});"
                         style="margin-bottom: 1em;">Mettre à jour</button>
+                <label id="opt_units">
+                    <div style="width: 100%;"></div><br/>
+                </label>
 
                 <label id="opt_ghm_roots">
                     <select onchange="thop.go({ghm_root: this.value});"

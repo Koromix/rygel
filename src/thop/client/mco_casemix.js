@@ -20,6 +20,8 @@ let mco_casemix = {};
     let structures = [];
 
     // Results
+    let mix_ready = false;
+    let mix_params = {};
     let mix_url = null;
     let mix_rows = [];
     let mix_ghm_roots = new Set;
@@ -53,20 +55,14 @@ let mco_casemix = {};
         descendings[route.view] = route.descending;
 
         // Casemix
-        let new_classify_url = null;
         if (user.isConnected()) {
             updateSettings();
             if (!route.algorithm)
                 route.algorithm = default_algorithm;
-            if (start_date) {
-                let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-                new_classify_url = buildCasemixUrl(route.period[0], route.period[1], route.units,
-                                                   route.algorithm, prev_period[0], prev_period[1]);
-            }
-            if (route.refresh && new_classify_url) {
-                clearCasemix();
-                updateCasemix(new_classify_url);
-            }
+
+            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
+            updateCasemix(route.period[0], route.period[1], route.algorithm,
+                          prev_period[0], prev_period[1], route.refresh);
         }
         delete route.refresh;
 
@@ -86,7 +82,7 @@ let mco_casemix = {};
         if (user.isConnected()) {
             if (!(['summary', 'table'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
-            if (!route.units.length && mix_url === new_classify_url)
+            if (!route.units.length && mix_ready)
                 errors.add('Aucune unité sélectionnée');
             if (route.view == 'table') {
                 if (!route.ghm_root)
@@ -123,7 +119,7 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
-                        refreshSummary(route.page, route.sort, route.descending);
+                        refreshSummary(route.units, route.page, route.sort, route.descending);
                     } break;
 
                     case 'table': {
@@ -139,12 +135,12 @@ let mco_casemix = {};
                 query('#cm').removeClass('hide');
             }
 
-            if (!data.isBusy() && mix_url !== new_classify_url) {
+            if (!data.isBusy() && !mix_ready) {
                 query('#cm').addClass('busy');
             } else if (!data.isBusy()) {
                 query('#cm').removeClass('busy');
             }
-            query('#opt_update').disabled = (mix_url === new_classify_url);
+            query('#opt_update').disabled = mix_ready;
         } else {
             query('#cm').addClass('hide');
         }
@@ -165,6 +161,9 @@ let mco_casemix = {};
             'apply_coefficient',
             'refresh'
         ];
+
+        if (args.units)
+            args.units = args.units.map(function(str) { return parseInt(str, 10); });
 
         let new_route = thop.buildRoute(args);
         if (args.page === undefined)
@@ -226,11 +225,16 @@ let mco_casemix = {};
         }
     }
 
-    function buildCasemixUrl(start, end, units, mode, diff_start, diff_end)
+    function clearCasemix()
+    {
+        mix_rows.length = 0;
+        mix_ghm_roots.clear();
+    }
+
+    function updateCasemix(start, end, mode, diff_start, diff_end, refresh)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
-            units: units.join('+'),
             mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             durations: 1,
@@ -238,15 +242,13 @@ let mco_casemix = {};
         };
         let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
 
-        return url;
-    }
+        mix_ready = (url === mix_url);
+        if (!refresh || mix_ready)
+            return;
 
-    function updateCasemix(url)
-    {
         data.get(url, function(json) {
             clearCasemix();
 
-            mix_url = url;
             mix_rows = json;
             for (let row of mix_rows) {
                 row.cmd = parseInt(row.ghm.substr(0, 2), 10);
@@ -255,13 +257,11 @@ let mco_casemix = {};
 
                 mix_ghm_roots.add(row.ghm_root);
             }
-        });
-    }
 
-    function clearCasemix()
-    {
-        mix_rows.length = 0;
-        mix_ghm_roots.clear();
+            mix_ready = true;
+            mix_params = params;
+            mix_url = url;
+        });
     }
 
     function refreshPeriods(period, prev_period, mode)
@@ -325,7 +325,7 @@ let mco_casemix = {};
                 }
 
                 builder.addOption(ent.path[ent.path.length - 1], ent.unit,
-                                  {selected: units.includes(ent.unit.toString())});
+                                  {selected: units.includes(ent.unit)});
             }
         }
 
@@ -377,37 +377,49 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function initSummaryTable()
+    function initSummaryTable(units)
     {
-        if (!needsRefresh(initSummaryTable, [mix_url]))
+        if (!needsRefresh(initSummaryTable, [mix_url].concat(Array.from(arguments))))
             return;
-
-        // FIXME: Ugly as hell
-        let diff = ((mix_url || '').indexOf('diff=') >= 0);
 
         summary_table = new DataTable(query('#cm_summary'));
         summary_table.sortHandler = function(col_idx, descending) {
             go({sort: col_idx, descending: descending});
         };
 
+        units = new Set(units);
+        let rows = mix_rows.filter(function(row) {
+            for (const unit of row.units) {
+                if (units.has(unit))
+                    return true;
+            }
+            return false;
+        });
+
         // Avoid headers with no data
-        if (!mix_rows.length)
+        if (!rows.length)
             return;
 
         // Header
         summary_table.addColumns([
             'GHM',
-            'RSS', !diff ? '%' : null,
-            'Total', !diff ? '%' : null,
-            'Partiel', !diff ? '%' : null,
-            'Décès', !diff ? '%' : null
+            'RSS', !mix_params.diff ? '%' : null,
+            'Total', !mix_params.diff ? '%' : null,
+            'Partiel', !mix_params.diff ? '%' : null,
+            'Décès', !mix_params.diff ? '%' : null
         ]);
 
+        function filterUnitParts(row)
+        {
+            let values = row.units.map(function(unit) { return units.has(unit); });
+            return ['include', values];
+        }
+
         // Aggregate
-        let stat1 = aggregate(mix_rows)[0][0];
-        let [stats2, stats2_map] = aggregate(mix_rows, 'ghm_root');
+        let stat1 = findAggregate(aggregate(rows, filterUnitParts)[1], true);
+        let [stats2, stats2_map] = aggregate(rows, 'ghm_root', filterUnitParts);
         let ghm_roots = stats2
-            // .sort(function(a, b) { return b.count - a.count; })
+            .filter(function(stat) { return stat.include; })
             .map(function(stat) { return stat.ghm_root; });
 
         // Resources
@@ -416,19 +428,18 @@ let mco_casemix = {};
         function addStatCells(stat)
         {
             summary_table.addCell(stat.count, numberText(stat.count));
-            if (!diff)
+            if (!mix_params.diff)
                 summary_table.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
+            summary_table.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
+            if (!mix_params.diff)
+                summary_table.addCell(stat.price_cents_total / stat1.price_cents_total,
+                                      percentText(stat.price_cents_total / stat1.price_cents_total));
             summary_table.addCell(stat.price_cents, priceText(stat.price_cents, false));
-            if (!diff)
+            if (!mix_params.diff)
                 summary_table.addCell(stat.price_cents / stat1.price_cents,
                                       percentText(stat.price_cents / stat1.price_cents));
-            summary_table.addCell(stat.partial_price_cents,
-                                  priceText(stat.partial_price_cents, false));
-            if (!diff)
-                summary_table.addCell(stat.partial_price_cents / stat1.partial_price_cents,
-                                      percentText(stat.partial_price_cents / stat1.partial_price_cents));
             summary_table.addCell(stat.deaths, numberText(stat.deaths));
-            if (!diff)
+            if (!mix_params.diff)
                 summary_table.addCell(stat.deaths / stat.count, percentText(stat.deaths / stat.count));
         }
 
@@ -441,7 +452,7 @@ let mco_casemix = {};
             let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
                                     title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
 
-            let stat2 = findAggregate(stats2_map, ghm_root);
+            let stat2 = findAggregate(stats2_map, ghm_root, true);
 
             summary_table.beginRow();
             summary_table.addCell(ghm_root, header);
@@ -451,12 +462,12 @@ let mco_casemix = {};
         summary_table.endRow();
     }
 
-    function refreshSummary(page, sort, descending)
+    function refreshSummary(units, page, sort, descending)
     {
         if (!needsRefresh(refreshSummary, [mix_url].concat(Array.from(arguments))))
             return;
 
-        initSummaryTable();
+        initSummaryTable(units);
 
         if (sort !== null && sort !== undefined)
             summary_table.sort(sort, descending);
@@ -491,7 +502,7 @@ let mco_casemix = {};
         return builder.getWidget();
     }
 
-    function refreshTable(pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
+    function refreshTable(units, pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
     {
         if (!needsRefresh(refreshTable, [mix_url].concat.apply(Array.from(arguments))))
             return;
@@ -506,9 +517,6 @@ let mco_casemix = {};
         if (rows.length && main_index >= 0) {
             let thead = table.query('thead');
             let tbody = table.query('tbody');
-
-            // FIXME: Ugly as hell
-            let diff = ((mix_url || '').indexOf('diff=') >= 0);
 
             let [stats, stats_map] = aggregate(rows, 'ghm', 'duration');
 
@@ -564,7 +572,7 @@ let mco_casemix = {};
                     if (stat) {
                         function addDiffClass(cls, value)
                         {
-                            if (diff) {
+                            if (mix_params.diff) {
                                 if (value > 0) {
                                     return cls + ' higher';
                                 } else if (value < 0) {
@@ -610,15 +618,15 @@ let mco_casemix = {};
         let template = {
             count: 0,
             deaths: 0,
+            mono_count_total: 0,
+            price_cents_total: 0,
             mono_count: 0,
-            partial_mono_count: 0,
-            price_cents: 0,
-            partial_price_cents: 0
+            price_cents: 0
         };
 
-        function aggregateRec(row, ptr, idx)
+        function aggregateRec(row, row_ptrs, ptr, col_idx, key_idx)
         {
-            for (let i = idx; i < by.length; i++) {
+            for (let i = key_idx; i < by.length; i++) {
                 let key = by[i];
                 let value;
                 if (typeof key === 'function') {
@@ -627,25 +635,20 @@ let mco_casemix = {};
                     value = row[key];
                 }
 
-                // Use recursion to deal with cases where we need to aggregate on
-                // multi-valued value.
+                if (Array.isArray(value))
+                    value = value[col_idx];
+
                 if (Array.isArray(value)) {
-                    if (values.length > 1) {
-                        const values = value;
-                        for (const value of values) {
-                            if (ptr[value] === undefined)
-                                ptr[value] = {};
-                            template[key] = value;
+                    const values = value;
+                    for (const value of values) {
+                        if (ptr[value] === undefined)
+                            ptr[value] = {};
+                        template[key] = value;
 
-                            aggregateRec(row, ptr[value], i + 1);
-                        }
-
-                        return;
-                    } else if (values.length === 1) {
-                        value = value[0];
-                    } else {
-                        value = null;
+                        aggregateRec(row, row_ptrs, ptr[value], col_idx, key_idx + 1);
                     }
+
+                    return;
                 }
 
                 if (ptr[value] === undefined)
@@ -660,16 +663,26 @@ let mco_casemix = {};
                 list.push(ptr);
             }
 
-            ptr.count += row.count;
-            ptr.mono_count += row.mono_count;
-            ptr.partial_mono_count += row.partial_mono_count;
-            ptr.deaths += row.deaths;
-            ptr.price_cents += row.price_cents;
-            ptr.partial_price_cents += row.partial_price_cents;
+            if (!row_ptrs.has(ptr)) {
+                ptr.count += row.count;
+                ptr.deaths += row.deaths;
+                ptr.mono_count_total += row.mono_count_total;
+                ptr.price_cents_total += row.price_cents_total;
+
+                row_ptrs.add(ptr);
+            }
+
+            ptr.mono_count += row.mono_count[col_idx];
+            ptr.price_cents += row.price_cents[col_idx];
         }
 
-        for (const row of rows)
-            aggregateRec(row, map, 0);
+        for (const row of rows) {
+            const max_idx = row.mono_count.length;
+
+            let row_ptrs = new Set;
+            for (let i = 0; i < max_idx; i++)
+                aggregateRec(row, row_ptrs, map, i, 0);
+        }
 
         return [list, map];
     }
@@ -694,8 +707,8 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
-        refreshSummary(1);
-        refreshTable();
+        refreshSummary([], 1);
+        refreshTable([]);
     });
 
     thop.registerUrl('mco_casemix', this, runCasemix);
