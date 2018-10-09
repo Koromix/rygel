@@ -76,6 +76,8 @@ UserSet thop_user_set;
 StructureSet thop_structure_set;
 mco_StaySet thop_stay_set;
 Date thop_stay_set_dates[2];
+HeapArray<mco_Result> thop_results;
+HeapArray<mco_Result> thop_mono_results;
 
 static DescSet desc_set;
 #ifndef NDEBUG
@@ -766,7 +768,6 @@ Options:
 
     if (stays_filenames.len) {
         LogInfo("Loading stays");
-
         mco_StaySetBuilder stay_set_builder;
         if (!stay_set_builder.LoadFiles(stays_filenames))
             return 1;
@@ -788,6 +789,14 @@ Options:
 
             thop_stay_set_dates[1]++;
         }
+
+        LogInfo("Classify");
+        mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+                     (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
+
+        // Don't use too much memory
+        thop_results.Trim();
+        thop_mono_results.Trim();
     }
 
     LogInfo("Computing constraints");

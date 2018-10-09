@@ -247,24 +247,20 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
         return CreateErrorPage(422, out_response);
     }
 
-    HeapArray<mco_Result> results;
-    HeapArray<mco_Result> mono_results;
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
-    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
-                 (int)mco_ClassifyFlag::Mono, &results, &mono_results);
-    mco_Price(results, false, &pricings);
-    mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+    mco_Price(thop_results, false, &pricings);
+    mco_Dispense(pricings, thop_mono_results, dispense_mode, &mono_pricings);
 
     HeapArray<AggregateStatistics> statistics;
     {
         Size j = 0;
         HashMap<AggregateKey, Size> statistics_map;
-        for (Size i = 0; i < results.len; i++) {
-            const mco_Result &result = results[i];
+        for (Size i = 0; i < thop_results.len; i++) {
+            const mco_Result &result = thop_results[i];
             const mco_Pricing &pricing = pricings[i];
 
-            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Result> sub_mono_results = thop_mono_results.Take(j, result.stays.len);
             Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
 
