@@ -1104,7 +1104,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
         if (ini.error || !valid)
             return false;
 
-        if (ghs_coefficient == 0.0f) {
+        if (ghs_coefficient == 0.0) {
             LogError("GhsCoefficient is not set or equal to 0");
         }
     }
