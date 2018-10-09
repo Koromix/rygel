@@ -1829,6 +1829,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
                      ghm != mco_GhmCode(28, 'Z', 3, 'Z') &&
                      ghm != mco_GhmCode(28, 'Z', 4, 'Z') &&
                      ghm != mco_GhmCode(11, 'K', 2, 'J'));
+    bool test_ent3 = (stay.exit.date >= Date(2014, 3, 1) && test_dia);
     bool test_sdc = (stay.exit.date >= Date(2017, 3, 1) && ghm.Root() != mco_GhmRootCode(5, 'C', 19));
 
     Size ambu_stay_idx = -1;
@@ -1960,12 +1961,10 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
                                                                             (proc_info->bytes[39] & 0x10) |
                                                                             (proc_info->bytes[41] & 0xF0) |
                                                                             (proc_info->bytes[40] & 0x7)));
-            if (test_dia) {
-                AddToCounter(i, (int)mco_SupplementType::Dia, !!(proc_info->bytes[32] & 0x2));
-                AddToCounter(i, (int)mco_SupplementType::Ent1, !!(proc_info->bytes[23] & 0x1));
-                AddToCounter(i, (int)mco_SupplementType::Ent2, !!(proc_info->bytes[24] & 0x80));
-                AddToCounter(i, (int)mco_SupplementType::Ent3, !!(proc_info->bytes[30] & 0x4));
-            }
+            AddToCounter(i, (int)mco_SupplementType::Dia, test_dia && !!(proc_info->bytes[32] & 0x2));
+            AddToCounter(i, (int)mco_SupplementType::Ent1, test_dia && !!(proc_info->bytes[23] & 0x1));
+            AddToCounter(i, (int)mco_SupplementType::Ent2, test_dia && !!(proc_info->bytes[24] & 0x80));
+            AddToCounter(i, (int)mco_SupplementType::Ent3, test_ent3 && !!(proc_info->bytes[30] & 0x4));
             if (test_sdc && (proc_info->bytes[24] & 0x2)) {
                 AddToCounter(i, (int)mco_SupplementType::Sdc, 1);
                 test_sdc = false;
