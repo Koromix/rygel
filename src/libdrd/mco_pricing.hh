@@ -10,11 +10,11 @@
 struct mco_Pricing {
     Span<const mco_Stay> stays; // Not valid in totals / summaries
 
-    Size results_count;
-    Size stays_count;
-    Size failures_count;
-    int64_t duration;
-    int64_t ghs_duration;
+    int32_t results_count;
+    int32_t stays_count;
+    int32_t failures_count;
+    int32_t duration;
+    int32_t ghs_duration;
 
     double ghs_coefficient; // Not valid in totals / summaries
     int64_t ghs_cents;

@@ -42,7 +42,7 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     out_pricing->stays = result.stays;
 
     out_pricing->results_count++;
-    out_pricing->stays_count += result.stays.len;
+    out_pricing->stays_count += (int32_t)result.stays.len;
     out_pricing->failures_count += result.ghm.IsError();
     out_pricing->duration += result.duration;
     out_pricing->ghs_duration += result.ghs_duration;
