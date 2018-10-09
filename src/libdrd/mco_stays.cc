@@ -35,8 +35,10 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
     bh.native_size = (uint8_t)SIZE(Size);
     bh.endianness = (int8_t)ARCH_ENDIANNESS;
     bh.stays_len = stays.len;
-    bh.diagnoses_len = store.diagnoses.len;
-    bh.procedures_len = store.procedures.len;
+    for (const mco_Stay &stay: stays) {
+        bh.diagnoses_len += stay.diagnoses.len;
+        bh.procedures_len += stay.procedures.len;
+    }
 
     st.Write(&bh, SIZE(bh));
 #ifdef ARCH_64
@@ -90,17 +92,14 @@ bool mco_StaySet::SavePack(const char *filename) const
 bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
     const Size start_stays_len = set.stays.len;
-    const Size start_diagnoses_len = set.store.diagnoses.len;
-    const Size start_procedures_len = set.store.procedures.len;
-    DEFER_N(set_guard) {
-        set.stays.RemoveFrom(start_stays_len);
-        set.store.diagnoses.RemoveFrom(start_diagnoses_len);
-        set.store.procedures.RemoveFrom(start_procedures_len);
-    };
+    DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
 
     if (out_tests) {
         LogError("Testing is not supported by .dspak files");
     }
+
+    HeapArray<DiagnosisCode> diagnoses(&set.diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures(&set.procedures_alloc);
 
     PackHeader bh;
     if (st.Read(SIZE(bh), &bh) != SIZE(bh))
@@ -123,9 +122,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     if (bh.stays_len < 0 || bh.diagnoses_len < 0 || bh.procedures_len < 0)
         goto corrupt_error;
 
-    if (bh.stays_len > (LEN_MAX - start_stays_len)
-            || bh.diagnoses_len > (LEN_MAX - start_diagnoses_len)
-            || bh.procedures_len > (LEN_MAX - start_procedures_len)) {
+    if (bh.stays_len > (LEN_MAX - start_stays_len)) {
         LogError("Too much data to load in '%1'", st.filename);
         return false;
     }
@@ -136,18 +133,22 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
-    set.store.diagnoses.Grow((Size)bh.diagnoses_len);
-    if (st.Read(SIZE(*set.store.diagnoses.ptr) * (Size)bh.diagnoses_len,
-                set.store.diagnoses.end()) != SIZE(*set.store.diagnoses.ptr) * (Size)bh.diagnoses_len)
+    diagnoses.Reserve((Size)bh.diagnoses_len);
+    if (st.Read(SIZE(*diagnoses.ptr) * (Size)bh.diagnoses_len,
+                diagnoses.ptr) != SIZE(*diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
-    set.store.procedures.Grow((Size)bh.procedures_len);
-    if (st.Read(SIZE(*set.store.procedures.ptr) * (Size)bh.procedures_len,
-                set.store.procedures.end()) != SIZE(*set.store.procedures.ptr) * (Size)bh.procedures_len)
-        goto corrupt_error;
+    diagnoses.len += (Size)bh.diagnoses_len;
 
+    procedures.Grow((Size)bh.procedures_len);
+    if (st.Read(SIZE(*procedures.ptr) * (Size)bh.procedures_len,
+                procedures.ptr) != SIZE(*procedures.ptr) * (Size)bh.procedures_len)
+        goto corrupt_error;
+    procedures.len += (Size)bh.procedures_len;
+
+    // Fix Stay diagnosis and procedure pointers
     {
-        Size store_diagnoses_len = set.store.diagnoses.len;
-        Size store_procedures_len = set.store.procedures.len;
+        Size diagnoses_offset = 0;
+        Size procedures_offset = 0;
 
         for (Size i = set.stays.len - (Size)bh.stays_len; i < set.stays.len; i++) {
             mco_Stay *stay = &set.stays[i];
@@ -170,27 +171,25 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
             if (stay->diagnoses.len) {
                 if (UNLIKELY(stay->diagnoses.len < 0))
                     goto corrupt_error;
-                stay->diagnoses.ptr = (DiagnosisCode *)store_diagnoses_len;
-                store_diagnoses_len += stay->diagnoses.len;
-                if (UNLIKELY(store_diagnoses_len <= 0 ||
-                             store_diagnoses_len > start_diagnoses_len + bh.diagnoses_len))
+                stay->diagnoses.ptr = &diagnoses[diagnoses_offset];
+                diagnoses_offset += stay->diagnoses.len;
+                if (UNLIKELY(diagnoses_offset <= 0 || diagnoses_offset > bh.diagnoses_len))
                     goto corrupt_error;
             }
+
             if (stay->procedures.len) {
                 if (UNLIKELY(stay->procedures.len < 0))
                     goto corrupt_error;
-                stay->procedures.ptr = (mco_ProcedureRealisation *)store_procedures_len;
-                store_procedures_len += stay->procedures.len;
-                if (UNLIKELY(store_procedures_len <= 0 ||
-                             store_procedures_len > start_procedures_len + bh.procedures_len))
+                stay->procedures.ptr = &procedures[procedures_offset];
+                procedures_offset += stay->procedures.len;
+                if (UNLIKELY(procedures_offset <= 0 || procedures_offset > bh.procedures_len))
                     goto corrupt_error;
             }
         }
-
-        set.store.diagnoses.len = store_diagnoses_len;
-        set.store.procedures.len = store_procedures_len;
     }
 
+    diagnoses.Leak();
+    procedures.Leak();
 
     // We assume stays are already sorted in pak files
 
@@ -359,6 +358,8 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset += 33; // Skip a bunch of fields
 
+    HeapArray<DiagnosisCode> diagnoses(&out_set->diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures(&out_set->procedures_alloc);
     if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
         if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
                                 (version >= 17 ? 29 : 26) * procedures_count)) {
@@ -366,26 +367,23 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             return false;
         }
 
-        stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
         if (LIKELY(stay.main_diagnosis.IsValid())) {
-            out_set->store.diagnoses.Append(stay.main_diagnosis);
+            diagnoses.Append(stay.main_diagnosis);
         }
         if (stay.linked_diagnosis.IsValid()) {
-            out_set->store.diagnoses.Append(stay.linked_diagnosis);
+            diagnoses.Append(stay.linked_diagnosis);
         }
         for (int i = 0; i < das_count; i++) {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
-                out_set->store.diagnoses.Append(diag);
+                diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
         }
-        stay.diagnoses.len = out_set->store.diagnoses.len - (Size)stay.diagnoses.ptr;
         offset += 8 * dad_count; // Skip documentary diagnoses
 
-        stay.procedures.ptr = (mco_ProcedureRealisation *)out_set->store.procedures.len;
         for (int i = 0; i < procedures_count; i++) {
             mco_ProcedureRealisation proc = {};
 
@@ -414,12 +412,14 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             ParsePmsiInt(ReadFragment(2), &proc.count);
 
             if (LIKELY(proc.proc.IsValid())) {
-                out_set->store.procedures.Append(proc);
+                procedures.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
-        stay.procedures.len = out_set->store.procedures.len - (Size)stay.procedures.ptr;
+
+        stay.diagnoses = diagnoses.TrimAndLeak();
+        stay.procedures = procedures.TrimAndLeak();
     }
 
     if (out_tests && tests) {
@@ -706,32 +706,32 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
 
     for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
-        mco_Stay &stay =out_set->stays[i];
+        mco_Stay &stay = out_set->stays[i];
 
-        stay.diagnoses.ptr = (DiagnosisCode *)out_set->store.diagnoses.len;
+        HeapArray<DiagnosisCode> diagnoses(&out_set->diagnoses_alloc);
         for (Size j = 0; j < stay.diagnoses.len; j++) {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
-                out_set->store.diagnoses.Append(diag);
+                diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
         }
         if (LIKELY(stay.main_diagnosis.IsValid())) {
-            out_set->store.diagnoses.Append(stay.main_diagnosis);
-            stay.diagnoses.len++;
+            diagnoses.Append(stay.main_diagnosis);
         }
         if (stay.linked_diagnosis.IsValid()) {
-            out_set->store.diagnoses.Append(stay.linked_diagnosis);
-            stay.diagnoses.len++;
+            diagnoses.Append(stay.linked_diagnosis);
         }
+
+        stay.diagnoses = diagnoses.TrimAndLeak();
     }
 
     for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
         mco_Stay &stay = out_set->stays[i];
 
-        stay.procedures.ptr = (mco_ProcedureRealisation *)out_set->store.procedures.len;
+        HeapArray<mco_ProcedureRealisation> procedures(&out_set->procedures_alloc);
         for (Size j = 0; j < stay.procedures.len; j++) {
             mco_ProcedureRealisation proc = {};
 
@@ -761,11 +761,13 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             offset += 1; // Skip date compatibility flag
 
             if (LIKELY(proc.proc.IsValid())) {
-                out_set->store.procedures.Append(proc);
+                procedures.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
+
+        stay.procedures = procedures.TrimAndLeak();
     }
 
     if (out_tests) {
@@ -781,12 +783,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
                                   HashTable<int32_t, mco_Test> *out_tests)
 {
     Size stays_len = set.stays.len;
-    DEFER_NC(set_guard, diagnoses_len = set.store.diagnoses.len,
-                        procedures_len = set.store.procedures.len) {
-        set.stays.RemoveFrom(stays_len);
-        set.store.diagnoses.RemoveFrom(diagnoses_len);
-        set.store.procedures.RemoveFrom(procedures_len);
-    };
+    DEFER_N(set_guard) { set.stays.RemoveFrom(stays_len); };
 
     Size errors = 0;
     {
@@ -950,11 +947,6 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
 
 bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
 {
-    for (mco_Stay &stay: set.stays) {
-        stay.diagnoses.ptr = set.store.diagnoses.ptr + (Size)stay.diagnoses.ptr;
-        stay.procedures.ptr = set.store.procedures.ptr + (Size)stay.procedures.ptr;
-    }
-
     // Build FICHCOMP map
     HashMap<int32_t, const FichCompData *> fichcomps_map;
     std::sort(fichcomps.begin(), fichcomps.end(),

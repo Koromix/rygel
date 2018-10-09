@@ -135,8 +135,11 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                           HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
-    out_stay_set->store.diagnoses.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
-    out_stay_set->store.procedures.Reserve(procedures_end - procedures_offset);
+
+    HeapArray<DiagnosisCode> diagnoses2(&out_stay_set->diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->diagnoses_alloc);
+    diagnoses2.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
+    procedures2.Reserve(procedures_end - procedures_offset);
 
     Size j = diagnoses_offset;
     Size k = procedures_offset;
@@ -195,7 +198,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         }
         stay.dip_count = stays.dip[i];
 
-        stay.diagnoses.ptr = out_stay_set->store.diagnoses.end();
+        stay.diagnoses.ptr = diagnoses2.end();
         if (diagnoses.type.Len()) {
             while (UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
                 j++;
@@ -227,7 +230,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                         case 's':
                         case 'S': {
                             if (LIKELY(diag.IsValid())) {
-                                out_stay_set->store.diagnoses.Append(diag);
+                                diagnoses2.Append(diag);
                             } else {
                                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                             }
@@ -272,18 +275,19 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
 
-                out_stay_set->store.diagnoses.Append(diag);
+                diagnoses2.Append(diag);
             }
         }
         if (stay.main_diagnosis.IsValid()) {
-            out_stay_set->store.diagnoses.Append(stay.main_diagnosis);
+            diagnoses2.Append(stay.main_diagnosis);
         }
         if (stay.linked_diagnosis.IsValid()) {
-            out_stay_set->store.diagnoses.Append(stay.linked_diagnosis);
+            diagnoses2.Append(stay.linked_diagnosis);
         }
-        stay.diagnoses.len = out_stay_set->store.diagnoses.end() - stay.diagnoses.ptr;
 
-        stay.procedures.ptr = out_stay_set->store.procedures.end();
+        stay.diagnoses.len = diagnoses2.end() - stay.diagnoses.ptr;
+
+        stay.procedures.ptr = procedures2.end();
         while (UNLIKELY(k < procedures_end && procedures.id[k] < stays.id[i])) {
             k++;
         }
@@ -324,12 +328,12 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             }
 
             if (LIKELY(proc.proc.IsValid())) {
-                out_stay_set->store.procedures.Append(proc);
+                procedures2.Append(proc);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedProcedureCode;
             }
         }
-        stay.procedures.len = out_stay_set->store.procedures.end() - stay.procedures.ptr;
+        stay.procedures.len = procedures2.end() - stay.procedures.ptr;
 
         out_stay_set->stays.Append(stay);
     }
@@ -340,6 +344,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     // because it has some overhead caused by multi-stays.
     mco_ClassifySerial(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
                        flags, out_results, out_mono_results);
+
+    diagnoses2.Leak();
+    procedures2.Leak();
 
     return true;
 }
@@ -1202,6 +1209,13 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
     if (stay_set.stays.len >= INT_MAX)
         Rcpp::stop("Cannot load more than %1 stays in data.frame", INT_MAX);
 
+    Size diagnoses_count = 0;
+    Size procedures_count = 0;
+    for (const mco_Stay &stay: stay_set.stays) {
+        diagnoses_count += stay.diagnoses.len;
+        procedures_count += stay.procedures.len;
+    }
+
     SEXP stays_df;
     SEXP diagnoses_df;
     SEXP procedures_df;
@@ -1231,11 +1245,11 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
         Rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
         Rcc_Vector<int> stays_dip = stays_builder.Add<int>("dip");
 
-        Rcc_DataFrameBuilder diagnoses_builder(stay_set.store.diagnoses.len);
+        Rcc_DataFrameBuilder diagnoses_builder(diagnoses_count);
         Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
         Rcc_Vector<const char *> diagnoses_diag = diagnoses_builder.Add<const char *>("diag");
 
-        Rcc_DataFrameBuilder procedures_builder(stay_set.store.procedures.len);
+        Rcc_DataFrameBuilder procedures_builder(procedures_count);
         Rcc_Vector<int> procedures_id = procedures_builder.Add<int>("id");
         Rcc_Vector<const char *> procedures_proc = procedures_builder.Add<const char *>("code");
         Rcc_Vector<int> procedures_extension = procedures_builder.Add<int>("extension");

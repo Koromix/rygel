@@ -139,10 +139,8 @@ struct mco_Test {
 struct mco_StaySet {
     HeapArray<mco_Stay> stays;
 
-    struct {
-        HeapArray<DiagnosisCode> diagnoses;
-        HeapArray<mco_ProcedureRealisation> procedures;
-    } store;
+    BlockAllocator diagnoses_alloc {2048 * SIZE(DiagnosisCode)};
+    BlockAllocator procedures_alloc {2048 * SIZE(mco_ProcedureRealisation)};
 
     bool SavePack(StreamWriter &st) const;
     bool SavePack(const char *filename) const;
