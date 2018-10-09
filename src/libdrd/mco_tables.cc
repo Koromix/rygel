@@ -989,7 +989,7 @@ bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &tab
                          mco_SupplementCounters<int32_t> *out_supplement_prices)
 {
     DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
-    mco_SupplementCounters<int32_t> supplement_prices;
+    mco_SupplementCounters<int32_t> supplement_prices = {};
 
     double ghs_coefficient = 0.0;
     {
