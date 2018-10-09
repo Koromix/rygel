@@ -426,7 +426,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
             exit_date.Set(k, result.stays[result.stays.len - 1].exit.date);
             stays[k] = (int)result.stays.len;
             duration[k] = (result.duration >= 0) ? result.duration : NA_INTEGER;
-            main_stay[k] = (int)result.main_stay_idx + 1;
+            main_stay[k] = result.main_stay_idx + 1;
             if (result.ghm.IsValid()) {
                 ghm.Set(k, result.ghm.ToString(buf));
                 main_error[k] = result.main_error;

@@ -33,9 +33,9 @@ struct mco_PreparedStay {
     };
 
     const mco_Stay *stay;
-    int duration;
-    int age;
-    int age_days;
+    int16_t duration;
+    int16_t age;
+    int32_t age_days;
 
     const mco_DiagnosisInfo *main_diag_info;
     const mco_DiagnosisInfo *linked_diag_info;
@@ -65,7 +65,7 @@ struct mco_PreparedSet {
 
 struct mco_ErrorSet {
     int16_t main_error = 0;
-    int priority = 0;
+    int16_t priority = 0;
     Bitset<512> errors;
 };
 
@@ -73,13 +73,13 @@ struct mco_Result {
     Span<const mco_Stay> stays;
 
     const mco_TableIndex *index;
-    Size main_stay_idx;
-    int duration;
+    int16_t main_stay_idx;
+    int16_t duration;
     mco_GhmCode ghm;
     int16_t main_error;
 
     mco_GhsCode ghs;
-    int ghs_duration;
+    int16_t ghs_duration;
 
     mco_SupplementCounters<int16_t> supplement_days;
 };
@@ -106,7 +106,7 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
                         unsigned int flags, mco_ErrorSet *out_errors);
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        mco_GhmCode ghm, unsigned int flags, int *out_ghs_duration = nullptr);
+                        mco_GhmCode ghm, unsigned int flags, int16_t *out_ghs_duration = nullptr);
 void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                           const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,

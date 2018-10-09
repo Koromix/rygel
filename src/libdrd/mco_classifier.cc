@@ -17,11 +17,12 @@ struct RunGhmTreeContext {
     int gnn;
 };
 
-static int ComputeAge(Date date, Date birthdate)
+static int16_t ComputeAge(Date date, Date birthdate)
 {
-    int age = date.st.year - birthdate.st.year;
+    int16_t age = (int16_t)(date.st.year - birthdate.st.year);
     age -= (date.st.month < birthdate.st.month ||
             (date.st.month == birthdate.st.month && date.st.day < birthdate.st.day));
+
     return age;
 }
 
@@ -151,7 +152,7 @@ static const mco_PreparedStay *FindMainStay(Span<const mco_PreparedStay> mono_pr
     return score_prep;
 }
 
-static bool SetError(mco_ErrorSet *error_set, int16_t error, int priority = 1)
+static bool SetError(mco_ErrorSet *error_set, int16_t error, int16_t priority = 1)
 {
     if (!error)
         return true;
@@ -1617,7 +1618,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
             const mco_Stay &mono_stay = *mono_prep.stay;
             if (authorization_set.TestAuthorization(mono_stay.unit, mono_stay.exit.date,
                                                     ghm_to_ghs_info.unit_authorization)) {
-                duration += std::max(1, mono_prep.duration);
+                duration += std::max((int16_t)1, mono_prep.duration);
                 authorized = true;
             }
         }
@@ -1663,7 +1664,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        mco_GhmCode ghm, unsigned int /*flags*/, int *out_ghs_duration)
+                        mco_GhmCode ghm, unsigned int /*flags*/, int16_t *out_ghs_duration)
 {
     const mco_Stay &stay = *prep.stay;
 
@@ -1982,7 +1983,7 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
         });
 
         if (ant_diag) {
-            int ant_days = prep.childbirth_date - stay.entry.date - 2;
+            int16_t ant_days = prep.childbirth_date - stay.entry.date - 2;
             for (Size i = 0; ant_days > 0; i++) {
                 int mono_ant_days = std::min(mono_preps[i].duration, ant_days);
                 AddToCounter(i, (int)mco_SupplementType::Ant, mono_ant_days);
@@ -2022,11 +2023,11 @@ static Size Classify(const mco_TableSet &table_set,
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
-        result.duration = prepared_set.prep.duration;
+        result.duration = (int16_t)prepared_set.prep.duration;
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
-            result.main_stay_idx = prepared_set.main_prep - prepared_set.mono_preps.ptr;
+            result.main_stay_idx = (int16_t)(prepared_set.main_prep - prepared_set.mono_preps.ptr);
             result.ghm = mco_PickGhm(*prepared_set.index,
                                      prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
@@ -2073,12 +2074,12 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
-        result.duration = prepared_set.prep.duration;
+        result.duration = (int16_t)prepared_set.prep.duration;
         mono_results.AppendDefault(result.stays.len);
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
-            result.main_stay_idx = prepared_set.main_prep - prepared_set.mono_preps.ptr;
+            result.main_stay_idx = (int16_t)(prepared_set.main_prep - prepared_set.mono_preps.ptr);
             result.ghm = mco_PickGhm(*prepared_set.index,
                                      prepared_set.prep, prepared_set.mono_preps, flags, &errors);
         }
@@ -2111,7 +2112,7 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
                 mono_result->stays = *mono_prep.stay;
                 mono_result->main_stay_idx = 0;
                 mono_result->index = prepared_set.index;
-                mono_result->duration = mono_prep.duration;
+                mono_result->duration = (int16_t)mono_prep.duration;
 
                 if (!result.ghm.IsError()) {
                     int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
