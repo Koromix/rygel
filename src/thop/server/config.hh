@@ -6,14 +6,13 @@
 
 #include "../../common/kutil.hh"
 
-// TODO: Streamline storage of allow / deny rules
 struct User {
     const char *name;
     const char *password_hash;
 
     bool allow_default;
-    HeapArray<const char *> allow;
-    HeapArray<const char *> deny;
+    Span<const char *> allow;
+    Span<const char *> deny;
 
     unsigned int dispense_modes;
 
@@ -24,7 +23,9 @@ struct UserSet {
     HeapArray<User> users;
     HashTable<const char *, const User *> map;
 
-    BlockAllocator str_alloc {Kibibytes(32)};
+    BlockAllocator allow_alloc {Kibibytes(4)};
+    BlockAllocator deny_alloc {Kibibytes(4)};
+    BlockAllocator str_alloc {Kibibytes(16)};
 
     const User *FindUser(const char *name) const { return map.FindValue(name, nullptr); }
 };
@@ -54,7 +55,7 @@ struct StructureSet {
     mco_DispenseMode dispense_mode;
     HeapArray<Structure> structures;
 
-    BlockAllocator str_alloc {Kibibytes(32)};
+    BlockAllocator str_alloc {Kibibytes(16)};
 };
 
 class StructureSetBuilder {

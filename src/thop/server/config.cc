@@ -14,6 +14,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
     bool valid = true;
     {
+        HeapArray<const char *> allow(&set.allow_alloc);
+        HeapArray<const char *> deny(&set.deny_alloc);
+
         IniProperty prop;
         while (ini.Next(&prop)) {
             User user = {};
@@ -44,9 +47,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     }
                     changed_allow_default = true;
                 } else if (prop.key == "Allow") {
-                    user.allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                    allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
-                    user.deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                    deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "DispenseModes") {
                     if (prop.value == "All") {
                         user.dispense_modes = UINT_MAX;
@@ -77,6 +80,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     valid = false;
                 }
             } while (ini.NextInSection(&prop));
+
+            user.allow = allow.TrimAndLeak();
+            user.deny = deny.TrimAndLeak();
 
             if (copy_from_idx >= 0) {
                 const User &base_user = set.users[copy_from_idx];
