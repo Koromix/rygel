@@ -41,14 +41,14 @@ public:
     void Finish(UserSet *out_set);
 };
 
-struct Unit {
-    UnitCode unit;
+struct StructureEntity {
     const char *path;
+    UnitCode unit;
 };
 
 struct Structure {
     const char *name;
-    HeapArray<Unit> units;
+    HeapArray<StructureEntity> entities;
 };
 
 struct StructureSet {

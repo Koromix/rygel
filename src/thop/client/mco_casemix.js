@@ -221,6 +221,11 @@ let mco_casemix = {};
                 default_algorithm = json.default_algorithm;
                 structures = json.structures;
 
+                for (let structure of structures) {
+                    for (let ent of structure.entities)
+                        ent.path = ent.path.substr(1).split('|');
+                }
+
                 prev_url_key = user.getUrlKey();
             });
         }
@@ -312,24 +317,22 @@ let mco_casemix = {};
         for (const structure of structures) {
             let prev_groups = [];
             builder.createTab(structure.name);
-            for (const unit of structure.units) {
-                let parts = unit.path.substr(1).split('|');
-
+            for (const ent of structure.entities) {
                 let common_len = 0;
-                while (common_len < parts.length - 1 && common_len < prev_groups.length &&
-                       parts[common_len] === prev_groups[common_len])
+                while (common_len < ent.path.length - 1 && common_len < prev_groups.length &&
+                       ent.path[common_len] === prev_groups[common_len])
                     common_len++;
                 while (prev_groups.length > common_len) {
                     builder.endGroup();
                     prev_groups.pop();
                 }
-                for (let k = common_len; k < parts.length - 1; k++) {
-                    builder.beginGroup(parts[k]);
-                    prev_groups.push(parts[k]);
+                for (let k = common_len; k < ent.path.length - 1; k++) {
+                    builder.beginGroup(ent.path[k]);
+                    prev_groups.push(ent.path[k]);
                 }
 
-                builder.addOption(parts[parts.length - 1], unit.unit,
-                                  {selected: units.includes(unit.unit.toString())});
+                builder.addOption(ent.path[ent.path.length - 1], ent.unit,
+                                  {selected: units.includes(ent.unit.toString())});
             }
         }
 

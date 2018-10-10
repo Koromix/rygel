@@ -5,10 +5,10 @@
 #include "thop.hh"
 #include "thop_mco.hh"
 
-static bool CheckUnitAgainstUser(const User &user, const Unit &unit)
+static bool CheckUnitAgainstUser(const User &user, const StructureEntity &ent)
 {
     const auto CheckNeedle = [&](const char *needle) {
-        return !!strstr(unit.path, needle);
+        return !!strstr(ent.path, needle);
     };
 
     if (user.allow_default) {
@@ -44,9 +44,9 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
     // TODO: Cache in session object (also neeeded in ProduceClassify)?
     HashSet<UnitCode> allowed_units;
     for (const Structure &structure: thop_structure_set.structures) {
-        for (const Unit &unit: structure.units) {
-            if (CheckUnitAgainstUser(*conn->user, unit))
-                allowed_units.Append(unit.unit);
+        for (const StructureEntity &ent: structure.entities) {
+            if (CheckUnitAgainstUser(*conn->user, ent))
+                allowed_units.Append(ent.unit);
         }
     }
 
@@ -83,12 +83,12 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
         for (const Structure &structure: thop_structure_set.structures) {
             writer.StartObject();
             writer.Key("name"); writer.String(structure.name);
-            writer.Key("units"); writer.StartArray();
-            for (const Unit &unit: structure.units) {
-                if (allowed_units.Find(unit.unit)) {
+            writer.Key("entities"); writer.StartArray();
+            for (const StructureEntity &ent: structure.entities) {
+                if (allowed_units.Find(ent.unit)) {
                     writer.StartObject();
-                    writer.Key("unit"); writer.Int(unit.unit.number);
-                    writer.Key("path"); writer.String(unit.path);
+                    writer.Key("unit"); writer.Int(ent.unit.number);
+                    writer.Key("path"); writer.String(ent.path);
                     writer.EndObject();
                 }
             }
@@ -170,9 +170,9 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
     HashSet<UnitCode> allowed_units;
     for (const Structure &structure: thop_structure_set.structures) {
-        for (const Unit &unit: structure.units) {
-            if (CheckUnitAgainstUser(*conn->user, unit))
-                allowed_units.Append(unit.unit);
+        for (const StructureEntity &ent: structure.entities) {
+            if (CheckUnitAgainstUser(*conn->user, ent))
+                allowed_units.Append(ent.unit);
         }
     }
 

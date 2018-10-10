@@ -191,23 +191,23 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                 structure.name = MakeString(&set.str_alloc, prop.section).ptr;
 
                 do {
-                    Unit unit = {};
+                    StructureEntity ent = {};
 
-                    unit.unit = UnitCode::FromString(prop.key);
-                    valid &= unit.unit.IsValid();
+                    ent.unit = UnitCode::FromString(prop.key);
+                    valid &= ent.unit.IsValid();
 
-                    unit.path = MakeString(&set.str_alloc, prop.value).ptr;
-                    if (unit.path[0] != '|' || !unit.path[1]) {
+                    ent.path = MakeString(&set.str_alloc, prop.value).ptr;
+                    if (ent.path[0] != '|' || !ent.path[1]) {
                         LogError("Unit path does not start with '|'");
                         valid = false;
                     }
 
-                    structure.units.Append(unit);
+                    structure.entities.Append(ent);
                 } while (ini.NextInSection(&prop));
 
-                std::sort(structure.units.begin(), structure.units.end(),
-                          [](const Unit &unit1, const Unit &unit2) {
-                    return CmpStr(unit1.path, unit2.path) < 0;
+                std::sort(structure.entities.begin(), structure.entities.end(),
+                          [](const StructureEntity &ent1, const StructureEntity &ent2) {
+                    return CmpStr(ent1.path, ent2.path) < 0;
                 });
 
                 if (map.Append(structure.name).second) {
