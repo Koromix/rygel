@@ -197,8 +197,8 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                     valid &= unit.unit.IsValid();
 
                     unit.path = MakeString(&set.str_alloc, prop.value).ptr;
-                    if (unit.path[0] != ':' || unit.path[1] != ':' || !unit.path[2]) {
-                        LogError("Unit path does not start with '::'");
+                    if (unit.path[0] != '|' || !unit.path[1]) {
+                        LogError("Unit path does not start with '|'");
                         valid = false;
                     }
 

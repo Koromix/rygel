@@ -313,7 +313,7 @@ let mco_casemix = {};
             let prev_groups = [];
             builder.createTab(structure.name);
             for (const unit of structure.units) {
-                let parts = unit.path.substr(2).split('::');
+                let parts = unit.path.substr(1).split('|');
 
                 let common_len = 0;
                 while (common_len < parts.length - 1 && common_len < prev_groups.length &&
