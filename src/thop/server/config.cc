@@ -205,6 +205,11 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                     structure.units.Append(unit);
                 } while (ini.NextInSection(&prop));
 
+                std::sort(structure.units.begin(), structure.units.end(),
+                          [](const Unit &unit1, const Unit &unit2) {
+                    return CmpStr(unit1.path, unit2.path) < 0;
+                });
+
                 if (map.Append(structure.name).second) {
                     set.structures.Append(structure);
                 } else {
