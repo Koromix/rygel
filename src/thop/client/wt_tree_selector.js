@@ -10,6 +10,7 @@ function TreeSelector(prefix)
 
     let self = this;
     let widget = null;
+    let curtab = null;
     let summary = null;
     let tabbar = null;
     let view = null;
@@ -69,6 +70,9 @@ function TreeSelector(prefix)
             if (!widget.hasClass('active') && self.changeHandler)
                 setTimeout(function() { self.changeHandler.call(widget); }, 0);
         }
+
+        if (!curtab.hasClass('hide'))
+            curtab.innerHTML = tabbar.childNodes[self.getActiveTab()].innerHTML;
 
         summary.innerHTML = '';
         summary.appendChild(document.createTextNode(prefix));
@@ -151,6 +155,7 @@ function TreeSelector(prefix)
     this.createTab = function(name, active) {
         if (tabbar.hasClass('hide')) {
             tabbar.removeClass('hide');
+            curtab.removeClass('hide');
         } else {
             list = html('div', {class: 'tsel_list'});
             view.appendChild(list);
@@ -251,7 +256,10 @@ function TreeSelector(prefix)
         html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
         html('div', {class: 'tsel_main'},
-            html('div', {class: 'tsel_summary', click: function(e) { self.toggle(); }}),
+            html('div', {class: 'tsel_rect', click: function(e) { self.toggle(); }},
+                 html('div', {class: 'tsel_curtab hide'}),
+                 html('div', {class: 'tsel_summary'})
+            ),
             html('div', {class: 'tsel_view'},
                 html('div', {class: 'tsel_tabbar hide'}),
                 html('div', {class: 'tsel_shortcuts'},
@@ -263,6 +271,7 @@ function TreeSelector(prefix)
             )
         ),
     );
+    curtab = widget.query('.tsel_curtab');
     summary = widget.query('.tsel_summary');
     tabbar = widget.query('.tsel_tabbar');
     view = widget.query('.tsel_view');
