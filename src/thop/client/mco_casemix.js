@@ -615,10 +615,9 @@ let mco_casemix = {};
             partial_price_cents: 0
         };
 
-        for (const row of rows) {
-            let ptr = map;
-
-            for (let i = 0; i < by.length; i++) {
+        function aggregateRec(row, ptr, idx)
+        {
+            for (let i = idx; i < by.length; i++) {
                 let key = by[i];
                 let value;
                 if (typeof key === 'function') {
@@ -627,11 +626,32 @@ let mco_casemix = {};
                     value = row[key];
                 }
 
+                // Use recursion to deal with cases where we need to aggregate on
+                // multi-valued value.
+                if (Array.isArray(value)) {
+                    if (values.length > 1) {
+                        const values = value;
+                        for (const value of values) {
+                            if (ptr[value] === undefined)
+                                ptr[value] = {};
+                            template[key] = value;
+
+                            aggregateRec(row, ptr[value], i + 1);
+                        }
+
+                        return;
+                    } else if (values.length === 1) {
+                        value = value[0];
+                    } else {
+                        value = null;
+                    }
+                }
+
                 if (ptr[value] === undefined)
                     ptr[value] = {};
-                ptr = ptr[value];
-
                 template[key] = value;
+
+                ptr = ptr[value];
             }
 
             if (ptr.count === undefined) {
@@ -646,6 +666,9 @@ let mco_casemix = {};
             ptr.price_cents += row.price_cents;
             ptr.partial_price_cents += row.partial_price_cents;
         }
+
+        for (const row of rows)
+            aggregateRec(row, map, 0);
 
         return [list, map];
     }
