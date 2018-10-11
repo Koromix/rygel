@@ -409,7 +409,7 @@ let mco_casemix = {};
 
         // Aggregate
         let stat1 = aggregate(mix_rows)[0][0];
-        let [stats2, stats2_map] = aggregate(mix_rows, ['ghm_root']);
+        let [stats2, stats2_map] = aggregate(mix_rows, 'ghm_root');
         let ghm_roots = stats2
             // .sort(function(a, b) { return b.count - a.count; })
             .map(function(stat) { return stat.ghm_root; });
@@ -509,7 +509,7 @@ let mco_casemix = {};
             // FIXME: Ugly as hell
             let diff = (mix_url.indexOf('diff=') >= 0);
 
-            let [stats, stats_map] = aggregate(rows, ['ghm', 'duration']);
+            let [stats, stats_map] = aggregate(rows, 'ghm', 'duration');
 
             let max_duration = 20;
             let max_count = 0;
@@ -600,29 +600,42 @@ let mco_casemix = {};
 
     function aggregate(rows, by)
     {
-        if (by === undefined)
-            by = [];
+        if (!Array.isArray(by))
+            by = Array.prototype.slice.call(arguments, 1);
 
         let list = [];
         let map = {};
 
+        let template = {
+            count: 0,
+            deaths: 0,
+            mono_count: 0,
+            partial_mono_count: 0,
+            price_cents: 0,
+            partial_price_cents: 0
+        };
+
         for (const row of rows) {
             let ptr = map;
-            for (const k of by) {
-                if (ptr[row[k]] === undefined)
-                    ptr[row[k]] = {};
-                ptr = ptr[row[k]];
-            }
-            if (ptr.count === undefined) {
-                for (const k of by)
-                    ptr[k] = row[k];
-                ptr.count = 0;
-                ptr.mono_count = 0;
-                ptr.partial_mono_count = 0;
-                ptr.deaths = 0;
-                ptr.price_cents = 0;
-                ptr.partial_price_cents = 0;
 
+            for (let i = 0; i < by.length; i++) {
+                let key = by[i];
+                let value;
+                if (typeof key === 'function') {
+                    [key, value] = key(row);
+                } else {
+                    value = row[key];
+                }
+
+                if (ptr[value] === undefined)
+                    ptr[value] = {};
+                ptr = ptr[value];
+
+                template[key] = value;
+            }
+
+            if (ptr.count === undefined) {
+                Object.assign(ptr, template);
                 list.push(ptr);
             }
 
@@ -637,11 +650,14 @@ let mco_casemix = {};
         return [list, map];
     }
 
-    function findAggregate(map)
+    function findAggregate(map, values)
     {
+        if (!Array.isArray(values))
+            values = Array.prototype.slice.call(arguments, 1);
+
         let ptr = map;
-        for (let i = 1; i < arguments.length; i++) {
-            ptr = ptr[arguments[i]];
+        for (const value of values) {
+            ptr = ptr[value];
             if (ptr === undefined)
                 return null;
         }
