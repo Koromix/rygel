@@ -312,7 +312,7 @@ let mco_casemix = {};
 
     function refreshStructures(units)
     {
-        let builder = new TreeSelector('Unités médicales : ');
+        let builder = new TreeSelector('Unités : ');
 
         for (const structure of structures) {
             let prev_groups = [];
