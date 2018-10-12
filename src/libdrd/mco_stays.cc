@@ -222,11 +222,13 @@ static bool ParsePmsiInt(Span<const char> str, T *out_value)
     if (UNLIKELY((unsigned int)(str[0] - '0') > 9))
         return false;
 
-    std::pair<T, bool> ret = ParseDec<T>(str, 0, &str);
-    if (LIKELY(ret.second && (!str.len || str[0] == ' '))) {
-        *out_value = ret.first;
+    T value;
+    if (LIKELY(ParseDec<T>(str, &value, 0, &str))) {
+        *out_value = value;
+        return true;
+    } else {
+        return (!str.len || str[0] == ' ');
     }
-    return ret.second;
 }
 
 static bool ParsePmsiDate(Span<const char> str, Date *out_date)

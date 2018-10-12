@@ -194,8 +194,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
             Span<const char> part = SplitStrAny(units_str, " ,+", &units_str);
 
             if (part.len) {
-                UnitCode unit;
-                unit.number = ParseDec<int16_t>(part).first;
+                UnitCode unit = UnitCode::FromString(part);
                 if (!unit.IsValid())
                     return CreateErrorPage(422, out_response);
 

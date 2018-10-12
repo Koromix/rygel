@@ -2935,18 +2935,6 @@ overflow:
     return false;
 }
 
-template <typename T>
-std::pair<T, bool> ParseDec(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                            Span<const char> *out_remaining = nullptr)
-{
-    T value;
-    if (ParseDec(str, &value, flags, out_remaining)) {
-        return {value, true};
-    } else {
-        return {0, false};
-    }
-}
-
 // ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------

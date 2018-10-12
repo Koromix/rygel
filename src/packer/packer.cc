@@ -132,14 +132,12 @@ Available compression types:)", CompressionTypeNames[0]);
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
-                std::pair<int, bool> ret = ParseDec<int>(opt_parser.current_value);
-                if (!ret.second)
+                if (!ParseDec<int>(opt_parser.current_value, &depth))
                     return 1;
-                if (ret.first <= 0) {
+                if (depth <= 0) {
                     LogError("Option --depth requires value > 0");
                     return 1;
                 }
-                depth = ret.first;
             } else if (TestOption(opt, "--span_name")) {
                 span_name = opt_parser.RequireValue(PrintUsage);
                 if (!span_name)
