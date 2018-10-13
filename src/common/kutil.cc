@@ -2444,7 +2444,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             }
 
             error_guard.disable();
-            current_section.Clear(128);
+            current_section.RemoveFrom(0);
             current_section.Append(section);
             return LineType::Section;
         } else {

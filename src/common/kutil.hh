@@ -957,12 +957,10 @@ public:
         return *this;
     }
 
-    void Clear(Size reserve_capacity = 0)
+    void Clear()
     {
         RemoveFrom(0);
-        if (capacity > reserve_capacity) {
-            SetCapacity(reserve_capacity);
-        }
+        SetCapacity(0);
     }
 
     operator Span<T>() { return Span<T>(ptr, len); }

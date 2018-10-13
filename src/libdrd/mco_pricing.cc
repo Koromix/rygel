@@ -212,7 +212,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
                 Span<mco_Pricing> sub_mono_pricings = out_mono_pricings->Take(j, pricing.stays_count);
                 j += pricing.stays_count;
 
-                coefficients.Clear(64);
+                coefficients.RemoveFrom(0);
                 double coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
                                                                  dispense_mode, &coefficients);
 

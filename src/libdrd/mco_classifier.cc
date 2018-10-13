@@ -273,7 +273,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int
             diagnoses_count += mono_stay.diagnoses.len;
         }
 
-        out_prepared_set->store.diagnoses.Clear(512);
+        out_prepared_set->store.diagnoses.RemoveFrom(0);
         out_prepared_set->store.diagnoses.Grow(2 * diagnoses_count);
     }
 
@@ -382,7 +382,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
     }
 
     // We cannot allow the HeapArray to move
-    out_prepared_set->store.procedures.Clear(1024);
+    out_prepared_set->store.procedures.RemoveFrom(0);
     out_prepared_set->store.procedures.Grow(max_pointers_count + max_procedures_count);
     out_prepared_set->store.procedures.len = max_pointers_count;
 
@@ -947,7 +947,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     // Reset cache
     out_prepared_set->prep = {};
     out_prepared_set->prep.duration = -1;
-    out_prepared_set->mono_preps.Clear(64);
+    out_prepared_set->mono_preps.RemoveFrom(0);
     for (const mco_Stay &mono_stay: mono_stays) {
         mco_PreparedStay mono_prep = {};
         mono_prep.stay = &mono_stay;
@@ -2067,7 +2067,7 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
     Size i, j = 0;
     for (i = 0; mono_stays.len; i++) {
         mco_Result result = {};
-        mono_results.Clear(64);
+        mono_results.RemoveFrom(0);
 
         // Prepare
         errors.main_error = 0;
