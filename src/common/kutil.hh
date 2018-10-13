@@ -1652,9 +1652,27 @@ public:
                 data[i].~ValueType();
             }
         }
-        count = 0;
 
+        count = 0;
         Rehash(0);
+    }
+
+    void RemoveAll()
+    {
+#if __cplusplus >= 201703L
+        StaticAssert(!std::is_pointer<ValueType>::value);
+#endif
+
+        for (Size i = 0; i < capacity; i++) {
+            if (!IsEmpty(i)) {
+                data[i].~ValueType();
+            }
+        }
+
+        count = 0;
+        if (used) {
+            memset(used, 0, (size_t)(capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t));
+        }
     }
 
     Iterator<HashTable> begin() { return Iterator<HashTable>(this, 0); }
@@ -1834,7 +1852,8 @@ private:
             capacity = 0;
         }
 
-        Allocator::Release(allocator, old_used, (old_capacity + 1) / 8);
+        Allocator::Release(allocator, old_used,
+                           (old_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t));
         Allocator::Release(allocator, old_data, old_capacity * SIZE(ValueType));
     }
 
@@ -1970,6 +1989,7 @@ public:
     HashTable<KeyType, Bucket> table;
 
     void Clear() { table.Clear(); }
+    void RemoveAll() { table.RemoveAll(); }
 
     std::pair<ValueType *, bool> Append(const KeyType &key, const ValueType &value)
     {
@@ -2032,6 +2052,7 @@ public:
     HashTable<ValueType, ValueType, Handler> table;
 
     void Clear() { table.Clear(); }
+    void RemoveAll() { table.RemoveAll(); }
 
     std::pair<ValueType *, bool> Append(const ValueType &value) { return table.Append(value); }
     ValueType *Set(const ValueType &value) { return table.Set(value); }
