@@ -1681,10 +1681,6 @@ public:
         return it ? *it : default_value;
     }
 
-    std::pair<ValueType *, bool> AppendUninitialized(const KeyType &key)
-    {
-        return Insert(key);
-    }
     std::pair<ValueType *, bool> Append(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
@@ -1694,16 +1690,26 @@ public:
         }
         return ret;
     }
-
-    ValueType *SetUninitialized(const KeyType &key)
+    std::pair<ValueType *, bool> AppendDefault(const KeyType &key)
     {
-        return Insert(key, true).first;
+        std::pair<ValueType *, bool> ret = Insert(key);
+        if (ret.second) {
+            new (ret.first) ValueType();
+        }
+        return ret;
     }
+
     ValueType *Set(const ValueType &value)
     {
         const KeyType &key = Handler::GetKey(value);
         ValueType *it = Insert(key).first;
         *it = value;
+        return it;
+    }
+    ValueType *SetDefault(const KeyType &key)
+    {
+        ValueType *it = Insert(key);
+        new (it) ValueType();
         return it;
     }
 
@@ -1970,20 +1976,18 @@ public:
         std::pair<Bucket *, bool> ret = table.Append({key, value});
         return { &ret.first->value, ret.second };
     }
-    std::pair<ValueType *, bool> AppendUninitialized(const KeyType &key)
+    std::pair<ValueType *, bool> AppendDefault(const KeyType &key)
     {
-        std::pair<Bucket *, bool> ret = table.AppendUninitialized(key);
-        if (ret.second) {
-            ret.first->key = key;
-        }
+        std::pair<Bucket *, bool> ret = table.AppendDefault(key);
+        ret.first->key = key;
         return { &ret.first->value, ret.second };
     }
 
     ValueType *Set(const KeyType &key, const ValueType &value)
         { return &table.Set({key, value})->value; }
-    ValueType *SetUninitialized(const KeyType &key)
+    ValueType *SetDefault(const KeyType &key)
     {
-        Bucket *table_it = table.Set(key);
+        Bucket *table_it = table.SetDefault(key);
         table_it->key = key;
         return &table_it->value;
     }

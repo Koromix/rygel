@@ -176,7 +176,7 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
         // std::atomic objects are not copyable so we can't use Append()
         Session *session;
         {
-            std::pair<Session *, bool> ret = sessions.AppendUninitialized(session_key);
+            std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
             if (!ret.second) {
                 LogError("Generated duplicate session key");
                 return CreateErrorPage(500, out_response);
