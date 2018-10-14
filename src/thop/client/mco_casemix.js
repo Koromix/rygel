@@ -60,9 +60,11 @@ let mco_casemix = {};
             if (!route.algorithm)
                 route.algorithm = default_algorithm;
 
-            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-            updateCasemix(route.period[0], route.period[1], route.algorithm,
-                          prev_period[0], prev_period[1], route.refresh);
+            if (start_date) {
+                let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
+                updateCasemix(route.period[0], route.period[1], route.algorithm,
+                              prev_period[0], prev_period[1], route.refresh);
+            }
         }
         delete route.refresh;
 
@@ -244,7 +246,7 @@ let mco_casemix = {};
         let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
 
         mix_ready = (url === mix_url);
-        if (!refresh || mix_ready)
+        if ((!refresh || mix_ready) && params.key === mix_params.key)
             return;
 
         data.get(url, function(json) {
