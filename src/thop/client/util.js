@@ -225,12 +225,15 @@ function buildUrl(url, query_values)
 // Misc
 // ------------------------------------------------------------------------
 
-function needsRefresh(func, args)
+function needsRefresh(func, key, args)
 {
+    if (func.prev_args_json === undefined)
+        func.prev_args_json = {};
+
     let args_json = JSON.stringify(args);
 
-    if (args_json !== func.prev_args_json) {
-        func.prev_args_json = args_json;
+    if (args_json !== func.prev_args_json[key]) {
+        func.prev_args_json[key] = args_json;
         return true;
     } else {
         return false;

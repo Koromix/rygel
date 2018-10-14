@@ -85,7 +85,7 @@ let mco_tree = {};
 
     function refreshTree(nodes)
     {
-        if (!needsRefresh(refreshTree, arguments))
+        if (!needsRefresh(refreshTree, null, arguments))
             return;
 
         let ul;

@@ -218,7 +218,7 @@ let mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshPriceTable, arguments))
+        if (!needsRefresh(refreshPriceTable, null, arguments))
             return;
 
         let table = html('table',
@@ -375,7 +375,7 @@ let mco_pricing = {};
     function refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff)
     {
-        if (!needsRefresh(refreshPriceChart, arguments))
+        if (!needsRefresh(refreshPriceChart, null, arguments))
             return;
 
         if (!pricing_info || !pricing_info[main_index]) {

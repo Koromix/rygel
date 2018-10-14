@@ -382,12 +382,12 @@ let mco_casemix = {};
 
     function refreshGhmRootsSummary(units, page, sort, descending)
     {
-        if (!needsRefresh(refreshGhmRootsSummary, [mix_url].concat(Array.from(arguments))))
+        if (!needsRefresh(refreshGhmRootsSummary, null, [mix_url].concat(Array.from(arguments))))
             return;
 
-        units = new Set(units);
+        if (!ghm_roots_summary || needsRefresh(refreshGhmRootsSummary, 'init', [mix_url, units])) {
+            units = new Set(units);
 
-        if (!ghm_roots_summary || needsRefresh(ghm_roots_summary, [mix_url, units])) {
             ghm_roots_summary = new DataTable(query('#cm_summary'));
             ghm_roots_summary.sortHandler = function(col_idx, descending) {
                 go({sort: col_idx, descending: descending});
@@ -502,7 +502,7 @@ let mco_casemix = {};
     function refreshDurationTable(units, pricing_info, main_index, ghm_root,
                                   apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshDurationTable, [mix_url].concat.apply(Array.from(arguments))))
+        if (!needsRefresh(refreshDurationTable, null, [mix_url].concat.apply(Array.from(arguments))))
             return;
 
         let table = html('table',
