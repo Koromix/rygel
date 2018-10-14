@@ -260,7 +260,7 @@ let mco_casemix = {};
 
     function clearCasemix()
     {
-        mix_rows = [];
+        mix_rows.length = 0;
         mix_ghm_roots.clear();
     }
 
