@@ -269,10 +269,14 @@ let mco_casemix = {};
 
     function refreshPeriodsPickers(period, prev_period, mode)
     {
+        if (!start_date) {
+            period = [null, null];
+            prev_period = [null, null];
+        }
+
         let picker;
         {
-            let builder = new PeriodPicker(start_date, end_date,
-                                           period ? period[0] : null, period ? period[1] : null);
+            let builder = new PeriodPicker(start_date, end_date, period[0], period[1]);
 
             builder.changeHandler = function() {
                 go({period: this.object.getValues()});
@@ -287,8 +291,7 @@ let mco_casemix = {};
 
         let prev_picker;
         {
-            let builder = new PeriodPicker(start_date, end_date,
-                                           prev_period ? prev_period[0] : null, prev_period ? prev_period[1] : null);
+            let builder = new PeriodPicker(start_date, end_date, prev_period[0], prev_period[1]);
 
             builder.changeHandler = function() {
                 go({prev_period: this.object.getValues()});
