@@ -77,7 +77,7 @@ function TreeSelector(prefix)
         summary.innerHTML = '';
         summary.appendChild(document.createTextNode(prefix));
         if (!values.length) {
-            let a = html('a', 'Aucune option sélectionnée');
+            let a = html('a', 'Aucune sélection');
             summary.appendChild(a);
         } else if (values.length < 8) {
             for (const value of values) {
