@@ -121,7 +121,7 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
-                        refreshGhmRootsSummary(route.units, route.page, route.sort, route.descending);
+                        refreshGhmRootsTable(route.units, route.page, route.sort, route.descending);
                     } break;
 
                     case 'table': {
@@ -385,12 +385,12 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshGhmRootsSummary(units, page, sort, descending)
+    function refreshGhmRootsTable(units, page, sort, descending)
     {
-        if (!needsRefresh(refreshGhmRootsSummary, null, [mix_url].concat(Array.from(arguments))))
+        if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
 
-        if (!ghm_roots_summary || needsRefresh(refreshGhmRootsSummary, 'init', [mix_url, units])) {
+        if (!ghm_roots_summary || needsRefresh(refreshGhmRootsTable, 'init', [mix_url, units])) {
             units = new Set(units);
 
             ghm_roots_summary = new DataTable(query('#cm_summary'));
@@ -715,7 +715,7 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
-        refreshGhmRootsSummary([], 1);
+        refreshGhmRootsTable([], 1);
         refreshDurationTable([]);
     });
 
