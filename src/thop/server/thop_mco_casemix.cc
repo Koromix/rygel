@@ -226,6 +226,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
     mco_Price(thop_results, false, &pricings);
     mco_Dispense(pricings, thop_mono_results, dispense_mode, &mono_pricings);
 
+    // TODO: Parallelize and optimize aggregation
     HeapArray<AggregateStatistics> statistics;
     BlockAllocator statistics_units_alloc(Kibibytes(4));
     BlockAllocator statistics_parts_alloc(Kibibytes(16));
