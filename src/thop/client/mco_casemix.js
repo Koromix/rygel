@@ -27,7 +27,7 @@ let mco_casemix = {};
     let mix_ghm_roots = new Set;
 
     // Cache
-    let summary_table = null;
+    let ghm_roots_summary = null;
 
     function runCasemix(route, url, parameters, hash)
     {
@@ -179,7 +179,8 @@ let mco_casemix = {};
 
         let url;
         {
-            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, window.btoa(JSON.stringify(short_route))];
+            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view,
+                             window.btoa(JSON.stringify(short_route))];
             while (!url_parts[url_parts.length - 1])
                 url_parts.pop();
 
@@ -305,6 +306,8 @@ let mco_casemix = {};
 
     function refreshStructuresMenu(units)
     {
+        units = new Set(units);
+
         let builder = new TreeSelector('Unités : ');
 
         for (const structure of structures) {
@@ -325,7 +328,7 @@ let mco_casemix = {};
                 }
 
                 builder.addOption(ent.path[ent.path.length - 1], ent.unit,
-                                  {selected: units.includes(ent.unit)});
+                                  {selected: units.has(ent.unit)});
             }
         }
 
@@ -377,103 +380,97 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function initSummaryTable(units)
-    {
-        if (!needsRefresh(initSummaryTable, [mix_url].concat(Array.from(arguments))))
-            return;
-
-        summary_table = new DataTable(query('#cm_summary'));
-        summary_table.sortHandler = function(col_idx, descending) {
-            go({sort: col_idx, descending: descending});
-        };
-
-        units = new Set(units);
-        let rows = mix_rows.filter(function(row) {
-            for (const unit of row.units) {
-                if (units.has(unit))
-                    return true;
-            }
-            return false;
-        });
-
-        // Avoid headers with no data
-        if (!rows.length)
-            return;
-
-        // Header
-        summary_table.addColumns([
-            'GHM',
-            'RSS', !mix_params.diff ? '%' : null,
-            'Total', !mix_params.diff ? '%' : null,
-            'Partiel', !mix_params.diff ? '%' : null,
-            'Décès', !mix_params.diff ? '%' : null
-        ]);
-
-        function filterUnitParts(row)
-        {
-            let values = row.units.map(function(unit) { return units.has(unit); });
-            return ['include', values];
-        }
-
-        // Aggregate
-        let stat1 = findAggregate(aggregate(rows, filterUnitParts)[1], true);
-        let [stats2, stats2_map] = aggregate(rows, 'ghm_root', filterUnitParts);
-        let ghm_roots = stats2
-            .filter(function(stat) { return stat.include; })
-            .map(function(stat) { return stat.ghm_root; });
-
-        // Resources
-        let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
-
-        function addStatCells(stat)
-        {
-            summary_table.addCell(stat.count, numberText(stat.count));
-            if (!mix_params.diff)
-                summary_table.addCell(stat.count / stat1.count, percentText(stat.count / stat1.count));
-            summary_table.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
-            if (!mix_params.diff)
-                summary_table.addCell(stat.price_cents_total / stat1.price_cents_total,
-                                      percentText(stat.price_cents_total / stat1.price_cents_total));
-            summary_table.addCell(stat.price_cents, priceText(stat.price_cents, false));
-            if (!mix_params.diff)
-                summary_table.addCell(stat.price_cents / stat1.price_cents,
-                                      percentText(stat.price_cents / stat1.price_cents));
-            summary_table.addCell(stat.deaths, numberText(stat.deaths));
-            if (!mix_params.diff)
-                summary_table.addCell(stat.deaths / stat.count, percentText(stat.deaths / stat.count));
-        }
-
-        // Add stats
-        summary_table.beginRow();
-        summary_table.addCell('Total');
-        addStatCells(stat1);
-        for (let ghm_root of ghm_roots) {
-            let ghm_root_desc = ghm_roots_map[ghm_root];
-            let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
-                                    title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
-
-            let stat2 = findAggregate(stats2_map, ghm_root, true);
-
-            summary_table.beginRow();
-            summary_table.addCell(ghm_root, header);
-            addStatCells(stat2);
-            summary_table.endRow();
-        }
-        summary_table.endRow();
-    }
-
     function refreshGhmRootsSummary(units, page, sort, descending)
     {
         if (!needsRefresh(refreshGhmRootsSummary, [mix_url].concat(Array.from(arguments))))
             return;
 
-        initSummaryTable(units);
+        units = new Set(units);
+
+        if (!ghm_roots_summary || needsRefresh(ghm_roots_summary, [mix_url, units])) {
+            ghm_roots_summary = new DataTable(query('#cm_summary'));
+            ghm_roots_summary.sortHandler = function(col_idx, descending) {
+                go({sort: col_idx, descending: descending});
+            };
+
+            let rows = mix_rows.filter(function(row) {
+                for (const unit of row.units) {
+                    if (units.has(unit))
+                        return true;
+                }
+                return false;
+            });
+
+            if (rows.length) {
+                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
+                // Header
+                ghm_roots_summary.addColumns([
+                    'GHM',
+                    'RSS', !mix_params.diff ? '%' : null,
+                    'Total', !mix_params.diff ? '%' : null,
+                    'Partiel', !mix_params.diff ? '%' : null,
+                    'Décès', !mix_params.diff ? '%' : null
+                ]);
+
+                function filterUnitParts(row)
+                {
+                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    return ['include', values];
+                }
+
+                // Aggregate
+                let stat1 = findAggregate(aggregate(rows, filterUnitParts)[1], true);
+                let [stats2, stats2_map] = aggregate(rows, 'ghm_root', filterUnitParts);
+                let ghm_roots = stats2
+                    .filter(function(stat) { return stat.include; })
+                    .map(function(stat) { return stat.ghm_root; });
+
+                function addStatCells(stat)
+                {
+                    ghm_roots_summary.addCell(stat.count, numberText(stat.count));
+                    if (!mix_params.diff)
+                        ghm_roots_summary.addCell(stat.count / stat1.count,
+                                                  percentText(stat.count / stat1.count));
+                    ghm_roots_summary.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
+                    if (!mix_params.diff)
+                        ghm_roots_summary.addCell(stat.price_cents_total / stat1.price_cents_total,
+                                                  percentText(stat.price_cents_total / stat1.price_cents_total));
+                    ghm_roots_summary.addCell(stat.price_cents, priceText(stat.price_cents, false));
+                    if (!mix_params.diff)
+                        ghm_roots_summary.addCell(stat.price_cents / stat1.price_cents,
+                                                  percentText(stat.price_cents / stat1.price_cents));
+                    ghm_roots_summary.addCell(stat.deaths, numberText(stat.deaths));
+                    if (!mix_params.diff)
+                        ghm_roots_summary.addCell(stat.deaths / stat.count,
+                                                  percentText(stat.deaths / stat.count));
+                }
+
+                // Add stats
+                ghm_roots_summary.beginRow();
+                ghm_roots_summary.addCell('Total');
+                addStatCells(stat1);
+                for (let ghm_root of ghm_roots) {
+                    let ghm_root_desc = ghm_roots_map[ghm_root];
+                    let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
+                                            title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
+
+                    let stat2 = findAggregate(stats2_map, ghm_root, true);
+
+                    ghm_roots_summary.beginRow();
+                    ghm_roots_summary.addCell(ghm_root, header);
+                    addStatCells(stat2);
+                    ghm_roots_summary.endRow();
+                }
+                ghm_roots_summary.endRow();
+            }
+        }
 
         if (sort !== null && sort !== undefined)
-            summary_table.sort(sort, descending);
+            ghm_roots_summary.sort(sort, descending);
 
-        let render_count = summary_table.render((page - 1) * TableLen, TableLen);
-        let row_count = summary_table.getRowCount();
+        let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen);
+        let row_count = ghm_roots_summary.getRowCount();
 
         let last_page = Math.floor((row_count - 1) / TableLen + 1);
         if (last_page === 1 && render_count === row_count)
