@@ -69,8 +69,8 @@ function createElement(ns, tag, attributes, children)
     ns = expandNamespace(ns);
     let el = document.createElementNS(ns, tag);
 
-    for (let key in attributes) {
-        value = attributes[key];
+    for (const key in attributes) {
+        const value = attributes[key];
         if (value !== null && value !== undefined) {
             if (typeof value === 'function') {
                 el.addEventListener(key, value.bind(el));
