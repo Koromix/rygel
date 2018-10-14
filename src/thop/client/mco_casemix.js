@@ -425,10 +425,9 @@ let mco_casemix = {};
                 }
 
                 // Aggregate
-                let stat1 = findAggregate(aggregate(rows, filterUnitParts)[1], true);
+                let stat1 = aggregate(rows, filterUnitParts)[0][0];
                 let [stats2, stats2_map] = aggregate(rows, 'ghm_root', filterUnitParts);
                 let ghm_roots = stats2
-                    .filter(function(stat) { return stat.include; })
                     .map(function(stat) { return stat.ghm_root; });
 
                 function addStatCells(stat)
@@ -460,7 +459,7 @@ let mco_casemix = {};
                     let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
                                             title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
 
-                    let stat2 = findAggregate(stats2_map, ghm_root, true);
+                    let stat2 = findAggregate(stats2_map, ghm_root);
 
                     ghm_roots_summary.beginRow();
                     ghm_roots_summary.addCell(ghm_root, header);
@@ -640,6 +639,12 @@ let mco_casemix = {};
 
                 if (Array.isArray(value))
                     value = value[col_idx];
+
+                if (value === true) {
+                    continue;
+                } else if (value === false) {
+                    return;
+                }
 
                 if (Array.isArray(value)) {
                     const values = value;
