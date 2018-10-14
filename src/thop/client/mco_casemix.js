@@ -25,7 +25,6 @@ let mco_casemix = {};
     let mix_ghm_roots = new Set;
 
     // Cache
-    let reactor = new Reactor;
     let summary_table = null;
 
     function runCasemix(route, url, parameters, hash)
@@ -124,16 +123,12 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
-                        if (reactor.changed('summary', mix_url, mix_rows.length, route.page,
-                                            route.sort, route.descending))
-                            refreshSummary(route.page, route.sort, route.descending);
+                        refreshSummary(route.page, route.sort, route.descending);
                     } break;
+
                     case 'table': {
-                        if (main_index >= 0 &&
-                                reactor.changed('table', mix_url, mix_rows.length, main_index,
-                                                route.ghm_root, route.apply_coefficient))
-                            refreshTable(pricings_map[route.ghm_root], main_index, route.ghm_root,
-                                         route.apply_coefficient, true);
+                        refreshTable(pricings_map[route.ghm_root], main_index,
+                                     route.ghm_root, route.apply_coefficient, true);
                     } break;
                 }
 
@@ -260,8 +255,6 @@ let mco_casemix = {};
 
                 mix_ghm_roots.add(row.ghm_root);
             }
-
-            initSummaryTable();
         });
     }
 
@@ -386,8 +379,11 @@ let mco_casemix = {};
 
     function initSummaryTable()
     {
+        if (!needsRefresh(initSummaryTable, [mix_url]))
+            return;
+
         // FIXME: Ugly as hell
-        let diff = (mix_url.indexOf('diff=') >= 0);
+        let diff = ((mix_url || '').indexOf('diff=') >= 0);
 
         summary_table = new DataTable(query('#cm_summary'));
         summary_table.sortHandler = function(col_idx, descending) {
@@ -457,8 +453,10 @@ let mco_casemix = {};
 
     function refreshSummary(page, sort, descending)
     {
-        if (!summary_table)
+        if (!needsRefresh(refreshSummary, [mix_url].concat(Array.from(arguments))))
             return;
+
+        initSummaryTable();
 
         if (sort !== null && sort !== undefined)
             summary_table.sort(sort, descending);
@@ -495,6 +493,9 @@ let mco_casemix = {};
 
     function refreshTable(pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
     {
+        if (!needsRefresh(refreshTable, [mix_url].concat.apply(Array.from(arguments))))
+            return;
+
         let table = html('table',
             html('thead'),
             html('tbody')
@@ -502,12 +503,12 @@ let mco_casemix = {};
 
         let rows = mix_rows.filter(function(row) { return row.ghm_root === ghm_root; });
 
-        if (rows.length) {
+        if (rows.length && main_index >= 0) {
             let thead = table.query('thead');
             let tbody = table.query('tbody');
 
             // FIXME: Ugly as hell
-            let diff = (mix_url.indexOf('diff=') >= 0);
+            let diff = ((mix_url || '').indexOf('diff=') >= 0);
 
             let [stats, stats_map] = aggregate(rows, 'ghm', 'duration');
 

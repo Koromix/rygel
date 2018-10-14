@@ -7,7 +7,6 @@ let mco_pricing = {};
     'use strict';
 
     // Cache
-    let reactor = new Reactor;
     let ghm_roots = [];
     let ghm_roots_map = {};
     let available_dates = new Set;
@@ -85,19 +84,17 @@ let mco_pricing = {};
             let pricing_info = pricings_map[route.ghm_root];
             let max_duration = parseInt(query('#opt_max_duration > input').value);
 
-            if (reactor.changed(route.view, route.ghm_root, indexes.length, main_index, diff_index,
-                                max_duration, route.apply_coefficient)) {
-                switch (route.view) {
-                    case 'table': {
-                        refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
-                                          max_duration, route.apply_coefficient, true);
-                    } break;
-                    case 'chart': {
-                        let chart_ctx = query('#pr_chart').getContext('2d');
-                        chart = refreshChart(chart, chart_ctx, pricing_info, main_index,
-                                             diff_index, max_duration, route.apply_coefficient);
-                    } break;
-                }
+            switch (route.view) {
+                case 'table': {
+                    refreshPriceTable(route.ghm_root, pricing_info, main_index, diff_index,
+                                      max_duration, route.apply_coefficient, true);
+                } break;
+
+                case 'chart': {
+                    let chart_ctx = query('#pr_chart').getContext('2d');
+                    chart = refreshChart(chart_ctx, pricing_info, main_index, diff_index,
+                                         max_duration, route.apply_coefficient);
+                } break;
             }
 
             query('#pr_table').toggleClass('hide', route.view !== 'table');
@@ -221,6 +218,9 @@ let mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
+        if (!needsRefresh(refreshPriceTable, arguments))
+            return;
+
         let table = html('table',
             html('thead'),
             html('tbody')
@@ -372,15 +372,14 @@ let mco_pricing = {};
     }
     this.addPricingHeader = addPricingHeader;
 
-    function refreshChart(chart, chart_ctx, pricing_info, main_index, diff_index,
-                          max_duration, apply_coeff)
+    function refreshChart(chart_ctx, pricing_info, main_index, diff_index, max_duration, apply_coeff)
     {
-        if (!pricing_info || !pricing_info[main_index]) {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
+        if (!needsRefresh(refreshChart, arguments))
+            return;
 
+        if (!pricing_info || !pricing_info[main_index]) {
+            if (chart)
+                chart.destroy();
             return;
         }
 

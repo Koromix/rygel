@@ -9,7 +9,6 @@ let mco_tree = {};
     // Cache
     let tree_url = null;
     let nodes = [];
-    let reactor = new Reactor;
     let collapse_nodes = new Set();
 
     function runTree(route, url, parameters, hash)
@@ -41,8 +40,7 @@ let mco_tree = {};
         if (!data.isBusy()) {
             data.clearErrors();
 
-            if (reactor.changed('tree', main_index, nodes.length))
-                refreshTree(nodes);
+            refreshTree(nodes);
             deploySelectedNode(hash);
 
             query('#tr').removeClass('hide');
@@ -87,6 +85,9 @@ let mco_tree = {};
 
     function refreshTree(nodes)
     {
+        if (!needsRefresh(refreshTree, arguments))
+            return;
+
         let ul;
         if (nodes.length) {
             ul = recurseNodes(0, '', []);
