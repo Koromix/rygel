@@ -70,9 +70,9 @@ let mco_pricing = {};
         // Refresh settings
         queryAll('#opt_indexes, #opt_ghm_roots, #opt_diff_indexes, #opt_max_duration, #opt_apply_coefficient')
             .removeClass('hide');
-        mco_common.refreshIndexes(indexes, main_index);
-        refreshGhmRoots(indexes, main_index, route.ghm_root);
-        refreshIndexesDiff(indexes, diff_index, route.ghm_root);
+        mco_common.refreshIndexesLine(indexes, main_index);
+        refreshGhmRootsMenu(indexes, main_index, route.ghm_root);
+        refreshDiffMenu(indexes, diff_index, route.ghm_root);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
@@ -92,8 +92,8 @@ let mco_pricing = {};
 
                 case 'chart': {
                     let chart_ctx = query('#pr_chart').getContext('2d');
-                    chart = refreshChart(chart_ctx, pricing_info, main_index, diff_index,
-                                         max_duration, route.apply_coefficient);
+                    chart = refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
+                                              max_duration, route.apply_coefficient);
                 } break;
             }
 
@@ -177,7 +177,7 @@ let mco_pricing = {};
     }
     this.updatePriceMap = updatePriceMap;
 
-    function refreshGhmRoots(indexes, main_index, select_ghm_root)
+    function refreshGhmRootsMenu(indexes, main_index, select_ghm_root)
     {
         let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
@@ -197,7 +197,7 @@ let mco_pricing = {};
             el.value = select_ghm_root;
     }
 
-    function refreshIndexesDiff(indexes, diff_index, test_ghm_root)
+    function refreshDiffMenu(indexes, diff_index, test_ghm_root)
     {
         let el = query("#opt_diff_indexes > select");
         el.innerHTML = '';
@@ -372,9 +372,10 @@ let mco_pricing = {};
     }
     this.addPricingHeader = addPricingHeader;
 
-    function refreshChart(chart_ctx, pricing_info, main_index, diff_index, max_duration, apply_coeff)
+    function refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
+                               max_duration, apply_coeff)
     {
-        if (!needsRefresh(refreshChart, arguments))
+        if (!needsRefresh(refreshPriceChart, arguments))
             return;
 
         if (!pricing_info || !pricing_info[main_index]) {

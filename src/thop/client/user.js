@@ -25,11 +25,11 @@ let user = {};
     function runSession()
     {
         if (ShowUser) {
-            refreshSession();
+            updateSession();
 
             if (!data.isBusy()) {
-                updateSessionBox();
-                updateSessionMenu();
+                refreshSessionBox();
+                refreshSessionMenu();
             }
         }
 
@@ -53,7 +53,7 @@ let user = {};
     {
         let url = buildUrl(thop.baseUrl('api/connect.json'));
         data.post(url, {username: username, password: password}, function() {
-            refreshSession();
+            updateSession();
             if (func)
                 func();
         });
@@ -64,7 +64,7 @@ let user = {};
     {
         let url = buildUrl(thop.baseUrl('api/disconnect.json'));
         data.post(url, {}, function(json) {
-            refreshSession();
+            updateSession();
             if (func)
                 func();
         });
@@ -85,7 +85,7 @@ let user = {};
     }
     this.login = login;
 
-    function refreshSession()
+    function updateSession()
     {
         let prev_url_key = url_key;
 
@@ -98,7 +98,7 @@ let user = {};
         }
     }
 
-    function updateSessionBox()
+    function refreshSessionBox()
     {
         let div = null;
         if (url_key) {
@@ -121,7 +121,7 @@ let user = {};
         old_div.replaceWith(div);
     }
 
-    function updateSessionMenu()
+    function refreshSessionMenu()
     {
         let menu_item;
         if (url_key) {

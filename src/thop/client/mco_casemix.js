@@ -105,11 +105,11 @@ let mco_casemix = {};
         queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update')
             .toggleClass('hide', !user.isConnected());
         query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'table');
-        refreshPeriods(route.period, route.prev_period, route.mode);
-        refreshStructures(route.units);
+        refreshPeriodsPickers(route.period, route.prev_period, route.mode);
+        refreshStructuresMenu(route.units);
         query('#opt_mode > select').value = route.mode;
-        refreshAlgorithms(route.algorithm);
-        refreshGhmRoots(ghm_roots, route.ghm_root);
+        refreshAlgorithmsMenu(route.algorithm);
+        refreshGhmRootsMenu(ghm_roots, route.ghm_root);
 
         // Refresh view
         thop.refreshErrors(Array.from(errors));
@@ -119,12 +119,12 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'summary': {
-                        refreshSummary(route.units, route.page, route.sort, route.descending);
+                        refreshGhmRootsSummary(route.units, route.page, route.sort, route.descending);
                     } break;
 
                     case 'table': {
-                        refreshTable(pricings_map[route.ghm_root], main_index,
-                                     route.ghm_root, route.apply_coefficient, true);
+                        refreshDurationTable(pricings_map[route.ghm_root], main_index,
+                                             route.ghm_root, route.apply_coefficient, true);
                     } break;
                 }
 
@@ -264,7 +264,7 @@ let mco_casemix = {};
         });
     }
 
-    function refreshPeriods(period, prev_period, mode)
+    function refreshPeriodsPickers(period, prev_period, mode)
     {
         let picker;
         {
@@ -303,7 +303,7 @@ let mco_casemix = {};
         prev_picker.toggleClass('hide', mode === 'none');
     }
 
-    function refreshStructures(units)
+    function refreshStructuresMenu(units)
     {
         let builder = new TreeSelector('Unités : ');
 
@@ -342,7 +342,7 @@ let mco_casemix = {};
         old_select.replaceWith(select);
     }
 
-    function refreshAlgorithms(algorithm)
+    function refreshAlgorithmsMenu(algorithm)
     {
         let select = query('#opt_algorithm > select');
 
@@ -357,7 +357,7 @@ let mco_casemix = {};
         select.value = algorithm;
     }
 
-    function refreshGhmRoots(ghm_roots, select_ghm_root)
+    function refreshGhmRootsMenu(ghm_roots, select_ghm_root)
     {
         let el = query('#opt_ghm_roots > select');
         el.innerHTML = '';
@@ -462,9 +462,9 @@ let mco_casemix = {};
         summary_table.endRow();
     }
 
-    function refreshSummary(units, page, sort, descending)
+    function refreshGhmRootsSummary(units, page, sort, descending)
     {
-        if (!needsRefresh(refreshSummary, [mix_url].concat(Array.from(arguments))))
+        if (!needsRefresh(refreshGhmRootsSummary, [mix_url].concat(Array.from(arguments))))
             return;
 
         initSummaryTable(units);
@@ -502,9 +502,10 @@ let mco_casemix = {};
         return builder.getWidget();
     }
 
-    function refreshTable(units, pricing_info, main_index, ghm_root, apply_coeff, merge_cells)
+    function refreshDurationTable(units, pricing_info, main_index, ghm_root,
+                                  apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshTable, [mix_url].concat.apply(Array.from(arguments))))
+        if (!needsRefresh(refreshDurationTable, [mix_url].concat.apply(Array.from(arguments))))
             return;
 
         let table = html('table',
@@ -707,8 +708,8 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
-        refreshSummary([], 1);
-        refreshTable([]);
+        refreshGhmRootsSummary([], 1);
+        refreshDurationTable([]);
     });
 
     thop.registerUrl('mco_casemix', this, runCasemix);

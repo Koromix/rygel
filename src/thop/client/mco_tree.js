@@ -33,7 +33,7 @@ let mco_tree = {};
 
         // Refresh settings
         queryAll('#opt_indexes').removeClass('hide');
-        mco_common.refreshIndexes(indexes, main_index);
+        mco_common.refreshIndexesLine(indexes, main_index);
 
         // Refresh view
         thop.refreshErrors(Array.from(errors));

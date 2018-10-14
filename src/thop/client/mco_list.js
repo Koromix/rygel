@@ -232,7 +232,7 @@ let mco_list = {};
 
         // Refresh settings
         queryAll('#opt_indexes').removeClass('hide');
-        mco_common.refreshIndexes(indexes, main_index);
+        mco_common.refreshIndexesLine(indexes, main_index);
         query('#opt_search').removeClass('hide');
         {
             let search_input = query('#opt_search > input');
@@ -241,7 +241,7 @@ let mco_list = {};
         }
         if (Lists[route.list] && Lists[route.list].groups !== undefined) {
             query('#opt_groups').removeClass('hide');
-            refreshGroups(Lists[route.list], route.group);
+            refreshGroupsMenu(Lists[route.list], route.group);
         }
 
         // Limit 'blinking' behavior
@@ -264,7 +264,7 @@ let mco_list = {};
             let list_info = Lists[route.list];
             if (list_info) {
                 let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
-                refreshTable(route.list, concepts_map, route.page);
+                refreshListTable(route.list, concepts_map, route.page);
                 query('#ls_' + route.list).removeClass('hide');
             }
 
@@ -434,7 +434,7 @@ let mco_list = {};
         }
     }
 
-    function refreshGroups(list_info, select_group)
+    function refreshGroupsMenu(list_info, select_group)
     {
         let el = query('#opt_groups > select');
         el.innerHTML = '';
@@ -447,7 +447,7 @@ let mco_list = {};
             el.value = select_group;
     }
 
-    function refreshTable(list_name, concepts_map, page)
+    function refreshListTable(list_name, concepts_map, page)
     {
         let table = html('table',
             html('thead'),

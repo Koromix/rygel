@@ -53,7 +53,7 @@ let mco_common = {};
     }
     this.updateConceptSet = updateConceptSet;
 
-    function refreshIndexes(indexes, main_index)
+    function refreshIndexesLine(indexes, main_index)
     {
         let builder = new VersionLine;
 
@@ -79,7 +79,7 @@ let mco_common = {};
         svg.copyAttributesFrom(old_svg);
         old_svg.replaceWith(svg);
     }
-    this.refreshIndexes = refreshIndexes;
+    this.refreshIndexesLine = refreshIndexesLine;
 
     function durationText(duration)
     {
