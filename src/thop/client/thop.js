@@ -95,6 +95,7 @@ let thop = {};
         user.runSession();
 
         // Find relevant module and run
+        query('main').toggleClass('busy', true);
         {
             let new_module_name = app_url.split('/')[0];
             let new_module = route_modules[new_module_name];
@@ -107,8 +108,6 @@ let thop = {};
             if (module)
                 module.func(route_values, app_url, url_parts.params, url_parts.hash);
         }
-
-        // Busy state
         query('main').toggleClass('busy', data.isBusy());
 
         // Update URL to reflect real state (module may have set default values, etc.)
