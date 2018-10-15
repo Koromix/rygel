@@ -166,16 +166,17 @@ function DataTable(widget)
 
         let end = Math.min(offset + len, rows_flat.length);
 
-        let prev_parents = Array.apply(null, Array(max_depth));
+        let parents = Array.apply(null, Array(max_depth));
         for (let i = offset; i < end; i++) {
             let row = rows_flat[i];
 
             let parent = row.parent;
-            while (parent && parent !== prev_parents[parent.depth]) {
-                addRow(parent, true);
-                prev_parents[parent.depth] = parent;
+            while (parent && parent !== parents[parent.depth]) {
+                parents[parent.depth] = parent;
                 parent = parent.parent;
             }
+            for (let i = parent ? (parent.depth + 1) : 0; i < parents.length; i++)
+                addRow(parents[i], true);
 
             addRow(row, false);
         }
