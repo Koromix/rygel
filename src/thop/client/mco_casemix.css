@@ -28,16 +28,3 @@
     margin-right: -19px;
 }
 #cm_table .empty { filter: opacity(50%); }
-
-@media screen and (min-width: 801px) {
-    #cm_cmds { margin-bottom: 1em; }
-    #cm_cmds td { border: 1px solid #a4a4a4; }
-}
-
-@media screen and (max-width: 800px) {
-    #cm_cmds { margin: 0; }
-    #cm_cmds td {
-        border-left: 1px solid #a4a4a4;
-        border-right: 1px solid #a4a4a4;
-    }
-}
