@@ -139,7 +139,7 @@ function DataTable(widget)
         let thead = widget.appendChild(html('thead'));
         let tbody = widget.appendChild(html('tbody'));
 
-        if (columns.length) {
+        if (columns.length && rows_flat.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
                 let th = html('th', {click: handleHeaderClick}, columns[i]);

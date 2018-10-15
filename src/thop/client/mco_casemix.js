@@ -27,6 +27,7 @@ let mco_casemix = {};
     let mix_ghm_roots = new Set;
 
     // Cache
+    let units_summary = null;
     let ghm_roots_summary = null;
 
     function runCasemix(route, url, parameters, hash)
@@ -37,18 +38,19 @@ let mco_casemix = {};
         let url_parts = url.split('/', 3);
         if (url_parts[2])
             Object.assign(route, thop.buildRoute(JSON.parse(window.atob(url_parts[2]))));
-        route.view = url_parts[1] || 'summary';
+        route.view = url_parts[1] || 'units';
         route.period = (route.period && route.period[0]) ? route.period : [start_date, end_date];
         route.prev_period = (route.prev_period && route.prev_period[0]) ?
                             route.prev_period : [start_date, end_date];
         route.units = route.units || [];
+        route.structure = route.structure || 0;
         route.mode = route.mode || 'none';
         route.algorithm = route.algorithm || null;
         route.refresh = route.refresh || false;
         route.ghm_root = route.ghm_root || null;
         route.apply_coefficient = route.apply_coefficient || false;
         route.page = parseInt(parameters.page, 10) || 1;
-        route.sort = parseInt(parameters.sort, 10) || null;
+        route.sort = parseInt(parameters.sort, 10) || 0;
         route.descending = !!parseInt(parameters.descending, 10) || false;
         pages[route.view] = route.page;
         sorts[route.view] = route.sort;
@@ -82,10 +84,12 @@ let mco_casemix = {};
 
         // Errors
         if (user.isConnected()) {
-            if (!(['summary', 'table'].includes(route.view)))
+            if (!(['units', 'ghm_roots', 'table'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_ready)
                 errors.add('Aucune unité sélectionnée');
+            if (route.structure > structures.length && structures.length)
+                errors.add('Structure inexistante');
             if (route.view == 'table') {
                 if (!route.ghm_root)
                     errors.add('Aucune racine de GHM sélectionnée');
@@ -108,9 +112,10 @@ let mco_casemix = {};
             .toggleClass('hide', !user.isConnected());
         query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'table');
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
-        refreshStructuresMenu(route.units);
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
+        query('#opt_update').disabled = mix_ready;
+        refreshStructuresMenu(route.units, route.structure);
         refreshGhmRootsMenu(ghm_roots, route.ghm_root);
 
         // Refresh view
@@ -120,7 +125,12 @@ let mco_casemix = {};
         if (user.isConnected()) {
             if (!data.isBusy()) {
                 switch (route.view) {
-                    case 'summary': {
+                    case 'units': {
+                        refreshUnitsTable(route.units, route.structure,
+                                          route.page, route.sort, route.descending);
+                    } break;
+
+                    case 'ghm_roots': {
                         refreshGhmRootsTable(route.units, route.page, route.sort, route.descending);
                     } break;
 
@@ -130,9 +140,8 @@ let mco_casemix = {};
                     } break;
                 }
 
-                queryAll('#cm_summary').toggleClass('hide', route.view !== 'summary');
-                queryAll('.cm_pager').toggleClass('hide', route.view !== 'summary' ||
-                                                  !query('.cm_pager').childNodes.length);
+                query('#cm_units').toggleClass('hide', route.view !== 'units');
+                query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
                 query('#cm_table').toggleClass('hide', route.view !== 'table');
                 query('#cm').removeClass('hide');
             }
@@ -142,7 +151,6 @@ let mco_casemix = {};
             } else if (!data.isBusy()) {
                 query('#cm').removeClass('busy');
             }
-            query('#opt_update').disabled = mix_ready;
         } else {
             query('#cm').addClass('hide');
         }
@@ -157,6 +165,7 @@ let mco_casemix = {};
             'period',
             'prev_period',
             'units',
+            'structure',
             'mode',
             'algorithm',
             'ghm_root',
@@ -192,8 +201,8 @@ let mco_casemix = {};
         if (new_route.page && new_route.page === 1)
             new_route.page = null;
         url = buildUrl(url, {
-            page: new_route.page,
-            sort: new_route.sort,
+            page: (new_route.page !== 1) ? new_route.page : null,
+            sort: new_route.sort || null,
             descending: new_route.descending ? 1 : null
         });
 
@@ -219,8 +228,11 @@ let mco_casemix = {};
                 structures = json.structures;
 
                 for (let structure of structures) {
-                    for (let ent of structure.entities)
+                    structure.units = {};
+                    for (let ent of structure.entities) {
                         ent.path = ent.path.substr(1).split('|');
+                        structure.units[ent.unit] = ent;
+                    }
                 }
 
                 prev_url_key = user.getUrlKey();
@@ -309,15 +321,16 @@ let mco_casemix = {};
         prev_picker.toggleClass('hide', mode === 'none');
     }
 
-    function refreshStructuresMenu(units)
+    function refreshStructuresMenu(units, structure_idx)
     {
         units = new Set(units);
 
         let builder = new TreeSelector('Unités : ');
 
         for (const structure of structures) {
-            let prev_groups = [];
             builder.createTab(structure.name);
+
+            let prev_groups = [];
             for (const ent of structure.entities) {
                 let common_len = 0;
                 while (common_len < ent.path.length - 1 && common_len < prev_groups.length &&
@@ -336,14 +349,14 @@ let mco_casemix = {};
                                   {selected: units.has(ent.unit)});
             }
         }
+        builder.setActiveTab(structure_idx);
 
         builder.changeHandler = function() {
-            go({units: this.object.getValues()});
+            go({units: this.object.getValues(),
+                structure: this.object.getActiveTab()});
         };
 
         let old_select = query('#opt_units > div');
-        if (old_select.object)
-            builder.setActiveTab(old_select.object.getActiveTab());
         let select = builder.getWidget();
         select.copyAttributesFrom(old_select);
         select.addClass('tsel');
@@ -385,6 +398,91 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
+    function refreshUnitsTable(units, structure_idx, page, sort, descending)
+    {
+        if (!needsRefresh(refreshUnitsTable, null, [mix_url].concat(Array.from(arguments))))
+            return;
+
+        if (!units_summary ||
+                needsRefresh(refreshUnitsTable, 'init', [mix_url, units, structure_idx])) {
+            let structure = structures[structure_idx];
+            units = new Set(units);
+
+            units_summary = createPagedTable(query('#cm_units'));
+            units_summary.addColumns([
+                'Unité',
+                'RSS', !mix_params.diff ? '%' : null,
+                'Total', !mix_params.diff ? '%' : null,
+                'Partiel', !mix_params.diff ? '%' : null,
+                'Décès', !mix_params.diff ? '%' : null
+            ]);
+
+            // Aggregate
+            let stat1;
+            let stats2, stats2_map;
+            {
+                function unitToEntities(row)
+                {
+                    let values = row.units.map(function(unit) { return structure.units[unit].path; });
+                    return ['entities', values];
+                }
+                function filterUnitParts(row)
+                {
+                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    return ['include', values];
+                }
+
+                stat1 = aggregate(mix_rows, filterUnitParts)[0][0];
+                [stats2, stats2_map] = aggregate(mix_rows, unitToEntities, filterUnitParts);
+            }
+
+            if (stat1) {
+                units_summary.beginRow();
+                units_summary.addCell('Total');
+                addSummaryCells(units_summary, stat1, stat1);
+
+                let prev_groups = [];
+                let prev_totals = [stat1];
+                for (const ent of structure.entities) {
+                    let unit_stat = findAggregate(stats2_map, ent.path[ent.path.length - 1]);
+                    if (!unit_stat)
+                        continue;
+
+                    let common_len = 0;
+                    while (common_len < ent.path.length - 1 && common_len < prev_groups.length &&
+                           ent.path[common_len] === prev_groups[common_len])
+                        common_len++;
+                    while (prev_groups.length > common_len) {
+                        units_summary.endRow();
+                        prev_groups.pop();
+                        prev_totals.pop();
+                    }
+
+                    for (let k = common_len; k < ent.path.length - 1; k++) {
+                        let group_stat = findAggregate(stats2_map, ent.path[k]);
+
+                        units_summary.beginRow();
+                        units_summary.addCell(ent.path[k]);
+                        addSummaryCells(units_summary, group_stat, prev_totals[prev_totals.length - 1]);
+
+                        prev_groups.push(ent.path[k]);
+                        prev_totals.push(group_stat);
+                    }
+
+                    units_summary.beginRow();
+                    units_summary.addCell(ent.path[ent.path.length - 1]);
+                    addSummaryCells(units_summary, unit_stat, prev_totals[prev_totals.length - 1]);
+                    units_summary.endRow();
+                }
+            }
+        }
+
+        units_summary.sort(sort, descending);
+
+        let render_count = units_summary.render((page - 1) * TableLen, TableLen);
+        syncPagers(queryAll('#cm_units .pagr'), render_count, units_summary.getRowCount(), page);
+    }
+
     function refreshGhmRootsTable(units, page, sort, descending)
     {
         if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
@@ -393,67 +491,37 @@ let mco_casemix = {};
         if (!ghm_roots_summary || needsRefresh(refreshGhmRootsTable, 'init', [mix_url, units])) {
             units = new Set(units);
 
-            ghm_roots_summary = new DataTable(query('#cm_summary'));
-            ghm_roots_summary.sortHandler = function(col_idx, descending) {
-                go({sort: col_idx, descending: descending});
-            };
+            ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
+            ghm_roots_summary.addColumns([
+                'GHM',
+                'RSS', !mix_params.diff ? '%' : null,
+                'Total', !mix_params.diff ? '%' : null,
+                'Partiel', !mix_params.diff ? '%' : null,
+                'Décès', !mix_params.diff ? '%' : null
+            ]);
 
-            let rows = mix_rows.filter(function(row) {
-                for (const unit of row.units) {
-                    if (units.has(unit))
-                        return true;
-                }
-                return false;
-            });
-
-            if (rows.length) {
-                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
-
-                // Header
-                ghm_roots_summary.addColumns([
-                    'GHM',
-                    'RSS', !mix_params.diff ? '%' : null,
-                    'Total', !mix_params.diff ? '%' : null,
-                    'Partiel', !mix_params.diff ? '%' : null,
-                    'Décès', !mix_params.diff ? '%' : null
-                ]);
-
+            // Aggregate
+            let stat1;
+            let stats2, stats2_map;
+            {
                 function filterUnitParts(row)
                 {
                     let values = row.units.map(function(unit) { return units.has(unit); });
                     return ['include', values];
                 }
 
-                // Aggregate
-                let stat1 = aggregate(rows, filterUnitParts)[0][0];
-                let [stats2, stats2_map] = aggregate(rows, 'ghm_root', filterUnitParts);
-                let ghm_roots = stats2
-                    .map(function(stat) { return stat.ghm_root; });
+                stat1 = aggregate(mix_rows, filterUnitParts)[0][0];
+                [stats2, stats2_map] = aggregate(mix_rows, 'ghm_root', filterUnitParts);
+            }
 
-                function addStatCells(stat)
-                {
-                    ghm_roots_summary.addCell(stat.count, numberText(stat.count));
-                    if (!mix_params.diff)
-                        ghm_roots_summary.addCell(stat.count / stat1.count,
-                                                  percentText(stat.count / stat1.count));
-                    ghm_roots_summary.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
-                    if (!mix_params.diff)
-                        ghm_roots_summary.addCell(stat.price_cents_total / stat1.price_cents_total,
-                                                  percentText(stat.price_cents_total / stat1.price_cents_total));
-                    ghm_roots_summary.addCell(stat.price_cents, priceText(stat.price_cents, false));
-                    if (!mix_params.diff)
-                        ghm_roots_summary.addCell(stat.price_cents / stat1.price_cents,
-                                                  percentText(stat.price_cents / stat1.price_cents));
-                    ghm_roots_summary.addCell(stat.deaths, numberText(stat.deaths));
-                    if (!mix_params.diff)
-                        ghm_roots_summary.addCell(stat.deaths / stat.count,
-                                                  percentText(stat.deaths / stat.count));
-                }
+            if (stat1) {
+                let ghm_roots = stats2.map(function(stat) { return stat.ghm_root; });
+                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
-                // Add stats
                 ghm_roots_summary.beginRow();
                 ghm_roots_summary.addCell('Total');
-                addStatCells(stat1);
+                addSummaryCells(ghm_roots_summary, stat1, stat1);
+
                 for (let ghm_root of ghm_roots) {
                     let ghm_root_desc = ghm_roots_map[ghm_root];
                     let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
@@ -463,44 +531,82 @@ let mco_casemix = {};
 
                     ghm_roots_summary.beginRow();
                     ghm_roots_summary.addCell(ghm_root, header);
-                    addStatCells(stat2);
+                    addSummaryCells(ghm_roots_summary, stat2, stat1);
                     ghm_roots_summary.endRow();
                 }
-                ghm_roots_summary.endRow();
             }
         }
 
-        if (sort !== null && sort !== undefined)
-            ghm_roots_summary.sort(sort, descending);
+        ghm_roots_summary.sort(sort, descending);
 
         let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen);
-        let row_count = ghm_roots_summary.getRowCount();
+        syncPagers(queryAll('#cm_ghm_roots .pagr'), render_count,
+                   ghm_roots_summary.getRowCount(), page);
+    }
 
+    function createPagedTable(el)
+    {
+        if (!el.childNodes.length) {
+            el.appendChildren([
+                html('table', {class: 'pagr'}),
+                html('table', {class: 'dtab'}),
+                html('table', {class: 'pagr'})
+            ]);
+        }
+
+        let dtab = new DataTable(el.query('.dtab'));
+        dtab.sortHandler = function(col_idx, descending) {
+            go({sort: col_idx, descending: descending});
+        };
+
+        return dtab;
+    }
+
+    function addSummaryCells(dtab, stat, total)
+    {
+        dtab.addCell(stat.count, numberText(stat.count));
+        if (!mix_params.diff)
+            dtab.addCell(stat.count / total.count, percentText(stat.count / total.count));
+
+        dtab.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
+        if (!mix_params.diff)
+            dtab.addCell(stat.price_cents_total / total.price_cents_total,
+                         percentText(stat.price_cents_total / total.price_cents_total));
+
+        dtab.addCell(stat.price_cents, priceText(stat.price_cents, false));
+        if (!mix_params.diff)
+            dtab.addCell(stat.price_cents / total.price_cents,
+                         percentText(stat.price_cents / total.price_cents));
+
+        dtab.addCell(stat.deaths, numberText(stat.deaths));
+        if (!mix_params.diff)
+            dtab.addCell(stat.deaths / stat.count, percentText(stat.deaths / stat.count));
+    }
+
+    function syncPagers(pagers, render_count, row_count, page)
+    {
         let last_page = Math.floor((row_count - 1) / TableLen + 1);
         if (last_page === 1 && render_count === row_count)
             last_page = null;
 
-        for (let old_pager of queryAll('.cm_pager')) {
+        for (let pager of pagers) {
             if (last_page) {
-                let pager = createPagination(page, last_page);
-                pager.copyAttributesFrom(old_pager);
-                pager.addClass('pagr');
-                pager.removeClass('hide');
-                old_pager.replaceWith(pager);
+                let new_pager;
+                {
+                    let builder = new Pager(page, last_page);
+                    builder.anchorBuilder = function(text, page) {
+                        return html('a', {href: routeToUrl({page: page})}, '' + text);
+                    }
+                    new_pager = builder.getWidget();
+                    new_pager.addClass('pagr');
+                }
+
+                pager.replaceWith(new_pager);
             } else {
-                old_pager.innerHTML = '';
-                old_pager.addClass('hide');
+                pager.innerHTML = '';
+                pager.addClass('hide');
             }
         }
-    }
-
-    function createPagination(page, last_page)
-    {
-        let builder = new Pager(page, last_page);
-        builder.anchorBuilder = function(text, page) {
-            return html('a', {href: routeToUrl({page: page})}, '' + text);
-        }
-        return builder.getWidget();
     }
 
     function refreshDurationTable(units, pricing_info, main_index, ghm_root,
@@ -715,6 +821,7 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
+        refreshUnitsTable([], 0, 1);
         refreshGhmRootsTable([], 1);
         refreshDurationTable([]);
     });

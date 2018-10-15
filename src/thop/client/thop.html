@@ -32,9 +32,10 @@
                     <li><a data-url="mco_list.routeToUrl({list: 'diagnoses'});">Diagnostics</a></li>
                     <li><a data-url="mco_list.routeToUrl({list: 'procedures'});">Actes</a></li>
 
-                    <li><a class="category" data-url="mco_casemix.routeToUrl({view: 'summary'});">Activité</a></li>
-                    <li><a data-url="mco_casemix.routeToUrl({view: 'summary'});">Synthèse</a></li>
-                    <li><a data-url="mco_casemix.routeToUrl({view: 'table'});">Grille</a></li>
+                    <li><a class="category" data-url="mco_casemix.routeToUrl({view: 'units'});">Activité</a></li>
+                    <li><a data-url="mco_casemix.routeToUrl({view: 'units'});">Unités</a></li>
+                    <li><a data-url="mco_casemix.routeToUrl({view: 'ghm_roots'});">Racines</a></li>
+                    <li><a data-url="mco_casemix.routeToUrl({view: 'table'});">Durées</a></li>
                 </ul>
             </nav>
         </div>
@@ -126,9 +127,8 @@
             </div>
 
             <div id="cm">
-                <table class="cm_pager"></table>
-                <table id="cm_summary" class="dtab"></table>
-                <table class="cm_pager"></table>
+                <div id="cm_units" class="cm_summary"></div>
+                <div id="cm_ghm_roots" class="cm_summary"></div>
 
                 <table id="cm_table" class="pr_grid"></table>
             </div>
