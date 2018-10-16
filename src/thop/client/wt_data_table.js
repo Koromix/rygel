@@ -12,6 +12,7 @@ function DataTable(widget)
     let self = this;
 
     let columns = [];
+    let columns_map = {};
     let rows_rec = [];
     let rows_flat = [];
     let max_depth = 0;
@@ -40,14 +41,14 @@ function DataTable(widget)
         e.preventDefault();
     }
 
-    this.addColumn = function(name) {
-        columns.push(name);
-    };
-    this.addColumns = function(names) {
-        for (let name of names) {
-            if (name !== null && name !== undefined)
-                columns.push(name);
-        }
+    this.addColumn = function(key, el) {
+        let column = {
+            key: key,
+            cell: el
+        };
+
+        columns.push(column);
+        columns_map[key] = column;
     };
 
     this.beginRow = function() {
@@ -157,7 +158,7 @@ function DataTable(widget)
         if (columns.length && rows_flat.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
-                let th = html('th', {click: handleHeaderClick}, columns[i]);
+                let th = html('th', {click: handleHeaderClick}, columns[i].cell);
                 if (i === sort_idx)
                     th.addClass(sort_descending ? 'descending' : 'ascending');
                 th.col_idx = i;

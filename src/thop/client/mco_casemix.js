@@ -402,13 +402,19 @@ let mco_casemix = {};
             units = new Set(units);
 
             units_summary = createPagedTable(query('#cm_units'));
-            units_summary.addColumns([
-                'Unité',
-                'RSS', !mix_params.diff ? '%' : null,
-                'Total', !mix_params.diff ? '%' : null,
-                'Partiel', !mix_params.diff ? '%' : null,
-                'Décès', !mix_params.diff ? '%' : null
-            ]);
+            units_summary.addColumn('unit', 'Unité');
+            units_summary.addColumn('rss', 'RSS');
+            if (!mix_params.diff)
+                units_summary.addColumn('rss_pct', '%');
+            units_summary.addColumn('total', 'Total');
+            if (!mix_params.diff)
+                units_summary.addColumn('total_pct', '%');
+            units_summary.addColumn('partial', 'Partiel');
+            if (!mix_params.diff)
+                units_summary.addColumn('partial_pct', '%');
+            units_summary.addColumn('deaths', 'Décès');
+            if (!mix_params.diff)
+                units_summary.addColumn('deaths_pct', '%');
 
             // Aggregate
             let stat1;
@@ -485,13 +491,19 @@ let mco_casemix = {};
             units = new Set(units);
 
             ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
-            ghm_roots_summary.addColumns([
-                'GHM',
-                'RSS', !mix_params.diff ? '%' : null,
-                'Total', !mix_params.diff ? '%' : null,
-                'Partiel', !mix_params.diff ? '%' : null,
-                'Décès', !mix_params.diff ? '%' : null
-            ]);
+            ghm_roots_summary.addColumn('ghm_root', 'Racine');
+            ghm_roots_summary.addColumn('rss', 'RSS');
+            if (!mix_params.diff)
+                ghm_roots_summary.addColumn('rss_pct', '%');
+            ghm_roots_summary.addColumn('total', 'Total');
+            if (!mix_params.diff)
+                ghm_roots_summary.addColumn('total_pct', '%');
+            ghm_roots_summary.addColumn('partial', 'Partiel');
+            if (!mix_params.diff)
+                ghm_roots_summary.addColumn('partial_pct', '%');
+            ghm_roots_summary.addColumn('deaths', 'Décès');
+            if (!mix_params.diff)
+                ghm_roots_summary.addColumn('deaths_pct', '%');
 
             // Aggregate
             let stat1;
