@@ -2,7 +2,6 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-.cm_summary .dtab th { min-width: 90px; }
 .cm_summary .dtab td {
     min-width: 0;
     text-align: right;

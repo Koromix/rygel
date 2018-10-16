@@ -95,8 +95,8 @@ form button, form input[type=submit] {
 @media screen and (min-width: 801px) {
     /* Global */
     main {
-        max-width: 800px;
-        margin-left: 200px;
+        max-width: 1000px;
+        margin-left: 180px;
         padding: 1em;
     }
 
@@ -110,7 +110,7 @@ form button, form input[type=submit] {
         left: 0;
         top: 0;
         min-height: 100%;
-        width: 200px;
+        width: 180px;
     }
     #side_menu li a { padding: 0.5em 0.5em 0.5em 2em; }
     #side_menu li a.category { padding-left: 0.5em; }
