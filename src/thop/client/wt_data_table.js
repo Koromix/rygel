@@ -26,13 +26,14 @@ function DataTable(widget)
 
     function handleHeaderClick(e)
     {
-        let col_idx = this.col_idx;
-        let descending = (sort_idx === col_idx) ? !sort_descending : false;
+        let sort = this.col_idx + 1;
+        if (sort_idx === this.col_idx && !sort_descending)
+            sort *= -1;
 
         if (self.sortHandler) {
-            self.sortHandler(col_idx, descending);
+            self.sortHandler(sort);
         } else {
-            self.sort(col_idx, descending);
+            self.sort(sort);
             self.render(render_offset, render_len);
         }
 
@@ -93,33 +94,47 @@ function DataTable(widget)
         }
     };
 
-    this.sort = function(col_idx, descending) {
+    this.sort = function(sort) {
+        let col_idx;
+        let descending;
+        if (sort) {
+            col_idx = Math.abs(sort) - 1;
+            descending = sort < 0;
+        } else {
+            col_idx = null;
+            descending = false;
+        }
+
         if (col_idx === sort_idx && descending === sort_descending)
             return false;
 
         let order = descending ? -1 : 1;
 
-        function recursiveSort(rows, col_idx)
+        function recursiveSort(rows)
         {
-            rows.sort(function(row1, row2) {
-                if (row1.values[col_idx] < row2.values[col_idx]) {
-                    return -order;
-                } else if (row1.values[col_idx] > row2.values[col_idx]) {
-                    return order;
-                } else {
-                    return row1.insert_idx - row2.insert_idx;
-                }
-            });
+            if (sort) {
+                rows.sort(function(row1, row2) {
+                    if (row1.values[col_idx] < row2.values[col_idx]) {
+                        return -order;
+                    } else if (row1.values[col_idx] > row2.values[col_idx]) {
+                        return order;
+                    } else {
+                        return row1.insert_idx - row2.insert_idx;
+                    }
+                });
+            } else {
+                rows.sort(function(row1, row2) { return row1.insert_idx - row2.insert_idx; });
+            }
 
             for (let row of rows) {
                 if (row.depth === max_depth)
                     rows_flat.push(row);
-                recursiveSort(row.children, col_idx);
+                recursiveSort(row.children);
             }
         }
 
         rows_flat = [];
-        recursiveSort(rows_rec, col_idx);
+        recursiveSort(rows_rec);
         ptr = null;
 
         sort_idx = col_idx;

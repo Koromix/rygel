@@ -9,7 +9,6 @@ let mco_casemix = {};
     // Route
     let pages = {};
     let sorts = {};
-    let descendings = {};
 
     // Casemix
     let prev_url_key = null;
@@ -51,10 +50,8 @@ let mco_casemix = {};
         route.apply_coefficient = route.apply_coefficient || false;
         route.page = parseInt(parameters.page, 10) || 1;
         route.sort = parseInt(parameters.sort, 10) || 0;
-        route.descending = !!parseInt(parameters.descending, 10) || false;
         pages[route.view] = route.page;
         sorts[route.view] = route.sort;
-        descendings[route.view] = route.descending;
 
         // Casemix
         if (user.isConnected()) {
@@ -126,12 +123,11 @@ let mco_casemix = {};
             if (!data.isBusy()) {
                 switch (route.view) {
                     case 'units': {
-                        refreshUnitsTable(route.units, route.structure,
-                                          route.page, route.sort, route.descending);
+                        refreshUnitsTable(route.units, route.structure, route.page, route.sort);
                     } break;
 
                     case 'ghm_roots': {
-                        refreshGhmRootsTable(route.units, route.page, route.sort, route.descending);
+                        refreshGhmRootsTable(route.units, route.page, route.sort);
                     } break;
 
                     case 'table': {
@@ -181,8 +177,6 @@ let mco_casemix = {};
             new_route.page = pages[new_route.view];
         if (args.sort === undefined)
             new_route.sort = sorts[new_route.view];
-        if (args.descending === undefined)
-            new_route.descending = descendings[new_route.view];
 
         let short_route = {};
         for (const k of KeepKeys)
@@ -202,8 +196,7 @@ let mco_casemix = {};
             new_route.page = null;
         url = buildUrl(url, {
             page: (new_route.page !== 1) ? new_route.page : null,
-            sort: new_route.sort || null,
-            descending: new_route.descending ? 1 : null
+            sort: new_route.sort || null
         });
 
         return url;
@@ -398,7 +391,7 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshUnitsTable(units, structure_idx, page, sort, descending)
+    function refreshUnitsTable(units, structure_idx, page, sort)
     {
         if (!needsRefresh(refreshUnitsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
@@ -477,13 +470,13 @@ let mco_casemix = {};
             }
         }
 
-        units_summary.sort(sort, descending);
+        units_summary.sort(sort);
 
         let render_count = units_summary.render((page - 1) * TableLen, TableLen);
         syncPagers(queryAll('#cm_units .pagr'), render_count, units_summary.getRowCount(), page);
     }
 
-    function refreshGhmRootsTable(units, page, sort, descending)
+    function refreshGhmRootsTable(units, page, sort)
     {
         if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
@@ -537,7 +530,7 @@ let mco_casemix = {};
             }
         }
 
-        ghm_roots_summary.sort(sort, descending);
+        ghm_roots_summary.sort(sort);
 
         let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen);
         syncPagers(queryAll('#cm_ghm_roots .pagr'), render_count,
@@ -555,9 +548,7 @@ let mco_casemix = {};
         }
 
         let dtab = new DataTable(el.query('.dtab'));
-        dtab.sortHandler = function(col_idx, descending) {
-            go({sort: col_idx, descending: descending});
-        };
+        dtab.sortHandler = function(sort) { go({sort: sort}); };
 
         return dtab;
     }
