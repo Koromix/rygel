@@ -192,8 +192,6 @@ let mco_casemix = {};
             url = url_parts.join('/');
         }
 
-        if (new_route.page && new_route.page === 1)
-            new_route.page = null;
         url = buildUrl(url, {
             page: (new_route.page !== 1) ? new_route.page : null,
             sort: new_route.sort || null
