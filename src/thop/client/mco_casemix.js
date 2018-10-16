@@ -406,6 +406,9 @@ let mco_casemix = {};
             units_summary.addColumn('rss', 'RSS');
             if (!mix_params.diff)
                 units_summary.addColumn('rss_pct', '%');
+            units_summary.addColumn('rum', 'RUM');
+            if (!mix_params.diff)
+                units_summary.addColumn('rum_pct', '%');
             units_summary.addColumn('total', 'Total');
             if (!mix_params.diff)
                 units_summary.addColumn('total_pct', '%');
@@ -495,6 +498,9 @@ let mco_casemix = {};
             ghm_roots_summary.addColumn('rss', 'RSS');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('rss_pct', '%');
+            ghm_roots_summary.addColumn('rum', 'RUM');
+            if (!mix_params.diff)
+                ghm_roots_summary.addColumn('rum_pct', '%');
             ghm_roots_summary.addColumn('total', 'Total');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('total_pct', '%');
@@ -570,6 +576,11 @@ let mco_casemix = {};
         dtab.addCell(stat.count, numberText(stat.count));
         if (!mix_params.diff)
             dtab.addCell(stat.count / total.count, percentText(stat.count / total.count));
+
+        dtab.addCell(stat.mono_count, numberText(stat.mono_count));
+        if (!mix_params.diff)
+            dtab.addCell(stat.mono_count / total.mono_count,
+                         percentText(stat.mono_count / total.mono_count));
 
         dtab.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
         if (!mix_params.diff)
