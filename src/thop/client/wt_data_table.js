@@ -27,9 +27,9 @@ function DataTable(widget)
 
     function handleHeaderClick(e)
     {
-        let sort = this.col_idx + 1;
+        let sort = columns[this.col_idx].key;
         if (sort_idx === this.col_idx && !sort_descending)
-            sort *= -1;
+            sort = '-' + sort;
 
         if (self.sortHandler) {
             self.sortHandler(sort);
@@ -43,6 +43,7 @@ function DataTable(widget)
 
     this.addColumn = function(key, el) {
         let column = {
+            idx: columns.length,
             key: key,
             cell: el
         };
@@ -99,8 +100,21 @@ function DataTable(widget)
         let col_idx;
         let descending;
         if (sort) {
-            col_idx = Math.abs(sort) - 1;
-            descending = sort < 0;
+            let column;
+            if (sort[0] === '-') {
+                column = columns_map[sort.substr(1)];
+                descending = true;
+            } else {
+                column = columns_map[sort];
+                descending = false;
+            }
+
+            if (column) {
+                col_idx = column.idx;
+            } else {
+                col_idx = null;
+                descending = false;
+            }
         } else {
             col_idx = null;
             descending = false;

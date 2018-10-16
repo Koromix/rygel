@@ -49,7 +49,7 @@ let mco_casemix = {};
         route.ghm_root = route.ghm_root || null;
         route.apply_coefficient = route.apply_coefficient || false;
         route.page = parseInt(parameters.page, 10) || 1;
-        route.sort = parseInt(parameters.sort, 10) || 0;
+        route.sort = parameters.sort || null;
         pages[route.view] = route.page;
         sorts[route.view] = route.sort;
 
