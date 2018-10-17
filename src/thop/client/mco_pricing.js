@@ -410,11 +410,8 @@ let mco_pricing = {};
         }
 
         let data = {
-            labels: [],
             datasets: []
         };
-        for (let i = 0; i < max_duration; i++)
-            data.labels.push(mco_common.durationText(i));
 
         let max_price = 0.0;
         for (const col of ghs) {
@@ -438,8 +435,8 @@ let mco_pricing = {};
 
                 if (info !== null) {
                     dataset.data.push({
-                        x: mco_common.durationText(duration),
-                        y: info.price / 100
+                        x: duration,
+                        y: info.price
                     });
                     max_price = Math.max(max_price, Math.abs(info.price));
                 } else {
@@ -464,9 +461,7 @@ let mco_pricing = {};
                         max_price = p.price;
                 }
             }
-            max_price /= 100.0;
         } else {
-            max_price /= 100.0;
             min_price = -max_price;
         }
 
@@ -481,16 +476,40 @@ let mco_pricing = {};
                 data: data,
                 options: {
                     responsive: true,
-                    tooltips: {mode: 'index', intersect: false},
+                    tooltips: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(items, data) {
+                                return mco_common.durationText(items[0].xLabel)
+                            },
+                            label: function(item, data) {
+                                return 'GHS ' + data.datasets[item.datasetIndex].label + ': ' +
+                                       priceText(item.yLabel);
+                            }
+                        }
+                    },
                     hover: {mode: 'x', intersect: true},
                     elements: {
                         line: {tension: 0},
                         point: {radius: 0, hitRadius: 0}
                     },
                     scales: {
-                        yAxes: [
-                            {ticks: {suggestedMin: min_price, suggestedMax: max_price}}
-                        ]
+                        xAxes: [{
+                            type: 'linear',
+                            ticks: {
+                                stepSize: 10,
+                                callback: function(value) { return mco_common.durationText(value); }
+                            }
+                        }],
+                        yAxes: [{
+                            type: 'linear',
+                            ticks: {
+                                suggestedMin: min_price,
+                                suggestedMax: max_price,
+                                callback: function(value) { return priceText(value); }
+                            }
+                        }]
                     },
                     legend: {onClick: null}
                 },
