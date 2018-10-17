@@ -131,7 +131,7 @@
     }
 
     .tsel_list {
-        height: calc(100% - 30px);
+        height: calc(100% - 80px);
         padding: 2px;
     }
     .tsel_validate {
