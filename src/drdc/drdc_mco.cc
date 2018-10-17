@@ -667,7 +667,7 @@ bool RunMcoPack(Span<const char *> arguments)
         }
     }
 
-    LogInfo("Loading stays");
+    LogInfo("Load stays");
     mco_StaySet stay_set;
     {
         mco_StaySetBuilder stay_set_builder;
@@ -678,7 +678,7 @@ bool RunMcoPack(Span<const char *> arguments)
             return false;
     }
 
-    LogInfo("Packing stays");
+    LogInfo("Pack stays");
     if (!stay_set.SavePack(dest_filename))
         return false;
 
