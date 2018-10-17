@@ -45,11 +45,24 @@
             <nav id="opt_menu">
                 <svg id="opt_indexes" class="indexes_line"></svg>
 
+                <label id="opt_diff_indexes">
+                    Comparer
+                    <select onchange="thop.go({diff: this.value});"
+                            style="width: 12em;"></select>
+                </label>
+
+                <label id="opt_max_duration">
+                    Durée
+                    <input type="number" onchange="thop.go();"
+                           value="200" min="0" max="500" step="5"/>
+                </label>
+
                 <label id="opt_search">
                     Recherche
                     <input type="search" style="width: 16em;"
                            oninput="thop.go({search: this.value}, 200);"/>
                 </label>
+
                 <label id="opt_groups">
                     Tri
                     <select onchange="thop.go({group: this.value});"></select><br/>
@@ -59,6 +72,7 @@
                     <div></div>
                     <div></div><br/>
                 </label>
+
                 <label id="opt_mode">
                     Comparer
                     <select onchange="thop.go({mode: this.value});">
@@ -66,12 +80,21 @@
                         <option value="absolute">Absolu</option>
                     </select>
                 </label>
+
                 <label id="opt_algorithm">
                     Algorithme
                     <select onchange="thop.go({algorithm: this.value});"></select>
                 </label>
+
+                <label id="opt_apply_coefficient">
+                    Coefficient prudentiel
+                    <input type="checkbox"
+                           onchange="thop.go({apply_coefficient: this.checked});"/>
+                </label>
+
                 <button id="opt_update" onclick="thop.go({refresh: true});"
                         style="margin-bottom: 1em;">Mettre à jour</button>
+
                 <label id="opt_units">
                     <div style="width: 100%;"></div><br/>
                 </label>
@@ -79,21 +102,6 @@
                 <label id="opt_ghm_roots">
                     <select onchange="thop.go({ghm_root: this.value});"
                             style="width: 100%; margin-bottom: 4px;"></select><br/>
-                </label>
-                <label id="opt_diff_indexes">
-                    Comparer
-                    <select onchange="thop.go({diff: this.value});"
-                            style="width: 12em;"></select>
-                </label>
-                <label id="opt_max_duration">
-                    Durée
-                    <input type="number" onchange="thop.go();"
-                           value="200" min="0" max="500" step="5"/>
-                </label>
-                <label id="opt_apply_coefficient">
-                    Coefficient prudentiel
-                    <input type="checkbox"
-                           onchange="thop.go({apply_coefficient: this.checked});"/>
                 </label>
             </nav>
             <div id="log"></div>
