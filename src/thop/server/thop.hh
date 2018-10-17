@@ -36,6 +36,11 @@ struct Response {
     unsigned int flags = 0;
 };
 
+struct mco_ResultPointers {
+    const mco_Result *result;
+    Span<const mco_Result> mono_results;
+};
+
 extern const mco_TableSet *thop_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
@@ -47,6 +52,8 @@ extern mco_StaySet thop_stay_set;
 extern Date thop_stay_set_dates[2];
 extern HeapArray<mco_Result> thop_results;
 extern HeapArray<mco_Result> thop_mono_results;
+extern HeapArray<mco_ResultPointers> thop_results_index_ghm;
+extern HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,

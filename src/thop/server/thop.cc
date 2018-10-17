@@ -78,6 +78,8 @@ mco_StaySet thop_stay_set;
 Date thop_stay_set_dates[2];
 HeapArray<mco_Result> thop_results;
 HeapArray<mco_Result> thop_mono_results;
+HeapArray<mco_ResultPointers> thop_results_index_ghm;
+HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
 static DescSet desc_set;
 #ifndef NDEBUG
@@ -409,7 +411,10 @@ static void InitRoutes()
     routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
-    routes.Set({"/api/mco_casemix.json", "GET", Route::Matching::Exact, ProduceMcoCasemix});
+    routes.Set({"/api/mco_casemix_units.json", "GET", Route::Matching::Exact,
+                ProduceMcoCasemixUnits});
+    routes.Set({"/api/mco_casemix_duration.json", "GET", Route::Matching::Exact,
+                ProduceMcoCasemixDuration});
     routes.Set({"/api/mco_indexes.json", "GET", Route::Matching::Exact, ProduceMcoIndexes});
     routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
     routes.Set({"/api/mco_procedures.json", "GET", Route::Matching::Exact, ProduceMcoProcedures});
@@ -733,6 +738,31 @@ static bool InitStays(Span<const char *const> stays_filenames)
                      (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
         thop_results.Trim();
         thop_mono_results.Trim();
+
+        LogInfo("Index");
+
+        // By GHM
+        for (Size i = 0, j = 0; i < thop_results.len; i++) {
+            const mco_Result &result = thop_results[i];
+
+            mco_ResultPointers p;
+            p.result = &result;
+            p.mono_results = thop_mono_results.Take(j, result.stays.len);
+
+            thop_results_index_ghm.Append(p);
+
+            j += result.stays.len;
+        }
+        std::sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
+                  [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
+            return p1.result->ghm.Root() < p2.result->ghm.Root();
+        });
+        for (const mco_ResultPointers &p: thop_results_index_ghm) {
+            std::pair<Span<const mco_ResultPointers> *, bool> ret =
+                thop_results_index_ghm_map.Append(p.result->ghm.Root(), p);
+            ret.first->len += !ret.second;
+        }
+        thop_results_index_ghm.Trim();
     }
 
     return true;

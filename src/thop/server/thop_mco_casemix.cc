@@ -133,12 +133,14 @@ struct AggregateStatistics {
     struct Key {
         mco_GhmCode ghm;
         mco_GhsCode ghs;
+        int16_t duration;
         Span<UnitCode> units;
 
         bool operator==(const Key &other) const
         {
             return ghm == other.ghm &&
                    ghs == other.ghs &&
+                   duration == other.duration &&
                    units == other.units;
         }
         bool operator !=(const Key &other) const { return !(*this == other); }
@@ -146,7 +148,8 @@ struct AggregateStatistics {
         uint64_t Hash() const
         {
             uint64_t hash = HashTraits<mco_GhmCode>::Hash(ghm) ^
-                            HashTraits<mco_GhsCode>::Hash(ghs);
+                            HashTraits<mco_GhsCode>::Hash(ghs) ^
+                            HashTraits<int16_t>::Hash(duration);
             for (UnitCode unit: units) {
                 hash ^= HashTraits<UnitCode>::Hash(unit);
             }
@@ -170,8 +173,14 @@ struct AggregateStatistics {
     HASH_TABLE_HANDLER(AggregateStatistics, key);
 };
 
+enum class AggregationFlag {
+    KeyOnDuration = 1 << 0,
+    KeyOnUnits = 1 << 1
+};
+
 template <typename T>
-int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_response)
+int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
+                      T func, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404, out_response);
@@ -269,6 +278,7 @@ int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_respon
                     continue;
                 }
 
+                bool match = false;
                 HeapArray<UnitCode> agg_units(&statistics_units_alloc);
                 for (Size k = 0; k < sub_mono_results.len; k++) {
                     const mco_Result &mono_result = sub_mono_results[k];
@@ -283,13 +293,15 @@ int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_respon
                         ret.first->mono_count += multiplier;
                         ret.first->price_cents += multiplier * mono_pricing.price_cents;
 
-                        if (ret.second) {
+                        if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
                             agg_units.Append(unit);
                         }
+
+                        match = true;
                     }
                 }
 
-                if (agg_units.len) {
+                if (match) {
                     std::sort(agg_units.begin(), agg_units.end());
 
                     HeapArray<AggregateStatistics::Part> agg_parts(&statistics_parts_alloc);
@@ -303,7 +315,12 @@ int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_respon
                     AggregateStatistics::Key key = {};
                     key.ghm = result.ghm;
                     key.ghs = result.ghs;
-                    key.units = agg_units.TrimAndLeak();
+                    if (flags & (int)AggregationFlag::KeyOnDuration) {
+                        key.duration = result.duration;
+                    }
+                    if (flags & (int)AggregationFlag::KeyOnUnits) {
+                        key.units = agg_units.TrimAndLeak();
+                    }
 
                     AggregateStatistics *agg;
                     {
@@ -349,11 +366,16 @@ int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_respon
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
             writer.Key("ghs"); writer.Int(agg.key.ghs.number);
-            writer.Key("units"); writer.StartArray();
-            for (UnitCode unit: agg.key.units) {
-                writer.Int(unit.number);
+            if (flags & (int)AggregationFlag::KeyOnDuration) {
+                writer.Key("duration"); writer.Int(agg.key.duration);
             }
-            writer.EndArray();
+            if (flags & (int)AggregationFlag::KeyOnUnits) {
+                writer.Key("units"); writer.StartArray();
+                for (UnitCode unit: agg.key.units) {
+                    writer.Int(unit.number);
+                }
+                writer.EndArray();
+            }
             writer.Key("count"); writer.Int(agg.count);
             writer.Key("deaths"); writer.Int64(agg.deaths);
             writer.Key("mono_count_total"); writer.Int(agg.mono_count);
@@ -376,12 +398,13 @@ int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_respon
     }, conn->compression_type, out_response);
 }
 
-int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     Size i = 0, j = 0;
-    return ProduceMcoCasemixOn(conn, [&](Size consumed, Size mono_consumed,
-                                         Span<const mco_Result> *out_results,
-                                         Span<const mco_Result> *out_mono_results) {
+    return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnUnits,
+                             [&](Size consumed, Size mono_consumed,
+                                 Span<const mco_Result> *out_results,
+                                 Span<const mco_Result> *out_mono_results) {
         i += consumed;
         j += mono_consumed;
         if (i >= thop_results.len)
@@ -390,6 +413,50 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
         Size sub_len = std::min((Size)262144, thop_results.len - i);
         *out_results = thop_results.Take(i, sub_len);
         *out_mono_results = thop_mono_results.Take(j, thop_mono_results.len - j);
+
+        return true;
+    }, out_response);
+}
+
+int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response)
+{
+    mco_GhmRootCode ghm_root;
+    {
+        const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
+        if (!ghm_root_str)
+            return CreateErrorPage(422, out_response);
+
+        ghm_root = mco_GhmRootCode::FromString(ghm_root_str);
+        if (!ghm_root.IsValid())
+            return CreateErrorPage(422, out_response);
+    }
+
+    Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
+
+    // Reuse for performance
+    HeapArray<mco_Result> results;
+    HeapArray<mco_Result> mono_results;
+
+    Size i = 0;
+    return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnDuration |
+                                   (int)AggregationFlag::KeyOnUnits,
+                             [&](Size, Size,
+                                 Span<const mco_Result> *out_results,
+                                 Span<const mco_Result> *out_mono_results) {
+        results.RemoveFrom(0);
+        mono_results.RemoveFrom(0);
+
+        for (; i < results_index.len && results.len < 8192; i++) {
+            const mco_ResultPointers &p = results_index[i];
+
+            results.Append(*p.result);
+            mono_results.Append(p.mono_results);
+        }
+        if (!results.len)
+            return false;
+
+        *out_results = results;
+        *out_mono_results = mono_results;
 
         return true;
     }, out_response);
