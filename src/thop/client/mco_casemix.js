@@ -237,13 +237,12 @@ let mco_casemix = {};
         mix_ghm_roots.clear();
     }
 
-    function updateCasemixUnits(start, end, mode, diff_start, diff_end, refresh)
+    function updateCasemixUnits(start, end, mode, diff_start, diff_end, apply_coefficient, refresh)
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
             mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
-            durations: 1,
             key: user.getUrlKey()
         };
         let url = buildUrl(thop.baseUrl('api/mco_casemix_units.json'), params);
