@@ -92,8 +92,8 @@ let mco_pricing = {};
 
                 case 'chart': {
                     let chart_ctx = query('#pr_chart').getContext('2d');
-                    chart = refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
-                                              max_duration, route.apply_coefficient);
+                    refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
+                                      max_duration, route.apply_coefficient);
                 } break;
             }
 
@@ -515,8 +515,6 @@ let mco_pricing = {};
                 },
             });
         }
-
-        return chart;
     }
 
     function testDuration(ghs, duration)
