@@ -676,6 +676,94 @@ static void ReleaseConnectionData(void *, struct MHD_Connection *,
     }
 }
 
+static bool InitTables(Span<const char *const> desc_directories,
+                       Span<const char *const> stays_filenames)
+{
+    thop_table_set = mco_GetMainTableSet();
+    if (!thop_table_set || !thop_table_set->indexes.len)
+        return false;
+
+    if (stays_filenames.len) {
+        thop_authorization_set = mco_GetMainAuthorizationSet();
+        if (!thop_authorization_set)
+            return false;
+        if (!InitUserSet(mco_resource_directories, nullptr, &thop_user_set))
+            return false;
+        if (!InitStructureSet(mco_resource_directories, nullptr, &thop_structure_set))
+            return false;
+    }
+
+    if (!InitDescSet(mco_resource_directories, desc_directories, &desc_set))
+        return false;
+
+    return true;
+}
+
+static bool InitStays(Span<const char *const> stays_filenames)
+{
+    LogInfo("Stays");
+
+    mco_StaySetBuilder stay_set_builder;
+    if (!stay_set_builder.LoadFiles(stays_filenames))
+        return false;
+    if (!stay_set_builder.Finish(&thop_stay_set))
+        return false;
+
+    if (thop_stay_set.stays.len) {
+        // Limit dates
+        {
+            Span<const mco_Stay> mono_stays = thop_stay_set.stays;
+
+            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
+            thop_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
+            thop_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
+
+            while (mono_stays.len) {
+                sub_stays = mco_Split(mono_stays, 1, &mono_stays);
+                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
+                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+            }
+
+            thop_stay_set_dates[1]++;
+        }
+
+        LogInfo("Classify");
+
+        mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+                     (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
+        thop_results.Trim();
+        thop_mono_results.Trim();
+    }
+
+    return true;
+}
+
+static bool ComputeConstraints()
+{
+    LogInfo("Constraints");
+
+    Async async;
+
+    thop_constraints_set.Reserve(thop_table_set->indexes.len);
+    for (Size i = 0; i < thop_table_set->indexes.len; i++) {
+        if (thop_table_set->indexes[i].valid) {
+            // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
+            if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
+                    !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
+                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
+                async.AddTask([=]() {
+                    return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
+                });
+            }
+            thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
+        } else {
+            thop_index_to_constraints.Append(nullptr);
+        }
+    }
+
+    return async.Sync();
+}
+
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
@@ -751,78 +839,12 @@ Options:
         return 1;
     }
 
-    thop_table_set = mco_GetMainTableSet();
-    if (!thop_table_set || !thop_table_set->indexes.len)
+    if (!InitTables(desc_directories, stays_filenames))
         return 1;
-    if (stays_filenames.len) {
-        thop_authorization_set = mco_GetMainAuthorizationSet();
-        if (!thop_authorization_set)
-            return 1;
-        if (!InitUserSet(mco_resource_directories, nullptr, &thop_user_set))
-            return 1;
-        if (!InitStructureSet(mco_resource_directories, nullptr, &thop_structure_set))
-            return 1;
-    }
-    if (!InitDescSet(mco_resource_directories, desc_directories, &desc_set))
+    if (stays_filenames.len && !InitStays(stays_filenames))
         return 1;
-
-    if (stays_filenames.len) {
-        LogInfo("Loading stays");
-        mco_StaySetBuilder stay_set_builder;
-        if (!stay_set_builder.LoadFiles(stays_filenames))
-            return 1;
-        if (!stay_set_builder.Finish(&thop_stay_set))
-            return 1;
-
-        if (thop_stay_set.stays.len) {
-            Span<const mco_Stay> mono_stays = thop_stay_set.stays;
-
-            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-            thop_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
-            thop_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
-
-            while (mono_stays.len) {
-                sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
-                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
-            }
-
-            thop_stay_set_dates[1]++;
-        }
-
-        LogInfo("Classify");
-        mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
-                     (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
-
-        // Don't use too much memory
-        thop_results.Trim();
-        thop_mono_results.Trim();
-    }
-
-    LogInfo("Computing constraints");
-    {
-        Async async;
-
-        thop_constraints_set.Reserve(thop_table_set->indexes.len);
-        for (Size i = 0; i < thop_table_set->indexes.len; i++) {
-            if (thop_table_set->indexes[i].valid) {
-                // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-                if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
-                        !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
-                    HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
-                    async.AddTask([=]() {
-                        return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
-                    });
-                }
-                thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
-            } else {
-                thop_index_to_constraints.Append(nullptr);
-            }
-        }
-
-        if (!async.Sync())
-            return 1;
-    }
+    if (!ComputeConstraints())
+        return 1;
 
 #ifndef NDEBUG
     if (!UpdateStaticAssets())
