@@ -132,7 +132,7 @@ form button, form input[type=submit] {
         padding: 0;
         margin: 0;
     }
-    main { padding-top: 40px; }
+    main { padding-top: 30px; }
 
     /* Forms */
     form {
@@ -146,26 +146,26 @@ form button, form input[type=submit] {
     #side_deploy {
         display: block;
         float: left;
-        width: 42px;
-        height: 40px;
+        width: 32px;
+        height: 30px;
         margin: 0;
         padding: 0;
         background-color: #262626;
-        background-image: url("data:image/gif;base64,R0lGODlhFgAWAIABAP///wAAACH5BAEKAAEALAAAAAAWABYAAAIfhI+py+0PXZi02ouz3rz7b0XiSJYRiKbqyobmC8dNAQA7");
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAARCAYAAAA7bUf6AAAAIklEQVQ4jWP4TwXAMHgMGQWYgCoBO3gMGQWYgCoBO2gMAQD2R2G7+rsoBAAAAABJRU5ErkJggg==");
         background-repeat: no-repeat;
         background-position: center;
     }
     #opt_deploy {
         position: fixed;
         top: 0;
-        left: calc(100vw - 42px);
-        width: 42px;
-        height: 40px;
+        left: calc(100vw - 32px);
+        width: 32px;
+        height: 30px;
         margin: 0;
         padding: 0;
         z-index: 20;
         background-color: #262626;
-        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAARCAYAAAC8XK78AAAAy0lEQVRIid3TPUuCYRSAYZdwSwgCh8ghgwgDCWooaHJwcgn8yW5O0RI1hIEFGkSBH4NXi8MZwnz1eS08cObr5vkoFP7ToIhSzruzKKCCR0xz2g52fzuFKnqYJd4u9pa9ihP0E+J32M/6Hmp4TYDfo5wJDxF1DNbAH3CwEh4iLvC+Av6Ew7XwEHGFjwz4M46S4CHiBp9L4C84ToqHiAa+FuB9nOaCh4gmRj/gbzjLFQ8RLYwDPsT5RvAQcYvJ/IdcbhQPEW1c/wm+NfMNHdgMHGZjy8cAAAAASUVORK5CYII=");
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAAnElEQVQoka3SoYoCYRgF0P8lBINYRFhkF0TQsILJYLII++JiEQyCMAqusCioxbPF8IVhGMe5cNvlpJvwgQyPmrpEI6WUEj6xrwFdoZli0MfxDXSNVsoLhjhVQDdo56IB/8bfC+gWnUI04BOcS6A7dEuhAZ/iUoBm6L2EBnyGaw56wFclNOBz3AL6i8FbaMAXuD8fM6oFDfgPxmX3/wRv+mUALt/NAAAAAElFTkSuQmCC");
         background-repeat: no-repeat;
         background-position: center;
     }
@@ -177,19 +177,26 @@ form button, form input[type=submit] {
         left: 0;
         top: 0;
         width: 100vw;
-        min-height: 40px;
+        min-height: 30px;
         background: #262626;
         z-index: 10;
     }
     #side_menu li a {
         display: none;
-        height: 40px;
-        padding: 10px 10px 10px 52px;
+        height: 30px;
+        padding: 6px 34px 9px 34px;
         color: white;
         font-style: italic;
-        font-size: 16px;
+        font-size: 15px;
     }
-    #side_menu li a.category { font-style: normal; }
+    #side_menu li a.category {
+        height: 20px;
+        padding: 4px 34px 4px 34px;
+        font-size: 12px;
+        font-style: normal;
+        text-align: center;
+        padding:
+    }
     #side_menu li a.active {
         display: block;
         font-style: normal;
@@ -202,7 +209,7 @@ form button, form input[type=submit] {
         display: none;
         position: fixed;
         left: 0;
-        top: 40px;
+        top: 30px;
         box-sizing: border-box;
         width: 100vw;
         padding: 1em;
