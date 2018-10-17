@@ -413,6 +413,8 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
 
 int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response)
 {
+    const int split_size = 65536;
+
     Size i = 0, j = 0;
     return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnUnits,
                              [&](Span<const mco_Result> *out_results,
@@ -420,7 +422,7 @@ int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *o
         if (i >= thop_results.len)
             return false;
 
-        Size len = std::min((Size)65536, thop_results.len - i);
+        Size len = std::min((Size)split_size, thop_results.len - i);
         Size mono_len = 0;
         for (Size k = i, end = i + len; k < end; k++) {
             mono_len += thop_results[k].stays.len;
@@ -437,6 +439,8 @@ int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *o
 
 int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response)
 {
+    const int split_size = 8192;
+
     mco_GhmRootCode ghm_root;
     {
         const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
@@ -462,7 +466,7 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
 
-        for (; i < results_index.len && results.len < 8192; i++) {
+        for (; i < results_index.len && results.len < split_size; i++) {
             const mco_ResultPointers &p = results_index[i];
 
             results.Append(*p.result);
