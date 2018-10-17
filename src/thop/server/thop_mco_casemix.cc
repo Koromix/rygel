@@ -357,7 +357,8 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                         agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
 
-    out_response->flags |= (int)Response::Flag::DisableETag;
+    out_response->flags |= (int)Response::Flag::DisableCacheControl |
+                           (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
         for (const AggregateStatistics &agg: statistics) {
