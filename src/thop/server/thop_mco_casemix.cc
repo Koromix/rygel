@@ -196,6 +196,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     Date dates[2] = {};
     Date diff_dates[2] = {};
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
+    bool apply_coefficent = false;
     {
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
                             &dates[0], &dates[1]))
@@ -214,6 +215,18 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 return CreateErrorPage(422, out_response);
             }
             dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+        }
+
+        const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
+        if (apply_coefficent_str && apply_coefficent_str[0]) {
+            if (TestStr(apply_coefficent_str, "1")) {
+                apply_coefficent = true;
+            } else if (TestStr(apply_coefficent_str, "0")) {
+                apply_coefficent = false;
+            } else {
+                LogError("Invalid 'apply_coefficent' parameter value '%1'", apply_coefficent_str);
+                return CreateErrorPage(422, out_response);
+            }
         }
     }
 
@@ -252,7 +265,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
 
             pricings.RemoveFrom(0);
             mono_pricings.RemoveFrom(0);
-            mco_Price(results, true, &pricings);
+            mco_Price(results, apply_coefficent, &pricings);
             mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
             for (i = 0, j = 0; i < results.len; i++) {

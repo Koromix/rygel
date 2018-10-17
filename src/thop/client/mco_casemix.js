@@ -62,7 +62,8 @@ let mco_casemix = {};
             if (start_date) {
                 let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
                 updateCasemixUnits(route.period[0], route.period[1], route.algorithm,
-                                   prev_period[0], prev_period[1], route.refresh);
+                                   prev_period[0], prev_period[1], route.apply_coefficient,
+                                   route.refresh);
             }
         }
         delete route.refresh;
@@ -105,12 +106,13 @@ let mco_casemix = {};
         }
 
         // Refresh settings
-        queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update')
+        queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .toggleClass('hide', !user.isConnected());
         query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'table');
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
+        query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
         query('#opt_update').disabled = mix_ready;
         refreshStructuresMenu(route.units, route.structure);
         refreshGhmRootsMenu(ghm_roots, route.ghm_root);
@@ -243,6 +245,7 @@ let mco_casemix = {};
             dates: (start && end) ? (start + '..' + end) : null,
             mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
+            apply_coefficient: 0 + apply_coefficient,
             key: user.getUrlKey()
         };
         let url = buildUrl(thop.baseUrl('api/mco_casemix_units.json'), params);
