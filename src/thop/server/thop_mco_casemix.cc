@@ -170,7 +170,8 @@ struct AggregateStatistics {
     HASH_TABLE_HANDLER(AggregateStatistics, key);
 };
 
-int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
+template <typename T>
+int ProduceMcoCasemixOn(const ConnectionInfo *conn, T func, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(404, out_response);
@@ -221,103 +222,113 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
         return CreateErrorPage(422, out_response);
     }
 
-    HeapArray<mco_Pricing> pricings;
-    HeapArray<mco_Pricing> mono_pricings;
-    mco_Price(thop_results, false, &pricings);
-    mco_Dispense(pricings, thop_mono_results, dispense_mode, &mono_pricings);
-
     // TODO: Parallelize and optimize aggregation
     HeapArray<AggregateStatistics> statistics;
     BlockAllocator statistics_units_alloc(Kibibytes(4));
     BlockAllocator statistics_parts_alloc(Kibibytes(16));
     {
         HashMap<AggregateStatistics::Key, Size> statistics_map;
+
         // Reuse for performance
+        HeapArray<mco_Pricing> pricings;
+        HeapArray<mco_Pricing> mono_pricings;
         HashMap<UnitCode, AggregateStatistics::Part> agg_parts_map;
 
-        Size j = 0;
-        for (Size i = 0; i < thop_results.len; i++) {
-            agg_parts_map.RemoveAll();
+        Size i = 0, j = 0;
+        for (;;) {
+            Span<const mco_Result> results;
+            Span<const mco_Result> mono_results;
+            if (!func(i, j, &results, &mono_results))
+                break;
 
-            const mco_Result &result = thop_results[i];
-            const mco_Pricing &pricing = pricings[i];
+            pricings.RemoveFrom(0);
+            mono_pricings.RemoveFrom(0);
+            mco_Price(results, true, &pricings);
+            mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-            Span<const mco_Result> sub_mono_results = thop_mono_results.Take(j, result.stays.len);
-            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-            j += result.stays.len;
+            for (i = 0, j = 0; i < results.len; i++) {
+                agg_parts_map.RemoveAll();
 
-            int multiplier;
-            if (!dates[0].value ||
-                    (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
-                     result.stays[result.stays.len - 1].exit.date < dates[1])) {
-                multiplier = 1;
-            } else if (diff_dates[0].value &&
-                       result.stays[result.stays.len - 1].exit.date >= diff_dates[0] &&
-                       result.stays[result.stays.len - 1].exit.date < diff_dates[1]) {
-                multiplier = -1;
-            } else {
-                continue;
-            }
+                const mco_Result &result = results[i];
+                const mco_Pricing &pricing = pricings[i];
 
-            HeapArray<UnitCode> agg_units(&statistics_units_alloc);
-            for (Size k = 0; k < sub_mono_results.len; k++) {
-                const mco_Result &mono_result = sub_mono_results[k];
-                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
-                UnitCode unit = mono_result.stays[0].unit;
-                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+                Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+                Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+                j += result.stays.len;
 
-                if (allowed_units.Find(unit)) {
-                    std::pair<AggregateStatistics::Part *, bool> ret =
-                        agg_parts_map.AppendDefault(mono_result.stays[0].unit);
-
-                    ret.first->mono_count += multiplier;
-                    ret.first->price_cents += multiplier * mono_pricing.price_cents;
-
-                    if (ret.second) {
-                        agg_units.Append(unit);
-                    }
-                }
-            }
-
-            if (agg_units.len) {
-                std::sort(agg_units.begin(), agg_units.end());
-
-                HeapArray<AggregateStatistics::Part> agg_parts(&statistics_parts_alloc);
-                for (UnitCode unit: agg_units) {
-                    AggregateStatistics::Part *part = agg_parts_map.Find(unit);
-                    if (part) {
-                        agg_parts.Append(*part);
-                    }
-                }
-
-                AggregateStatistics::Key key = {};
-                key.ghm = result.ghm;
-                key.ghs = result.ghs;
-                key.units = agg_units.TrimAndLeak();
-
-                AggregateStatistics *agg;
-                {
-                    std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
-                    if (ret.second) {
-                        agg = statistics.AppendDefault();
-                        agg->key = key;
-                    } else {
-                        agg = &statistics[*ret.first];
-                    }
-                }
-
-                agg->count += multiplier;
-                agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
-                agg->mono_count += multiplier * (int32_t)result.stays.len;
-                agg->price_cents += multiplier * pricing.price_cents;
-                if (agg->parts.ptr) {
-                    DebugAssert(agg->parts.len == agg_parts.len);
-                    for (Size k = 0; k < agg->parts.len; k++) {
-                        agg->parts[k].mono_count += agg_parts[k].mono_count;
-                        agg->parts[k].price_cents += agg_parts[k].price_cents;
-                    }
+                int multiplier;
+                if (!dates[0].value ||
+                        (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
+                         result.stays[result.stays.len - 1].exit.date < dates[1])) {
+                    multiplier = 1;
+                } else if (diff_dates[0].value &&
+                           result.stays[result.stays.len - 1].exit.date >= diff_dates[0] &&
+                           result.stays[result.stays.len - 1].exit.date < diff_dates[1]) {
+                    multiplier = -1;
                 } else {
-                    agg->parts = agg_parts.TrimAndLeak();
+                    continue;
+                }
+
+                HeapArray<UnitCode> agg_units(&statistics_units_alloc);
+                for (Size k = 0; k < sub_mono_results.len; k++) {
+                    const mco_Result &mono_result = sub_mono_results[k];
+                    const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+                    UnitCode unit = mono_result.stays[0].unit;
+                    DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+
+                    if (allowed_units.Find(unit)) {
+                        std::pair<AggregateStatistics::Part *, bool> ret =
+                            agg_parts_map.AppendDefault(mono_result.stays[0].unit);
+
+                        ret.first->mono_count += multiplier;
+                        ret.first->price_cents += multiplier * mono_pricing.price_cents;
+
+                        if (ret.second) {
+                            agg_units.Append(unit);
+                        }
+                    }
+                }
+
+                if (agg_units.len) {
+                    std::sort(agg_units.begin(), agg_units.end());
+
+                    HeapArray<AggregateStatistics::Part> agg_parts(&statistics_parts_alloc);
+                    for (UnitCode unit: agg_units) {
+                        AggregateStatistics::Part *part = agg_parts_map.Find(unit);
+                        if (part) {
+                            agg_parts.Append(*part);
+                        }
+                    }
+
+                    AggregateStatistics::Key key = {};
+                    key.ghm = result.ghm;
+                    key.ghs = result.ghs;
+                    key.units = agg_units.TrimAndLeak();
+
+                    AggregateStatistics *agg;
+                    {
+                        std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
+                        if (ret.second) {
+                            agg = statistics.AppendDefault();
+                            agg->key = key;
+                        } else {
+                            agg = &statistics[*ret.first];
+                        }
+                    }
+
+                    agg->count += multiplier;
+                    agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
+                    agg->mono_count += multiplier * (int32_t)result.stays.len;
+                    agg->price_cents += multiplier * pricing.price_cents;
+                    if (agg->parts.ptr) {
+                        DebugAssert(agg->parts.len == agg_parts.len);
+                        for (Size k = 0; k < agg->parts.len; k++) {
+                            agg->parts[k].mono_count += agg_parts[k].mono_count;
+                            agg->parts[k].price_cents += agg_parts[k].price_cents;
+                        }
+                    } else {
+                        agg->parts = agg_parts.TrimAndLeak();
+                    }
                 }
             }
         }
@@ -363,4 +374,23 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
         return true;
     }, conn->compression_type, out_response);
+}
+
+int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
+{
+    Size i = 0, j = 0;
+    return ProduceMcoCasemixOn(conn, [&](Size consumed, Size mono_consumed,
+                                         Span<const mco_Result> *out_results,
+                                         Span<const mco_Result> *out_mono_results) {
+        i += consumed;
+        j += mono_consumed;
+        if (i >= thop_results.len)
+            return false;
+
+        Size sub_len = std::min((Size)262144, thop_results.len - i);
+        *out_results = thop_results.Take(i, sub_len);
+        *out_mono_results = thop_mono_results.Take(j, thop_mono_results.len - j);
+
+        return true;
+    }, out_response);
 }
