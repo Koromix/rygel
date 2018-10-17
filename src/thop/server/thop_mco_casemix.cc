@@ -256,11 +256,10 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         HeapArray<mco_Pricing> mono_pricings;
         HashMap<UnitCode, AggregateStatistics::Part> agg_parts_map;
 
-        Size i = 0, j = 0;
         for (;;) {
             Span<const mco_Result> results;
             Span<const mco_Result> mono_results;
-            if (!func(i, j, &results, &mono_results))
+            if (!func(&results, &mono_results))
                 break;
 
             pricings.RemoveFrom(0);
@@ -268,7 +267,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
             mco_Price(results, apply_coefficent, &pricings);
             mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-            for (i = 0, j = 0; i < results.len; i++) {
+            for (Size i = 0, j = 0; i < results.len; i++) {
                 agg_parts_map.RemoveAll();
 
                 const mco_Result &result = results[i];
@@ -416,17 +415,21 @@ int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *o
 {
     Size i = 0, j = 0;
     return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnUnits,
-                             [&](Size consumed, Size mono_consumed,
-                                 Span<const mco_Result> *out_results,
+                             [&](Span<const mco_Result> *out_results,
                                  Span<const mco_Result> *out_mono_results) {
-        i += consumed;
-        j += mono_consumed;
         if (i >= thop_results.len)
             return false;
 
-        Size sub_len = std::min((Size)262144, thop_results.len - i);
-        *out_results = thop_results.Take(i, sub_len);
-        *out_mono_results = thop_mono_results.Take(j, thop_mono_results.len - j);
+        Size len = std::min((Size)65536, thop_results.len - i);
+        Size mono_len = 0;
+        for (Size k = i, end = i + len; k < end; k++) {
+            mono_len += thop_results[k].stays.len;
+        }
+
+        *out_results = thop_results.Take(i, len);
+        *out_mono_results = thop_mono_results.Take(j, mono_len);
+        i += len;
+        j += mono_len;
 
         return true;
     }, out_response);
@@ -454,8 +457,7 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
     Size i = 0;
     return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnDuration |
                                    (int)AggregationFlag::KeyOnUnits,
-                             [&](Size, Size,
-                                 Span<const mco_Result> *out_results,
+                             [&](Span<const mco_Result> *out_results,
                                  Span<const mco_Result> *out_mono_results) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
