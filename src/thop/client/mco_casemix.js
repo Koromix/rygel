@@ -55,6 +55,17 @@ let mco_casemix = {};
         pages[route.view] = route.page;
         sorts[route.view] = route.sort;
 
+        // Resources
+        let indexes = mco_common.updateIndexes();
+        if (!route.date && indexes.length)
+            route.date = indexes[indexes.length - 1].begin_date;
+        let ghm_roots = [];
+        if (route.view === 'durations') {
+            ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
+            if (!route.ghm_root && ghm_roots.length)
+                route.ghm_root = ghm_roots[0].ghm_root;
+        }
+
         // Casemix
         let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
         if (user.isConnected()) {
@@ -73,17 +84,6 @@ let mco_casemix = {};
             }
         }
         delete route.refresh;
-
-        // Resources
-        let indexes = mco_common.updateIndexes();
-        if (!route.date && indexes.length)
-            route.date = indexes[indexes.length - 1].begin_date;
-        let ghm_roots = [];
-        if (route.view === 'durations') {
-            ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
-            if (!route.ghm_root && ghm_roots.length)
-                route.ghm_root = ghm_roots[0].ghm_root;
-        }
 
         // Errors
         if (user.isConnected()) {
