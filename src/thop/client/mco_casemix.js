@@ -723,7 +723,7 @@ let mco_casemix = {};
                 [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
             }
 
-            let max_duration = 20;
+            let max_duration = 10;
             let max_count = 0;
             let max_price_cents = 0;
             for (const stat of stats2) {
