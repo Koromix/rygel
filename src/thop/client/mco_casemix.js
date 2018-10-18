@@ -243,9 +243,7 @@ let mco_casemix = {};
     {
         mix_rows.length = 0;
         mix_ghm_roots.clear();
-
         mix_durations = {};
-        mix_mismatched_roots.clear();
     }
 
     function updateCasemixUnits(start, end, mode, diff_start, diff_end, apply_coefficient, refresh)
@@ -335,6 +333,8 @@ let mco_casemix = {};
                         row.ghs = '2+';
 
                     mix_mismatched_roots.add(ghm_root);
+                } else {
+                    mix_mismatched_roots.delete(ghm_root);
                 }
 
                 mix_durations[ghm_root] = json;
