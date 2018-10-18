@@ -111,6 +111,7 @@ form button, form input[type=submit] {
         top: 0;
         min-height: 100%;
         width: 180px;
+        z-index: 999;
     }
     #side_menu li a { padding: 0.5em 0.5em 0.5em 2em; }
     #side_menu li a.category { padding-left: 0.5em; }
