@@ -76,6 +76,8 @@ let mco_casemix = {};
 
         // Resources
         let indexes = mco_common.updateIndexes();
+        if (!route.date && indexes.length)
+            route.date = indexes[indexes.length - 1].begin_date;
         let ghm_roots = [];
         if (route.view === 'durations') {
             ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;

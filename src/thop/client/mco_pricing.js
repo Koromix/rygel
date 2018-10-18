@@ -52,9 +52,9 @@ let mco_pricing = {};
         // Errors
         if (route.view !== 'chart' && route.view !== 'table')
             errors.add('Mode d\'affichage incorrect');
-        if (route.date !== null && indexes.length && main_index < 0)
+        if (route.date && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
-        if (route.diff !== null && indexes.length && diff_index < 0)
+        if (route.diff && indexes.length && diff_index < 0)
             errors.add('Date de comparaison incorrecte');
         if (route.ghm_root !== null && ghm_roots.length) {
             if (!ghm_roots_map[route.ghm_root]) {
