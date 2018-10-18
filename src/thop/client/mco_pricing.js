@@ -345,7 +345,7 @@ let mco_pricing = {};
                       function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
             appendRow('Tarif €', function(col) {
                 let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-                return [priceText(cents), {class: 'price'}, true];
+                return [priceText(cents), {class: 'noex'}, true];
             });
             appendRow('Forfait EXB €', function(col) {
                 let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
@@ -549,7 +549,7 @@ let mco_pricing = {};
             mode = 'exh';
         } else {
             price_cents = ghs.ghs_cents;
-            mode = 'price';
+            mode = 'noex';
         }
 
         price_cents = applyGhsCoefficient(ghs, price_cents, apply_coeff);

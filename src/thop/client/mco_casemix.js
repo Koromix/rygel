@@ -738,18 +738,18 @@ let mco_casemix = {};
             for (let td of thead.queryAll('td'))
                 td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
 
-            function addDiffClass(cls, value)
+            function diffClass(value)
             {
                 if (mix_params.diff) {
                     if (value > 0) {
-                        return cls + ' higher';
+                        return ' diff higher';
                     } else if (value < 0) {
-                        return cls + ' lower';
+                        return ' diff lower';
                     } else {
-                        return cls + ' neutral';
+                        return ' diff neutral';
                     }
                 } else {
-                    return cls;
+                    return '';
                 }
             }
 
@@ -764,15 +764,15 @@ let mco_casemix = {};
 
                     if (stat) {
                         tr.appendChildren([
-                            html('td', {class: 'count ' + addDiffClass('total', stat.count)},
+                            html('td', {class: 'count total' + diffClass(stat.count)},
                                  '' + stat.count),
-                            html('td', {class: addDiffClass('total', stat.price_cents)},
+                            html('td', {class: 'price total' + diffClass(stat.price_cents)},
                                  priceText(stat.price_cents, false))
                         ]);
                     } else {
                         tr.appendChildren([
-                            html('td', {class: 'total empty'}),
-                            html('td', {class: 'total empty'})
+                            html('td', {class: 'count total empty'}),
+                            html('td', {class: 'price total empty'})
                         ]);
                     }
                 }
@@ -803,26 +803,26 @@ let mco_casemix = {};
                     } else if (col.exh_treshold && duration >= col.exh_treshold) {
                         cls = 'exh';
                     } else {
-                        cls = 'price';
+                        cls = 'noex';
                     }
 
                     if (stat) {
                         tr.appendChildren([
-                            html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
+                            html('td', {class: 'count ' + cls + diffClass(stat.count)},
                                  '' + stat.count),
-                            html('td', {class: addDiffClass(cls, stat.price_cents)},
+                            html('td', {class: 'price ' + cls + diffClass(stat.price_cents)},
                                  priceText(stat.price_cents, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
                         tr.appendChildren([
-                            html('td', {class: cls}),
-                            html('td', {class: cls})
+                            html('td', {class: 'count ' + cls}),
+                            html('td', {class: 'price ' + cls})
                         ]);
                     } else {
                         tr.appendChildren([
-                            html('td'),
-                            html('td')
+                            html('td', {class: 'count'}),
+                            html('td', {class: 'price'})
                         ]);
                     }
                 }

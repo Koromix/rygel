@@ -21,6 +21,7 @@
     font-style: italic;
     font-weight: normal;
 }
+.pr_grid td { border-left: 0; }
 .pr_grid thead td { text-align: center; }
 .pr_grid tbody td {
     background: #969696;
@@ -35,7 +36,7 @@
     background: var(--mco_conditions_bg);
     color: var(--mco_conditions_fg);
 }
-.pr_grid .price {
+.pr_grid .noex {
     background: var(--mco_price_bg);
     color: var(--mco_price_fg);
 }
@@ -51,38 +52,30 @@
     background: var(--mco_age_bg);
     color: var(--mco_age_fg);
 }
-.pr_grid .lower:before {
+.pr_grid .diff:before {
     float: left;
     height: 22px;
     margin: -3px;
     width: 16px;
-    content: '↘';
     text-align: center;
+}
+.pr_grid .lower:before {
+    content: '↘';
     background: #ff8888;
     color: black;
 }
 .pr_grid .higher:before {
-    float: left;
-    height: 22px;
-    margin: -3px;
-    width: 16px;
     content: '↗';
-    text-align: center;
     background: #a2d4b6;
     color: black;
 }
 .pr_grid .neutral:before {
-    float: left;
-    height: 22px;
-    margin: -3px;
-    width: 16px;
     content: ' ';
-    text-align: center;
     background: #d7d7d7;
     color: black;
 }
-.pr_grid .removed:after { content: ' *'; }
-.pr_grid .added:after { content: ' *'; }
+.pr_grid .removed:after { content: '*'; }
+.pr_grid .added:after { content: '*'; }
 
 #pr_table .warn {
     filter: grayscale(90%) !important;
