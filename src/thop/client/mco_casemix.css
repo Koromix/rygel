@@ -11,6 +11,13 @@
     text-align: left;
 }
 
+#cm_table .total {
+    background: var(--mco_total_bg);
+    color: var(--mco_total_fg);
+    font-weight: bold;
+}
+
+#cm_table .count { border-right: 0; }
 #cm_table .count.lower { padding-right: 19px; }
 #cm_table .count.lower:before {
     float: right;

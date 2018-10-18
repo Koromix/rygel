@@ -241,4 +241,6 @@ form button, form input[type=submit] {
     --mco_exb_fg: black;
     --mco_age_bg: #99ffff;
     --mco_age_fg: black;
+    --mco_total_bg: #1c4d9e;
+    --mco_total_fg: white;
 }

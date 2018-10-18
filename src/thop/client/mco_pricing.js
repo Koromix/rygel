@@ -233,7 +233,8 @@ let mco_pricing = {};
 
             let ghs = pricing_info[main_index].ghs;
 
-            addPricingHeader(thead, ghm_root, pricing_info[main_index].ghs, apply_coeff, merge_cells);
+            addPricingHeader(thead, ghm_root, pricing_info[main_index].ghs, true,
+                             apply_coeff, merge_cells);
 
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
@@ -280,7 +281,7 @@ let mco_pricing = {};
         old_table.replaceWith(table);
     }
 
-    function addPricingHeader(thead, ghm_root, columns, apply_coeff, merge_cells)
+    function addPricingHeader(thead, ghm_root, columns, show_pricing, apply_coeff, merge_cells)
     {
         if (apply_coeff === undefined)
             apply_coeff = false;
@@ -333,42 +334,44 @@ let mco_pricing = {};
         appendRow('GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, false]; });
         appendRow('GHM', function(col) { return [col.ghm, {class: 'desc'}, true]; });
         appendRow('Niveau', function(col) { return ['Niveau ' + col.ghm.substr(5, 1), {class: 'desc'}, true]; });
-        appendRow('Conditions', function(col) {
-            let el = html('div', {title: col.conditions.join('\n')},
-                          col.conditions.length ? col.conditions.length.toString() : '');
-            return [el, {class: 'conditions'}, true];
-        });
-        appendRow('Borne basse', function(col) { return [mco_common.durationText(col.exb_treshold), {class: 'exb'}, true]; });
-        appendRow('Borne haute',
-                  function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
-        appendRow('Tarif €', function(col) {
-            let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
-            return [priceText(cents), {class: 'price'}, true];
-        });
-        appendRow('Forfait EXB €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
-        });
-        appendRow('Tarif EXB €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
-            return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
-        });
-        appendRow('Tarif EXH €', function(col) {
-            let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
-            return [priceText(cents), {class: 'exh'}, true];
-        });
-        appendRow('Age', function(col) {
-            let texts = [];
-            let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
-            if (severity >= 0 && severity < 4) {
-                if (severity < col.young_severity_limit)
-                    texts.push('< ' + col.young_age_treshold.toString());
-                if (severity < col.old_severity_limit)
-                    texts.push('≥ ' + col.old_age_treshold.toString());
-            }
+        if (show_pricing) {
+            appendRow('Conditions', function(col) {
+                let el = html('div', {title: col.conditions.join('\n')},
+                              col.conditions.length ? col.conditions.length.toString() : '');
+                return [el, {class: 'conditions'}, true];
+            });
+            appendRow('Borne basse', function(col) { return [mco_common.durationText(col.exb_treshold), {class: 'exb'}, true]; });
+            appendRow('Borne haute',
+                      function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+            appendRow('Tarif €', function(col) {
+                let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
+                return [priceText(cents), {class: 'price'}, true];
+            });
+            appendRow('Forfait EXB €', function(col) {
+                let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+                return [col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+            });
+            appendRow('Tarif EXB €', function(col) {
+                let cents = applyGhsCoefficient(col, col.exb_cents, apply_coeff);
+                return [!col.exb_once ? priceText(cents) : '', {class: 'exb'}, true];
+            });
+            appendRow('Tarif EXH €', function(col) {
+                let cents = applyGhsCoefficient(col, col.exh_cents, apply_coeff);
+                return [priceText(cents), {class: 'exh'}, true];
+            });
+            appendRow('Age', function(col) {
+                let texts = [];
+                let severity = col.ghm.charCodeAt(5) - '1'.charCodeAt(0);
+                if (severity >= 0 && severity < 4) {
+                    if (severity < col.young_severity_limit)
+                        texts.push('< ' + col.young_age_treshold.toString());
+                    if (severity < col.old_severity_limit)
+                        texts.push('≥ ' + col.old_age_treshold.toString());
+                }
 
-            return [texts.join(', '), {class: 'age'}, true];
-        });
+                return [texts.join(', '), {class: 'age'}, true];
+            });
+        }
     }
     this.addPricingHeader = addPricingHeader;
 

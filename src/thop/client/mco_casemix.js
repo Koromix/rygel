@@ -24,10 +24,13 @@ let mco_casemix = {};
     let mix_url = null;
     let mix_rows = [];
     let mix_ghm_roots = new Set;
+    let mix_durations = {};
 
     // Cache
     let units_summary = null;
     let ghm_roots_summary = null;
+    let duration_columns = [];
+    let duration_mismatch = false;
 
     function runCasemix(route, url, parameters, hash)
     {
@@ -54,50 +57,55 @@ let mco_casemix = {};
         sorts[route.view] = route.sort;
 
         // Casemix
+        let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
         if (user.isConnected()) {
             updateSettings();
             if (!route.algorithm)
                 route.algorithm = default_algorithm;
 
             if (start_date) {
-                let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
                 updateCasemixUnits(route.period[0], route.period[1], route.algorithm,
                                    prev_period[0], prev_period[1], route.apply_coefficient,
                                    route.refresh);
+
+                // TODO: Don't require updateCasemixUnits() if we start on durations view
+                if (mix_rows.length && route.view === 'durations')
+                    updateCasemixDuration(route.ghm_root);
             }
         }
         delete route.refresh;
 
         // Resources
         let indexes = mco_common.updateIndexes();
-        let ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
-        if (!route.date && indexes.length)
-            route.date = indexes[indexes.length - 1].begin_date;
-        if (!route.ghm_root && ghm_roots.length)
-            route.ghm_root = ghm_roots[0].ghm_root;
-        let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
-        let pricings_map = null;
-        if (main_index >= 0)
-            pricings_map = mco_pricing.updatePriceMap(main_index);
+        let ghm_roots = [];
+        if (route.view === 'durations') {
+            ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
+            if (!route.ghm_root && ghm_roots.length)
+                route.ghm_root = ghm_roots[0].ghm_root;
+
+            // FIXME: Use mix_params for period and prev_period
+            if (route.ghm_root)
+                updateCasemixPricings(indexes, route.period, prev_period, route.ghm_root);
+        }
 
         // Errors
         if (user.isConnected()) {
-            if (!(['units', 'ghm_roots', 'table'].includes(route.view)))
+            if (!(['units', 'ghm_roots', 'durations'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_ready)
                 errors.add('Aucune unité sélectionnée');
             if (route.structure > structures.length && structures.length)
                 errors.add('Structure inexistante');
-            if (route.view == 'table') {
+            if (route.view === 'durations') {
                 if (!route.ghm_root)
                     errors.add('Aucune racine de GHM sélectionnée');
                 if (mix_ghm_roots.size && !mix_ghm_roots.has(route.ghm_root))
                     errors.add('Aucun séjour dans cette racine');
+                //if (duration_mismatch)
+                //    errors.add('Regroupement des GHS suite à changement')
             }
             if (!(['none', 'absolute'].includes(route.mode)))
                 errors.add('Mode de comparaison inconnu');
-            if (route.date !== null && indexes.length && main_index < 0)
-                errors.add('Date incorrecte');
             if (algorithms.length &&
                     !algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
                 errors.add('Algorithme inconnu');
@@ -108,14 +116,15 @@ let mco_casemix = {};
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .toggleClass('hide', !user.isConnected());
-        query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'table');
+        query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'durations');
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
         query('#opt_update').disabled = mix_ready;
         refreshStructuresMenu(route.units, route.structure);
-        refreshGhmRootsMenu(ghm_roots, route.ghm_root);
+        if (route.view === 'durations')
+            refreshGhmRootsMenu(ghm_roots, route.ghm_root);
 
         // Refresh view
         thop.refreshErrors(Array.from(errors));
@@ -132,15 +141,15 @@ let mco_casemix = {};
                         refreshGhmRootsTable(route.units, route.page, route.sort);
                     } break;
 
-                    case 'table': {
-                        refreshDurationTable(pricings_map[route.ghm_root], main_index,
-                                             route.ghm_root, route.apply_coefficient, true);
+                    case 'durations': {
+                        refreshDurationTable(route.units, route.ghm_root, duration_columns,
+                                             route.apply_coefficient, true);
                     } break;
                 }
 
                 query('#cm_units').toggleClass('hide', route.view !== 'units');
                 query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
-                query('#cm_table').toggleClass('hide', route.view !== 'table');
+                query('#cm_table').toggleClass('hide', route.view !== 'durations');
                 query('#cm').removeClass('hide');
             }
 
@@ -237,6 +246,7 @@ let mco_casemix = {};
     {
         mix_rows.length = 0;
         mix_ghm_roots.clear();
+        mix_durations = {};
     }
 
     function updateCasemixUnits(start, end, mode, diff_start, diff_end, apply_coefficient, refresh)
@@ -270,6 +280,62 @@ let mco_casemix = {};
             mix_params = params;
             mix_url = url;
         });
+    }
+
+    function updateCasemixDuration(ghm_root)
+    {
+        if (!mix_durations[ghm_root]) {
+            let params = Object.assign({ghm_root: ghm_root}, mix_params);
+            let url = buildUrl(thop.baseUrl('api/mco_casemix_duration.json'), params);
+
+            data.get(url, function(json) {
+                mix_durations[ghm_root] = json;
+            });
+        }
+    }
+
+    // FIXME: Put in updateCasemixDuration()?
+    function updateCasemixPricings(indexes, period, prev_period, ghm_root)
+    {
+        duration_mismatch = false;
+
+        let pricings = [];
+        let prev_str = null;
+        for (let i = 0; i < indexes.length; i++) {
+            const index = indexes[i];
+            if ((period[0] && period[0] < index.end_date && index.begin_date < period[1]) ||
+                    (prev_period[0] && prev_period[0] < index.end_date && index.begin_date < prev_period[1])) {
+                let pricings_map = mco_pricing.updatePriceMap(i);
+                let pricing_info = pricings_map[ghm_root];
+
+                // FIXME: Error if pricings_map ends up incomplete
+                if (pricing_info && pricing_info[i]) {
+                    pricings.push(pricing_info[i]);
+
+                    let str = pricing_info[i].ghs.map(function(col) {
+                        return col.ghm + '-' + col.ghs;
+                    }).join('|');
+
+                    if (prev_str && str !== prev_str)
+                        duration_mismatch = true;
+                    prev_str = str;
+                }
+            }
+        }
+
+        if (pricings.length) {
+            // FIXME: Error on GHM set mismatch
+            if (duration_mismatch) {
+                duration_columns = pricings[0].ghs.map(function(col) {
+                    let col2 = Object.assign({}, col);
+                    col2.ghs = '2+';
+
+                    return col2;
+                });
+            } else {
+                duration_columns = pricings[0].ghs;
+            }
+        }
     }
 
     function refreshPeriodsPickers(period, prev_period, mode)
@@ -535,7 +601,7 @@ let mco_casemix = {};
 
                 for (let ghm_root of ghm_roots) {
                     let ghm_root_desc = ghm_roots_map[ghm_root];
-                    let header = html('a', {href: routeToUrl({view: 'table', ghm_root: ghm_root}),
+                    let header = html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
                                             title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
 
                     let stat2 = findAggregate(stats2_map, ghm_root);
@@ -623,10 +689,9 @@ let mco_casemix = {};
         }
     }
 
-    function refreshDurationTable(units, pricing_info, main_index, ghm_root,
-                                  apply_coeff, merge_cells)
+    function refreshDurationTable(units, ghm_root, columns, apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshDurationTable, null, [mix_url].concat.apply(Array.from(arguments))))
+        if (!needsRefresh(refreshDurationTable, null, [mix_url, units, ghm_root, merge_cells]))
             return;
 
         let table = html('table',
@@ -634,44 +699,99 @@ let mco_casemix = {};
             html('tbody')
         );
 
-        let rows = mix_rows.filter(function(row) { return row.ghm_root === ghm_root; });
+        let rows = mix_durations[ghm_root];
 
-        if (rows.length && main_index >= 0) {
+        if (rows && rows.length) {
+            units = new Set(units);
+
             let thead = table.query('thead');
             let tbody = table.query('tbody');
 
-            let [stats, stats_map] = aggregate(rows, 'ghm', 'duration');
+            let stats1_map;
+            let stats2, stats2_map;
+            {
+                function filterUnitParts(row)
+                {
+                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    return ['include', values];
+                }
+
+                if (duration_mismatch) {
+                    stats1_map = aggregate(rows, 'ghm', filterUnitParts)[1];
+                    [stats2, stats2_map] = aggregate(rows, 'ghm', 'duration', filterUnitParts);
+                } else {
+                    stats1_map = aggregate(rows, 'ghm', 'ghs', filterUnitParts)[1];
+                    [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
+                }
+            }
 
             let max_duration = 20;
             let max_count = 0;
             let max_price_cents = 0;
-            for (const stat of stats) {
+            for (const stat of stats2) {
                 max_duration = Math.max(max_duration, stat.duration + 1);
                 max_count = Math.max(max_count, stat.count);
                 max_price_cents = Math.max(max_price_cents, stat.price_cents);
             }
 
-            let ghs = pricing_info[main_index].ghs;
-            let ghms = [Object.assign({}, ghs[0])];
-            for (let i = 1; i < ghs.length; i++) {
-                if (ghs[i].ghm !== ghms[ghms.length - 1].ghm) {
-                    ghms.push(Object.assign({}, ghs[i]));
-                } else {
-                    ghms[ghms.length - 1].ghs = '2+';
-                    ghms[ghms.length - 1].conditions = [];
-                }
-            }
-
-            mco_pricing.addPricingHeader(thead, ghm_root, ghms, apply_coeff, merge_cells);
+            mco_pricing.addPricingHeader(thead, ghm_root, columns, false, apply_coeff, merge_cells);
             for (let td of thead.queryAll('td'))
                 td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
 
+            function addDiffClass(cls, value)
+            {
+                if (mix_params.diff) {
+                    if (value > 0) {
+                        return cls + ' higher';
+                    } else if (value < 0) {
+                        return cls + ' lower';
+                    } else {
+                        return cls + ' neutral';
+                    }
+                } else {
+                    return cls;
+                }
+            }
+
+            // Totals
+            {
+                let tr = html('tr',
+                    html('th', 'Total')
+                );
+
+                for (const col of columns) {
+                    let stat;
+                    if (duration_mismatch) {
+                        stat = findAggregate(stats1_map, col.ghm);
+                    } else {
+                        stat = findAggregate(stats1_map, col.ghm, col.ghs);
+                    }
+
+                    if (stat) {
+                        tr.appendChildren([
+                            html('td', {class: 'count ' + addDiffClass('total', stat.count)},
+                                 '' + stat.count),
+                            html('td', {class: addDiffClass('total', stat.price_cents)},
+                                 priceText(stat.price_cents, false))
+                        ]);
+                    } else {
+                        tr.appendChildren([
+                            html('td', {class: 'total empty'}),
+                            html('td', {class: 'total empty'})
+                        ]);
+                    }
+                }
+
+                tbody.appendChild(tr);
+            }
+
+            // Durations
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
                                     mco_common.durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
-                        html('th', {class: 'repeat', colspan: ghs.length}, text)
+                        html('th', {class: 'repeat', colspan: columns.length}, text)
                     );
                     tbody.appendChild(tr);
                 }
@@ -679,8 +799,13 @@ let mco_casemix = {};
                 let tr = html('tr',
                     html('th', mco_common.durationText(duration))
                 );
-                for (const col of ghms) {
-                    let stat = findAggregate(stats_map, col.ghm, duration);
+                for (const col of columns) {
+                    let stat;
+                    if (duration_mismatch) {
+                        stat = findAggregate(stats2_map, col.ghm, duration);
+                    } else {
+                        stat = findAggregate(stats2_map, col.ghm, col.ghs, duration);
+                    }
 
                     let cls;
                     if (col.exb_treshold && duration < col.exb_treshold) {
@@ -692,21 +817,6 @@ let mco_casemix = {};
                     }
 
                     if (stat) {
-                        function addDiffClass(cls, value)
-                        {
-                            if (mix_params.diff) {
-                                if (value > 0) {
-                                    return cls + ' higher';
-                                } else if (value < 0) {
-                                    return cls + ' lower';
-                                } else {
-                                    return cls + ' neutral';
-                                }
-                            } else {
-                                return cls;
-                            }
-                        }
-
                         tr.appendChildren([
                             html('td', {class: 'count ' + addDiffClass(cls, stat.count)},
                                  '' + stat.count),
@@ -715,9 +825,15 @@ let mco_casemix = {};
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
-                        tr.appendChild(html('td', {class: cls, colspan: 2}));
+                        tr.appendChildren([
+                            html('td', {class: cls}),
+                            html('td', {class: cls})
+                        ]);
                     } else {
-                        tr.appendChild(html('td', {colspan: 2}));
+                        tr.appendChildren([
+                            html('td'),
+                            html('td')
+                        ]);
                     }
                 }
                 tbody.appendChild(tr);
