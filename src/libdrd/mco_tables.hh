@@ -193,12 +193,12 @@ struct mco_GhmToGhsInfo {
     int8_t bed_authorization;
     int8_t unit_authorization;
     int8_t minimal_duration;
-
     int8_t minimal_age;
-
     ListMask main_diagnosis_mask;
     ListMask diagnosis_mask;
     LocalArray<ListMask, 4> procedure_masks;
+
+    int8_t conditions_count;
 
     mco_GhsCode Ghs(Sector sector) const
     {

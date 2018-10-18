@@ -796,18 +796,21 @@ bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table
                 mask.value = raw_ghs_node.params[1];
                 FAIL_PARSE_IF(table.filename, !current_ghs.procedure_masks.Available());
                 current_ghs.procedure_masks.Append(mask);
+                current_ghs.conditions_count++;
             } break;
 
             case 2: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.unit_authorization);
                 current_ghs.unit_authorization = (int8_t)raw_ghs_node.params[1];
+                current_ghs.conditions_count++;
             } break;
 
             case 3: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.bed_authorization);
                 current_ghs.bed_authorization = (int8_t)raw_ghs_node.params[1];
+                current_ghs.conditions_count++;
             } break;
 
             case 5: {
@@ -815,12 +818,14 @@ bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table
                                               current_ghs.main_diagnosis_mask.value);
                 current_ghs.main_diagnosis_mask.offset = raw_ghs_node.params[0];
                 current_ghs.main_diagnosis_mask.value = raw_ghs_node.params[1];
+                current_ghs.conditions_count++;
             } break;
 
             case 6: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.minimal_duration);
                 current_ghs.minimal_duration = (int8_t)(raw_ghs_node.params[1] + 1);
+                current_ghs.conditions_count++;
             } break;
 
             case 7: {
@@ -828,12 +833,14 @@ bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table
                                               current_ghs.diagnosis_mask.value);
                 current_ghs.diagnosis_mask.offset = raw_ghs_node.params[0];
                 current_ghs.diagnosis_mask.value = raw_ghs_node.params[1];
+                current_ghs.conditions_count++;
             } break;
 
             case 8: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
                 FAIL_PARSE_IF(table.filename, current_ghs.minimal_age);
                 current_ghs.minimal_age = (int8_t)raw_ghs_node.params[1];
+                current_ghs.conditions_count++;
             } break;
 
             default: {

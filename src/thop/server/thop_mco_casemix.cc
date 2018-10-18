@@ -173,9 +173,38 @@ struct AggregateStatistics {
     HASH_TABLE_HANDLER(AggregateStatistics, key);
 };
 
+struct AggregationGhmGhs {
+    struct Key {
+        mco_GhmCode ghm;
+        mco_GhsCode ghs;
+
+        bool operator==(const Key &other) const
+        {
+            return ghm == other.ghm &&
+                   ghs == other.ghs;
+        }
+        bool operator !=(const Key &other) const { return !(*this == other); }
+
+        uint64_t Hash() const
+        {
+            uint64_t hash = HashTraits<mco_GhmCode>::Hash(ghm) ^
+                            HashTraits<mco_GhsCode>::Hash(ghs);
+
+            return hash;
+        }
+    };
+
+    Key key;
+    const mco_GhmToGhsInfo *ghm_to_ghs_info;
+    int16_t exh_treshold;
+    int16_t exb_treshold;
+    uint32_t durations;
+};
+
 enum class AggregationFlag {
     KeyOnDuration = 1 << 0,
-    KeyOnUnits = 1 << 1
+    KeyOnUnits = 1 << 1,
+    ExportGhsInfo = 1 << 2
 };
 
 template <typename T>
@@ -193,7 +222,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         }
     }
 
-    Date dates[2] = {};
+    Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};
     Date diff_dates[2] = {};
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
@@ -230,12 +259,8 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         }
     }
 
-    if (diff_dates[0].value && !dates[0].value) {
-        LogError("Parameter 'diff' specified but 'dates' is missing");
-        return CreateErrorPage(422, out_response);
-    }
     if (dates[0].value && diff_dates[0].value &&
-               dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
+            dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
         LogError("Parameters 'dates' and 'diff' must not overlap");
         return CreateErrorPage(422, out_response);
     }
@@ -246,10 +271,12 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
 
     // TODO: Parallelize and optimize aggregation
     HeapArray<AggregateStatistics> statistics;
+    HeapArray<mco_GhmRootCode> ghm_roots;
     BlockAllocator statistics_units_alloc(Kibibytes(4));
     BlockAllocator statistics_parts_alloc(Kibibytes(16));
     {
         HashMap<AggregateStatistics::Key, Size> statistics_map;
+        HashSet<mco_GhmRootCode> ghm_roots_set;
 
         // Reuse for performance
         HeapArray<mco_Pricing> pricings;
@@ -278,9 +305,8 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 j += result.stays.len;
 
                 int multiplier;
-                if (!dates[0].value ||
-                        (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
-                         result.stays[result.stays.len - 1].exit.date < dates[1])) {
+                if (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
+                         result.stays[result.stays.len - 1].exit.date < dates[1]) {
                     multiplier = 1;
                 } else if (diff_dates[0].value &&
                            result.stays[result.stays.len - 1].exit.date >= diff_dates[0] &&
@@ -358,24 +384,101 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                     } else {
                         agg->parts = agg_parts.TrimAndLeak();
                     }
+
+                    if ((flags & (int)AggregationFlag::ExportGhsInfo) &&
+                            ghm_roots_set.Append(result.ghm.Root()).second) {
+                        ghm_roots.Append(result.ghm.Root());
+                    }
                 }
             }
         }
     }
-
     std::sort(statistics.begin(), statistics.end(),
               [](const AggregateStatistics &agg1, const AggregateStatistics &agg2) {
         return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
                         agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
 
+    HeapArray<AggregationGhmGhs> ghm_ghs;
+    if (flags & (int)AggregationFlag::ExportGhsInfo) {
+        HashMap<AggregationGhmGhs::Key, Size> ghm_ghs_map;
+
+        for (const mco_TableIndex &index: thop_table_set->indexes) {
+            const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
+                *thop_index_to_constraints[&index - thop_table_set->indexes.ptr];
+
+            if ((dates[0] < index.limit_dates[1] && index.limit_dates[0] < dates[1]) ||
+                    (diff_dates[0].value && diff_dates[0] < index.limit_dates[1] &&
+                     index.limit_dates[0] < diff_dates[1])) {
+                for (mco_GhmRootCode ghm_root: ghm_roots) {
+                    Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm_root);
+
+                    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+                        const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
+                        const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
+                        DebugAssert(constraint);
+
+                        AggregationGhmGhs *agg_ghm_ghs;
+                        {
+                            AggregationGhmGhs::Key key;
+                            key.ghm = ghm_to_ghs_info.ghm;
+                            key.ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+
+                            std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, ghm_ghs.len);
+                            if (ret.second) {
+                                agg_ghm_ghs = ghm_ghs.AppendDefault();
+                                agg_ghm_ghs->key = key;
+                                agg_ghm_ghs->ghm_to_ghs_info = &ghm_to_ghs_info;
+                            } else {
+                                agg_ghm_ghs = &ghm_ghs[*ret.first];
+                            }
+                        }
+
+                        agg_ghm_ghs->durations |= constraint->durations &
+                                                  ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+
+                        if (!agg_ghm_ghs->exh_treshold ||
+                                ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
+                            agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
+                        }
+                        if (!agg_ghm_ghs->exb_treshold ||
+                                ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
+                            agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     out_response->flags |= (int)Response::Flag::DisableCacheControl |
                            (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        writer.StartArray();
-        for (const AggregateStatistics &agg: statistics) {
-            char buf[32];
+        char buf[32];
 
+        writer.StartObject();
+        if (flags & (int)AggregationFlag::ExportGhsInfo) {
+            writer.Key("ghs"); writer.StartArray();
+            for (const AggregationGhmGhs &agg_ghm_ghs: ghm_ghs) {
+                writer.StartObject();
+                writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg_ghm_ghs.key.ghm).ptr);
+                writer.Key("ghs"); writer.Int(agg_ghm_ghs.key.ghs.number);
+                writer.Key("conditions"); writer.Bool(agg_ghm_ghs.ghm_to_ghs_info->conditions_count);
+                writer.Key("durations"); writer.Uint(agg_ghm_ghs.durations);
+
+                if (agg_ghm_ghs.exh_treshold) {
+                    writer.Key("exh_treshold"); writer.Int(agg_ghm_ghs.exh_treshold);
+                }
+                if (agg_ghm_ghs.exb_treshold) {
+                    writer.Key("exb_treshold"); writer.Int(agg_ghm_ghs.exb_treshold);
+                }
+                writer.EndObject();
+            }
+            writer.EndArray();
+        }
+
+        writer.Key("rows"); writer.StartArray();
+        for (const AggregateStatistics &agg: statistics) {
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
             writer.Key("ghs"); writer.Int(agg.key.ghs.number);
@@ -406,6 +509,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
             writer.EndObject();
         }
         writer.EndArray();
+        writer.EndObject();
 
         return true;
     }, conn->compression_type, out_response);
@@ -460,7 +564,8 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
 
     Size i = 0;
     return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnDuration |
-                                   (int)AggregationFlag::KeyOnUnits,
+                                   (int)AggregationFlag::KeyOnUnits |
+                                   (int)AggregationFlag::ExportGhsInfo,
                              [&](Span<const mco_Result> *out_results,
                                  Span<const mco_Result> *out_mono_results) {
         results.RemoveFrom(0);
