@@ -48,7 +48,9 @@ let mco_casemix = {};
         route.prev_period = (route.prev_period && route.prev_period[0]) ?
                             route.prev_period : [start_date, end_date];
         route.units = route.units || [];
+        route.ghm_roots = route.ghm_roots || [];
         route.structure = route.structure || 0;
+        route.regroup = route.regroup || 'none';
         route.mode = route.mode || 'none';
         route.algorithm = route.algorithm || null;
         route.refresh = route.refresh || false;
@@ -63,12 +65,9 @@ let mco_casemix = {};
         let indexes = mco_common.updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
-        let ghm_roots = [];
-        if (route.view === 'durations') {
-            ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
-            if (!route.ghm_root && ghm_roots.length)
-                route.ghm_root = ghm_roots[0].ghm_root;
-        }
+        let ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
+        if (route.view === 'durations' && !route.ghm_root && ghm_roots.length)
+            route.ghm_root = ghm_roots[0].ghm_root;
 
         // Casemix
         let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
@@ -87,7 +86,6 @@ let mco_casemix = {};
                     case 'units': {
                         updateCasemixUnits();
                     } break;
-
                     case 'durations': {
                         updateCasemixDuration(route.ghm_root);
                     } break;
@@ -101,8 +99,12 @@ let mco_casemix = {};
             errors.add('Mode d\'affichage incorrect');
         if (!route.units.length && mix_ready)
             errors.add('Aucune unité sélectionnée');
+        if (['ghm_roots', 'units'].includes(route.view) && !route.ghm_roots.length && mix_ready)
+            errors.add('Aucune racine sélectionnée');
         if (route.structure > structures.length && structures.length)
             errors.add('Structure inexistante');
+        if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
+            errors.add('Regroupement incorrect');
         if (route.view === 'durations') {
             if (!route.ghm_root)
                 errors.add('Aucune racine de GHM sélectionnée');
@@ -118,8 +120,9 @@ let mco_casemix = {};
             errors.add('Algorithme inconnu');
 
         // Refresh settings
-        queryAll('#opt_units, #opt_ghm_roots, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
+        queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .removeClass('hide');
+        query('#opt_ghm_roots').toggleClass('hide', !['units', 'ghm_roots'].includes(route.view));
         query('#opt_ghm_root').toggleClass('hide', route.view !== 'durations');
 
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
@@ -127,21 +130,28 @@ let mco_casemix = {};
         refreshAlgorithmsMenu(route.algorithm);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
         query('#opt_update').disabled = mix_ready;
-        refreshStructuresMenu(route.units, route.structure);
-        if (route.view === 'durations')
-            refreshGhmRootsMenu(ghm_roots, route.ghm_root);
+        refreshStructuresTree(route.units, route.structure);
+        switch (route.view) {
+            case 'ghm_roots':
+            case 'units': {
+                refreshGhmRootsTree(ghm_roots, route.ghm_roots, route.regroup);
+            } break;
+            case 'durations': {
+                refreshGhmRootsMenu(ghm_roots, route.ghm_root);
+            } break;
+        }
 
         // Refresh view
         if (!data.isBusy()) {
             switch (route.view) {
                 case 'ghm_roots': {
-                    refreshGhmRootsTable(route.units, route.page, route.sort);
+                    refreshGhmRootsTable(route.units, route.ghm_roots, route.regroup,
+                                         route.page, route.sort);
                 } break;
-
                 case 'units': {
-                    refreshUnitsTable(route.units, route.structure, route.page, route.sort);
+                    refreshUnitsTable(route.units, route.ghm_roots, route.structure,
+                                      route.page, route.sort);
                 } break;
-
                 case 'durations': {
                     refreshDurationTable(route.units, route.ghm_root,
                                          route.apply_coefficient, true);
@@ -165,7 +175,9 @@ let mco_casemix = {};
             'period',
             'prev_period',
             'units',
+            'ghm_roots',
             'structure',
+            'regroup',
             'mode',
             'algorithm',
             'ghm_root',
@@ -276,11 +288,9 @@ let mco_casemix = {};
         if (!mix_rows.length) {
             data.get(mix_url, function(json) {
                 mix_rows = json.rows;
-                for (let row of mix_rows) {
-                    row.cmd = parseInt(row.ghm.substr(0, 2), 10);
-                    row.type = row.ghm.substr(2, 1);
-                    row.ghm_root = row.ghm.substr(0, 5);
 
+                for (let row of mix_rows) {
+                    row.ghm_root = row.ghm.substr(0, 5);
                     mix_ghm_roots.add(row.ghm_root);
                 }
             });
@@ -392,7 +402,7 @@ let mco_casemix = {};
         prev_picker.toggleClass('hide', mode === 'none');
     }
 
-    function refreshStructuresMenu(units, structure_idx)
+    function refreshStructuresTree(units, structure_idx)
     {
         units = new Set(units);
 
@@ -449,6 +459,68 @@ let mco_casemix = {};
         select.value = algorithm;
     }
 
+    function refreshGhmRootsTree(ghm_roots, select_ghm_roots, regroup)
+    {
+        // TODO: This should probably not be hard-coded here
+        const GroupTypes = [
+            {key: 'none', text: 'Racines'},
+            {key: 'cmd', text: 'CMD'},
+            {key: 'da', text: 'DA'},
+            {key: 'ga', text: 'GA'}
+        ];
+
+        select_ghm_roots = new Set(select_ghm_roots);
+
+        let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+
+        let builder = new TreeSelector('GHM : ');
+        builder.changeHandler = function() {
+            go({ghm_roots: this.object.getValues(),
+                regroup: GroupTypes[this.object.getActiveTab()].key});
+        };
+
+        for (const group_type of GroupTypes) {
+            ghm_roots = ghm_roots.slice().sort(function(ghm_root1, ghm_root2) {
+                const group1 = ghm_root1[group_type.key];
+                const group2 = ghm_root2[group_type.key];
+
+                if (group1 !== group2) {
+                    return (group1 < group2) ? -1 : 1;
+                } else if (ghm_root1.ghm_root !== ghm_root2.ghm_root) {
+                    return (ghm_root1.ghm_root < ghm_root2.ghm_root) ? -1 : 1;
+                } else {
+                    return 0;
+                }
+            });
+
+            builder.createTab(group_type.text);
+
+            let prev_group = null;
+            for (const ghm_root of ghm_roots) {
+                let group = ghm_root[group_type.key] || null;
+                if (group !== prev_group) {
+                    if (prev_group)
+                        builder.endGroup();
+                    builder.beginGroup(group + ' - ' + ghm_root[group_type.key + '_desc']);
+
+                    prev_group = group;
+                }
+
+                builder.addOption(ghm_root.ghm_root + ' - ' + ghm_root.desc, ghm_root.ghm_root,
+                                  {selected: select_ghm_roots.has(ghm_root.ghm_root)});
+            }
+        }
+        builder.setActiveTab(GroupTypes.findIndex(function(group_type) {
+            return group_type.key === regroup;
+        }));
+
+        let old_select = query('#opt_ghm_roots > div');
+        let select = builder.getWidget();
+        select.copyAttributesFrom(old_select);
+        select.addClass('tsel');
+        old_select.replaceWith(select);
+    }
+
     function refreshGhmRootsMenu(ghm_roots, select_ghm_root)
     {
         let el = query('#opt_ghm_root > select');
@@ -469,15 +541,26 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshUnitsTable(units, structure_idx, page, sort)
+    function refreshUnitsTable(units, ghm_roots, structure, page, sort)
     {
         if (!needsRefresh(refreshUnitsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
 
         if (!units_summary ||
-                needsRefresh(refreshUnitsTable, 'init', [mix_url, units, structure_idx])) {
-            let structure = structures[structure_idx];
+                needsRefresh(refreshUnitsTable, 'init', [mix_url, units, ghm_roots, structure])) {
             units = new Set(units);
+            ghm_roots = new Set(ghm_roots);
+            structure = structures[structure];
+
+            const rows = mix_rows.filter(function(row) {
+                if (!ghm_roots.has(row.ghm_root))
+                    return false;
+                for (const unit of row.unit) {
+                    if (units.has(unit))
+                        return true;
+                }
+                return false;
+            });
 
             units_summary = createPagedTable(query('#cm_units'));
             units_summary.addColumn('unit', 'Unité');
@@ -512,8 +595,8 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(mix_rows, filterUnitParts)[0][0];
-                [stats1, stats1_map] = aggregate(mix_rows, unitToEntities, filterUnitParts);
+                stat0 = aggregate(rows, filterUnitParts)[0][0];
+                [stats1, stats1_map] = aggregate(rows, unitToEntities, filterUnitParts);
             }
 
             if (stat0) {
@@ -563,13 +646,27 @@ let mco_casemix = {};
         syncPagers(queryAll('#cm_units .pagr'), render_count, units_summary.getRowCount(), page);
     }
 
-    function refreshGhmRootsTable(units, page, sort)
+    function refreshGhmRootsTable(units, ghm_roots, regroup, page, sort)
     {
         if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
 
-        if (!ghm_roots_summary || needsRefresh(refreshGhmRootsTable, 'init', [mix_url, units])) {
+        if (!ghm_roots_summary ||
+                needsRefresh(refreshGhmRootsTable, 'init', [mix_url, units, ghm_roots, regroup])) {
             units = new Set(units);
+            ghm_roots = new Set(ghm_roots);
+
+            const rows = mix_rows.filter(function(row) {
+                if (!ghm_roots.has(row.ghm_root))
+                    return false;
+                for (const unit of row.unit) {
+                    if (units.has(unit))
+                        return true;
+                }
+                return false;
+            });
+
+            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
             ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
             ghm_roots_summary.addColumn('ghm_root', 'Racine');
@@ -592,35 +689,76 @@ let mco_casemix = {};
             // Aggregate
             let stat0;
             let stats1, stats1_map;
+            let stats2_map;
             {
+                function ghmRootToGroup(row)
+                {
+                    let ghm_root_info = ghm_roots_map[row.ghm_root];
+                    let group = ghm_root_info ? (ghm_root_info[regroup] || null) : null;
+                    return ['group', group];
+                }
                 function filterUnitParts(row)
                 {
                     let values = row.unit.map(function(unit) { return units.has(unit); });
                     return ['include', values];
                 }
 
-                stat0 = aggregate(mix_rows, filterUnitParts)[0][0];
-                [stats1, stats1_map] = aggregate(mix_rows, 'ghm_root', filterUnitParts);
+                stat0 = aggregate(rows, filterUnitParts)[0][0];
+                [stats1, stats1_map] = aggregate(rows, 'ghm_root', filterUnitParts);
+                stats2_map = aggregate(rows, ghmRootToGroup, filterUnitParts)[1];
             }
 
             if (stat0) {
                 let ghm_roots = stats1.map(function(stat) { return stat.ghm_root; });
-                let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+                ghm_roots = ghm_roots.sort(function(ghm_root1, ghm_root2) {
+                    const ghm_root_info1 = ghm_roots_map[ghm_root1] || {};
+                    const ghm_root_info2 = ghm_roots_map[ghm_root2] || {};
+
+                    if (ghm_root_info1[regroup] !== ghm_root_info2[regroup]) {
+                        return (ghm_root_info1[regroup] < ghm_root_info2[regroup]) ? -1 : 1;
+                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
+                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+                    } else {
+                        return 0;
+                    }
+                });
 
                 ghm_roots_summary.beginRow();
                 ghm_roots_summary.addCell('Total');
                 addSummaryCells(ghm_roots_summary, stat0, stat0);
 
+                let prev_group = null;
+                let total = stat0;
                 for (const ghm_root of ghm_roots) {
                     let root_stat = findAggregate(stats1_map, ghm_root);
+                    let ghm_root_info = ghm_roots_map[ghm_root];
+                    let group = ghm_root_info ? ghm_root_info[regroup] : null;
 
-                    let desc = ghm_roots_map[ghm_root];
+                    if (group !== prev_group) {
+                        if (prev_group) {
+                            ghm_roots_summary.endRow();
+                            total = stat0;
+                        }
+
+                        if (group) {
+                            let group_stat = findAggregate(stats2_map, group);
+
+                            ghm_roots_summary.beginRow();
+                            ghm_roots_summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
+                            addSummaryCells(ghm_roots_summary, group_stat, total);
+
+                            total = group_stat;
+                        }
+
+                        prev_group = group;
+                    }
+
                     let header = html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
-                                            title: desc ? desc.desc : null}, ghm_root);
+                                            title: ghm_root_info ? ghm_root_info.desc : null}, ghm_root);
 
                     ghm_roots_summary.beginRow();
                     ghm_roots_summary.addCell(ghm_root, header);
-                    addSummaryCells(ghm_roots_summary, root_stat, stat0);
+                    addSummaryCells(ghm_roots_summary, root_stat, total);
                     ghm_roots_summary.endRow();
                 }
             }
@@ -1027,8 +1165,8 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
-        refreshUnitsTable([], 0, 1);
-        refreshGhmRootsTable([], 1);
+        refreshUnitsTable([], [], 0, 1);
+        refreshGhmRootsTable([], [], 1);
         refreshDurationTable([]);
     });
 

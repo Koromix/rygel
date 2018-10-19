@@ -220,7 +220,7 @@ function TreeSelector(prefix)
         return 0;
     };
     this.setActiveTab = function(idx) {
-        if (idx < tabbar.childNodes.length)
+        if (idx >= 0 && idx < tabbar.childNodes.length)
             selectTab(tabbar.childNodes[idx]);
     };
 
