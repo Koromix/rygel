@@ -753,11 +753,14 @@ let mco_casemix = {};
                         prev_group = group;
                     }
 
-                    let header = html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
-                                            title: ghm_root_info ? ghm_root_info.desc : null}, ghm_root);
+                    let elements = [
+                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
+                                   title: ghm_root_info ? ghm_root_info.desc : null}, ghm_root),
+                        ghm_root_info ? ' - ' + ghm_root_info.desc : null
+                    ];
 
                     ghm_roots_summary.beginRow();
-                    ghm_roots_summary.addCell(ghm_root, header);
+                    ghm_roots_summary.addCell(ghm_root, elements);
                     addSummaryCells(ghm_roots_summary, root_stat, total);
                     ghm_roots_summary.endRow();
                 }

@@ -89,7 +89,8 @@ function createElementProxy(ns, tag, args, args_idx)
 {
     let attributes;
     if (arguments.length > args_idx &&
-            args[args_idx] instanceof Object && !(args[args_idx] instanceof Node)) {
+            args[args_idx] instanceof Object &&
+            !(args[args_idx] instanceof Node || Array.isArray(args[args_idx]))) {
         attributes = args[args_idx++];
     } else {
         attributes = {};
