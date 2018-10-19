@@ -704,16 +704,25 @@ let mco_casemix = {};
         );
 
         if (mix_durations[ghm_root]) {
-            const columns = mix_durations[ghm_root].ghs;
-            const rows = mix_durations[ghm_root].rows;
-
             units = new Set(units);
+
+            const columns = mix_durations[ghm_root].ghs;
+            const rows = mix_durations[ghm_root].rows.filter(function(row) {
+                for (const unit of row.units) {
+                    if (units.has(unit))
+                        return true;
+                }
+                return false;
+            });
 
             let thead = table.query('thead');
             let tbody = table.query('tbody');
 
+            let stat0;
             let stats1_map;
+            let stats1_units_map;
             let stats2, stats2_map;
+            let stats2_units_map;
             {
                 function filterUnitParts(row)
                 {
@@ -721,22 +730,60 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
+                stat0 = aggregate(rows, filterUnitParts)[0][0];
                 stats1_map = aggregate(rows, 'ghm', 'ghs', filterUnitParts)[1];
+                stats1_units_map = aggregate(rows, 'ghm', 'ghs', 'units')[1];
                 [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
+                stats2_units_map = aggregate(rows, 'ghm', 'ghs', 'duration', 'units')[1];
             }
 
             let max_duration = 10;
             let max_count = 0;
             let max_price_cents = 0;
-            for (const stat of stats2) {
-                max_duration = Math.max(max_duration, stat.duration + 1);
-                max_count = Math.max(max_count, stat.count);
-                max_price_cents = Math.max(max_price_cents, stat.price_cents);
+            for (const duration_stat of stats2) {
+                max_duration = Math.max(max_duration, duration_stat.duration + 1);
+                max_count = Math.max(max_count, duration_stat.count);
+                max_price_cents = Math.max(max_price_cents, duration_stat.price_cents);
             }
 
             mco_pricing.addPricingHeader(thead, ghm_root, columns, false, apply_coeff, merge_cells);
             for (let td of thead.queryAll('td'))
                 td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
+
+            function makeTooltip(col_stat, duration_stat, unit_stats)
+            {
+                unit_stats = Object.values(unit_stats).sort(function(unit1, unit2) {
+                    return unit1.units - unit2.units;
+                });
+
+                let tooltip = '';
+
+                if (!mix_params.diff) {
+                    tooltip += percentText(duration_stat.price_cents_total / col_stat.price_cents_total) +
+                               ' de la colonne\n' +
+                               percentText(duration_stat.price_cents_total / stat0.price_cents_total) +
+                               ' de la racine\n\n';
+                }
+
+                tooltip += 'Unités :';
+                {
+                    let missing_cents = duration_stat.price_cents_total;
+                    for (const unit_stat of unit_stats) {
+                        tooltip += '\n– ' + unit_stat.units + ' : ' + priceText(unit_stat.price_cents);
+                        if (!mix_params.diff)
+                            tooltip += ' (' + percentText(unit_stat.price_cents / duration_stat.price_cents_total) + ')';
+                        missing_cents -= unit_stat.price_cents;
+                    }
+
+                    if (missing_cents) {
+                        tooltip += '\n– Autres : ' + priceText(missing_cents);
+                        if (!mix_params.diff)
+                            tooltip += ' (' + percentText(missing_cents / duration_stat.price_cents_total) + ')';
+                    }
+                }
+
+                return tooltip;
+            }
 
             function diffClass(value)
             {
@@ -760,14 +807,20 @@ let mco_casemix = {};
                 );
 
                 for (const col of columns) {
-                    let stat = findAggregate(stats1_map, col.ghm, col.ghs);
+                    let col_stat = findAggregate(stats1_map, col.ghm, col.ghs);
 
-                    if (stat) {
+                    if (col_stat) {
+                        let tooltip =
+                            makeTooltip(col_stat, col_stat,
+                                        findPartialAggregate(stats1_units_map, col.ghm, col.ghs));
+
                         tr.appendChildren([
-                            html('td', {class: 'count total' + diffClass(stat.count)},
-                                 '' + stat.count),
-                            html('td', {class: 'price total' + diffClass(stat.price_cents)},
-                                 priceText(stat.price_cents, false))
+                            html('td', {class: 'count total' + diffClass(col_stat.count),
+                                        title: tooltip},
+                                 '' + col_stat.count),
+                            html('td', {class: 'price total' + diffClass(col_stat.price_cents_total),
+                                        title: tooltip},
+                                 priceText(col_stat.price_cents_total, false))
                         ]);
                     } else {
                         tr.appendChildren([
@@ -795,7 +848,8 @@ let mco_casemix = {};
                     html('th', mco_common.durationText(duration))
                 );
                 for (const col of columns) {
-                    let stat = findAggregate(stats2_map, col.ghm, col.ghs, duration);
+                    let col_stat = findAggregate(stats1_map, col.ghm, col.ghs);
+                    let duration_stat = findAggregate(stats2_map, col.ghm, col.ghs, duration);
 
                     let cls;
                     if (col.exb_treshold && duration < col.exb_treshold) {
@@ -806,12 +860,18 @@ let mco_casemix = {};
                         cls = 'noex';
                     }
 
-                    if (stat) {
+                    if (duration_stat) {
+                        let tooltip =
+                            makeTooltip(col_stat, duration_stat,
+                                        findPartialAggregate(stats2_units_map, col.ghm, col.ghs, duration));
+
                         tr.appendChildren([
-                            html('td', {class: 'count ' + cls + diffClass(stat.count)},
-                                 '' + stat.count),
-                            html('td', {class: 'price ' + cls + diffClass(stat.price_cents)},
-                                 priceText(stat.price_cents, false))
+                            html('td', {class: 'count ' + cls + diffClass(duration_stat.count),
+                                        title: tooltip},
+                                 '' + duration_stat.count),
+                            html('td', {class: 'price ' + cls + diffClass(duration_stat.price_cents_total),
+                                        title: tooltip},
+                                 priceText(duration_stat.price_cents_total, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
@@ -921,7 +981,7 @@ let mco_casemix = {};
         return [list, map];
     }
 
-    function findAggregate(map, values)
+    function findPartialAggregate(map, values)
     {
         if (!Array.isArray(values))
             values = Array.prototype.slice.call(arguments, 1);
@@ -932,7 +992,14 @@ let mco_casemix = {};
             if (ptr === undefined)
                 return null;
         }
-        if (ptr.count === undefined)
+
+        return ptr;
+    }
+
+    function findAggregate(map, values)
+    {
+        let ptr = findPartialAggregate.apply(null, arguments);
+        if (ptr && ptr.count === undefined)
             return null;
 
         return ptr;
