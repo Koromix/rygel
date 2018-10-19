@@ -22,8 +22,8 @@ let mco_list = {};
                 }},
                 {type: 'da', name: 'Domaines d\'activité',
                  func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
-                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
-                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root];
+                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
+                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
 
                     if (ghm_root_info1.da !== ghm_root_info2.da) {
                         return (ghm_root_info1.da < ghm_root_info2.da) ? -1 : 1;
@@ -35,8 +35,8 @@ let mco_list = {};
                 }},
                 {type: 'ga', name: 'Groupes d\'activité',
                  func: function(ghm_ghs1, ghm_ghs2, ghm_roots_map) {
-                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root];
-                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root];
+                    let ghm_root_info1 = ghm_roots_map[ghm_ghs1.ghm_root] || {};
+                    let ghm_root_info2 = ghm_roots_map[ghm_ghs2.ghm_root] || {};
 
                     if (ghm_root_info1.ga !== ghm_root_info2.ga) {
                         return (ghm_root_info1.ga < ghm_root_info2.ga) ? -1 : 1;
