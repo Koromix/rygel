@@ -509,12 +509,12 @@ let mco_casemix = {};
             {
                 function unitToEntities(row)
                 {
-                    let values = row.units.map(function(unit) { return structure.units[unit].path; });
+                    let values = row.unit.map(function(unit) { return structure.units[unit].path; });
                     return ['entities', values];
                 }
                 function filterUnitParts(row)
                 {
-                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    let values = row.unit.map(function(unit) { return units.has(unit); });
                     return ['include', values];
                 }
 
@@ -601,7 +601,7 @@ let mco_casemix = {};
             {
                 function filterUnitParts(row)
                 {
-                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    let values = row.unit.map(function(unit) { return units.has(unit); });
                     return ['include', values];
                 }
 
@@ -722,7 +722,7 @@ let mco_casemix = {};
 
             const columns = mix_durations[ghm_root].ghs;
             const rows = mix_durations[ghm_root].rows.filter(function(row) {
-                for (const unit of row.units) {
+                for (const unit of row.unit) {
                     if (units.has(unit))
                         return true;
                 }
@@ -740,15 +740,15 @@ let mco_casemix = {};
             {
                 function filterUnitParts(row)
                 {
-                    let values = row.units.map(function(unit) { return units.has(unit); });
+                    let values = row.unit.map(function(unit) { return units.has(unit); });
                     return ['include', values];
                 }
 
                 stat0 = aggregate(rows, filterUnitParts)[0][0];
                 stats1_map = aggregate(rows, 'ghm', 'ghs', filterUnitParts)[1];
-                stats1_units_map = aggregate(rows, 'ghm', 'ghs', 'units')[1];
+                stats1_units_map = aggregate(rows, 'ghm', 'ghs', 'unit')[1];
                 [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
-                stats2_units_map = aggregate(rows, 'ghm', 'ghs', 'duration', 'units')[1];
+                stats2_units_map = aggregate(rows, 'ghm', 'ghs', 'duration', 'unit')[1];
             }
 
             let max_duration = 10;
@@ -767,7 +767,7 @@ let mco_casemix = {};
             function makeTooltip(col_stat, duration_stat, unit_stats)
             {
                 unit_stats = Object.values(unit_stats).sort(function(unit1, unit2) {
-                    return unit1.units - unit2.units;
+                    return unit1.unit - unit2.unit;
                 });
 
                 let tooltip = '';
@@ -783,7 +783,7 @@ let mco_casemix = {};
                 {
                     let missing_cents = duration_stat.price_cents_total;
                     for (const unit_stat of unit_stats) {
-                        tooltip += '\n– ' + unit_stat.units + ' : ' + priceText(unit_stat.price_cents);
+                        tooltip += '\n– ' + unit_stat.unit + ' : ' + priceText(unit_stat.price_cents);
                         if (!mix_params.diff)
                             tooltip += ' (' + percentText(unit_stat.price_cents / duration_stat.price_cents_total) + ')';
                         missing_cents -= unit_stat.price_cents;

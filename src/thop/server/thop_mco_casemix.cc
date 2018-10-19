@@ -486,7 +486,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 writer.Key("duration"); writer.Int(agg.key.duration);
             }
             if (flags & (int)AggregationFlag::KeyOnUnits) {
-                writer.Key("units"); writer.StartArray();
+                writer.Key("unit"); writer.StartArray();
                 for (UnitCode unit: agg.key.units) {
                     writer.Int(unit.number);
                 }
