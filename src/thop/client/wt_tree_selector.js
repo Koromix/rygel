@@ -201,10 +201,17 @@ function TreeSelector(prefix)
         list.appendChild(el);
     };
 
-    this.open = function() { widget.addClass('active'); };
+    this.open = function() {
+        for (let tsel of queryAll('.tsel.active'))
+            tsel.object.close();
+        widget.addClass('active');
+    }
     this.toggle = function(state) {
-        if (!widget.toggleClass('active', state) && self.changeHandler)
-             setTimeout(function() { self.changeHandler.call(widget); }, 0);
+        if (!widget.hasClass('active')) {
+            self.open();
+        } else {
+            self.close();
+        }
     };
     this.close = function() {
         widget.removeClass('active');
