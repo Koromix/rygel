@@ -162,7 +162,11 @@ let mco_casemix = {};
         query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
         query('#cm_units').toggleClass('hide', route.view !== 'units');
         query('#cm_table').toggleClass('hide', route.view !== 'durations');
-        query('#cm').toggleClass('busy', !data.isBusy() && !mix_ready);
+        if (!data.isBusy() && !mix_ready) {
+            query('#cm').addClass('busy');
+        } else if (!data.isBusy()) {
+            query('#cm').removeClass('busy');
+        }
         query('#cm').removeClass('hide');
     }
 
