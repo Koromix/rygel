@@ -490,8 +490,8 @@ let mco_casemix = {};
                 units_summary.addColumn('deaths_pct', '%');
 
             // Aggregate
-            let stat1;
-            let stats2, stats2_map;
+            let stat0;
+            let stats1, stats1_map;
             {
                 function unitToEntities(row)
                 {
@@ -504,19 +504,19 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat1 = aggregate(mix_rows, filterUnitParts)[0][0];
-                [stats2, stats2_map] = aggregate(mix_rows, unitToEntities, filterUnitParts);
+                stat0 = aggregate(mix_rows, filterUnitParts)[0][0];
+                [stats1, stats1_map] = aggregate(mix_rows, unitToEntities, filterUnitParts);
             }
 
-            if (stat1) {
+            if (stat0) {
                 units_summary.beginRow();
                 units_summary.addCell('Total');
-                addSummaryCells(units_summary, stat1, stat1);
+                addSummaryCells(units_summary, stat0, stat0);
 
                 let prev_groups = [];
-                let prev_totals = [stat1];
+                let prev_totals = [stat0];
                 for (const ent of structure.entities) {
-                    let unit_stat = findAggregate(stats2_map, ent.path[ent.path.length - 1]);
+                    let unit_stat = findAggregate(stats1_map, ent.path[ent.path.length - 1]);
                     if (!unit_stat)
                         continue;
 
@@ -531,7 +531,7 @@ let mco_casemix = {};
                     }
 
                     for (let k = common_len; k < ent.path.length - 1; k++) {
-                        let group_stat = findAggregate(stats2_map, ent.path[k]);
+                        let group_stat = findAggregate(stats1_map, ent.path[k]);
 
                         units_summary.beginRow();
                         units_summary.addCell(ent.path[k]);
@@ -582,8 +582,8 @@ let mco_casemix = {};
                 ghm_roots_summary.addColumn('deaths_pct', '%');
 
             // Aggregate
-            let stat1;
-            let stats2, stats2_map;
+            let stat0;
+            let stats1, stats1_map;
             {
                 function filterUnitParts(row)
                 {
@@ -591,28 +591,28 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat1 = aggregate(mix_rows, filterUnitParts)[0][0];
-                [stats2, stats2_map] = aggregate(mix_rows, 'ghm_root', filterUnitParts);
+                stat0 = aggregate(mix_rows, filterUnitParts)[0][0];
+                [stats1, stats1_map] = aggregate(mix_rows, 'ghm_root', filterUnitParts);
             }
 
-            if (stat1) {
-                let ghm_roots = stats2.map(function(stat) { return stat.ghm_root; });
+            if (stat0) {
+                let ghm_roots = stats1.map(function(stat) { return stat.ghm_root; });
                 let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
                 ghm_roots_summary.beginRow();
                 ghm_roots_summary.addCell('Total');
-                addSummaryCells(ghm_roots_summary, stat1, stat1);
+                addSummaryCells(ghm_roots_summary, stat0, stat0);
 
-                for (let ghm_root of ghm_roots) {
-                    let ghm_root_desc = ghm_roots_map[ghm_root];
+                for (const ghm_root of ghm_roots) {
+                    let root_stat = findAggregate(stats1_map, ghm_root);
+
+                    let desc = ghm_roots_map[ghm_root];
                     let header = html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
-                                            title: ghm_root_desc ? ghm_root_desc.desc : null}, ghm_root);
-
-                    let stat2 = findAggregate(stats2_map, ghm_root);
+                                            title: desc ? desc.desc : null}, ghm_root);
 
                     ghm_roots_summary.beginRow();
                     ghm_roots_summary.addCell(ghm_root, header);
-                    addSummaryCells(ghm_roots_summary, stat2, stat1);
+                    addSummaryCells(ghm_roots_summary, root_stat, stat0);
                     ghm_roots_summary.endRow();
                 }
             }
