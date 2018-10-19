@@ -95,8 +95,10 @@ let thop = {};
         user.runSession();
 
         // Find relevant module and run
-        query('main').toggleClass('busy', true);
+        let errors = new Set(data.getErrors());
         {
+            query('main').toggleClass('busy', true);
+
             let new_module_name = app_url.split('/')[0];
             let new_module = route_modules[new_module_name];
 
@@ -106,9 +108,15 @@ let thop = {};
 
             module = new_module;
             if (module)
-                module.func(route_values, app_url, url_parts.params, url_parts.hash);
+                module.func(route_values, app_url, url_parts.params, url_parts.hash, errors);
+
+            query('main').toggleClass('busy', data.isBusy());
         }
-        query('main').toggleClass('busy', data.isBusy());
+
+        // Show errors if any
+        thop.refreshErrors(Array.from(errors));
+        if (!data.isBusy())
+            data.clearErrors();
 
         // Update URL to reflect real state (module may have set default values, etc.)
         {

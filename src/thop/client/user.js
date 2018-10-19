@@ -11,13 +11,8 @@ let user = {};
     let url_key = 0;
     let username = null;
 
-    function runLogin(route, url, parameters, hash)
+    function runLogin(route, url, parameters, hash, errors)
     {
-        let errors = new Set(data.getErrors());
-
-        thop.refreshErrors(Array.from(errors));
-        if (!data.isBusy())
-            data.clearErrors();
         query('#user button').disabled = false;
         query('#user').removeClass('hide');
     }

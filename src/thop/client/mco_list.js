@@ -186,10 +186,8 @@ let mco_list = {};
     let list_cache = {};
     let reactor = {};
 
-    function runList(route, url, parameters, hash)
+    function runList(route, url, parameters, hash, errors)
     {
-        let errors = new Set(data.getErrors());
-
         // Parse route (model: list/<table>/<date>[/<spec>])
         let url_parts = url.split('/');
         route.list = url_parts[1] || 'ghm_roots';
@@ -255,10 +253,7 @@ let mco_list = {};
         }
 
         // Refresh view
-        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
-            data.clearErrors();
-
             refreshHeader(route.spec);
 
             let list_info = Lists[route.list];

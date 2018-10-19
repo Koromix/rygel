@@ -15,10 +15,8 @@ let mco_pricing = {};
     // Chart.js
     let chart = null;
 
-    function runPricing(route, url, parameters, hash)
+    function runPricing(route, url, parameters, hash, errors)
     {
-        let errors = new Set(data.getErrors());
-
         // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
         let url_parts = url.split('/');
         route.view = url_parts[1] || 'table';
@@ -76,10 +74,7 @@ let mco_pricing = {};
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
-        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
-            data.clearErrors();
-
             let ghm_root_info = ghm_roots_map[route.ghm_root];
             let pricing_info = pricings_map[route.ghm_root];
             let max_duration = parseInt(query('#opt_max_duration > input').value);

@@ -11,10 +11,8 @@ let mco_tree = {};
     let nodes = [];
     let collapse_nodes = new Set();
 
-    function runTree(route, url, parameters, hash)
+    function runTree(route, url, parameters, hash, errors)
     {
-        let errors = new Set(data.getErrors());
-
         // Parse route (model: tree/<date>)
         let url_parts = url.split('/');
         route.date = url_parts[1] || null;
@@ -36,10 +34,7 @@ let mco_tree = {};
         mco_common.refreshIndexesLine(indexes, main_index);
 
         // Refresh view
-        thop.refreshErrors(Array.from(errors));
         if (!data.isBusy()) {
-            data.clearErrors();
-
             refreshTree(nodes);
             deploySelectedNode(hash);
         }
