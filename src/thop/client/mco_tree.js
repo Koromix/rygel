@@ -32,7 +32,7 @@ let mco_tree = {};
             errors.add('Date incorrecte');
 
         // Refresh settings
-        queryAll('#opt_indexes').removeClass('hide');
+        queryAll('#opt_index').removeClass('hide');
         mco_common.refreshIndexesLine(indexes, main_index);
 
         // Refresh view

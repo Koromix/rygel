@@ -75,7 +75,7 @@ let mco_common = {};
         };
 
         let svg = builder.getWidget();
-        let old_svg = query('#opt_indexes');
+        let old_svg = query('#opt_index');
         svg.copyAttributesFrom(old_svg);
         old_svg.replaceWith(svg);
     }

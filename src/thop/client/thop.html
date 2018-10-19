@@ -43,9 +43,9 @@
         <main>
             <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
             <nav id="opt_menu">
-                <svg id="opt_indexes" class="indexes_line"></svg>
+                <svg id="opt_index" class="indexes_line"></svg>
 
-                <label id="opt_diff_indexes">
+                <label id="opt_diff_index">
                     Comparer
                     <select onchange="thop.go({diff: this.value});"
                             style="width: 12em;"></select>
@@ -63,7 +63,7 @@
                            oninput="thop.go({search: this.value}, 200);"/>
                 </label>
 
-                <label id="opt_groups">
+                <label id="opt_group">
                     Tri
                     <select onchange="thop.go({group: this.value});"></select><br/>
                 </label>
@@ -99,7 +99,7 @@
                     <div style="width: 100%;"></div><br/>
                 </label>
 
-                <label id="opt_ghm_roots">
+                <label id="opt_ghm_root">
                     <select onchange="thop.go({ghm_root: this.value});"
                             style="width: 96%; margin-top: 4px;"></select><br/>
                 </label>

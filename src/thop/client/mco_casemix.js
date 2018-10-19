@@ -120,7 +120,7 @@ let mco_casemix = {};
         // Refresh settings
         queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .toggleClass('hide', !user.isConnected());
-        query('#opt_ghm_roots').toggleClass('hide', !user.isConnected() || route.view !== 'durations');
+        query('#opt_ghm_root').toggleClass('hide', !user.isConnected() || route.view !== 'durations');
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
@@ -457,7 +457,7 @@ let mco_casemix = {};
 
     function refreshGhmRootsMenu(ghm_roots, select_ghm_root)
     {
-        let el = query('#opt_ghm_roots > select');
+        let el = query('#opt_ghm_root > select');
         el.innerHTML = '';
 
         for (const ghm_root of ghm_roots) {

@@ -231,7 +231,7 @@ let mco_list = {};
             errors.add('Critère de tri inconnu');
 
         // Refresh settings
-        queryAll('#opt_indexes').removeClass('hide');
+        queryAll('#opt_index').removeClass('hide');
         mco_common.refreshIndexesLine(indexes, main_index);
         query('#opt_search').removeClass('hide');
         {
@@ -240,7 +240,7 @@ let mco_list = {};
                 search_input.value = route.search || '';
         }
         if (Lists[route.list] && Lists[route.list].groups !== undefined) {
-            query('#opt_groups').removeClass('hide');
+            query('#opt_group').removeClass('hide');
             refreshGroupsMenu(Lists[route.list], route.group);
         }
 
@@ -436,7 +436,7 @@ let mco_list = {};
 
     function refreshGroupsMenu(list_info, select_group)
     {
-        let el = query('#opt_groups > select');
+        let el = query('#opt_group > select');
         el.innerHTML = '';
 
         for (const group of list_info.groups) {

@@ -68,7 +68,7 @@ let mco_pricing = {};
         }
 
         // Refresh settings
-        queryAll('#opt_indexes, #opt_ghm_roots, #opt_diff_indexes, #opt_max_duration, #opt_apply_coefficient')
+        queryAll('#opt_index, #opt_ghm_root, #opt_diff_index, #opt_max_duration, #opt_apply_coefficient')
             .removeClass('hide');
         mco_common.refreshIndexesLine(indexes, main_index);
         refreshGhmRootsMenu(indexes, main_index, route.ghm_root);
@@ -179,7 +179,7 @@ let mco_pricing = {};
 
     function refreshGhmRootsMenu(indexes, main_index, select_ghm_root)
     {
-        let el = query('#opt_ghm_roots > select');
+        let el = query('#opt_ghm_root > select');
         el.innerHTML = '';
 
         for (const ghm_root of ghm_roots) {
@@ -199,7 +199,7 @@ let mco_pricing = {};
 
     function refreshDiffMenu(indexes, diff_index, test_ghm_root)
     {
-        let el = query("#opt_diff_indexes > select");
+        let el = query("#opt_diff_index > select");
         el.innerHTML = '';
 
         el.appendChild(html('option', {value: ''}, 'Désactiver'));
