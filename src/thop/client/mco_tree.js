@@ -42,9 +42,9 @@ let mco_tree = {};
 
             refreshTree(nodes);
             deploySelectedNode(hash);
-
-            query('#tr').removeClass('hide');
         }
+
+        query('#tr').removeClass('hide');
     }
 
     function routeToUrl(args)

@@ -150,18 +150,13 @@ let mco_casemix = {};
                                              route.apply_coefficient, true);
                     } break;
                 }
-
-                query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
-                query('#cm_units').toggleClass('hide', route.view !== 'units');
-                query('#cm_table').toggleClass('hide', route.view !== 'durations');
-                query('#cm').removeClass('hide');
             }
 
-            if (!data.isBusy() && !mix_ready) {
-                query('#cm').addClass('busy');
-            } else if (!data.isBusy()) {
-                query('#cm').removeClass('busy');
-            }
+            query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
+            query('#cm_units').toggleClass('hide', route.view !== 'units');
+            query('#cm_table').toggleClass('hide', route.view !== 'durations');
+            query('#cm').removeClass('hide');
+            query('#cm').toggleClass('busy', !data.isBusy() && !mix_ready);
         } else {
             query('#cm').addClass('hide');
         }

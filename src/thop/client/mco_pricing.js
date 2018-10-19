@@ -96,11 +96,11 @@ let mco_pricing = {};
                                       max_duration, route.apply_coefficient);
                 } break;
             }
-
-            query('#pr_table').toggleClass('hide', route.view !== 'table');
-            query('#pr_chart').toggleClass('hide', route.view !== 'chart');
-            query('#pr').removeClass('hide');
         }
+
+        query('#pr_table').toggleClass('hide', route.view !== 'table');
+        query('#pr_chart').toggleClass('hide', route.view !== 'chart');
+        query('#pr').removeClass('hide');
     }
 
     function routeToUrl(args)
