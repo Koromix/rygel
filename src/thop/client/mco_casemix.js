@@ -39,7 +39,7 @@ let mco_casemix = {};
         let url_parts = url.split('/', 3);
         if (url_parts[2])
             Object.assign(route, thop.buildRoute(JSON.parse(window.atob(url_parts[2]))));
-        route.view = url_parts[1] || 'units';
+        route.view = url_parts[1] || 'ghm_roots';
         route.period = (route.period && route.period[0]) ? route.period : [start_date, end_date];
         route.prev_period = (route.prev_period && route.prev_period[0]) ?
                             route.prev_period : [start_date, end_date];
@@ -87,7 +87,7 @@ let mco_casemix = {};
 
         // Errors
         if (user.isConnected()) {
-            if (!(['units', 'ghm_roots', 'durations'].includes(route.view)))
+            if (!(['ghm_roots', 'units', 'durations'].includes(route.view)))
                 errors.add('Mode d\'affichage incorrect');
             if (!route.units.length && mix_ready)
                 errors.add('Aucune unité sélectionnée');
@@ -130,12 +130,12 @@ let mco_casemix = {};
         if (user.isConnected()) {
             if (!data.isBusy()) {
                 switch (route.view) {
-                    case 'units': {
-                        refreshUnitsTable(route.units, route.structure, route.page, route.sort);
-                    } break;
-
                     case 'ghm_roots': {
                         refreshGhmRootsTable(route.units, route.page, route.sort);
+                    } break;
+
+                    case 'units': {
+                        refreshUnitsTable(route.units, route.structure, route.page, route.sort);
                     } break;
 
                     case 'durations': {
@@ -144,8 +144,8 @@ let mco_casemix = {};
                     } break;
                 }
 
-                query('#cm_units').toggleClass('hide', route.view !== 'units');
                 query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
+                query('#cm_units').toggleClass('hide', route.view !== 'units');
                 query('#cm_table').toggleClass('hide', route.view !== 'durations');
                 query('#cm').removeClass('hide');
             }
