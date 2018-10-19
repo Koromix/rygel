@@ -451,8 +451,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         }
     }
 
-    out_response->flags |= (int)Response::Flag::DisableCacheControl |
-                           (int)Response::Flag::DisableETag;
+    out_response->flags |= (int)Response::Flag::DisableCache;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
 

@@ -24,7 +24,7 @@ struct ConnectionInfo {
 
 struct Response {
     enum class Flag {
-        DisableCacheControl = 1 << 0,
+        DisableCache = 1 << 0,
         DisableETag = 1 << 1
     };
 

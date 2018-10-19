@@ -762,17 +762,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     // Add caching information
     if (try_cache) {
 #ifndef NDEBUG
-        response.flags |= (int)Response::Flag::DisableCacheControl;
+        response.flags |= (int)Response::Flag::DisableCache;
 #endif
 
-        if (!(response.flags & (int)Response::Flag::DisableCacheControl)) {
+        if (!(response.flags & (int)Response::Flag::DisableCache)) {
             MHD_add_response_header(response.response.get(), "Cache-Control", "max-age=3600");
-        } else {
-            MHD_add_response_header(response.response.get(), "Cache-Control", "max-age=0");
-        }
 
-        if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
-            MHD_add_response_header(response.response.get(), "ETag", etag);
+            if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
+                MHD_add_response_header(response.response.get(), "ETag", etag);
+            }
+        } else {
+            MHD_add_response_header(response.response.get(), "Cache-Control", "no-store");
         }
     }
 
