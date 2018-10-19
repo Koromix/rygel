@@ -41,11 +41,15 @@ function DataTable(widget)
         e.preventDefault();
     }
 
-    this.addColumn = function(key, el) {
+    this.addColumn = function(key) {
+        let th = createElementProxy('html', 'th', arguments, 1);
+        th.addEventListener('click', handleHeaderClick.bind(th));
+        th.col_idx = columns.length;
+
         let column = {
             idx: columns.length,
             key: key,
-            cell: el
+            cell: th
         };
 
         columns.push(column);
@@ -80,19 +84,23 @@ function DataTable(widget)
         ptr = ptr.parent;
     };
 
-    this.addCell = function(value, el) {
-        if (el === undefined)
-            el = document.createTextNode('' + value);
+    this.addCell = function(value) {
+        let td;
+        if (arguments.length >= 2) {
+            td = createElementProxy('html', 'td', arguments, 1);
+        } else {
+            td = html('td', '' + value);
+        }
+        if (!ptr.cells.length && ptr.depth)
+            td.style.paddingLeft = 'calc(3px + ' + ptr.depth + 'em)';
 
         ptr.values.push(value);
-        ptr.cells.push(el);
+        ptr.cells.push(td);
     };
     this.addCells = function(values) {
         for (let value of values) {
-            if (value !== null && value !== undefined) {
-                ptr.values.push(value);
-                ptr.cells.push(document.createTextNode('' + value));
-            }
+            if (value !== null && value !== undefined)
+                self.addCell(value);
         }
     };
 
@@ -172,10 +180,13 @@ function DataTable(widget)
         if (columns.length && rows_flat.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
-                let th = html('th', {click: handleHeaderClick}, columns[i].cell);
-                if (i === sort_idx)
+                let th = columns[i].cell;
+                if (i === sort_idx) {
                     th.addClass(sort_descending ? 'descending' : 'ascending');
-                th.col_idx = i;
+                } else {
+                    th.removeClass('descending');
+                    th.removeClass('ascending');
+                }
 
                 tr.appendChild(th);
             }
@@ -184,13 +195,7 @@ function DataTable(widget)
 
         function addRow(row, parent)
         {
-            let tr = html('tr', {class: parent ? 'parent' : null});
-            for (let j = 0; j < row.cells.length; j++) {
-                let td = html('td', row.cells[j]);
-                if (row.depth && !j)
-                    td.style.paddingLeft = '' + row.depth + 'em';
-                tr.appendChild(td);
-            }
+            let tr = html('tr', {class: parent ? 'parent' : null}, row.cells);
             tbody.appendChild(tr);
         }
 

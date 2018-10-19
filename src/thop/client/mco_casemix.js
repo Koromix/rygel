@@ -625,7 +625,7 @@ let mco_casemix = {};
                         let group_stat = findAggregate(stats1_map, ent.path[k]);
 
                         units_summary.beginRow();
-                        units_summary.addCell(ent.path[k]);
+                        units_summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
                         addSummaryCells(units_summary, group_stat, prev_totals[prev_totals.length - 1]);
 
                         prev_groups.push(ent.path[k]);
@@ -633,7 +633,8 @@ let mco_casemix = {};
                     }
 
                     units_summary.beginRow();
-                    units_summary.addCell(ent.path[ent.path.length - 1]);
+                    units_summary.addCell(ent.path[ent.path.length - 1],
+                                          {title: ent.path[ent.path.length - 1]}, ent.path[ent.path.length - 1]);
                     addSummaryCells(units_summary, unit_stat, prev_totals[prev_totals.length - 1]);
                     units_summary.endRow();
                 }
@@ -754,13 +755,14 @@ let mco_casemix = {};
                     }
 
                     let elements = [
-                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}),
-                                   title: ghm_root_info ? ghm_root_info.desc : null}, ghm_root),
+                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root})},
+                             ghm_root),
                         ghm_root_info ? ' - ' + ghm_root_info.desc : null
                     ];
+                    let title = ghm_root_info ? ghm_root_info.desc : null;
 
                     ghm_roots_summary.beginRow();
-                    ghm_roots_summary.addCell(ghm_root, elements);
+                    ghm_roots_summary.addCell(ghm_root, {title: title}, elements);
                     addSummaryCells(ghm_roots_summary, root_stat, total);
                     ghm_roots_summary.endRow();
                 }
