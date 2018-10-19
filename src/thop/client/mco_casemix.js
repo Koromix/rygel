@@ -737,6 +737,7 @@ let mco_casemix = {};
             let stats1_units_map;
             let stats2, stats2_map;
             let stats2_units_map;
+            let stats3_map;
             {
                 function filterUnitParts(row)
                 {
@@ -749,6 +750,7 @@ let mco_casemix = {};
                 stats1_units_map = aggregate(rows, 'ghm', 'ghs', 'unit')[1];
                 [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
                 stats2_units_map = aggregate(rows, 'ghm', 'ghs', 'duration', 'unit')[1];
+                stats3_map = aggregate(rows, 'duration', filterUnitParts)[1];
             }
 
             let max_duration = 10;
@@ -764,7 +766,7 @@ let mco_casemix = {};
             for (let td of thead.queryAll('td'))
                 td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
 
-            function makeTooltip(col_stat, duration_stat, unit_stats)
+            function makeTooltip(title, col, col_stat, row_stat, duration_stat, unit_stats)
             {
                 unit_stats = Object.values(unit_stats).sort(function(unit1, unit2) {
                     return unit1.unit - unit2.unit;
@@ -773,10 +775,16 @@ let mco_casemix = {};
                 let tooltip = '';
 
                 if (!mix_params.diff) {
-                    tooltip += percentText(duration_stat.price_cents_total / col_stat.price_cents_total) +
-                               ' de la colonne\n' +
+                    tooltip += col.ghm + ' (' + col.ghs + ') – ' + title + ' :\n' +
+                               '– ' + percentText(duration_stat.count / stat0.count) + ' / ' +
                                percentText(duration_stat.price_cents_total / stat0.price_cents_total) +
-                               ' de la racine\n\n';
+                               ' de la racine\n' +
+                               '– ' + percentText(duration_stat.count / col_stat.count) + ' / ' +
+                               percentText(duration_stat.price_cents_total / col_stat.price_cents_total) +
+                               ' de la colonne\n' +
+                               '– ' + percentText(duration_stat.count / row_stat.count) + ' / ' +
+                               percentText(duration_stat.price_cents_total / row_stat.price_cents_total) +
+                               ' de la ligne\n\n';
                 }
 
                 tooltip += 'Unités :';
@@ -825,7 +833,7 @@ let mco_casemix = {};
 
                     if (col_stat) {
                         let tooltip =
-                            makeTooltip(col_stat, col_stat,
+                            makeTooltip('Total', col, col_stat, stat0, col_stat,
                                         findPartialAggregate(stats1_units_map, col.ghm, col.ghs));
 
                         tr.appendChildren([
@@ -849,6 +857,8 @@ let mco_casemix = {};
 
             // Durations
             for (let duration = 0; duration < max_duration; duration++) {
+                let row_stat = findAggregate(stats3_map, duration);
+
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
                                     mco_common.durationText(Math.min(max_duration - 1, duration + 9));
@@ -876,7 +886,8 @@ let mco_casemix = {};
 
                     if (duration_stat) {
                         let tooltip =
-                            makeTooltip(col_stat, duration_stat,
+                            makeTooltip(mco_common.durationText(duration),
+                                        col, col_stat, row_stat, duration_stat,
                                         findPartialAggregate(stats2_units_map, col.ghm, col.ghs, duration));
 
                         tr.appendChildren([
