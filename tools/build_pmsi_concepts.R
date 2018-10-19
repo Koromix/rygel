@@ -15,34 +15,34 @@ library(enc) # UTF-8 support in R on Windows is completely fucked up
 load_mco_ghm_roots <- function(root) {
     cmds <- tribble(
         ~cmd, ~cmd_desc,
-        1,  'Affections du système nerveux',
-        2,  'Affections de l\'œil',
-        3,  'Affections des oreilles, du nez, de la gorge, de la bouche et des dents',
-        4,  'Affections de l\'appareil respiratoire',
-        5,  'Affections de l\'appareil circulatoire',
-        6,  'Affections du tube digestif',
-        7,  'Affections du système hépatobiliaire et du pancréas',
-        8,  'Affections et traumatismes de l\'appareil musculosquelettique et du tissu conjonctif',
-        9,  'Affections de la peau, des tissus sous-cutanés et des seins',
-        10, 'Affections endocriniennes, métaboliques et nutritionnelles',
-        11, 'Affections du rein et des voies urinaires',
-        12, 'Affections de l\'appareil génital masculin',
-        13, 'Affections de l\'appareil génital féminin',
-        14, 'Grossesses pathologiques, accouchements et affections du postpartum',
-        15, 'Nouveau-nés, prématurés et affections de la période périnatale',
-        16, 'Affections du sang et des organes hématopoïétiques',
-        17, 'Affections myéloprolifératives et tumeurs de siège imprécis ou diffus',
-        18, 'Maladies infectieuses et parasitaires',
-        19, 'Maladies et troubles mentaux',
-        20, 'Troubles mentaux organiques liés à l\'absorption de drogues ou induits par celles-ci',
-        21, 'Traumatismes, allergies et empoisonnements',
-        22, 'Brulures',
-        23, 'Facteurs influant sur l\'état de santé et autres motifs de recours aux services de santé',
-        25, 'Maladies dues à une infection par le VIH',
-        26, 'Traumatismes multiples graves',
-        27, 'Transplantations d\'organes',
-        28, 'Séances',
-        90, 'Erreurs et autres séjours inclassables'
+        'C01', 'Affections du système nerveux',
+        'C02', 'Affections de l\'œil',
+        'C03', 'Affections des oreilles, du nez, de la gorge, de la bouche et des dents',
+        'C04', 'Affections de l\'appareil respiratoire',
+        'C05', 'Affections de l\'appareil circulatoire',
+        'C06', 'Affections du tube digestif',
+        'C07', 'Affections du système hépatobiliaire et du pancréas',
+        'C08', 'Affections et traumatismes de l\'appareil musculosquelettique et du tissu conjonctif',
+        'C09', 'Affections de la peau, des tissus sous-cutanés et des seins',
+        'C10', 'Affections endocriniennes, métaboliques et nutritionnelles',
+        'C11', 'Affections du rein et des voies urinaires',
+        'C12', 'Affections de l\'appareil génital masculin',
+        'C13', 'Affections de l\'appareil génital féminin',
+        'C14', 'Grossesses pathologiques, accouchements et affections du postpartum',
+        'C15', 'Nouveau-nés, prématurés et affections de la période périnatale',
+        'C16', 'Affections du sang et des organes hématopoïétiques',
+        'C17', 'Affections myéloprolifératives et tumeurs de siège imprécis ou diffus',
+        'C18', 'Maladies infectieuses et parasitaires',
+        'C19', 'Maladies et troubles mentaux',
+        'C20', 'Troubles mentaux organiques liés à l\'absorption de drogues ou induits par celles-ci',
+        'C21', 'Traumatismes, allergies et empoisonnements',
+        'C22', 'Brulures',
+        'C23', 'Facteurs influant sur l\'état de santé et autres motifs de recours aux services de santé',
+        'C25', 'Maladies dues à une infection par le VIH',
+        'C26', 'Traumatismes multiples graves',
+        'C27', 'Transplantations d\'organes',
+        'C28', 'Séances',
+        'C90', 'Erreurs et autres séjours inclassables'
     )
 
     files <- list.files(root, pattern = 'regroup.*\\.xlsx?', full.names = TRUE)
@@ -60,7 +60,7 @@ load_mco_ghm_roots <- function(root) {
              c('racine', 'libelle', 'DA', 'libellé domaine d\'activité', 'GA', 'libellé Groupes d\'Activité'),
              c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc'))
 
-    ghm_roots$cmd <- as.integer(substr(ghm_roots$ghm_root, 1, 2))
+    ghm_roots$cmd <- paste0('C', substr(ghm_roots$ghm_root, 1, 2))
     ghm_roots[cmds, cmd_desc := i.cmd_desc, on = 'cmd']
 
     keep_columns <- c('ghm_root', 'desc', 'da', 'da_desc', 'ga', 'ga_desc',

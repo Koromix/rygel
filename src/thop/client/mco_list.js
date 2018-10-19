@@ -56,8 +56,7 @@ let mco_list = {};
                         case 'cmd': {
                             let ghm_root_info = ghm_roots_map[ghm_ghs.ghm_root];
                             if (ghm_root_info && ghm_root_info.cmd) {
-                                return 'CMD ' + (ghm_root_info.cmd < 10 ? '0' : '') + ghm_root_info.cmd +
-                                                ' - ' + ghm_root_info.cmd_desc;
+                                return ghm_root_info.cmd + ' - ' + ghm_root_info.cmd_desc;
                             } else {
                                 return 'CMD inconnue ??';
                             }
