@@ -889,6 +889,7 @@ Options:
 #endif
 
         daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
+                                  MHD_OPTION_THREAD_POOL_SIZE, GetIdealThreadCount(),
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);
         if (!daemon)
