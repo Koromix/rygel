@@ -236,7 +236,7 @@ let mco_pricing = {};
                     let text = '' + duration + ' - ' +
                                     mco_common.durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
-                        html('th', {class: 'repeat', colspan: ghs.length}, text)
+                        html('th', {class: 'repeat', colspan: ghs.length + 1}, text)
                     );
                     tbody.appendChild(tr);
                 }

@@ -1004,7 +1004,7 @@ let mco_casemix = {};
                     let text = '' + duration + ' - ' +
                                     mco_common.durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
-                        html('th', {class: 'repeat', colspan: columns.length}, text)
+                        html('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
                     );
                     tbody.appendChild(tr);
                 }
