@@ -561,11 +561,11 @@ let mco_pricing = {};
         if (p !== null && p2 !== null) {
             p.price -= p2.price;
             if (p.price < 0) {
-                p.mode += ' lower';
+                p.mode += ' diff lower';
             } else if (p.price > 0) {
-                p.mode += ' higher';
+                p.mode += ' diff higher';
             } else {
-                p.mode += ' neutral';
+                p.mode += ' diff neutral';
             }
         } else if (p !== null) {
             p.mode += ' added';
