@@ -10,6 +10,10 @@
     background: white;
     border: 1px solid #a4a4a4;
     text-align: left;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
 }
 .tsel_main {
     position: relative;
