@@ -11,7 +11,7 @@ let user = {};
     let url_key = 0;
     let username = null;
 
-    function runLogin(route, url, parameters, hash, errors)
+    function runLogin(route, path, parameters, hash, errors)
     {
         query('#user button').disabled = false;
         query('#user').removeClass('hide');

@@ -15,13 +15,13 @@ let mco_pricing = {};
     // Chart.js
     let chart = null;
 
-    function runPricing(route, url, parameters, hash, errors)
+    function runPricing(route, path, parameters, hash, errors)
     {
         // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
-        let url_parts = url.split('/');
-        route.view = url_parts[1] || 'table';
-        if (url_parts[2]) {
-            let date_parts = url_parts[2].split('..', 2);
+        let path_parts = path.split('/');
+        route.view = path_parts[1] || 'table';
+        if (path_parts[2]) {
+            let date_parts = path_parts[2].split('..', 2);
             if (date_parts.length === 2) {
                 route.date = date_parts[1];
                 route.diff = date_parts[0];
@@ -30,7 +30,7 @@ let mco_pricing = {};
                 route.diff = null;
             }
         }
-        route.ghm_root = url_parts[3] || null;
+        route.ghm_root = path_parts[3] || null;
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources

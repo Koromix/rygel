@@ -11,11 +11,11 @@ let mco_tree = {};
     let nodes = [];
     let collapse_nodes = new Set();
 
-    function runTree(route, url, parameters, hash, errors)
+    function runTree(route, path, parameters, hash, errors)
     {
         // Parse route (model: tree/<date>)
-        let url_parts = url.split('/');
-        route.date = url_parts[1] || null;
+        let path_parts = path.split('/');
+        route.date = path_parts[1] || null;
 
         // Resources
         let indexes = mco_common.updateIndexes();

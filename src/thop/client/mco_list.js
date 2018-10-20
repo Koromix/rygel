@@ -185,14 +185,14 @@ let mco_list = {};
     let list_cache = {};
     let reactor = {};
 
-    function runList(route, url, parameters, hash, errors)
+    function runList(route, path, parameters, hash, errors)
     {
         // Parse route (model: list/<table>/<date>[/<spec>])
-        let url_parts = url.split('/');
-        route.list = url_parts[1] || 'ghm_roots';
-        route.date = url_parts[2] || null;
+        let path_parts = path.split('/');
+        route.list = path_parts[1] || 'ghm_roots';
+        route.date = path_parts[2] || null;
         route.page = parseInt(parameters.page, 10) || 1;
-        route.spec = (url_parts[2] && url_parts[3]) ? url_parts[3] : null;
+        route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
         route.group = parameters.group || null;
         route.search = parameters.search || null;
         specs[route.list] = route.spec;

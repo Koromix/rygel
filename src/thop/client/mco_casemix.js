@@ -31,7 +31,7 @@ let mco_casemix = {};
     let units_summary = null;
     let ghm_roots_summary = null;
 
-    function runCasemix(route, url, parameters, hash, errors)
+    function runCasemix(route, path, parameters, hash, errors)
     {
         if (!user.isConnected()) {
             errors.add('Vous n\'êtes pas connecté(e)');
@@ -40,19 +40,19 @@ let mco_casemix = {};
         }
 
         // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
-        let url_parts = url.split('/', 3);
-        if (url_parts[2])
-            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(url_parts[2]))));
-        route.view = url_parts[1] || 'ghm_roots';
+        let path_parts = path.split('/', 3);
+        if (path_parts[2])
+            Object.assign(route, thop.buildRoute(JSON.parse(window.atob(path_parts[2]))));
+        route.view = path_parts[1] || 'ghm_roots';
         route.period = (route.period && route.period[0]) ? route.period : [start_date, end_date];
         route.prev_period = (route.prev_period && route.prev_period[0]) ?
                             route.prev_period : [start_date, end_date];
-        route.units = route.units || [];
-        route.ghm_roots = route.ghm_roots || [];
         route.structure = route.structure || 0;
         route.regroup = route.regroup || 'none';
         route.mode = route.mode || 'none';
-        route.algorithm = route.algorithm || null;
+        route.algorithm = route.algorithm || default_algorithm;
+        route.units = route.units || [];
+        route.ghm_roots = route.ghm_roots || [];
         route.refresh = route.refresh || false;
         route.ghm_root = route.ghm_root || null;
         route.apply_coefficient = route.apply_coefficient || false;
@@ -73,8 +73,6 @@ let mco_casemix = {};
         let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
         if (user.isConnected()) {
             updateSettings();
-            if (!route.algorithm)
-                route.algorithm = default_algorithm;
 
             if (start_date) {
                 updateCasemixParams(route.period[0], route.period[1], route.algorithm,
