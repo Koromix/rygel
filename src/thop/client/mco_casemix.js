@@ -7,6 +7,7 @@ let mco_casemix = {};
     'use strict';
 
     // Route
+    let unspecified = false;
     let pages = {};
     let sorts = {};
 
@@ -68,26 +69,31 @@ let mco_casemix = {};
         let ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
         if (route.view === 'durations' && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
+        if (unspecified && structures.length && ghm_roots.length) {
+            if (!route.units.length && structures[route.structure])
+                route.units = structures[route.structure].entities.map(function(ent) { return ent.unit; }).sort();
+            if (!route.ghm_roots.length)
+                route.ghm_roots = ghm_roots.map(function(ghm_root) { return ghm_root.ghm_root; }).sort();
+
+            unspecified = false;
+        }
+        updateSettings();
 
         // Casemix
-        let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-        if (user.isConnected()) {
-            updateSettings();
+        if (start_date) {
+            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
+            updateCasemixParams(route.period[0], route.period[1], route.algorithm,
+                                prev_period[0], prev_period[1], route.apply_coefficient,
+                                route.refresh);
 
-            if (start_date) {
-                updateCasemixParams(route.period[0], route.period[1], route.algorithm,
-                                    prev_period[0], prev_period[1], route.apply_coefficient,
-                                    route.refresh);
-
-                switch (route.view) {
-                    case 'ghm_roots':
-                    case 'units': {
-                        updateCasemixUnits();
-                    } break;
-                    case 'durations': {
-                        updateCasemixDuration(route.ghm_root);
-                    } break;
-                }
+            switch (route.view) {
+                case 'ghm_roots':
+                case 'units': {
+                    updateCasemixUnits();
+                } break;
+                case 'durations': {
+                    updateCasemixDuration(route.ghm_root);
+                } break;
             }
         }
         delete route.refresh;
@@ -122,7 +128,6 @@ let mco_casemix = {};
             .removeClass('hide');
         query('#opt_ghm_roots').toggleClass('hide', !['units', 'ghm_roots'].includes(route.view));
         query('#opt_ghm_root').toggleClass('hide', route.view !== 'durations');
-
         refreshPeriodsPickers(route.period, route.prev_period, route.mode);
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
@@ -195,15 +200,21 @@ let mco_casemix = {};
             new_route.page = pages[new_route.view];
         if (args.sort === undefined)
             new_route.sort = sorts[new_route.view];
+        if (!new_route.algorithm)
+            unspecified = true;
 
-        let short_route = {};
-        for (const k of KeepKeys)
-            short_route[k] = new_route[k] || null;
+        let short_route_str;
+        {
+            let short_route = {};
+            for (const k of KeepKeys)
+                short_route[k] = new_route[k] || null;
+
+            short_route_str = window.btoa(JSON.stringify(short_route));
+        }
 
         let url;
         {
-            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view,
-                             window.btoa(JSON.stringify(short_route))];
+            let url_parts = [thop.baseUrl('mco_casemix'), new_route.view, short_route_str];
             while (!url_parts[url_parts.length - 1])
                 url_parts.pop();
 
