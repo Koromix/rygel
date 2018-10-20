@@ -74,9 +74,7 @@ let user = {};
         query('#user_password').value = '';
         query('#user button').disabled = true;
 
-        connect(username, password, function() {
-            setTimeout(thop.goBackOrHome, 0);
-        });
+        connect(username, password, thop.goBackOrHome);
     }
     this.login = login;
 

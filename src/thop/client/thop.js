@@ -13,13 +13,13 @@ let thop = {};
     let route_modules = {};
 
     let route_timer_id = null;
-    let history_count = 0;
 
     let route_url = null;
     let route_url_parts = null;
     let route_values = {};
     let scroll_cache = {};
     let module = null;
+    let prev_module = null;
 
     function toggleMenu(selector, enable)
     {
@@ -94,10 +94,8 @@ let thop = {};
             if (!route_url_parts || url_parts.href !== route_url_parts.href) {
                 if (route_url_parts)
                     scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-                if (mark_history) {
-                    history_count++;
+                if (mark_history)
                     window.history.pushState(null, null, url_parts.href);
-                }
             }
 
             // Update user stuff
@@ -109,8 +107,10 @@ let thop = {};
                 let new_module_name = app_url.split('/')[0];
                 let new_module = route_modules[new_module_name];
 
-                if (new_module !== module)
+                if (new_module !== module) {
                     queryAll('main > div').addClass('hide');
+                    prev_module = module;
+                }
                 queryAll('#opt_menu > *').addClass('hide');
 
                 module = new_module;
@@ -198,8 +198,8 @@ let thop = {};
 
     function goBackOrHome()
     {
-        if (history_count) {
-            window.history.back();
+        if (prev_module) {
+            prev_module.object.go({});
         } else {
             let first_anchor = query('#side_menu a[data-url]');
             route(first_anchor.href);
@@ -228,7 +228,6 @@ let thop = {};
         route(new_url, 0, false);
 
         window.addEventListener('popstate', function(e) {
-            history_count--;
             route(window.location.href, 0, false);
         });
         document.body.addEventListener('click', function(e) {
