@@ -119,7 +119,7 @@ let thop = {};
             }
 
             // Show errors if any
-            thop.refreshErrors(Array.from(errors));
+            refreshErrors(Array.from(errors));
             if (!data.isBusy())
                 data.clearErrors();
 
@@ -214,7 +214,6 @@ let thop = {};
         log.innerHTML = errors.join('<br/>');
         log.toggleClass('hide', !errors.length);
     }
-    this.refreshErrors = refreshErrors;
 
     function init()
     {
