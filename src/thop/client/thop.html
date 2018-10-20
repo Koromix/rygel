@@ -42,7 +42,7 @@
 
         <main>
             <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
-            <nav id="opt_menu">
+            <nav id="opt_menu" class="hide">
                 <svg id="opt_index" class="indexes_line"></svg>
 
                 <label id="opt_diff_index">
@@ -108,9 +108,9 @@
                             style="width: 96%; margin-top: 4px;"></select><br/>
                 </label>
             </nav>
-            <div id="log"></div>
+            <div id="log" class="hide"></div>
 
-            <div id="user">
+            <div id="user" class="hide">
                 <form id="user_login">
                     <label>Utilisateur : <input id="user_username" type="text"/></label>
                     <label>Mot de passe : <input id="user_password" type="password"/></label>
@@ -118,16 +118,16 @@
                 </form>
             </div>
 
-            <div id="pr">
+            <div id="pr" class="hide">
                 <table id="pr_table" class="pr_grid"></table>
                 <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
 
-            <div id="tr">
+            <div id="tr" class="hide">
                 <ul id="tr_tree"></ul>
             </div>
 
-            <div id="ls">
+            <div id="ls" class="hide">
                 <h1 id="ls_spec"></h1>
                 <table class="ls_pager"></table>
                 <p id="ls_stats"></p>
@@ -138,7 +138,7 @@
                 <table class="ls_pager"></table>
             </div>
 
-            <div id="cm">
+            <div id="cm" class="hide">
                 <div id="cm_ghm_roots" class="cm_summary"></div>
                 <div id="cm_units" class="cm_summary"></div>
 
