@@ -78,6 +78,12 @@ let user = {};
     }
     this.login = login;
 
+    function logout()
+    {
+        disconnect(thop.goHome);
+    }
+    this.logout = logout;
+
     function updateSession()
     {
         let prev_url_key = url_key;
@@ -99,7 +105,7 @@ let user = {};
                 username + ' (',
                 html('a', {href: routeToUrl()}, 'changer'),
                 ', ',
-                html('a', {href: '#', click: function(e) { disconnect(); e.preventDefault(); }},
+                html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
                      'déconnexion'),
                 ')'
             );
@@ -119,7 +125,7 @@ let user = {};
         let menu_item;
         if (url_key) {
             menu_item = html('li',
-                html('a', {href: '#', click: function(e) { user.disconnect(); e.preventDefault(); }},
+                html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
                      'Se déconnecter (' + username + ')')
             );
         } else {

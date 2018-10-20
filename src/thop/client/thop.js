@@ -196,13 +196,19 @@ let thop = {};
     }
     this.go = go;
 
+    function goHome()
+    {
+        let first_anchor = query('#side_menu a[data-url]');
+        route(first_anchor.href);
+    }
+    this.goHome = goHome;
+
     function goBackOrHome()
     {
         if (prev_module) {
             prev_module.object.go({});
         } else {
-            let first_anchor = query('#side_menu a[data-url]');
-            route(first_anchor.href);
+            goHome();
         }
     }
     this.goBackOrHome = goBackOrHome;
