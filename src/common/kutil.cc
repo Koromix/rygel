@@ -1420,6 +1420,30 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
 // Tasks
 // ------------------------------------------------------------------------
 
+int GetIdealThreadCount()
+{
+#ifdef __EMSCRIPTEN__
+    static const int max_threads = 1;
+#else
+    static const int max_threads = []() {
+        const char *env = getenv(DEBUG_ENV_PREFIX "THREADS");
+        if (env) {
+            char *end_ptr;
+            long threads = strtol(env, &end_ptr, 10);
+            if (end_ptr > env && !end_ptr[0] && threads > 0) {
+                return (int)threads;
+            } else {
+                LogError("%1 must be positive number, ignoring", DEBUG_ENV_PREFIX "THREADS");
+            }
+        }
+        return (int)std::thread::hardware_concurrency();
+    }();
+    Assert(max_threads > 0);
+#endif
+
+    return max_threads;
+}
+
 struct Task {
     std::function<bool()> func;
     Async *async;
@@ -1448,30 +1472,11 @@ static THREAD_LOCAL WorkerThread *g_worker_thread;
 Async::Async()
 {
     if (!g_thread_pool) {
-#ifdef __EMSCRIPTEN__
-        static const int max_threads = 1;
-#else
-        static const int max_threads = []() {
-            const char *env = getenv(DEBUG_ENV_PREFIX "THREADS");
-            if (env) {
-                char *end_ptr;
-                long threads = strtol(env, &end_ptr, 10);
-                if (end_ptr > env && !end_ptr[0] && threads > 0) {
-                    return (int)threads;
-                } else {
-                    LogError("%1 must be positive number, ignoring", DEBUG_ENV_PREFIX "THREADS");
-                }
-            }
-            return (int)std::thread::hardware_concurrency();
-        }();
-        Assert(max_threads > 0);
-#endif
-
         // NOTE: We're leaking one ThreadPool each time a non-worker thread uses Async for
         // the first time. That's only one leak in most cases, when the main thread is the
         // only non-worker thread using Async, but still. Something to keep in mind.
         g_thread_pool = new ThreadPool;
-        g_thread_pool->workers.AppendDefault(max_threads);
+        g_thread_pool->workers.AppendDefault(GetIdealThreadCount());
         g_worker_thread = &g_thread_pool->workers[0];
     }
 

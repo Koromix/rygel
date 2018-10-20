@@ -3010,6 +3010,8 @@ FILE *OpenFile(const char *path, OpenFileMode mode);
 // Tasks
 // ------------------------------------------------------------------------
 
+int GetIdealThreadCount();
+
 class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
