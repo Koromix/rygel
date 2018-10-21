@@ -59,12 +59,8 @@ let thop = {};
     }
     this.registerUrl = registerUrl;
 
-    let running = false;
     function route(new_url, delay, mark_history)
     {
-        if (running)
-            return;
-
         if (new_url === undefined)
             new_url = null;
         if (mark_history === undefined)
@@ -81,106 +77,103 @@ let thop = {};
             return;
         }
 
+        // Busy
         query('main').toggleClass('busy', true);
-        running = true;
 
-        // Do some kind of DoEvents() with setTimeout()
-        setTimeout(function() {
-            // Parse new URL
-            let url_parts = new_url ? parseUrl(new_url) : route_url_parts;
-            let app_url = url_parts.path.substr(BaseUrl.length);
+        // Parse new URL
+        let url_parts = new_url ? parseUrl(new_url) : route_url_parts;
+        let app_url = url_parts.path.substr(BaseUrl.length);
 
-            // Update scroll cache and history
-            if (!route_url_parts || url_parts.href !== route_url_parts.href) {
-                if (route_url_parts)
-                    scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
-                if (mark_history)
-                    window.history.pushState(null, null, url_parts.href);
+        // Update scroll cache and history
+        if (!route_url_parts || url_parts.href !== route_url_parts.href) {
+            if (route_url_parts)
+                scroll_cache[route_url_parts.path] = [window.pageXOffset, window.pageYOffset];
+            if (mark_history)
+                window.history.pushState(null, null, url_parts.href);
+        }
+
+        // Update user stuff
+        user.runSession();
+
+        // Find relevant module and run
+        let errors = new Set(data.getErrors());
+        {
+            let new_module_name = app_url.split('/')[0];
+            let new_module = route_modules[new_module_name];
+
+            if (new_module !== module) {
+                queryAll('main > div').addClass('hide');
+                prev_module = module;
             }
+            queryAll('#opt_menu > *').addClass('hide');
 
-            // Update user stuff
-            user.runSession();
+            module = new_module;
+            if (module)
+                module.func(route_values, app_url, url_parts.params, url_parts.hash, errors);
+        }
 
-            // Find relevant module and run
-            let errors = new Set(data.getErrors());
-            {
-                let new_module_name = app_url.split('/')[0];
-                let new_module = route_modules[new_module_name];
+        // Show errors if any
+        refreshErrors(Array.from(errors));
+        if (!data.isBusy())
+            data.clearErrors();
 
-                if (new_module !== module) {
-                    queryAll('main > div').addClass('hide');
-                    prev_module = module;
-                }
-                queryAll('#opt_menu > *').addClass('hide');
+        // Update URL to reflect real state (module may have set default values, etc.)
+        {
+            let real_url = null;
+            if (module)
+                real_url = module.object.routeToUrl({});
+            if (real_url) {
+                if (url_parts.hash)
+                    real_url += '#' + url_parts.hash;
 
-                module = new_module;
-                if (module)
-                    module.func(route_values, app_url, url_parts.params, url_parts.hash, errors);
-            }
-
-            // Show errors if any
-            refreshErrors(Array.from(errors));
-            if (!data.isBusy())
-                data.clearErrors();
-
-            // Update URL to reflect real state (module may have set default values, etc.)
-            {
-                let real_url = null;
-                if (module)
-                    real_url = module.object.routeToUrl({});
-                if (real_url) {
-                    if (url_parts.hash)
-                        real_url += '#' + url_parts.hash;
-
-                    window.history.replaceState(null, null, real_url);
-                    route_url_parts = parseUrl(real_url);
-                    route_url = real_url.substr(BaseUrl.length);
-                } else {
-                    route_url_parts = url_parts;
-                    route_url = app_url;
-                }
-            }
-
-            // Update side menu state and links
-            for (let anchor of queryAll('#side_menu li a')) {
-                if (anchor.dataset.url) {
-                    let url = eval(anchor.dataset.url);
-                    anchor.classList.toggle('hide', !url);
-                    if (url)
-                        anchor.href = url;
-                }
-
-                let active = (route_url_parts.href.startsWith(anchor.href) &&
-                              !anchor.hasClass('category'));
-                anchor.toggleClass('active', active);
-            }
-            toggleMenu('#side_menu', false);
-
-            // Hide page menu if empty
-            let opt_hide = true;
-            for (let el of queryAll('#opt_menu > *')) {
-                if (!el.hasClass('hide')) {
-                    opt_hide = false;
-                    break;
-                }
-            }
-            queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
-
-            // Update scroll target
-            let scroll_target = scroll_cache[route_url_parts.path];
-            if (route_url_parts.hash) {
-                let el = query('#' + route_url_parts.hash);
-                if (el && el.offsetTop)
-                    window.scrollTo(0, el.offsetTop - 5);
-            } else if (scroll_target) {
-                window.scrollTo(scroll_target[0], scroll_target[1]);
+                window.history.replaceState(null, null, real_url);
+                route_url_parts = parseUrl(real_url);
+                route_url = real_url.substr(BaseUrl.length);
             } else {
-                window.scrollTo(0, 0);
+                route_url_parts = url_parts;
+                route_url = app_url;
+            }
+        }
+
+        // Update side menu state and links
+        for (let anchor of queryAll('#side_menu li a')) {
+            if (anchor.dataset.url) {
+                let url = eval(anchor.dataset.url);
+                anchor.classList.toggle('hide', !url);
+                if (url)
+                    anchor.href = url;
             }
 
-            query('main').toggleClass('busy', data.isBusy());
-            running = false;
-        }, 0);
+            let active = (route_url_parts.href.startsWith(anchor.href) &&
+                          !anchor.hasClass('category'));
+            anchor.toggleClass('active', active);
+        }
+        toggleMenu('#side_menu', false);
+
+        // Hide page menu if empty
+        let opt_hide = true;
+        for (let el of queryAll('#opt_menu > *')) {
+            if (!el.hasClass('hide')) {
+                opt_hide = false;
+                break;
+            }
+        }
+        queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
+
+        // Update scroll target
+        let scroll_target = scroll_cache[route_url_parts.path];
+        if (route_url_parts.hash) {
+            let el = query('#' + route_url_parts.hash);
+            if (el && el.offsetTop)
+                window.scrollTo(0, el.offsetTop - 5);
+        } else if (scroll_target) {
+            window.scrollTo(scroll_target[0], scroll_target[1]);
+        } else {
+            window.scrollTo(0, 0);
+        }
+
+        // Done
+        query('main').toggleClass('busy', data.isBusy());
     }
     this.route = route;
 
