@@ -39,7 +39,7 @@ static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode disp
 int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
-        return CreateErrorPage(404, out_response);
+        return CreateErrorPage(403, out_response);
 
     // TODO: Cache in session object (also neeeded in ProduceClassify)?
     HashSet<UnitCode> allowed_units;
@@ -212,7 +212,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                       T func, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user)
-        return CreateErrorPage(404, out_response);
+        return CreateErrorPage(403, out_response);
 
     HashSet<UnitCode> allowed_units;
     for (const Structure &structure: thop_structure_set.structures) {

@@ -146,7 +146,7 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
-        return CreateErrorPage(404, out_response);
+        return CreateErrorPage(403, out_response);
 
     // Create session key
     char session_key[129];

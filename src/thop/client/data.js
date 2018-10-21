@@ -78,6 +78,7 @@ let data = {};
         let error = null;
         switch (status) {
             case 200: { /* Success */ } break;
+            case 403: { error = 'Accès refusé'; } break;
             case 404: { error = 'Adresse \'' + url + '\' introuvable'; } break;
             case 422: { error = 'Paramètres incorrects'; } break;
             case 502:
