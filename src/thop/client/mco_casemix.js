@@ -787,7 +787,7 @@ let mco_casemix = {};
         if (!el.childNodes.length) {
             el.appendChildren([
                 html('table', {class: 'pagr'}),
-                html('table', {class: 'dtab'}),
+                html('div', {class: 'dtab'}),
                 html('table', {class: 'pagr'})
             ]);
         }

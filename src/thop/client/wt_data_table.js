@@ -4,9 +4,6 @@
 
 function DataTable(widget)
 {
-    if (widget === undefined)
-        widget = html('table');
-
     this.sortHandler = null;
 
     let self = this;
@@ -22,8 +19,8 @@ function DataTable(widget)
     let sort_idx = null;
     let sort_descending;
 
-    let render_offset;
-    let render_len;
+    let prev_offset;
+    let prev_len;
 
     function handleHeaderClick(e)
     {
@@ -35,7 +32,7 @@ function DataTable(widget)
             self.sortHandler(sort);
         } else {
             self.sort(sort);
-            self.render(render_offset, render_len);
+            self.render(prev_offset, prev_len);
         }
 
         e.preventDefault();
@@ -173,9 +170,18 @@ function DataTable(widget)
             len = rows_flat.length;
 
         widget.innerHTML = '';
+        widget.addClass('dtab');
+        widget.appendChildren([
+            html('p', {class: 'dtab_count'}),
+            html('table', {class: 'dtab_table'},
+                html('thead'),
+                html('tbody')
+            )
+        ]);
 
-        let thead = widget.appendChild(html('thead'));
-        let tbody = widget.appendChild(html('tbody'));
+        let p = widget.query('p');
+        let thead = widget.query('thead');
+        let tbody = widget.query('tbody');
 
         if (columns.length && rows_flat.length) {
             let tr = html('tr');
@@ -199,27 +205,41 @@ function DataTable(widget)
             tbody.appendChild(tr);
         }
 
-        let end = Math.min(offset + len, rows_flat.length);
+        let render_count;
+        {
+            let end = Math.min(offset + len, rows_flat.length);
 
-        let parents = Array.apply(null, Array(max_depth));
-        for (let i = offset; i < end; i++) {
-            let row = rows_flat[i];
+            let parents = Array.apply(null, Array(max_depth));
+            for (let i = offset; i < end; i++) {
+                let row = rows_flat[i];
 
-            let parent = row.parent;
-            while (parent && parent !== parents[parent.depth]) {
-                parents[parent.depth] = parent;
-                parent = parent.parent;
+                let parent = row.parent;
+                while (parent && parent !== parents[parent.depth]) {
+                    parents[parent.depth] = parent;
+                    parent = parent.parent;
+                }
+                for (let i = parent ? (parent.depth + 1) : 0; i < parents.length; i++)
+                    addRow(parents[i], true);
+
+                addRow(row, false);
             }
-            for (let i = parent ? (parent.depth + 1) : 0; i < parents.length; i++)
-                addRow(parents[i], true);
 
-            addRow(row, false);
+            render_count = Math.max(end - offset, 0);
         }
 
-        render_offset = offset;
-        render_len = len;
+        if (rows_flat.length) {
+            let count_text = '';
+            if (render_count)
+                count_text += offset + ' - ' + (offset + render_count) + ' ';
+            count_text += '(' + rows_flat.length + ' ' + (rows_flat.length > 1 ? 'lignes' : 'ligne') + ')';
 
-        return Math.max(end - offset, 0);
+            p.innerHTML = count_text;
+        }
+
+        prev_offset = offset;
+        prev_len = len;
+
+        return render_count;
     };
 
     this.getRowCount = function() { return rows_flat.length; }

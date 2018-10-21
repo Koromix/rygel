@@ -2,15 +2,20 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-.dtab th { cursor: pointer; }
+.dtab_count {
+    margin: 3px;
+    font-size: 0.9em;
+    font-style: italic;
+    color: #777;
+}
 
-.dtab {
+.dtab_table {
     width: 100%;
     border-collapse: collapse;
 }
-.dtab thead { background: #ccc; }
-.dtab tbody { background: #fafafa; }
-.dtab th, .dtab td {
+.dtab_table thead { background: #ccc; }
+.dtab_table tbody { background: #fafafa; }
+.dtab_table th, .dtab_table td {
     min-width: 60px;
     max-width: 260px;
     border: 1px solid #a4a4a4;
@@ -19,26 +24,26 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.dtab th {
+.dtab_table th {
     cursor: pointer;
     text-align: center;
     font-weight: bold;
 }
-.dtab .parent { background: #eee; }
+.dtab_table .parent { background: #eee; }
 
-.dtab .ascending {
+.dtab_table .ascending {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAFCAYAAABxeg0vAAAAOUlEQVQImWNgwARODAwM8VjEsYIkBgaGXwwMDP8ZGBjSCClOgypExjg1YVOMU5MtAwPDGQLYFqYYAH3dFcttYcRhAAAAAElFTkSuQmCC');
     background-repeat: no-repeat;
     background-position: right center;
 }
-.dtab .descending {
+.dtab_table .descending {
     background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAFCAYAAABxeg0vAAAANklEQVQImWNgYGCwZWBgOEMA2zKggTQGBob/OHAaumJ8mnAqhoEkBgaGX8QqhgEnBgaGeFySAMvFFcvEu6Q2AAAAAElFTkSuQmCC');
     background-repeat: no-repeat;
     background-position: right center;
 }
 
 @media screen and (max-width: 800px) {
-    .dtab th, .dtab td {
+    .dtab_table th, .dtab_table td {
         font-size: 0.8em;
         border: 0;
     }
