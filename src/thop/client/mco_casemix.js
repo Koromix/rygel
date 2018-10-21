@@ -380,34 +380,26 @@ let mco_casemix = {};
             prev_period = [null, null];
         }
 
-        let picker;
-        {
-            let builder = new PeriodPicker(start_date, end_date, period[0], period[1]);
+        let picker = query('#opt_periods > div:last-of-type');
+        let prev_picker = query('#opt_periods > div:first-of-type');
 
+        // Set main picker
+        {
+            let builder = new PeriodPicker(picker, start_date, end_date, period[0], period[1]);
             builder.changeHandler = function() {
                 go({period: this.object.getValues()});
             };
-
-            picker = builder.getWidget();
-            let old_picker = query('#opt_periods > div:last-of-type');
-            picker.copyAttributesFrom(old_picker);
-            picker.addClass('ppik');
-            old_picker.replaceWith(picker);
+            builder.render();
         }
 
-        let prev_picker;
+        // Set diff picker
         {
-            let builder = new PeriodPicker(start_date, end_date, prev_period[0], prev_period[1]);
-
+            let builder = new PeriodPicker(prev_picker, start_date, end_date,
+                                           prev_period[0], prev_period[1]);
             builder.changeHandler = function() {
                 go({prev_period: this.object.getValues()});
             };
-
-            prev_picker = builder.getWidget();
-            let old_picker = query('#opt_periods > div:first-of-type');
-            prev_picker.copyAttributesFrom(old_picker);
-            prev_picker.addClass('ppik');
-            old_picker.replaceWith(prev_picker);
+            builder.render();
         }
 
         picker.style.width = (mode !== 'none') ? '49%' : '100%';
@@ -422,7 +414,13 @@ let mco_casemix = {};
 
         units = new Set(units);
 
-        let builder = new TreeSelector('Unités : ');
+        let select = query('#opt_units > div');
+
+        let builder = new TreeSelector(select, 'Unités : ');
+        builder.changeHandler = function() {
+            go({units: this.object.getValues(),
+                structure: this.object.getActiveTab()});
+        };
 
         for (const structure of structures) {
             builder.createTab(structure.name);
@@ -448,16 +446,7 @@ let mco_casemix = {};
         }
         builder.setActiveTab(structure_idx);
 
-        builder.changeHandler = function() {
-            go({units: this.object.getValues(),
-                structure: this.object.getActiveTab()});
-        };
-
-        let old_select = query('#opt_units > div');
-        let select = builder.getWidget();
-        select.copyAttributesFrom(old_select);
-        select.addClass('tsel');
-        old_select.replaceWith(select);
+        builder.render();
     }
 
     function refreshAlgorithmsMenu(algorithm)
@@ -492,7 +481,9 @@ let mco_casemix = {};
 
         let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
-        let builder = new TreeSelector('GHM : ');
+        let select = query('#opt_ghm_roots > div');
+
+        let builder = new TreeSelector(select, 'GHM : ');
         builder.changeHandler = function() {
             go({ghm_roots: this.object.getValues(),
                 regroup: GroupTypes[this.object.getActiveTab()].key});
@@ -533,11 +524,7 @@ let mco_casemix = {};
             return group_type.key === regroup;
         }));
 
-        let old_select = query('#opt_ghm_roots > div');
-        let select = builder.getWidget();
-        select.copyAttributesFrom(old_select);
-        select.addClass('tsel');
-        old_select.replaceWith(select);
+        builder.render();
     }
 
     function refreshGhmRootsMenu(ghm_roots, select_ghm_root)
@@ -845,20 +832,16 @@ let mco_casemix = {};
 
         for (let pager of pagers) {
             if (last_page) {
-                let new_pager;
-                {
-                    let builder = new Pager(page, last_page);
-                    builder.anchorBuilder = function(text, page) {
-                        return html('a', {href: routeToUrl({page: page})}, '' + text);
-                    }
-                    new_pager = builder.getWidget();
-                    new_pager.addClass('pagr');
+                let builder = new Pager(pager, page, last_page);
+                builder.anchorBuilder = function(text, page) {
+                    return html('a', {href: routeToUrl({page: page})}, '' + text);
                 }
+                builder.render();
 
-                pager.replaceWith(new_pager);
+                pager.removeClass('hide');
             } else {
-                pager.innerHTML = '';
                 pager.addClass('hide');
+                pager.innerHTML = '';
             }
         }
     }

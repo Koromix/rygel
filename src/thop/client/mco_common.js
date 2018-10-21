@@ -55,7 +55,15 @@ let mco_common = {};
 
     function refreshIndexesLine(indexes, main_index)
     {
-        let builder = new VersionLine;
+        let svg = query('#opt_index');
+
+        let builder = new VersionLine(svg);
+        builder.anchorBuilder = function(version) {
+            return thop.routeToUrl({date: version.date});
+        };
+        builder.changeHandler = function() {
+            thop.go({date: this.object.getValue()});
+        };
 
         for (const index of indexes) {
             let label = index.begin_date;
@@ -67,17 +75,7 @@ let mco_common = {};
         if (main_index >= 0)
             builder.setValue(indexes[main_index].begin_date);
 
-        builder.anchorBuilder = function(version) {
-            return thop.routeToUrl({date: version.date});
-        };
-        builder.changeHandler = function() {
-            thop.go({date: this.object.getValue()});
-        };
-
-        let svg = builder.getWidget();
-        let old_svg = query('#opt_index');
-        svg.copyAttributesFrom(old_svg);
-        old_svg.replaceWith(svg);
+        builder.render();
     }
     this.refreshIndexesLine = refreshIndexesLine;
 

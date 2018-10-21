@@ -2,14 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function PeriodPicker(min_date, max_date, start_date, end_date)
+function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 {
     'use strict';
 
     this.changeHandler = null;
 
     let self = this;
-    let widget = null;
     let main = null;
     let handles = null;
     let bar = null;
@@ -178,15 +177,22 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
     }
 
-    this.getValues = function() {
-        return [handles[0].lastChild.value, handles[1].lastChild.value];
+    // TODO: Only mess with the (visible?) DOM when 'rendering'
+    this.render = function() {
+        handles[0].lastChild.valueAsDate = clampHandleDate(handles[0], start_date);
+        handles[1].lastChild.valueAsDate = clampHandleDate(handles[1], end_date);
+
+        syncHandle(handles[0]);
+        syncHandle(handles[1]);
+        syncBar();
     }
 
-    this.getWidget = function() {
-        return widget;
-    }
+    this.getValues = function() { return [handles[0].lastChild.value, handles[1].lastChild.value]; }
+    this.getWidget = function() { return widget; }
 
-    widget = html('div', {class: 'ppik'},
+    widget.innerHTML = '';
+    widget.addClass('ppik');
+    widget.appendChildren([
         // This dummy button catches click events that happen when a label encloses the widget
         html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
@@ -207,7 +213,7 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
                                change: handleDateChange, focusout: handleDateFocusOut})
             )
         )
-    );
+    ]);
     main = widget.query('.ppik_main');
     handles = widget.queryAll('.ppik_handle');
     bar = widget.query('.ppik_bar');
@@ -216,13 +222,6 @@ function PeriodPicker(min_date, max_date, start_date, end_date)
     max_date = max_date ? strToDate(max_date) : new Date(2100, 1, 1);
     start_date = start_date ? strToDate(start_date) : min_date;
     end_date = end_date ? strToDate(end_date) : max_date;
-
-    handles[0].lastChild.valueAsDate = clampHandleDate(handles[0], start_date);
-    handles[1].lastChild.valueAsDate = clampHandleDate(handles[1], end_date);
-
-    syncHandle(handles[0]);
-    syncHandle(handles[1]);
-    syncBar();
 
     widget.object = this;
 }

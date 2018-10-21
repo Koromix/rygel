@@ -1,15 +1,14 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
+﻿// This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function TreeSelector(prefix)
+function TreeSelector(widget, prefix)
 {
     'use strict';
 
     this.changeHandler = null;
 
     let self = this;
-    let widget = null;
     let curtab = null;
     let summary = null;
     let tabbar = null;
@@ -249,16 +248,20 @@ function TreeSelector(prefix)
         return values;
     };
 
-    this.getWidget = function() {
+    // TODO: Only mess with the (visible?) DOM when 'rendering'
+    this.render = function() {
         total = self.getValues(true).length;
 
         syncGroupCheckboxes();
         updateSummary();
+    }
 
-        return widget;
-    };
+    this.getWidget = function() { return widget; }
 
-    widget = html('div', {class: 'tsel', click: function(e) { e.stopPropagation(); }},
+    widget.innerHTML = '';
+    widget.addClass('tsel');
+    widget.addEventListener('click', function(e) { e.stopPropagation(); });
+    widget.appendChildren([
         // This dummy button catches click events that happen when a label encloses the widget
         html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
@@ -277,7 +280,7 @@ function TreeSelector(prefix)
                 html('div', {class: 'tsel_list active'})
             )
         ),
-    );
+    ]);
     curtab = widget.query('.tsel_curtab');
     summary = widget.query('.tsel_summary');
     tabbar = widget.query('.tsel_tabbar');

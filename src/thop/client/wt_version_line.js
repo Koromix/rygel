@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function VersionLine()
+function VersionLine(widget)
 {
     'use strict';
 
@@ -10,8 +10,6 @@ function VersionLine()
     this.changeHandler = null;
 
     let self = this;
-    let widget = null;
-    let g = null;
 
     let versions = [];
     let value = null;
@@ -19,8 +17,7 @@ function VersionLine()
     function handleNodeClick(e)
     {
         value = this.value;
-        render();
-        setTimeout(0, render);
+        setTimeout(self.render, 0);
 
         if (self.changeHandler)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
@@ -28,12 +25,15 @@ function VersionLine()
         e.preventDefault();
     }
 
-    function render()
-    {
-        if (g)
-            g.parentNode.removeChild(g);
-        g = svg('g');
-        widget.appendChild(g);
+    this.render = function() {
+        while (widget.lastChild)
+            widget.removeChild(widget.lastChild);
+        widget.addClass('vlin');
+        widget.appendChildren([
+            svg('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
+            svg('g')
+        ]);
+        let g = widget.query('g');
 
         if (versions.length < 2)
             return;
@@ -100,15 +100,7 @@ function VersionLine()
 
     this.setValue = function(date) { value = date; };
     this.getValue = function() { return value; };
-
-    this.getWidget = function() {
-        render();
-        return widget;
-    };
-
-    widget = svg('svg',
-        svg('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
-    );
+    this.getWidget = function() { return widget; }
 
     widget.object = this;
 }

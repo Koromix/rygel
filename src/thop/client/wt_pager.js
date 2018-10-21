@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-function Pager(active_page, last_page)
+function Pager(widget, active_page, last_page)
 {
     'use strict';
 
@@ -10,13 +10,11 @@ function Pager(active_page, last_page)
     this.changeHandler = null;
 
     let self = this;
-    let widget = null;
-    let tr = null;
 
     function handlePageClick(e, page)
     {
         active_page = page;
-        render();
+        setTimeout(self.render, 0);
 
         if (self.changeHandler)
             self.changeHandler.call(this, page);
@@ -25,7 +23,7 @@ function Pager(active_page, last_page)
     }
     this.handlePageClick = handlePageClick;
 
-    function addPageLink(text, page)
+    function addPageLink(tr, text, page)
     {
         let content = null;
         if (page) {
@@ -45,9 +43,11 @@ function Pager(active_page, last_page)
         return td;
     }
 
-    function render()
-    {
-        tr.innerHTML = '';
+    this.render = function() {
+        widget.innerHTML = '';
+        widget.addClass('pagr');
+        widget.appendChild(html('tr'));
+        let tr = widget.firstChild;
 
         let start_page, end_page;
         if (last_page < 8) {
@@ -64,37 +64,28 @@ function Pager(active_page, last_page)
             end_page = active_page + 1;
         }
 
-        addPageLink('≪', (active_page > 1) ? (active_page - 1) : null);
+        addPageLink(tr, '≪', (active_page > 1) ? (active_page - 1) : null);
         if (start_page > 1) {
-            addPageLink(1, 1);
-            addPageLink(' … ');
+            addPageLink(tr, 1, 1);
+            addPageLink(tr, ' … ');
         }
         for (let i = start_page; i <= end_page; i++) {
-            let td = addPageLink(i, (i !== active_page) ? i : null);
+            let td = addPageLink(tr, i, (i !== active_page) ? i : null);
             if (i === active_page)
                 td.addClass('active');
         }
         if (end_page < last_page) {
-            addPageLink(' … ');
-            addPageLink(last_page, last_page);
+            addPageLink(tr, ' … ');
+            addPageLink(tr, last_page, last_page);
         }
-        addPageLink('≫', (active_page < last_page) ? (active_page + 1) : null);
+        addPageLink(tr, '≫', (active_page < last_page) ? (active_page + 1) : null);
     }
 
     this.getValue = function() {
         let active = widget.query('td.active');
         return parseInt(active.textContent, 10);
     }
-
-    this.getWidget = function() {
-        render();
-        return widget;
-    }
-
-    widget = html('table', {class: 'pagr'},
-        html('tr')
-    );
-    tr = widget.query('tr');
+    this.getWidget = function() { return widget; }
 
     widget.object = this;
 }

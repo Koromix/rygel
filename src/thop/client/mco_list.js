@@ -522,16 +522,18 @@ let mco_list = {};
             stats_text += ')';
         }
 
-        for (let old_pager of queryAll('.ls_pager')) {
+        for (let pager of queryAll('.ls_pager')) {
             if (last_page) {
-                let pager = createPagination(page, last_page);
-                pager.copyAttributesFrom(old_pager);
-                pager.addClass('pagr');
+                let builder = new Pager(pager, page, last_page);
+                builder.anchorBuilder = function(text, page) {
+                    return html('a', {href: routeToUrl({page: page})}, '' + text);
+                }
+                builder.render();
+
                 pager.removeClass('hide');
-                old_pager.replaceWith(pager);
             } else {
-                old_pager.innerHTML = '';
-                old_pager.addClass('hide');
+                pager.addClass('hide');
+                pager.innerHTML = '';
             }
         }
 
@@ -540,15 +542,6 @@ let mco_list = {};
         let old_table = query('#ls_' + list_name);
         table.copyAttributesFrom(old_table);
         old_table.replaceWith(table);
-    }
-
-    function createPagination(page, last_page)
-    {
-        let builder = new Pager(page, last_page);
-        builder.anchorBuilder = function(text, page) {
-            return html('a', {href: routeToUrl({page: page})}, '' + text);
-        }
-        return builder.getWidget();
     }
 
     function maskToRanges(mask)
