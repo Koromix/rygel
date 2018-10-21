@@ -12,7 +12,7 @@ let mco_casemix = {};
     let sorts = {};
 
     // Casemix
-    let prev_url_key = null;
+    let st_url_key = null;
     let start_date = null;
     let end_date = null;
     let algorithms = [];
@@ -80,7 +80,7 @@ let mco_casemix = {};
         updateSettings();
 
         // Casemix
-        if (start_date) {
+        if (st_url_key) {
             let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
             updateCasemixParams(route.period[0], route.period[1], route.algorithm,
                                 prev_period[0], prev_period[1], route.apply_coefficient,
@@ -245,7 +245,7 @@ let mco_casemix = {};
 
     function updateSettings()
     {
-        if (user.getUrlKey() !== prev_url_key) {
+        if (user.getUrlKey() !== st_url_key) {
             let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, function(json) {
                 start_date = json.begin_date;
@@ -262,7 +262,7 @@ let mco_casemix = {};
                     }
                 }
 
-                prev_url_key = user.getUrlKey();
+                st_url_key = user.getUrlKey();
             });
         }
     }
@@ -417,6 +417,9 @@ let mco_casemix = {};
 
     function refreshStructuresTree(units, structure_idx)
     {
+        if (!needsRefresh(refreshStructuresTree, null, [st_url_key].concat(Array.from(arguments))))
+            return;
+
         units = new Set(units);
 
         let builder = new TreeSelector('Unités : ');
@@ -474,6 +477,9 @@ let mco_casemix = {};
 
     function refreshGhmRootsTree(ghm_roots, select_ghm_roots, regroup)
     {
+        if (!needsRefresh(refreshGhmRootsTree, null, [st_url_key].concat(Array.from(arguments))))
+            return;
+
         // TODO: This should probably not be hard-coded here
         const GroupTypes = [
             {key: 'none', text: 'Racines'},
