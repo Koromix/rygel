@@ -761,11 +761,10 @@ let mco_casemix = {};
                     }
 
                     let elements = [
-                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root})},
-                             ghm_root),
+                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root})}, ghm_root),
                         ghm_root_info ? ' - ' + ghm_root_info.desc : null
                     ];
-                    let title = ghm_root_info ? ghm_root_info.desc : null;
+                    let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
 
                     ghm_roots_summary.beginRow();
                     ghm_roots_summary.addCell(ghm_root, {title: title}, elements);

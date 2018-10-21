@@ -88,8 +88,10 @@ function DataTable(widget)
         } else {
             td = html('td', '' + value);
         }
-        if (!ptr.cells.length && ptr.depth)
-            td.style.paddingLeft = 'calc(3px + ' + ptr.depth + 'em)';
+        if (!ptr.cells.length && ptr.depth) {
+            let spacer = html('span', {style: 'display: inline-block; width: ' + (ptr.depth * 0.8) + 'em;'});
+            td.insertBefore(spacer, td.firstChild);
+        }
 
         ptr.values.push(value);
         ptr.cells.push(td);
