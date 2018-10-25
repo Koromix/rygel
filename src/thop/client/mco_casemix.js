@@ -799,28 +799,34 @@ let mco_casemix = {};
 
     function addSummaryCells(dtab, stat, total)
     {
+        function addPercentCell(value)
+        {
+            if (!isNaN(value)) {
+                dtab.addCell(value, percentText(value));
+            } else {
+                dtab.addCell(null, null);
+            }
+        }
+
         dtab.addCell(stat.count, numberText(stat.count));
         if (!mix_params.diff)
-            dtab.addCell(stat.count / total.count, percentText(stat.count / total.count));
+            addPercentCell(stat.count / total.count);
 
         dtab.addCell(stat.mono_count, numberText(stat.mono_count));
         if (!mix_params.diff)
-            dtab.addCell(stat.mono_count / total.mono_count,
-                         percentText(stat.mono_count / total.mono_count));
+            addPercentCell(stat.mono_count / total.mono_count);
 
         dtab.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
         if (!mix_params.diff)
-            dtab.addCell(stat.price_cents_total / total.price_cents_total,
-                         percentText(stat.price_cents_total / total.price_cents_total));
+            addPercentCell(stat.price_cents_total / total.price_cents_total);
 
         dtab.addCell(stat.price_cents, priceText(stat.price_cents, false));
         if (!mix_params.diff)
-            dtab.addCell(stat.price_cents / total.price_cents,
-                         percentText(stat.price_cents / total.price_cents));
+            addPercentCell(stat.price_cents / total.price_cents);
 
         dtab.addCell(stat.deaths, numberText(stat.deaths));
         if (!mix_params.diff)
-            dtab.addCell(stat.deaths / stat.count, percentText(stat.deaths / stat.count));
+            addPercentCell(stat.deaths / stat.count);
     }
 
     function syncPagers(pagers, render_count, row_count, page)
