@@ -190,7 +190,8 @@ function DataTable(widget)
             for (let i = 0; i < columns.length; i++) {
                 let th = columns[i].cell;
                 if (i === sort_idx) {
-                    th.addClass(sort_descending ? 'descending' : 'ascending');
+                    th.toggleClass('descending', sort_descending);
+                    th.toggleClass('ascending', !sort_descending);
                 } else {
                     th.removeClass('descending');
                     th.removeClass('ascending');
