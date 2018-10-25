@@ -884,12 +884,14 @@ Options:
     MHD_Daemon *daemon;
     {
         int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+        int thread_count = std::max(GetIdealThreadCount(), 2);
+
 #ifndef NDEBUG
         flags |= MHD_USE_DEBUG;
 #endif
 
         daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
-                                  MHD_OPTION_THREAD_POOL_SIZE, GetIdealThreadCount(),
+                                  MHD_OPTION_THREAD_POOL_SIZE, thread_count,
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);
         if (!daemon)
