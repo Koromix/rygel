@@ -42,7 +42,22 @@
     background-position: right center;
 }
 
+@media screen and (min-width: 801px) {
+    .dtab_count { float: left; }
+    .dtab_excel {
+        display: block;
+        float: right;
+        width: 16px;
+        height: 16px;
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAABrUlEQVQokWNgwA4YGbK0ebBLpRmzypY46MgWOYfLFbm2yRW7bFEod78vU+BwiMGTX5nBiUGZIUAMQhszsDLIFDp7KNZ4/les8vyvWO35X77C/b9EocN/h/aE//MPrfuz4vi2P3MPrPmz4tyOP2aNoYEMUkWOfsq13v+l8x3+i+bY/Fcucf8vU+D0X78m8H/agsb/C49u/B82rej/yWdX/0dOK4phkC5y9hEvdfxfu3bS//KVvf87t879L5Bp8V+vOuB/8tza/zP2rfwfMqXg/757Z/6HTS2IZJAucvYRLbb/HzGt5P/3Xz//u3Qm/xeEakiYU/1/2t4V/4Mm5f3fe/f0/7CpxRANIkV2/7MWNv1/8/n9/8hpJf/5M8z/61b5/4+dWfF/yp5l//0mZP/fc+cUVEO+g49Mhev/wmUd/yOmlfxv3zL7v3CW1X+96oD/ibMhNgRPzv+/7+5piJOkilz9lGq9/4vm2PwXzbH5L5Xv8F8W6unU+fX/FxzZ8D9kauH/E0+hnkYOVqVqr/+KlR7wYF1waN2flejByhCqzSZT6KJLdMThShqiOJIGADXf7VjCuLmEAAAAAElFTkSuQmCC');
+        background-repeat: no-repeat;
+        background-position: center bottom;
+    }
+}
+
 @media screen and (max-width: 800px) {
+    .dtab_excel { display: none; }
+
     .dtab_table th, .dtab_table td {
         font-size: 0.8em;
         border: 0;

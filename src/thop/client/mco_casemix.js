@@ -569,22 +569,22 @@ let mco_casemix = {};
             });
 
             units_summary = createPagedTable(query('#cm_units'));
-            units_summary.addColumn('unit', 'Unité');
-            units_summary.addColumn('rss', 'RSS');
+            units_summary.addColumn('unit', null, 'Unité');
+            units_summary.addColumn('rss', '#,##0', 'RSS');
             if (!mix_params.diff)
-                units_summary.addColumn('rss_pct', '%');
-            units_summary.addColumn('rum', 'RUM');
+                units_summary.addColumn('rss_pct', '0.00%', '%');
+            units_summary.addColumn('rum', '#,##0', 'RUM');
             if (!mix_params.diff)
-                units_summary.addColumn('rum_pct', '%');
-            units_summary.addColumn('total', 'Total');
+                units_summary.addColumn('rum_pct', '0.00%', '%');
+            units_summary.addColumn('total', '#,##0', 'Total');
             if (!mix_params.diff)
-                units_summary.addColumn('total_pct', '%');
-            units_summary.addColumn('partial', 'Partiel');
+                units_summary.addColumn('total_pct', '0.00%', '%');
+            units_summary.addColumn('partial', '#,##0', 'Partiel');
             if (!mix_params.diff)
-                units_summary.addColumn('partial_pct', '%');
-            units_summary.addColumn('deaths', 'Décès');
+                units_summary.addColumn('partial_pct', '0.00%', '%');
+            units_summary.addColumn('deaths', '#,##0', 'Décès');
             if (!mix_params.diff)
-                units_summary.addColumn('deaths_pct', '%');
+                units_summary.addColumn('deaths_pct', '0.00%', '%');
 
             // Aggregate
             let stat0;
@@ -676,22 +676,22 @@ let mco_casemix = {};
             let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
 
             ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
-            ghm_roots_summary.addColumn('ghm_root', 'Racine');
-            ghm_roots_summary.addColumn('rss', 'RSS');
+            ghm_roots_summary.addColumn('ghm_root', null, 'Racine');
+            ghm_roots_summary.addColumn('rss', '#,##0', 'RSS');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('rss_pct', '%');
-            ghm_roots_summary.addColumn('rum', 'RUM');
+                ghm_roots_summary.addColumn('rss_pct', '0.00%', '%');
+            ghm_roots_summary.addColumn('rum', '#,##0', 'RUM');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('rum_pct', '%');
-            ghm_roots_summary.addColumn('total', 'Total');
+                ghm_roots_summary.addColumn('rum_pct', '0.00%', '%');
+            ghm_roots_summary.addColumn('total', '#,##0', 'Total');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('total_pct', '%');
-            ghm_roots_summary.addColumn('partial', 'Partiel');
+                ghm_roots_summary.addColumn('total_pct', '0.00%', '%');
+            ghm_roots_summary.addColumn('partial', '#,##0', 'Partiel');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('partial_pct', '%');
-            ghm_roots_summary.addColumn('deaths', 'Décès');
+                ghm_roots_summary.addColumn('partial_pct', '0.00%', '%');
+            ghm_roots_summary.addColumn('deaths', '#,##0', 'Décès');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('deaths_pct', '%');
+                ghm_roots_summary.addColumn('deaths_pct', '0.00%', '%');
 
             // Aggregate
             let stat0;

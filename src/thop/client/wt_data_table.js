@@ -10,10 +10,9 @@ function DataTable(widget)
 
     let columns = [];
     let columns_map = {};
-    let rows_rec = [];
-    let rows_flat = [];
-    let max_depth = 0;
 
+    let row_sets = [[]];
+    let sorted_rows = [];
     let ptr = null;
 
     let sort_idx = null;
@@ -21,6 +20,48 @@ function DataTable(widget)
 
     let prev_offset;
     let prev_len;
+
+    function handleExcelClick(e)
+    {
+        let wb = {
+            SheetNames: [],
+            Sheets: {}
+        };
+
+        for (let i = 0; i < row_sets.length; i++) {
+            const rows = row_sets[i];
+
+            let ws = XLSX.utils.aoa_to_sheet([
+                columns.map(function(col) { return col.key; })
+            ]);
+            if (i)
+                ws[XLSX.utils.encode_cell({c: columns.length, r: 0})] = {v: 'parent', t: 's'};
+
+            for (const row of rows) {
+                let values = i ? row.values.concat(row.parent.insert_idx + 1) : row.values;
+                XLSX.utils.sheet_add_aoa(ws, [values], {origin: -1});
+            }
+            for (let j = 0; j < columns.length; j++) {
+                const column = columns[j];
+
+                if (column.format) {
+                    for (let k = 1; k <= rows.length; k++) {
+                        let cell = ws[XLSX.utils.encode_cell({c: j, r: k})];
+                        if (cell)
+                            cell.z = column.format;
+                    }
+                }
+            }
+
+            let name = 'Sheet' + wb.SheetNames.length;
+            wb.SheetNames.push(name);
+            wb.Sheets[name] = ws;
+        }
+
+        XLSX.writeFile(wb, 'export.xlsx');
+
+        e.preventDefault();
+    }
 
     function handleHeaderClick(e)
     {
@@ -38,15 +79,16 @@ function DataTable(widget)
         e.preventDefault();
     }
 
-    this.addColumn = function(key) {
-        let th = createElementProxy('html', 'th', arguments, 1);
+    this.addColumn = function(key, format) {
+        let th = createElementProxy('html', 'th', arguments, 2);
         th.addEventListener('click', handleHeaderClick.bind(th));
         th.col_idx = columns.length;
 
         let column = {
             idx: columns.length,
             key: key,
-            cell: th
+            cell: th,
+            format: format
         };
 
         columns.push(column);
@@ -54,26 +96,26 @@ function DataTable(widget)
     };
 
     this.beginRow = function() {
+        let depth = ptr ? (ptr.depth + 1) : 0;
+        if (depth >= row_sets.length) {
+            row_sets.push([]);
+            sorted_rows = [];
+        }
+
         let row = {
-            insert_idx: rows_flat.length,
+            insert_idx: row_sets[depth].length,
             parent: ptr,
-            depth: ptr ? (ptr.depth + 1) : 0,
+            depth: depth,
             values: [],
             cells: [],
             children: []
         };
 
-        if (ptr) {
+        if (ptr)
             ptr.children.push(row);
-        } else {
-            rows_rec.push(row);
-        }
-        if (row.depth > max_depth) {
-            rows_flat = [];
-            max_depth = row.depth;
-        }
-        if (row.depth === max_depth)
-            rows_flat.push(row);
+        row_sets[depth].push(row);
+        if (depth + 1 === row_sets.length)
+            sorted_rows.push(row);
 
         ptr = row;
     };
@@ -141,22 +183,22 @@ function DataTable(widget)
                     } else if (row1.values[col_idx] > row2.values[col_idx]) {
                         return order;
                     } else {
-                        return row1.insert_idx - row2.insert_idx;
+                        return order * (row1.insert_idx - row2.insert_idx);
                     }
                 });
             } else {
                 rows.sort(function(row1, row2) { return row1.insert_idx - row2.insert_idx; });
             }
 
-            for (let row of rows) {
-                if (row.depth === max_depth)
-                    rows_flat.push(row);
+            for (const row of rows) {
+                if (row.depth + 1 === row_sets.length)
+                    sorted_rows.push(row);
                 recursiveSort(row.children);
             }
         }
 
-        rows_flat = [];
-        recursiveSort(rows_rec);
+        sorted_rows = [];
+        recursiveSort(row_sets[0]);
         ptr = null;
 
         sort_idx = col_idx;
@@ -169,12 +211,17 @@ function DataTable(widget)
         if (offset === undefined)
             offset = 0;
         if (len === undefined)
-            len = rows_flat.length;
+            len = sorted_rows.length;
 
         widget.innerHTML = '';
         widget.addClass('dtab');
+        if (sorted_rows.length) {
+            widget.appendChildren([
+                html('p', {class: 'dtab_count'}),
+                html('a', {class: 'dtab_excel', href: '#', click: handleExcelClick})
+            ]);
+        }
         widget.appendChildren([
-            html('p', {class: 'dtab_count'}),
             html('table', {class: 'dtab_table'},
                 html('thead'),
                 html('tbody')
@@ -185,7 +232,7 @@ function DataTable(widget)
         let thead = widget.query('thead');
         let tbody = widget.query('tbody');
 
-        if (columns.length && rows_flat.length) {
+        if (columns.length && sorted_rows.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
                 let th = columns[i].cell;
@@ -210,11 +257,11 @@ function DataTable(widget)
 
         let render_count;
         {
-            let end = Math.min(offset + len, rows_flat.length);
+            let end = Math.min(offset + len, sorted_rows.length);
 
-            let parents = Array.apply(null, Array(max_depth));
+            let parents = Array.apply(null, Array(row_sets.length - 1));
             for (let i = offset; i < end; i++) {
-                let row = rows_flat[i];
+                let row = sorted_rows[i];
 
                 let parent = row.parent;
                 while (parent && parent !== parents[parent.depth]) {
@@ -230,11 +277,11 @@ function DataTable(widget)
             render_count = Math.max(end - offset, 0);
         }
 
-        if (rows_flat.length) {
+        if (sorted_rows.length) {
             let count_text = '';
             if (render_count)
                 count_text += offset + ' - ' + (offset + render_count) + ' ';
-            count_text += '(' + rows_flat.length + ' ' + (rows_flat.length > 1 ? 'lignes' : 'ligne') + ')';
+            count_text += '(' + sorted_rows.length + ' ' + (sorted_rows.length > 1 ? 'lignes' : 'ligne') + ')';
 
             p.innerHTML = count_text;
         }
@@ -245,7 +292,7 @@ function DataTable(widget)
         return render_count;
     };
 
-    this.getRowCount = function() { return rows_flat.length; }
+    this.getRowCount = function() { return sorted_rows.length; }
     this.getWidget = function() { return widget; }
 
     widget.object = this;

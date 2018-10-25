@@ -34,6 +34,7 @@ set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
                    client/wt_tree_selector.js
                    client/wt_version_line.js
                    ../../lib/chartjs/chart.min.js
+                   ../../lib/sheetjs/xlsx.core.min.js
 
                    client/thop.css
                    client/mco_casemix.css
