@@ -229,7 +229,7 @@ let thop = {};
             route(window.location.href, 0, false);
         });
         document.body.addEventListener('click', function(e) {
-            if (e.target && e.target.tagName == 'A') {
+            if (e.target && e.target.tagName == 'A' && !e.target.getAttribute('download')) {
                 let href = e.target.getAttribute('href');
                 if (href && !href.match(/^(?:[a-z]+:)?\/\//) && href[0] != '#') {
                     route(href);
