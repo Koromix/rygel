@@ -55,6 +55,9 @@ let mco_common = {};
 
     function refreshIndexesLine(indexes, main_index)
     {
+        if (!needsRefresh(refreshIndexesLine, null, arguments))
+            return;
+
         let svg = query('#opt_index');
 
         let builder = new VersionLine(svg);
