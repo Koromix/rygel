@@ -35,7 +35,7 @@ let mco_pricing = {};
 
         // Resources
         let indexes = mco_common.updateIndexes();
-        ({concepts: ghm_roots, map: ghm_roots_map} = mco_common.updateConceptSet('mco_ghm_roots'));
+        ({concepts: ghm_roots, map: ghm_roots_map} = mco_common.updateCatalog('mco_ghm_roots'));
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
@@ -285,7 +285,7 @@ let mco_pricing = {};
 
         let title;
         {
-            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
             title = ghm_root;
             if (ghm_roots_map[ghm_root])

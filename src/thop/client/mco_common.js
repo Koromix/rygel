@@ -6,15 +6,15 @@ let mco_common = {};
 (function() {
     'use strict';
 
-    const ConceptSets = {
-        'ccam': {path: 'concepts/ccam.json', key: 'procedure'},
-        'cim10': {path: 'concepts/cim10.json', key: 'diagnosis'},
-        'mco_ghm_roots': {path: 'concepts/mco_ghm_roots.json', key: 'ghm_root'}
+    const Catalogs = {
+        'ccam': {path: 'catalogs/ccam.json', key: 'procedure'},
+        'cim10': {path: 'catalogs/cim10.json', key: 'diagnosis'},
+        'mco_ghm_roots': {path: 'catalogs/mco_ghm_roots.json', key: 'ghm_root'}
     };
 
     // Cache
     let indexes = [];
-    let concept_sets = {};
+    let catalogs = {};
 
     function updateIndexes()
     {
@@ -29,17 +29,17 @@ let mco_common = {};
     }
     this.updateIndexes = updateIndexes;
 
-    function updateConceptSet(name)
+    function updateCatalog(name)
     {
-        let info = ConceptSets[name];
-        let set = concept_sets[name];
+        let info = Catalogs[name];
+        let set = catalogs[name];
 
         if (info && !set) {
             set = {
                 concepts: [],
                 map: {}
             };
-            concept_sets[name] = set;
+            catalogs[name] = set;
 
             let url = thop.baseUrl(info.path);
             data.get(url, function(json) {
@@ -51,7 +51,7 @@ let mco_common = {};
 
         return set;
     }
-    this.updateConceptSet = updateConceptSet;
+    this.updateCatalog = updateCatalog;
 
     function refreshIndexesLine(indexes, main_index)
     {

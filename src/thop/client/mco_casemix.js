@@ -66,7 +66,7 @@ let mco_casemix = {};
         let indexes = mco_common.updateIndexes();
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
-        let ghm_roots = mco_common.updateConceptSet('mco_ghm_roots').concepts;
+        let ghm_roots = mco_common.updateCatalog('mco_ghm_roots').concepts;
         if (route.view === 'durations' && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
         if (unspecified && structures.length && ghm_roots.length) {
@@ -479,7 +479,7 @@ let mco_casemix = {};
 
         select_ghm_roots = new Set(select_ghm_roots);
 
-        let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+        let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
         let select = query('#opt_ghm_roots > div');
 
@@ -673,7 +673,7 @@ let mco_casemix = {};
                 return false;
             });
 
-            let ghm_roots_map = mco_common.updateConceptSet('mco_ghm_roots').map;
+            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
             ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
             ghm_roots_summary.addColumn('ghm_root', null, 'Racine');

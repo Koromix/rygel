@@ -17,8 +17,8 @@
 #include "user.hh"
 #include "../../packer/packer.hh"
 
-struct DescSet {
-    HeapArray<PackerAsset> descs;
+struct CatalogSet {
+    HeapArray<PackerAsset> catalogs;
     LinkedAllocator alloc;
 };
 
@@ -81,7 +81,7 @@ HeapArray<mco_Result> thop_mono_results;
 HeapArray<mco_ResultPointers> thop_results_index_ghm;
 HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
-static DescSet desc_set;
+static CatalogSet catalog_set;
 #ifndef NDEBUG
 static HeapArray<PackerAsset> packer_assets;
 static LinkedAllocator packer_alloc;
@@ -117,8 +117,8 @@ static const char *GetMimeType(Span<const char> path)
     }
 }
 
-static bool InitDescSet(Span<const char *const> resource_directories,
-                        Span<const char *const> desc_directories)
+static bool InitCatalogSet(Span<const char *const> resource_directories,
+                           Span<const char *const> desc_directories)
 {
     BlockAllocator temp_alloc(Kibibytes(8));
 
@@ -126,7 +126,7 @@ static bool InitDescSet(Span<const char *const> resource_directories,
     {
         bool success = true;
         for (const char *resource_dir: resource_directories) {
-            const char *desc_dir = Fmt(&temp_alloc, "%1%/concepts", resource_dir).ptr;
+            const char *desc_dir = Fmt(&temp_alloc, "%1%/catalogs", resource_dir).ptr;
             if (TestPath(desc_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(desc_dir, "*.json", &temp_alloc, &filenames, 1024);
             }
@@ -139,16 +139,16 @@ static bool InitDescSet(Span<const char *const> resource_directories,
     }
 
     if (!filenames.len) {
-        LogError("No desc file specified or found");
+        LogError("No catalog file specified or found");
     }
 
     for (const char *filename: filenames) {
-        PackerAsset desc = {};
+        PackerAsset catalog = {};
 
         const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
         Assert(name[0]);
 
-        HeapArray<uint8_t> buf(&desc_set.alloc);
+        HeapArray<uint8_t> buf(&catalog_set.alloc);
         {
             StreamReader reader(filename);
             StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
@@ -158,11 +158,11 @@ static bool InitDescSet(Span<const char *const> resource_directories,
                 return false;
         }
 
-        desc.name = DuplicateString(&desc_set.alloc, name).ptr;
-        desc.data = buf.Leak();
-        desc.compression_type = CompressionType::Gzip;
+        catalog.name = DuplicateString(&catalog_set.alloc, name).ptr;
+        catalog.data = buf.Leak();
+        catalog.compression_type = CompressionType::Gzip;
 
-        desc_set.descs.Append(desc);
+        catalog_set.catalogs.Append(catalog);
     }
 
     return true;
@@ -237,7 +237,7 @@ static bool InitStructureSet(Span<const char *const> resource_directories,
     return true;
 }
 
-static bool InitTables(Span<const char *const> desc_directories,
+static bool InitTables(Span<const char *const> catalog_directories,
                        Span<const char *const> stays_filenames)
 {
     thop_table_set = mco_GetMainTableSet();
@@ -254,7 +254,7 @@ static bool InitTables(Span<const char *const> desc_directories,
             return false;
     }
 
-    if (!InitDescSet(mco_resource_directories, desc_directories))
+    if (!InitCatalogSet(mco_resource_directories, catalog_directories))
         return false;
 
     return true;
@@ -501,9 +501,9 @@ static void InitRoutes()
         routes.Set({url, "GET", Route::Matching::Exact, asset, GetMimeType(asset.name)});
     }
 
-    // Concepts
-    for (const PackerAsset &desc: desc_set.descs) {
-        const char *url = Fmt(&routes_alloc, "/concepts/%1", desc.name).ptr;
+    // Catalogs
+    for (const PackerAsset &desc: catalog_set.catalogs) {
+        const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         routes.Set({url, "GET", Route::Matching::Exact, desc, GetMimeType(url)});
     }
 
@@ -801,8 +801,8 @@ R"(Usage: thop [options] [stay_file ..]
 Options:
     -p, --port <port>            Web server port
                                  (default: 8888)
-        --concept_dir <dir>      Add concepts directory
-                                 (default: <resource_dir>%/concepts)
+        --catalog_dir <dir>      Add catalogs directory
+                                 (default: <resource_dir>%/catalogs)
 
     -c, --casemix                Load stays for casemix module
 )");
@@ -817,7 +817,7 @@ Options:
         mco_resource_directories.Append(default_resource_dir);
     }
 
-    HeapArray<const char *> desc_directories;
+    HeapArray<const char *> catalog_directories;
     uint16_t port = 8888;
     HeapArray<const char *> stays_filenames;
     {
@@ -841,11 +841,11 @@ Options:
                     return 1;
                 }
                 port = (uint16_t)new_port;
-            } else if (TestOption(opt, "--desc_dir")) {
+            } else if (TestOption(opt, "--catalog_dir")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
 
-                desc_directories.Append(opt_parser.current_value);
+                catalog_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-c", "--casemix")) {
                 casemix = true;
             } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
@@ -867,7 +867,7 @@ Options:
         return 1;
     }
 
-    if (!InitTables(desc_directories, stays_filenames))
+    if (!InitTables(catalog_directories, stays_filenames))
         return 1;
     if (stays_filenames.len && !InitStays(stays_filenames))
         return 1;

@@ -9,7 +9,7 @@ let mco_list = {};
     const Lists = {
         'ghm_roots': {
             'path': 'api/mco_ghm_ghs.json',
-            'concept_set': 'mco_ghm_roots',
+            'catalog': 'mco_ghm_roots',
 
             'groups': [
                 {type: 'cmd', name: 'Catégories majeures de diagnostic',
@@ -90,7 +90,7 @@ let mco_list = {};
 
         'ghm_ghs': {
             'path': 'api/mco_ghm_ghs.json',
-            'concept_set': 'mco_ghm_roots',
+            'catalog': 'mco_ghm_roots',
 
             'columns': [
                 {func: function(ghm_ghs, ghm_roots_map) {
@@ -137,7 +137,7 @@ let mco_list = {};
 
         'diagnoses': {
             'path': 'api/mco_diagnoses.json',
-            'concept_set': 'cim10',
+            'catalog': 'cim10',
 
             'columns': [
                 {header: 'Diagnostic', func: function(diag, cim10_map) {
@@ -158,7 +158,7 @@ let mco_list = {};
 
         'procedures': {
             'path': 'api/mco_procedures.json',
-            'concept_set': 'ccam',
+            'catalog': 'ccam',
 
             'columns': [
                 {header: 'Acte', func: function(proc, ccam_map) {
@@ -257,7 +257,7 @@ let mco_list = {};
 
             let list_info = Lists[route.list];
             if (list_info) {
-                let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
+                let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
                 refreshListTable(route.list, concepts_map, route.page);
                 query('#ls_' + route.list).removeClass('hide');
             }
@@ -314,7 +314,7 @@ let mco_list = {};
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {
-            mco_common.updateConceptSet(Lists[list_name].concept_set);
+            mco_common.updateCatalog(Lists[list_name].catalog);
 
             list_cache[list_name] = {
                 url: null, items: [], match_count: 0,
@@ -332,7 +332,7 @@ let mco_list = {};
 
             let list_info = Lists[list_name];
             let columns = list_info.columns;
-            let concepts_map = mco_common.updateConceptSet(list_info.concept_set).map;
+            let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
 
             // Groups
             if (group_info)
