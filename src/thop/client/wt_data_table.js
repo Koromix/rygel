@@ -253,7 +253,7 @@ function DataTable(widget)
         let thead = widget.query('thead');
         let tbody = widget.query('tbody');
 
-        if (render_header && columns.length && sorted_rows.length) {
+        if (render_header && columns.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
                 let th = columns[i].cell;
@@ -298,6 +298,12 @@ function DataTable(widget)
             }
 
             render_count = Math.max(end - offset, 0);
+        }
+        if (!render_count) {
+            let msg = sorted_rows.length ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
+            tbody.appendChild(html('tr',
+                html('td', {colspan: columns.length}, msg)
+            ));
         }
 
         if (sorted_rows.length) {
