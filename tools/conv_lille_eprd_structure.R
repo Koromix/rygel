@@ -7,6 +7,7 @@
 library(drdR)
 library(data.table)
 library(optparse)
+library(stringr)
 
 opt_parser <- OptionParser(option_list = list(
     make_option(c('-s', '--stays'), type = 'character', help = 'filter valid units from stay file')
@@ -16,11 +17,12 @@ args <- parse_args(opt_parser, positional_arguments = 1)
 eprd <- fread(args$args[1], encoding = 'Latin-1')
 eprd$CODE_UF <- as.numeric(eprd$CODE_UF)
 eprd <- eprd[!is.na(eprd$CODE_UF),]
-eprd$PATH <- paste0('::', eprd$LIB_POLE, '::', eprd$CODE_UF, '-', eprd$LIB_UF)
+eprd$PATH <- paste0('|', eprd$LIB_POLE, '|',
+                    str_pad(eprd$CODE_UF, 4, 'left', '0'), '-', eprd$LIB_UF)
 setorder(eprd, PATH)
 
 if (!is.null(args$options$stays)) {
-    stays <- mco_load_stays('/media/veracrypt1/dim/mco/rss/rss.dspak.gz')$stays
+    stays <- mco_load_stays(args$options$stays)$stays
     eprd <- eprd[eprd$CODE_UF %in% unique(stays$unit),]
 }
 
