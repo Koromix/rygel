@@ -81,7 +81,8 @@ let mco_list = {};
                         } break;
                     }
                 }},
-                {header: 'Racine de GHM', func: function(ghm_ghs, ghm_roots_map) {
+                {key: 'ghm_root', header: 'Racine de GHM',
+                 func: function(ghm_ghs, ghm_roots_map) {
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
                                               ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }}
@@ -93,22 +94,25 @@ let mco_list = {};
             'catalog': 'mco_ghm_roots',
 
             'columns': [
-                {func: function(ghm_ghs, ghm_roots_map) {
+                {key: 'ghm_root', func: function(ghm_ghs, ghm_roots_map) {
                     return ghm_ghs.ghm_root + (ghm_roots_map[ghm_ghs.ghm_root] ?
                                               ' - ' + ghm_roots_map[ghm_ghs.ghm_root].desc : '');
                 }},
-                {header: 'GHM', variable: 'ghm'},
-                {header: 'GHS', variable: 'ghs'},
-                {header: 'Durées', title: 'Durées (nuits)', func: function(ghm_ghs) {
+                {key: 'ghm', header: 'GHM', variable: 'ghm'},
+                {key: 'ghs', header: 'GHS', variable: 'ghs'},
+                {key: 'durations', header: 'Durées', title: 'Durées (nuits)',
+                 func: function(ghm_ghs) {
                     return maskToRanges(ghm_ghs.durations);
                 }},
-                {header: 'Confirmation', title: 'Confirmation (nuits)', func: function(ghm_ghs) {
+                {key: 'confirm', header: 'Confirmation', title: 'Confirmation (nuits)',
+                 func: function(ghm_ghs) {
                     return ghm_ghs.confirm_treshold ? '< ' + ghm_ghs.confirm_treshold : null;
                 }},
-                {header: 'DP', variable: 'main_diagnosis'},
-                {header: 'Diagnostics', variable: 'diagnoses'},
-                {header: 'Actes', variable: 'procedures'},
-                {header: 'Autorisations', title: 'Autorisations (unités et lits)', func: function(ghm_ghs) {
+                {key: 'main_diagnosis', header: 'DP', variable: 'main_diagnosis'},
+                {key: 'diagnoses', header: 'Diagnostics', variable: 'diagnoses'},
+                {key: 'procedures', header: 'Actes', variable: 'procedures'},
+                {key: 'authorizations', header: 'Autorisations', title: 'Autorisations (unités et lits)',
+                 func: function(ghm_ghs) {
                     let ret = [];
                     if (ghm_ghs.unit_authorization)
                         ret.push('Unité ' + ghm_ghs.unit_authorization);
@@ -116,7 +120,7 @@ let mco_list = {};
                         ret.push('Lit ' + ghm_ghs.bed_authorization);
                     return ret;
                 }},
-                {header: 'Sévérité âgé', func: function(ghm_ghs) {
+                {key: 'old_severity', header: 'Sévérité âgé', func: function(ghm_ghs) {
                     if (ghm_ghs.old_age_treshold) {
                         return '≥ ' + ghm_ghs.old_age_treshold + ' et < ' +
                                (ghm_ghs.old_severity_limit + 1);
@@ -124,7 +128,7 @@ let mco_list = {};
                         return null;
                     }
                 }},
-                {header: 'Sévérité jeune', func: function(ghm_ghs) {
+                {key: 'young_severity', header: 'Sévérité jeune', func: function(ghm_ghs) {
                     if (ghm_ghs.young_age_treshold) {
                         return '< ' + ghm_ghs.young_age_treshold + ' et < ' +
                                (ghm_ghs.young_severity_limit + 1);
@@ -140,7 +144,8 @@ let mco_list = {};
             'catalog': 'cim10',
 
             'columns': [
-                {header: 'Diagnostic', func: function(diag, cim10_map) {
+                {key: 'diag', header: 'Diagnostic',
+                 func: function(diag, cim10_map) {
                     let text = diag.diag;
                     switch (diag.sex) {
                         case 'Homme': { text += ' (♂)'; } break;
@@ -150,9 +155,10 @@ let mco_list = {};
                         text += ' - ' + cim10_map[diag.diag].desc;
                     return text;
                 }},
-                {header: 'Niveau', func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }},
-                {header: 'CMD', variable: 'cmd'},
-                {header: 'Liste principale', variable: 'main_list'}
+                {key: 'severity', header: 'Niveau',
+                 func: function(diag) { return diag.severity ? diag.severity + 1 : 1; }},
+                {key: 'cmd' , header: 'CMD', variable: 'cmd'},
+                {key: 'main_list', header: 'Liste principale', variable: 'main_list'}
             ]
         },
 
@@ -161,16 +167,16 @@ let mco_list = {};
             'catalog': 'ccam',
 
             'columns': [
-                {header: 'Acte', func: function(proc, ccam_map) {
+                {key: 'proc', header: 'Acte',
+                 func: function(proc, ccam_map) {
                     let proc_phase = proc.proc + (proc.phase ? '/' + proc.phase : '');
                     return proc_phase + (ccam_map[proc.proc] ? ' - ' + ccam_map[proc.proc].desc : '');
                 }},
-                {header: 'Dates', title: 'Date de début incluse, date de fin exclue',
-                 func: function(proc) {
-                    return proc.begin_date + ' -- ' + proc.end_date;
-                }},
-                {header: 'Activités', variable: 'activities'},
-                {header: 'Extensions', title: 'Extensions (CCAM descriptive)', variable: 'extensions'}
+                {key: 'dates', header: 'Dates', title: 'Date de début incluse, date de fin exclue',
+                 func: function(proc) { return proc.begin_date + ' -- ' + proc.end_date; }},
+                {key: 'activities', header: 'Activités', variable: 'activities'},
+                {key: 'extensions', header: 'Extensions', title: 'Extensions (CCAM descriptive)',
+                 variable: 'extensions'}
             ]
         }
     };
@@ -180,6 +186,7 @@ let mco_list = {};
     let groups = {};
     let search = {};
     let pages = {};
+    let sorts = {};
 
     // Cache
     let list_cache = {};
@@ -191,14 +198,16 @@ let mco_list = {};
         let path_parts = path.split('/');
         route.list = path_parts[1] || 'ghm_roots';
         route.date = path_parts[2] || null;
-        route.page = parseInt(parameters.page, 10) || 1;
         route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
-        route.group = parameters.group || null;
         route.search = parameters.search || null;
+        route.group = parameters.group || null;
+        route.page = parseInt(parameters.page, 10) || 1;
+        route.sort = parameters.sort || null;
         specs[route.list] = route.spec;
         search[route.list] = route.search;
         groups[route.list] = route.group;
         pages[route.list + route.spec] = route.page;
+        sorts[route.list + route.spec] = route.sort;
 
         // Resources
         let indexes = mco_common.updateIndexes();
@@ -216,8 +225,7 @@ let mco_list = {};
             }
         }
         if (main_index >= 0 && Lists[route.list])
-            updateList(route.list, indexes[main_index].begin_date,
-                       route.spec, group_info, route.search);
+            updateList(route.list, indexes[main_index].begin_date, route.spec);
 
         // Errors
         if (!Lists[route.list])
@@ -241,28 +249,19 @@ let mco_list = {};
             refreshGroupsMenu(Lists[route.list], route.group);
         }
 
-        // Limit 'blinking' behavior
-        let list_table = query('#ls_' + route.list);
-        let show_table = list_table && !list_table.hasClass('hide');
-        queryAll('.ls_table').addClass('hide');
-        if (show_table) {
-            list_table.removeClass('hide');
-        } else {
-            query('#ls').addClass('hide');
-        }
-
         // Refresh view
         if (!data.isBusy()) {
             refreshHeader(route.spec);
 
-            let list_info = Lists[route.list];
-            if (list_info) {
-                let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
-                refreshListTable(route.list, concepts_map, route.page);
+            queryAll('.ls_table').addClass('hide');
+            if (Lists[route.list]) {
+                refreshListTable(route.list, group_info, route.search, route.page, route.sort);
                 query('#ls_' + route.list).removeClass('hide');
             }
 
             query('#ls').removeClass('hide');
+        } else if (query('#ls_' + route.list).hasClass('hide')) {
+            query('#ls').addClass('hide');
         }
     }
 
@@ -277,6 +276,8 @@ let mco_list = {};
             new_route.group = groups[new_route.list];
         if (args.page === undefined)
             new_route.page = pages[new_route.list + new_route.spec];
+        if (args.sort === undefined)
+            new_route.sort = sorts[new_route.list + new_route.spec];
 
         let url;
         {
@@ -293,9 +294,10 @@ let mco_list = {};
                 new_route.group === Lists[new_route.list].groups[0].type)
             new_route.group = null;
         url = buildUrl(url, {
-            search: new_route.search,
+            search: new_route.search || null,
+            group: new_route.group,
             page: new_route.page,
-            group: new_route.group
+            sort: new_route.sort || null
         });
 
         return url;
@@ -308,7 +310,7 @@ let mco_list = {};
     }
     this.go = go;
 
-    function updateList(list_name, date, spec, group_info, search)
+    function updateList(list_name, date, spec)
     {
         let url = buildUrl(thop.baseUrl(Lists[list_name].path), {date: date, spec: spec});
         let list = list_cache[list_name];
@@ -317,8 +319,8 @@ let mco_list = {};
             mco_common.updateCatalog(Lists[list_name].catalog);
 
             list_cache[list_name] = {
-                url: null, items: [], match_count: 0,
-                init: false, cells: [], offsets: []
+                url: null,
+                items: []
             };
             list = list_cache[list_name];
 
@@ -326,57 +328,122 @@ let mco_list = {};
                 list.url = url;
                 list.items = json;
             });
-        } else if (!list.init || group_info !== list.group_info || search !== list.search) {
-            if (search)
-                search = simplifyForSearch(search);
+        }
+    }
 
-            let list_info = Lists[list_name];
-            let columns = list_info.columns;
-            let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
+    function refreshHeader(spec)
+    {
+        let h1 = query('#ls_spec');
+
+        if (spec) {
+            h1.innerHTML = '';
+            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
+            h1.appendChild(html('a', {href: routeToUrl({spec: null})}, '(retirer)'));
+            h1.removeClass('hide');
+        } else {
+            h1.innerText = '';
+            h1.addClass('hide');
+        }
+    }
+
+    function refreshGroupsMenu(list_info, select_group)
+    {
+        let el = query('#opt_group > select');
+        el.innerHTML = '';
+
+        for (const group of list_info.groups) {
+            let opt = html('option', {value: group.type}, group.name);
+            el.appendChild(opt);
+        }
+        if (select_group)
+            el.value = select_group;
+    }
+
+    function refreshListTable(list_name, group_info, search, page, sort)
+    {
+        if (search)
+            search = simplifyForSearch(search);
+
+        let list_info = Lists[list_name];
+        let list = list_cache[list_name];
+        let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
+
+        if (!list || !needsRefresh(refreshListTable, null, [list.url].concat(Array.from(arguments))))
+            return;
+
+        let builder;
+        if (needsRefresh(refreshListTable, list_name, [list.url, group_info, search])) {
+            builder = createPagedDataTable(query('#ls_' + list_name));
+            builder.sortHandler = function(sort) { go({sort: sort}); }
+            list.builder = builder;
+
+            // Special column
+            let first_column = 0;
+            if (!list_info.columns[0].header)
+                first_column = 1;
+
+            // Header
+            for (let i = first_column; i < list_info.columns.length; i++) {
+                let col = list_info.columns[i];
+                builder.addColumn(col.key, null, {title: col.title || col.header}, col.header);
+            }
 
             // Groups
             if (group_info)
                 list.items.sort(function(v1, v2) { return group_info.func(v1, v2, concepts_map); });
 
-            // Filter
-            list.cells = [];
-            list.items_count = 0;
-            list.match_count = 0;
-            {
-                let prev_deduplicate_key = null;
-                for (const item of list.items) {
-                    if (list_info.deduplicate) {
-                        let deduplicate_key = list_info.deduplicate(item, concepts_map);
-                        if (deduplicate_key === prev_deduplicate_key)
-                            continue;
-                        prev_deduplicate_key = deduplicate_key;
-                    }
-                    list.items_count++;
+            // Data
+            let prev_cell0 = null;
+            let prev_deduplicate_key = null;
+            for (const item of list.items) {
+                if (list_info.deduplicate) {
+                    let deduplicate_key = list_info.deduplicate(item, concepts_map);
+                    if (deduplicate_key === prev_deduplicate_key)
+                        continue;
+                    prev_deduplicate_key = deduplicate_key;
+                }
 
-                    let show = false;
-                    let prev_length = list.cells.length;
-                    for (const col of columns) {
-                        let content = createContent(col, item, concepts_map,
-                                                    group_info ? group_info.type : null);
-                        if (!search || simplifyForSearch(content).indexOf(search) >= 0)
-                            show = true;
-                        list.cells.push(content);
+                let show = false;
+                let cells = [];
+                for (const col of list_info.columns) {
+                    let content = createContent(col, item, concepts_map,
+                                                group_info ? group_info.type : null);
+
+                    if (!search || simplifyForSearch(content).indexOf(search) >= 0)
+                        show = true;
+                    cells.push(content);
+                }
+
+                if (show) {
+                    if (first_column) {
+                        if (cells[0] !== prev_cell0) {
+                            if (prev_cell0)
+                                builder.endRow();
+                            builder.beginRow();
+                            builder.addCell(cells[0], {colspan: cells.length - 1},
+                                            addSpecLinks(cells[0]));
+                            prev_cell0 = cells[0];
+                        }
                     }
 
-                    if (show) {
-                        if (list.match_count % TableLen === 0)
-                            list.offsets.push(prev_length);
-                        list.match_count++;
-                    } else {
-                        list.cells.splice(prev_length);
+                    builder.beginRow();
+                    for (let i = first_column; i < cells.length; i++) {
+                        const cell = cells[i];
+                        builder.addCell(cell, addSpecLinks(cell));
                     }
+                    builder.endRow();
                 }
             }
-
-            list.init = true;
-            list.group_info = group_info;
-            list.search = search;
+        } else {
+            builder = list.builder;
         }
+
+        builder.sort(sort, false);
+
+        let render_count = builder.render((page - 1) * TableLen, TableLen,
+                                          list_info.header, !sort);
+        syncPagers(queryAll('#ls_' + list_name + ' .pagr'), page,
+                   computeLastPage(render_count, builder.getRowCount(), TableLen));
     }
 
     function createContent(column, item, concepts_map, group)
@@ -411,137 +478,6 @@ let mco_list = {};
                 case 'œ': return 'oe';
             }
         });
-    }
-
-    function refreshHeader(spec)
-    {
-        let h1 = query('#ls_spec');
-
-        if (spec) {
-            h1.innerHTML = '';
-            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(html('a', {href: routeToUrl({spec: null})}, '(retirer)'));
-            h1.removeClass('hide');
-        } else {
-            h1.innerText = '';
-            h1.addClass('hide');
-        }
-    }
-
-    function refreshGroupsMenu(list_info, select_group)
-    {
-        let el = query('#opt_group > select');
-        el.innerHTML = '';
-
-        for (const group of list_info.groups) {
-            let opt = html('option', {value: group.type}, group.name);
-            el.appendChild(opt);
-        }
-        if (select_group)
-            el.value = select_group;
-    }
-
-    function refreshListTable(list_name, concepts_map, page)
-    {
-        let table = html('table',
-            html('thead'),
-            html('tbody')
-        );
-        let thead = table.query('thead');
-        let tbody = table.query('tbody');
-
-        let list_info = Lists[list_name];
-        let list = list_cache[list_name];
-
-        let stats_text = '';
-        let last_page = null;
-        if (list && list.url) {
-            // Pagination
-            let offset = (page >= 1 && page <= list.offsets.length) ? list.offsets[page - 1] : list.cells.length;
-
-            // Pagination
-            if (list.match_count && (list.match_count > TableLen || offset))
-                last_page = Math.floor((list.match_count - 1) / TableLen + 1);
-
-            let first_column = 0;
-            if (!list_info.columns[0].header)
-                first_column = 1;
-
-            // Header
-            if (list_info.header === undefined || list_info.header) {
-                let tr = html('tr');
-                for (let i = first_column; i < list_info.columns.length; i++) {
-                    let col = list_info.columns[i];
-
-                    let title = col.title ? col.title : col.header;
-                    let th = html('th', {title: title, style: col.style}, col.header);
-                    tr.appendChild(th);
-                }
-                thead.appendChild(tr);
-            }
-
-            // Data
-            let visible_count = 0;
-            let end = Math.min(offset + TableLen * list_info.columns.length, list.cells.length);
-            let prev_heading_content = null;
-            for (let i = offset; i < end; i += list_info.columns.length) {
-                if (!list_info.columns[0].header) {
-                    let content = list.cells[i];
-                    if (content && content !== prev_heading_content) {
-                        let tr = html('tr', {class: 'heading'},
-                            html('td', {colspan: list_info.columns.length - 1, title: content},
-                                 addSpecLinks(content))
-                        );
-                        tbody.appendChild(tr);
-                        prev_heading_content = content;
-                    }
-                }
-
-                let tr = html('tr');
-                for (let j = first_column; j < list_info.columns.length; j++) {
-                    let content = list.cells[i + j];
-                    let td = html('td', {title: content}, addSpecLinks(content));
-                    tr.appendChild(td);
-                }
-                tbody.appendChild(tr);
-                visible_count++;
-            }
-
-            if (!visible_count) {
-                let message = list.match_count ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
-                tbody.appendChild(html('tr',
-                    html('td', {colspan: list_info.columns.length - first_column}, message)
-                ));
-            }
-
-            if (visible_count)
-                stats_text += ((page - 1) * TableLen + 1) + ' - ' + ((page - 1) * TableLen + visible_count) + ' ';
-            stats_text += '(' + list.match_count + ' ' + (list.match_count > 1 ? 'lignes' : 'ligne');
-            if (list.match_count < list.items_count)
-                stats_text += ' sur ' + list.items_count;
-            stats_text += ')';
-        }
-
-        for (let pager of queryAll('.ls_pager')) {
-            if (last_page) {
-                let builder = new Pager(pager, page, last_page);
-                builder.anchorBuilder = function(text, page) {
-                    return html('a', {href: routeToUrl({page: page})}, '' + text);
-                }
-                builder.render();
-
-                pager.removeClass('hide');
-            } else {
-                pager.addClass('hide');
-                pager.innerHTML = '';
-            }
-        }
-
-        query('#ls_stats').innerText = stats_text;
-
-        let old_table = query('#ls_' + list_name);
-        table.copyAttributesFrom(old_table);
-        old_table.replaceWith(table);
     }
 
     function maskToRanges(mask)
@@ -613,6 +549,24 @@ let mco_list = {};
         return elements;
     }
     this.addSpecLinks = addSpecLinks;
+
+    function syncPagers(pagers, active_page, last_page)
+    {
+        for (let pager of pagers) {
+            if (last_page) {
+                let builder = new Pager(pager, active_page, last_page);
+                builder.anchorBuilder = function(text, active_page) {
+                    return html('a', {href: routeToUrl({page: active_page})}, '' + text);
+                }
+                builder.render();
+
+                pager.removeClass('hide');
+            } else {
+                pager.addClass('hide');
+                pager.innerHTML = '';
+            }
+        }
+    }
 
     thop.registerUrl('mco_list', this, runList);
 }).call(mco_list);

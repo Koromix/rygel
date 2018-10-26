@@ -568,7 +568,9 @@ let mco_casemix = {};
                 return false;
             });
 
-            units_summary = createPagedTable(query('#cm_units'));
+            units_summary = createPagedDataTable(query('#cm_units'));
+            units_summary.sortHandler = function(sort) { go({sort: sort}); };
+
             units_summary.addColumn('unit', null, 'Unité');
             units_summary.addColumn('rss', '#,##0', 'RSS');
             if (!mix_params.diff)
@@ -650,7 +652,8 @@ let mco_casemix = {};
         units_summary.sort(sort);
 
         let render_count = units_summary.render((page - 1) * TableLen, TableLen);
-        syncPagers(queryAll('#cm_units .pagr'), render_count, units_summary.getRowCount(), page);
+        syncPagers(queryAll('#cm_units .pagr'), page,
+                   computeLastPage(render_count, units_summary.getRowCount(), TableLen));
     }
 
     function refreshGhmRootsTable(units, ghm_roots, regroup, page, sort)
@@ -675,7 +678,9 @@ let mco_casemix = {};
 
             let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
-            ghm_roots_summary = createPagedTable(query('#cm_ghm_roots'));
+            ghm_roots_summary = createPagedDataTable(query('#cm_ghm_roots'));
+            ghm_roots_summary.sortHandler = function(sort) { go({sort: sort}); };
+
             ghm_roots_summary.addColumn('ghm_root', null, 'Racine');
             ghm_roots_summary.addColumn('rss', '#,##0', 'RSS');
             if (!mix_params.diff)
@@ -777,24 +782,8 @@ let mco_casemix = {};
         ghm_roots_summary.sort(sort);
 
         let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen);
-        syncPagers(queryAll('#cm_ghm_roots .pagr'), render_count,
-                   ghm_roots_summary.getRowCount(), page);
-    }
-
-    function createPagedTable(el)
-    {
-        if (!el.childNodes.length) {
-            el.appendChildren([
-                html('table', {class: 'pagr'}),
-                html('div', {class: 'dtab'}),
-                html('table', {class: 'pagr'})
-            ]);
-        }
-
-        let dtab = new DataTable(el.query('.dtab'));
-        dtab.sortHandler = function(sort) { go({sort: sort}); };
-
-        return dtab;
+        syncPagers(queryAll('#cm_ghm_roots .pagr'), page,
+                   computeLastPage(render_count, ghm_roots_summary.getRowCount(), TableLen));
     }
 
     function addSummaryCells(dtab, stat, total)
@@ -829,17 +818,13 @@ let mco_casemix = {};
             addPercentCell(stat.deaths / stat.count);
     }
 
-    function syncPagers(pagers, render_count, row_count, page)
+    function syncPagers(pagers, active_page, last_page)
     {
-        let last_page = Math.floor((row_count - 1) / TableLen + 1);
-        if (last_page === 1 && render_count === row_count)
-            last_page = null;
-
         for (let pager of pagers) {
             if (last_page) {
-                let builder = new Pager(pager, page, last_page);
-                builder.anchorBuilder = function(text, page) {
-                    return html('a', {href: routeToUrl({page: page})}, '' + text);
+                let builder = new Pager(pager, active_page, last_page);
+                builder.anchorBuilder = function(text, active_page) {
+                    return html('a', {href: routeToUrl({page: active_page})}, '' + text);
                 }
                 builder.render();
 

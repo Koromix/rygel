@@ -45,4 +45,5 @@
 
 @media screen and (max-width: 800px) {
     #tr_tree ul { padding-left: 25px; }
+    #ls_tree { font-size: 0.9em; }
 }

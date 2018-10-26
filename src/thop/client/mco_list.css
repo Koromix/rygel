@@ -2,23 +2,16 @@
    License, v. 2.0. If a copy of the MPL was not distributed with this
    file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-#ls h1 {
+#ls_spec {
     font-size: 1.3em;
     text-align: center;
 }
 
-#ls_stats {
-    margin: 3px;
-    font-size: 0.9em;
-    font-style: italic;
-    color: #777;
-}
-
-.ls_table {
+.ls_table .dtab  {
     width: 100%;
     border-collapse: collapse;
 }
-.ls_table th, .ls_table td {
+.ls_table .dtab th, .ls_table .dtab td {
     min-width: 60px;
     max-width: 260px;
     border: 1px solid #a4a4a4;
@@ -27,37 +20,29 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.ls_table thead { background: #ccc; }
-.ls_table tbody { background: #fafafa; }
-.ls_table th {
+.ls_table .dtab thead { background: #ccc; }
+.ls_table .dtab tbody { background: #fafafa; }
+.ls_table .dtab th {
     text-align: center;
     font-weight: bold;
 }
-.ls_table tr.heading { background: #eee; }
+.ls_table .dtab tr.heading { background: #eee; }
 
-.ls_total {
-    background: #ddd;
-    font-style: italic;
-}
-
-#ls_diagnoses td:nth-child(2) { text-align: center; }
+#ls_diagnoses .dtab td:nth-child(2) { text-align: center; }
 
 @media screen and (min-width: 800px) {
-    #ls_procedures td:first-child { min-width: 70%; }
-    #ls_diagnoses td:first-child { min-width: 70%; }
+    #ls_procedures .dtab td:first-child { min-width: 70%; }
+    #ls_diagnoses .dtab td:first-child { min-width: 70%; }
 }
 
 @media screen and (max-width: 800px) {
-    #ls_tree { font-size: 0.9em; }
-    #ls_tree ul { padding-left: 30px; }
-
-    .ls_table th, .ls_table td {
+    .ls_table .dtab th, .ls_table .dtab td {
         font-size: 0.8em;
         border: 0;
     }
 
-    .ls_table td { box-sizing: border-box; }
-    #ls_ghm_roots td:first-child, #ls_procedures td:first-child { min-width: 100vw; }
-    #ls_diagnoses td:first-child { min-width: 85vw; }
-    #ls_diagnoses td:nth-child(2) { min-width: 15vw; }
+    .ls_table .dtab td { box-sizing: border-box; }
+    #ls_ghm_roots .dtab td:first-child, #ls_procedures .dtab td:first-child { min-width: 100vw; }
+    #ls_diagnoses .dtab td:first-child { min-width: 85vw; }
+    #ls_diagnoses .dtab td:nth-child(2) { min-width: 15vw; }
 }

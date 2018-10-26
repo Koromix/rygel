@@ -31,9 +31,14 @@ function DataTable(widget)
         for (let i = 0; i < row_sets.length; i++) {
             const rows = row_sets[i];
 
-            let ws = XLSX.utils.aoa_to_sheet([
-                columns.map(function(col) { return col.key; })
-            ]);
+            let ws;
+            if (columns.length) {
+                ws = XLSX.utils.aoa_to_sheet([
+                    columns.map(function(col) { return col.key; })
+                ]);
+            } else {
+                ws = XLSX.utils.aoa_to_sheet([]);
+            }
             if (i)
                 ws[XLSX.utils.encode_cell({c: columns.length, r: 0})] = {v: 'parent', t: 's'};
 
@@ -145,7 +150,10 @@ function DataTable(widget)
         }
     };
 
-    this.sort = function(sort) {
+    this.sort = function(sort, sort_rec) {
+        if (sort_rec === undefined)
+            sort_rec = true;
+
         let col_idx;
         let descending;
         if (sort) {
@@ -174,7 +182,7 @@ function DataTable(widget)
 
         let order = descending ? -1 : 1;
 
-        function recursiveSort(rows)
+        function sortRows(rows)
         {
             if (sort) {
                 rows.sort(function(row1, row2) {
@@ -189,16 +197,25 @@ function DataTable(widget)
             } else {
                 rows.sort(function(row1, row2) { return row1.insert_idx - row2.insert_idx; });
             }
+        }
+
+        function sortRowsRecursive(rows)
+        {
+            sortRows(rows);
 
             for (const row of rows) {
                 if (row.depth + 1 === row_sets.length)
                     sorted_rows.push(row);
-                recursiveSort(row.children);
+                sortRowsRecursive(row.children);
             }
         }
 
-        sorted_rows = [];
-        recursiveSort(row_sets[0]);
+        if (sort_rec) {
+            sorted_rows = [];
+            sortRowsRecursive(row_sets[0]);
+        } else {
+            sortRows(sorted_rows);
+        }
         ptr = null;
 
         sort_idx = col_idx;
@@ -207,11 +224,15 @@ function DataTable(widget)
         return true;
     };
 
-    this.render = function(offset, len) {
+    this.render = function(offset, len, render_header, render_parents) {
         if (offset === undefined)
             offset = 0;
         if (len === undefined)
             len = sorted_rows.length;
+        if (render_header === undefined)
+            render_header = true;
+        if (render_parents === undefined)
+            render_parents = true;
 
         widget.innerHTML = '';
         widget.addClass('dtab');
@@ -232,7 +253,7 @@ function DataTable(widget)
         let thead = widget.query('thead');
         let tbody = widget.query('tbody');
 
-        if (columns.length && sorted_rows.length) {
+        if (render_header && columns.length && sorted_rows.length) {
             let tr = html('tr');
             for (let i = 0; i < columns.length; i++) {
                 let th = columns[i].cell;
@@ -249,9 +270,9 @@ function DataTable(widget)
             thead.appendChild(tr);
         }
 
-        function addRow(row, parent)
+        function addRow(row, leaf)
         {
-            let tr = html('tr', {class: parent ? 'parent' : null}, row.cells);
+            let tr = html('tr', {class: leaf ? null : 'parent'}, row.cells);
             tbody.appendChild(tr);
         }
 
@@ -263,15 +284,17 @@ function DataTable(widget)
             for (let i = offset; i < end; i++) {
                 let row = sorted_rows[i];
 
-                let parent = row.parent;
-                while (parent && parent !== parents[parent.depth]) {
-                    parents[parent.depth] = parent;
-                    parent = parent.parent;
+                if (render_parents) {
+                    let parent = row.parent;
+                    while (parent && parent !== parents[parent.depth]) {
+                        parents[parent.depth] = parent;
+                        parent = parent.parent;
+                    }
+                    for (let i = parent ? (parent.depth + 1) : 0; i < parents.length; i++)
+                        addRow(parents[i], false);
                 }
-                for (let i = parent ? (parent.depth + 1) : 0; i < parents.length; i++)
-                    addRow(parents[i], true);
 
-                addRow(row, false);
+                addRow(row, true);
             }
 
             render_count = Math.max(end - offset, 0);
@@ -296,4 +319,21 @@ function DataTable(widget)
     this.getWidget = function() { return widget; }
 
     widget.object = this;
+}
+
+function createPagedDataTable(el)
+{
+    'use strict';
+
+    if (!el.childNodes.length) {
+        el.appendChildren([
+            html('table', {class: 'pagr'}),
+            html('div', {class: 'dtab'}),
+            html('table', {class: 'pagr'})
+        ]);
+    }
+
+    let dtab = new DataTable(el.query('.dtab'));
+
+    return dtab;
 }

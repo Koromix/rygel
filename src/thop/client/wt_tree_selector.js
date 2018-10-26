@@ -291,6 +291,8 @@ function TreeSelector(widget, prefix)
 }
 
 document.addEventListener('click', function(e) {
+    'use strict';
+
     for (let tsel of queryAll('.tsel.active'))
         tsel.object.close();
 });
