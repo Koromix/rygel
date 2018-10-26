@@ -244,9 +244,8 @@ let thop = {};
         }
     }
 
-    if (document.readyState === 'complete') {
-        init();
-    } else {
-        document.addEventListener('DOMContentLoaded', init);
-    }
+    document.addEventListener('readystatechange', function() {
+        if (document.readyState === 'complete')
+            init();
+    });
 }).call(thop);
