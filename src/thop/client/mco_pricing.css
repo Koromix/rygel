@@ -29,28 +29,28 @@
 }
 
 .pr_grid .desc {
-    background: var(--mco_desc_bg);
-    color: var(--mco_desc_fg);
+    background: #ffc634;
+    color: black;
 }
 .pr_grid .conditions {
-    background: var(--mco_conditions_bg);
-    color: var(--mco_conditions_fg);
+    background: #b70202;
+    color: white;
 }
 .pr_grid .noex {
-    background: var(--mco_price_bg);
-    color: var(--mco_price_fg);
+    background: #6cc943;
+    color: black;
 }
 .pr_grid .exb {
-    background: var(--mco_exb_bg);
-    color: var(--mco_exb_fg);
+    background: #ff8900;
+    color: black;
 }
 .pr_grid .exh {
-    background: var(--mco_exh_bg);
-    color: var(--mco_exh_fg);
+    background: #6b1b6a;
+    color: #b4cdff;
 }
 .pr_grid .age {
-    background: var(--mco_age_bg);
-    color: var(--mco_age_fg);
+    background: #99ffff;
+    color: black;
 }
 .pr_grid .diff:before {
     float: left;

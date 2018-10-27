@@ -4,8 +4,6 @@
 
 let mco_list = {};
 (function() {
-    'use strict';
-
     const Lists = {
         'ghm_roots': {
             'path': 'api/mco_ghm_ghs.json',
@@ -552,7 +550,7 @@ let mco_list = {};
 
     function syncPagers(pagers, active_page, last_page)
     {
-        for (let pager of pagers) {
+        pagers.forEach(function(pager) {
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
@@ -565,7 +563,7 @@ let mco_list = {};
                 pager.addClass('hide');
                 pager.innerHTML = '';
             }
-        }
+        });
     }
 
     thop.registerUrl('mco_list', this, runList);

@@ -72,13 +72,14 @@ form button, form input[type=submit] {
 .hide { display: none !important; }
 .busy {
     animation: busy 1s 1 linear;
-    filter: grayscale(100%) opacity(50%);
+    filter: grayscale(100%);
+    opacity: 0.5;
     pointer-events: none;
 }
 @keyframes busy {
-    0% { filter: grayscale(0) opacity(100%); }
-    10% { filter: grayscale(0) opacity(100%); }
-    100% { filter: grayscale(100%) opacity(50%); }
+    0% { filter: grayscale(0); opacity: 1; }
+    10% { filter: grayscale(0); opacity: 1; }
+    100% { filter: grayscale(100%); opacity: 0.5; }
 }
 #log {
     margin-bottom: 1em;
@@ -226,22 +227,4 @@ form button, form input[type=submit] {
         margin-bottom: 12px;
         text-align: left;
     }
-}
-
-/* Theming */
-:root {
-    --mco_desc_bg: #ffc634;
-    --mco_desc_fg: black;
-    --mco_conditions_bg: #b70202;
-    --mco_conditions_fg: white;
-    --mco_price_bg: #6cc943;
-    --mco_price_fg: black;
-    --mco_exh_bg: #6b1b6a;
-    --mco_exh_fg: #b4cdff;
-    --mco_exb_bg: #ff8900;
-    --mco_exb_fg: black;
-    --mco_age_bg: #99ffff;
-    --mco_age_fg: black;
-    --mco_total_bg: #1c4d9e;
-    --mco_total_fg: white;
 }

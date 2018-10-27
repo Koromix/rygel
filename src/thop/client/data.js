@@ -4,8 +4,6 @@
 
 let data = {};
 (function() {
-    'use strict';
-
     this.busyHandler = null;
 
     let self = this;

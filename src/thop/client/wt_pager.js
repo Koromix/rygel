@@ -4,8 +4,6 @@
 
 function Pager(widget, active_page, last_page)
 {
-    'use strict';
-
     this.anchorBuilder = null;
     this.changeHandler = null;
 
@@ -92,8 +90,6 @@ function Pager(widget, active_page, last_page)
 
 function computeLastPage(render_count, row_count, page_length)
 {
-    'use strict';
-
     let last_page = Math.floor((row_count - 1) / page_length + 1);
     if (last_page === 1 && render_count === row_count)
         last_page = null;

@@ -329,8 +329,6 @@ function DataTable(widget)
 
 function createPagedDataTable(el)
 {
-    'use strict';
-
     if (!el.childNodes.length) {
         el.appendChildren([
             html('table', {class: 'pagr'}),

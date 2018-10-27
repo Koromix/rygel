@@ -20,8 +20,8 @@
 }
 #cm_table .price { font-style: italic; }
 #cm_table .total {
-    background: var(--mco_total_bg);
-    color: var(--mco_total_fg);
+    background: #1c4d9e;
+    color: white;
 }
 #cm_table .count.diff {
     min-width: 58px;
@@ -33,4 +33,4 @@
 }
 #cm_table .price.diff { min-width: 78px; }
 #cm_table .price.diff:before { font-style: normal; }
-#cm_table .empty { filter: opacity(50%); }
+#cm_table .empty { opacity: 0.5; }

@@ -19,6 +19,7 @@ configure_file(client/thop.js "${CMAKE_CURRENT_BINARY_DIR}/thop.js")
 
 set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
 
+                   client/compat.js
                    client/util.js
                    "${CMAKE_CURRENT_BINARY_DIR}/thop.js"
                    client/data.js

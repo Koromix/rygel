@@ -12,8 +12,9 @@ function query(selector) { return document.querySelector(selector); }
 function queryAll(selector) { return document.querySelectorAll(selector); }
 
 NodeList.prototype.addClass = function(cls) {
-    for (let el of this)
+    this.forEach(function(el) {
         el.classList.add(cls);
+    });
 };
 
 Element.prototype.addClass = function(cls) {
@@ -21,8 +22,9 @@ Element.prototype.addClass = function(cls) {
 };
 
 NodeList.prototype.removeClass = function(cls) {
-    for (let el of this)
+    this.forEach(function(el) {
         el.classList.remove(cls);
+    });
 };
 
 Element.prototype.removeClass = function(cls, value) {
@@ -30,8 +32,9 @@ Element.prototype.removeClass = function(cls, value) {
 };
 
 NodeList.prototype.toggleClass = function(cls, value) {
-    for (let el of this)
+    this.forEach(function(el) {
         el.classList.toggle(cls, value);
+    });
 };
 
 Element.prototype.toggleClass = function(cls, value) {
@@ -49,8 +52,10 @@ Element.prototype.appendChildren = function(els)
     } else if (typeof els === 'string') {
         this.appendChild(document.createTextNode(els));
     } else if (Array.isArray(els) || els instanceof NodeList) {
-        for (let el of els)
-            this.appendChildren(el);
+        let self = this;
+        els.forEach(function(el) {
+            self.appendChildren(el);
+        });
     } else {
         this.appendChild(els);
     }
@@ -108,8 +113,9 @@ function html(tag) { return createElementProxy('html', tag, arguments, 1); }
 function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
 
 Element.prototype.copyAttributesFrom = function(el) {
-    for (const attr of el.attributes)
-        this.setAttribute(attr.nodeName, attr.nodeValue);
+    let attributes = el.attributes;
+    for (let i = 0; i < attributes.length; i++)
+        this.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
 }
 
 Element.prototype.replaceWith = function(el) {

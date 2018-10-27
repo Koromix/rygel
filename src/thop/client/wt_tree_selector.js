@@ -4,8 +4,6 @@
 
 function TreeSelector(widget, prefix)
 {
-    'use strict';
-
     this.changeHandler = null;
 
     let self = this;
@@ -21,8 +19,9 @@ function TreeSelector(widget, prefix)
     function syncValue(value, checked)
     {
         let checkboxes = widget.queryAll('.tsel_option input[data-value="' + value + '"]');
-        for (let checkbox of checkboxes)
+        checkboxes.forEach(function(checkbox) {
             checkbox.checked = checked;
+        });
     }
 
     // Does not work correctly for deep hierarchies (more than 32 levels)
@@ -102,9 +101,11 @@ function TreeSelector(widget, prefix)
     function setVisibleState(checked)
     {
         let list = widget.query('.tsel_list.active');
+
         let checkboxes = list.queryAll('.tsel_option input[type=checkbox]');
-        for (const checkbox of checkboxes)
+        checkboxes.forEach(function(checkbox) {
             syncValue(checkbox.dataset.value, checked);
+        });
 
         syncGroupCheckboxes();
         updateSummary();
@@ -201,8 +202,9 @@ function TreeSelector(widget, prefix)
     };
 
     this.open = function() {
-        for (let tsel of queryAll('.tsel.active'))
+        queryAll('.tsel.active').forEach(function(tsel) {
             tsel.object.close();
+        });
         widget.addClass('active');
     }
     this.toggle = function(state) {
@@ -235,10 +237,12 @@ function TreeSelector(widget, prefix)
             all = false;
 
         let values = [];
-        let checkboxes = widget.queryAll('.tsel_option input[type=checkbox]');
-        for (const checkbox of checkboxes) {
-            if (checkbox.checked || all)
-                values.push(checkbox.dataset.value);
+        {
+            let checkboxes = widget.queryAll('.tsel_option input[type=checkbox]');
+            checkboxes.forEach(function(checkbox) {
+                if (checkbox.checked || all)
+                    values.push(checkbox.dataset.value);
+            });
         }
 
         values = values.sort().filter(function(value, i) {
@@ -291,8 +295,7 @@ function TreeSelector(widget, prefix)
 }
 
 document.addEventListener('click', function(e) {
-    'use strict';
-
-    for (let tsel of queryAll('.tsel.active'))
+    queryAll('.tsel.active').forEach(function(tsel) {
         tsel.object.close();
+    });
 });

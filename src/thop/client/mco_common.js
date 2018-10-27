@@ -4,8 +4,6 @@
 
 let mco_common = {};
 (function() {
-    'use strict';
-
     const Catalogs = {
         'ccam': {path: 'catalogs/ccam.json', key: 'procedure'},
         'cim10': {path: 'catalogs/cim10.json', key: 'diagnosis'},

@@ -4,8 +4,6 @@
 
 function VersionLine(widget)
 {
-    'use strict';
-
     this.anchorBuilder = null;
     this.changeHandler = null;
 

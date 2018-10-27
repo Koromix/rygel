@@ -4,8 +4,6 @@
 
 let user = {};
 (function() {
-    'use strict';
-
     let change_handlers = [];
 
     let url_key = 0;

@@ -4,8 +4,6 @@
 
 let mco_tree = {};
 (function() {
-    'use strict';
-
     // Cache
     let tree_url = null;
     let nodes = [];

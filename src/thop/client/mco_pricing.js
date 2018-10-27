@@ -4,8 +4,6 @@
 
 let mco_pricing = {};
 (function() {
-    'use strict';
-
     // Cache
     let ghm_roots = [];
     let ghm_roots_map = {};
@@ -35,7 +33,11 @@ let mco_pricing = {};
 
         // Resources
         let indexes = mco_common.updateIndexes();
-        ({concepts: ghm_roots, map: ghm_roots_map} = mco_common.updateCatalog('mco_ghm_roots'));
+        {
+            let ret = mco_common.updateCatalog('mco_ghm_roots');
+            ghm_roots = ret.concepts;
+            ghm_roots_map = ret.map;
+        }
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         if (!route.ghm_root && ghm_roots.length)
@@ -373,7 +375,8 @@ let mco_pricing = {};
     function refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff)
     {
-        if (!needsRefresh(refreshPriceChart, null, arguments))
+        if (!needsRefresh(refreshPriceChart, null, [pricing_info, main_index, diff_index,
+                                                    max_duration, apply_coeff]))
             return;
 
         if (!pricing_info || !pricing_info[main_index]) {

@@ -4,8 +4,6 @@
 
 let mco_casemix = {};
 (function() {
-    'use strict';
-
     // Route
     let unspecified = false;
     let pages = {};
@@ -590,7 +588,7 @@ let mco_casemix = {};
 
             // Aggregate
             let stat0;
-            let stats1, stats1_map;
+            let stats1;
             {
                 function unitToEntities(row)
                 {
@@ -603,8 +601,8 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts)[0][0];
-                [stats1, stats1_map] = aggregate(rows, unitToEntities, filterUnitParts);
+                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stats1 = aggregate(rows, unitToEntities, filterUnitParts);
             }
 
             if (stat0) {
@@ -615,7 +613,7 @@ let mco_casemix = {};
                 let prev_groups = [];
                 let prev_totals = [stat0];
                 for (const ent of structure.entities) {
-                    let unit_stat = findAggregate(stats1_map, ent.path[ent.path.length - 1]);
+                    let unit_stat = findAggregate(stats1, ent.path[ent.path.length - 1]);
                     if (!unit_stat)
                         continue;
 
@@ -630,7 +628,7 @@ let mco_casemix = {};
                     }
 
                     for (let k = common_len; k < ent.path.length - 1; k++) {
-                        let group_stat = findAggregate(stats1_map, ent.path[k]);
+                        let group_stat = findAggregate(stats1, ent.path[k]);
 
                         units_summary.beginRow();
                         units_summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
@@ -700,8 +698,8 @@ let mco_casemix = {};
 
             // Aggregate
             let stat0;
-            let stats1, stats1_map;
-            let stats2_map;
+            let stats1;
+            let stats2;
             {
                 function ghmRootToGroup(row)
                 {
@@ -715,13 +713,13 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts)[0][0];
-                [stats1, stats1_map] = aggregate(rows, 'ghm_root', filterUnitParts);
-                stats2_map = aggregate(rows, ghmRootToGroup, filterUnitParts)[1];
+                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stats1 = aggregate(rows, 'ghm_root', filterUnitParts);
+                stats2 = aggregate(rows, ghmRootToGroup, filterUnitParts);
             }
 
             if (stat0) {
-                let ghm_roots = stats1.map(function(stat) { return stat.ghm_root; });
+                let ghm_roots = stats1.list.map(function(stat) { return stat.ghm_root; });
                 ghm_roots = ghm_roots.sort(function(ghm_root1, ghm_root2) {
                     const ghm_root_info1 = ghm_roots_map[ghm_root1] || {};
                     const ghm_root_info2 = ghm_roots_map[ghm_root2] || {};
@@ -742,7 +740,7 @@ let mco_casemix = {};
                 let prev_group = null;
                 let total = stat0;
                 for (const ghm_root of ghm_roots) {
-                    let root_stat = findAggregate(stats1_map, ghm_root);
+                    let root_stat = findAggregate(stats1, ghm_root);
                     let ghm_root_info = ghm_roots_map[ghm_root];
                     let group = ghm_root_info ? ghm_root_info[regroup] : null;
 
@@ -753,7 +751,7 @@ let mco_casemix = {};
                         }
 
                         if (group) {
-                            let group_stat = findAggregate(stats2_map, group);
+                            let group_stat = findAggregate(stats2, group);
 
                             ghm_roots_summary.beginRow();
                             ghm_roots_summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
@@ -820,7 +818,7 @@ let mco_casemix = {};
 
     function syncPagers(pagers, active_page, last_page)
     {
-        for (let pager of pagers) {
+        pagers.forEach(function(pager) {
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
@@ -833,7 +831,7 @@ let mco_casemix = {};
                 pager.addClass('hide');
                 pager.innerHTML = '';
             }
-        }
+        });
     }
 
     function refreshDurationTable(units, ghm_root, apply_coeff, merge_cells)
@@ -862,11 +860,11 @@ let mco_casemix = {};
             let tbody = table.query('tbody');
 
             let stat0;
-            let stats1_map;
-            let stats1_units_map;
-            let stats2, stats2_map;
-            let stats2_units_map;
-            let stats3_map;
+            let stats1;
+            let stats1_units;
+            let stats2;
+            let stats2_units;
+            let stats3;
             {
                 function filterUnitParts(row)
                 {
@@ -874,26 +872,27 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts)[0][0];
-                stats1_map = aggregate(rows, 'ghm', 'ghs', filterUnitParts)[1];
-                stats1_units_map = aggregate(rows, 'ghm', 'ghs', 'unit')[1];
-                [stats2, stats2_map] = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
-                stats2_units_map = aggregate(rows, 'ghm', 'ghs', 'duration', 'unit')[1];
-                stats3_map = aggregate(rows, 'duration', filterUnitParts)[1];
+                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stats1 = aggregate(rows, 'ghm', 'ghs', filterUnitParts);
+                stats1_units = aggregate(rows, 'ghm', 'ghs', 'unit');
+                stats2 = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
+                stats2_units = aggregate(rows, 'ghm', 'ghs', 'duration', 'unit');
+                stats3 = aggregate(rows, 'duration', filterUnitParts);
             }
 
             let max_duration = 10;
             let max_count = 0;
             let max_price_cents = 0;
-            for (const duration_stat of stats2) {
+            for (const duration_stat of stats2.list) {
                 max_duration = Math.max(max_duration, duration_stat.duration + 1);
                 max_count = Math.max(max_count, duration_stat.count);
                 max_price_cents = Math.max(max_price_cents, duration_stat.price_cents);
             }
 
             mco_pricing.addPricingHeader(thead, ghm_root, columns, false, apply_coeff, merge_cells);
-            for (let td of thead.queryAll('td'))
+            thead.queryAll('td').forEach(function(td) {
                 td.setAttribute('colspan', parseInt(td.getAttribute('colspan') || 1) * 2);
+            });
 
             function makeTooltip(title, col, col_stat, row_stat, duration_stat, unit_stats)
             {
@@ -958,12 +957,12 @@ let mco_casemix = {};
                 );
 
                 for (const col of columns) {
-                    let col_stat = findAggregate(stats1_map, col.ghm, col.ghs);
+                    let col_stat = findAggregate(stats1, col.ghm, col.ghs);
 
                     if (col_stat) {
                         let tooltip =
                             makeTooltip('Total', col, col_stat, stat0, col_stat,
-                                        findPartialAggregate(stats1_units_map, col.ghm, col.ghs));
+                                        findPartialAggregate(stats1_units, col.ghm, col.ghs));
 
                         tr.appendChildren([
                             html('td', {class: 'count total' + diffClass(col_stat.count),
@@ -986,7 +985,7 @@ let mco_casemix = {};
 
             // Durations
             for (let duration = 0; duration < max_duration; duration++) {
-                let row_stat = findAggregate(stats3_map, duration);
+                let row_stat = findAggregate(stats3, duration);
 
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
@@ -1001,8 +1000,8 @@ let mco_casemix = {};
                     html('th', mco_common.durationText(duration))
                 );
                 for (const col of columns) {
-                    let col_stat = findAggregate(stats1_map, col.ghm, col.ghs);
-                    let duration_stat = findAggregate(stats2_map, col.ghm, col.ghs, duration);
+                    let col_stat = findAggregate(stats1, col.ghm, col.ghs);
+                    let duration_stat = findAggregate(stats2, col.ghm, col.ghs, duration);
 
                     let cls;
                     if (col.exb_treshold && duration < col.exb_treshold) {
@@ -1017,7 +1016,7 @@ let mco_casemix = {};
                         let tooltip =
                             makeTooltip(mco_common.durationText(duration),
                                         col, col_stat, row_stat, duration_stat,
-                                        findPartialAggregate(stats2_units_map, col.ghm, col.ghs, duration));
+                                        findPartialAggregate(stats2_units, col.ghm, col.ghs, duration));
 
                         tr.appendChildren([
                             html('td', {class: 'count ' + cls + diffClass(duration_stat.count),
@@ -1072,7 +1071,9 @@ let mco_casemix = {};
                 let key = by[i];
                 let value;
                 if (typeof key === 'function') {
-                    [key, value] = key(row);
+                    let ret = key(row);
+                    key = ret[0];
+                    value = ret[1];
                 } else {
                     value = row[key];
                 }
@@ -1132,15 +1133,15 @@ let mco_casemix = {};
                 aggregateRec(row, row_ptrs, map, i, 0);
         }
 
-        return [list, map];
+        return {list: list, map: map};
     }
 
-    function findPartialAggregate(map, values)
+    function findPartialAggregate(agg, values)
     {
         if (!Array.isArray(values))
             values = Array.prototype.slice.call(arguments, 1);
 
-        let ptr = map;
+        let ptr = agg.map;
         for (const value of values) {
             ptr = ptr[value];
             if (ptr === undefined)
@@ -1150,7 +1151,7 @@ let mco_casemix = {};
         return ptr;
     }
 
-    function findAggregate(map, values)
+    function findAggregate(agg, values)
     {
         let ptr = findPartialAggregate.apply(null, arguments);
         if (ptr && ptr.count === undefined)

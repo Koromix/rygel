@@ -8,8 +8,6 @@ const TableLen = 100;
 
 let thop = {};
 (function() {
-    'use strict';
-
     let route_modules = {};
 
     let route_timer_id = null;
@@ -27,8 +25,9 @@ let thop = {};
         if (enable === undefined)
             enable = !el.classList.contains('active');
         if (enable) {
-            for (let nav of queryAll('nav'))
+            queryAll('nav').forEach(function(nav) {
                 nav.toggleClass('active', nav === el);
+            });
         } else {
             el.removeClass('active');
         }
@@ -136,7 +135,7 @@ let thop = {};
         }
 
         // Update side menu state and links
-        for (let anchor of queryAll('#side_menu li a')) {
+        queryAll('#side_menu li a').forEach(function(anchor) {
             if (anchor.dataset.url) {
                 let url = eval(anchor.dataset.url);
                 anchor.classList.toggle('hide', !url);
@@ -147,17 +146,15 @@ let thop = {};
             let active = (route_url_parts.href.startsWith(anchor.href) &&
                           !anchor.hasClass('category'));
             anchor.toggleClass('active', active);
-        }
+        });
         toggleMenu('#side_menu', false);
 
         // Hide page menu if empty
         let opt_hide = true;
-        for (let el of queryAll('#opt_menu > *')) {
-            if (!el.hasClass('hide')) {
+        queryAll('#opt_menu > *').forEach(function(el) {
+            if (!el.hasClass('hide'))
                 opt_hide = false;
-                break;
-            }
-        }
+        });
         queryAll('#opt_deploy, #opt_menu').toggleClass('hide', opt_hide);
 
         // Update scroll target

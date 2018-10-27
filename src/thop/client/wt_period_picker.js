@@ -4,8 +4,6 @@
 
 function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 {
-    'use strict';
-
     this.changeHandler = null;
 
     let self = this;
