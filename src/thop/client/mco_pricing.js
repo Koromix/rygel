@@ -15,11 +15,12 @@ let mco_pricing = {};
 
     function runPricing(route, path, parameters, hash, errors)
     {
-        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/[coeff])
+        // Parse route (model: pricing/<view>/[<diff>..]<date>/<ghm_root>/<sector>)
         let path_parts = path.split('/');
         route.view = path_parts[1] || 'table';
-        if (path_parts[2]) {
-            let date_parts = path_parts[2].split('..', 2);
+        route.sector = path_parts[2] || 'public';
+        if (path_parts[3]) {
+            let date_parts = path_parts[3].split('..', 2);
             if (date_parts.length === 2) {
                 route.date = date_parts[1];
                 route.diff = date_parts[0];
@@ -28,7 +29,7 @@ let mco_pricing = {};
                 route.diff = null;
             }
         }
-        route.ghm_root = path_parts[3] || null;
+        route.ghm_root = path_parts[4] || null;
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
@@ -45,9 +46,9 @@ let mco_pricing = {};
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
         let diff_index = indexes.findIndex(function(info) { return info.begin_date === route.diff; });
         if (main_index >= 0)
-            updatePriceMap(main_index);
+            updatePriceMap(main_index, route.sector);
         if (diff_index >= 0)
-            updatePriceMap(diff_index);
+            updatePriceMap(diff_index, route.sector);
 
         // Errors
         if (route.view !== 'chart' && route.view !== 'table')
@@ -56,30 +57,35 @@ let mco_pricing = {};
             errors.add('Date incorrecte');
         if (route.diff && indexes.length && diff_index < 0)
             errors.add('Date de comparaison incorrecte');
+        if (!['public', 'private'].includes(route.sector))
+            errors.add('Secteur incorrect');
         if (route.ghm_root !== null && ghm_roots.length) {
             if (!ghm_roots_map[route.ghm_root]) {
                 errors.add('Racine de GHM inconnue');
             } else {
-                if (!checkIndexGhmRoot(indexes, main_index, route.ghm_root))
+                if (!checkIndexGhmRoot(indexes, main_index, route.sector, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[main_index].begin_date + '\'');
-                if (!checkIndexGhmRoot(indexes, diff_index, route.ghm_root))
+                if (!checkIndexGhmRoot(indexes, diff_index, route.sector, route.ghm_root))
                     errors.add('Cette racine n\'existe pas dans la version \'' + indexes[diff_index].begin_date + '\'');
             }
         }
 
         // Refresh settings
-        queryAll('#opt_index, #opt_ghm_root, #opt_diff_index, #opt_max_duration, #opt_apply_coefficient')
+        queryAll('#opt_index, #opt_sector, #opt_ghm_root, #opt_diff_index, #opt_max_duration, #opt_apply_coefficient')
             .removeClass('hide');
         mco_common.refreshIndexesLine(indexes, main_index);
-        refreshGhmRootsMenu(indexes, main_index, route.ghm_root);
-        refreshDiffMenu(indexes, diff_index, route.ghm_root);
+        query('#opt_sector > select').value = route.sector;
+        refreshGhmRootsMenu(indexes, main_index, route.sector, route.ghm_root);
+        refreshDiffMenu(indexes, diff_index, route.sector, route.ghm_root);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
         if (!data.isBusy()) {
-            let ghm_root_info = ghm_roots_map[route.ghm_root];
+            const ghm_root_info = ghm_roots_map[route.ghm_root];
             let pricing_info = pricings_map[route.ghm_root];
-            let max_duration = parseInt(query('#opt_max_duration > input').value);
+            if (pricing_info)
+                pricing_info = pricing_info[route.sector];
+            const max_duration = parseInt(query('#opt_max_duration > input').value);
 
             switch (route.view) {
                 case 'table': {
@@ -107,7 +113,8 @@ let mco_pricing = {};
         let url;
         {
             let date = (new_route.diff ? new_route.diff + '..' : '') + (new_route.date || '');
-            let url_parts = [thop.baseUrl('mco_pricing'), new_route.view, date, new_route.ghm_root];
+            let url_parts = [thop.baseUrl('mco_pricing'), new_route.view, new_route.sector,
+                             date, new_route.ghm_root];
             while (!url_parts[url_parts.length - 1])
                 url_parts.pop();
 
@@ -129,31 +136,40 @@ let mco_pricing = {};
     this.go = go;
 
     // A true result actually means maybe (if we haven't download the relevant index yet)
-    function checkIndexGhmRoot(indexes, index, ghm_root)
+    function checkIndexGhmRoot(indexes, index, sector, ghm_root)
     {
-        return index < 0 ||
-               !(available_dates.has(indexes[index].begin_date)) ||
-               (pricings_map[ghm_root] && pricings_map[ghm_root][index]);
+        if (index < 0)
+            return true;
+
+        const date_key = indexes[index].begin_date + '@' + sector;
+
+        return !available_dates.has(date_key) ||
+               (pricings_map[ghm_root] && pricings_map[ghm_root][sector] && pricings_map[ghm_root][sector][index]);
     }
 
-    function updatePriceMap(index)
+    function updatePriceMap(index, sector)
     {
-        let indexes = mco_common.updateIndexes();
-        let begin_date = indexes[index].begin_date;
+        const indexes = mco_common.updateIndexes();
+        const date_key = indexes[index].begin_date + '@' + sector;
 
-        if (!available_dates.has(begin_date)) {
-            let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'), {date: begin_date});
+        if (!available_dates.has(date_key)) {
+            let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'),
+                               {date: indexes[index].begin_date, sector: sector});
             data.get(url, function(json) {
                 for (let ghm_ghs of json) {
-                    let ghm_root = ghm_ghs.ghm_root;
+                    const ghm_root = ghm_ghs.ghm_root;
 
                     ghm_ghs.conditions = buildConditionsArray(ghm_ghs);
 
                     let pricing_info = pricings_map[ghm_root];
                     if (pricing_info === undefined) {
-                        pricing_info = Array.apply(null, Array(indexes.length));
+                        pricing_info = {
+                            public: Array.apply(null, Array(indexes.length)),
+                            private: Array.apply(null, Array(indexes.length))
+                        };
                         pricings_map[ghm_root] = pricing_info;
                     }
+                    pricing_info = pricing_info[sector];
 
                     if (pricing_info[index] === undefined) {
                         pricing_info[index] = {
@@ -166,7 +182,7 @@ let mco_pricing = {};
                     pricing_info[index].ghs_map[ghm_ghs.ghs] = ghm_ghs;
                 }
 
-                available_dates.add(begin_date);
+                available_dates.add(date_key);
             });
         }
 
@@ -174,7 +190,7 @@ let mco_pricing = {};
     }
     this.updatePriceMap = updatePriceMap;
 
-    function refreshGhmRootsMenu(indexes, main_index, select_ghm_root)
+    function refreshGhmRootsMenu(indexes, main_index, sector, select_ghm_root)
     {
         let el = query('#opt_ghm_root > select');
         el.innerHTML = '';
@@ -183,7 +199,7 @@ let mco_pricing = {};
             let opt = html('option', {value: ghm_root.ghm_root},
                            ghm_root.ghm_root + ' – ' + ghm_root.desc);
 
-            if (!checkIndexGhmRoot(indexes, main_index, ghm_root.ghm_root)) {
+            if (!checkIndexGhmRoot(indexes, main_index, sector, ghm_root.ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }
@@ -194,7 +210,7 @@ let mco_pricing = {};
             el.value = select_ghm_root;
     }
 
-    function refreshDiffMenu(indexes, diff_index, test_ghm_root)
+    function refreshDiffMenu(indexes, diff_index, sector, test_ghm_root)
     {
         let el = query("#opt_diff_index > select");
         el.innerHTML = '';
@@ -204,7 +220,7 @@ let mco_pricing = {};
             let opt = html('option', {value: indexes[i].begin_date}, indexes[i].begin_date);
             if (i === diff_index)
                 opt.setAttribute('selected', '');
-            if (!checkIndexGhmRoot(indexes, i, test_ghm_root)) {
+            if (!checkIndexGhmRoot(indexes, i, sector, test_ghm_root)) {
                 opt.setAttribute('disabled', '');
                 opt.text += '*';
             }

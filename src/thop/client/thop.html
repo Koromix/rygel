@@ -45,6 +45,14 @@
             <nav id="opt_menu">
                 <svg id="opt_index" class="indexes_line"></svg>
 
+                <label id="opt_sector">
+                    Secteur
+                    <select onchange="thop.go({sector: this.value});">
+                        <option value="public">Public</option>
+                        <option value="private">Privé</option>
+                    </select>
+                </label>
+
                 <label id="opt_diff_index">
                     Comparer
                     <select onchange="thop.go({diff: this.value});"

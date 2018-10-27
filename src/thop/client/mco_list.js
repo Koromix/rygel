@@ -7,6 +7,7 @@ let mco_list = {};
     const Lists = {
         'ghm_roots': {
             'path': 'api/mco_ghm_ghs.json',
+            'sector': true,
             'catalog': 'mco_ghm_roots',
 
             'groups': [
@@ -89,6 +90,7 @@ let mco_list = {};
 
         'ghm_ghs': {
             'path': 'api/mco_ghm_ghs.json',
+            'sector': true,
             'catalog': 'mco_ghm_roots',
 
             'columns': [
@@ -192,11 +194,17 @@ let mco_list = {};
 
     function runList(route, path, parameters, hash, errors)
     {
-        // Parse route (model: list/<table>/<date>[/<spec>])
+        // Parse route (model: list/<table>/<date>/<sector>)
         let path_parts = path.split('/');
         route.list = path_parts[1] || 'ghm_roots';
-        route.date = path_parts[2] || null;
-        route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
+        if (Lists[route.list] && Lists[route.list].sector) {
+            route.sector = path_parts[2] || 'public';
+            route.date = path_parts[3] || null;
+            route.spec = (path_parts[3] && path_parts[4]) ? path_parts[4] : null;
+        } else {
+            route.date = path_parts[2] || null;
+            route.spec = (path_parts[2] && path_parts[3]) ? path_parts[3] : null;
+        }
         route.search = parameters.search || null;
         route.group = parameters.group || null;
         route.page = parseInt(parameters.page, 10) || 1;
@@ -223,19 +231,25 @@ let mco_list = {};
             }
         }
         if (main_index >= 0 && Lists[route.list])
-            updateList(route.list, indexes[main_index].begin_date, route.spec);
+            updateList(route.list, indexes[main_index].begin_date, route.sector, route.spec);
 
         // Errors
         if (!Lists[route.list])
             errors.add('Liste inconnue');
         if (route.date !== null && indexes.length && main_index < 0)
             errors.add('Date incorrecte');
+        if (Lists[route.list] && Lists[route.list].sector && !['public', 'private'].includes(route.sector))
+            errors.add('Secteur incorrect');
         if (route.group && Lists[route.list] && !group_info)
             errors.add('Critère de tri inconnu');
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');
         mco_common.refreshIndexesLine(indexes, main_index);
+        if (Lists[route.list] && Lists[route.list].sector) {
+            query('#opt_sector').removeClass('hide');
+            query('#opt_sector > select').value = route.sector;
+        }
         query('#opt_search').removeClass('hide');
         {
             let search_input = query('#opt_search > input');
@@ -279,7 +293,14 @@ let mco_list = {};
 
         let url;
         {
-            let url_parts = [thop.baseUrl('mco_list'), new_route.list, new_route.date, new_route.spec];
+            let url_parts;
+            if (Lists[new_route.list] && Lists[new_route.list].sector) {
+                url_parts = [thop.baseUrl('mco_list'), new_route.list, new_route.sector,
+                             new_route.date, new_route.spec];
+            } else {
+                url_parts = [thop.baseUrl('mco_list'), new_route.list,
+                             new_route.date, new_route.spec];
+            }
             while (!url_parts[url_parts.length - 1])
                 url_parts.pop();
 
@@ -308,9 +329,14 @@ let mco_list = {};
     }
     this.go = go;
 
-    function updateList(list_name, date, spec)
+    function updateList(list_name, date, sector, spec)
     {
-        let url = buildUrl(thop.baseUrl(Lists[list_name].path), {date: date, spec: spec});
+        let params = {
+            date: date,
+            sector: Lists[list_name].sector ? sector : null,
+            spec: spec
+        };
+        let url = buildUrl(thop.baseUrl(Lists[list_name].path), params);
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {

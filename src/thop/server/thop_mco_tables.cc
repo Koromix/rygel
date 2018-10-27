@@ -6,7 +6,8 @@
 #include "thop_mco.hh"
 
 static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
-                               Response *out_response, const mco_TableIndex **out_index)
+                               Response *out_response, const mco_TableIndex **out_index,
+                               Sector *out_sector = nullptr)
 {
     Date date = {};
     {
@@ -18,6 +19,22 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
         }
         if (!date.value)
             return CreateErrorPage(422, out_response);
+    }
+
+    Sector sector = Sector::Public;
+    if (out_sector) {
+        const char *sector_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "sector");
+        if (!sector_str) {
+            LogError("Missing 'sector' parameter");
+            return CreateErrorPage(422, out_response);
+        } else if (TestStr(sector_str, "public")) {
+            sector = Sector::Public;
+        } else if (TestStr(sector_str, "private")) {
+            sector = Sector::Private;
+        } else {
+            LogError("Invalid 'sector' parameter");
+            return CreateErrorPage(422, out_response);
+        }
     }
 
     const mco_TableIndex *index = thop_table_set->FindIndex(date);
@@ -41,6 +58,9 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
     }
 
     *out_index = index;
+    if (out_sector) {
+        *out_sector = sector;
+    }
     return 0;
 }
 
@@ -184,7 +204,8 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
 int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response)
 {
     const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+    Sector sector;
+    if (int code = GetIndexFromRequest(conn, url, out_response, &index, &sector); code)
         return code;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
@@ -197,9 +218,9 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
         for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
             Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                mco_GhsCode ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+                mco_GhsCode ghs = ghm_to_ghs_info.Ghs(sector);
 
-                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, Sector::Public);
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, sector);
                 const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
                 if (!constraint)
                     continue;
@@ -221,7 +242,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
                 }
                 writer.Key("durations"); writer.Uint(combined_durations);
 
-                writer.Key("ghs"); writer.Int(ghm_to_ghs_info.Ghs(Sector::Public).number);
+                writer.Key("ghs"); writer.Int(ghs.number);
                 if ((combined_durations & 1) &&
                         (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
                     writer.Key("warn_cmd28"); writer.Bool(true);
@@ -263,7 +284,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
 
                 if (ghs_price_info) {
                     writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
-                    writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(Sector::Public));
+                    writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(sector));
                     if (ghs_price_info->exh_treshold) {
                         writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
                         writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
