@@ -11,7 +11,7 @@
         <script type="text/javascript" src="${THOP_BASE_URL}static/thop.js" async></script>
     </head>
 
-    <body>
+    <body class="hide">
         <div id="side_bar">
             <a id="side_deploy" href="#" onclick="thop.toggleMenu('#side_menu'); return false;"></a>
             <nav id="side_menu">
@@ -42,7 +42,7 @@
 
         <main>
             <a id="opt_deploy" class="deploy" href="#" onclick="thop.toggleMenu('#opt_menu'); return false;"></a>
-            <nav id="opt_menu" class="hide">
+            <nav id="opt_menu">
                 <svg id="opt_index" class="indexes_line"></svg>
 
                 <label id="opt_diff_index">
@@ -108,9 +108,9 @@
                             style="width: 96%; margin-top: 4px;"></select><br/>
                 </label>
             </nav>
-            <div id="log" class="hide"></div>
+            <div id="log"></div>
 
-            <div id="user" class="hide">
+            <div id="user">
                 <form id="user_login">
                     <label>Utilisateur : <input id="user_username" type="text"/></label>
                     <label>Mot de passe : <input id="user_password" type="password"/></label>
@@ -118,16 +118,16 @@
                 </form>
             </div>
 
-            <div id="pr" class="hide">
+            <div id="pr">
                 <table id="pr_table" class="pr_grid"></table>
                 <canvas id="pr_chart" width="400" height="300"></canvas>
             </div>
 
-            <div id="tr" class="hide">
+            <div id="tr">
                 <ul id="tr_tree"></ul>
             </div>
 
-            <div id="ls" class="hide">
+            <div id="ls">
                 <h1 id="ls_spec"></h1>
 
                 <div id="ls_ghm_roots" class="ls_table"></div>
@@ -136,7 +136,7 @@
                 <div id="ls_procedures" class="ls_table"></div>
             </div>
 
-            <div id="cm" class="hide">
+            <div id="cm">
                 <div id="cm_ghm_roots" class="cm_summary"></div>
                 <div id="cm_units" class="cm_summary"></div>
 

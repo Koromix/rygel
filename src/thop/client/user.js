@@ -20,10 +20,8 @@ let user = {};
         if (ShowUser) {
             updateSession();
 
-            if (!data.isBusy()) {
-                refreshSessionBox();
-                refreshSessionMenu();
-            }
+            refreshSessionBox();
+            refreshSessionMenu();
         }
 
         queryAll('#side_session_box, #side_session_menu').toggleClass('hide', !ShowUser);

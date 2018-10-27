@@ -171,6 +171,7 @@ let thop = {};
 
         // Done
         query('main').toggleClass('busy', data.isBusy());
+        document.body.removeClass('hide');
     }
     this.route = route;
 
