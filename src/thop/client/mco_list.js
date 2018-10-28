@@ -465,7 +465,7 @@ let mco_list = {};
         builder.sort(sort, false);
 
         let render_count = builder.render((page - 1) * TableLen, TableLen,
-                                          list_info.header, !sort);
+                                          {render_header: list_info.header, render_parents: !sort});
         syncPagers(queryAll('#ls_' + list_name + ' .pagr'), page,
                    computeLastPage(render_count, builder.getRowCount(), TableLen));
     }

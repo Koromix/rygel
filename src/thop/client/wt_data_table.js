@@ -224,15 +224,13 @@ function DataTable(widget)
         return true;
     };
 
-    this.render = function(offset, len, render_header, render_parents) {
-        if (offset === undefined)
-            offset = 0;
-        if (len === undefined)
-            len = sorted_rows.length;
-        if (render_header === undefined)
-            render_header = true;
-        if (render_parents === undefined)
-            render_parents = true;
+    this.render = function(offset, len, options) {
+        offset = (offset !== undefined) ? offset : 0;
+        len = (len !== undefined) ? len : sorted_rows.length;
+        options = (options !== undefined) ? options : {};
+        options.render_header = (options.render_header !== undefined) ? options.render_header : true;
+        options.render_parents = (options.render_parents !== undefined) ? options.render_parents : true;
+        options.render_empty = (options.render_empty !== undefined) ? options.render_empty : true;
 
         widget.innerHTML = '';
         widget.addClass('dtab');
@@ -249,42 +247,41 @@ function DataTable(widget)
             )
         ]);
 
-        let p = widget.query('p');
-        let thead = widget.query('thead');
-        let tbody = widget.query('tbody');
+        let render_count = 0;
+        if (sorted_rows.length || options.render_empty) {
+            let p = widget.query('p');
+            let thead = widget.query('thead');
+            let tbody = widget.query('tbody');
 
-        if (render_header && columns.length) {
-            let tr = html('tr');
-            for (let i = 0; i < columns.length; i++) {
-                let th = columns[i].cell;
-                if (i === sort_idx) {
-                    th.toggleClass('descending', sort_descending);
-                    th.toggleClass('ascending', !sort_descending);
-                } else {
-                    th.removeClass('descending');
-                    th.removeClass('ascending');
+            if (options.render_header && columns.length) {
+                let tr = html('tr');
+                for (let i = 0; i < columns.length; i++) {
+                    let th = columns[i].cell;
+                    if (i === sort_idx) {
+                        th.toggleClass('descending', sort_descending);
+                        th.toggleClass('ascending', !sort_descending);
+                    } else {
+                        th.removeClass('descending');
+                        th.removeClass('ascending');
+                    }
+
+                    tr.appendChild(th);
                 }
-
-                tr.appendChild(th);
+                thead.appendChild(tr);
             }
-            thead.appendChild(tr);
-        }
 
-        function addRow(row, leaf)
-        {
-            let tr = html('tr', {class: leaf ? null : 'parent'}, row.cells);
-            tbody.appendChild(tr);
-        }
+            function addRow(row, leaf)
+            {
+                let tr = html('tr', {class: leaf ? null : 'parent'}, row.cells);
+                tbody.appendChild(tr);
+            }
 
-        let render_count;
-        {
             let end = Math.min(offset + len, sorted_rows.length);
-
             let parents = Array.apply(null, Array(row_sets.length - 1));
             for (let i = offset; i < end; i++) {
                 let row = sorted_rows[i];
 
-                if (render_parents) {
+                if (options.render_parents) {
                     let parent = row.parent;
                     while (parent && parent !== parents[parent.depth]) {
                         parents[parent.depth] = parent;
@@ -298,21 +295,21 @@ function DataTable(widget)
             }
 
             render_count = Math.max(end - offset, 0);
-        }
-        if (!render_count) {
-            let msg = sorted_rows.length ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
-            tbody.appendChild(html('tr',
-                html('td', {colspan: columns.length}, msg)
-            ));
-        }
+            if (!render_count) {
+                let msg = sorted_rows.length ? 'Cette page n\'existe pas' : 'Aucun contenu à afficher';
+                tbody.appendChild(html('tr',
+                    html('td', {colspan: columns.length}, msg)
+                ));
+            }
 
-        if (sorted_rows.length) {
-            let count_text = '';
-            if (render_count)
-                count_text += offset + ' - ' + (offset + render_count) + ' ';
-            count_text += '(' + sorted_rows.length + ' ' + (sorted_rows.length > 1 ? 'lignes' : 'ligne') + ')';
+            if (sorted_rows.length) {
+                let count_text = '';
+                if (render_count)
+                    count_text += offset + ' - ' + (offset + render_count) + ' ';
+                count_text += '(' + sorted_rows.length + ' ' + (sorted_rows.length > 1 ? 'lignes' : 'ligne') + ')';
 
-            p.innerHTML = count_text;
+                p.innerHTML = count_text;
+            }
         }
 
         prev_offset = offset;

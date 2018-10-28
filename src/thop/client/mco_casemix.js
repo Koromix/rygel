@@ -649,7 +649,8 @@ let mco_casemix = {};
 
         units_summary.sort(sort);
 
-        let render_count = units_summary.render((page - 1) * TableLen, TableLen);
+        let render_count = units_summary.render((page - 1) * TableLen, TableLen,
+                                                {render_empty: false});
         syncPagers(queryAll('#cm_units .pagr'), page,
                    computeLastPage(render_count, units_summary.getRowCount(), TableLen));
     }
@@ -779,7 +780,8 @@ let mco_casemix = {};
 
         ghm_roots_summary.sort(sort);
 
-        let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen);
+        let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen,
+                                                    {render_empty: false});
         syncPagers(queryAll('#cm_ghm_roots .pagr'), page,
                    computeLastPage(render_count, ghm_roots_summary.getRowCount(), TableLen));
     }
