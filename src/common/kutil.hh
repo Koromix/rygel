@@ -1640,8 +1640,15 @@ public:
         memset(&other, 0, SIZE(other));
         return *this;
     }
-    HashTable(HashTable &) = delete;
-    HashTable &operator=(const HashTable &) = delete;
+    HashTable(const HashTable &other) { *this = other; }
+    HashTable &operator=(const HashTable &other)
+    {
+        Clear();
+        for (const ValueType &value: other) {
+            Append(value);
+        }
+        return *this;
+    }
 
     void Clear()
     {
