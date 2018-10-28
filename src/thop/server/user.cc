@@ -46,21 +46,27 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
         IniProperty prop;
         while (ini.Next(&prop)) {
-            User user = {};
-            Size copy_from_idx = -1;
-            bool changed_allow_default = false;
-            bool changed_dispense_modes = false;
-
             // TODO: Check validity, or maybe the INI parser checks are enough?
-            user.name = MakeString(&set.str_alloc, prop.section).ptr;
+            const char *name = MakeString(&set.str_alloc, prop.section).ptr;
+            User user = {};
 
+            bool first_property = true;
             do {
                 if (prop.key == "PasswordHash") {
                     user.password_hash = MakeString(&set.str_alloc, prop.value).ptr;
                 } else if (prop.key == "Template") {
-                    copy_from_idx = map.FindValue(prop.value.ptr, -1);
-                    if (copy_from_idx < 0) {
-                        LogError("Cannot copy from non-existent user '%1'", prop.value);
+                    if (first_property) {
+                        Size template_idx = map.FindValue(prop.value.ptr, -1);
+                        if (template_idx >= 0) {
+                            user = set.users[template_idx];
+                            allow.Append(set.users[template_idx].allow);
+                            deny.Append(set.users[template_idx].deny);
+                        } else {
+                            LogError("Cannot copy from non-existent user '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else {
+                        LogError("Template must be the first property");
                         valid = false;
                     }
                 } else if (prop.key == "Default") {
@@ -72,7 +78,6 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         LogError("Incorrect value '%1' for Default attribute", prop.value);
                         valid = false;
                     }
-                    changed_allow_default = true;
                 } else if (prop.key == "Allow") {
                     allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
@@ -89,43 +94,29 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                                 const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                                       std::end(mco_DispenseModeOptions),
                                                                       [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
-                                if (desc == std::end(mco_DispenseModeOptions)) {
+                                if (desc != std::end(mco_DispenseModeOptions)) {
+                                    user.dispense_modes |= 1u << (desc - mco_DispenseModeOptions);
+                                } else {
                                     LogError("Unknown dispensation mode '%1'", part);
                                     valid = false;
                                 }
-
-                                user.dispense_modes |= 1 << (int)(desc - mco_DispenseModeOptions);
                             }
                         }
                     } else {
                         LogError("Incorrect value '%1' for DispenseModes attribute", prop.value);
                         valid = false;
                     }
-                    changed_dispense_modes = true;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
+
+                first_property = false;
             } while (ini.NextInSection(&prop));
 
+            user.name = name;
             user.allow = allow.TrimAndLeak();
             user.deny = deny.TrimAndLeak();
-
-            if (copy_from_idx >= 0) {
-                const User &base_user = set.users[copy_from_idx];
-                if (!changed_allow_default) {
-                    user.allow_default = base_user.allow_default;
-                }
-                if (!user.allow.len) {
-                    user.allow = base_user.allow;
-                }
-                if (!user.deny.len) {
-                    user.deny = base_user.deny;
-                }
-                if (!changed_dispense_modes) {
-                    user.dispense_modes = base_user.dispense_modes;
-                }
-            }
 
             if (map.Append(user.name, set.users.len).second) {
                 set.users.Append(user);
