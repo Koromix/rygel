@@ -76,7 +76,7 @@ let user = {};
 
     function logout()
     {
-        disconnect(thop.goHome);
+        disconnect();
     }
     this.logout = logout;
 
