@@ -7,8 +7,11 @@
 #include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 
 #include "../../libdrd/libdrd.hh"
-#include "config.hh"
 #include "json.hh"
+
+struct StructureSet;
+struct UserSet;
+struct User;
 
 struct ConnectionInfo {
     MHD_Connection *conn;

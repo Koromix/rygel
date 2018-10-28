@@ -6,10 +6,6 @@
 
 #include "thop.hh"
 
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *url, Response *out_response);
-int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response);
-int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response);
-
 int ProduceMcoIndexes(const ConnectionInfo *conn, const char *url, Response *out_response);
 int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response);
 int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response);

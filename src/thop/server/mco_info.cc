@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "thop.hh"
-#include "thop_mco.hh"
+#include "mco_info.hh"
 
 static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
                                Response *out_response, const mco_TableIndex **out_index,

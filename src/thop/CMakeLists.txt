@@ -51,16 +51,17 @@ set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
                    client/images/thop_logo.svg
                    client/images/favicon.ico)
 
-set(THOP_SRC server/thop.cc
+set(THOP_SRC server/json.hh
+             server/mco_classify.cc
+             server/mco_classify.hh
+             server/mco_info.cc
+             server/mco_info.hh
+             server/structure.cc
+             server/structure.hh
+             server/thop.cc
              server/thop.hh
-             server/config.cc
-             server/config.hh
-             server/json.hh
              server/user.cc
-             server/user.hh
-             server/thop_mco_casemix.cc
-             server/thop_mco_tables.cc
-             server/thop_mco.hh)
+             server/user.hh)
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>

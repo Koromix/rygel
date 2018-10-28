@@ -13,7 +13,9 @@
 #endif
 
 #include "thop.hh"
-#include "thop_mco.hh"
+#include "structure.hh"
+#include "mco_classify.hh"
+#include "mco_info.hh"
 #include "user.hh"
 #include "../../packer/packer.hh"
 

@@ -3,7 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "thop.hh"
-#include "thop_mco.hh"
+#include "mco_classify.hh"
+#include "structure.hh"
+#include "user.hh"
 
 static bool CheckUnitAgainstUser(const User &user, const StructureEntity &ent)
 {
