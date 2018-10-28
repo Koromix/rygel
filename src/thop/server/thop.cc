@@ -74,8 +74,8 @@ HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
 const mco_AuthorizationSet *thop_authorization_set;
-UserSet thop_user_set;
 StructureSet thop_structure_set;
+UserSet thop_user_set;
 mco_StaySet thop_stay_set;
 Date thop_stay_set_dates[2];
 HeapArray<mco_Result> thop_results;
@@ -170,40 +170,6 @@ static bool InitCatalogSet(Span<const char *const> resource_directories,
     return true;
 }
 
-static bool InitUserSet(Span<const char *const> resource_directories, const char *user_filename)
-{
-    LogInfo("Load users");
-
-    BlockAllocator temp_alloc(Kibibytes(8));
-
-    const char *filename = nullptr;
-    {
-        if (user_filename) {
-            filename = user_filename;
-        } else {
-            for (Size i = resource_directories.len; i-- > 0;) {
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config/users.ini",
-                                                resource_directories[i]).ptr;
-                if (TestPath(test_filename, FileType::File)) {
-                    filename = test_filename;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (filename && filename[0]) {
-        UserSetBuilder user_set_builder;
-        if (!user_set_builder.LoadFiles(filename))
-            return false;
-        user_set_builder.Finish(&thop_user_set);
-    } else {
-        LogError("No users file specified or found");
-    }
-
-    return true;
-}
-
 static bool InitStructureSet(Span<const char *const> resource_directories,
                              const char *structure_filename)
 {
@@ -239,6 +205,40 @@ static bool InitStructureSet(Span<const char *const> resource_directories,
     return true;
 }
 
+static bool InitUserSet(Span<const char *const> resource_directories, const char *user_filename)
+{
+    LogInfo("Load users");
+
+    BlockAllocator temp_alloc(Kibibytes(8));
+
+    const char *filename = nullptr;
+    {
+        if (user_filename) {
+            filename = user_filename;
+        } else {
+            for (Size i = resource_directories.len; i-- > 0;) {
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config/users.ini",
+                                                resource_directories[i]).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (filename && filename[0]) {
+        UserSetBuilder user_set_builder;
+        if (!user_set_builder.LoadFiles(filename))
+            return false;
+        user_set_builder.Finish(thop_structure_set, &thop_user_set);
+    } else {
+        LogError("No users file specified or found");
+    }
+
+    return true;
+}
+
 static bool InitTables(Span<const char *const> catalog_directories,
                        Span<const char *const> stays_filenames)
 {
@@ -250,9 +250,9 @@ static bool InitTables(Span<const char *const> catalog_directories,
         thop_authorization_set = mco_GetMainAuthorizationSet();
         if (!thop_authorization_set)
             return false;
-        if (!InitUserSet(mco_resource_directories, nullptr))
-            return false;
         if (!InitStructureSet(mco_resource_directories, nullptr))
+            return false;
+        if (!InitUserSet(mco_resource_directories, nullptr))
             return false;
     }
 

@@ -6,15 +6,22 @@
 
 #include "thop.hh"
 
+struct StructureEntity;
+
+enum class UserPermission {
+    Classify = 1 << 0
+};
+static const char *const UserPermissionNames[] = {
+    "Classify"
+};
+
 struct User {
     const char *name;
     const char *password_hash;
 
-    bool allow_default;
-    Span<const char *> allow;
-    Span<const char *> deny;
-
+    unsigned int permissions;
     unsigned int dispense_modes;
+    HashSet<UnitCode> allowed_units;
 
     HASH_TABLE_HANDLER(User, name);
 };
@@ -23,22 +30,33 @@ struct UserSet {
     HeapArray<User> users;
     HashTable<const char *, const User *> map;
 
-    BlockAllocator allow_alloc {Kibibytes(4)};
-    BlockAllocator deny_alloc {Kibibytes(4)};
     BlockAllocator str_alloc {Kibibytes(16)};
 
     const User *FindUser(const char *name) const { return map.FindValue(name, nullptr); }
 };
 
 class UserSetBuilder {
+    struct UnitRuleSet {
+        bool allow_default;
+        Span<const char *> allow;
+        Span<const char *> deny;
+    };
+
     UserSet set;
     HashMap<const char *, Size> map;
+
+    HeapArray<UnitRuleSet> rule_sets;
+    BlockAllocator allow_alloc {Kibibytes(4)};
+    BlockAllocator deny_alloc {Kibibytes(4)};
 
 public:
     bool LoadIni(StreamReader &st);
     bool LoadFiles(Span<const char *const> filenames);
 
-    void Finish(UserSet *out_set);
+    void Finish(const StructureSet &structure_set, UserSet *out_set);
+
+private:
+    bool CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent);
 };
 
 const User *CheckSessionUser(MHD_Connection *conn);

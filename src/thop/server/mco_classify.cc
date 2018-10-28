@@ -7,31 +7,6 @@
 #include "structure.hh"
 #include "user.hh"
 
-static bool CheckUnitAgainstUser(const User &user, const StructureEntity &ent)
-{
-    const auto CheckNeedle = [&](const char *needle) {
-        return !!strstr(ent.path, needle);
-    };
-
-    if (user.allow_default) {
-        bool deny = std::any_of(user.deny.begin(), user.deny.end(), CheckNeedle);
-        if (deny) {
-            bool allow = std::any_of(user.allow.begin(), user.allow.end(), CheckNeedle);
-            if (!allow)
-                return false;
-        }
-    } else {
-        bool allow = std::any_of(user.allow.begin(), user.allow.end(), CheckNeedle);
-        if (!allow)
-            return false;
-        bool deny = std::any_of(user.deny.begin(), user.deny.end(), CheckNeedle);
-        if (deny)
-            return false;
-    }
-
-    return true;
-}
-
 static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode dispense_mode)
 {
     return dispense_mode == thop_structure_set.dispense_mode ||
@@ -42,15 +17,6 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
 {
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(403, out_response);
-
-    // TODO: Cache in session object (also neeeded in ProduceClassify)?
-    HashSet<UnitCode> allowed_units;
-    for (const Structure &structure: thop_structure_set.structures) {
-        for (const StructureEntity &ent: structure.entities) {
-            if (CheckUnitAgainstUser(*conn->user, ent))
-                allowed_units.Append(ent.unit);
-        }
-    }
 
     out_response->flags |= (int)Response::Flag::DisableETag;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
@@ -87,7 +53,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
             writer.Key("name"); writer.String(structure.name);
             writer.Key("entities"); writer.StartArray();
             for (const StructureEntity &ent: structure.entities) {
-                if (allowed_units.Find(ent.unit)) {
+                if (conn->user->allowed_units.Find(ent.unit)) {
                     writer.StartObject();
                     writer.Key("unit"); writer.Int(ent.unit.number);
                     writer.Key("path"); writer.String(ent.path);
@@ -216,14 +182,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     if (!thop_stay_set.stays.len || !conn->user)
         return CreateErrorPage(403, out_response);
 
-    HashSet<UnitCode> allowed_units;
-    for (const Structure &structure: thop_structure_set.structures) {
-        for (const StructureEntity &ent: structure.entities) {
-            if (CheckUnitAgainstUser(*conn->user, ent))
-                allowed_units.Append(ent.unit);
-        }
-    }
-
     Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};
     Date diff_dates[2] = {};
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
@@ -326,7 +284,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                     UnitCode unit = mono_result.stays[0].unit;
                     DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-                    if (allowed_units.Find(unit)) {
+                    if (conn->user->allowed_units.Find(unit)) {
                         std::pair<AggregateStatistics::Part *, bool> ret =
                             agg_parts_map.AppendDefault(mono_result.stays[0].unit);
 

@@ -49,8 +49,8 @@ extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
 extern const mco_AuthorizationSet *thop_authorization_set;
-extern UserSet thop_user_set;
 extern StructureSet thop_structure_set;
+extern UserSet thop_user_set;
 extern mco_StaySet thop_stay_set;
 extern Date thop_stay_set_dates[2];
 extern HeapArray<mco_Result> thop_results;

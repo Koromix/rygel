@@ -12,6 +12,7 @@
 #endif
 
 #include "thop.hh"
+#include "structure.hh"
 #include "user.hh"
 
 static const int64_t PruneDelay = 20 * 60 * 1000;
@@ -41,14 +42,15 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
     bool valid = true;
     {
-        HeapArray<const char *> allow(&set.allow_alloc);
-        HeapArray<const char *> deny(&set.deny_alloc);
+        HeapArray<const char *> allow(&allow_alloc);
+        HeapArray<const char *> deny(&deny_alloc);
 
         IniProperty prop;
         while (ini.Next(&prop)) {
             // TODO: Check validity, or maybe the INI parser checks are enough?
             const char *name = MakeString(&set.str_alloc, prop.section).ptr;
             User user = {};
+            UnitRuleSet rule_set = {};
 
             bool first_property = true;
             do {
@@ -59,8 +61,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         Size template_idx = map.FindValue(prop.value.ptr, -1);
                         if (template_idx >= 0) {
                             user = set.users[template_idx];
-                            allow.Append(set.users[template_idx].allow);
-                            deny.Append(set.users[template_idx].deny);
+                            rule_set = rule_sets[template_idx];
+                            allow.Append(rule_sets[template_idx].allow);
+                            deny.Append(rule_sets[template_idx].deny);
                         } else {
                             LogError("Cannot copy from non-existent user '%1'", prop.value);
                             valid = false;
@@ -71,9 +74,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     }
                 } else if (prop.key == "Default") {
                     if (prop.value == "Allow") {
-                        user.allow_default = true;
+                        rule_set.allow_default = true;
                     } else if (prop.value == "Deny") {
-                        user.allow_default = false;
+                        rule_set.allow_default = false;
                     } else {
                         LogError("Incorrect value '%1' for Default attribute", prop.value);
                         valid = false;
@@ -115,11 +118,12 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
             } while (ini.NextInSection(&prop));
 
             user.name = name;
-            user.allow = allow.TrimAndLeak();
-            user.deny = deny.TrimAndLeak();
+            rule_set.allow = allow.TrimAndLeak();
+            rule_set.deny = deny.TrimAndLeak();
 
             if (map.Append(user.name, set.users.len).second) {
                 set.users.Append(user);
+                rule_sets.Append(rule_set);
             } else {
                 LogError("Duplicate user '%1'", user.name);
                 valid = false;
@@ -162,18 +166,53 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
     return success;
 }
 
-void UserSetBuilder::Finish(UserSet *out_set)
+void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
     std::sort(set.users.begin(), set.users.end(),
               [](const User &user1, const User &user2) {
         return CmpStr(user1.name, user2.name) < 0;
     });
 
-    for (const User &user: set.users) {
+    for (Size i = 0; i < set.users.len; i++) {
+        User &user = set.users[i];
+        const UnitRuleSet &rule_set = rule_sets[i];
+
+        for (const Structure &structure: structure_set.structures) {
+            for (const StructureEntity &ent: structure.entities) {
+                if (CheckUnitPermission(rule_set, ent))
+                    user.allowed_units.Append(ent.unit);
+            }
+        }
+
         set.map.Append(&user);
     }
 
     SwapMemory(out_set, &set, SIZE(set));
+}
+
+bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent)
+{
+    const auto CheckNeedle = [&](const char *needle) {
+        return !!strstr(ent.path, needle);
+    };
+
+    if (rule_set.allow_default) {
+        bool deny = std::any_of(rule_set.deny.begin(), rule_set.deny.end(), CheckNeedle);
+        if (deny) {
+            bool allow = std::any_of(rule_set.allow.begin(), rule_set.allow.end(), CheckNeedle);
+            if (!allow)
+                return false;
+        }
+    } else {
+        bool allow = std::any_of(rule_set.allow.begin(), rule_set.allow.end(), CheckNeedle);
+        if (!allow)
+            return false;
+        bool deny = std::any_of(rule_set.deny.begin(), rule_set.deny.end(), CheckNeedle);
+        if (deny)
+            return false;
+    }
+
+    return true;
 }
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
