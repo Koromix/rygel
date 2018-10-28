@@ -437,13 +437,15 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                         agg_ghm_ghs->durations |= constraint->durations &
                                                   ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
 
-                        if (!agg_ghm_ghs->exh_treshold ||
-                                ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
-                            agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
-                        }
-                        if (!agg_ghm_ghs->exb_treshold ||
-                                ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
-                            agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
+                        if (ghs_price_info) {
+                            if (!agg_ghm_ghs->exh_treshold ||
+                                    ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
+                                agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
+                            }
+                            if (!agg_ghm_ghs->exb_treshold ||
+                                    ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
+                                agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
+                            }
                         }
                     }
                 }
