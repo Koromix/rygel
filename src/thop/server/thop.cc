@@ -543,9 +543,9 @@ static void InitRoutes()
 
     // We can use a global ETag because everything is in the binary
     {
-        time_t now;
-        time(&now);
-        Fmt(etag, "%1", now);
+        uint64_t buf[2];
+        randombytes_buf(&buf, SIZE(buf));
+        Fmt(etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
     }
 }
 
