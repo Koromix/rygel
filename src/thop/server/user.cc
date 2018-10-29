@@ -328,6 +328,7 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     if (!username || !password || !user_agent)
         return CreateErrorPage(422, out_response);
 
+    // Find and validate user
     const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
@@ -356,6 +357,8 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     // Register session
     {
         std::unique_lock<std::shared_mutex> lock(sessions_mutex);
+
+        // Drop current session (if any)
         sessions.Remove(FindSession(conn->conn));
 
         // std::atomic objects are not copyable so we can't use Append()
