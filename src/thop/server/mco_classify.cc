@@ -226,7 +226,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     }
     if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        return CreateErrorPage(422, out_response);
+        return CreateErrorPage(403, out_response);
     }
 
     // TODO: Parallelize and optimize aggregation
