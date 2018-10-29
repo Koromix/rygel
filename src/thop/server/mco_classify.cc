@@ -259,7 +259,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
 
                 const mco_Result &result = results[i];
                 const mco_Pricing &pricing = pricings[i];
-
                 Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
                 Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
                 j += result.stays.len;
