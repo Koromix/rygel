@@ -100,7 +100,7 @@ bool mco_TestExclusion(const mco_TableIndex &index, int8_t sex, int age,
                        const mco_DiagnosisInfo &cma_diag_info,
                        const mco_GhmRootInfo &ghm_root_info,
                        const mco_DiagnosisInfo &main_diag_info,
-                       const mco_DiagnosisInfo *linked_diag_info = nullptr);
+                       const mco_DiagnosisInfo *linked_diag_info);
 
 mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
