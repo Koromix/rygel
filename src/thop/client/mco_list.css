@@ -7,27 +7,6 @@
     text-align: center;
 }
 
-.ls_table .dtab  {
-    width: 100%;
-    border-collapse: collapse;
-}
-.ls_table .dtab th, .ls_table .dtab td {
-    min-width: 60px;
-    max-width: 260px;
-    border: 1px solid #a4a4a4;
-    padding: 3px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.ls_table .dtab thead { background: #ccc; }
-.ls_table .dtab tbody { background: #fafafa; }
-.ls_table .dtab th {
-    text-align: center;
-    font-weight: bold;
-}
-.ls_table .dtab tr.heading { background: #eee; }
-
 #ls_diagnoses .dtab td:nth-child(2) { text-align: center; }
 
 @media screen and (min-width: 800px) {
@@ -36,11 +15,6 @@
 }
 
 @media screen and (max-width: 800px) {
-    .ls_table .dtab th, .ls_table .dtab td {
-        font-size: 0.8em;
-        border: 0;
-    }
-
     .ls_table .dtab td { box-sizing: border-box; }
     #ls_ghm_roots .dtab td:first-child, #ls_procedures .dtab td:first-child { min-width: 100vw; }
     #ls_diagnoses .dtab td:first-child { min-width: 85vw; }
