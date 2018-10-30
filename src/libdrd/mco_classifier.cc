@@ -2023,7 +2023,8 @@ static Size Classify(const mco_TableSet &table_set,
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
-        result.duration = (int16_t)prepared_set.prep.duration;
+        result.age = prepared_set.prep.age;
+        result.duration = prepared_set.prep.duration;
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
@@ -2074,7 +2075,8 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
         result.stays = mco_Split(mono_stays, 1, &mono_stays);
         result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
         result.index = prepared_set.index;
-        result.duration = (int16_t)prepared_set.prep.duration;
+        result.age = prepared_set.prep.age;
+        result.duration = prepared_set.prep.duration;
         mono_results.AppendDefault(result.stays.len);
 
         // Classify GHM
@@ -2112,7 +2114,8 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
                 mono_result->stays = *mono_prep.stay;
                 mono_result->main_stay_idx = 0;
                 mono_result->index = prepared_set.index;
-                mono_result->duration = (int16_t)mono_prep.duration;
+                mono_result->age = mono_prep.age;
+                mono_result->duration = mono_prep.duration;
 
                 if (!result.ghm.IsError()) {
                     int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;

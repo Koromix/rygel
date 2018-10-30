@@ -75,6 +75,7 @@ struct mco_Result {
     const mco_TableIndex *index;
     int16_t main_stay_idx;
     int16_t duration;
+    int16_t age;
     mco_GhmCode ghm;
     int16_t main_error;
 
