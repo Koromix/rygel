@@ -77,12 +77,18 @@
 .pr_grid .removed:after { content: '*'; }
 .pr_grid .added:after { content: '*'; }
 
-#pr_table .info:before { content: "⚠ "; }
+#pr_table .info:before {
+    content: "⚠ ";
+    font-size: 0.8em;
+}
 #pr_table .warn {
     filter: grayscale(90%) !important;
     color: #555;
 }
-#pr_table .warn:before { content: "⚠ "; }
+#pr_table .warn:before {
+    content: "⚠ ";
+    font-size: 0.8em;
+}
 
 @media screen and (min-width: 801px) {
     .pr_grid th:first-child { width: 90px; }
