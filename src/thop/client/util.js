@@ -38,7 +38,13 @@ NodeList.prototype.toggleClass = function(cls, value) {
 };
 
 Element.prototype.toggleClass = function(cls, value) {
-    return this.classList.toggle(cls, value);
+    // 'return this.classList.toggle(cls, value);' should be enough but for some
+    // reason it does not always work with old Chrome (42) versions.
+    if (value !== undefined) {
+        return this.classList.toggle(cls, value);
+    } else {
+        return this.classList.toggle(cls);
+    }
 };
 
 Element.prototype.hasClass = function(cls) {

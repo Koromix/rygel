@@ -555,3 +555,245 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
         return true;
     }, out_response);
 }
+
+// TODO: Limit maximum number of results (~ 500?)
+// TODO: Split loop
+// TODO: Deal with invalid values (duration, age)
+int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
+{
+    if (!thop_stay_set.stays.len || !conn->user ||
+            !(conn->user->permissions & (int)UserPermission::Classify))
+        return CreateErrorPage(403, out_response);
+
+    Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};
+    mco_GhmRootCode ghm_root;
+    mco_DispenseMode dispense_mode = mco_DispenseMode::J;
+    bool apply_coefficent = false;
+    {
+        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
+                            &dates[0], &dates[1]))
+            return CreateErrorPage(422, out_response);
+
+        const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
+        if (!ghm_root_str) {
+            LogError("Missing 'ghm_root' argument");
+            return CreateErrorPage(422, out_response);
+        }
+        ghm_root = mco_GhmRootCode::FromString(ghm_root_str);
+        if (!ghm_root.IsValid())
+            return CreateErrorPage(422, out_response);
+
+        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dispense_mode");
+        if (mode_str) {
+            const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                                  std::end(mco_DispenseModeOptions),
+                                                  [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
+            if (desc == std::end(mco_DispenseModeOptions)) {
+                LogError("Invalid 'dispense_mode' parameter value '%1'", mode_str);
+                return CreateErrorPage(422, out_response);
+            }
+            dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+        } else {
+            LogError("Missing 'dispense_mode' argument");
+            return CreateErrorPage(422, out_response);
+        }
+
+        const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
+        if (apply_coefficent_str) {
+            if (TestStr(apply_coefficent_str, "1")) {
+                apply_coefficent = true;
+            } else if (TestStr(apply_coefficent_str, "0")) {
+                apply_coefficent = false;
+            } else {
+                LogError("Invalid 'apply_coefficent' parameter value '%1'", apply_coefficent_str);
+                return CreateErrorPage(422, out_response);
+            }
+        } else {
+            LogError("Missing 'apply_coefficent' argument");
+            return CreateErrorPage(422, out_response);
+        }
+    }
+
+    if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
+        LogError("User is not allowed to use this dispensation mode");
+        return CreateErrorPage(403, out_response);
+    }
+
+    HeapArray<mco_Result> results;
+    HeapArray<mco_Result> mono_results;
+    {
+
+        Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
+
+        for (const mco_ResultPointers &p: results_index) {
+            bool allow = std::any_of(p.result->stays.begin(), p.result->stays.end(),
+                                 [&](const mco_Stay &stay) {
+                return !!conn->user->allowed_units.Find(stay.unit);
+            });
+
+            if (allow) {
+                results.Append(*p.result);
+                mono_results.Append(p.mono_results);
+            }
+        }
+    }
+
+    HeapArray<mco_Pricing> pricings;
+    HeapArray<mco_Pricing> mono_pricings;
+    mco_Price(results, apply_coefficent, &pricings);
+    mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+
+    out_response->flags |= (int)Response::Flag::DisableCache;
+    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+        writer.StartArray();
+        for (Size i = 0, j = 0; i < results.len; i++) {
+            char buf[32];
+
+            const mco_Result &result = results[i];
+            const mco_Pricing &pricing = pricings[i];
+            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+            j += result.stays.len;
+
+            if (result.stays[result.stays.len - 1].exit.date < dates[0] ||
+                    result.stays[result.stays.len - 1].exit.date >= dates[1])
+                continue;
+
+            const mco_GhmRootInfo *ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
+            const mco_DiagnosisInfo *main_diag_info =
+                result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
+            const mco_DiagnosisInfo *linked_diag_info =
+                result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
+
+            writer.StartObject();
+
+            writer.Key("admin_id"); writer.Int(result.stays[0].admin_id);
+            writer.Key("bill_id"); writer.Int(result.stays[0].bill_id);
+            writer.Key("index_date"); writer.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
+            writer.Key("duration"); writer.Int(result.duration);
+            writer.Key("sex"); writer.Int(result.stays[0].sex);
+            writer.Key("age"); writer.Int(result.age);
+            writer.Key("main_stay"); writer.Int(result.main_stay_idx);
+            writer.Key("ghm"); writer.String(result.ghm.ToString(buf).ptr);
+            writer.Key("main_error"); writer.Int(result.main_error);
+            writer.Key("ghs"); writer.Int(result.ghs.number);
+            writer.Key("ghs_duration"); writer.Int(result.ghs_duration);
+            writer.Key("exb_exh"); writer.Int(pricing.exb_exh);
+            writer.Key("price_cents"); writer.Int((int)pricing.price_cents);
+            writer.Key("total_cents"); writer.Int((int)pricing.total_cents);
+
+            writer.Key("stays"); writer.StartArray();
+            for (Size k = 0; k < result.stays.len; k++) {
+                const mco_Stay &stay = result.stays[k];
+                const mco_Result &mono_result = sub_mono_results[k];
+                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+
+                writer.StartObject();
+
+                writer.Key("duration"); writer.Int(mono_result.duration);
+                if (conn->user->allowed_units.Find(stay.unit)) {
+                    writer.Key("sex"); writer.Int(stay.sex);
+                    writer.Key("birthdate"); writer.String(Fmt(buf, "%1", stay.birthdate).ptr);
+                    writer.Key("entry_date"); writer.String(Fmt(buf, "%1", stay.entry.date).ptr);
+                    writer.Key("entry_mode"); writer.String(&stay.entry.mode, 1);
+                    if (stay.entry.origin) {
+                        writer.Key("entry_origin"); writer.String(&stay.entry.origin, 1);
+                    }
+                    writer.Key("exit_date"); writer.String(Fmt(buf, "%1", stay.exit.date).ptr);
+                    writer.Key("exit_mode"); writer.String(&stay.exit.mode, 1);
+                    if (stay.exit.destination) {
+                        writer.Key("exit_destination"); writer.String(&stay.exit.destination, 1);
+                    }
+                    writer.Key("unit"); writer.Int(stay.unit.number);
+                    if (stay.bed_authorization) {
+                        writer.Key("bed_authorization"); writer.Int(stay.bed_authorization);
+                    }
+                    if (stay.session_count) {
+                        writer.Key("session_count"); writer.Int(stay.session_count);
+                    }
+                    if (stay.igs2) {
+                        writer.Key("igs2"); writer.Int(stay.igs2);
+                    }
+                    if (stay.last_menstrual_period.value) {
+                        writer.Key("last_menstrual_period"); writer.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
+                    }
+                    if (stay.gestational_age) {
+                        writer.Key("gestational_age"); writer.Int(stay.gestational_age);
+                    }
+                    if (stay.newborn_weight) {
+                        writer.Key("newborn_weight"); writer.Int(stay.newborn_weight);
+                    }
+                    if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
+                        writer.Key("confirm"); writer.Bool(true);
+                    }
+                    if (stay.dip_count) {
+                        writer.Key("dip_count"); writer.Int(stay.dip_count);
+                    }
+                    if (stay.flags & (int)mco_Stay::Flag::Ucd) {
+                        writer.Key("ucd"); writer.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
+                    }
+
+                    if (LIKELY(stay.main_diagnosis.IsValid())) {
+                        writer.Key("main_diagnosis"); writer.String(stay.main_diagnosis.str);
+                    }
+                    if (stay.linked_diagnosis.IsValid()) {
+                        writer.Key("linked_diagnosis"); writer.String(stay.linked_diagnosis.str);
+                    }
+
+                    writer.Key("other_diagnoses"); writer.StartArray();
+                    for (DiagnosisCode diag: stay.diagnoses) {
+                        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
+                            continue;
+
+                        const mco_DiagnosisInfo *diag_info = result.index->FindDiagnosis(diag);
+
+                        writer.StartObject();
+                        writer.Key("diag"); writer.String(diag.str);
+                        if (diag_info) {
+                            writer.Key("severity"); writer.Int(diag_info->Attributes(stay.sex).severity);
+                        }
+                        if (!ghm_root_info || !main_diag_info || !diag_info ||
+                                mco_TestExclusion(*result.index, stay.sex, result.age,
+                                                  *diag_info, *ghm_root_info, *main_diag_info,
+                                                  linked_diag_info)) {
+                            writer.Key("exclude"); writer.Bool(true);
+                        }
+                        writer.EndObject();
+                    }
+                    writer.EndArray();
+
+                    writer.Key("procedures"); writer.StartArray();
+                    for (const mco_ProcedureRealisation &proc: stay.procedures) {
+                        writer.StartObject();
+                        writer.Key("proc"); writer.String(proc.proc.str);
+                        if (proc.phase) {
+                            writer.Key("phase"); writer.Int(proc.phase);
+                        }
+                        writer.Key("activity"); writer.Int(proc.activity);
+                        if (proc.extension) {
+                            writer.Key("extension"); writer.Int(proc.extension);
+                        }
+                        writer.String("date"); writer.String(Fmt(buf, "%1", proc.date).ptr);
+                        writer.String("count"); writer.Int(proc.count);
+                        if (proc.doc) {
+                            writer.String("doc"); writer.String(&proc.doc, 1);
+                        }
+                        writer.EndObject();
+                    }
+                    writer.EndArray();
+                }
+
+                writer.Key("price_cents"); writer.Int(mono_pricing.price_cents);
+                writer.Key("total_cents"); writer.Int(mono_pricing.total_cents);
+
+                writer.EndObject();
+            }
+            writer.EndArray();
+
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        return true;
+    }, conn->compression_type, out_response);
+}

@@ -82,6 +82,7 @@ HeapArray<mco_Result> thop_results;
 HeapArray<mco_Result> thop_mono_results;
 HeapArray<mco_ResultPointers> thop_results_index_ghm;
 HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
+HashMap<int32_t, mco_ResultPointers> thop_results_index_bill_id;
 
 static CatalogSet catalog_set;
 #ifndef NDEBUG
@@ -321,6 +322,21 @@ static bool InitStays(Span<const char *const> stays_filenames)
             ret.first->len += !ret.second;
         }
         thop_results_index_ghm.Trim();
+
+        // By bill id
+        {
+            Size i = 0;
+            for (const mco_Result &result: thop_results) {
+                DebugAssert(thop_mono_results[i].stays[0].bill_id == result.stays[0].bill_id);
+
+                mco_ResultPointers p;
+                p.result = &result;
+                p.mono_results = thop_mono_results.Take(i, result.stays.len);
+                i += result.stays.len;
+
+                thop_results_index_bill_id.Append(result.stays[0].bill_id, p);
+            }
+        }
     }
 
     return true;
@@ -522,12 +538,14 @@ static void InitRoutes()
     routes.Set({"/mco_casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
+    routes.Set({"/mco_results", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
     routes.Set({"/api/mco_casemix_units.json", "GET", Route::Matching::Exact,
                 ProduceMcoCasemixUnits});
     routes.Set({"/api/mco_casemix_duration.json", "GET", Route::Matching::Exact,
                 ProduceMcoCasemixDuration});
+    routes.Set({"/api/mco_results.json", "GET", Route::Matching::Exact, ProduceMcoResults});
     routes.Set({"/api/mco_indexes.json", "GET", Route::Matching::Exact, ProduceMcoIndexes});
     routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
     routes.Set({"/api/mco_procedures.json", "GET", Route::Matching::Exact, ProduceMcoProcedures});

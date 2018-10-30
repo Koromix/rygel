@@ -85,6 +85,38 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
                 } else if (prop.key == "Deny") {
                     deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                } else if (prop.key == "Permissions") {
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
+                        if (part.len) {
+                            bool enable;
+                            if (part[0] == '+') {
+                                enable = true;
+                                part = part.Take(1, part.len - 1);
+                            } else if (part[0] == '-') {
+                                enable = false;
+                                part = part.Take(1, part.len - 1);
+                            } else {
+                                enable = true;
+                            }
+
+                            if (part == "All") {
+                                user.permissions = enable ? UINT_MAX : 0;
+                            } else {
+                                const char *const *name =
+                                    std::find_if(std::begin(UserPermissionNames),
+                                                 std::end(UserPermissionNames),
+                                                 [&](const char *str) { return TestStr(str, part); });
+                                if (name != std::end(UserPermissionNames)) {
+                                    user.permissions =
+                                        ApplyMask(user.permissions, 1u << (name - UserPermissionNames), enable);
+                                } else {
+                                    LogError("Unknown permission '%1'", part);
+                                    valid = false;
+                                }
+                            }
+                        }
+                    }
                 } else if (prop.key == "DispenseModes") {
                     if (prop.value == "All") {
                         user.dispense_modes = UINT_MAX;

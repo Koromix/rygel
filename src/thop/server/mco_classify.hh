@@ -10,3 +10,5 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *url, Response *ou
 
 int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response);
 int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response);
+
+int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response);

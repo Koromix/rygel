@@ -9,7 +9,7 @@ let mco_casemix = {};
     let pages = {};
     let sorts = {};
 
-    // Casemix
+    // Settings
     let st_url_key = null;
     let start_date = null;
     let end_date = null;
@@ -17,7 +17,7 @@ let mco_casemix = {};
     let default_algorithm = null;
     let structures = [];
 
-    // Results
+    // Casemix
     let mix_ready = false;
     let mix_params = {};
     let mix_url = null;
@@ -26,9 +26,14 @@ let mco_casemix = {};
     let mix_durations = {};
     let mix_mismatched_roots = new Set;
 
+    // Results
+    let rt_url = null;
+    let rt_results = [];
+
     // Cache
     let units_summary = null;
     let ghm_roots_summary = null;
+    let deploy_results = new Set;
 
     function runCasemix(route, path, parameters, hash, errors)
     {
@@ -65,7 +70,7 @@ let mco_casemix = {};
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let ghm_roots = mco_common.updateCatalog('mco_ghm_roots').concepts;
-        if (route.view === 'durations' && !route.ghm_root && ghm_roots.length)
+        if (['durations', 'results'].includes(route.view) && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
         if (unspecified && structures.length && ghm_roots.length) {
             if (!route.units.length && structures[route.structure])
@@ -74,6 +79,10 @@ let mco_casemix = {};
                 route.ghm_roots = ghm_roots.map(function(ghm_root) { return ghm_root.ghm_root; }).sort();
 
             unspecified = false;
+        }
+        if (route.view === 'results') {
+            mco_common.updateCatalog('cim10');
+            mco_common.updateCatalog('ccam');
         }
         updateSettings();
 
@@ -92,12 +101,15 @@ let mco_casemix = {};
                 case 'durations': {
                     updateCasemixDuration(route.ghm_root);
                 } break;
+                case 'results': {
+                    updateResults(route.ghm_root);
+                } break;
             }
         }
         delete route.refresh;
 
         // Errors
-        if (!(['ghm_roots', 'units', 'durations'].includes(route.view)))
+        if (!(['ghm_roots', 'units', 'durations', 'results'].includes(route.view)))
             errors.add('Mode d\'affichage incorrect');
         if (!route.units.length && mix_ready)
             errors.add('Aucune unité sélectionnée');
@@ -107,12 +119,12 @@ let mco_casemix = {};
             errors.add('Structure inexistante');
         if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
             errors.add('Regroupement incorrect');
-        if (route.view === 'durations') {
+        if (['durations', 'results'].includes(route.view)) {
             if (!route.ghm_root)
                 errors.add('Aucune racine de GHM sélectionnée');
             if (!checkCasemixGhmRoot(route.ghm_root))
                 errors.add('Cette racine n\'existe pas dans cette période');
-            if (mix_mismatched_roots.has(route.ghm_root))
+            if (route.view === 'durations' && mix_mismatched_roots.has(route.ghm_root))
                 errors.add('Regroupement des GHS suite à changement')
         }
         if (!(['none', 'absolute'].includes(route.mode)))
@@ -122,11 +134,13 @@ let mco_casemix = {};
             errors.add('Algorithme inconnu');
 
         // Refresh settings
-        queryAll('#opt_units, #opt_periods, #opt_mode, #opt_algorithm, #opt_update, #opt_apply_coefficient')
+        queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .removeClass('hide');
+        query('#opt_mode').toggleClass('hide', !['units', 'ghm_roots', 'durations'].includes(route.view));
         query('#opt_ghm_roots').toggleClass('hide', !['units', 'ghm_roots'].includes(route.view));
-        query('#opt_ghm_root').toggleClass('hide', route.view !== 'durations');
-        refreshPeriodsPickers(route.period, route.prev_period, route.mode);
+        query('#opt_ghm_root').toggleClass('hide', !['durations', 'results'].includes(route.view));
+        refreshPeriodsPickers(route.period, route.prev_period,
+                              route.view !== 'results' ? route.mode : 'none');
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
@@ -137,7 +151,8 @@ let mco_casemix = {};
             case 'units': {
                 refreshGhmRootsTree(ghm_roots, route.ghm_roots, route.regroup);
             } break;
-            case 'durations': {
+            case 'durations':
+            case 'results': {
                 refreshGhmRootsMenu(ghm_roots, route.ghm_root);
             } break;
         }
@@ -157,12 +172,16 @@ let mco_casemix = {};
                     refreshDurationTable(route.units, route.ghm_root,
                                          route.apply_coefficient, true);
                 } break;
+                case 'results': {
+                    refreshResults(route.units, route.page);
+                } break;
             }
         }
 
         query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
         query('#cm_units').toggleClass('hide', route.view !== 'units');
         query('#cm_table').toggleClass('hide', route.view !== 'durations');
+        query('#rt').toggleClass('hide', route.view !== 'results');
         if (!data.isBusy() && !mix_ready) {
             query('#cm').addClass('busy');
         } else if (!data.isBusy()) {
@@ -271,6 +290,9 @@ let mco_casemix = {};
         mix_ghm_roots.clear();
         mix_durations = {};
 
+        rt_results = [];
+        deploy_results.clear();
+
         mix_ready = false;
     }
 
@@ -367,6 +389,23 @@ let mco_casemix = {};
                 }
 
                 mix_durations[ghm_root] = json;
+            });
+        }
+    }
+
+    function updateResults(ghm_root)
+    {
+        let params = Object.assign({ghm_root: ghm_root}, mix_params);
+        delete params.diff;
+        let url = buildUrl(thop.baseUrl('api/mco_results.json'), params);
+
+        if (url !== rt_url) {
+            data.get(url, function(json) {
+                rt_results = json;
+                rt_url = url;
+
+                for (let result of json)
+                    result.ghm_root = result.ghm.substr(0, 5);
             });
         }
     }
@@ -1050,6 +1089,257 @@ let mco_casemix = {};
         old_table.replaceWith(table);
     }
 
+    function refreshResults(units, page)
+    {
+        if (!needsRefresh(refreshResults, null, [mix_url, rt_url, units, page]))
+            return;
+
+        units = new Set(units);
+
+        let cim10_map = mco_common.updateCatalog('cim10').map;
+        let ccam_map = mco_common.updateCatalog('ccam').map;
+        let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+
+        function handleIdClick(e)
+        {
+            let table = this.parentNode.parentNode.parentNode.parentNode;
+            if (table.toggleClass('deploy')) {
+                deploy_results.add(table.dataset.bill_id);
+            } else {
+                deploy_results.delete(table.dataset.bill_id);
+            }
+
+            e.preventDefault();
+        }
+
+        function codeWithDesc(map, code)
+        {
+            const desc = map[code];
+            if (code && desc) {
+                return '' + code + ' - ' + desc.desc;
+            } else if (code) {
+                return '' + code;
+            } else {
+                return null;
+            }
+        }
+
+        function unitPath(unit)
+        {
+            if (unit && structures[0]) {
+                let unit_info = structures[0].units[unit];
+                if (unit_info) {
+                    return unit_info.path[unit_info.path.length - 1];
+                } else {
+                    return '' + unit;
+                }
+            } else if (unit) {
+                return '' + unit;
+            } else {
+                return null;
+            }
+        }
+
+        let results = rt_results.filter(function(result) {
+            for (const stay of result.stays) {
+                if (units.has(stay.unit))
+                    return true;
+            }
+            return false;
+        });
+
+        let offset = (page - 1) * TableLen;
+        let end = Math.min(offset + TableLen, results.length);
+
+        let elements = [];
+        for (let i = offset; i < end; i++) {
+            const result = results[i];
+
+            let table = html('table', {class: 'rt_result', 'data-bill_id': result.bill_id},
+                html('tbody',
+                    html('tr', {class: 'rt_header'},
+                        html('td',
+                            html('a', {class: 'rt_id', href: '#', click: handleIdClick},
+                                 '' + result.bill_id)
+                        ),
+                        html('td', (['♂', '♀'][result.sex - 1] || '?') + ' ' + result.age + ' ans'),
+                        html('td', mco_common.durationText(result.duration)),
+                        html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
+                                           'GHM : ' + result.ghm + '\n' +
+                                           'Erreur : ' + result.main_error + '\n' +
+                                           'GHS : ' + result.ghs},
+                            html('a', {href: mco_pricing.routeToUrl({view: 'table',
+                                                                     date: result.index_date,
+                                                                     ghm_root: result.ghm.substr(0, 5)})},
+                                 result.ghm),
+                            ' (' + result.ghs + ')'
+                        ),
+                        html('td', {style: 'text-align: right;'},
+                             priceText(result.price_cents) + '€'),
+                        html('td', {style: 'text-align: right;'},
+                             priceText(result.total_cents) + '€')
+                    )
+                )
+            );
+            let tbody = table.query('tbody');
+
+            table.dataset.bill_id =result.bill_id;
+            if (deploy_results.has(table.dataset.bill_id))
+                table.addClass('deploy');
+
+            for (let j = 0; j < result.stays.length; j++) {
+                const stay = result.stays[j];
+
+                tbody.appendChildren(html('tr', {class: 'rt_stay'},
+                    html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
+                    html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
+                    html('td', {colspan: 2}, mco_common.durationText(stay.duration)),
+                    html('td', {style: 'text-align: right;'},
+                         stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
+                    html('td', {style: 'text-align: right;'},
+                         stay.price_cents ? (priceText(stay.total_cents) + '€') : '')
+                ));
+
+                if (stay.sex) {
+                    let tr = html('tr', {class: 'rt_details'},
+                        html('td', {colspan: 6},
+                            html('div',
+                                html('div', html('table')),
+                                html('div', html('table')),
+                                html('div', html('table'))
+                            )
+                        )
+                    );
+                    let div = tr.query('div');
+                    let table0 = div.childNodes[0].firstChild;
+                    let table1 = div.childNodes[1].firstChild;
+                    let table2 = div.childNodes[2].firstChild;
+
+                    table0.appendChildren([
+                        html('tr',
+                            html('th', 'Sexe'),
+                            html('td', ['Homme', 'Femme'][stay.sex - 1] || '')
+                        ),
+                        html('tr',
+                            html('th', 'Date de naissance'),
+                            html('td', stay.birthdate)
+                        ),
+                        html('tr',
+                            html('th', 'Entrée'),
+                            html('td', '' + stay.entry_date + ' ' + stay.entry_mode +
+                                       (stay.entry_origin ? '-' + stay.entry_origin : ''))
+                        ),
+                        html('tr',
+                            html('th', 'Sortie'),
+                            html('td', '' + stay.exit_date + ' ' + stay.exit_mode +
+                                       (stay.exit_destination ? '-' + stay.exit_destination : ''))
+                        ),
+                        stay.bed_authorization ? html('tr',
+                            html('th', 'Autorisation de Lit'),
+                            html('td', '' + stay.bed_authorization)
+                        ) : null,
+                        stay.igs2 ? html('tr',
+                            html('th', 'IGS 2'),
+                            html('td', '' + stay.igs2)
+                        ) : null,
+                        stay.session_count ? html('tr',
+                            html('th', 'Séances'),
+                            html('td', '' + stay.session_count)
+                        ) : null,
+                        stay.last_menstrual_period ? html('tr',
+                            html('th', 'Dernières règles'),
+                            html('td', '' + stay.last_menstrual_period)
+                        ) : null,
+                        stay.gestational_age ? html('tr',
+                            html('th', 'Âge gestationnel'),
+                            html('td', '' + stay.gestational_age + ' SA')
+                        ) : null,
+                        stay.newborn_weight ? html('tr',
+                            html('th', 'Poids du nouveau-né'),
+                            html('td', '' + stay.newborn_weight + ' grammes')
+                        ) : null,
+                        stay.confirm ? html('tr',
+                            html('th', 'Confirmation'),
+                            html('td', 'Oui')
+                        ) : null,
+                        stay.dip_count ? html('tr',
+                            html('th', 'Séances de DIP'),
+                            html('td', '' + stay.dip_count)
+                        ) : null,
+                        stay.ucd ? html('tr',
+                            html('th', 'Présence UCD'),
+                            html('td', 'Oui')
+                        ) : null
+                    ]);
+
+                    table1.appendChildren([
+                        html('tr',
+                            html('th', 'Diagnostic principal'),
+                            html('td', {title: codeWithDesc(cim10_map, stay.main_diagnosis)},
+                                 stay.main_diagnosis)
+                        ),
+                        stay.linked_diagnosis ? html('tr',
+                            html('th', 'Diagnostic relié'),
+                            html('td', {title: codeWithDesc(cim10_map, stay.linked_diagnosis)},
+                                 stay.linked_diagnosis)
+                        ) : null
+                    ]);
+                    for (let k = 0; k < stay.other_diagnoses.length; k++) {
+                        const diag = stay.other_diagnoses[k];
+
+                        let contents = [diag.diag];
+                        if (diag.severity) {
+                            if (diag.exclude) {
+                                contents.push(' ');
+                                contents.push(html('s', '(' + (diag.severity + 1) + ')'));
+                            } else {
+                                contents.push(' (' + (diag.severity + 1) + ')');
+                            }
+                        }
+
+                        let tr = html('tr',
+                            !k ? html('th', 'Diagnostics associés') : html('td'),
+                            html('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
+                        );
+
+                        table1.appendChild(tr);
+                    }
+
+                    for (let k = 0; k < stay.procedures.length; k++) {
+                        const proc = stay.procedures[k];
+                        let text = proc.proc + (proc.phase ? '/' + proc.phase : '') +
+                                   ' (' + proc.activity + ')' +
+                                   (proc.count !== 1 ? ' * ' + proc.count : '');
+
+                        let tr = html('tr',
+                            !k ? html('th', 'Actes') : html('td'),
+                            html('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
+                        );
+
+                        table2.appendChild(tr);
+                    }
+
+                    tbody.appendChild(tr);
+                }
+            }
+
+            elements.push(table);
+        }
+
+        let pagers = [
+            html('table', {class: 'pagr'}),
+            html('table', {class: 'pagr'})
+        ];
+        syncPagers(pagers, page, computeLastPage(end - offset, results.length, TableLen));
+
+        query('#rt').innerHTML = '';
+        query('#rt').appendChildren([
+            pagers[0],
+            elements,
+            pagers[1]
+        ]);
+    }
+
     function aggregate(rows, by)
     {
         if (!Array.isArray(by))
@@ -1165,9 +1455,9 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
-        refreshUnitsTable([], [], 0, 1);
-        refreshGhmRootsTable([], [], 1);
-        refreshDurationTable([]);
+        queryAll('#cm > *').forEach(function(el) {
+            el.innerHTML = '';
+        });
     });
 
     thop.registerUrl('mco_casemix', this, runCasemix);

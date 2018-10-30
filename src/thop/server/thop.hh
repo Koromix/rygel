@@ -57,6 +57,7 @@ extern HeapArray<mco_Result> thop_results;
 extern HeapArray<mco_Result> thop_mono_results;
 extern HeapArray<mco_ResultPointers> thop_results_index_ghm;
 extern HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
+extern HashMap<int32_t, mco_ResultPointers> thop_results_index_bill_id;
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,

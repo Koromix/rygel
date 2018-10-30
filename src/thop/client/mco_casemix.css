@@ -34,3 +34,92 @@
 #cm_table .price.diff { min-width: 78px; }
 #cm_table .price.diff:before { font-style: normal; }
 #cm_table .empty { opacity: 0.5; }
+
+.rt_result {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #ddd;
+    table-layout: fixed;
+}
+
+.rt_header td {
+    padding: 3px;
+    background: #ddd;
+    text-align: left;
+    font-weight: normal;
+}
+
+.rt_id {
+    color: black;
+    font-weight: normal;
+}
+.rt_result:not(.deploy) .rt_stay { display: none; }
+.rt_result:not(.deploy) .rt_details { display: none; }
+
+.rt_stay th, .rt_stay td {
+    background: #eee;
+    padding: 3px;
+    text-align: left;
+    font-weight: bold;
+    font-style: normal;
+}
+
+.rt_details { background: #fafafa; }
+.rt_details > td { padding: 0; }
+.rt_details table {
+    width: 100%;
+    table-layout: fixed;
+}
+.rt_details table th, .rt_details table td { padding: 3px; }
+.rt_details table th {
+    text-align: left;
+    font-weight: normal;
+    font-style: normal;
+}
+.rt_details table td {
+    text-align: left;
+    font-style: italic;
+}
+
+@media screen and (min-width: 801px) {
+    .rt_result { margin-bottom: 1em; }
+
+    .rt_result:not(.deploy) .rt_id {
+        padding-left: 10px;
+        background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAHCAYAAAAvZezQAAAAH0lEQVQImWNgYGD4z4AG/qML/kcX/I8uiFMFihlwAADE3A/xEQom7AAAAABJRU5ErkJggg==');
+        background-repeat: no-repeat;
+        background-position: 2px center;
+    }
+    .rt_result.deploy .rt_id {
+        padding-left: 10px;
+        background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAcAAAAECAYAAABCxiV9AAAAGUlEQVQImWNgYGD4jwczMOCTwKYAK0CRAACmBg/xSKFhKQAAAABJRU5ErkJggg==');
+        background-repeat: no-repeat;
+        background-position: left center;
+    }
+
+    .rt_stay th, .rt_stay td { font-size: 0.8em; }
+
+    .rt_details > td > div {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+    }
+    .rt_details > td > div > div {
+        display: table-cell;
+    }
+}
+
+@media screen and (max-width: 800px) {
+    .rt_result {
+        font-size: 0.8em;
+        border: 0;
+    }
+
+    .rt_header td { box-sizing: border-box; }
+    .rt_header td:nth-child(1) { width: 18vw; }
+    .rt_header td:nth-child(2) { width: 18vw; }
+    .rt_header td:nth-child(3) { width: 18vw; }
+    .rt_header td:nth-child(4) { width: 23vw; }
+    .rt_header td:nth-child(5) { width: 23vw; }
+    .rt_header td:nth-child(6) { width: 23vw; }
+}
