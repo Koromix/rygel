@@ -193,6 +193,11 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff"),
                             &diff_dates[0], &diff_dates[1]))
             return CreateErrorPage(422, out_response);
+        if (dates[0].value && diff_dates[0].value &&
+                dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
+            LogError("Parameters 'dates' and 'diff' must not overlap");
+            return CreateErrorPage(422, out_response);
+        }
 
         const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dispense_mode");
         if (mode_str) {
@@ -210,7 +215,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         }
 
         const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
-        if (apply_coefficent_str && apply_coefficent_str[0]) {
+        if (apply_coefficent_str) {
             if (TestStr(apply_coefficent_str, "1")) {
                 apply_coefficent = true;
             } else if (TestStr(apply_coefficent_str, "0")) {
@@ -219,14 +224,13 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 LogError("Invalid 'apply_coefficent' parameter value '%1'", apply_coefficent_str);
                 return CreateErrorPage(422, out_response);
             }
+        } else {
+            LogError("Missing 'apply_coefficent' argument");
+            return CreateErrorPage(422, out_response);
         }
     }
 
-    if (dates[0].value && diff_dates[0].value &&
-            dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
-        LogError("Parameters 'dates' and 'diff' must not overlap");
-        return CreateErrorPage(422, out_response);
-    }
+    // Permissions
     if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
@@ -511,9 +515,10 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
     mco_GhmRootCode ghm_root;
     {
         const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
-        if (!ghm_root_str)
+        if (!ghm_root_str) {
+            LogError("Missing 'ghm_root' argument");
             return CreateErrorPage(422, out_response);
-
+        }
         ghm_root = mco_GhmRootCode::FromString(ghm_root_str);
         if (!ghm_root.IsValid())
             return CreateErrorPage(422, out_response);
