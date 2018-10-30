@@ -77,6 +77,7 @@
 .pr_grid .removed:after { content: '*'; }
 .pr_grid .added:after { content: '*'; }
 
+#pr_table .info:before { content: "⚠ "; }
 #pr_table .warn {
     filter: grayscale(90%) !important;
     color: #555;

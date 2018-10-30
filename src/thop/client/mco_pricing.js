@@ -274,10 +274,18 @@ let mco_pricing = {};
                     let td;
                     if (info) {
                         td = html('td', {class: info.mode}, priceText(info.price));
+
+                        let title = '';
                         if (!duration && col.warn_cmd28) {
                             td.addClass('warn');
-                            td.title = 'Devrait être orienté dans la CMD 28 (séance)';
+                            title += 'Devrait être orienté dans la CMD 28 (séance)\n';
                         }
+                        if (col.warn_ucd) {
+                            td.addClass('info');
+                            title += 'Possibilité de minoration UCD (40 €)\n';
+                        }
+                        if (title)
+                            td.title = title;
                     } else {
                         td = html('td');
                     }

@@ -283,6 +283,9 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
                 }
 
                 if (ghs_price_info) {
+                    if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::Minoration) {
+                        writer.Key("warn_ucd"); writer.Bool(true);
+                    }
                     writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
                     writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(sector));
                     if (ghs_price_info->exh_treshold) {
