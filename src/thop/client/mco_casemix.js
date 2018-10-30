@@ -278,7 +278,7 @@ let mco_casemix = {};
     {
         let params = {
             dates: (start && end) ? (start + '..' + end) : null,
-            mode: mode,
+            dispense_mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             apply_coefficient: 0 + apply_coefficient,
             key: user.getUrlKey()

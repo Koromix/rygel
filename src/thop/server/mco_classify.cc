@@ -194,16 +194,19 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                             &diff_dates[0], &diff_dates[1]))
             return CreateErrorPage(422, out_response);
 
-        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "mode");
-        if (mode_str && mode_str[0]) {
+        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dispense_mode");
+        if (mode_str) {
             const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                   std::end(mco_DispenseModeOptions),
                                                   [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
             if (desc == std::end(mco_DispenseModeOptions)) {
-                LogError("Invalid 'mode' parameter value '%1'", mode_str);
+                LogError("Invalid 'dispense_mode' parameter value '%1'", mode_str);
                 return CreateErrorPage(422, out_response);
             }
             dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+        } else {
+            LogError("Missing 'dispense_mode' argument");
+            return CreateErrorPage(422, out_response);
         }
 
         const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
