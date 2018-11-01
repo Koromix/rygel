@@ -1472,16 +1472,32 @@ public:
     inline bool Test(Size idx) const
     {
         DebugAssert(idx >= 0 && idx < N);
-        return data[idx / (SIZE(size_t) * 8)] & ((size_t)1 << (idx % (SIZE(size_t) * 8)));
+
+        Size offset = idx / (SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+
+        return data[offset] & mask;
     }
     inline void Set(Size idx, bool value = true)
     {
         DebugAssert(idx >= 0 && idx < N);
-        if (value) {
-            data[idx / (SIZE(size_t) * 8)] |= (size_t)1 << (idx % (SIZE(size_t) * 8));
-        } else {
-            data[idx / (SIZE(size_t) * 8)] &= ~((size_t)1 << (idx % (SIZE(size_t) * 8)));
-        }
+
+        Size offset = idx / (SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+
+        data[offset] = ApplyMask(data[offset], mask, value);
+    }
+    inline bool TestAndSet(Size idx, bool value = true)
+    {
+        DebugAssert(idx >= 0 && idx < N);
+
+        Size offset = idx / (SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+
+        bool ret = data[offset] & mask;
+        data[offset] = ApplyMask(data[offset], mask, value);
+
+        return ret;
     }
 
     Bitset &operator&=(const Bitset &other)
