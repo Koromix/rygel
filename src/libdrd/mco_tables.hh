@@ -144,13 +144,6 @@ struct mco_ProcedureInfo {
     HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
 };
 
-struct mco_ProcedureExtensionInfo {
-    ProcedureCode proc;
-    int8_t phase;
-
-    int8_t extension;
-};
-
 template <Size N>
 struct mco_ValueRangeCell {
     struct {
@@ -257,38 +250,6 @@ struct mco_SrcPair {
 };
 
 Date mco_ConvertDate1980(uint16_t days);
-
-bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
-                           Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables);
-
-bool mco_ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &table,
-                              HeapArray<mco_GhmDecisionNode> *out_nodes);
-bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_DiagnosisInfo> *out_diags);
-bool mco_ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_ExclusionInfo> *out_exclusions);
-bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_ProcedureInfo> *out_procs);
-bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                      HeapArray<mco_ProcedureExtensionInfo> *out_procedures);
-bool mco_ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
-                           HeapArray<mco_GhmRootInfo> *out_ghm_roots);
-bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
-                            HeapArray<mco_ValueRangeCell<2>> *out_cells);
-
-bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table,
-                            HeapArray<mco_GhmToGhsInfo> *out_nodes);
-bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                 HeapArray<mco_AuthorizationInfo> *out_auths);
-bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
-                           HeapArray<mco_SrcPair> *out_pairs);
-bool mco_ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                 HeapArray<mco_GhsCode> *out_minored_ghs);
-
-bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
-                         double *out_ghs_coefficient,
-                         HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
-                         mco_SupplementCounters<int32_t> *out_supplement_prices);
 
 struct mco_TableIndex {
     Date limit_dates[2];

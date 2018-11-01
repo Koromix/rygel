@@ -5,6 +5,12 @@
 #include "../common/kutil.hh"
 #include "mco_tables.hh"
 
+struct ProcedureExtensionInfo {
+    ProcedureCode proc;
+    int8_t phase;
+    int8_t extension;
+};
+
 #define FAIL_PARSE_IF(Filename, Cond) \
     do { \
         if (UNLIKELY(Cond)) { \
@@ -52,8 +58,8 @@ static ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint16_t
 }
 
 // TODO: Be careful with overflow in offset and length checks
-bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
-                           Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables)
+static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
+                              Allocator *str_alloc, HeapArray<mco_TableInfo> *out_tables)
 {
     DEFER_NC(out_tables_guard, len = out_tables->len) { out_tables->RemoveFrom(len); };
 
@@ -231,8 +237,8 @@ bool mco_ParseTableHeaders(Span<const uint8_t> file_data, const char *filename,
     return true;
 }
 
-bool mco_ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &table,
-                              HeapArray<mco_GhmDecisionNode> *out_nodes)
+static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &table,
+                                 HeapArray<mco_GhmDecisionNode> *out_nodes)
 {
     DEFER_NC(out_nodes_guard, len = out_nodes->len) { out_nodes->RemoveFrom(len); };
 
@@ -293,8 +299,8 @@ bool mco_ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &tab
     return true;
 }
 
-bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_DiagnosisInfo> *out_diags)
+static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                HeapArray<mco_DiagnosisInfo> *out_diags)
 {
     DEFER_NC(out_diags_guard, len = out_diags->len) { out_diags->RemoveFrom(len); };
 
@@ -406,8 +412,8 @@ bool mco_ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &tabl
     return true;
 }
 
-bool mco_ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_ExclusionInfo> *out_exclusions)
+static bool ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                HeapArray<mco_ExclusionInfo> *out_exclusions)
 {
     DEFER_NC(out_exclusions_guard, len = out_exclusions->len) { out_exclusions->RemoveFrom(len); };
 
@@ -427,8 +433,8 @@ bool mco_ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &tabl
     return true;
 }
 
-bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &table,
-                             HeapArray<mco_ProcedureInfo> *out_procs)
+static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                HeapArray<mco_ProcedureInfo> *out_procs)
 {
     DEFER_NC(out_proc_guard, len = out_procs->len) { out_procs->RemoveFrom(len); };
 
@@ -522,8 +528,8 @@ bool mco_ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &tabl
     return true;
 }
 
-bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                      HeapArray<mco_ProcedureExtensionInfo> *out_extensions)
+static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                         HeapArray<ProcedureExtensionInfo> *out_extensions)
 {
     DEFER_NC(out_guard, len = out_extensions->len) { out_extensions->RemoveFrom(len); };
 
@@ -558,7 +564,7 @@ bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableI
 
         for (Size block_offset = block_start; block_offset < block_end;
              block_offset += SIZE(PackedProcedureExtension)) {
-            mco_ProcedureExtensionInfo ext_info = {};
+            ProcedureExtensionInfo ext_info = {};
 
             PackedProcedureExtension raw_proc_ext;
             {
@@ -581,8 +587,8 @@ bool mco_ParseProcedureExtensionTable(const uint8_t *file_data, const mco_TableI
     return true;
 }
 
-bool mco_ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
-                           HeapArray<mco_GhmRootInfo> *out_ghm_roots)
+static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
+                              HeapArray<mco_GhmRootInfo> *out_ghm_roots)
 {
     DEFER_NC(out_ghm_roots_guard, len = out_ghm_roots->len) { out_ghm_roots->RemoveFrom(len); };
 
@@ -689,8 +695,8 @@ bool mco_ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &table,
     return true;
 }
 
-bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
-                            HeapArray<mco_ValueRangeCell<2>> *out_cells)
+static bool ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table,
+                               int section_idx, HeapArray<mco_ValueRangeCell<2>> *out_cells)
 {
     DEFER_NC(out_cells_guard, len = out_cells->len) { out_cells->RemoveFrom(len); };
 
@@ -732,8 +738,8 @@ bool mco_ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &table
     return true;
 }
 
-bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table,
-                            HeapArray<mco_GhmToGhsInfo> *out_ghs)
+static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table,
+                               HeapArray<mco_GhmToGhsInfo> *out_ghs)
 {
     Size start_ghs_len = out_ghs->len;
     DEFER_N(out_ghs_guard) { out_ghs->RemoveFrom(start_ghs_len); };
@@ -877,8 +883,8 @@ bool mco_ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &table
     return true;
 }
 
-bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                 HeapArray<mco_AuthorizationInfo> *out_auths)
+static bool ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                    HeapArray<mco_AuthorizationInfo> *out_auths)
 {
     DEFER_NC(out_auths_guard, len = out_auths->len) { out_auths->RemoveFrom(len); };
 
@@ -921,8 +927,8 @@ bool mco_ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInfo &
     return true;
 }
 
-bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table, int section_idx,
-                           HeapArray<mco_SrcPair> *out_pairs)
+static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
+                              int section_idx, HeapArray<mco_SrcPair> *out_pairs)
 {
     DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
 
@@ -968,8 +974,8 @@ bool mco_ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
     return true;
 }
 
-bool mco_ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
-                                 HeapArray<mco_GhsCode> *out_minored_ghs)
+static bool ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                    HeapArray<mco_GhsCode> *out_minored_ghs)
 {
     DEFER_NC(out_guard, len = out_minored_ghs->len) { out_minored_ghs->RemoveFrom(len); };
 
@@ -990,10 +996,10 @@ bool mco_ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInfo &
     return true;
 }
 
-bool mco_ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
-                         double *out_ghs_coefficient,
-                         HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
-                         mco_SupplementCounters<int32_t> *out_supplement_prices)
+static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &table,
+                            double *out_ghs_coefficient,
+                            HeapArray<mco_GhsPriceInfo> *out_ghs_prices,
+                            mco_SupplementCounters<int32_t> *out_supplement_prices)
 {
     DEFER_NC(out_guard, len = out_ghs_prices->len) { out_ghs_prices->RemoveFrom(len); };
     mco_SupplementCounters<int32_t> supplement_prices = {};
@@ -1139,7 +1145,7 @@ bool mco_TableSetBuilder::LoadTab(StreamReader &st)
         return false;
 
     Size start_len = set.tables.len;
-    if (!mco_ParseTableHeaders(raw_buf, st.filename, &set.str_alloc, &set.tables))
+    if (!ParseTableHeaders(raw_buf, st.filename, &set.str_alloc, &set.tables))
         return false;
 
     Span<uint8_t> raw_data = raw_buf.Leak();
@@ -1390,32 +1396,33 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
         switch ((mco_TableType)i) {
             case mco_TableType::GhmDecisionTree: {
-                LOAD_TABLE(ghm_nodes, mco_ParseGhmDecisionTree,
+                LOAD_TABLE(ghm_nodes, ParseGhmDecisionTree,
                            load_info->raw_data.ptr, *table_info);
             } break;
 
             case mco_TableType::DiagnosisTable: {
-                LOAD_TABLE(diagnoses, mco_ParseDiagnosisTable,
+                LOAD_TABLE(diagnoses, ParseDiagnosisTable,
                            load_info->raw_data.ptr, *table_info);
-                LOAD_TABLE(exclusions, mco_ParseExclusionTable,
+                LOAD_TABLE(exclusions, ParseExclusionTable,
                            load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(diagnoses, diagnoses_map, diagnoses);
             } break;
 
             case mco_TableType::ProcedureTable: {
-                LOAD_TABLE(procedures, mco_ParseProcedureTable,
+                LOAD_TABLE(procedures, ParseProcedureTable,
                            load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(procedures, procedures_map, procedures);
             } break;
             case mco_TableType::ProcedureExtensionTable: {
-                StaticAssert((int)mco_TableType::ProcedureExtensionTable > (int)mco_TableType::ProcedureTable);
+                StaticAssert((int)mco_TableType::ProcedureExtensionTable >
+                             (int)mco_TableType::ProcedureTable);
 
-                if (table_info) {
-                    HeapArray<mco_ProcedureExtensionInfo> extensions;
-                    valid &= mco_ParseProcedureExtensionTable(load_info->raw_data.ptr,
-                                                              *table_info, &extensions);
+                if (table_info && load_info->prev_index_idx < 0) {
+                    HeapArray<ProcedureExtensionInfo> extensions;
+                    valid &= ParseProcedureExtensionTable(load_info->raw_data.ptr,
+                                                          *table_info, &extensions);
 
-                    for (const mco_ProcedureExtensionInfo &ext_info: extensions) {
+                    for (const ProcedureExtensionInfo &ext_info: extensions) {
                         if (ext_info.extension >= 8) {
                             LogError("Procedure extension value %1 > 7 cannot be used",
                                      ext_info.extension);
@@ -1437,38 +1444,38 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
             } break;
 
             case mco_TableType::GhmRootTable: {
-                LOAD_TABLE(ghm_roots, mco_ParseGhmRootTable,
+                LOAD_TABLE(ghm_roots, ParseGhmRootTable,
                            load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(ghm_roots, ghm_roots_map, ghm_roots);
             } break;
 
             case mco_TableType::SeverityTable: {
-                LOAD_TABLE(gnn_cells, mco_ParseSeverityTable,
+                LOAD_TABLE(gnn_cells, ParseSeverityTable,
                            load_info->raw_data.ptr, *table_info, 0);
-                LOAD_TABLE(cma_cells[0], mco_ParseSeverityTable,
+                LOAD_TABLE(cma_cells[0], ParseSeverityTable,
                            load_info->raw_data.ptr, *table_info, 1);
-                LOAD_TABLE(cma_cells[1], mco_ParseSeverityTable,
+                LOAD_TABLE(cma_cells[1], ParseSeverityTable,
                            load_info->raw_data.ptr, *table_info, 2);
-                LOAD_TABLE(cma_cells[2], mco_ParseSeverityTable,
+                LOAD_TABLE(cma_cells[2], ParseSeverityTable,
                            load_info->raw_data.ptr, *table_info, 3);
             } break;
 
             case mco_TableType::GhmToGhsTable: {
-                LOAD_TABLE(ghs, mco_ParseGhmToGhsTable, load_info->raw_data.ptr, *table_info);
+                LOAD_TABLE(ghs, ParseGhmToGhsTable, load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(ghs, ghm_to_ghs_map, ghm_to_ghs);
                 BUILD_MAP(ghs, ghm_root_to_ghs_map, ghm_root_to_ghs);
             } break;
 
             case mco_TableType::AuthorizationTable: {
-                LOAD_TABLE(authorizations, mco_ParseAuthorizationTable,
+                LOAD_TABLE(authorizations, ParseAuthorizationTable,
                            load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(authorizations, authorizations_map, authorizations);
             } break;
 
             case mco_TableType::SrcPairTable: {
-                LOAD_TABLE(src_pairs[0], mco_ParseSrcPairTable,
+                LOAD_TABLE(src_pairs[0], ParseSrcPairTable,
                            load_info->raw_data.ptr, *table_info, 0);
-                LOAD_TABLE(src_pairs[1], mco_ParseSrcPairTable,
+                LOAD_TABLE(src_pairs[1], ParseSrcPairTable,
                            load_info->raw_data.ptr, *table_info, 1);
             } break;
 
@@ -1479,9 +1486,9 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 if (table_info) {
                     if (load_info->prev_index_idx < 0) {
                         auto array = set.store.ghs_prices[table_idx].AppendDefault();
-                        valid &= mco_ParsePriceTable(load_info->raw_data, *table_info,
-                                                     &index.ghs_coefficient[table_idx], array,
-                                                     &index.supplement_prices[table_idx]);
+                        valid &= ParsePriceTable(load_info->raw_data, *table_info,
+                                                 &index.ghs_coefficient[table_idx], array,
+                                                 &index.supplement_prices[table_idx]);
                         index.ghs_prices[table_idx] = *array;
                     } else {
                         index.ghs_coefficient[table_idx] = set.indexes[load_info->prev_index_idx].ghs_coefficient[table_idx];
@@ -1496,8 +1503,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
             case mco_TableType::GhsMinorationTable: {
                 if (table_info) {
                     HeapArray<mco_GhsCode> minored_ghs;
-                    valid &= mco_ParseGhsMinorationTable(load_info->raw_data.ptr, *table_info,
-                                                         &minored_ghs);
+                    valid &= ParseGhsMinorationTable(load_info->raw_data.ptr, *table_info,
+                                                     &minored_ghs);
 
                     for (int j = 0; j < 2; j++) {
                         for (mco_GhsCode ghs: minored_ghs) {
