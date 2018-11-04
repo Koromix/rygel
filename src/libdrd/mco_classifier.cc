@@ -396,7 +396,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
             if (UNLIKELY(!proc.count)) {
                 valid &= SetError(out_errors, 52);
             }
-            if (UNLIKELY(!proc.activities)) {
+            if (UNLIKELY(!proc.activity)) {
                 valid &= SetError(out_errors, 103);
             }
             if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureDoc) &&
@@ -451,25 +451,20 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     }
                 }
 
-                uintptr_t proc_info_mask = 0;
+                uintptr_t global_ptr_mask = 0;
                 if (!TestStr(MakeSpan(proc.proc.str, 4), "YYYY")) {
-                    uint8_t extra_activities = (uint8_t)(proc.activities & ~proc_info->activities);
-                    if (UNLIKELY(extra_activities)) {
-                        if (extra_activities & ~0x3E) {
-                            valid &= SetError(out_errors, 103);
-                        }
-                        extra_activities &= 0x3E;
-
-                        if (extra_activities & (1 << 4)) {
+                    if (UNLIKELY(!(proc_info->activities & (1 << proc.activity)))) {
+                        if (proc.activity == 4) {
                             valid &= SetError(out_errors, 110);
-                        }
-                        if (extra_activities & ~(1 << 4)) {
+                        } else if (proc.activity < 1 || proc.activity > 5) {
+                            valid &= SetError(out_errors, 103);
+                        } else {
                             SetError(out_errors, 111, 0);
                         }
                     }
 
                     if (UNLIKELY(stay.exit.date >= Date(2013, 3, 1) &&
-                                 (proc.activities & (1 << 4)) && !proc.doc)) {
+                                 proc.activity == 4 && !proc.doc)) {
                         SetError(out_errors, 170, 0);
                     }
 
@@ -478,19 +473,19 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     // us to trivially detect when activity 1 is missing for a given procedure
                     // in the deduplication phase below (error 167).
                     StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 2);
-                    if (!(proc.activities & (1 << 1)) && !(proc_info->bytes[42] & 0x2)) {
-                        proc_info_mask = 0x1;
+                    if (proc.activity != 1 && !(proc_info->bytes[42] & 0x2)) {
+                        global_ptr_mask = 0x1;
                     }
                 }
 
                 out_prepared_set->store.procedures.ptr[pointers_count++] =
-                    (const mco_ProcedureInfo *)((uintptr_t)proc_info | proc_info_mask);
+                    (const mco_ProcedureInfo *)((uintptr_t)proc_info | global_ptr_mask);
                 for (Size i = 0; i < proc.count; i++) {
                     out_prepared_set->store.procedures.Append(proc_info);
                 }
                 mono_prep.procedures.len += proc.count;
 
-                proc_activities |= proc.activities;
+                proc_activities |= 1 << proc.activity;
             } else {
                 Span <const mco_ProcedureInfo> compatible_procs = index.FindProcedure(proc.proc);
                 bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),

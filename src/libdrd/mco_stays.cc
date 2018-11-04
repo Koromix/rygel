@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 11
+#define PACK_VERSION 12
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -401,11 +401,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
                 offset += 3;
             }
             ParsePmsiInt(ReadFragment(1), &proc.phase);
-            {
-                int activity = 0;
-                ParsePmsiInt(ReadFragment(1), &activity);
-                proc.activities = (uint8_t)(1 << activity);
-            }
+            ParsePmsiInt(ReadFragment(1), &proc.activity);
             if (line[offset] != ' ') {
                 proc.doc = UpperAscii(line[offset]);
             }
@@ -752,11 +748,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
                 offset += 2;
             }
             ParsePmsiInt(ReadFragment(1), &proc.phase);
-            {
-                int activity;
-                ParsePmsiInt(ReadFragment(1), &activity);
-                proc.activities = (uint8_t)(1 << activity);
-            }
+            ParsePmsiInt(ReadFragment(1), &proc.activity);
             ParsePmsiChar(line[offset++], &proc.doc);
             offset += 6; // Skip modifiers, doc extension, etc.
             ParsePmsiInt(ReadFragment(2), &proc.count);

@@ -307,14 +307,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 }
             }
             proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
-            {
-                int activities_dec = procedures.activity[k];
-                while (activities_dec) {
-                    int activity = activities_dec % 10;
-                    activities_dec /= 10;
-                    proc.activities |= (uint8_t)(1 << activity);
-                }
-            }
+            proc.activity = (int8_t)procedures.activity[k];
             proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 0);
             proc.date = procedures.date[k];
             if (procedures.doc.Len()) {
@@ -1310,15 +1303,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
                 procedures_proc.Set(k, proc.proc.str);
                 procedures_extension[k] = proc.extension ? proc.extension : NA_INTEGER;
                 procedures_phase[k] = proc.phase;
-                {
-                    int activities_dec = 0;
-                    for (int i = 1; i < 8; i++) {
-                        if (proc.activities & (1 << i)) {
-                            activities_dec = (activities_dec * 10) + i;
-                        }
-                    }
-                    procedures_activity[k] = activities_dec;
-                }
+                procedures_activity[k] = proc.activity;
                 procedures_date.Set(k, proc.date);
                 procedures_count[k] = LIKELY(proc.count) ? proc.count : NA_INTEGER;
                 if (proc.doc) {

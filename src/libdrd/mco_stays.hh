@@ -10,7 +10,7 @@
 struct mco_ProcedureRealisation {
     ProcedureCode proc;
     int8_t phase;
-    uint8_t activities;
+    int8_t activity;
     int16_t count;
     Date date;
 
