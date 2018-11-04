@@ -287,6 +287,7 @@ void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st
                     mco_DumpProcedureTable(index.procedures, out_st);
                     PrintLn(out_st);
                 } break;
+                case mco_TableType::ProcedureAdditionTable: {} break;
                 case mco_TableType::ProcedureExtensionTable: {} break;
                 case mco_TableType::GhmRootTable: {
                     PrintLn(out_st, "    GHM Roots:");

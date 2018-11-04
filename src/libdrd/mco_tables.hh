@@ -13,6 +13,7 @@ enum class mco_TableType: uint32_t {
     GhmDecisionTree,
     DiagnosisTable,
     ProcedureTable,
+    ProcedureAdditionTable,
     ProcedureExtensionTable,
     GhmRootTable,
     SeverityTable,
@@ -29,6 +30,7 @@ static const char *const mco_TableTypeNames[] = {
     "GHM Decision Tree",
     "Diagnosis Table",
     "Procedure Table",
+    "Procedure Addition Table",
     "Procedure Extension Table",
     "GHM Root Table",
     "Severity Table",
@@ -126,6 +128,12 @@ struct mco_ProcedureInfo {
     uint8_t bytes[54];
     uint8_t extensions;
 
+    int16_t additions[8];
+    struct {
+        int16_t offset;
+        int16_t len;
+    } addition_list;
+
     static int MaskToDec(int8_t value)
     {
         int dec = 0;
@@ -142,6 +150,14 @@ struct mco_ProcedureInfo {
     int ExtensionsToDec() const { return MaskToDec(extensions); }
 
     HASH_TABLE_HANDLER(mco_ProcedureInfo, proc);
+};
+
+struct mco_ProcedureLink {
+    ProcedureCode proc;
+    int8_t phase;
+    int8_t activity;
+
+    int16_t addition_idx;
 };
 
 template <Size N>
@@ -262,6 +278,7 @@ struct mco_TableIndex {
     Span<const mco_DiagnosisInfo> diagnoses;
     Span<const mco_ExclusionInfo> exclusions;
     Span<const mco_ProcedureInfo> procedures;
+    Span<const mco_ProcedureLink> procedure_links;
     Span<const mco_GhmRootInfo> ghm_roots;
     Span<const mco_ValueRangeCell<2>> gnn_cells;
     Span<const mco_ValueRangeCell<2>> cma_cells[3];
@@ -308,6 +325,7 @@ public:
         BlockQueue<HeapArray<mco_DiagnosisInfo>, 16> diagnoses;
         BlockQueue<HeapArray<mco_ExclusionInfo>, 16> exclusions;
         BlockQueue<HeapArray<mco_ProcedureInfo>, 16> procedures;
+        BlockQueue<HeapArray<mco_ProcedureLink>, 16> procedure_links;
         BlockQueue<HeapArray<mco_GhmRootInfo>, 16> ghm_roots;
         BlockQueue<HeapArray<mco_ValueRangeCell<2>>, 16> gnn_cells;
         BlockQueue<HeapArray<mco_ValueRangeCell<2>>, 16> cma_cells[3];

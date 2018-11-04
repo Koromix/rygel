@@ -11,6 +11,16 @@ struct ProcedureExtensionInfo {
     int8_t extension;
 };
 
+struct ProcedureAdditionInfo {
+    ProcedureCode proc1;
+    int8_t phase1;
+    int8_t activity1;
+
+    ProcedureCode proc2;
+    int8_t phase2;
+    int8_t activity2;
+};
+
 #define FAIL_PARSE_IF(Filename, Cond) \
     do { \
         if (UNLIKELY(Cond)) { \
@@ -185,6 +195,8 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
             table.type = mco_TableType::GhmToGhsTable;
         } else if (TestStr(table.raw_type, "TABCOMBI")) {
             table.type = mco_TableType::SeverityTable;
+        } else if (TestStr(table.raw_type, "GESTCOMP")) {
+            table.type = mco_TableType::ProcedureAdditionTable;
         } else if (TestStr(table.raw_type, "CCAMDESC")) {
             table.type = mco_TableType::ProcedureExtensionTable;
         } else if (TestStr(table.raw_type, "AUTOREFS")) {
@@ -525,6 +537,96 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
     }
 
     out_proc_guard.disable();
+    return true;
+}
+
+static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_TableInfo &table,
+                                        HeapArray<ProcedureAdditionInfo> *out_additions)
+{
+    DEFER_NC(out_guard, len = out_additions->len) { out_additions->RemoveFrom(len); };
+
+#pragma pack(push, 1)
+    struct PackedRootPtr {
+        uint16_t count;
+        uint16_t proc1_idx;
+    };
+    struct PackedProc1 {
+        char char4;
+        uint32_t seq_phase_activity;
+        uint8_t count;
+        uint16_t proc2_idx;
+    };
+    struct PackedProc2 {
+        uint16_t root_idx;
+        char char4;
+        uint32_t seq_phase_activity;
+    };
+#pragma pack(pop)
+
+    FAIL_PARSE_IF(table.filename, table.sections.len != 4);
+    FAIL_PARSE_IF(table.filename, table.sections[0].values_count != 26 * 26 * 26 ||
+                                  table.sections[0].value_len != SIZE(PackedRootPtr));
+    FAIL_PARSE_IF(table.filename, table.sections[1].value_len != SIZE(PackedProc1));
+    FAIL_PARSE_IF(table.filename, table.sections[2].value_len != 2);
+    FAIL_PARSE_IF(table.filename, table.sections[3].value_len != SIZE(PackedProc2));
+
+    for (int16_t root_idx = 0; root_idx < table.sections[0].values_count; root_idx++) {
+        PackedRootPtr raw_root_ptr;
+        memcpy(&raw_root_ptr, file_data + table.sections[0].raw_offset +
+                                          root_idx * SIZE(PackedRootPtr), SIZE(PackedRootPtr));
+        raw_root_ptr.count = BigEndian(raw_root_ptr.count);
+        raw_root_ptr.proc1_idx = BigEndian(raw_root_ptr.proc1_idx);
+        FAIL_PARSE_IF(table.filename,
+                      raw_root_ptr.proc1_idx > table.sections[1].values_count - raw_root_ptr.count);
+
+        for (Size i = 0; i < raw_root_ptr.count; i++) {
+            PackedProc1 raw_proc1;
+            memcpy(&raw_proc1, file_data + table.sections[1].raw_offset +
+                                           (raw_root_ptr.proc1_idx + i) * table.sections[1].value_len,
+                   SIZE(PackedProc1));
+            raw_proc1.seq_phase_activity = BigEndian(raw_proc1.seq_phase_activity);
+            raw_proc1.proc2_idx = BigEndian(raw_proc1.proc2_idx);
+            FAIL_PARSE_IF(table.filename,
+                          raw_proc1.proc2_idx > table.sections[2].values_count - raw_proc1.count);
+
+            ProcedureCode proc1 = ConvertProcedureCode(root_idx, raw_proc1.char4,
+                                                       (uint16_t)(raw_proc1.seq_phase_activity / 100));
+            int8_t phase1 = (int8_t)(raw_proc1.seq_phase_activity / 10 % 10);
+            int8_t activity1 = (int8_t)(raw_proc1.seq_phase_activity % 10);
+
+            for (Size j = 0; j < raw_proc1.count; j++) {
+                ProcedureAdditionInfo addition_info = {};
+
+                uint16_t proc2_idx;
+                {
+                    const uint8_t *proc2_idx_ptr = file_data + table.sections[2].raw_offset +
+                                                               (raw_proc1.proc2_idx + j) * SIZE(uint16_t);
+                    proc2_idx = (uint16_t)((proc2_idx_ptr[0] << 8) | proc2_idx_ptr[1]);
+                    FAIL_PARSE_IF(table.filename, proc2_idx >= table.sections[3].values_count);
+                }
+
+                PackedProc2 raw_proc2;
+                memcpy(&raw_proc2, file_data + table.sections[3].raw_offset +
+                                               proc2_idx * SIZE(PackedProc2), SIZE(PackedProc2));
+                raw_proc2.root_idx = BigEndian(raw_proc2.root_idx);
+                raw_proc2.seq_phase_activity = BigEndian(raw_proc2.seq_phase_activity);
+                FAIL_PARSE_IF(table.filename, raw_proc2.root_idx >= 26 * 26 * 26);
+
+                addition_info.proc1 = proc1;
+                addition_info.phase1 = phase1;
+                addition_info.activity1 = activity1;
+                addition_info.proc2 =
+                    ConvertProcedureCode((int16_t)raw_proc2.root_idx, raw_proc2.char4,
+                                         (uint16_t)(raw_proc2.seq_phase_activity / 100));
+                addition_info.phase2 = (int8_t)(raw_proc2.seq_phase_activity / 10 % 10);
+                addition_info.activity2 = (int8_t)(raw_proc2.seq_phase_activity % 10);
+
+                out_additions->Append(addition_info);
+            }
+        }
+    }
+
+    out_guard.disable();
     return true;
 }
 
@@ -1355,6 +1457,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
     // - when we load a new main table, we need to reload secondary tables,
     // - when we load a new secondary table, we need to make a new version of the main table.
     static const std::pair<mco_TableType, mco_TableType> TableDependencies[] = {
+        {mco_TableType::ProcedureTable, mco_TableType::ProcedureAdditionTable},
         {mco_TableType::ProcedureTable, mco_TableType::ProcedureExtensionTable},
         {mco_TableType::PriceTablePublic, mco_TableType::GhsMinorationTable},
         {mco_TableType::PriceTablePrivate, mco_TableType::GhsMinorationTable}
@@ -1412,6 +1515,87 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                 LOAD_TABLE(procedures, ParseProcedureTable,
                            load_info->raw_data.ptr, *table_info);
                 BUILD_MAP(procedures, procedures_map, procedures);
+            } break;
+            case mco_TableType::ProcedureAdditionTable: {
+                StaticAssert((int)mco_TableType::ProcedureAdditionTable >
+                             (int)mco_TableType::ProcedureTable);
+
+                if (load_info->prev_index_idx < 0) {
+                    HeapArray<mco_ProcedureLink> *links = set.store.procedure_links.AppendDefault();
+
+                    if (table_info) {
+                        HeapArray<ProcedureAdditionInfo> additions;
+                        success &= ParseProcedureAdditionTable(load_info->raw_data.ptr,
+                                                               *table_info, &additions);
+
+                        std::sort(additions.begin(), additions.end(),
+                                  [](const ProcedureAdditionInfo &addition_info1,
+                                     const ProcedureAdditionInfo &addition_info2) {
+                            return MultiCmp(addition_info1.proc1.value - addition_info2.proc1.value,
+                                            addition_info1.phase1 - addition_info2.phase1) < 0;
+                        });
+
+                        Size next_addition_idx = 1;
+                        for (const ProcedureAdditionInfo &addition_info: additions) {
+                            Size addition_idx = 0;
+                            if (LIKELY(addition_info.activity2 >= 0 &&
+                                       addition_info.activity2 < ARRAY_SIZE(mco_ProcedureInfo::additions))) {
+                                mco_ProcedureInfo *proc_info =
+                                    (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
+
+                                if (LIKELY(proc_info)) {
+                                    bool new_match = false;
+                                    do {
+                                        if (proc_info->phase == addition_info.phase2) {
+                                            if (!proc_info->additions[addition_info.activity2]) {
+                                                proc_info->additions[addition_info.activity2] = next_addition_idx;
+                                                new_match = true;
+                                            }
+                                            addition_idx = proc_info->additions[addition_info.activity2];
+                                        }
+                                    } while (++proc_info < index.procedures.end() &&
+                                             proc_info->proc == addition_info.proc2);
+
+                                    next_addition_idx += new_match;
+                                }
+                            }
+
+                            if (addition_idx) {
+                                mco_ProcedureInfo *proc_info =
+                                    (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc1, nullptr);
+
+                                if (LIKELY(proc_info)) {
+                                    bool match = false;
+                                    Size offset = links->len;
+                                    do {
+                                        if (proc_info->phase == addition_info.phase1) {
+                                            if (!proc_info->addition_list.len) {
+                                                proc_info->addition_list.offset = offset;
+                                            }
+                                            proc_info->addition_list.len++;
+
+                                            match = true;
+                                        }
+                                    } while (++proc_info < index.procedures.end() &&
+                                             proc_info->proc == addition_info.proc1);
+
+                                    if (match) {
+                                        mco_ProcedureLink link = {};
+                                        link.proc = addition_info.proc1;
+                                        link.phase = addition_info.phase1;
+                                        link.activity = addition_info.activity1;
+                                        link.addition_idx = addition_idx;
+                                        links->Append(link);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    index.procedure_links = *links;
+                } else {
+                    index.procedure_links = set.indexes[load_info->prev_index_idx].procedure_links;
+                }
             } break;
             case mco_TableType::ProcedureExtensionTable: {
                 StaticAssert((int)mco_TableType::ProcedureExtensionTable >

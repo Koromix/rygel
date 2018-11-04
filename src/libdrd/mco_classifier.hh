@@ -14,13 +14,15 @@ enum class mco_ClassifyFlag {
     MonoOriginalStay = 1 << 1,
     IgnoreConfirmation = 1 << 2,
     IgnoreProcedureDoc = 1 << 3,
-    IgnoreProcedureExtension = 1 << 4
+    IgnoreProcedureAddition = 1 << 4,
+    IgnoreProcedureExtension = 1 << 5
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
     {"mono", "Perform mono-stay classification"},
     {"mono_orig_stay", "Use original stays in mono algorithm"},
     {"ignore_confirm", "Ignore RSS confirmation flag"},
     {"ignore_proc_doc", "Ignore procedure documentation check"},
+    {"ignore_proc_add", "Ignore completementary procedure check"},
     {"ignore_proc_ext", "Ignore ATIH procedure extension check"}
 };
 

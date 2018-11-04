@@ -390,7 +390,11 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
     for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
         const mco_Stay &mono_stay = *mono_prep.stay;
 
+        // Reuse for performance
+        static THREAD_LOCAL Bitset<512> additions;
+        int additions_mismatch = 0;
         uint8_t proc_activities = 0;
+
         mono_prep.procedures.ptr = out_prepared_set->store.procedures.end();
         for (const mco_ProcedureRealisation &proc: mono_stay.procedures) {
             if (UNLIKELY(!proc.count)) {
@@ -478,10 +482,26 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     }
                 }
 
+                uintptr_t mono_ptr_mask = 0;
+                if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureAddition)) {
+                    StaticAssert(std::alignment_of<mco_ProcedureInfo>::value >= 8);
+
+                    if ((proc_info->bytes[32] & 0x8) &&
+                            proc.activity >= 0 && proc.activity < ARRAY_SIZE(proc_info->additions) &&
+                            proc_info->additions[proc.activity]) {
+                        additions_mismatch += !additions.TestAndSet(proc_info->additions[proc.activity]);
+                    }
+                    if (proc_info->bytes[32] & 0x4) {
+                        mono_ptr_mask = proc.activity & 0x7;
+                    }
+                }
+
                 out_prepared_set->store.procedures.ptr[pointers_count++] =
                     (const mco_ProcedureInfo *)((uintptr_t)proc_info | global_ptr_mask);
                 for (Size i = 0; i < proc.count; i++) {
-                    out_prepared_set->store.procedures.Append(proc_info);
+                    const mco_ProcedureInfo *masked_ptr =
+                        (const mco_ProcedureInfo *)((uintptr_t)proc_info | mono_ptr_mask);
+                    out_prepared_set->store.procedures.Append(masked_ptr);
                 }
                 mono_prep.procedures.len += proc.count;
 
@@ -504,6 +524,32 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
                     valid &= SetError(out_errors, 73);
                 }
             }
+        }
+
+        if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureAddition)) {
+            for (Size i = 0; i < mono_prep.procedures.len; i++) {
+                const mco_ProcedureInfo *proc_info =
+                    (const mco_ProcedureInfo *)((uintptr_t)mono_prep.procedures[i] & ~(uintptr_t)0x7);
+                int8_t activity = (uintptr_t)mono_prep.procedures[i] & 0x7;
+
+                if (activity) {
+                    for (Size i = 0; additions_mismatch && i < proc_info->addition_list.len; i++) {
+                        const mco_ProcedureLink &link =
+                            index.procedure_links[proc_info->addition_list.offset + i];
+
+                        if (activity == link.activity) {
+                            additions_mismatch -= additions.TestAndSet(link.addition_idx, false);
+                        }
+                    }
+                }
+
+                mono_prep.procedures[i] = proc_info;
+            }
+            if (additions_mismatch) {
+                SetError(out_errors, 112, 0);
+            }
+
+            additions.Clear();
         }
 
         if (flags & (int)mco_ClassifyFlag::Mono) {
