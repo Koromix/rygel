@@ -116,7 +116,7 @@ struct mco_DiagnosisInfo {
 };
 
 struct mco_ExclusionInfo {
-    uint8_t raw[256];
+    uint8_t raw[232];
 };
 
 struct mco_ProcedureInfo {
