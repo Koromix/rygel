@@ -1909,33 +1909,65 @@ public:
     static bool Test(const T &key1, const T &key2) { return key1 == key2; }
 };
 
-// Stole the Hash function from Java's HashMap
-#define DEFINE_INTEGER_HASH_TRAITS(Type) \
+// Stole the Hash function from Thomas Wang (see here: https://gist.github.com/badboy/6267743)
+#define DEFINE_INTEGER_HASH_TRAITS_32(Type) \
     template <> \
     class HashTraits<Type> { \
     public: \
         static uint64_t Hash(Type key) \
         { \
-            key ^= (key >> 20) ^ (key >> 12); \
-            key = key ^ (key >> 7) ^ (key >> 4); \
-            return key; \
+            uint32_t hash = (uint32_t)key; \
+             \
+            hash = (hash ^ 61) ^ (hash >> 16); \
+            hash += hash << 3; \
+            hash ^= hash >> 4; \
+            hash *= 0x27D4EB2D; \
+            hash ^= hash >> 15; \
+             \
+            return (uint64_t)hash; \
+        } \
+         \
+        static bool Test(Type key1, Type key2) { return key1 == key2; } \
+    }
+#define DEFINE_INTEGER_HASH_TRAITS_64(Type) \
+    template <> \
+    class HashTraits<Type> { \
+    public: \
+        static uint64_t Hash(Type key) \
+        { \
+            uint64_t hash = (uint64_t)key; \
+             \
+            hash = (~hash) + (hash << 18); \
+            hash ^= hash >> 31; \
+            hash *= 21; \
+            hash ^= hash >> 11; \
+            hash += hash << 6; \
+            hash ^= hash >> 22; \
+             \
+            return hash; \
         } \
          \
         static bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
 
-DEFINE_INTEGER_HASH_TRAITS(char);
-DEFINE_INTEGER_HASH_TRAITS(unsigned char);
-DEFINE_INTEGER_HASH_TRAITS(short);
-DEFINE_INTEGER_HASH_TRAITS(unsigned short);
-DEFINE_INTEGER_HASH_TRAITS(int);
-DEFINE_INTEGER_HASH_TRAITS(unsigned int);
-DEFINE_INTEGER_HASH_TRAITS(long);
-DEFINE_INTEGER_HASH_TRAITS(unsigned long);
-DEFINE_INTEGER_HASH_TRAITS(long long);
-DEFINE_INTEGER_HASH_TRAITS(unsigned long long);
+DEFINE_INTEGER_HASH_TRAITS_32(char);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned char);
+DEFINE_INTEGER_HASH_TRAITS_32(short);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned short);
+DEFINE_INTEGER_HASH_TRAITS_32(int);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned int);
+#ifdef __LP64__
+    DEFINE_INTEGER_HASH_TRAITS_64(long);
+    DEFINE_INTEGER_HASH_TRAITS_64(unsigned long);
+#else
+    DEFINE_INTEGER_HASH_TRAITS_32(long);
+    DEFINE_INTEGER_HASH_TRAITS_32(unsigned long);
+#endif
+DEFINE_INTEGER_HASH_TRAITS_64(long long);
+DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long);
 
-#undef DEFINE_INTEGER_HASH_TRAITS
+#undef DEFINE_INTEGER_HASH_TRAITS_32
+#undef DEFINE_INTEGER_HASH_TRAITS_64
 
 template <>
 class HashTraits<const char *> {
