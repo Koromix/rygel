@@ -124,7 +124,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
 
         if (test->ghm.IsValid()) {
             tested_ghm++;
-            if (test->ghm != result.ghm) {
+            if (test->ghm != result.ghm || test->error != result.main_error) {
                 failed_ghm++;
                 if (verbose) {
                     PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
