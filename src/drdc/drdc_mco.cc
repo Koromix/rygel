@@ -423,11 +423,7 @@ Dispensation modes:)");
         ExportTests(results, pricings, mono_results, tests, verbosity >= 1);
     }
 
-    if (apply_coefficient) {
-        PrintLn("GHS coefficients have been applied!");
-    } else {
-        PrintLn("GHS coefficients have NOT been applied!");
-    }
+    PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
 
     if (torture) {
         uint64_t total_time = classify_time + pricing_time;
