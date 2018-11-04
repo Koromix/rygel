@@ -578,9 +578,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     procedures.activity = procedures_df["activity"];
     LOAD_OPTIONAL_COLUMN(procedures, count);
     procedures.date = procedures_df["date"];
-    if (!(flags & (int)mco_ClassifyFlag::IgnoreProcedureDoc)) {
-        LOAD_OPTIONAL_COLUMN(procedures, doc);
-    }
+    LOAD_OPTIONAL_COLUMN(procedures, doc);
 
 #undef LOAD_OPTIONAL_COLUMN
 

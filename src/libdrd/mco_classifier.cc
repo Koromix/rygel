@@ -403,8 +403,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
             if (UNLIKELY(!proc.activity)) {
                 valid &= SetError(out_errors, 103);
             }
-            if (UNLIKELY(!(flags & (int)mco_ClassifyFlag::IgnoreProcedureDoc) &&
-                         proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
+            if (UNLIKELY(proc.doc && (!IsAsciiAlphaOrDigit(proc.doc) ||
                                       proc.doc == 'I' || proc.doc == 'O'))) {
                 valid &= SetError(out_errors, 173);
             }
