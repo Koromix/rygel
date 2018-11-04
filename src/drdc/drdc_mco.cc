@@ -265,8 +265,7 @@ Classify options:
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
-        --torture [N]            Run classifier N times
-                                 (default = 1)
+        --torture [N]            Benchmark classifier with N runs
 
 Classifier options:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
@@ -287,7 +286,7 @@ Dispensation modes:)");
     bool apply_coefficient = false;
     int verbosity = 0;
     bool test = false;
-    int torture = 1;
+    int torture = 0;
     {
         const char *opt;
         while ((opt = opt_parser.Next())) {
@@ -378,27 +377,37 @@ Dispensation modes:)");
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
     mco_Pricing summary = {};
-    for (int j = 0; j < torture; j++) {
+    uint64_t classify_time = 0;
+    uint64_t pricing_time = 0;
+    for (int j = 0; j < std::max(torture, 1); j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
         pricings.RemoveFrom(0);
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        mco_Classify(*table_set, *authorization_set, stay_set.stays, flags,
-                     &results, &mono_results);
+        {
+            uint64_t start_time = GetMonotonicTime();
+            mco_Classify(*table_set, *authorization_set, stay_set.stays, flags,
+                         &results, &mono_results);
+            classify_time += GetMonotonicTime() - start_time;
+        }
 
-        if (dispense_mode >= 0 || verbosity || test) {
-            mco_Price(results, apply_coefficient, &pricings);
-            if (dispense_mode >= 0) {
-                mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
-                             &mono_pricings);
+        {
+            uint64_t start_time = GetMonotonicTime();
+            if (dispense_mode >= 0 || verbosity || test) {
+                mco_Price(results, apply_coefficient, &pricings);
+                if (dispense_mode >= 0) {
+                    mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
+                                 &mono_pricings);
+                } else {
+                    mco_Price(mono_results, apply_coefficient, &mono_pricings);
+                }
+                mco_Summarize(pricings, &summary);
             } else {
-                mco_Price(mono_results, apply_coefficient, &mono_pricings);
+                mco_PriceTotal(results, apply_coefficient, &summary);
             }
-            mco_Summarize(pricings, &summary);
-        } else {
-            mco_PriceTotal(results, apply_coefficient, &summary);
+            pricing_time += GetMonotonicTime() - start_time;
         }
     }
 
@@ -418,6 +427,21 @@ Dispensation modes:)");
         PrintLn("GHS coefficients have been applied!");
     } else {
         PrintLn("GHS coefficients have NOT been applied!");
+    }
+
+    if (torture) {
+        uint64_t total_time = classify_time + pricing_time;
+        int64_t perf = (int64_t)summary.results_count * torture * 1000 / total_time;
+        int64_t mono_perf = (int64_t)summary.stays_count * torture * 1000 / total_time;
+
+        PrintLn();
+        PrintLn("Performance (with %1 runs):", torture);
+        PrintLn("  Results: %1/sec", perf);
+        PrintLn("  Stays: %1/sec", mono_perf);
+        PrintLn();
+        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%",
+                FmtDouble(100.0 * classify_time / total_time, 2),
+                FmtDouble(100.0 * pricing_time / total_time, 2));
     }
 
     return true;
