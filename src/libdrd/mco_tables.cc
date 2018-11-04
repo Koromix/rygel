@@ -1032,7 +1032,8 @@ static bool ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInf
 static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &table,
                               int section_idx, HeapArray<mco_SrcPair> *out_pairs)
 {
-    DEFER_NC(out_pairs_guard, len = out_pairs->len) { out_pairs->RemoveFrom(len); };
+    Size start_len = out_pairs->len;
+    DEFER_N(out_pairs_guard) { out_pairs->RemoveFrom(start_len); };
 
 #pragma pack(push, 1)
     struct PackedPair {
@@ -1071,6 +1072,11 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
 
         out_pairs->Append(pair);
     }
+
+    std::sort(out_pairs->begin() + start_len, out_pairs->end(),
+              [](const mco_SrcPair &pair1, const mco_SrcPair &pair2) {
+        return pair1.diag < pair2.diag;
+    });
 
     out_pairs_guard.disable();
     return true;
@@ -1661,6 +1667,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                            load_info->raw_data.ptr, *table_info, 0);
                 LOAD_TABLE(src_pairs[1], ParseSrcPairTable,
                            load_info->raw_data.ptr, *table_info, 1);
+                BUILD_MAP(src_pairs[0], src_pairs_map[0], src_pairs);
+                BUILD_MAP(src_pairs[1], src_pairs_map[1], src_pairs);
             } break;
 
             case mco_TableType::PriceTablePublic:

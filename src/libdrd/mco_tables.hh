@@ -263,6 +263,8 @@ struct mco_AuthorizationInfo {
 struct mco_SrcPair {
     DiagnosisCode diag;
     ProcedureCode proc;
+
+    HASH_TABLE_HANDLER(mco_SrcPair, diag);
 };
 
 Date mco_ConvertDate1980(uint16_t days);
@@ -298,6 +300,7 @@ struct mco_TableIndex {
     const HashTable<mco_GhmCode, const mco_GhmToGhsInfo *> *ghm_to_ghs_map;
     const HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *, mco_GhmToGhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
     const HashTable<int16_t, const mco_AuthorizationInfo *> *authorizations_map;
+    const HashTable<DiagnosisCode, const mco_SrcPair *> *src_pairs_map[2];
 
     const HashTable<mco_GhsCode, const mco_GhsPriceInfo *> *ghs_prices_map[2];
 
@@ -344,6 +347,7 @@ public:
         BlockQueue<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
                                mco_GhmToGhsInfo::GhmRootHandler>, 16> ghm_root_to_ghs;
         BlockQueue<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
+        BlockQueue<HashTable<DiagnosisCode, const mco_SrcPair *>, 16> src_pairs;
 
         BlockQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;

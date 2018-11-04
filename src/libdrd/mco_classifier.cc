@@ -1792,11 +1792,11 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
             if (diag_info->Attributes(stay.sex).raw[21] & 0x10)
                 return true;
             if (diag_info->Attributes(stay.sex).raw[21] & 0x8) {
-                // TODO: HashSet for SrcPair on diagnoses to accelerate this
-                for (const mco_SrcPair &pair: index.src_pairs[0]) {
-                    if (pair.diag == diag_info->diag) {
-                        src_procedures.Append(pair.proc);
-                    }
+                const mco_SrcPair *pair = index.src_pairs_map[0]->FindValue(diag_info->diag, nullptr);
+                if (pair) {
+                    do {
+                        src_procedures.Append(pair->proc);
+                    } while (++pair < index.src_pairs[0].end() && pair->diag == diag_info->diag);
                 }
             }
         }
@@ -1806,10 +1806,11 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
             if (diag_info->Attributes(stay.sex).raw[22] & 0x80)
                 return true;
             if (diag_info->Attributes(stay.sex).raw[22] & 0x40) {
-                for (const mco_SrcPair &pair: index.src_pairs[1]) {
-                    if (pair.diag == diag_info->diag) {
-                        src_procedures.Append(pair.proc);
-                    }
+                const mco_SrcPair *pair = index.src_pairs_map[1]->FindValue(diag_info->diag, nullptr);
+                if (pair) {
+                    do {
+                        src_procedures.Append(pair->proc);
+                    } while (++pair < index.src_pairs[1].end() && pair->diag == diag_info->diag);
                 }
             }
         }
