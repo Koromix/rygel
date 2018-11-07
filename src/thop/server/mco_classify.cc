@@ -382,7 +382,6 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
                         const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
                         const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
-                        DebugAssert(constraint);
 
                         AggregationGhmGhs *agg_ghm_ghs;
                         {
@@ -400,8 +399,10 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                             }
                         }
 
-                        agg_ghm_ghs->durations |= constraint->durations &
-                                                  ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                        if (constraint) {
+                            agg_ghm_ghs->durations |= constraint->durations &
+                                                      ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                        }
 
                         if (ghs_price_info) {
                             if (!agg_ghm_ghs->exh_treshold ||

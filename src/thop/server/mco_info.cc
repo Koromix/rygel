@@ -222,11 +222,12 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
 
                 const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, sector);
                 const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
-                if (!constraint)
-                    continue;
 
-                uint32_t combined_durations = constraint->durations &
-                                              ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                uint32_t combined_durations = 0;
+                if (constraint) {
+                    combined_durations = constraint->durations &
+                                         ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                }
 
                 writer.StartObject();
 
@@ -243,7 +244,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
                 writer.Key("durations"); writer.Uint(combined_durations);
 
                 writer.Key("ghs"); writer.Int(ghs.number);
-                if ((combined_durations & 1) &&
+                if ((combined_durations & 1) && constraint &&
                         (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
                     writer.Key("warn_cmd28"); writer.Bool(true);
                 }
