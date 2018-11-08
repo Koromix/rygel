@@ -172,3 +172,18 @@ if(NOT EMSCRIPTEN)
     endif()
     target_link_libraries(sodium PRIVATE Threads::Threads)
 endif()
+
+set(WREN_SRC wren/src/vm/wren_compiler.c
+             wren/src/vm/wren_core.c
+             wren/src/vm/wren_debug.c
+             wren/src/vm/wren_primitive.c
+             wren/src/vm/wren_utils.c
+             wren/src/vm/wren_value.c
+             wren/src/vm/wren_vm.c
+             wren/src/optional/wren_opt_meta.c
+             wren/src/optional/wren_opt_random.c)
+add_library(wren STATIC EXCLUDE_FROM_ALL ${WREN_SRC})
+target_include_directories(wren PRIVATE wren/src/include wren/src/vm wren/src/optional)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_definitions(wren PRIVATE -DDEBUG)
+endif()
