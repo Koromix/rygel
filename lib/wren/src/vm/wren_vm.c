@@ -24,8 +24,10 @@
 // may return a non-NULL pointer which must not be dereferenced but nevertheless
 // should be freed. To prevent that, we avoid calling realloc() with a zero
 // size.
-static void* defaultReallocate(void* ptr, size_t newSize)
+static void* defaultReallocate(void* ptr, size_t oldSize, size_t newSize)
 {
+  (void)oldSize;
+
   if (newSize == 0)
   {
     free(ptr);
@@ -55,7 +57,7 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
   WrenReallocateFn reallocate = defaultReallocate;
   if (config != NULL) reallocate = config->reallocateFn;
   
-  WrenVM* vm = (WrenVM*)reallocate(NULL, sizeof(*vm));
+  WrenVM* vm = (WrenVM*)reallocate(NULL, 0, sizeof(*vm));
   memset(vm, 0, sizeof(WrenVM));
 
   // Copy the configuration if given one.
@@ -72,7 +74,7 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
   vm->grayCount = 0;
   // TODO: Tune this.
   vm->grayCapacity = 4;
-  vm->gray = (Obj**)reallocate(NULL, vm->grayCapacity * sizeof(Obj*));
+  vm->gray = (Obj**)reallocate(NULL, 0, vm->grayCapacity * sizeof(Obj*));
   vm->nextGC = vm->config.initialHeapSize;
 
   wrenSymbolTableInit(&vm->methodNames);
@@ -96,7 +98,7 @@ void wrenFreeVM(WrenVM* vm)
   }
 
   // Free up the GC gray set.
-  vm->gray = (Obj**)vm->config.reallocateFn(vm->gray, 0);
+  vm->gray = (Obj**)vm->config.reallocateFn(vm->gray, vm->grayCapacity * sizeof(Obj*), 0);
 
   // Tell the user if they didn't free any handles. We don't want to just free
   // them here because the host app may still have pointers to them that they
@@ -219,7 +221,7 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
   if (newSize > 0 && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 #endif
 
-  return vm->config.reallocateFn(memory, newSize);
+  return vm->config.reallocateFn(memory, oldSize, newSize);
 }
 
 // Captures the local variable [local] into an [Upvalue]. If that local is
