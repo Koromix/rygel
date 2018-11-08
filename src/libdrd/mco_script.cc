@@ -233,11 +233,24 @@ bool mco_RunScript(const char *script,
                    Span<const mco_Result> results, Span<const mco_Result> mono_results,
                    Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings)
 {
+    static THREAD_LOCAL BlockAllocator *thread_alloc;
+
+    BlockAllocator temp_alloc(Megabytes(1));
+    thread_alloc = &temp_alloc;
+
     // Init Wren VM
     WrenVM* vm;
     {
         WrenConfiguration config;
         wrenInitConfiguration(&config);
+
+        // Use fast bump allocator and avoid GC as much as possible for
+        // maximum performance.
+        config.reallocateFn = [](void *mem, size_t old_size, size_t new_size) {
+            Assert(old_size <= LEN_MAX && new_size <= LEN_MAX);
+            Allocator::Resize(thread_alloc, &mem, (Size)old_size, (Size)new_size);
+            return mem;
+        };
 
         config.writeFn = [](WrenVM *, const char *text) {
             fputs(text, stdout);
@@ -246,14 +259,19 @@ bool mco_RunScript(const char *script,
                             const char *module, int line, const char* message) {
             LogError("%1(%2): %3", module, line, message);
         };
+
         config.bindForeignClassFn = BindForeignClass;
         config.bindForeignMethodFn = BindForeignMethod;
+
+        // Limit execution time and space, and (basically) disable GC
+        config.maxRunOps = 20000;
+        config.maxHeapSize = Mebibytes(8);
+        config.initialHeapSize = 0;
 
         // We don't need to free this because all allocations go through the
         // WrenMemory allocator above.
         vm = wrenNewVM(&config);
     }
-    DEFER { wrenFreeVM(vm); };
 
     if (wrenInterpret(vm, __FILE__, InitCode) != WREN_RESULT_SUCCESS)
         return false;
