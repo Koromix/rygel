@@ -263,6 +263,8 @@ Classify options:
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
 
+    -S, --script_file <file>     Run Wren script
+
     -v, --verbose                Show more classification details (cumulative)
 
         --test                   Enable testing against GenRSA values
@@ -282,6 +284,7 @@ Dispensation modes:)");
     unsigned int flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
+    const char *script_path = nullptr;
     int verbosity = 0;
     bool test = false;
     int torture = 0;
@@ -324,6 +327,10 @@ Dispensation modes:)");
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (opt_parser.TestOption("--coeff")) {
                 apply_coefficient = true;
+            } else if (opt_parser.TestOption("-S", "--script_file")) {
+                script_path = opt_parser.RequireValue();
+                if (!script_path)
+                    return false;
             } else if (opt_parser.TestOption("-v", "--verbose")) {
                 verbosity++;
             } else if (opt_parser.TestOption("--test")) {
@@ -360,10 +367,15 @@ Dispensation modes:)");
                                   &authorization_set))
         return false;
 
+    HeapArray<char> script_buf;
+    if (script_path) {
+        if (ReadFile(script_path, Megabytes(4), &script_buf) < 0)
+            return false;
+        script_buf.Append(0);
+    }
+
     mco_StaySet stay_set;
     HashTable<int32_t, mco_Test> tests;
-
-    // Load
     {
         mco_StaySetBuilder stay_set_builder;
         for (const char *filename: filenames) {
@@ -407,7 +419,7 @@ Dispensation modes:)");
         mco_Classify(table_set, authorization_set, stay_set.stays, flags, &results, &mono_results);
 
         switch_perf_counter(&pricing_time);
-        if (dispense_mode >= 0 || verbosity || test) {
+        if (dispense_mode >= 0 || verbosity || test || script_path) {
             mco_Price(results, apply_coefficient, &pricings);
             if (dispense_mode >= 0) {
                 mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
@@ -421,6 +433,11 @@ Dispensation modes:)");
         }
     }
     switch_perf_counter(nullptr);
+
+    if (script_path) {
+        LogInfo("Script");
+        mco_RunScript(script_buf.ptr, results, mono_results, pricings, mono_pricings);
+    }
 
     LogInfo("Export");
     if (verbosity - test >= 1) {

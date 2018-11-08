@@ -5,13 +5,9 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "common.hh"
-#include "mco_common.hh"
-#include "mco_authorization.hh"
-#include "mco_tables.hh"
-#include "mco_stay.hh"
 #include "mco_classifier.hh"
-#include "mco_mapper.hh"
 #include "mco_pricing.hh"
-#include "mco_script.hh"
-#include "mco_dump.hh"
+
+bool mco_RunScript(const char *script,
+                   Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                   Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings);

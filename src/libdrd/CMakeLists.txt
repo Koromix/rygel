@@ -16,13 +16,15 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_mapper.hh
                mco_pricing.cc
                mco_pricing.hh
+               mco_script.cc
+               mco_script.hh
                mco_stay.cc
                mco_stay.hh
                mco_tables.cc
                mco_tables.hh)
 add_library(drd ${LIBDRD_SRC})
 set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(drd PUBLIC miniz)
+target_link_libraries(drd PUBLIC miniz wren)
 if(NOT EMSCRIPTEN)
     target_link_libraries(drd PUBLIC Threads::Threads)
 endif()
