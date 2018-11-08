@@ -121,7 +121,6 @@ void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags)
 {
-    DebugAssert(old_size >= 0);
     DebugAssert(new_size >= 0);
 
     if (!alloc) {
@@ -224,6 +223,8 @@ void BlockAllocator::ReleaseAll()
 
 void *BlockAllocator::Allocate(Size size, unsigned int flags)
 {
+    DebugAssert(size >= 0);
+
     // Keep alignement requirements
     Size aligned_size = AlignSizeValue(size);
 
@@ -251,6 +252,9 @@ void *BlockAllocator::Allocate(Size size, unsigned int flags)
 
 void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
+    DebugAssert(old_size >= 0);
+    DebugAssert(new_size >= 0);
+
     if (!new_size) {
         Release(*ptr, old_size);
     } else {
@@ -291,6 +295,8 @@ void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned i
 
 void BlockAllocator::Release(void *ptr, Size size)
 {
+    DebugAssert(size >= 0);
+
     if (ptr) {
         Size aligned_size = AlignSizeValue(size);
 
