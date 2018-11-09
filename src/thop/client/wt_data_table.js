@@ -58,7 +58,7 @@ function DataTable(widget)
                 }
             }
 
-            let name = 'Sheet' + wb.SheetNames.length;
+            let name = 'Niveau ' + (wb.SheetNames.length + 1);
             wb.SheetNames.push(name);
             wb.Sheets[name] = ws;
         }
