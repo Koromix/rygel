@@ -618,9 +618,9 @@ let mco_casemix = {};
             units_summary.addColumn('total', '#,##0', 'Total');
             if (!mix_params.diff)
                 units_summary.addColumn('total_pct', '0.00%', '%');
-            units_summary.addColumn('partial', '#,##0', 'Partiel');
+            units_summary.addColumn('pay', '#,##0', 'Rétribué');
             if (!mix_params.diff)
-                units_summary.addColumn('partial_pct', '0.00%', '%');
+                units_summary.addColumn('pay_pct', '0.00%', '%');
             units_summary.addColumn('deaths', '#,##0', 'Décès');
             if (!mix_params.diff)
                 units_summary.addColumn('deaths_pct', '0.00%', '%');
@@ -729,9 +729,9 @@ let mco_casemix = {};
             ghm_roots_summary.addColumn('total', '#,##0', 'Total');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('total_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('partial', '#,##0', 'Partiel');
+            ghm_roots_summary.addColumn('pay', '#,##0', 'Rétribué');
             if (!mix_params.diff)
-                ghm_roots_summary.addColumn('partial_pct', '0.00%', '%');
+                ghm_roots_summary.addColumn('pay_pct', '0.00%', '%');
             ghm_roots_summary.addColumn('deaths', '#,##0', 'Décès');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('deaths_pct', '0.00%', '%');
