@@ -691,6 +691,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                 writer.StartObject();
 
                 writer.Key("duration"); writer.Int(mono_result.duration);
+                writer.Key("unit"); writer.Int(stay.unit.number);
                 if (conn->user->allowed_units.Find(stay.unit)) {
                     writer.Key("sex"); writer.Int(stay.sex);
                     writer.Key("birthdate"); writer.String(Fmt(buf, "%1", stay.birthdate).ptr);
@@ -704,7 +705,6 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                     if (stay.exit.destination) {
                         writer.Key("exit_destination"); writer.String(&stay.exit.destination, 1);
                     }
-                    writer.Key("unit"); writer.Int(stay.unit.number);
                     if (stay.bed_authorization) {
                         writer.Key("bed_authorization"); writer.Int(stay.bed_authorization);
                     }
