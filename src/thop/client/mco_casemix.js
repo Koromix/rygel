@@ -1283,8 +1283,13 @@ let mco_casemix = {};
                                  stay.linked_diagnosis)
                         ) : null
                     ]);
-                    for (let k = 0; k < stay.other_diagnoses.length; k++) {
-                        const diag = stay.other_diagnoses[k];
+
+                    let other_diagnoses = stay.other_diagnoses.slice().sort(function(diag1, diag2) {
+                        return compareValues(diag1.diag, diag2.diag);
+                    });
+
+                    for (let k = 0; k < other_diagnoses.length; k++) {
+                        const diag = other_diagnoses[k];
 
                         let contents = [diag.diag];
                         if (diag.severity) {
