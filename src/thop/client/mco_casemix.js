@@ -1172,7 +1172,8 @@ let mco_casemix = {};
                                                                      date: result.index_date,
                                                                      ghm_root: result.ghm.substr(0, 5)})},
                                  result.ghm),
-                            ' (' + result.ghs + ')'
+                            result.ghm.startsWith('90') ? (' [' + result.main_error + ']')
+                                                        : (' (' + result.ghs + ')')
                         ),
                         html('td', {style: 'text-align: right;'},
                              priceText(result.price_cents) + '€'),
