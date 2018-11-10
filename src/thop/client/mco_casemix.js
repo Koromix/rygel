@@ -1099,6 +1099,7 @@ let mco_casemix = {};
         let cim10_map = mco_common.updateCatalog('cim10').map;
         let ccam_map = mco_common.updateCatalog('ccam').map;
         let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+        let errors_map = mco_common.updateCatalog('mco_errors').map;
 
         function handleIdClick(e)
         {
@@ -1115,10 +1116,8 @@ let mco_casemix = {};
         function codeWithDesc(map, code)
         {
             const desc = map[code];
-            if (code && desc) {
-                return '' + code + ' - ' + desc.desc;
-            } else if (code) {
-                return '' + code;
+            if (code !== null && code !== undefined) {
+                return '' + code + (desc ? ' - ' + desc.desc : '');
             } else {
                 return null;
             }
@@ -1166,7 +1165,7 @@ let mco_casemix = {};
                         html('td', mco_common.durationText(result.duration)),
                         html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
                                            'GHM : ' + result.ghm + '\n' +
-                                           'Erreur : ' + result.main_error + '\n' +
+                                           'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
                                            'GHS : ' + result.ghs},
                             html('a', {href: mco_pricing.routeToUrl({view: 'table',
                                                                      date: result.index_date,
