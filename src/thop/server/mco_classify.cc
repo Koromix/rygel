@@ -659,17 +659,22 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                     result.stays[result.stays.len - 1].exit.date >= dates[1])
                 continue;
 
-            const mco_GhmRootInfo *ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
-            const mco_DiagnosisInfo *main_diag_info =
-                result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
-            const mco_DiagnosisInfo *linked_diag_info =
-                result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
+            const mco_GhmRootInfo *ghm_root_info = nullptr;
+            const mco_DiagnosisInfo *main_diag_info = nullptr;
+            const mco_DiagnosisInfo *linked_diag_info = nullptr;
+            if (LIKELY(result.index)) {
+                ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
+                main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
+                linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
+            }
 
             writer.StartObject();
 
             writer.Key("admin_id"); writer.Int(result.stays[0].admin_id);
             writer.Key("bill_id"); writer.Int(result.stays[0].bill_id);
-            writer.Key("index_date"); writer.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
+            if (LIKELY(result.index)) {
+                writer.Key("index_date"); writer.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
+            }
             writer.Key("duration"); writer.Int(result.duration);
             writer.Key("sex"); writer.Int(result.stays[0].sex);
             writer.Key("age"); writer.Int(result.age);
@@ -745,18 +750,19 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                         if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
                             continue;
 
-                        const mco_DiagnosisInfo *diag_info = result.index->FindDiagnosis(diag);
+                        const mco_DiagnosisInfo *diag_info =
+                            LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
 
                         writer.StartObject();
                         writer.Key("diag"); writer.String(diag.str);
-                        if (diag_info) {
+                        if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
                             writer.Key("severity"); writer.Int(diag_info->Attributes(stay.sex).severity);
-                        }
-                        if (!ghm_root_info || !main_diag_info || !diag_info ||
-                                mco_TestExclusion(*result.index, stay.sex, result.age,
+
+                            if (mco_TestExclusion(*result.index, stay.sex, result.age,
                                                   *diag_info, *ghm_root_info, *main_diag_info,
                                                   linked_diag_info)) {
-                            writer.Key("exclude"); writer.Bool(true);
+                                writer.Key("exclude"); writer.Bool(true);
+                            }
                         }
                         writer.EndObject();
                     }
