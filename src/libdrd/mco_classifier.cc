@@ -568,17 +568,23 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
         std::sort(procedures.begin(), procedures.end());
 
+        // Need to treat index 0 specially for the loop to work correctly
+        if (UNLIKELY((uintptr_t)procedures[0] & 0x1)) {
+            procedures[0] = (const mco_ProcedureInfo *)((uintptr_t)procedures[0] ^ 0x1);
+            valid &= SetError(out_errors, 167);
+        }
+
         Size j = 0;
         for (Size i = 0; i < procedures.len; i++) {
-            if ((uintptr_t)procedures[i] & 0x1) {
-                const mco_ProcedureInfo *proc_info =
-                    (const mco_ProcedureInfo *)((uintptr_t)procedures[i] ^ 0x1);
+            const mco_ProcedureInfo *proc_info = procedures[i];
+            if ((uintptr_t)proc_info & 0x1) {
+                proc_info = (const mco_ProcedureInfo *)((uintptr_t)proc_info ^ 0x1);
                 if (proc_info != procedures[j]) {
                     procedures[++j] = proc_info;
                     valid &= SetError(out_errors, 167);
                 }
-            } else if (procedures[i] != procedures[j]) {
-                procedures[++j] = procedures[i];
+            } else if (proc_info != procedures[j]) {
+                procedures[++j] = proc_info;
             }
         }
 
