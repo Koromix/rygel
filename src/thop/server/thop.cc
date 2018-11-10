@@ -777,6 +777,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     }
     DebugAssert(response.response);
 
+    MHD_add_response_header(response.response.get(), "Referrer-Policy", "no-referrer");
     AddSessionHeaders(conn->conn, conn->user, response.response.get());
 
     // Add caching information
