@@ -45,6 +45,8 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
         HeapArray<const char *> allow(&allow_alloc);
         HeapArray<const char *> deny(&deny_alloc);
 
+        bool warn_about_plain_passwords = true;
+
         IniProperty prop;
         while (ini.Next(&prop)) {
             // TODO: Check validity, or maybe the INI parser checks are enough?
@@ -54,9 +56,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
             bool first_property = true;
             do {
-                if (prop.key == "PasswordHash") {
-                    user.password_hash = MakeString(&set.str_alloc, prop.value).ptr;
-                } else if (prop.key == "Template") {
+                if (prop.key == "Template") {
                     if (first_property) {
                         Size template_idx = map.FindValue(prop.value.ptr, -1);
                         if (template_idx >= 0) {
@@ -70,6 +70,23 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         }
                     } else {
                         LogError("Template must be the first property");
+                        valid = false;
+                    }
+                } else if (prop.key == "PasswordHash") {
+                    user.password_hash = MakeString(&set.str_alloc, prop.value).ptr;
+                } else if (prop.key == "Password") {
+                    if (warn_about_plain_passwords) {
+                        LogError("Plain passwords are not recommended, prefer PasswordHash");
+                        warn_about_plain_passwords = false;
+                    }
+
+                    if (char hash[crypto_pwhash_STRBYTES];
+                            crypto_pwhash_str(hash, prop.value.ptr, prop.value.len,
+                                              crypto_pwhash_OPSLIMIT_MIN,
+                                              crypto_pwhash_MEMLIMIT_MIN) == 0) {
+                        user.password_hash = DuplicateString(&set.str_alloc, hash).ptr;
+                    } else {
+                        LogError("Failed to hash password");
                         valid = false;
                     }
                 } else if (prop.key == "Default") {
