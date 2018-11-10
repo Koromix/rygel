@@ -289,9 +289,7 @@ let mco_casemix = {};
         mix_rows.length = 0;
         mix_ghm_roots.clear();
         mix_durations = {};
-
         rt_results = [];
-        deploy_results.clear();
 
         mix_ready = false;
     }
@@ -1456,6 +1454,8 @@ let mco_casemix = {};
     // Clear casemix data when user changes or disconnects
     user.addChangeHandler(function() {
         clearCasemix();
+        deploy_results.clear();
+
         queryAll('#cm > *').forEach(function(el) {
             el.innerHTML = '';
         });
