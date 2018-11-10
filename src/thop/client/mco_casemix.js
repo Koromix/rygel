@@ -1162,7 +1162,7 @@ let mco_casemix = {};
                                  '' + result.bill_id)
                         ),
                         html('td', (['♂', '♀'][result.sex - 1] || '?') + ' ' + result.age + ' ans'),
-                        html('td', mco_common.durationText(result.duration)),
+                        html('td', result.duration >= 0 ? mco_common.durationText(result.duration) : null),
                         html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
                                            'GHM : ' + result.ghm + '\n' +
                                            'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
@@ -1193,7 +1193,8 @@ let mco_casemix = {};
                 tbody.appendChildren(html('tr', {class: 'rt_stay'},
                     html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
                     html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                    html('td', {colspan: 2}, mco_common.durationText(stay.duration)),
+                    html('td', stay.duration >= 0 ? mco_common.durationText(stay.duration) : null),
+                    html('td'),
                     html('td', {style: 'text-align: right;'},
                          stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
                     html('td', {style: 'text-align: right;'},
@@ -1273,11 +1274,11 @@ let mco_casemix = {};
                     ]);
 
                     table1.appendChildren([
-                        html('tr',
+                        stay.main_diagnosis ? html('tr',
                             html('th', 'Diagnostic principal'),
                             html('td', {title: codeWithDesc(cim10_map, stay.main_diagnosis)},
                                  stay.main_diagnosis)
-                        ),
+                        ) : null,
                         stay.linked_diagnosis ? html('tr',
                             html('th', 'Diagnostic relié'),
                             html('td', {title: codeWithDesc(cim10_map, stay.linked_diagnosis)},
