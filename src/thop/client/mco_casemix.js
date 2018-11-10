@@ -1304,8 +1304,33 @@ let mco_casemix = {};
                         table1.appendChild(tr);
                     }
 
-                    for (let k = 0; k < stay.procedures.length; k++) {
-                        const proc = stay.procedures[k];
+                    let procedures = [];
+                    {
+                        let procedures_map = {};
+
+                        for (let proc of stay.procedures) {
+                            let map_key = proc.proc + '/' + proc.phase + ':' + proc.activity;
+                            let prev_proc = procedures_map[map_key];
+
+                            if (prev_proc) {
+                                prev_proc.count += proc.count;
+                            } else {
+                                proc = Object.assign({}, proc);
+                                proc.key = map_key;
+
+                                procedures_map[map_key] = proc;
+                                procedures.push(proc);
+                            }
+                        }
+
+                        procedures.sort(function(proc1, proc2) {
+                            return compareValues(proc1.key, proc2.key);
+                        });
+                    }
+
+                    for (let k = 0; k < procedures.length; k++) {
+                        const proc = procedures[k];
+
                         let text = proc.proc + (proc.phase ? '/' + proc.phase : '') +
                                    ' (' + proc.activity + ')' +
                                    (proc.count !== 1 ? ' * ' + proc.count : '');
