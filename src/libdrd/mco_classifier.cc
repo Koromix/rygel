@@ -628,33 +628,6 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
             valid &= SetError(out_errors, mono_stay.sex ? 17 : 16);
         }
 
-        // Dates
-        {
-            // Malformed, missing, incoherent (e.g. 2001/02/29)
-            static const int16_t birthdate_errors[3] = {14, 13, 39};
-            static const int16_t entry_date_errors[3] = {20, 19, 21};
-            static const int16_t exit_date_errors[3] = {29, 28, 30};
-
-            bool birthdate_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedBirthdate,
-                                                   mono_stay.birthdate, birthdate_errors, out_errors);
-            bool entry_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedEntryDate,
-                                                    mono_stay.entry.date, entry_date_errors, out_errors);
-            bool exit_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedExitDate,
-                                                   mono_stay.exit.date, exit_date_errors, out_errors);
-
-            if (UNLIKELY(birthdate_valid && entry_date_valid &&
-                         (mono_stay.birthdate > mono_stay.entry.date ||
-                          mono_stay.entry.date.st.year - mono_stay.birthdate.st.year > 140))) {
-                valid &= SetError(out_errors, 15);
-            }
-            if (UNLIKELY(entry_date_valid && exit_date_valid &&
-                         mono_stay.exit.date < mono_stay.entry.date)) {
-                valid &= SetError(out_errors, 32);
-            }
-
-            valid &= birthdate_valid && entry_date_valid && exit_date_valid;
-        }
-
         // Entry mode and origin
         if (UNLIKELY(mono_stay.errors & ((int)mco_Stay::Error::MalformedEntryMode |
                                         (int)mco_Stay::Error::MalformedEntryOrigin))) {
@@ -744,8 +717,8 @@ static bool CheckDataErrors(Span<const mco_Stay> mono_stays, mco_ErrorSet *out_e
     return valid;
 }
 
-static bool CheckAggregateErrors(const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                                 mco_ErrorSet *out_errors)
+static bool CheckAggregateErrors(const mco_PreparedStay &prep,
+                                 Span<const mco_PreparedStay> mono_preps, mco_ErrorSet *out_errors)
 {
     const mco_Stay &stay = *prep.stay;
 
@@ -978,41 +951,94 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep, Span<const mco_Pr
     return valid;
 }
 
+static bool InitCriticalData(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
+                             mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
+{
+    // Malformed, missing, incoherent (e.g. 2001/02/29)
+    static const int16_t birthdate_errors[3] = {14, 13, 39};
+    static const int16_t entry_date_errors[3] = {20, 19, 21};
+    static const int16_t exit_date_errors[3] = {29, 28, 30};
+
+    bool valid = true;
+
+    bool exit_date_valid = false;
+    int total_duration = 0;
+    for (const mco_Stay &mono_stay: mono_stays) {
+        mco_PreparedStay mono_prep = {};
+
+        mono_prep.stay = &mono_stay;
+
+        bool birthdate_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedBirthdate,
+                                               mono_stay.birthdate, birthdate_errors, out_errors);
+        bool entry_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedEntryDate,
+                                                mono_stay.entry.date, entry_date_errors, out_errors);
+        exit_date_valid = CheckDateErrors(mono_stay.errors & (int)mco_Stay::Error::MalformedExitDate,
+                                          mono_stay.exit.date, exit_date_errors, out_errors);
+
+        if (LIKELY(birthdate_valid && entry_date_valid)) {
+            mono_prep.age = std::max(ComputeAge(mono_stay.entry.date, mono_stay.birthdate), (int16_t)0);
+            mono_prep.age_days = std::max(mono_stay.entry.date - mono_stay.birthdate, 0);
+        } else {
+            mono_prep.age = -1;
+            mono_prep.age_days = -1;
+        }
+        if (LIKELY(entry_date_valid && exit_date_valid)) {
+            int duration = mono_prep.stay->exit.date - mono_prep.stay->entry.date;
+            if (LIKELY(duration >= 0)) {
+                mono_prep.duration = (int16_t)duration;
+                total_duration += duration;
+            } else {
+                mono_prep.duration = -1;
+                total_duration = INT_MIN;
+            }
+        } else {
+            mono_prep.duration = -1;
+            total_duration = INT_MIN;
+        }
+
+        valid &= birthdate_valid && entry_date_valid && exit_date_valid;
+
+        if (UNLIKELY(birthdate_valid && entry_date_valid &&
+                     (mono_stay.birthdate > mono_stay.entry.date ||
+                      mono_stay.entry.date.st.year - mono_stay.birthdate.st.year > 140))) {
+            valid &= SetError(out_errors, 15);
+        }
+        if (UNLIKELY(entry_date_valid && exit_date_valid &&
+                     mono_stay.exit.date < mono_stay.entry.date)) {
+            valid &= SetError(out_errors, 32);
+        }
+
+        out_prepared_set->mono_preps.Append(mono_prep);
+    }
+
+    out_prepared_set->prep.stay = &out_prepared_set->stay;
+    out_prepared_set->prep.duration = (int16_t)std::max(total_duration, -1);
+    out_prepared_set->prep.age = out_prepared_set->mono_preps[0].age;
+    out_prepared_set->prep.age_days =out_prepared_set->mono_preps[0].age_days;
+
+    if (LIKELY(exit_date_valid)) {
+        out_prepared_set->index = table_set.FindIndex(mono_stays[mono_stays.len - 1].exit.date);
+    }
+
+    return valid;
+}
+
 mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono_stays,
                         unsigned int flags, mco_PreparedSet *out_prepared_set,
                         mco_ErrorSet *out_errors)
 {
     DebugAssert(mono_stays.len > 0);
 
-    // Reset cache
-    out_prepared_set->prep = {};
-    out_prepared_set->prep.duration = -1;
+    // Reset prepared data
+    out_prepared_set->index = nullptr;
+    out_prepared_set->mono_stays = mono_stays;
     out_prepared_set->mono_preps.RemoveFrom(0);
-    for (const mco_Stay &mono_stay: mono_stays) {
-        mco_PreparedStay mono_prep = {};
-        mono_prep.stay = &mono_stay;
-        mono_prep.duration = -1;
-        out_prepared_set->mono_preps.Append(mono_prep);
-    }
-
-    // These errors are too serious to continue (broken data, etc.)
-    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
-        DebugAssert(mono_stays.len == 1);
-        SetError(out_errors, 59);
-        return mco_GhmCode::FromString("90Z00Z");
-    }
-    if (UNLIKELY(!CheckDataErrors(mono_stays, out_errors)))
-        return mco_GhmCode::FromString("90Z00Z");
-
-    out_prepared_set->index = table_set.FindIndex(mono_stays[mono_stays.len - 1].exit.date);
-    if (UNLIKELY(!out_prepared_set->index)) {
-        SetError(out_errors, 502, 2);
-        return mco_GhmCode::FromString("90Z03Z");
-    }
+    out_prepared_set->prep = {};
+    out_prepared_set->main_prep = nullptr;
 
     // Aggregate mono_stays into stay
-    out_prepared_set->mono_stays = mono_stays;
     out_prepared_set->stay = mono_stays[0];
+    out_prepared_set->mono_stays = mono_stays;
     for (const mco_Stay &mono_stay: mono_stays) {
         if (mono_stay.gestational_age > 0) {
             out_prepared_set->stay.gestational_age = mono_stay.gestational_age;
@@ -1033,48 +1059,59 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     out_prepared_set->stay.diagnoses = {};
     out_prepared_set->stay.procedures = {};
 
-    // Prepare cache
-    out_prepared_set->prep.stay = &out_prepared_set->stay;
-    out_prepared_set->prep.duration = 0;
-    for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
-        mono_prep.duration = mono_prep.stay->exit.date - mono_prep.stay->entry.date;
-        out_prepared_set->prep.duration += mono_prep.duration;
+    // Too critical to even try anything (all data is invalid)
+    if (UNLIKELY(mono_stays[0].errors & (int)mco_Stay::Error::UnknownRumVersion)) {
+        DebugAssert(mono_stays.len == 1);
 
-        mono_prep.age = ComputeAge(mono_prep.stay->entry.date, mono_prep.stay->birthdate);
-        mono_prep.age_days = mono_prep.stay->entry.date - mono_prep.stay->birthdate;
+        out_prepared_set->prep.duration = -1;
+        out_prepared_set->prep.age = -1;
+        out_prepared_set->prep.age_days = -1;
+        out_prepared_set->mono_preps.Append(out_prepared_set->prep);
+
+        SetError(out_errors, 59);
+        return mco_GhmCode::FromString("90Z00Z");
     }
-    out_prepared_set->prep.age = out_prepared_set->mono_preps[0].age;
-    out_prepared_set->prep.age_days = out_prepared_set->mono_preps[0].age_days;
 
     bool valid = true;
 
-    // Aggregate diagnoses and procedures
-    valid &= AppendValidDiagnoses(out_prepared_set, flags, out_errors);
-    valid &= AppendValidProcedures(out_prepared_set, flags, out_errors);
+    valid &= InitCriticalData(table_set, mono_stays, out_prepared_set, out_errors);
+    valid &= CheckDataErrors(mono_stays, out_errors);
 
-    // Pick main stay
-    {
-        const mco_PreparedStay *main_prep;
-        if (mono_stays.len > 1) {
-            main_prep = FindMainStay(out_prepared_set->mono_preps, out_prepared_set->prep.duration);
-
-            out_prepared_set->stay.main_diagnosis = main_prep->main_diag_info->diag;
-            if (main_prep->linked_diag_info) {
-                out_prepared_set->stay.linked_diagnosis = main_prep->linked_diag_info->diag;
-            } else {
-                out_prepared_set->stay.linked_diagnosis = {};
-            }
-        } else {
-            main_prep = &out_prepared_set->mono_preps[0];
+    if (LIKELY(valid)) {
+        if (UNLIKELY(!out_prepared_set->index)) {
+            SetError(out_errors, 502, 2);
+            return mco_GhmCode::FromString("90Z03Z");
         }
 
-        out_prepared_set->main_prep = main_prep;
-        out_prepared_set->prep.main_diag_info = main_prep->main_diag_info;
-        out_prepared_set->prep.linked_diag_info = main_prep->linked_diag_info;
+        // Aggregate diagnoses and procedures
+        valid &= AppendValidDiagnoses(out_prepared_set, flags, out_errors);
+        valid &= AppendValidProcedures(out_prepared_set, flags, out_errors);
+
+        // Pick main stay
+        {
+            const mco_PreparedStay *main_prep;
+            if (mono_stays.len > 1) {
+                main_prep = FindMainStay(out_prepared_set->mono_preps, out_prepared_set->prep.duration);
+
+                out_prepared_set->stay.main_diagnosis = main_prep->main_diag_info->diag;
+                if (main_prep->linked_diag_info) {
+                    out_prepared_set->stay.linked_diagnosis = main_prep->linked_diag_info->diag;
+                } else {
+                    out_prepared_set->stay.linked_diagnosis = {};
+                }
+            } else {
+                main_prep = &out_prepared_set->mono_preps[0];
+            }
+
+            out_prepared_set->main_prep = main_prep;
+            out_prepared_set->prep.main_diag_info = main_prep->main_diag_info;
+            out_prepared_set->prep.linked_diag_info = main_prep->linked_diag_info;
+        }
     }
 
-    // Check remaining stay errors
+    // Some of these checks require diagnosis and/or procedure information
     valid &= CheckAggregateErrors(out_prepared_set->prep, out_prepared_set->mono_preps, out_errors);
+
     if (UNLIKELY(!valid))
         return mco_GhmCode::FromString("90Z00Z");
 

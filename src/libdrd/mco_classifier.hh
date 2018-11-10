@@ -52,10 +52,11 @@ struct mco_PreparedSet {
     const mco_TableIndex *index;
 
     Span<const mco_Stay> mono_stays;
-    HeapArray<mco_PreparedStay> mono_preps;
-    const mco_PreparedStay *main_prep;
     mco_Stay stay;
+
+    HeapArray<mco_PreparedStay> mono_preps;
     mco_PreparedStay prep;
+    const mco_PreparedStay *main_prep;
 
     struct {
         HeapArray<const mco_DiagnosisInfo *> diagnoses;
