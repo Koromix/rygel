@@ -1222,7 +1222,7 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
         ImGui::Separator();
 
         if (state.align_concepts.table.count) {
-            if (ImGui::Button("Desalign")) {
+            if (ImGui::Button("Remove alignement")) {
                 ToggleAlign(state);
             }
             ImGui::Separator();
