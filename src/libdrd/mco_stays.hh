@@ -93,9 +93,9 @@ struct mco_Stay {
 };
 
 // Some paths (e.g. drdR) need to test for this before building Stay
-static inline bool mco_SplitTest(int32_t bill_id1, int32_t bill_id2)
+static inline bool mco_SplitTest(int32_t id1, int32_t id2)
 {
-    return !bill_id1 || bill_id1 != bill_id2;
+    return !id1 || id1 != id2;
 }
 
 template <typename T>

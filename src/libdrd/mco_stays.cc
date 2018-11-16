@@ -484,6 +484,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     }
 
     ParsePmsiInt(ReadFragment(10), &rsa.bill_id) || SetErrorFlag(mco_Stay::Error::MalformedBillId);
+    rsa.admin_id = rsa.bill_id;
     test.bill_id = rsa.bill_id;
     offset += 19; // Skip more version info, first GHM
     test.ghm = mco_GhmCode::FromString(ReadFragment(6));
