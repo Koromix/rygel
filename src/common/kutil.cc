@@ -263,7 +263,8 @@ void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned i
         Size aligned_delta = aligned_new_size - aligned_old_size;
 
         // Try fast path
-        if (*ptr && *ptr == last_alloc && (current_bucket->used + aligned_delta) <= block_size) {
+        if (*ptr && *ptr == last_alloc && (current_bucket->used + aligned_delta) <= block_size &&
+                !AllocateSeparately(aligned_new_size)) {
             current_bucket->used += aligned_delta;
 
             if ((flags & (int)Allocator::Flag::Zero) && new_size > old_size) {
