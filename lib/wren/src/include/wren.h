@@ -265,6 +265,7 @@ typedef enum
   WREN_TYPE_LIST,
   WREN_TYPE_NULL,
   WREN_TYPE_STRING,
+  WREN_TYPE_CLOSURE,
 
   // The object is of a type that isn't accessible by the C API.
   WREN_TYPE_UNKNOWN

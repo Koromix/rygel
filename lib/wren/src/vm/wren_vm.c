@@ -1579,6 +1579,7 @@ WrenType wrenGetSlotType(WrenVM* vm, int slot)
   if (IS_LIST(vm->apiStack[slot])) return WREN_TYPE_LIST;
   if (IS_NULL(vm->apiStack[slot])) return WREN_TYPE_NULL;
   if (IS_STRING(vm->apiStack[slot])) return WREN_TYPE_STRING;
+  if (IS_CLOSURE(vm->apiStack[slot])) return WREN_TYPE_CLOSURE;
   
   return WREN_TYPE_UNKNOWN;
 }
