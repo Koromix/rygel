@@ -746,10 +746,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                     }
 
                     writer.Key("other_diagnoses"); writer.StartArray();
-                    for (DiagnosisCode diag: stay.diagnoses) {
-                        if (diag == stay.main_diagnosis || diag == stay.linked_diagnosis)
-                            continue;
-
+                    for (DiagnosisCode diag: stay.other_diagnoses) {
                         const mco_DiagnosisInfo *diag_info =
                             LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
 

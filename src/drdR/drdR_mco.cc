@@ -136,9 +136,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
 
-    HeapArray<DiagnosisCode> diagnoses2(&out_stay_set->diagnoses_alloc);
-    HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->diagnoses_alloc);
-    diagnoses2.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
+    HeapArray<DiagnosisCode> other_diagnoses2(&out_stay_set->other_diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->other_diagnoses_alloc);
+    other_diagnoses2.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
     procedures2.Reserve(procedures_end - procedures_offset);
 
     Size j = diagnoses_offset;
@@ -198,7 +198,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         }
         stay.dip_count = stays.dip_count[i];
 
-        stay.diagnoses.ptr = diagnoses2.end();
+        stay.other_diagnoses.ptr = other_diagnoses2.end();
         if (diagnoses.type.Len()) {
             while (UNLIKELY(j < diagnoses_end && diagnoses.id[j] < stays.id[i])) {
                 j++;
@@ -230,7 +230,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                         case 's':
                         case 'S': {
                             if (LIKELY(diag.IsValid())) {
-                                diagnoses2.Append(diag);
+                                other_diagnoses2.Append(diag);
                             } else {
                                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                             }
@@ -275,17 +275,10 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
 
-                diagnoses2.Append(diag);
+                other_diagnoses2.Append(diag);
             }
         }
-        if (stay.main_diagnosis.IsValid()) {
-            diagnoses2.Append(stay.main_diagnosis);
-        }
-        if (stay.linked_diagnosis.IsValid()) {
-            diagnoses2.Append(stay.linked_diagnosis);
-        }
-
-        stay.diagnoses.len = diagnoses2.end() - stay.diagnoses.ptr;
+        stay.other_diagnoses.len = other_diagnoses2.end() - stay.other_diagnoses.ptr;
 
         stay.procedures.ptr = procedures2.end();
         while (UNLIKELY(k < procedures_end && procedures.id[k] < stays.id[i])) {
@@ -338,7 +331,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     mco_ClassifySerial(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
                        flags, out_results, out_mono_results);
 
-    diagnoses2.Leak();
+    other_diagnoses2.Leak();
     procedures2.Leak();
 
     return true;
@@ -1203,7 +1196,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
     Size diagnoses_count = 0;
     Size procedures_count = 0;
     for (const mco_Stay &stay: stay_set.stays) {
-        diagnoses_count += stay.diagnoses.len;
+        diagnoses_count += stay.other_diagnoses.len;
         procedures_count += stay.procedures.len;
     }
 
@@ -1290,7 +1283,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::Ucd);
             stays_dip_count[i] = stay.dip_count;
 
-            for (DiagnosisCode diag: stay.diagnoses) {
+            for (DiagnosisCode diag: stay.other_diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);
                 diagnoses_diag.Set(j, diag.str);
                 j++;

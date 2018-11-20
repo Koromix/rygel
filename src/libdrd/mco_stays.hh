@@ -85,7 +85,7 @@ struct mco_Stay {
     // It's 2017, so let's assume 64-bit LE platforms are the majority. Use padding and
     // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support dspak
     // files on 32-bit platforms.
-    Span<DiagnosisCode> diagnoses;
+    Span<DiagnosisCode> other_diagnoses;
     Span<mco_ProcedureRealisation> procedures;
 #ifndef ARCH_64
     char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
@@ -139,7 +139,7 @@ struct mco_Test {
 struct mco_StaySet {
     HeapArray<mco_Stay> stays;
 
-    BlockAllocator diagnoses_alloc {2048 * SIZE(DiagnosisCode)};
+    BlockAllocator other_diagnoses_alloc {2048 * SIZE(DiagnosisCode)};
     BlockAllocator procedures_alloc {2048 * SIZE(mco_ProcedureRealisation)};
 
     bool SavePack(StreamWriter &st) const;

@@ -270,7 +270,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int
     {
         Size diagnoses_count = 0;
         for (const mco_Stay &mono_stay: out_prepared_set->mono_stays) {
-            diagnoses_count += mono_stay.diagnoses.len;
+            diagnoses_count += mono_stay.other_diagnoses.len + 2;
         }
 
         out_prepared_set->store.diagnoses.RemoveFrom(0);
@@ -281,10 +281,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int
         const mco_Stay &mono_stay = *mono_prep.stay;
 
         mono_prep.diagnoses.ptr = out_prepared_set->store.diagnoses.end();
-        for (DiagnosisCode diag: mono_stay.diagnoses) {
-            if (diag == mono_stay.main_diagnosis || diag == mono_stay.linked_diagnosis)
-                continue;
-
+        for (DiagnosisCode diag: mono_stay.other_diagnoses) {
             if (diag.Matches("Z37")) {
                 out_prep->markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
                 mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
@@ -1062,7 +1059,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
     if (mono_stays[mono_stays.len - 1].flags & (int)mco_Stay::Flag::Confirmed) {
         out_prepared_set->stay.flags |= (int)mco_Stay::Flag::Confirmed;
     }
-    out_prepared_set->stay.diagnoses = {};
+    out_prepared_set->stay.other_diagnoses = {};
     out_prepared_set->stay.procedures = {};
 
     // Too critical to even try anything (all data is invalid)

@@ -17,7 +17,7 @@ struct PackHeader {
     int64_t procedures_len;
 };
 #pragma pack(pop)
-#define PACK_VERSION 12
+#define PACK_VERSION 13
 #define PACK_SIGNATURE "DRD_STAY_PAK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
@@ -36,7 +36,7 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
     bh.endianness = (int8_t)ARCH_ENDIANNESS;
     bh.stays_len = stays.len;
     for (const mco_Stay &stay: stays) {
-        bh.diagnoses_len += stay.diagnoses.len;
+        bh.diagnoses_len += stay.other_diagnoses.len;
         bh.procedures_len += stay.procedures.len;
     }
 
@@ -65,7 +65,7 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
     }
 #endif
     for (const mco_Stay &stay: stays) {
-        st.Write(stay.diagnoses.ptr, stay.diagnoses.len * SIZE(*stay.diagnoses.ptr));
+        st.Write(stay.other_diagnoses.ptr, stay.other_diagnoses.len * SIZE(*stay.other_diagnoses.ptr));
     }
     for (const mco_Stay &stay: stays) {
         st.Write(stay.procedures.ptr, stay.procedures.len * SIZE(*stay.procedures.ptr));
@@ -98,7 +98,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         LogError("Testing is not supported by .dspak files");
     }
 
-    HeapArray<DiagnosisCode> diagnoses(&set.diagnoses_alloc);
+    HeapArray<DiagnosisCode> diagnoses(&set.other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&set.procedures_alloc);
 
     PackHeader bh;
@@ -168,11 +168,11 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
             stay->procedures.len = (Size)u.st.procedures_len;
 #endif
 
-            if (stay->diagnoses.len) {
-                if (UNLIKELY(stay->diagnoses.len < 0))
+            if (stay->other_diagnoses.len) {
+                if (UNLIKELY(stay->other_diagnoses.len < 0))
                     goto corrupt_error;
-                stay->diagnoses.ptr = &diagnoses[diagnoses_offset];
-                diagnoses_offset += stay->diagnoses.len;
+                stay->other_diagnoses.ptr = &diagnoses[diagnoses_offset];
+                diagnoses_offset += stay->other_diagnoses.len;
                 if (UNLIKELY(diagnoses_offset <= 0 || diagnoses_offset > bh.diagnoses_len))
                     goto corrupt_error;
             }
@@ -360,7 +360,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset += 33; // Skip a bunch of fields
 
-    HeapArray<DiagnosisCode> diagnoses(&out_set->diagnoses_alloc);
+    HeapArray<DiagnosisCode> other_diagnoses(&out_set->other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&out_set->procedures_alloc);
     if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
         if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
@@ -369,17 +369,11 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             return false;
         }
 
-        if (LIKELY(stay.main_diagnosis.IsValid())) {
-            diagnoses.Append(stay.main_diagnosis);
-        }
-        if (stay.linked_diagnosis.IsValid()) {
-            diagnoses.Append(stay.linked_diagnosis);
-        }
         for (int i = 0; i < das_count; i++) {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
-                diagnoses.Append(diag);
+                other_diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
@@ -416,7 +410,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
             }
         }
 
-        stay.diagnoses = diagnoses.TrimAndLeak();
+        stay.other_diagnoses = other_diagnoses.TrimAndLeak();
         stay.procedures = procedures.TrimAndLeak();
     }
 
@@ -627,7 +621,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         if (version >= 221) {
             ParsePmsiInt(ReadFragment(2), &stay.gestational_age);
         }
-        ParsePmsiInt(ReadFragment(2), &stay.diagnoses.len);
+        ParsePmsiInt(ReadFragment(2), &stay.other_diagnoses.len);
         ParsePmsiInt(ReadFragment(3), &stay.procedures.len);
         if (i) {
             stay.entry.date = out_set->stays[out_set->stays.len - 1].exit.date;
@@ -694,7 +688,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         out_set->stays.Append(stay);
 
         stay.entry.date = stay.exit.date;
-        das_count += stay.diagnoses.len;
+        das_count += stay.other_diagnoses.len;
         procedures_count += stay.procedures.len;
     }
 
@@ -707,24 +701,18 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
         mco_Stay &stay = out_set->stays[i];
 
-        HeapArray<DiagnosisCode> diagnoses(&out_set->diagnoses_alloc);
-        for (Size j = 0; j < stay.diagnoses.len; j++) {
+        HeapArray<DiagnosisCode> other_diagnoses(&out_set->other_diagnoses_alloc);
+        for (Size j = 0; j < stay.other_diagnoses.len; j++) {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
-                diagnoses.Append(diag);
+                other_diagnoses.Append(diag);
             } else {
                 stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
             }
         }
-        if (LIKELY(stay.main_diagnosis.IsValid())) {
-            diagnoses.Append(stay.main_diagnosis);
-        }
-        if (stay.linked_diagnosis.IsValid()) {
-            diagnoses.Append(stay.linked_diagnosis);
-        }
 
-        stay.diagnoses = diagnoses.TrimAndLeak();
+        stay.other_diagnoses = other_diagnoses.TrimAndLeak();
     }
 
     for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
