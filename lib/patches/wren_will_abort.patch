@@ -1,0 +1,30 @@
+diff --git a/lib/wren/src/include/wren.h b/lib/wren/src/include/wren.h
+index 23e34231..0528f6f3 100644
+--- a/lib/wren/src/include/wren.h
++++ b/lib/wren/src/include/wren.h
+@@ -480,6 +480,9 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
+ // runtime error object.
+ void wrenAbortFiber(WrenVM* vm, int slot);
+ 
++// Returns true if the current fiber is about to abort.
++bool wrenWillAbort(WrenVM *vm);
++
+ // Returns the user data associated with the WrenVM.
+ void* wrenGetUserData(WrenVM* vm);
+ 
+diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+index 9f01fe00..78e28ff6 100644
+--- a/lib/wren/src/vm/wren_vm.c
++++ b/lib/wren/src/vm/wren_vm.c
+@@ -1758,6 +1758,11 @@ void wrenAbortFiber(WrenVM* vm, int slot)
+   vm->fiber->error = vm->apiStack[slot];
+ }
+ 
++bool wrenWillAbort(WrenVM* vm)
++{
++  return !IS_NULL(vm->fiber->error);
++}
++
+ void* wrenGetUserData(WrenVM* vm)
+ {
+ 	return vm->config.userData;

@@ -1758,6 +1758,11 @@ void wrenAbortFiber(WrenVM* vm, int slot)
   vm->fiber->error = vm->apiStack[slot];
 }
 
+bool wrenWillAbort(WrenVM* vm)
+{
+  return !IS_NULL(vm->fiber->error);
+}
+
 void* wrenGetUserData(WrenVM* vm)
 {
 	return vm->config.userData;

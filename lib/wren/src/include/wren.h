@@ -480,6 +480,9 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
 // runtime error object.
 void wrenAbortFiber(WrenVM* vm, int slot);
 
+// Returns true if the current fiber is about to abort.
+bool wrenWillAbort(WrenVM *vm);
+
 // Returns the user data associated with the WrenVM.
 void* wrenGetUserData(WrenVM* vm);
 
