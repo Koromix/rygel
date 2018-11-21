@@ -146,6 +146,9 @@ struct ScriptContext {
     HeapArray<ScriptFilter> filters;
 };
 
+static THREAD_LOCAL Allocator *thread_alloc;
+static THREAD_LOCAL bool first_error;
+
 template <typename... Args>
 static void TriggerError(WrenVM *vm, Args... args)
 {
@@ -829,8 +832,6 @@ bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &au
                    const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings,
                    mco_StaySet *out_stay_set)
 {
-    static THREAD_LOCAL BlockAllocator *thread_alloc;
-
     // FIXME: Make sure all deallocations are disabled
     BlockAllocator temp_alloc(Megabytes(1));
     thread_alloc = &temp_alloc;
@@ -852,12 +853,14 @@ bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &au
         config.writeFn = [](WrenVM *, const char *text) {
             fputs(text, stdout);
         };
-        config.errorFn = [](WrenVM *, WrenErrorType,
-                            const char *module, int line, const char* message) {
-            if (module) {
-                LogError("%1(%2): %3", module, line, message);
-            } else {
-                LogError("%1", message);
+
+        // Default issues stack-trace like errors, hack around it to show (when possible)
+        // a single error message to the user.
+        first_error = true;
+        config.errorFn = [](WrenVM *, WrenErrorType, const char *, int, const char *msg) {
+            if (first_error) {
+                LogError("%1", msg);
+                first_error = false;
             }
         };
 
