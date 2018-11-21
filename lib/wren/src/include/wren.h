@@ -476,6 +476,10 @@ void wrenInsertInList(WrenVM* vm, int listSlot, int index, int elementSlot);
 void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
                      int slot);
 
+// Returns true if the foreign instance in [slot] has the class
+// in [class].
+bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle);
+
 // Sets the current fiber to be aborted, and uses the value in [slot] as the
 // runtime error object.
 void wrenAbortFiber(WrenVM* vm, int slot);

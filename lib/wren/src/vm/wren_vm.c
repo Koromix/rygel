@@ -1752,6 +1752,20 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
   setSlot(vm, slot, moduleObj->variables.data[variableSlot]);
 }
 
+bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle)
+{
+  validateApiSlot(vm, slot);
+  ASSERT(IS_FOREIGN(vm->apiStack[slot]), "Slot must hold a foreign instance.");
+  ASSERT(classHandle != NULL, "Handle cannot be null.");
+  ASSERT(IS_CLASS(classHandle->value), "Handle value must be a class.");
+
+  ObjForeign *obj = AS_FOREIGN(vm->apiStack[slot]);
+  ObjClass* classObj = AS_CLASS(classHandle->value);
+  ASSERT(classObj->numFields == -1, "Class must be a foreign class.");
+
+  return classObj == obj->obj.classObj;
+}
+
 void wrenAbortFiber(WrenVM* vm, int slot)
 {
   validateApiSlot(vm, slot);

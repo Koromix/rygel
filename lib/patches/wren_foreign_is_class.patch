@@ -1,0 +1,40 @@
+diff --git a/lib/wren/src/include/wren.h b/lib/wren/src/include/wren.h
+index 0528f6f3..38957ccb 100644
+--- a/lib/wren/src/include/wren.h
++++ b/lib/wren/src/include/wren.h
+@@ -476,6 +476,10 @@ void wrenInsertInList(WrenVM* vm, int listSlot, int index, int elementSlot);
+ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
+                      int slot);
+ 
++// Returns true if the foreign instance in [slot] has the class
++// in [class].
++bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle);
++
+ // Sets the current fiber to be aborted, and uses the value in [slot] as the
+ // runtime error object.
+ void wrenAbortFiber(WrenVM* vm, int slot);
+diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+index 78e28ff6..03b24e55 100644
+--- a/lib/wren/src/vm/wren_vm.c
++++ b/lib/wren/src/vm/wren_vm.c
+@@ -1752,6 +1752,20 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
+   setSlot(vm, slot, moduleObj->variables.data[variableSlot]);
+ }
+ 
++bool wrenForeignIsClass(WrenVM *vm, int slot, WrenHandle *classHandle)
++{
++  validateApiSlot(vm, slot);
++  ASSERT(IS_FOREIGN(vm->apiStack[slot]), "Slot must hold a foreign instance.");
++  ASSERT(classHandle != NULL, "Handle cannot be null.");
++  ASSERT(IS_CLASS(classHandle->value), "Handle value must be a class.");
++
++  ObjForeign *obj = AS_FOREIGN(vm->apiStack[slot]);
++  ObjClass* classObj = AS_CLASS(classHandle->value);
++  ASSERT(classObj->numFields == -1, "Class must be a foreign class.");
++
++  return classObj == obj->obj.classObj;
++}
++
+ void wrenAbortFiber(WrenVM* vm, int slot)
+ {
+   validateApiSlot(vm, slot);
