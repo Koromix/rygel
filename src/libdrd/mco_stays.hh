@@ -99,19 +99,19 @@ static inline bool mco_SplitTest(int32_t id1, int32_t id2)
 }
 
 template <typename T>
-Span<T> mco_Split(Span<T> mono_stays, Size count, Span<T> *out_remainder = nullptr)
+Span<T> mco_Split(Span<T> mono_stays, Size split_len, Span<T> *out_remainder = nullptr)
 {
-    DebugAssert(mono_stays.len > 0);
+    DebugAssert(mono_stays.len >= split_len);
 
-    Size agg_len = 0;
-    while (count && ++agg_len < mono_stays.len) {
-        count -= mco_SplitTest(mono_stays[agg_len - 1].bill_id, mono_stays[agg_len].bill_id);
+    while (split_len < mono_stays.len &&
+           !mco_SplitTest(mono_stays[split_len - 1].bill_id, mono_stays[split_len].bill_id)) {
+        split_len++;
     }
 
     if (out_remainder) {
-        *out_remainder = mono_stays.Take(agg_len, mono_stays.len - agg_len);
+        *out_remainder = mono_stays.Take(split_len, mono_stays.len - split_len);
     }
-    return mono_stays.Take(0, agg_len);
+    return mono_stays.Take(0, split_len);
 }
 
 struct mco_Test {
