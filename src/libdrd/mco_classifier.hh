@@ -115,6 +115,11 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
                           mco_SupplementCounters<int16_t> *out_counters,
                           Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
 
+Size mco_RunClassifier(const mco_TableSet &table_set,
+                       const mco_AuthorizationSet &authorization_set,
+                       Span<const mco_Stay> mono_stays, unsigned int flags,
+                       mco_Result out_results[], Strider<mco_Result> out_mono_results = {});
+
 void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
                   HeapArray<mco_Result> *out_mono_results = nullptr);

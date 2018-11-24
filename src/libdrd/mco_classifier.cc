@@ -2086,70 +2086,19 @@ static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)
     return mono_stay;
 }
 
-static Size Classify(const mco_TableSet &table_set,
-                     const mco_AuthorizationSet &authorization_set,
-                     Span<const mco_Stay> mono_stays, unsigned int flags,
-                     mco_Result out_results[])
+Size mco_RunClassifier(const mco_TableSet &table_set,
+                       const mco_AuthorizationSet &authorization_set,
+                       Span<const mco_Stay> mono_stays, unsigned int flags,
+                       mco_Result out_results[], Strider<mco_Result> out_mono_results)
 {
     // Reuse for performance
     mco_PreparedSet prepared_set;
     mco_ErrorSet errors;
-
-    Size i;
-    for (i = 0; mono_stays.len; i++) {
-        mco_Result result = {};
-
-        // Prepare
-        errors.main_error = 0;
-        result.stays = mco_Split(mono_stays, 1, &mono_stays);
-        result.ghm = mco_Prepare(table_set, result.stays, flags, &prepared_set, &errors);
-        result.index = prepared_set.index;
-        result.age = prepared_set.prep.age;
-        result.duration = prepared_set.prep.duration;
-
-        // Classify GHM
-        if (LIKELY(!result.ghm.IsError())) {
-            result.main_stay_idx = (int16_t)(prepared_set.main_prep - prepared_set.mono_preps.ptr);
-            result.ghm = mco_PickGhm(*prepared_set.index,
-                                     prepared_set.prep, prepared_set.mono_preps, flags, &errors);
-        }
-        result.main_error = errors.main_error;
-        DebugAssert(result.ghm.IsValid());
-
-        // Classify GHS
-        result.ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                 prepared_set.prep, prepared_set.mono_preps, result.ghm,
-                                 flags, &result.ghs_duration);
-
-        // Count supplements days
-        mco_CountSupplements(*prepared_set.index, authorization_set,
-                             prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
-                             flags, &result.supplement_days);
-
-        // Commit result
-        out_results[i] = result;
-    }
-
-    return i;
-}
-
-// TODO: Try to deduplicate code between Classify() and ClassifyWithMono()
-// without losing performance.
-static Size ClassifyWithMono(const mco_TableSet &table_set,
-                             const mco_AuthorizationSet &authorization_set,
-                             Span<const mco_Stay> mono_stays, unsigned int flags,
-                             mco_Result out_results[], Strider<mco_Result> out_mono_results)
-{
-    // Reuse for performance
-    mco_PreparedSet prepared_set;
-    mco_ErrorSet errors;
-    HeapArray<mco_Result> mono_results;
     mco_ErrorSet mono_errors;
 
     Size i, j = 0;
     for (i = 0; mono_stays.len; i++) {
         mco_Result result = {};
-        mono_results.RemoveFrom(0);
 
         // Prepare
         errors.main_error = 0;
@@ -2158,7 +2107,6 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
         result.index = prepared_set.index;
         result.age = prepared_set.prep.age;
         result.duration = prepared_set.prep.duration;
-        mono_results.AppendDefault(result.stays.len);
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
@@ -2174,65 +2122,71 @@ static Size ClassifyWithMono(const mco_TableSet &table_set,
                                  prepared_set.prep, prepared_set.mono_preps, result.ghm,
                                  flags, &result.ghs_duration);
 
-        // Count supplements days
-        Strider<mco_SupplementCounters<int16_t>> mono_supplement_days =
-            MakeStrider(&mono_results[0].supplement_days, SIZE(mco_Result));
-        mco_CountSupplements(*prepared_set.index, authorization_set,
-                             prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
-                             flags, &result.supplement_days, mono_supplement_days);
+        if (out_mono_results.IsValid()) {
+            Strider<mco_SupplementCounters<int16_t>> mono_supplement_days =
+                MakeStrider(&out_mono_results[j].supplement_days, out_mono_results.stride);
 
-        // Commit result
-        out_results[i] = result;
+            // Perform mono-stay classifications
+            if (result.stays.len == 1) {
+                out_mono_results[j++] = result;
+            } else {
+                for (Size k = 0; k < result.stays.len; j++, k++) {
+                    mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
+                    mco_Result *mono_result = &out_mono_results[j];
 
-        // Perform mono-stay classifications
-        if (result.stays.len == 1) {
-            out_mono_results[j++] = result;
-        } else {
-            for (Size k = 0; k < result.stays.len; k++) {
-                mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
-                mco_Result *mono_result = &mono_results[k];
+                    *mono_result = {};
+                    mono_result->stays = *mono_prep.stay;
+                    mono_result->main_stay_idx = 0;
+                    mono_result->index = prepared_set.index;
+                    mono_result->age = mono_prep.age;
+                    mono_result->duration = mono_prep.duration;
 
-                mono_result->stays = *mono_prep.stay;
-                mono_result->main_stay_idx = 0;
-                mono_result->index = prepared_set.index;
-                mono_result->age = mono_prep.age;
-                mono_result->duration = mono_prep.duration;
+                    if (!result.ghm.IsError()) {
+                        int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
 
-                if (!result.ghm.IsError()) {
-                    int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
+                        mono_errors.main_error = 0;
+                        if (flags & (int)mco_ClassifyFlag::MonoOriginalStay) {
+                            mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
+                            const mco_GhmRootInfo *ghm_root_info =
+                                prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
+                            if (LIKELY(ghm_root_info)) {
+                                mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
+                                                                  mono_result->ghm, *ghm_root_info);
+                            }
+                            mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           mono_flags, &mono_result->ghs_duration);
+                        } else {
+                            DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
+                            mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
+                            mono_prep.stay = &fixed_mono_stay;
 
-                    mono_errors.main_error = 0;
-                    if (flags & (int)mco_ClassifyFlag::MonoOriginalStay) {
-                        mono_result->ghm = RunGhmTree(*prepared_set.index, mono_prep, &mono_errors);
-                        const mco_GhmRootInfo *ghm_root_info =
-                            prepared_set.index->FindGhmRoot(mono_result->ghm.Root());
-                        if (LIKELY(ghm_root_info)) {
-                            mono_result->ghm = RunGhmSeverity(*prepared_set.index, mono_prep,
-                                                              mono_result->ghm, *ghm_root_info);
+                            mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep,
+                                                           mono_prep, mono_flags, &mono_errors);
+                            mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           mono_flags, &mono_result->ghs_duration);
                         }
-                        mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                       mono_prep, mono_prep, mono_result->ghm,
-                                                       mono_flags, &mono_result->ghs_duration);
+                        mono_result->main_error = mono_errors.main_error;
                     } else {
-                        DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
-                        mco_Stay fixed_mono_stay = FixMonoStayForClassifier(*mono_prep.stay);
-                        mono_prep.stay = &fixed_mono_stay;
-
-                        mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep,
-                                                       mono_prep, mono_flags, &mono_errors);
-                        mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                       mono_prep, mono_prep, mono_result->ghm,
-                                                       mono_flags, &mono_result->ghs_duration);
+                        mono_result->ghs = mco_GhsCode(9999);
                     }
-                    mono_result->main_error = mono_errors.main_error;
-                } else {
-                    mono_result->ghs = mco_GhsCode(9999);
                 }
             }
 
-            memcpy(&out_mono_results[j], mono_results.ptr, mono_results.len * SIZE(mco_Result));
-            j += result.stays.len;
+            // Count supplements days
+            mco_CountSupplements(*prepared_set.index, authorization_set,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
+                                 flags, &result.supplement_days, mono_supplement_days);
+        } else {
+            // Count supplements days
+            mco_CountSupplements(*prepared_set.index, authorization_set,
+                                 prepared_set.prep, prepared_set.mono_preps, result.ghm, result.ghs,
+                                 flags, &result.supplement_days);
         }
+
+        // Commit result
+        out_results[i] = result;
     }
 
     return i;
@@ -2265,19 +2219,21 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         Async async;
 
         const auto AddClassifierTask = [&](Span<const mco_Stay> task_stays, Size results_offset) {
-            mco_Result *task_out_results = out_results->ptr + results_offset;
             if (out_mono_results) {
-                mco_Result *task_out_mono_results = out_mono_results->ptr +
+                async.AddTask([&, task_stays, results_offset]() mutable {
+                    mco_Result *task_results = out_results->ptr + results_offset;
+                    mco_Result *task_mono_results = out_mono_results->ptr +
                                                     (task_stays.ptr - mono_stays.ptr);
-                async.AddTask([&, task_stays, task_out_results, task_out_mono_results]() mutable {
-                    ClassifyWithMono(table_set, authorization_set, task_stays, flags,
-                                     task_out_results, task_out_mono_results);
+
+                    mco_RunClassifier(table_set, authorization_set, task_stays, flags,
+                                      task_results, task_mono_results);
                     return true;
                 });
             } else {
-                async.AddTask([&, task_stays, task_out_results]() mutable {
-                    Classify(table_set, authorization_set, task_stays, flags,
-                             task_out_results);
+                async.AddTask([&, task_stays, results_offset]() mutable {
+                    mco_Result *task_results = out_results->ptr + results_offset;
+
+                    mco_RunClassifier(table_set, authorization_set, task_stays, flags, task_results);
                     return true;
                 });
             }
@@ -2321,11 +2277,11 @@ void mco_ClassifySerial(const mco_TableSet &table_set, const mco_AuthorizationSe
     out_results->Grow(mono_stays.len);
     if (out_mono_results) {
         out_mono_results->Grow(mono_stays.len);
-        out_results->len += ClassifyWithMono(table_set, authorization_set, mono_stays, flags,
-                                             out_results->end(), out_mono_results->end());
+        out_results->len += mco_RunClassifier(table_set, authorization_set, mono_stays, flags,
+                                              out_results->end(), out_mono_results->end());
         out_mono_results->len += mono_stays.len;
     } else {
-        out_results->len += Classify(table_set, authorization_set, mono_stays, flags,
-                                     out_results->end());
+        out_results->len += mco_RunClassifier(table_set, authorization_set, mono_stays, flags,
+                                              out_results->end());
     }
 }
