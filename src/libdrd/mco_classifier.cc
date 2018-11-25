@@ -2096,8 +2096,8 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
     mco_ErrorSet errors;
     mco_ErrorSet mono_errors;
 
-    Size i, j = 0;
-    for (i = 0; mono_stays.len; i++) {
+    Size i = 0, j = 0;
+    while (mono_stays.len) {
         mco_Result result = {};
 
         // Prepare
@@ -2128,11 +2128,11 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
 
             // Perform mono-stay classifications
             if (result.stays.len == 1) {
-                out_mono_results[j++] = result;
+                out_mono_results[j] = result;
             } else {
-                for (Size k = 0; k < result.stays.len; j++, k++) {
+                for (Size k = 0; k < result.stays.len; k++) {
                     mco_PreparedStay &mono_prep = prepared_set.mono_preps[k];
-                    mco_Result *mono_result = &out_mono_results[j];
+                    mco_Result *mono_result = &out_mono_results[j + k];
 
                     *mono_result = {};
                     mono_result->stays = *mono_prep.stay;
@@ -2186,7 +2186,8 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
         }
 
         // Commit result
-        out_results[i] = result;
+        out_results[i++] = result;
+        j += result.stays.len;
     }
 
     return i;
