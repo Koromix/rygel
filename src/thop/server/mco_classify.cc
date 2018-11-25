@@ -702,6 +702,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                 writer.Key("unit"); writer.Int(stay.unit.number);
                 if (conn->user->allowed_units.Find(stay.unit)) {
                     writer.Key("sex"); writer.Int(stay.sex);
+                    writer.Key("age"); writer.Int(mono_result.age);
                     writer.Key("birthdate"); writer.String(Fmt(buf, "%1", stay.birthdate).ptr);
                     writer.Key("entry_date"); writer.String(Fmt(buf, "%1", stay.entry.date).ptr);
                     writer.Key("entry_mode"); writer.String(&stay.entry.mode, 1);

@@ -1221,7 +1221,8 @@ let mco_casemix = {};
                         ),
                         html('tr',
                             html('th', 'Date de naissance'),
-                            html('td', stay.birthdate)
+                            html('td', (stay.birthdate || '') +
+                                       (stay.age !== undefined ? ' (' + mco_common.ageText(stay.age) + ')' : ''))
                         ),
                         html('tr',
                             html('th', 'Entrée'),
