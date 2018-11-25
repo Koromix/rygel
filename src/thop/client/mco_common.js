@@ -256,11 +256,21 @@ let mco_common = {};
 
     function durationText(duration)
     {
-        if (duration !== undefined) {
+        if (duration !== null && duration !== undefined) {
             return duration.toString() + (duration >= 2 ? ' nuits' : ' nuit');
         } else {
             return '';
         }
     }
     this.durationText = durationText;
+
+    function ageText(age)
+    {
+        if (age !== null && age !== undefined) {
+            return age.toString() + (age >= 2 ? ' ans' : ' an');
+        } else {
+            return '';
+        }
+    }
+    this.ageText = ageText;
 }).call(mco_common);

@@ -556,9 +556,6 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
     }, out_response);
 }
 
-// TODO: Limit maximum number of results (~ 500?)
-// TODO: Split loop
-// TODO: Deal with invalid values (duration, age)
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user ||
@@ -675,9 +672,13 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
             if (LIKELY(result.index)) {
                 writer.Key("index_date"); writer.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
             }
-            writer.Key("duration"); writer.Int(result.duration);
+            if (result.duration >= 0) {
+                writer.Key("duration"); writer.Int(result.duration);
+            }
             writer.Key("sex"); writer.Int(result.stays[0].sex);
-            writer.Key("age"); writer.Int(result.age);
+            if (result.age >= 0) {
+                writer.Key("age"); writer.Int(result.age);
+            }
             writer.Key("main_stay"); writer.Int(result.main_stay_idx);
             writer.Key("ghm"); writer.String(result.ghm.ToString(buf).ptr);
             writer.Key("main_error"); writer.Int(result.main_error);
@@ -695,7 +696,9 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
 
                 writer.StartObject();
 
-                writer.Key("duration"); writer.Int(mono_result.duration);
+                if (mono_result.duration >= 0) {
+                    writer.Key("duration"); writer.Int(mono_result.duration);
+                }
                 writer.Key("unit"); writer.Int(stay.unit.number);
                 if (conn->user->allowed_units.Find(stay.unit)) {
                     writer.Key("sex"); writer.Int(stay.sex);
