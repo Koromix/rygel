@@ -119,6 +119,6 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
                        const mco_AuthorizationSet &authorization_set,
                        Span<const mco_Stay> mono_stays, unsigned int flags,
                        mco_Result out_results[], Strider<mco_Result> out_mono_results = {});
-void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
                   HeapArray<mco_Result> *out_mono_results = nullptr);

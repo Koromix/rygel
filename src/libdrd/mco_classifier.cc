@@ -2192,7 +2192,7 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
     return i;
 }
 
-void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   Span<const mco_Stay> mono_stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
@@ -2201,9 +2201,6 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     } else {
         out_mono_results = nullptr;
     }
-
-    if (!mono_stays.len)
-        return;
 
     static const int task_size = 2048;
 
@@ -2232,6 +2229,9 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     // Counting results on the main thread costs us some performance. If the caller is
     // already parallelizing (drdR for example) don't do it.
     if (!Async::IsTaskRunning()) {
+        if (!mono_stays.len)
+            return 0;
+
         Async async;
 
         results_count = 1;
@@ -2265,4 +2265,6 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
     if (out_mono_results) {
         out_mono_results->len += mono_stays.len;
     }
+
+    return results_count;
 }
