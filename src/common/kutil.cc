@@ -1469,6 +1469,7 @@ struct ThreadPool {
 // around this with heap allocation.
 static THREAD_LOCAL ThreadPool *g_thread_pool;
 static THREAD_LOCAL WorkerThread *g_worker_thread;
+static THREAD_LOCAL bool g_task_running = false;
 
 Async::Async()
 {
@@ -1537,9 +1538,18 @@ bool Async::Sync()
     return success;
 }
 
+bool Async::IsTaskRunning()
+{
+    return g_task_running;
+}
+
 void Async::RunTask(Task *task)
 {
     g_thread_pool->pending_tasks--;
+
+    g_task_running = true;
+    DEFER { g_task_running = false; };
+
     bool ret = task->func();
     success &= ret;
     remaining_tasks--;

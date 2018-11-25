@@ -3081,6 +3081,8 @@ public:
     void AddTask(const std::function<bool()> &f);
     bool Sync();
 
+    static bool IsTaskRunning();
+
 private:
     void RunTask(struct Task *task);
 

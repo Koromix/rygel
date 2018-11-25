@@ -326,10 +326,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     if (j < diagnoses_end || k < procedures_end)
         return false;
 
-    // We're already running in parallel, using ClassifyParallel would slow us down,
-    // because it has some overhead caused by multi-stays.
-    mco_ClassifySerial(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
-                       flags, out_results, out_mono_results);
+    mco_Classify(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
+                 flags, out_results, out_mono_results);
 
     other_diagnoses2.Leak();
     procedures2.Leak();

@@ -2214,37 +2214,36 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         out_mono_results->Grow(mono_stays.len);
     }
 
-    Size results_count = 1;
-    {
+    const auto run_classifier_task = [&](Span<const mco_Stay> task_stays, Size results_offset) {
+        mco_Result *task_results = out_results->ptr + results_offset;
+
+        if (out_mono_results) {
+            mco_Result *task_mono_results = out_mono_results->ptr +
+                                            (task_stays.ptr - mono_stays.ptr);
+            return mco_RunClassifier(table_set, authorization_set, task_stays, flags,
+                                     task_results, task_mono_results);
+        } else {
+            return mco_RunClassifier(table_set, authorization_set, task_stays, flags,
+                                     task_results);
+        }
+    };
+
+    Size results_count;
+    // Counting results on the main thread costs us some performance. If the caller is
+    // already parallelizing (drdR for example) don't do it.
+    if (!Async::IsTaskRunning()) {
         Async async;
 
-        const auto AddClassifierTask = [&](Span<const mco_Stay> task_stays, Size results_offset) {
-            if (out_mono_results) {
-                async.AddTask([&, task_stays, results_offset]() mutable {
-                    mco_Result *task_results = out_results->ptr + results_offset;
-                    mco_Result *task_mono_results = out_mono_results->ptr +
-                                                    (task_stays.ptr - mono_stays.ptr);
-
-                    mco_RunClassifier(table_set, authorization_set, task_stays, flags,
-                                      task_results, task_mono_results);
-                    return true;
-                });
-            } else {
-                async.AddTask([&, task_stays, results_offset]() mutable {
-                    mco_Result *task_results = out_results->ptr + results_offset;
-
-                    mco_RunClassifier(table_set, authorization_set, task_stays, flags, task_results);
-                    return true;
-                });
-            }
-        };
-
+        results_count = 1;
         Size results_offset = out_results->len;
         Span<const mco_Stay> task_stays = mono_stays[0];
         for (Size i = 1; i < mono_stays.len; i++) {
             if (mco_SplitTest(mono_stays[i - 1].bill_id, mono_stays[i].bill_id)) {
                 if (results_count % task_size == 0) {
-                    AddClassifierTask(task_stays, results_offset);
+                    async.AddTask([&, task_stays, results_offset]() mutable {
+                        run_classifier_task(task_stays, results_offset);
+                        return true;
+                    });
                     results_offset += task_size;
                     task_stays = MakeSpan(&mono_stays[i], 0);
                 }
@@ -2252,36 +2251,18 @@ void mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
             }
             task_stays.len++;
         }
-        AddClassifierTask(task_stays, results_offset);
+        async.AddTask([&, task_stays, results_offset]() mutable {
+            run_classifier_task(task_stays, results_offset);
+            return true;
+        });
 
         async.Sync();
+    } else {
+        results_count = run_classifier_task(mono_stays, 0);
     }
 
     out_results->len += results_count;
     if (out_mono_results) {
         out_mono_results->len += mono_stays.len;
-    }
-}
-
-void mco_ClassifySerial(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                        Span<const mco_Stay> mono_stays, unsigned int flags,
-                        HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
-{
-    if (flags & (int)mco_ClassifyFlag::Mono) {
-        DebugAssert(out_mono_results);
-    } else {
-        out_mono_results = nullptr;
-    }
-
-    // Pessimistic assumption (no multi-stay)
-    out_results->Grow(mono_stays.len);
-    if (out_mono_results) {
-        out_mono_results->Grow(mono_stays.len);
-        out_results->len += mco_RunClassifier(table_set, authorization_set, mono_stays, flags,
-                                              out_results->end(), out_mono_results->end());
-        out_mono_results->len += mono_stays.len;
-    } else {
-        out_results->len += mco_RunClassifier(table_set, authorization_set, mono_stays, flags,
-                                              out_results->end());
     }
 }
