@@ -559,7 +559,7 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!thop_stay_set.stays.len || !conn->user ||
-            !(conn->user->permissions & (int)UserPermission::Classify))
+            !(conn->user->permissions & (int)UserPermission::FullResults))
         return CreateErrorPage(403, out_response);
 
     Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};

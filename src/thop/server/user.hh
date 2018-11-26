@@ -9,10 +9,10 @@
 struct StructureEntity;
 
 enum class UserPermission {
-    Classify = 1 << 0
+    FullResults = 1 << 0
 };
 static const char *const UserPermissionNames[] = {
-    "Classify"
+    "FullResults"
 };
 
 struct User {
