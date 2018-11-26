@@ -47,6 +47,14 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
             writer.Key("default_algorithm"); writer.String(default_desc.name);
         }
 
+        writer.Key("permissions"); writer.StartArray();
+        for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
+            if (conn->user->permissions & (1 << i)) {
+                writer.String(UserPermissionNames[i]);
+            }
+        }
+        writer.EndArray();
+
         writer.Key("structures"); writer.StartArray();
         for (const Structure &structure: thop_structure_set.structures) {
             writer.StartObject();
