@@ -278,14 +278,19 @@ static bool InitStays(Span<const char *const> stays_filenames)
         {
             Span<const mco_Stay> mono_stays = thop_stay_set.stays;
 
-            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-            thop_stay_set_dates[0] = sub_stays[sub_stays.len - 1].exit.date;
-            thop_stay_set_dates[1] = sub_stays[sub_stays.len - 1].exit.date;
-
+            thop_stay_set_dates[0].value = INT32_MAX;
             while (mono_stays.len) {
-                sub_stays = mco_Split(mono_stays, 1, &mono_stays);
-                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
-                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+                Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
+
+                if (LIKELY(sub_stays[sub_stays.len - 1].exit.date.IsValid())) {
+                    thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
+                    thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+                }
+            }
+
+            if (!thop_stay_set_dates[1].value) {
+                LogError("Could not determine date range for stay set");
+                return false;
             }
 
             thop_stay_set_dates[1]++;
