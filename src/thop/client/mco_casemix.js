@@ -89,8 +89,13 @@ let mco_casemix = {};
         // Casemix
         if (!route.period[0]) {
             let year = parseInt(settings.end_date.split('-')[0], 10);
-            route.period = ['' + (year - 1) + '-01-01', settings.end_date];
-            route.prev_period = ['' + (year - 2) + '-01-01', '' + (year - 1) + '-01-01'];
+            if (settings.end_date.endsWith('-01-01')) {
+                route.period = ['' + (year - 1) + '-01-01', settings.end_date];
+                route.prev_period = ['' + (year - 2) + '-01-01', '' + (year - 1) + '-01-01'];
+            } else {
+                route.period = ['' + year + '-01-01', settings.end_date];
+                route.prev_period = ['' + (year - 1) + '-01-01', '' + (year - 1) + settings.end_date.substring(4)];
+            }
         }
         if (!route.algorithm)
             route.algorithm = settings.default_algorithm;
