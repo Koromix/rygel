@@ -23,6 +23,9 @@ struct User {
     unsigned int dispense_modes;
     HashSet<UnitCode> allowed_units;
 
+    bool CheckDispenseMode(mco_DispenseMode dispense_mode) const
+        { return (dispense_modes & (1 << (int)dispense_mode)); }
+
     HASH_TABLE_HANDLER(User, name);
 };
 

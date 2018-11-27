@@ -179,21 +179,37 @@ let mco_common = {};
     };
 
     // Cache
-    let indexes = [];
+    let settings = {
+        indexes: [],
+        url_key: null
+    };
     let catalogs = {};
 
-    function updateIndexes()
+    function updateSettings()
     {
-        if (!indexes.length) {
-            let url = thop.baseUrl('api/mco_indexes.json');
+        if (user.getUrlKey() !== settings.url_key) {
+            let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, function(json) {
-                indexes = json;
+                settings = json;
+
+                if (settings.start_date) {
+                    settings.permissions = new Set(settings.permissions);
+                    for (let structure of settings.structures) {
+                        structure.units = {};
+                        for (let ent of structure.entities) {
+                            ent.path = ent.path.substr(1).split('|');
+                            structure.units[ent.unit] = ent;
+                        }
+                    }
+                }
+
+                settings.url_key = user.getUrlKey();
             });
         }
 
-        return indexes;
+        return settings;
     }
-    this.updateIndexes = updateIndexes;
+    this.updateSettings = updateSettings;
 
     function updateCatalog(name)
     {

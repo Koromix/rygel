@@ -4,80 +4,7 @@
 
 #include "thop.hh"
 #include "mco_classify.hh"
-#include "structure.hh"
 #include "user.hh"
-
-static bool CheckDispenseModeAgainstUser(const User &user, mco_DispenseMode dispense_mode)
-{
-    return dispense_mode == thop_structure_set.dispense_mode ||
-           (user.dispense_modes & (1 << (int)dispense_mode));
-}
-
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
-{
-    if (!thop_stay_set.stays.len || !conn->user)
-        return CreateErrorPage(403, out_response);
-
-    out_response->flags |= (int)Response::Flag::DisableETag;
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
-        char buf[32];
-
-        writer.StartObject();
-
-        writer.Key("begin_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[0]).ptr);
-        writer.Key("end_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[1]).ptr);
-
-        // Algorithms
-        {
-            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_structure_set.dispense_mode];
-
-            writer.Key("algorithms"); writer.StartArray();
-            for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
-                if (CheckDispenseModeAgainstUser(*conn->user, (mco_DispenseMode)i)) {
-                    const OptionDesc &desc = mco_DispenseModeOptions[i];
-
-                    writer.StartObject();
-                    writer.Key("name"); writer.String(desc.name);
-                    writer.Key("title"); writer.String(desc.help);
-                    writer.EndObject();
-                }
-            }
-            writer.EndArray();
-
-            writer.Key("default_algorithm"); writer.String(default_desc.name);
-        }
-
-        writer.Key("permissions"); writer.StartArray();
-        for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
-            if (conn->user->permissions & (1 << i)) {
-                writer.String(UserPermissionNames[i]);
-            }
-        }
-        writer.EndArray();
-
-        writer.Key("structures"); writer.StartArray();
-        for (const Structure &structure: thop_structure_set.structures) {
-            writer.StartObject();
-            writer.Key("name"); writer.String(structure.name);
-            writer.Key("entities"); writer.StartArray();
-            for (const StructureEntity &ent: structure.entities) {
-                if (conn->user->allowed_units.Find(ent.unit)) {
-                    writer.StartObject();
-                    writer.Key("unit"); writer.Int(ent.unit.number);
-                    writer.Key("path"); writer.String(ent.path);
-                    writer.EndObject();
-                }
-            }
-            writer.EndArray();
-            writer.EndObject();
-        }
-        writer.EndArray();
-
-        writer.EndObject();
-
-        return true;
-    }, conn->compression_type, out_response);
-}
 
 static bool ParseDateRange(Span<const char> date_str, Date *out_start_date, Date *out_end_date)
 {
@@ -239,7 +166,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     }
 
     // Permissions
-    if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
+    if (!conn->user->CheckDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
@@ -619,7 +546,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
         }
     }
 
-    if (!CheckDispenseModeAgainstUser(*conn->user, dispense_mode)) {
+    if (!conn->user->CheckDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }

@@ -16,7 +16,7 @@ let mco_tree = {};
         route.date = path_parts[1] || null;
 
         // Resources
-        let indexes = mco_common.updateIndexes();
+        let indexes = mco_common.updateSettings().indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });

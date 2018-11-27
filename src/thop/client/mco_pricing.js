@@ -33,7 +33,7 @@ let mco_pricing = {};
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
-        let indexes = mco_common.updateIndexes();
+        let indexes = mco_common.updateSettings().indexes;
         {
             let ret = mco_common.updateCatalog('mco_ghm_roots');
             ghm_roots = ret.concepts;
@@ -149,7 +149,7 @@ let mco_pricing = {};
 
     function updatePriceMap(index, sector)
     {
-        const indexes = mco_common.updateIndexes();
+        const indexes = mco_common.updateSettings().indexes;
         const date_key = indexes[index].begin_date + '@' + sector;
 
         if (!available_dates.has(date_key)) {

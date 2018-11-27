@@ -10,12 +10,7 @@ let mco_casemix = {};
     let sorts = {};
 
     // Settings
-    let st_url_key = null;
-    let start_date = null;
-    let end_date = null;
-    let algorithms = [];
-    let default_algorithm = null;
-    let structures = [];
+    let settings = {};
 
     // Casemix
     let mix_ready = false;
@@ -48,13 +43,12 @@ let mco_casemix = {};
         if (path_parts[2])
             Object.assign(route, thop.buildRoute(JSON.parse(window.atob(path_parts[2]))));
         route.view = path_parts[1] || 'ghm_roots';
-        route.period = (route.period && route.period[0]) ? route.period : [start_date, end_date];
-        route.prev_period = (route.prev_period && route.prev_period[0]) ?
-                            route.prev_period : [start_date, end_date];
+        route.period = route.period || [null, null];
+        route.prev_period = route.prev_period || [null, null];
         route.structure = route.structure || 0;
         route.regroup = route.regroup || 'none';
         route.mode = route.mode || 'none';
-        route.algorithm = route.algorithm || default_algorithm;
+        route.algorithm = route.algorithm || null;
         route.units = route.units || [];
         route.ghm_roots = route.ghm_roots || [];
         route.refresh = route.refresh || false;
@@ -66,15 +60,16 @@ let mco_casemix = {};
         sorts[route.view] = route.sort;
 
         // Resources
-        let indexes = mco_common.updateIndexes();
+        settings = mco_common.updateSettings();
+        let indexes = settings.indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let ghm_roots = mco_common.updateCatalog('mco_ghm_roots').concepts;
         if (['durations', 'results'].includes(route.view) && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
-        if (unspecified && structures.length && ghm_roots.length) {
-            if (!route.units.length && structures[route.structure])
-                route.units = structures[route.structure].entities.map(function(ent) { return ent.unit; }).sort();
+        if (unspecified && settings.structures.length && ghm_roots.length) {
+            if (!route.units.length && settings.structures[route.structure])
+                route.units = settings.structures[route.structure].entities.map(function(ent) { return ent.unit; }).sort();
             if (!route.ghm_roots.length)
                 route.ghm_roots = ghm_roots.map(function(ghm_root) { return ghm_root.ghm_root; }).sort();
 
@@ -84,27 +79,30 @@ let mco_casemix = {};
             mco_common.updateCatalog('cim10');
             mco_common.updateCatalog('ccam');
         }
-        updateSettings();
 
         // Casemix
-        if (st_url_key) {
-            let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-            updateCasemixParams(route.period[0], route.period[1], route.algorithm,
-                                prev_period[0], prev_period[1], route.apply_coefficient,
-                                route.refresh);
-
-            switch (route.view) {
-                case 'ghm_roots':
-                case 'units': {
-                    updateCasemixUnits();
-                } break;
-                case 'durations': {
-                    updateCasemixDuration(route.ghm_root);
-                } break;
-                case 'results': {
-                    updateResults(route.ghm_root);
-                } break;
-            }
+        if (!route.period[0]) {
+            let year = parseInt(settings.end_date.split('-')[0], 10);
+            route.period = ['' + (year - 1) + '-01-01', settings.end_date];
+            route.prev_period = ['' + (year - 2) + '-01-01', '' + (year - 1) + '-01-01'];
+        }
+        if (!route.algorithm)
+            route.algorithm = settings.default_algorithm;
+        let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
+        updateCasemixParams(route.period[0], route.period[1], route.algorithm,
+                            prev_period[0], prev_period[1], route.apply_coefficient,
+                            route.refresh);
+        switch (route.view) {
+            case 'ghm_roots':
+            case 'units': {
+                updateCasemixUnits();
+            } break;
+            case 'durations': {
+                updateCasemixDuration(route.ghm_root);
+            } break;
+            case 'results': {
+                updateResults(route.ghm_root);
+            } break;
         }
         delete route.refresh;
 
@@ -115,7 +113,7 @@ let mco_casemix = {};
             errors.add('Aucune unité sélectionnée');
         if (['ghm_roots', 'units'].includes(route.view) && !route.ghm_roots.length && mix_ready)
             errors.add('Aucune racine sélectionnée');
-        if (route.structure > structures.length && structures.length)
+        if (route.structure > settings.structures.length && settings.structures.length)
             errors.add('Structure inexistante');
         if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
             errors.add('Regroupement incorrect');
@@ -129,8 +127,8 @@ let mco_casemix = {};
         }
         if (!(['none', 'absolute'].includes(route.mode)))
             errors.add('Mode de comparaison inconnu');
-        if (algorithms.length &&
-                !algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
+        if (settings.algorithms.length &&
+                !settings.algorithms.find(function(algorithm) { return algorithm.name === route.algorithm; }))
             errors.add('Algorithme inconnu');
 
         // Refresh settings
@@ -260,30 +258,6 @@ let mco_casemix = {};
                (!mix_durations[ghm_root] || mix_durations[ghm_root].ghs.length);
     }
 
-    function updateSettings()
-    {
-        if (user.getUrlKey() !== st_url_key) {
-            let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
-            data.get(url, function(json) {
-                start_date = json.begin_date;
-                end_date = json.end_date;
-                algorithms = json.algorithms;
-                default_algorithm = json.default_algorithm;
-                structures = json.structures;
-
-                for (let structure of structures) {
-                    structure.units = {};
-                    for (let ent of structure.entities) {
-                        ent.path = ent.path.substr(1).split('|');
-                        structure.units[ent.unit] = ent;
-                    }
-                }
-
-                st_url_key = user.getUrlKey();
-            });
-        }
-    }
-
     function clearCasemix()
     {
         mix_rows.length = 0;
@@ -410,7 +384,7 @@ let mco_casemix = {};
 
     function refreshPeriodsPickers(period, prev_period, mode)
     {
-        if (!start_date) {
+        if (!settings.start_date) {
             period = [null, null];
             prev_period = [null, null];
         }
@@ -420,7 +394,8 @@ let mco_casemix = {};
 
         // Set main picker
         {
-            let builder = new PeriodPicker(picker, start_date, end_date, period[0], period[1]);
+            let builder = new PeriodPicker(picker, settings.start_date, settings.end_date,
+                                           period[0], period[1]);
             builder.changeHandler = function() {
                 go({period: this.object.getValues()});
             };
@@ -429,7 +404,7 @@ let mco_casemix = {};
 
         // Set diff picker
         {
-            let builder = new PeriodPicker(prev_picker, start_date, end_date,
+            let builder = new PeriodPicker(prev_picker, settings.start_date, settings.end_date,
                                            prev_period[0], prev_period[1]);
             builder.changeHandler = function() {
                 go({prev_period: this.object.getValues()});
@@ -444,7 +419,7 @@ let mco_casemix = {};
 
     function refreshStructuresTree(units, structure_idx)
     {
-        if (!needsRefresh(refreshStructuresTree, null, [st_url_key].concat(Array.from(arguments))))
+        if (!needsRefresh(refreshStructuresTree, null, [settings.url_key].concat(Array.from(arguments))))
             return;
 
         units = new Set(units);
@@ -457,7 +432,7 @@ let mco_casemix = {};
                 structure: this.object.getActiveTab()});
         };
 
-        for (const structure of structures) {
+        for (const structure of settings.structures) {
             builder.createTab(structure.name);
 
             let prev_groups = [];
@@ -489,9 +464,9 @@ let mco_casemix = {};
         let select = query('#opt_algorithm > select');
 
         select.innerHTML = '';
-        for (const algorithm of algorithms) {
+        for (const algorithm of settings.algorithms) {
             let text ='Algorithme ' + algorithm.title;
-            if (algorithm.name === default_algorithm)
+            if (algorithm.name === settings.default_algorithm)
                 text += ' *';
             let option = html('option', {value: algorithm.name}, text);
             select.appendChild(option);
@@ -501,7 +476,7 @@ let mco_casemix = {};
 
     function refreshGhmRootsTree(ghm_roots, select_ghm_roots, regroup)
     {
-        if (!needsRefresh(refreshGhmRootsTree, null, [st_url_key].concat(Array.from(arguments))))
+        if (!needsRefresh(refreshGhmRootsTree, null, [settings.url_key].concat(Array.from(arguments))))
             return;
 
         // TODO: This should probably not be hard-coded here
@@ -591,7 +566,7 @@ let mco_casemix = {};
                 needsRefresh(refreshUnitsTable, 'init', [mix_url, units, ghm_roots, structure])) {
             units = new Set(units);
             ghm_roots = new Set(ghm_roots);
-            structure = structures[structure];
+            structure = settings.structures[structure];
 
             const rows = mix_rows.filter(function(row) {
                 if (!ghm_roots.has(row.ghm_root))
@@ -1123,8 +1098,8 @@ let mco_casemix = {};
 
         function unitPath(unit)
         {
-            if (unit && structures[0]) {
-                let unit_info = structures[0].units[unit];
+            if (unit && settings.structures[0]) {
+                let unit_info = settings.structures[0].units[unit];
                 if (unit_info) {
                     return unit_info.path[unit_info.path.length - 1];
                 } else {

@@ -540,13 +540,12 @@ static void InitRoutes()
     routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_results", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
     routes.Set({"/api/mco_casemix_units.json", "GET", Route::Matching::Exact,
                 ProduceMcoCasemixUnits});
     routes.Set({"/api/mco_casemix_duration.json", "GET", Route::Matching::Exact,
                 ProduceMcoCasemixDuration});
     routes.Set({"/api/mco_results.json", "GET", Route::Matching::Exact, ProduceMcoResults});
-    routes.Set({"/api/mco_indexes.json", "GET", Route::Matching::Exact, ProduceMcoIndexes});
+    routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
     routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
     routes.Set({"/api/mco_procedures.json", "GET", Route::Matching::Exact, ProduceMcoProcedures});
     routes.Set({"/api/mco_ghm_ghs.json", "GET", Route::Matching::Exact, ProduceMcoGhmGhs});

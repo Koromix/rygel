@@ -226,6 +226,8 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
         User &user = set.users[i];
         const UnitRuleSet &rule_set = rule_sets[i];
 
+        user.dispense_modes |= 1 << (int)structure_set.dispense_mode;
+
         for (const Structure &structure: structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
                 if (CheckUnitPermission(rule_set, ent))

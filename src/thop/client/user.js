@@ -84,7 +84,7 @@ let user = {};
     {
         let prev_url_key = url_key;
 
-        url_key = getCookie('url_key');
+        url_key = getCookie('url_key') || 0;
         username = getCookie('username');
 
         if (url_key !== prev_url_key) {
