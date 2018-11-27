@@ -541,7 +541,7 @@ let mco_list = {};
             url = routeToUrl({list: 'procedures', spec: str});
         } else if (str[0] === 'D') {
             url = routeToUrl({list: 'diagnoses', spec: str});
-        } else if (str.match(/^[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?$/)) {
+        } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
             url = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
             cls = 'ghm';
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
@@ -560,7 +560,7 @@ let mco_list = {};
     {
         let elements = [];
         for (;;) {
-            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZK][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
+            let m = str.match(/([AD](\-[0-9]+|\$[0-9]+\.[0-9]+)|[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?|[Nn]oeud [0-9]+)/);
             if (!m)
                 break;
 
