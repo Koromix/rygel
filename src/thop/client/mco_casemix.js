@@ -32,12 +32,6 @@ let mco_casemix = {};
 
     function runCasemix(route, path, parameters, hash, errors)
     {
-        if (!user.isConnected()) {
-            errors.add('Vous n\'êtes pas connecté(e)');
-            query('#cm').addClass('hide');
-            return;
-        }
-
         // Parse route (model: casemix/<view>/<json_parameters_in_base64>)
         let path_parts = path.split('/', 3);
         if (path_parts[2])
@@ -78,6 +72,18 @@ let mco_casemix = {};
         if (route.view === 'results') {
             mco_common.updateCatalog('cim10');
             mco_common.updateCatalog('ccam');
+        }
+
+        // Permissions
+        if (!settings.start_date) {
+            errors.add('Vous n\'êtes pas connecté(e)');
+            query('#cm').addClass('hide');
+            return;
+        }
+        if (route.view === 'results' && !settings.permissions.has('FullResults')) {
+            errors.add('Vous n\'avez pas les droits pour voir cette page');
+            query('#cm').addClass('hide');
+            return;
         }
 
         // Casemix
@@ -190,9 +196,6 @@ let mco_casemix = {};
 
     function routeToUrl(args)
     {
-        if (!user.isConnected())
-            return null;
-
         const KeepKeys = [
             'period',
             'prev_period',
@@ -240,6 +243,13 @@ let mco_casemix = {};
             page: (new_route.page !== 1) ? new_route.page : null,
             sort: new_route.sort || null
         });
+
+        // Hide links if not available for user
+        let settings = mco_common.updateSettings();
+        if (!settings.start_date)
+            return null;
+        if (new_route.view === 'results' && !settings.permissions.has('FullResults'))
+            return null;
 
         return url;
     }
