@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "mco_stays.hh"
+#include "mco_stay.hh"
 
 #pragma pack(push, 1)
 struct PackHeader {

@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "mco_authorizations.hh"
+#include "mco_authorization.hh"
 #include "mco_tables.hh"
 
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)

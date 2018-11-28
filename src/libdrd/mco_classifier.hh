@@ -5,8 +5,8 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "mco_authorizations.hh"
-#include "mco_stays.hh"
+#include "mco_authorization.hh"
+#include "mco_stay.hh"
 #include "mco_tables.hh"
 
 enum class mco_ClassifyFlag {

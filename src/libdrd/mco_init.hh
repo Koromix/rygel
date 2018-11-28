@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../common/kutil.hh"
-#include "mco_authorizations.hh"
+#include "mco_authorization.hh"
 #include "mco_tables.hh"
 
 static const char *const mco_options_usage =

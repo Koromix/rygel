@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.cc"
-#include "mco_authorizations.cc"
+#include "mco_authorization.cc"
 #include "mco_tables.cc"
-#include "mco_stays.cc"
+#include "mco_stay.cc"
 #include "mco_classifier.cc"
 #include "mco_mapper.cc"
 #include "mco_pricing.cc"

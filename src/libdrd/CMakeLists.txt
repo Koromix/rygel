@@ -5,8 +5,8 @@
 set(LIBDRD_SRC ../common/kutil.cc
                ../common/kutil.hh
                common.hh
-               mco_authorizations.cc
-               mco_authorizations.hh
+               mco_authorization.cc
+               mco_authorization.hh
                mco_classifier.cc
                mco_classifier.hh
                mco_common.hh
@@ -18,8 +18,8 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_mapper.hh
                mco_pricing.cc
                mco_pricing.hh
-               mco_stays.cc
-               mco_stays.hh
+               mco_stay.cc
+               mco_stay.hh
                mco_tables.cc
                mco_tables.hh)
 add_library(drd ${LIBDRD_SRC})
