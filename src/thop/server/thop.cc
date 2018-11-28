@@ -184,7 +184,7 @@ static bool InitStructureSet(Span<const char *const> resource_directories,
             filename = structure_filename;
         } else {
             for (Size i = resource_directories.len; i-- > 0;) {
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config%/structures.ini",
+                const char *test_filename = Fmt(&temp_alloc, "%1%/config%/mco_structures.ini",
                                                 resource_directories[i]).ptr;
                 if (TestPath(test_filename, FileType::File)) {
                     filename = test_filename;
