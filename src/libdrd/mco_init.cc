@@ -23,7 +23,7 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
     {
         bool success = true;
         for (const char *resource_dir: resource_directories) {
-            const char *tab_dir = Fmt(&temp_alloc, "%1%/mco", resource_dir).ptr;
+            const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
             if (TestPath(tab_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(tab_dir, "*.tab*", &temp_alloc,
                                                    &filenames2, 1024);
@@ -148,13 +148,13 @@ bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp)
 
         mco_resource_directories.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("--mco_dir")) {
+    } else if (opt_parser.TestOption("--mco_table_dir")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
         mco_table_directories.Append(opt_parser.current_value);
         return true;
-    } else if (opt_parser.TestOption("--mco_file")) {
+    } else if (opt_parser.TestOption("--mco_table_file")) {
         if (!opt_parser.RequireValue(usage_func))
             return false;
 
