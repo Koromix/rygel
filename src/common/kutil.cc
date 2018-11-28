@@ -1100,6 +1100,12 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
     HANDLE handle = FindFirstFileEx(find_filter, FindExInfoBasic, &find_data,
                                     FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (handle == INVALID_HANDLE_VALUE) {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND) {
+            DWORD attrib = GetFileAttributes(dirname);
+            if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
+                return EnumStatus::Done;
+        }
+
         LogError("Cannot enumerate directory '%1': %2", dirname,
                  Win32ErrorString());
         return EnumStatus::Error;
