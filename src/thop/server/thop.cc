@@ -240,14 +240,13 @@ static bool InitUserSet(Span<const char *const> resource_directories, const char
     return true;
 }
 
-static bool InitTables(Span<const char *const> catalog_directories,
-                       Span<const char *const> stays_filenames)
+static bool InitTables(Span<const char *const> catalog_directories, bool casemix)
 {
     thop_table_set = mco_GetMainTableSet();
     if (!thop_table_set || !thop_table_set->indexes.len)
         return false;
 
-    if (stays_filenames.len) {
+    if (casemix) {
         thop_authorization_set = mco_GetMainAuthorizationSet();
         if (!thop_authorization_set)
             return false;
@@ -263,84 +262,116 @@ static bool InitTables(Span<const char *const> catalog_directories,
     return true;
 }
 
-static bool InitStays(Span<const char *const> stays_filenames)
+static bool InitStays(Span<const char *const> stay_directories,
+                      Span<const char *const> stay_filenames)
 {
     LogInfo("Load stays");
 
+    BlockAllocator temp_alloc(Kibibytes(8));
+
+    HeapArray<const char *> filenames;
+    {
+        bool success = true;
+        for (const char *resource_dir: mco_resource_directories) {
+            const char *stay_dir = Fmt(&temp_alloc, "%1%/mco_stays", resource_dir).ptr;
+            if (TestPath(stay_dir, FileType::Directory)) {
+                success &= EnumerateDirectoryFiles(stay_dir, "*.grp", &temp_alloc, &filenames, 1024);
+                success &= EnumerateDirectoryFiles(stay_dir, "*.rss", &temp_alloc, &filenames, 1024);
+                success &= EnumerateDirectoryFiles(stay_dir, "*.dspak", &temp_alloc, &filenames, 1024);
+                success &= EnumerateDirectoryFiles(stay_dir, "*.grp.gz", &temp_alloc, &filenames, 1024);
+                success &= EnumerateDirectoryFiles(stay_dir, "*.rss.gz", &temp_alloc, &filenames, 1024);
+                success &= EnumerateDirectoryFiles(stay_dir, "*.dspak.gz", &temp_alloc, &filenames, 1024);
+            }
+        }
+        for (const char *dir: stay_directories) {
+            success &= EnumerateDirectoryFiles(dir, "*.grp", &temp_alloc, &filenames, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.rss", &temp_alloc, &filenames, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.dspak", &temp_alloc, &filenames, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.grp.gz", &temp_alloc, &filenames, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.rss.gz", &temp_alloc, &filenames, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.dspak.gz", &temp_alloc, &filenames, 1024);
+        }
+        filenames.Append(stay_filenames);
+        if (!success)
+            return false;
+    }
+
     mco_StaySetBuilder stay_set_builder;
-    if (!stay_set_builder.LoadFiles(stays_filenames))
+    if (!stay_set_builder.LoadFiles(filenames))
         return false;
     if (!stay_set_builder.Finish(&thop_stay_set))
         return false;
+    if (!thop_stay_set.stays.len) {
+        LogError("Cannot continue without any loaded stay");
+        return false;
+    }
 
-    if (thop_stay_set.stays.len) {
-        // Limit dates
-        {
-            Span<const mco_Stay> mono_stays = thop_stay_set.stays;
+    // Limit dates
+    {
+        Span<const mco_Stay> mono_stays = thop_stay_set.stays;
 
-            thop_stay_set_dates[0].value = INT32_MAX;
-            while (mono_stays.len) {
-                Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
+        thop_stay_set_dates[0].value = INT32_MAX;
+        while (mono_stays.len) {
+            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
 
-                if (LIKELY(sub_stays[sub_stays.len - 1].exit.date.IsValid())) {
-                    thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
-                    thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
-                }
+            if (LIKELY(sub_stays[sub_stays.len - 1].exit.date.IsValid())) {
+                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
+                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
             }
-
-            if (!thop_stay_set_dates[1].value) {
-                LogError("Could not determine date range for stay set");
-                return false;
-            }
-
-            thop_stay_set_dates[1]++;
         }
 
-        LogInfo("Classify stays");
+        if (!thop_stay_set_dates[1].value) {
+            LogError("Could not determine date range for stay set");
+            return false;
+        }
 
-        mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
-                     (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
-        thop_results.Trim();
-        thop_mono_results.Trim();
+        thop_stay_set_dates[1]++;
+    }
 
-        LogInfo("Index results");
+    LogInfo("Classify stays");
 
-        // By GHM
-        for (Size i = 0, j = 0; i < thop_results.len; i++) {
-            const mco_Result &result = thop_results[i];
+    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+                 (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
+    thop_results.Trim();
+    thop_mono_results.Trim();
+
+    LogInfo("Index results");
+
+    // By GHM
+    for (Size i = 0, j = 0; i < thop_results.len; i++) {
+        const mco_Result &result = thop_results[i];
+
+        mco_ResultPointers p;
+        p.result = &result;
+        p.mono_results = thop_mono_results.Take(j, result.stays.len);
+
+        thop_results_index_ghm.Append(p);
+
+        j += result.stays.len;
+    }
+    std::sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
+              [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
+        return p1.result->ghm.Root() < p2.result->ghm.Root();
+    });
+    for (const mco_ResultPointers &p: thop_results_index_ghm) {
+        std::pair<Span<const mco_ResultPointers> *, bool> ret =
+            thop_results_index_ghm_map.Append(p.result->ghm.Root(), p);
+        ret.first->len += !ret.second;
+    }
+    thop_results_index_ghm.Trim();
+
+    // By bill id
+    {
+        Size i = 0;
+        for (const mco_Result &result: thop_results) {
+            DebugAssert(thop_mono_results[i].stays[0].bill_id == result.stays[0].bill_id);
 
             mco_ResultPointers p;
             p.result = &result;
-            p.mono_results = thop_mono_results.Take(j, result.stays.len);
+            p.mono_results = thop_mono_results.Take(i, result.stays.len);
+            i += result.stays.len;
 
-            thop_results_index_ghm.Append(p);
-
-            j += result.stays.len;
-        }
-        std::sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
-                  [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
-            return p1.result->ghm.Root() < p2.result->ghm.Root();
-        });
-        for (const mco_ResultPointers &p: thop_results_index_ghm) {
-            std::pair<Span<const mco_ResultPointers> *, bool> ret =
-                thop_results_index_ghm_map.Append(p.result->ghm.Root(), p);
-            ret.first->len += !ret.second;
-        }
-        thop_results_index_ghm.Trim();
-
-        // By bill id
-        {
-            Size i = 0;
-            for (const mco_Result &result: thop_results) {
-                DebugAssert(thop_mono_results[i].stays[0].bill_id == result.stays[0].bill_id);
-
-                mco_ResultPointers p;
-                p.result = &result;
-                p.mono_results = thop_mono_results.Take(i, result.stays.len);
-                i += result.stays.len;
-
-                thop_results_index_bill_id.Append(result.stays[0].bill_id, p);
-            }
+            thop_results_index_bill_id.Append(result.stays[0].bill_id, p);
         }
     }
 
@@ -820,18 +851,20 @@ static void ReleaseConnectionData(void *, struct MHD_Connection *,
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp,
-R"(Usage: thop [options] [stay_file ..]
-
-Options:
-    -p, --port <port>            Web server port
-                                 (default: 8888)
-        --catalog_dir <dir>      Add catalogs directory
-                                 (default: <resource_dir>%/catalogs)
-
-    -c, --casemix                Load stays for casemix module
+        PrintLn(fp, R"(Usage: thop [options]
 )");
         PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(
+THOP options:
+    -p, --port <port>            Web server port
+                                 (default: 8888)
+
+    -c, --casemix                Enable casemix module
+
+        --mco_stay_dir <dir>     Add MCO stays directory
+                                 (default: <resource_dir>%/mco_stays)
+        --mco_stay_file <dir>    Add MCO stays file
+)");
     };
 
     BlockAllocator temp_alloc(Kibibytes(8));
@@ -844,11 +877,12 @@ Options:
 
     HeapArray<const char *> catalog_directories;
     uint16_t port = 8888;
-    HeapArray<const char *> stays_filenames;
+    bool casemix = false;
+    HeapArray<const char *> stay_directories;
+    HeapArray<const char *> stay_filenames;
     {
         OptionParser opt_parser(argc, argv);
 
-        bool casemix = false;
         const char *opt;
         while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
@@ -871,6 +905,16 @@ Options:
                     return 1;
 
                 catalog_directories.Append(opt_parser.current_value);
+            } else if (TestOption(opt, "--mco_stay_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return 1;
+
+                stay_directories.Append(opt_parser.current_value);
+            } else if (TestOption(opt, "--mco_stay_file")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return 1;
+
+                stay_filenames.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-c", "--casemix")) {
                 casemix = true;
             } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
@@ -878,12 +922,8 @@ Options:
             }
         }
 
-        if (casemix) {
-            opt_parser.ConsumeNonOptions(&stays_filenames);
-            if (!stays_filenames.len) {
-                LogError("No stay filenames specified despite '--casemix' option");
-                return 1;
-            }
+        if (!casemix && (stay_directories.len || stay_filenames.len)) {
+            LogError("Ignoring stays without --casemix option");
         }
     }
 
@@ -892,9 +932,9 @@ Options:
         return 1;
     }
 
-    if (!InitTables(catalog_directories, stays_filenames))
+    if (!InitTables(catalog_directories, casemix))
         return 1;
-    if (stays_filenames.len && !InitStays(stays_filenames))
+    if (casemix && !InitStays(stay_directories, stay_filenames))
         return 1;
     if (!ComputeConstraints())
         return 1;
