@@ -265,10 +265,11 @@ static bool InitTables(Span<const char *const> catalog_directories, bool casemix
 static bool InitStays(Span<const char *const> stay_directories,
                       Span<const char *const> stay_filenames)
 {
-    LogInfo("Load stays");
-
     BlockAllocator temp_alloc(Kibibytes(8));
 
+    LogInfo("Load stays");
+
+    // Aggregate stay files
     HeapArray<const char *> filenames;
     {
         const auto enumerate_directory_files = [&](const char *dir) {
@@ -303,6 +304,7 @@ static bool InitStays(Span<const char *const> stay_directories,
             return false;
     }
 
+    // Load stays
     mco_StaySetBuilder stay_set_builder;
     if (!stay_set_builder.LoadFiles(filenames))
         return false;
@@ -337,6 +339,7 @@ static bool InitStays(Span<const char *const> stay_directories,
 
     LogInfo("Classify stays");
 
+    // Classify
     mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
                  (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
     thop_results.Trim();
@@ -365,7 +368,7 @@ static bool InitStays(Span<const char *const> stay_directories,
         thop_stay_set_dates[1]++;
     }
 
-    // By GHM
+    // Index by GHM
     for (Size i = 0, j = 0; i < thop_results.len; i++) {
         const mco_Result &result = thop_results[i];
 
@@ -388,7 +391,7 @@ static bool InitStays(Span<const char *const> stay_directories,
     }
     thop_results_index_ghm.Trim();
 
-    // By bill id
+    // Index by bill id
     {
         Size i = 0;
         for (const mco_Result &result: thop_results) {
