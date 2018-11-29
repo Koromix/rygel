@@ -313,6 +313,28 @@ static bool InitStays(Span<const char *const> stay_directories,
         return false;
     }
 
+    // Check units
+    {
+        HashSet<UnitCode> known_units;
+        for (const Structure &structure: thop_structure_set.structures) {
+            for (const StructureEntity &ent: structure.entities) {
+                known_units.Append(ent.unit);
+            }
+        }
+
+        bool valid = true;
+        for (const mco_Stay &stay: thop_stay_set.stays) {
+            if (stay.unit.IsValid() && !known_units.Find(stay.unit)) {
+                LogError("Structure set is missing unit %1", stay.unit);
+                known_units.Append(stay.unit);
+
+                valid = false;
+            }
+        }
+        if (!valid)
+            return false;
+    }
+
     // Limit dates
     {
         Span<const mco_Stay> mono_stays = thop_stay_set.stays;
