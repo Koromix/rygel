@@ -37,6 +37,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                 // TODO: Check validity, or maybe the INI parser checks are enough?
                 structure.name = MakeString(&set.str_alloc, prop.section).ptr;
 
+                HashSet<UnitCode> units_set;
                 do {
                     StructureEntity ent = {};
 
@@ -49,7 +50,15 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
 
-                    structure.entities.Append(ent);
+                    if (units_set.Append(ent.unit).second) {
+                        structure.entities.Append(ent);
+
+                        Size *ref_count = unit_reference_counts.Append(ent.unit, 0).first;
+                        (*ref_count)++;
+                    } else {
+                        LogError("Ignoring duplicate unit %1 in structure '%2'",
+                                 ent.unit, structure.name);
+                    }
                 } while (ini.NextInSection(&prop));
 
                 std::sort(structure.entities.begin(), structure.entities.end(),
@@ -57,7 +66,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                     return CmpStr(ent1.path, ent2.path) < 0;
                 });
 
-                if (map.Append(structure.name).second) {
+                if (structures_set.Append(structure.name).second) {
                     set.structures.Append(structure);
                 } else {
                     LogError("Duplicate structure '%1'", structure.name);
@@ -104,5 +113,11 @@ bool StructureSetBuilder::LoadFiles(Span<const char *const> filenames)
 
 void StructureSetBuilder::Finish(StructureSet *out_set)
 {
+    for (const auto &it: unit_reference_counts.table) {
+        if (it.value != set.structures.len) {
+            LogError("Unit %1 is missing in some structures", it.key);
+        }
+    }
+
     SwapMemory(out_set, &set, SIZE(set));
 }

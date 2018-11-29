@@ -25,7 +25,9 @@ struct StructureSet {
 
 class StructureSetBuilder {
     StructureSet set;
-    HashSet<const char *> map;
+
+    HashSet<const char *> structures_set;
+    HashMap<UnitCode, Size> unit_reference_counts;
 
 public:
     bool LoadIni(StreamReader &st);
