@@ -335,17 +335,25 @@ static bool InitStays(Span<const char *const> stay_directories,
             return false;
     }
 
+    LogInfo("Classify stays");
+
+    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+                 (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
+    thop_results.Trim();
+    thop_mono_results.Trim();
+
+    LogInfo("Index results");
+
     // Limit dates
     {
-        Span<const mco_Stay> mono_stays = thop_stay_set.stays;
-
         thop_stay_set_dates[0].value = INT32_MAX;
-        while (mono_stays.len) {
-            Span<const mco_Stay> sub_stays = mco_Split(mono_stays, 1, &mono_stays);
 
-            if (LIKELY(sub_stays[sub_stays.len - 1].exit.date.IsValid())) {
-                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], sub_stays[sub_stays.len - 1].exit.date);
-                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], sub_stays[sub_stays.len - 1].exit.date);
+        for (const mco_Result &result: thop_results) {
+            const mco_Stay &last_stay = result.stays[result.stays.len - 1];
+
+            if (LIKELY(last_stay.exit.date.IsValid())) {
+                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], last_stay.exit.date);
+                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], last_stay.exit.date);
             }
         }
 
@@ -356,15 +364,6 @@ static bool InitStays(Span<const char *const> stay_directories,
 
         thop_stay_set_dates[1]++;
     }
-
-    LogInfo("Classify stays");
-
-    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
-                 (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
-    thop_results.Trim();
-    thop_mono_results.Trim();
-
-    LogInfo("Index results");
 
     // By GHM
     for (Size i = 0, j = 0; i < thop_results.len; i++) {
