@@ -64,6 +64,5 @@ Commands:
 #undef HANDLE_COMMAND
 
     LogError("Unknown command '%1'", cmd);
-    PrintUsage(stderr);
     return 1;
 }

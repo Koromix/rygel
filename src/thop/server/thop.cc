@@ -862,16 +862,16 @@ Options:
                 PrintUsage(stdout);
                 return 0;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return 1;
 
                 table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-C", "--config_dir")) {
-                config_directory = opt_parser.RequireValue(PrintUsage);
+                config_directory = opt_parser.RequireValue();
                 if (!config_directory)
                     return 1;
             } else if (TestOption(opt, "-p", "--port")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return 1;
 
                 char *end_ptr;
@@ -884,7 +884,6 @@ Options:
                 port = (uint16_t)new_port;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return 1;
             }
         }

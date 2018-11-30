@@ -297,12 +297,12 @@ Dispensation modes:)");
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-A", "--auth_file")) {
-                authorization_filename = opt_parser.RequireValue(PrintUsage);
+                authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
                     return false;
             } else if (TestOption(opt, "-o", "--option")) {
@@ -341,13 +341,12 @@ Dispensation modes:)");
             } else if (TestOption(opt, "--test")) {
                 test = true;
             } else if (TestOption(opt, "--torture")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
                 if (!ParseDec(opt_parser.current_value, &torture))
                     return false;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -355,7 +354,6 @@ Dispensation modes:)");
         opt_parser.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             LogError("No filename provided");
-            PrintUsage(stderr);
             return false;
         }
     }
@@ -480,7 +478,7 @@ Options:
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
@@ -488,7 +486,6 @@ Options:
                 dump = true;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -531,27 +528,25 @@ Options:
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
 
         opt_parser.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
-            LogError("No specifier provided");
-            PrintUsage(stderr);
+            LogError("No specifier string provided");
             return false;
         }
     }
@@ -631,12 +626,12 @@ Options:
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 index_date = Date::FromString(opt_parser.current_value);
@@ -644,7 +639,6 @@ Options:
                     return false;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -702,13 +696,12 @@ bool RunMcoPack(Span<const char *> arguments)
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-O", "--output")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 dest_filename = opt_parser.current_value;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -716,12 +709,10 @@ bool RunMcoPack(Span<const char *> arguments)
         opt_parser.ConsumeNonOptions(&filenames);
         if (!dest_filename) {
             LogError("A destination file must be provided (--output)");
-            PrintUsage(stderr);
             return false;
         }
         if (!filenames.len) {
             LogError("No stay file provided");
-            PrintUsage(stderr);
             return false;
         }
     }
@@ -765,19 +756,18 @@ Options:
                 PrintUsage(stdout);
                 return true;
             } else if (TestOption(opt, "-T", "--table_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
             } else {
                 LogError("Unknown option '%1'", opt);
-                PrintUsage(stderr);
                 return false;
             }
         }
@@ -785,7 +775,6 @@ Options:
         opt_parser.ConsumeNonOptions(&names);
         if (!names.len) {
             LogError("No element name provided");
-            PrintUsage(stderr);
             return false;
         }
     }

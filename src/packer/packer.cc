@@ -129,7 +129,7 @@ Available compression types:)", CompressionTypeNames[0]);
                 PrintUsage(stdout);
                 return 0;
             } else if (TestOption(opt, "-d", "--depth")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return 1;
 
                 if (!ParseDec<int>(opt_parser.current_value, &depth))
@@ -139,17 +139,17 @@ Available compression types:)", CompressionTypeNames[0]);
                     return 1;
                 }
             } else if (TestOption(opt, "--span_name")) {
-                span_name = opt_parser.RequireValue(PrintUsage);
+                span_name = opt_parser.RequireValue();
                 if (!span_name)
                     return 1;
             } else if (TestOption(opt, "--export", "-e")) {
                 export_span = true;
             } else if (TestOption(opt, "-O")) {
-                output_path = opt_parser.RequireValue(PrintUsage);
+                output_path = opt_parser.RequireValue();
                 if (!output_path)
                     return 1;
             } else if (TestOption(opt, "-c", "--compress")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return 1;
 
                 Size i = 0;
@@ -164,7 +164,7 @@ Available compression types:)", CompressionTypeNames[0]);
 
                 compression_type = (CompressionType)i;
             } else if (TestOption(opt, "-m", "--merge")) {
-                if (!opt_parser.RequireValue(PrintUsage))
+                if (!opt_parser.RequireValue())
                     return 1;
 
                 Span<const char> remain = opt_parser.current_value;
@@ -176,7 +176,7 @@ Available compression types:)", CompressionTypeNames[0]);
                     }
                 }
             } else if (TestOption(opt, "-M", "--merge_name")) {
-                merge_name = opt_parser.RequireValue(PrintUsage);
+                merge_name = opt_parser.RequireValue();
                 if (!merge_name)
                     return 1;
             } else {
@@ -188,7 +188,6 @@ Available compression types:)", CompressionTypeNames[0]);
         opt_parser.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             LogError("No filename specified");
-            PrintUsage(stderr);
             return 1;
         }
     }
