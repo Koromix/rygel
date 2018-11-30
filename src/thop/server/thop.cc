@@ -13,6 +13,7 @@
 #endif
 
 #include "thop.hh"
+#include "config.hh"
 #include "structure.hh"
 #include "mco_classify.hh"
 #include "mco_info.hh"
@@ -73,6 +74,7 @@ mco_TableSet thop_table_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
+Config thop_config;
 mco_AuthorizationSet thop_authorization_set;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
@@ -169,6 +171,8 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
 
 static bool InitTables(Span<const char *const> table_directories)
 {
+    LogInfo("Load tables");
+
     if (!mco_LoadTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
         return false;
     if (!InitCatalogSet(table_directories))
@@ -177,18 +181,36 @@ static bool InitTables(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitConfig(const char *config_directory, const char *authorization_filename)
+static bool InitConfig(const char *profile_directory, const char *config_filename)
 {
     BlockAllocator temp_alloc {Kibibytes(8)};
 
-    if (!mco_LoadAuthorizationSet(config_directory, authorization_filename, &thop_authorization_set))
+    LogInfo("Load configuration");
+
+    if (!config_filename) {
+        config_filename = Fmt(&temp_alloc, "%1%/thop.ini", profile_directory).ptr;
+    }
+    if (!LoadConfig(config_filename, &thop_config))
         return false;
 
-    if (const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini", config_directory).ptr;
+    return true;
+}
+
+static bool InitProfile(const char *profile_directory, const char *authorization_filename)
+{
+    BlockAllocator temp_alloc {Kibibytes(8)};
+
+    LogInfo("Load profile");
+
+    if (!mco_LoadAuthorizationSet(profile_directory, authorization_filename,
+                                  &thop_authorization_set))
+        return false;
+
+    if (const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini", profile_directory).ptr;
             !LoadStructureSet(filename, &thop_structure_set))
         return false;
-    if (const char *filename = Fmt(&temp_alloc, "%1%/users.ini", config_directory).ptr;
-            !LoadUserSet(filename, thop_structure_set, &thop_user_set))
+    if (const char *filename = Fmt(&temp_alloc, "%1%/users.ini", profile_directory).ptr;
+            !LoadUserSet(filename, thop_structure_set, thop_config.dispense_mode, &thop_user_set))
         return false;
 
     return true;
@@ -811,24 +833,35 @@ int main(int argc, char **argv)
         PrintLn(fp, R"(Usage: thop [options] [stay_file ..]
 
 Options:
-    -T, --table_dir <dir>        Add tables directory
-    -C, --config_dir <dir>       Set configuration directory
-        --auth_file <file>       Set authorization file
-                                 (default: <config_dir>%/mco_authorizations.ini
-                                           <config_dir>%/mco_authorizations.txt)
+    -P, --profile_dir <dir>      Set profile directory
+    -C, --config_file <file>     Set configuration file
+                                 (default: <profile_dir>%/thop.ini)
 
-    -p, --port <port>            Web server port
+        --table_dir <dir>        Add table directory
+        --auth_file <file>       Set authorization file
+                                 (default: <profile_dir>%/mco_authorizations.ini
+                                           <profile_dir>%/mco_authorizations.txt)
+
+        --port <port>            Web server port
                                  (default: 8888))");
     };
 
+    if (sodium_init() < 0) {
+        LogError("Failed to initialize libsodium");
+        return 1;
+    }
+
     BlockAllocator temp_alloc(Kibibytes(8));
 
-    HeapArray<const char *> table_directories;
-    const char *config_directory = nullptr;
-    const char *authorization_filename = nullptr;
-    uint16_t port = 8888;
-    HeapArray<const char *> stay_filenames;
+    // Parse arguments and load config file
     {
+        HeapArray<const char *> table_directories;
+        const char *profile_directory = nullptr;
+        const char *config_filename = nullptr;
+        const char *authorization_filename = nullptr;
+        int port = -1;
+        HeapArray<const char *> stay_filenames;
+
         OptionParser opt_parser(argc, argv);
 
         const char *opt;
@@ -836,62 +869,78 @@ Options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (TestOption(opt, "-P", "--profile_dir")) {
+                profile_directory = opt_parser.RequireValue();
+                if (!profile_directory)
+                    return 1;
+            } else if (TestOption(opt, "-C", "--config_file")) {
+                config_filename = opt_parser.RequireValue();
+                if (!config_filename)
+                    return 1;
+            } else if (TestOption(opt, "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-C", "--config_dir")) {
-                config_directory = opt_parser.RequireValue();
-                if (!config_directory)
-                    return 1;
             } else if (TestOption(opt, "--auth_file")) {
                 authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
                     return 1;
-            } else if (TestOption(opt, "-p", "--port")) {
+            } else if (TestOption(opt, "--port")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
-                char *end_ptr;
-                long new_port = strtol(opt_parser.current_value, &end_ptr, 10);
-                if (end_ptr == opt_parser.current_value || end_ptr[0] ||
-                        new_port < 0 || new_port >= 65536) {
-                    LogError("Option '--port' requires a value between 0 and 65535");
+                if (!ParseDec(opt_parser.current_value, &port))
                     return 1;
-                }
-                port = (uint16_t)new_port;
             } else {
                 LogError("Unknown option '%1'", opt);
                 return 1;
             }
         }
 
-        if (!table_directories.len || !config_directory) {
-            if (!table_directories.len) {
-                LogError("No table directory is specified");
-            }
-            if (!config_directory) {
-                LogError("Configuration directory is missing");
-            }
+        opt_parser.ConsumeNonOptions(&stay_filenames);
 
+        if (!config_filename && !profile_directory) {
+            LogError("Missing profile directory and config file");
             return 1;
         }
-
-        opt_parser.ConsumeNonOptions(&stay_filenames);
-    }
-
-    if (sodium_init() < 0) {
-        LogError("Failed to initialize libsodium");
-        return 1;
-    }
-
-    if (!InitTables(table_directories))
-        return 1;
-    if (stay_filenames.len) {
-        if (!InitConfig(config_directory, authorization_filename))
+        if (!InitConfig(profile_directory, config_filename))
             return 1;
-        if (!InitStays({}, stay_filenames))
+
+        if (profile_directory) {
+            thop_config.profile_directory = profile_directory;
+        }
+        thop_config.table_directories.Append(table_directories);
+        if (authorization_filename) {
+            thop_config.authorization_filename = authorization_filename;
+        }
+        if (port >= 0) {
+            thop_config.port = port;
+        }
+        thop_config.mco_stay_filenames.Append(stay_filenames);
+    }
+
+    if (!thop_config.table_directories.len || !thop_config.profile_directory) {
+        if (!thop_config.table_directories.len) {
+            LogError("No table directory is specified");
+        }
+        if (!thop_config.profile_directory) {
+            LogError("Profile directory is missing");
+        }
+
+        return 1;
+    }
+    if (thop_config.port < 0 || thop_config.port > UINT16_MAX) {
+        LogError("Port must be between 0 and %1", UINT16_MAX);
+        return 1;
+    }
+
+    if (!InitTables(thop_config.table_directories))
+        return 1;
+    if (thop_config.mco_stay_directories.len || thop_config.mco_stay_filenames.len) {
+        if (!InitProfile(thop_config.profile_directory, thop_config.authorization_filename))
+            return 1;
+        if (!InitStays(thop_config.mco_stay_directories, thop_config.mco_stay_filenames))
             return 1;
     }
     if (!ComputeConstraints())
@@ -916,11 +965,11 @@ Options:
         // FIXME: Investigate why libmicrohttpd in thread pool mode works badly on MSVC builds
 #ifdef _MSC_VER
         flags |= MHD_USE_THREAD_PER_CONNECTION;
-        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
+        daemon = MHD_start_daemon(flags, thop_config.port, nullptr, nullptr, HandleHttpConnection, nullptr,
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);
 #else
-        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
+        daemon = MHD_start_daemon(flags, thop_config.port, nullptr, nullptr, HandleHttpConnection, nullptr,
                                   MHD_OPTION_THREAD_POOL_SIZE, thread_count,
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);

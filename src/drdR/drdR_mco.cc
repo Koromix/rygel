@@ -49,9 +49,12 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
         authorization_filename2 = authorization_filename[0].ptr;
     }
 
+    LogInfo("Load tables");
     if (!mco_LoadTableSet(table_dirs2, table_filenames2, &classifier->table_set) ||
             !classifier->table_set.indexes.len)
         Rcc_StopWithLastError();
+
+    LogInfo("Load authorizations");
     if (!mco_LoadAuthorizationSet(nullptr, authorization_filename2, &classifier->authorization_set))
         Rcc_StopWithLastError();
 

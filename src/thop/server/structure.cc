@@ -18,60 +18,49 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (!prop.section.len) {
-                if (prop.key == "DispenseMode") {
-                    const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                                          std::end(mco_DispenseModeOptions),
-                                                          [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
-                    if (desc == std::end(mco_DispenseModeOptions)) {
-                        LogError("Unknown dispensation mode '%1'", prop.value);
-                        valid = false;
-                    }
-                    set.dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
+                LogError("Property is outside section");
+                return false;
+            }
+
+            Structure structure = {};
+
+            // TODO: Check validity, or maybe the INI parser checks are enough?
+            structure.name = MakeString(&set.str_alloc, prop.section).ptr;
+
+            HashSet<UnitCode> units_set;
+            do {
+                StructureEntity ent = {};
+
+                ent.unit = UnitCode::FromString(prop.key);
+                valid &= ent.unit.IsValid();
+
+                ent.path = MakeString(&set.str_alloc, prop.value).ptr;
+                if (ent.path[0] != '|' || !ent.path[1]) {
+                    LogError("Unit path does not start with '|'");
                     valid = false;
                 }
+
+                if (units_set.Append(ent.unit).second) {
+                    structure.entities.Append(ent);
+
+                    Size *ref_count = unit_reference_counts.Append(ent.unit, 0).first;
+                    (*ref_count)++;
+                } else {
+                    LogError("Ignoring duplicate unit %1 in structure '%2'",
+                             ent.unit, structure.name);
+                }
+            } while (ini.NextInSection(&prop));
+
+            std::sort(structure.entities.begin(), structure.entities.end(),
+                      [](const StructureEntity &ent1, const StructureEntity &ent2) {
+                return CmpStr(ent1.path, ent2.path) < 0;
+            });
+
+            if (structures_set.Append(structure.name).second) {
+                set.structures.Append(structure);
             } else {
-                Structure structure = {};
-
-                // TODO: Check validity, or maybe the INI parser checks are enough?
-                structure.name = MakeString(&set.str_alloc, prop.section).ptr;
-
-                HashSet<UnitCode> units_set;
-                do {
-                    StructureEntity ent = {};
-
-                    ent.unit = UnitCode::FromString(prop.key);
-                    valid &= ent.unit.IsValid();
-
-                    ent.path = MakeString(&set.str_alloc, prop.value).ptr;
-                    if (ent.path[0] != '|' || !ent.path[1]) {
-                        LogError("Unit path does not start with '|'");
-                        valid = false;
-                    }
-
-                    if (units_set.Append(ent.unit).second) {
-                        structure.entities.Append(ent);
-
-                        Size *ref_count = unit_reference_counts.Append(ent.unit, 0).first;
-                        (*ref_count)++;
-                    } else {
-                        LogError("Ignoring duplicate unit %1 in structure '%2'",
-                                 ent.unit, structure.name);
-                    }
-                } while (ini.NextInSection(&prop));
-
-                std::sort(structure.entities.begin(), structure.entities.end(),
-                          [](const StructureEntity &ent1, const StructureEntity &ent2) {
-                    return CmpStr(ent1.path, ent2.path) < 0;
-                });
-
-                if (structures_set.Append(structure.name).second) {
-                    set.structures.Append(structure);
-                } else {
-                    LogError("Duplicate structure '%1'", structure.name);
-                    valid = false;
-                }
+                LogError("Duplicate structure '%1'", structure.name);
+                valid = false;
             }
         }
     }
@@ -124,8 +113,6 @@ void StructureSetBuilder::Finish(StructureSet *out_set)
 
 bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set)
 {
-    LogInfo("Load structures");
-
     StructureSetBuilder structure_set_builder;
     if (!structure_set_builder.LoadFiles(filenames))
         return false;

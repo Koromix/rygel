@@ -49,6 +49,11 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
         IniProperty prop;
         while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                LogError("Property is outside section");
+                return false;
+            }
+
             // TODO: Check validity, or maybe the INI parser checks are enough?
             const char *name = MakeString(&set.str_alloc, prop.section).ptr;
             User user = {};
@@ -215,7 +220,8 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
     return success;
 }
 
-void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
+void UserSetBuilder::Finish(const StructureSet &structure_set, mco_DispenseMode dispense_mode,
+                            UserSet *out_set)
 {
     std::sort(set.users.begin(), set.users.end(),
               [](const User &user1, const User &user2) {
@@ -226,7 +232,7 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
         User &user = set.users[i];
         const UnitRuleSet &rule_set = rule_sets[i];
 
-        user.dispense_modes |= 1 << (int)structure_set.dispense_mode;
+        user.dispense_modes |= 1 << (int)dispense_mode;
 
         for (const Structure &structure: structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
@@ -267,14 +273,12 @@ bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const Stru
 }
 
 bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
-                 UserSet *out_set)
+                 mco_DispenseMode dispense_mode, UserSet *out_set)
 {
-    LogInfo("Load users");
-
     UserSetBuilder user_set_builder;
     if (!user_set_builder.LoadFiles(filenames))
         return false;
-    user_set_builder.Finish(structure_set, out_set);
+    user_set_builder.Finish(structure_set, dispense_mode, out_set);
 
     return true;
 }

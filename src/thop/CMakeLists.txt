@@ -51,7 +51,9 @@ set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
                    client/images/thop_logo.svg
                    client/images/favicon.ico)
 
-set(THOP_SRC server/json.hh
+set(THOP_SRC server/config.cc
+             server/config.hh
+             server/json.hh
              server/mco_classify.cc
              server/mco_classify.hh
              server/mco_info.cc

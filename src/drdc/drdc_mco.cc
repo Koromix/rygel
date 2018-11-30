@@ -256,8 +256,9 @@ bool RunMcoClassify(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
 
 Options:
+    -P, --profile_dir <dir>      Set profile directory
+
     -T, --table_dir <dir>        Add table directory
-    -C, --config_dir <dir>       Set configuration directory
         --auth_file <file>       Set authorization file
                                  (default: <config_dir>%/mco_authorizations.ini
                                            <config_dir>%/mco_authorizations.txt)
@@ -285,7 +286,7 @@ Dispensation modes:)");
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> table_directories;
-    const char *config_directory = nullptr;
+    const char *profile_directory = nullptr;
     const char *authorization_filename = nullptr;
     unsigned int flags = 0;
     int dispense_mode = -1;
@@ -300,15 +301,15 @@ Dispensation modes:)");
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-P", "--profile_dir")) {
+                profile_directory = opt_parser.RequireValue();
+                if (!profile_directory)
+                    return false;
             } else if (TestOption(opt, "-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-C", "--config_directory")) {
-                config_directory = opt_parser.RequireValue();
-                if (!config_directory)
-                    return false;
             } else if (TestOption(opt, "--auth_file")) {
                 authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
@@ -369,11 +370,14 @@ Dispensation modes:)");
         flags |= (int)mco_ClassifyFlag::Mono;
     }
 
+    LogInfo("Load tables");
     mco_TableSet table_set;
     if (!mco_LoadTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
         return false;
+
+    LogInfo("Load authorizations");
     mco_AuthorizationSet authorization_set;
-    if (!mco_LoadAuthorizationSet(config_directory, authorization_filename, &authorization_set))
+    if (!mco_LoadAuthorizationSet(profile_directory, authorization_filename, &authorization_set))
         return false;
 
     mco_StaySet stay_set;

@@ -18,7 +18,7 @@ struct PackHeader {
 };
 #pragma pack(pop)
 #define PACK_VERSION 13
-#define PACK_SIGNATURE "DRD_STAY_PAK"
+#define PACK_SIGNATURE "DRD_MCO_PACK"
 
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));

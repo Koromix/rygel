@@ -1787,8 +1787,6 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
                       Span<const char *const> table_filenames,
                       mco_TableSet *out_set)
 {
-    LogInfo("Load tables");
-
     BlockAllocator temp_alloc(Kibibytes(8));
 
     HeapArray<const char *> filenames;

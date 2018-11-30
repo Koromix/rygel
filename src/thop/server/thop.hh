@@ -9,6 +9,7 @@
 #include "../../libdrd/libdrd.hh"
 #include "json.hh"
 
+struct Config;
 struct StructureSet;
 struct UserSet;
 struct User;
@@ -48,6 +49,7 @@ extern mco_TableSet thop_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
+extern Config thop_config;
 extern mco_AuthorizationSet thop_authorization_set;
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;

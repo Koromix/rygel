@@ -17,7 +17,6 @@ struct Structure {
 };
 
 struct StructureSet {
-    mco_DispenseMode dispense_mode;
     HeapArray<Structure> structures;
 
     BlockAllocator str_alloc {Kibibytes(16)};

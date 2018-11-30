@@ -246,8 +246,6 @@ bool mco_LoadAuthorizationSet(const char *config_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set)
 {
-    LogInfo("Load authorizations");
-
     static const char *const default_names[] = {
         "mco_authorizations.ini",
         "mco_authorizations.txt"

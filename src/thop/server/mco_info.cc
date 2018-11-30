@@ -4,6 +4,7 @@
 
 #include "thop.hh"
 #include "mco_info.hh"
+#include "config.hh"
 #include "structure.hh"
 #include "user.hh"
 
@@ -41,7 +42,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
 
             // Algorithms
             {
-                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_structure_set.dispense_mode];
+                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.dispense_mode];
 
                 writer.Key("algorithms"); writer.StartArray();
                 for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
