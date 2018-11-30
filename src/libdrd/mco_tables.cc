@@ -1541,9 +1541,9 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                             addition_info1.phase1 - addition_info2.phase1) < 0;
                         });
 
-                        Size next_addition_idx = 1;
+                        int16_t next_addition_idx = 1;
                         for (const ProcedureAdditionInfo &addition_info: additions) {
-                            Size addition_idx = 0;
+                            int16_t addition_idx = 0;
                             if (LIKELY(addition_info.activity2 >= 0 &&
                                        addition_info.activity2 < ARRAY_SIZE(mco_ProcedureInfo::additions))) {
                                 mco_ProcedureInfo *proc_info =
@@ -1572,7 +1572,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
                                 if (LIKELY(proc_info)) {
                                     bool match = false;
-                                    Size offset = links->len;
+                                    int16_t offset = (int16_t)links->len;
                                     do {
                                         if (proc_info->phase == addition_info.phase1) {
                                             if (!proc_info->addition_list.len) {
