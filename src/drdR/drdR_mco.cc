@@ -21,13 +21,12 @@ RcppExport SEXP drdR_Options(SEXP debug = R_NilValue)
     );
 }
 
-RcppExport SEXP drdR_mco_Init(SEXP data_dirs_xp, SEXP table_dirs_xp, SEXP table_filenames_xp,
+RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
                               SEXP authorization_filename_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
-    Rcc_Vector<const char *> data_dirs(data_dirs_xp);
     Rcc_Vector<const char *> table_dirs(table_dirs_xp);
     Rcc_Vector<const char *> table_filenames(table_filenames_xp);
     Rcc_Vector<const char *> authorization_filename(authorization_filename_xp);
@@ -37,13 +36,9 @@ RcppExport SEXP drdR_mco_Init(SEXP data_dirs_xp, SEXP table_dirs_xp, SEXP table_
     ClassifierInstance *classifier = new ClassifierInstance;
     DEFER_N(classifier_guard) { delete classifier; };
 
-    HeapArray<const char *> data_dirs2;
     HeapArray<const char *> table_dirs2;
     HeapArray<const char *> table_filenames2;
     const char *authorization_filename2 = nullptr;
-    for (const char *str: data_dirs) {
-        data_dirs2.Append(str);
-    }
     for (const char *str: table_dirs) {
         table_dirs2.Append(str);
     }
@@ -54,11 +49,10 @@ RcppExport SEXP drdR_mco_Init(SEXP data_dirs_xp, SEXP table_dirs_xp, SEXP table_
         authorization_filename2 = authorization_filename[0].ptr;
     }
 
-    if (!mco_InitTableSet(data_dirs2, table_dirs2, table_filenames2, &classifier->table_set) ||
+    if (!mco_InitTableSet(table_dirs2, table_filenames2, &classifier->table_set) ||
             !classifier->table_set.indexes.len)
         Rcc_StopWithLastError();
-    if (!mco_InitAuthorizationSet(data_dirs2, authorization_filename2,
-                                  &classifier->authorization_set))
+    if (!mco_InitAuthorizationSet(nullptr, authorization_filename2, &classifier->authorization_set))
         Rcc_StopWithLastError();
 
     SEXP classifier_xp = R_MakeExternalPtr(classifier, R_NilValue, R_NilValue);
@@ -1380,7 +1374,7 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
         {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
-        {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
+        {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 3},
         {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 9},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Indexes", (DL_FUNC)&drdR_mco_Indexes, 1},

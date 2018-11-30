@@ -254,10 +254,11 @@ bool RunMcoClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
-)");
-        PrintLn(fp, mco_options_usage);
-        PrintLn(fp, R"(
-Classify options:
+
+Options:
+    -T, --table_dir <dir>        Add table directory
+    -A, --auth_file <file>       Set authorization file
+
     -o, --option <options>       Classifier options (see below)
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
@@ -280,19 +281,30 @@ Dispensation modes:)");
 
     OptionParser opt_parser(arguments);
 
-    HeapArray<const char *> filenames;
+    HeapArray<const char *> table_directories;
+    const char *authorization_filename = nullptr;
     unsigned int flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
     int verbosity = 0;
     bool test = false;
     int torture = 0;
+    HeapArray<const char *> filenames;
     {
         const char *opt;
         while ((opt = opt_parser.Next())) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+
+                table_directories.Append(opt_parser.current_value);
+            } else if (TestOption(opt, "-A", "--auth_file")) {
+                authorization_filename = opt_parser.RequireValue(PrintUsage);
+                if (!authorization_filename)
+                    return false;
             } else if (TestOption(opt, "-o", "--option")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
@@ -333,7 +345,9 @@ Dispensation modes:)");
                     return false;
                 if (!ParseDec(opt_parser.current_value, &torture))
                     return false;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -349,11 +363,11 @@ Dispensation modes:)");
         flags |= (int)mco_ClassifyFlag::Mono;
     }
 
-    const mco_TableSet *table_set = mco_GetMainTableSet();
-    if (!table_set || !table_set->indexes.len)
+    mco_TableSet table_set;
+    if (!mco_InitTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
         return false;
-    const mco_AuthorizationSet *authorization_set = mco_GetMainAuthorizationSet();
-    if (!authorization_set)
+    mco_AuthorizationSet authorization_set;
+    if (!mco_InitAuthorizationSet({}, authorization_filename, &authorization_set))
         return false;
 
     mco_StaySet stay_set;
@@ -388,7 +402,7 @@ Dispensation modes:)");
 
         {
             uint64_t start_time = GetMonotonicTime();
-            mco_Classify(*table_set, *authorization_set, stay_set.stays, flags,
+            mco_Classify(table_set, authorization_set, stay_set.stays, flags,
                          &results, &mono_results);
             classify_time += GetMonotonicTime() - start_time;
         }
@@ -447,15 +461,16 @@ bool RunMcoDump(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
-)");
-        PrintLn(fp, mco_options_usage);
-        PrintLn(fp, R"(
-Dump options:
+
+Options:
+    -T, --table_dir <dir>        Tables directory
+
     -d, --dump                   Dump content of (readable) tables)");
     };
 
     OptionParser opt_parser(arguments);
 
+    HeapArray<const char *> table_directories;
     bool dump = false;
     HeapArray<const char *> filenames;
     {
@@ -464,9 +479,16 @@ Dump options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+
+                table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt, "-d", "--dump")) {
                 dump = true;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -474,12 +496,12 @@ Dump options:
         opt_parser.ConsumeNonOptions(&filenames);
     }
 
-    const mco_TableSet *table_set = mco_GetMainTableSet();
-    if (!table_set || !table_set->indexes.len)
+    mco_TableSet table_set;
+    if (!mco_InitTableSet(table_directories, filenames, &table_set) || !table_set.indexes.len)
         return false;
-    mco_DumpTableSetHeaders(*table_set, &stdout_st);
+    mco_DumpTableSetHeaders(table_set, &stdout_st);
     if (dump) {
-        mco_DumpTableSetContent(*table_set, &stdout_st);
+        mco_DumpTableSetContent(table_set, &stdout_st);
     }
 
     return true;
@@ -489,16 +511,17 @@ bool RunMcoList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
-)");
-        PrintLn(fp, mco_options_usage);
-        PrintLn(fp, R"(
-List options:
+
+Options:
+    -T, --table_dir <dir>        Tables directory
+
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
     };
 
     OptionParser opt_parser(arguments);
 
+    HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> spec_strings;
     {
@@ -507,13 +530,20 @@ List options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+
+                table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -526,13 +556,12 @@ List options:
         }
     }
 
-    const mco_TableSet *table_set;
+    mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        table_set = mco_GetMainTableSet();
-        if (!table_set)
+        if (!mco_InitTableSet(table_directories, {}, &table_set))
             return false;
-        index = table_set->FindIndex(index_date);
+        index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
             return false;
@@ -583,16 +612,17 @@ bool RunMcoMap(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_map [options]
-)");
-        PrintLn(fp, mco_options_usage);
-        PrintLn(fp, R"(
-Constraints options:
+
+Options:
+    -T, --table_dir <dir>        Tables directory
+
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
     };
 
     OptionParser opt_parser(arguments);
 
+    HeapArray<const char *> table_directories;
     Date index_date = {};
     {
         const char *opt;
@@ -600,25 +630,32 @@ Constraints options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+
+                table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return false;
+
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
     }
 
-    const mco_TableSet *table_set;
+    mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        table_set = mco_GetMainTableSet();
-        if (!table_set)
+        if (!mco_InitTableSet(table_directories, {}, &table_set))
             return false;
-        index = table_set->FindIndex(index_date);
+        index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
             return false;
@@ -650,15 +687,14 @@ Constraints options:
 bool RunMcoPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
-)");
-        PrintLn(fp, mco_options_usage);
+        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file)");
     };
 
     OptionParser opt_parser(arguments);
 
-    HeapArray<const char *> filenames;
+    HeapArray<const char *> table_directories;
     const char *dest_filename = nullptr;
+    HeapArray<const char *> filenames;
     {
         const char *opt;
         while ((opt = opt_parser.Next())) {
@@ -668,8 +704,11 @@ bool RunMcoPack(Span<const char *> arguments)
             } else if (TestOption(opt, "-O", "--output")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return false;
+
                 dest_filename = opt_parser.current_value;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -709,12 +748,14 @@ bool RunMcoShow(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
-)");
-        PrintLn(fp, mco_options_usage);
+
+Options:
+    -T, --table_dir <dir>        Tables directory)");
     };
 
     OptionParser opt_parser(arguments);
 
+    HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> names;
     {
@@ -723,13 +764,20 @@ bool RunMcoShow(Span<const char *> arguments)
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return true;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return false;
+
+                table_directories.Append(opt_parser.current_value);
             } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return false;
             }
         }
@@ -742,13 +790,12 @@ bool RunMcoShow(Span<const char *> arguments)
         }
     }
 
-    const mco_TableSet *table_set;
+    mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        table_set = mco_GetMainTableSet();
-        if (!table_set)
+        if (!mco_InitTableSet(table_directories, {}, &table_set))
             return false;
-        index = table_set->FindIndex(index_date);
+        index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
             return false;

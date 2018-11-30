@@ -2,9 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-mco_init <- function(data_dirs = character(0), table_dirs = character(0),
-                     table_filenames = character(0), authorization_filename = NULL) {
-    .Call(`drdR_mco_Init`, data_dirs, table_dirs, table_filenames, authorization_filename)
+mco_init <- function(table_dirs, authorization_filename,
+                     table_filenames = character(0)) {
+    .Call(`drdR_mco_Init`, table_dirs, table_filenames, authorization_filename)
 }
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,

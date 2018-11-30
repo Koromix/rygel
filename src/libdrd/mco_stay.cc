@@ -81,8 +81,8 @@ bool mco_StaySet::SavePack(const char *filename) const
     CompressionType compression_type;
     Span<const char> extension = GetPathExtension(filename, &compression_type);
 
-    if (!TestStr(extension, ".dspak")) {
-        LogError("Unknown packing extension '%1', prefer '.dspak'", extension);
+    if (!TestStr(extension, ".dmpak")) {
+        LogError("Unknown packing extension '%1', prefer '.dmpak'", extension);
     }
 
     StreamWriter st(filename, compression_type);
@@ -95,7 +95,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
     DEFER_N(set_guard) { set.stays.RemoveFrom(start_stays_len); };
 
     if (out_tests) {
-        LogError("Testing is not supported by .dspak files");
+        LogError("Testing is not supported by '.dmpak' files");
     }
 
     HeapArray<DiagnosisCode> diagnoses(&set.other_diagnoses_alloc);
@@ -902,7 +902,7 @@ bool mco_StaySetBuilder::LoadFiles(Span<const char *const> filenames,
 
         bool (mco_StaySetBuilder::*load_func)(StreamReader &st,
                                               HashTable<int32_t, mco_Test> *out_tests);
-        if (extension == ".dspak") {
+        if (extension == ".dmpak") {
             load_func = &mco_StaySetBuilder::LoadPack;
         } else if (extension == ".grp" || extension == ".rss") {
             load_func = &mco_StaySetBuilder::LoadRss;

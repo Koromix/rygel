@@ -8,34 +8,10 @@
 #include "mco_authorization.hh"
 #include "mco_tables.hh"
 
-static const char *const mco_options_usage =
-R"(Common options:
-    -D, --resource_dir <dir>     Add resource directory
-                                 (default: <executable_dir>%/resources)
-        --mco_table_dir <dir>    Add MCO table directory
-                                 (default: <resource_dir>%/mco_tables)
-        --mco_table_file <path>  Add MCO table file
-        --mco_auth <path>        Set authorization file
-                                 (default: <resource_dir>%/config%/mco_authorizations.ini
-                                           <resource_dir>%/config%/mco_authorizations.txt)
-
-    -O, --output <path>          Dump information to file
-                                 (default: stdout))";
-
-extern HeapArray<const char *> mco_resource_directories;
-extern HeapArray<const char *> mco_table_directories;
-extern HeapArray<const char *> mco_table_filenames;
-extern const char *mco_authorization_filename;
-
-bool mco_InitTableSet(Span<const char *const> resource_directories,
-                      Span<const char *const> table_directories,
+bool mco_InitTableSet(Span<const char *const> table_directories,
                       Span<const char *const> table_filenames,
                       mco_TableSet *out_set);
-bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
+
+bool mco_InitAuthorizationSet(const char *config_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set);
-
-const mco_TableSet *mco_GetMainTableSet();
-const mco_AuthorizationSet *mco_GetMainAuthorizationSet();
-
-bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp));

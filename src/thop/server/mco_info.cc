@@ -16,7 +16,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
         writer.StartObject();
 
         writer.Key("indexes"); writer.StartArray();
-        for (const mco_TableIndex &index: thop_table_set->indexes) {
+        for (const mco_TableIndex &index: thop_table_set.indexes) {
             if (!index.valid)
                 continue;
 
@@ -124,7 +124,7 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
         }
     }
 
-    const mco_TableIndex *index = thop_table_set->FindIndex(date);
+    const mco_TableIndex *index = thop_table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         return CreateErrorPage(404, out_response);
@@ -269,7 +269,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
         return code;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-        *thop_index_to_constraints[index - thop_table_set->indexes.ptr];
+        *thop_index_to_constraints[index - thop_table_set.indexes.ptr];
 
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[512];

@@ -304,9 +304,9 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     if (flags & (int)AggregationFlag::ExportGhsInfo) {
         HashMap<AggregationGhmGhs::Key, Size> ghm_ghs_map;
 
-        for (const mco_TableIndex &index: thop_table_set->indexes) {
+        for (const mco_TableIndex &index: thop_table_set.indexes) {
             const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-                *thop_index_to_constraints[&index - thop_table_set->indexes.ptr];
+                *thop_index_to_constraints[&index - thop_table_set.indexes.ptr];
 
             if ((dates[0] < index.limit_dates[1] && index.limit_dates[0] < dates[1]) ||
                     (diff_dates[0].value && diff_dates[0] < index.limit_dates[1] &&

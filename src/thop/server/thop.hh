@@ -44,11 +44,11 @@ struct mco_ResultPointers {
     Span<const mco_Result> mono_results;
 };
 
-extern const mco_TableSet *thop_table_set;
+extern mco_TableSet thop_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
-extern const mco_AuthorizationSet *thop_authorization_set;
+extern mco_AuthorizationSet thop_authorization_set;
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;
 extern mco_StaySet thop_stay_set;

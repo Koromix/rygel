@@ -26,7 +26,6 @@ Commands:
     mco_show                     Print information about individual MCO elements
                                  (diagnoses, procedures, GHM roots, etc.)
 )");
-        PrintLn(fp, mco_options_usage);
     };
 
     LinkedAllocator temp_alloc;
@@ -45,15 +44,6 @@ Commands:
         } else {
             PrintUsage(stdout);
             return 0;
-        }
-    }
-
-    // Add default resource directory
-    {
-        const char *app_dir = GetApplicationDirectory();
-        if (app_dir) {
-            const char *default_resource_dir = Fmt(&temp_alloc, "%1%/resources", app_dir).ptr;
-            mco_resource_directories.Append(default_resource_dir);
         }
     }
 

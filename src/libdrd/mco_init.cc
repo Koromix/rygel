@@ -5,13 +5,7 @@
 #include "../common/kutil.hh"
 #include "mco_init.hh"
 
-HeapArray<const char *> mco_resource_directories;
-HeapArray<const char *> mco_table_directories;
-HeapArray<const char *> mco_table_filenames;
-const char *mco_authorization_filename;
-
-bool mco_InitTableSet(Span<const char *const> resource_directories,
-                      Span<const char *const> table_directories,
+bool mco_InitTableSet(Span<const char *const> table_directories,
                       Span<const char *const> table_filenames,
                       mco_TableSet *out_set)
 {
@@ -39,14 +33,11 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
         };
 
         bool success = true;
-        for (const char *resource_dir: resource_directories) {
+        for (const char *resource_dir: table_directories) {
             const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
             if (TestPath(tab_dir, FileType::Directory)) {
                 success &= enumerate_directory_files(tab_dir);
             }
-        }
-        for (const char *dir: table_directories) {
-            success &= enumerate_directory_files(dir);
         }
         filenames.Append(table_filenames);
         if (!success)
@@ -69,7 +60,7 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
     return true;
 }
 
-bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
+bool mco_InitAuthorizationSet(const char *config_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set)
 {
@@ -87,16 +78,12 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
         if (authorization_filename) {
             filename = authorization_filename;
         } else {
-            for (Size i = resource_directories.len; i-- > 0 && !filename;) {
-                const char *resource_dir = resource_directories[i];
-
-                for (const char *default_name: default_names) {
-                    const char *test_filename = Fmt(&temp_alloc, "%1%/config/%2",
-                                                    resource_dir, default_name).ptr;
-                    if (TestPath(test_filename, FileType::File)) {
-                        filename = test_filename;
-                        break;
-                    }
+            for (const char *default_name: default_names) {
+                const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
+                                                config_directory, default_name).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
                 }
             }
         }
@@ -112,77 +99,4 @@ bool mco_InitAuthorizationSet(Span<const char *const> resource_directories,
     }
 
     return true;
-}
-
-const mco_TableSet *mco_GetMainTableSet()
-{
-    static mco_TableSet table_set;
-    static bool loaded = false;
-
-    if (!loaded) {
-        if (!mco_InitTableSet(mco_resource_directories, mco_table_directories,
-                              mco_table_filenames, &table_set))
-            return nullptr;
-        loaded = true;
-    }
-
-    return &table_set;
-}
-
-const mco_AuthorizationSet *mco_GetMainAuthorizationSet()
-{
-    static mco_AuthorizationSet authorization_set;
-    static bool loaded = false;
-
-    if (!loaded) {
-        if (!mco_InitAuthorizationSet(mco_resource_directories, mco_authorization_filename,
-                                      &authorization_set))
-            return nullptr;
-        loaded = true;
-    }
-
-    return &authorization_set;
-}
-
-bool mco_HandleMainOption(OptionParser &opt_parser, void (*usage_func)(FILE *fp))
-{
-    if (opt_parser.TestOption("-O", "--output")) {
-        const char *filename = opt_parser.RequireValue(usage_func);
-        if (!filename)
-            return false;
-
-        if (!freopen(filename, "w", stdout)) {
-            LogError("Cannot open '%1': %2", filename, strerror(errno));
-            return false;
-        }
-        return true;
-    } else if (opt_parser.TestOption("-D", "--resource_dir")) {
-        if (!opt_parser.RequireValue(usage_func))
-            return false;
-
-        mco_resource_directories.Append(opt_parser.current_value);
-        return true;
-    } else if (opt_parser.TestOption("--mco_table_dir")) {
-        if (!opt_parser.RequireValue(usage_func))
-            return false;
-
-        mco_table_directories.Append(opt_parser.current_value);
-        return true;
-    } else if (opt_parser.TestOption("--mco_table_file")) {
-        if (!opt_parser.RequireValue(usage_func))
-            return false;
-
-        mco_table_filenames.Append(opt_parser.current_value);
-        return true;
-    } else if (opt_parser.TestOption("--mco_auth")) {
-        if (!opt_parser.RequireValue(usage_func))
-            return false;
-
-        mco_authorization_filename = opt_parser.current_value;
-        return true;
-    } else {
-        LogError("Unknown option '%1'", opt_parser.current_option);
-        usage_func(stderr);
-        return false;
-    }
 }

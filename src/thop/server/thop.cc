@@ -69,11 +69,11 @@ struct Route {
     HASH_TABLE_HANDLER(Route, url);
 };
 
-const mco_TableSet *thop_table_set;
+mco_TableSet thop_table_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
-const mco_AuthorizationSet *thop_authorization_set;
+mco_AuthorizationSet thop_authorization_set;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 mco_StaySet thop_stay_set;
@@ -120,22 +120,18 @@ static const char *GetMimeType(Span<const char> path)
     }
 }
 
-static bool InitCatalogSet(Span<const char *const> resource_directories,
-                           Span<const char *const> desc_directories)
+static bool InitCatalogSet(Span<const char *const> table_directories)
 {
     BlockAllocator temp_alloc(Kibibytes(8));
 
     HeapArray<const char *> filenames;
     {
         bool success = true;
-        for (const char *resource_dir: resource_directories) {
+        for (const char *resource_dir: table_directories) {
             const char *desc_dir = Fmt(&temp_alloc, "%1%/catalogs", resource_dir).ptr;
             if (TestPath(desc_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(desc_dir, "*.json", 1024, &temp_alloc, &filenames);
             }
-        }
-        for (const char *dir: desc_directories) {
-            success &= EnumerateDirectoryFiles(dir, "*.json", 1024, &temp_alloc, &filenames);
         }
         if (!success)
             return false;
@@ -171,92 +167,57 @@ static bool InitCatalogSet(Span<const char *const> resource_directories,
     return true;
 }
 
-static bool InitStructureSet(Span<const char *const> resource_directories,
-                             const char *structure_filename)
+static bool InitStructureSet(const char *config_directory)
 {
     LogInfo("Load structures");
 
     BlockAllocator temp_alloc(Kibibytes(8));
 
-    const char *filename = nullptr;
-    {
-        if (structure_filename) {
-            filename = structure_filename;
-        } else {
-            for (Size i = resource_directories.len; i-- > 0;) {
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config%/mco_structures.ini",
-                                                resource_directories[i]).ptr;
-                if (TestPath(test_filename, FileType::File)) {
-                    filename = test_filename;
-                    break;
-                }
-            }
-        }
-    }
+    const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini",
+                               config_directory).ptr;
 
-    if (filename && filename[0]) {
-        StructureSetBuilder structure_set_builder;
-        if (!structure_set_builder.LoadFiles(filename))
-            return false;
-        structure_set_builder.Finish(&thop_structure_set);
-    } else {
-        LogError("No structures file specified or found");
-    }
+    StructureSetBuilder structure_set_builder;
+    if (!structure_set_builder.LoadFiles(filename))
+        return false;
+    structure_set_builder.Finish(&thop_structure_set);
 
     return true;
 }
 
-static bool InitUserSet(Span<const char *const> resource_directories, const char *user_filename)
+static bool InitUserSet(const char *config_directory)
 {
     LogInfo("Load users");
 
     BlockAllocator temp_alloc(Kibibytes(8));
 
-    const char *filename = nullptr;
-    {
-        if (user_filename) {
-            filename = user_filename;
-        } else {
-            for (Size i = resource_directories.len; i-- > 0;) {
-                const char *test_filename = Fmt(&temp_alloc, "%1%/config%/users.ini",
-                                                resource_directories[i]).ptr;
-                if (TestPath(test_filename, FileType::File)) {
-                    filename = test_filename;
-                    break;
-                }
-            }
-        }
-    }
+    const char *filename = Fmt(&temp_alloc, "%1%/users.ini",
+                               config_directory).ptr;
 
-    if (filename && filename[0]) {
-        UserSetBuilder user_set_builder;
-        if (!user_set_builder.LoadFiles(filename))
-            return false;
-        user_set_builder.Finish(thop_structure_set, &thop_user_set);
-    } else {
-        LogError("No users file specified or found");
-    }
+    UserSetBuilder user_set_builder;
+    if (!user_set_builder.LoadFiles(filename))
+        return false;
+    user_set_builder.Finish(thop_structure_set, &thop_user_set);
 
     return true;
 }
 
-static bool InitTables(Span<const char *const> catalog_directories, bool casemix)
+static bool InitTables(Span<const char *const> table_directories,
+                       const char *config_directory, bool casemix)
 {
-    thop_table_set = mco_GetMainTableSet();
-    if (!thop_table_set || !thop_table_set->indexes.len)
+    if (!mco_InitTableSet(table_directories, {}, &thop_table_set) ||
+            !thop_table_set.indexes.len)
         return false;
 
     if (casemix) {
-        thop_authorization_set = mco_GetMainAuthorizationSet();
-        if (!thop_authorization_set)
+        if (!mco_InitAuthorizationSet(config_directory, nullptr, &thop_authorization_set))
             return false;
-        if (!InitStructureSet(mco_resource_directories, nullptr))
+        if (!InitStructureSet(config_directory))
             return false;
-        if (!InitUserSet(mco_resource_directories, nullptr))
+        if (!InitUserSet(config_directory))
             return false;
     }
 
-    if (!InitCatalogSet(mco_resource_directories, catalog_directories))
+    if (!InitCatalogSet(table_directories))
         return false;
 
     return true;
@@ -279,7 +240,7 @@ static bool InitStays(Span<const char *const> stay_directories,
                 const char *ext = GetPathExtension(filename, &compression_type).ptr;
 
                 if (info.type == FileType::File &&
-                        (TestStr(ext, ".grp") || TestStr(ext, ".rss") || TestStr(ext, ".dspak"))) {
+                        (TestStr(ext, ".grp") || TestStr(ext, ".rss") || TestStr(ext, ".dmpak"))) {
                     filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
                 }
 
@@ -290,12 +251,6 @@ static bool InitStays(Span<const char *const> stay_directories,
         };
 
         bool success = true;
-        for (const char *resource_dir: mco_resource_directories) {
-            const char *stay_dir = Fmt(&temp_alloc, "%1%/mco_stays", resource_dir).ptr;
-            if (TestPath(stay_dir, FileType::Directory)) {
-                success &= enumerate_directory_files(stay_dir);
-            }
-        }
         for (const char *dir: stay_directories) {
             success &= enumerate_directory_files(dir);
         }
@@ -340,7 +295,7 @@ static bool InitStays(Span<const char *const> stay_directories,
     LogInfo("Classify stays");
 
     // Classify
-    mco_Classify(*thop_table_set, *thop_authorization_set, thop_stay_set.stays,
+    mco_Classify(thop_table_set, thop_authorization_set, thop_stay_set.stays,
                  (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
     thop_results.Trim();
     thop_mono_results.Trim();
@@ -415,15 +370,15 @@ static bool ComputeConstraints()
 
     Async async;
 
-    thop_constraints_set.Reserve(thop_table_set->indexes.len);
-    for (Size i = 0; i < thop_table_set->indexes.len; i++) {
-        if (thop_table_set->indexes[i].valid) {
+    thop_constraints_set.Reserve(thop_table_set.indexes.len);
+    for (Size i = 0; i < thop_table_set.indexes.len; i++) {
+        if (thop_table_set.indexes[i].valid) {
             // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-            if (thop_table_set->indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
+            if (thop_table_set.indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
                     !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
                 HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
                 async.AddTask([=]() {
-                    return mco_ComputeGhmConstraints(thop_table_set->indexes[i], constraints);
+                    return mco_ComputeGhmConstraints(thop_table_set.indexes[i], constraints);
                 });
             }
             thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
@@ -882,34 +837,21 @@ static void ReleaseConnectionData(void *, struct MHD_Connection *,
 int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: thop [options]
-)");
-        PrintLn(fp, mco_options_usage);
-        PrintLn(fp, R"(
-THOP options:
+        PrintLn(fp, R"(Usage: thop [options] [stay_file ..]
+
+Options:
+    -T, --table_dir <dir>        Add tables directory
+    -C, --config_dir <dir>       Set configuration directory
+
     -p, --port <port>            Web server port
-                                 (default: 8888)
-
-    -c, --casemix                Enable casemix module
-
-        --mco_stay_dir <dir>     Add MCO stays directory
-                                 (default: <resource_dir>%/mco_stays)
-        --mco_stay_file <dir>    Add MCO stays file
-)");
+                                 (default: 8888))");
     };
 
     BlockAllocator temp_alloc(Kibibytes(8));
 
-    // Add default resource directory
-    if (const char *app_dir = GetApplicationDirectory(); app_dir) {
-        const char *default_resource_dir = Fmt(&temp_alloc, "%1%/resources", app_dir).ptr;
-        mco_resource_directories.Append(default_resource_dir);
-    }
-
-    HeapArray<const char *> catalog_directories;
+    HeapArray<const char *> table_directories;
+    const char *config_directory = nullptr;
     uint16_t port = 8888;
-    bool casemix = false;
-    HeapArray<const char *> stay_directories;
     HeapArray<const char *> stay_filenames;
     {
         OptionParser opt_parser(argc, argv);
@@ -919,6 +861,15 @@ THOP options:
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return 0;
+            } else if (TestOption(opt, "-T", "--table_dir")) {
+                if (!opt_parser.RequireValue(PrintUsage))
+                    return 1;
+
+                table_directories.Append(opt_parser.current_value);
+            } else if (TestOption(opt, "-C", "--config_dir")) {
+                config_directory = opt_parser.RequireValue(PrintUsage);
+                if (!config_directory)
+                    return 1;
             } else if (TestOption(opt, "-p", "--port")) {
                 if (!opt_parser.RequireValue(PrintUsage))
                     return 1;
@@ -931,31 +882,25 @@ THOP options:
                     return 1;
                 }
                 port = (uint16_t)new_port;
-            } else if (TestOption(opt, "--catalog_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
-                    return 1;
-
-                catalog_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "--mco_stay_dir")) {
-                if (!opt_parser.RequireValue(PrintUsage))
-                    return 1;
-
-                stay_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "--mco_stay_file")) {
-                if (!opt_parser.RequireValue(PrintUsage))
-                    return 1;
-
-                stay_filenames.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-c", "--casemix")) {
-                casemix = true;
-            } else if (!mco_HandleMainOption(opt_parser, PrintUsage)) {
+            } else {
+                LogError("Unknown option '%1'", opt);
+                PrintUsage(stderr);
                 return 1;
             }
         }
 
-        if (!casemix && (stay_directories.len || stay_filenames.len)) {
-            LogError("Ignoring stays without --casemix option");
+        if (!table_directories.len || !config_directory) {
+            if (!table_directories.len) {
+                LogError("No table directory is specified");
+            }
+            if (!config_directory) {
+                LogError("Configuration directory is missing");
+            }
+
+            return 1;
         }
+
+        opt_parser.ConsumeNonOptions(&stay_filenames);
     }
 
     if (sodium_init() < 0) {
@@ -963,9 +908,9 @@ THOP options:
         return 1;
     }
 
-    if (!InitTables(catalog_directories, casemix))
+    if (!InitTables(table_directories, config_directory, stay_filenames.len))
         return 1;
-    if (casemix && !InitStays(stay_directories, stay_filenames))
+    if (stay_filenames.len && !InitStays({}, stay_filenames))
         return 1;
     if (!ComputeConstraints())
         return 1;
