@@ -930,10 +930,18 @@ Options:
         flags |= MHD_USE_DEBUG;
 #endif
 
+        // FIXME: Investigate why libmicrohttpd in thread pool mode works badly on MSVC builds
+#ifdef _MSC_VER
+        flags |= MHD_USE_THREAD_PER_CONNECTION;
+        daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
+                                  MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
+                                  MHD_OPTION_END);
+#else
         daemon = MHD_start_daemon(flags, port, nullptr, nullptr, HandleHttpConnection, nullptr,
                                   MHD_OPTION_THREAD_POOL_SIZE, thread_count,
                                   MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
                                   MHD_OPTION_END);
+#endif
         if (!daemon)
             return 1;
     }
