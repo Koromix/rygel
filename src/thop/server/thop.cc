@@ -201,23 +201,23 @@ static bool InitUserSet(const char *config_directory)
     return true;
 }
 
-static bool InitTables(Span<const char *const> table_directories,
-                       const char *config_directory, bool casemix)
+static bool InitTables(Span<const char *const> table_directories)
 {
-    if (!mco_InitTableSet(table_directories, {}, &thop_table_set) ||
-            !thop_table_set.indexes.len)
+    if (!mco_InitTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
+        return false;
+    if (!InitCatalogSet(table_directories))
         return false;
 
-    if (casemix) {
-        if (!mco_InitAuthorizationSet(config_directory, nullptr, &thop_authorization_set))
-            return false;
-        if (!InitStructureSet(config_directory))
-            return false;
-        if (!InitUserSet(config_directory))
-            return false;
-    }
+    return true;
+}
 
-    if (!InitCatalogSet(table_directories))
+static bool InitConfig(const char *config_directory, const char *authorization_filename)
+{
+    if (!mco_InitAuthorizationSet(config_directory, authorization_filename, &thop_authorization_set))
+        return false;
+    if (!InitStructureSet(config_directory))
+        return false;
+    if (!InitUserSet(config_directory))
         return false;
 
     return true;
@@ -842,6 +842,9 @@ int main(int argc, char **argv)
 Options:
     -T, --table_dir <dir>        Add tables directory
     -C, --config_dir <dir>       Set configuration directory
+        --auth_file <file>       Set authorization file
+                                 (default: <config_dir>%/mco_authorizations.ini
+                                           <config_dir>%/mco_authorizations.txt)
 
     -p, --port <port>            Web server port
                                  (default: 8888))");
@@ -851,6 +854,7 @@ Options:
 
     HeapArray<const char *> table_directories;
     const char *config_directory = nullptr;
+    const char *authorization_filename = nullptr;
     uint16_t port = 8888;
     HeapArray<const char *> stay_filenames;
     {
@@ -869,6 +873,10 @@ Options:
             } else if (TestOption(opt, "-C", "--config_dir")) {
                 config_directory = opt_parser.RequireValue();
                 if (!config_directory)
+                    return 1;
+            } else if (TestOption(opt, "--auth_file")) {
+                authorization_filename = opt_parser.RequireValue();
+                if (!authorization_filename)
                     return 1;
             } else if (TestOption(opt, "-p", "--port")) {
                 if (!opt_parser.RequireValue())
@@ -907,10 +915,14 @@ Options:
         return 1;
     }
 
-    if (!InitTables(table_directories, config_directory, stay_filenames.len))
+    if (!InitTables(table_directories))
         return 1;
-    if (stay_filenames.len && !InitStays({}, stay_filenames))
-        return 1;
+    if (stay_filenames.len) {
+        if (!InitConfig(config_directory, authorization_filename))
+            return 1;
+        if (!InitStays({}, stay_filenames))
+            return 1;
+    }
     if (!ComputeConstraints())
         return 1;
 

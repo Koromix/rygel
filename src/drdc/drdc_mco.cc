@@ -257,7 +257,10 @@ bool RunMcoClassify(Span<const char *> arguments)
 
 Options:
     -T, --table_dir <dir>        Add table directory
-    -A, --auth_file <file>       Set authorization file
+    -C, --config_dir <dir>       Set configuration directory
+        --auth_file <file>       Set authorization file
+                                 (default: <config_dir>%/mco_authorizations.ini
+                                           <config_dir>%/mco_authorizations.txt)
 
     -o, --option <options>       Classifier options (see below)
     -d, --dispense <mode>        Run dispensation algorithm (see below)
@@ -282,6 +285,7 @@ Dispensation modes:)");
     OptionParser opt_parser(arguments);
 
     HeapArray<const char *> table_directories;
+    const char *config_directory = nullptr;
     const char *authorization_filename = nullptr;
     unsigned int flags = 0;
     int dispense_mode = -1;
@@ -301,7 +305,11 @@ Dispensation modes:)");
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-A", "--auth_file")) {
+            } else if (TestOption(opt, "-C", "--config_directory")) {
+                config_directory = opt_parser.RequireValue();
+                if (!config_directory)
+                    return false;
+            } else if (TestOption(opt, "--auth_file")) {
                 authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
                     return false;
@@ -365,7 +373,7 @@ Dispensation modes:)");
     if (!mco_InitTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
         return false;
     mco_AuthorizationSet authorization_set;
-    if (!mco_InitAuthorizationSet({}, authorization_filename, &authorization_set))
+    if (!mco_InitAuthorizationSet(config_directory, authorization_filename, &authorization_set))
         return false;
 
     mco_StaySet stay_set;
