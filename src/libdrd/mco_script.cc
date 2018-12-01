@@ -29,7 +29,7 @@ foreign class Date {
     foreign toString
 }
 
-foreign class ForeignList {
+foreign class ForeignList is Sequence {
     foreign count
     foreign [index]
     foreign iterate(it)
