@@ -481,24 +481,12 @@ uint64_t GetMonotonicTime()
 // Strings
 // ------------------------------------------------------------------------
 
-Span<const char> MakeString(Allocator *alloc, Span<const char> bytes)
+Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
-    char *new_str = (char *)Allocator::Allocate(alloc, bytes.len + 1);
-    memcpy(new_str, bytes.ptr, (size_t)bytes.len);
-    new_str[bytes.len] = 0;
-    return MakeSpan(new_str, bytes.len);
-}
-
-Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len)
-{
-    Size str_len = (Size)strlen(str);
-    if (max_len >= 0 && str_len > max_len) {
-        str_len = max_len;
-    }
-    char *new_str = (char *)Allocator::Allocate(alloc, str_len + 1);
-    memcpy(new_str, str, (size_t)str_len);
-    new_str[str_len] = 0;
-    return MakeSpan(new_str, str_len);
+    char *new_str = (char *)Allocator::Allocate(alloc, str.len + 1);
+    memcpy(new_str, str.ptr, (size_t)str.len);
+    new_str[str.len] = 0;
+    return MakeSpan(new_str, str.len);
 }
 
 // ------------------------------------------------------------------------

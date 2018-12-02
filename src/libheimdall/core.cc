@@ -1172,7 +1172,7 @@ static void ToggleAlign(InterfaceState &state)
 static ConceptSet *CreateView(const char *name, HeapArray<ConceptSet> *out_concept_sets)
 {
     ConceptSet *concept_set = out_concept_sets->AppendDefault();
-    concept_set->name = DuplicateString(&concept_set->str_alloc, name).ptr;
+    concept_set->name = DuplicateString(name, &concept_set->str_alloc).ptr;
     concept_set->paths.Append("/");
     concept_set->paths_set.Append("/");
     return concept_set;
@@ -1182,7 +1182,7 @@ static void AddConceptsToView(const HashSet<Span<const char>> &concepts, Concept
 {
     for (Span<const char> concept_name: concepts.table) {
         Concept concept = {};
-        concept.name = MakeString(&out_concept_set->str_alloc, concept_name).ptr;
+        concept.name = DuplicateString(concept_name, &out_concept_set->str_alloc).ptr;
         concept.title = concept.name;
         concept.path = "/";
         out_concept_set->concepts_map.Append(concept);

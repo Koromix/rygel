@@ -401,7 +401,7 @@ public:
 
     SEXP Add(const char *name, SEXP vec)
     {
-        name = DuplicateString(&str_alloc, name).ptr;
+        name = DuplicateString(name, &str_alloc).ptr;
         variables.Append({name, vec});
         return vec;
     }

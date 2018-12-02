@@ -34,11 +34,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             if (prop.section == "Resources") {
                 do {
                     if (prop.key == "TableDirectory") {
-                        config.table_directories.Append(MakeString(&config.str_alloc, prop.value).ptr);
+                        config.table_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
                     } else if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = MakeString(&config.str_alloc, prop.value).ptr;
+                        config.profile_directory = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "AuthorizationFile") {
-                        config.authorization_filename = MakeString(&config.str_alloc, prop.value).ptr;
+                        config.authorization_filename = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -47,9 +47,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             } else if (prop.section == "MCO") {
                 do {
                     if (prop.key == "StayDirectory") {
-                        config.mco_stay_directories.Append(MakeString(&config.str_alloc, prop.value).ptr);
+                        config.mco_stay_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
                     } else if (prop.key == "StayFile") {
-                        config.mco_stay_filenames.Append(MakeString(&config.str_alloc, prop.value).ptr);
+                        config.mco_stay_filenames.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
                     } else if (prop.key == "DispenseMode") {
                         const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                               std::end(mco_DispenseModeOptions),

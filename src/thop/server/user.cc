@@ -55,7 +55,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
             }
 
             // TODO: Check validity, or maybe the INI parser checks are enough?
-            const char *name = MakeString(&set.str_alloc, prop.section).ptr;
+            const char *name = DuplicateString(prop.section, &set.str_alloc).ptr;
             User user = {};
             UnitRuleSet rule_set = {};
 
@@ -78,7 +78,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } else if (prop.key == "PasswordHash") {
-                    user.password_hash = MakeString(&set.str_alloc, prop.value).ptr;
+                    user.password_hash = DuplicateString(prop.value, &set.str_alloc).ptr;
                 } else if (prop.key == "Password") {
                     if (warn_about_plain_passwords) {
                         LogError("Plain passwords are not recommended, prefer PasswordHash");
@@ -89,7 +89,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             crypto_pwhash_str(hash, prop.value.ptr, prop.value.len,
                                               crypto_pwhash_OPSLIMIT_MIN,
                                               crypto_pwhash_MEMLIMIT_MIN) == 0) {
-                        user.password_hash = DuplicateString(&set.str_alloc, hash).ptr;
+                        user.password_hash = DuplicateString(hash, &set.str_alloc).ptr;
                     } else {
                         LogError("Failed to hash password");
                         valid = false;
@@ -104,9 +104,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } else if (prop.key == "Allow") {
-                    allow.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                    allow.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
                 } else if (prop.key == "Deny") {
-                    deny.Append(MakeString(&set.str_alloc, prop.value).ptr);
+                    deny.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
                 } else if (prop.key == "Permissions") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));

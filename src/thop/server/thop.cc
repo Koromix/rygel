@@ -159,7 +159,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
                 return false;
         }
 
-        catalog.name = DuplicateString(&catalog_set.alloc, name).ptr;
+        catalog.name = DuplicateString(name, &catalog_set.alloc).ptr;
         catalog.data = buf.Leak();
         catalog.compression_type = CompressionType::Gzip;
 
@@ -657,7 +657,7 @@ static bool UpdateStaticAssets()
     packer_alloc.ReleaseAll();
     for (const PackerAsset &asset: *lib_assets) {
         PackerAsset asset_copy;
-        asset_copy.name = DuplicateString(&packer_alloc, asset.name).ptr;
+        asset_copy.name = DuplicateString(asset.name, &packer_alloc).ptr;
         uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&packer_alloc, asset.data.len);
         memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.data = {data_ptr, asset.data.len};
@@ -697,8 +697,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
                                                     const char *data, uint64_t, size_t) {
                 ConnectionInfo *conn = (ConnectionInfo *)cls;
 
-                key = DuplicateString(&conn->temp_alloc, key).ptr;
-                data = DuplicateString(&conn->temp_alloc, data).ptr;
+                key = DuplicateString(key, &conn->temp_alloc).ptr;
+                data = DuplicateString(data, &conn->temp_alloc).ptr;
                 conn->post.Append(key, data);
 
                 return MHD_YES;

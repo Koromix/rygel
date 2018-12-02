@@ -2665,8 +2665,7 @@ void PopLogHandler();
 // Strings
 // ------------------------------------------------------------------------
 
-Span<const char> MakeString(Allocator *alloc, Span<const char> str);
-Span<const char> DuplicateString(Allocator *alloc, const char *str, Size max_len = -1);
+Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
 
 static inline bool IsAsciiAlpha(char c)
 {

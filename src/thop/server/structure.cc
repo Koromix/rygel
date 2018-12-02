@@ -25,7 +25,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
             Structure structure = {};
 
             // TODO: Check validity, or maybe the INI parser checks are enough?
-            structure.name = MakeString(&set.str_alloc, prop.section).ptr;
+            structure.name = DuplicateString(prop.section, &set.str_alloc).ptr;
 
             HashSet<UnitCode> units_set;
             do {
@@ -34,7 +34,7 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
                 ent.unit = UnitCode::FromString(prop.key);
                 valid &= ent.unit.IsValid();
 
-                ent.path = MakeString(&set.str_alloc, prop.value).ptr;
+                ent.path = DuplicateString(prop.value, &set.str_alloc).ptr;
                 if (ent.path[0] != '|' || !ent.path[1]) {
                     LogError("Unit path does not start with '|'");
                     valid = false;

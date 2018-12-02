@@ -64,7 +64,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
     inst->last_source_id++;
     {
-        const char *src_name = DuplicateString(&inst->entity_set.str_alloc, source.get_cstring()).ptr;
+        const char *src_name = DuplicateString(source.get_cstring(), &inst->entity_set.str_alloc).ptr;
         inst->entity_set.sources.Append(inst->last_source_id, src_name);
     }
 
@@ -80,7 +80,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
             Size idx = entities_map.FindValue(values.entity[i], -1);
             if (idx == -1) {
                 entity = inst->entity_set.entities.AppendDefault();
-                entity->id = DuplicateString(&inst->entity_set.str_alloc, values.entity[i]).ptr;
+                entity->id = DuplicateString((const char *)values.entity[i], &inst->entity_set.str_alloc).ptr;
 
                 entities_map.Append(entity->id, inst->entity_set.entities.len - 1);
             } else {
@@ -90,7 +90,7 @@ int AddElements(Instance *inst, const Rcpp::String &source, Rcpp::DataFrame valu
 
         Element elmt;
         elmt.source_id = inst->last_source_id;
-        elmt.concept = DuplicateString(&inst->entity_set.str_alloc, values.concept[i]).ptr;
+        elmt.concept = DuplicateString((const char *)values.concept[i], &inst->entity_set.str_alloc).ptr;
         elmt.time = values.time[i];
         func(elmt, i);
         entity->elements.Append(elmt);
@@ -206,7 +206,7 @@ void R_HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame conce
     } else {
         concept_set = inst->concept_sets.AppendDefault();
     }
-    concept_set->name = DuplicateString(&concept_set->str_alloc, name.c_str()).ptr;
+    concept_set->name = DuplicateString(name.c_str(), &concept_set->str_alloc).ptr;
 
     for (Size i = 0; i < concepts_df.nrow(); i++) {
         if (((const char *)concepts.path[i])[0] != '/')
@@ -214,13 +214,13 @@ void R_HeimdallSetConcepts(SEXP inst_xp, std::string name, Rcpp::DataFrame conce
 
         const char *path = concept_set->paths_set.FindValue(concepts.path[i], nullptr);
         if (!path) {
-            path = DuplicateString(&inst->entity_set.str_alloc, concepts.path[i]).ptr;
+            path = DuplicateString((const char *)concepts.path[i], &inst->entity_set.str_alloc).ptr;
             concept_set->paths.Append(path);
             concept_set->paths_set.Append(path);
         }
 
         Concept concept;
-        concept.name = DuplicateString(&inst->entity_set.str_alloc, concepts.name[i]).ptr;
+        concept.name = DuplicateString((const char *)concepts.name[i], &inst->entity_set.str_alloc).ptr;
         concept.path = path;
         if (!concept_set->concepts_map.Append(concept).second) {
             LogError("Concept '%1' already exists", concept.name);

@@ -176,7 +176,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         }
 
         if (str_alloc) {
-            table.filename = DuplicateString(str_alloc, filename).ptr;
+            table.filename = DuplicateString(filename, str_alloc).ptr;
         }
 
         // Table type
@@ -1330,7 +1330,7 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader &st)
     load_info.prev_index_idx = -1;
     table_loads.Append(load_info);
 
-    table_info.filename = DuplicateString(&set.str_alloc, st.filename).ptr;
+    table_info.filename = DuplicateString(st.filename, &set.str_alloc).ptr;
     set.tables.Append(table_info);
 
     return true;
