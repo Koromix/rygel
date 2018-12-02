@@ -167,5 +167,8 @@ target_include_directories(sodium PRIVATE libsodium/src/libsodium/include
                                           libsodium/src/libsodium/include/sodium)
 target_compile_definitions(sodium PUBLIC -DSODIUM_STATIC -DCONFIGURED=1)
 if(NOT EMSCRIPTEN)
+    if(WIN32)
+        target_compile_definitions(sodium PUBLIC -DHAVE_PTHREAD)
+    endif()
     target_link_libraries(sodium PRIVATE Threads::Threads)
 endif()
