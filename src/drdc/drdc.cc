@@ -24,8 +24,7 @@ Commands:
     mco_map                      Compute GHM accessibility constraints
     mco_pack                     Pack MCO stays for quicker loads
     mco_show                     Print information about individual MCO elements
-                                 (diagnoses, procedures, GHM roots, etc.)
-)");
+                                 (diagnoses, procedures, GHM roots, etc.))");
     };
 
     LinkedAllocator temp_alloc;

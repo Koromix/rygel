@@ -473,7 +473,7 @@ bool RunMcoDump(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
 
 Options:
-    -T, --table_dir <dir>        Tables directory
+    -T, --table_dir <dir>        Add table directory
 
     -d, --dump                   Dump content of (readable) tables)");
     };
@@ -522,7 +522,7 @@ bool RunMcoList(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
 
 Options:
-    -T, --table_dir <dir>        Tables directory
+    -T, --table_dir <dir>        Add table directory
 
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
@@ -621,7 +621,7 @@ bool RunMcoMap(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_map [options]
 
 Options:
-    -T, --table_dir <dir>        Tables directory
+    -T, --table_dir <dir>        Add table directory
 
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
@@ -753,7 +753,7 @@ bool RunMcoShow(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
 
 Options:
-    -T, --table_dir <dir>        Tables directory)");
+    -T, --table_dir <dir>        Add table directory)");
     };
 
     OptionParser opt_parser(arguments);
