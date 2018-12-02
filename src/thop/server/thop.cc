@@ -252,7 +252,7 @@ static bool InitStays(Span<const char *const> stay_directories,
 
         bool valid = true;
         for (const mco_Stay &stay: thop_stay_set.stays) {
-            if (stay.unit.IsValid() && !known_units.Find(stay.unit)) {
+            if (stay.unit.number && !known_units.Find(stay.unit)) {
                 LogError("Structure set is missing unit %1", stay.unit);
                 known_units.Append(stay.unit);
 
