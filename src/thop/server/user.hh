@@ -62,6 +62,9 @@ private:
     bool CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent);
 };
 
+bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
+                 UserSet *out_set);
+
 const User *CheckSessionUser(MHD_Connection *conn);
 void AddSessionHeaders(MHD_Connection *conn, const User *user, MHD_Response *response);
 

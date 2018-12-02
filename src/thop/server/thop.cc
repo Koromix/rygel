@@ -167,40 +167,6 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitStructureSet(const char *config_directory)
-{
-    LogInfo("Load structures");
-
-    BlockAllocator temp_alloc(Kibibytes(8));
-
-    const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini",
-                               config_directory).ptr;
-
-    StructureSetBuilder structure_set_builder;
-    if (!structure_set_builder.LoadFiles(filename))
-        return false;
-    structure_set_builder.Finish(&thop_structure_set);
-
-    return true;
-}
-
-static bool InitUserSet(const char *config_directory)
-{
-    LogInfo("Load users");
-
-    BlockAllocator temp_alloc(Kibibytes(8));
-
-    const char *filename = Fmt(&temp_alloc, "%1%/users.ini",
-                               config_directory).ptr;
-
-    UserSetBuilder user_set_builder;
-    if (!user_set_builder.LoadFiles(filename))
-        return false;
-    user_set_builder.Finish(thop_structure_set, &thop_user_set);
-
-    return true;
-}
-
 static bool InitTables(Span<const char *const> table_directories)
 {
     if (!mco_LoadTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
@@ -213,11 +179,16 @@ static bool InitTables(Span<const char *const> table_directories)
 
 static bool InitConfig(const char *config_directory, const char *authorization_filename)
 {
+    BlockAllocator temp_alloc {Kibibytes(8)};
+
     if (!mco_LoadAuthorizationSet(config_directory, authorization_filename, &thop_authorization_set))
         return false;
-    if (!InitStructureSet(config_directory))
+
+    if (const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini", config_directory).ptr;
+            !LoadStructureSet(filename, &thop_structure_set))
         return false;
-    if (!InitUserSet(config_directory))
+    if (const char *filename = Fmt(&temp_alloc, "%1%/users.ini", config_directory).ptr;
+            !LoadUserSet(filename, thop_structure_set, &thop_user_set))
         return false;
 
     return true;

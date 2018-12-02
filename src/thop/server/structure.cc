@@ -121,3 +121,15 @@ void StructureSetBuilder::Finish(StructureSet *out_set)
 
     SwapMemory(out_set, &set, SIZE(set));
 }
+
+bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set)
+{
+    LogInfo("Load structures");
+
+    StructureSetBuilder structure_set_builder;
+    if (!structure_set_builder.LoadFiles(filenames))
+        return false;
+    structure_set_builder.Finish(out_set);
+
+    return true;
+}

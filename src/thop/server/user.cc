@@ -266,6 +266,19 @@ bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const Stru
     return true;
 }
 
+bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
+                 UserSet *out_set)
+{
+    LogInfo("Load users");
+
+    UserSetBuilder user_set_builder;
+    if (!user_set_builder.LoadFiles(filenames))
+        return false;
+    user_set_builder.Finish(structure_set, out_set);
+
+    return true;
+}
+
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 {
     int family;

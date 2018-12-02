@@ -35,3 +35,5 @@ public:
 
     void Finish(StructureSet *out_set);
 };
+
+bool LoadStructureSet(Span<const char *const> filenames, StructureSet *out_set);
