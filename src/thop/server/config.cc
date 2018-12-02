@@ -46,11 +46,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "MCO") {
                 do {
-                    if (prop.key == "StayDirectory") {
-                        config.mco_stay_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
-                    } else if (prop.key == "StayFile") {
-                        config.mco_stay_filenames.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
-                    } else if (prop.key == "DispenseMode") {
+                    if (prop.key == "DispenseMode") {
                         const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                               std::end(mco_DispenseModeOptions),
                                                               [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
@@ -59,6 +55,10 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                             valid = false;
                         }
                         config.dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+                    } else if (prop.key == "StayDirectory") {
+                        config.mco_stay_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
+                    } else if (prop.key == "StayFile") {
+                        config.mco_stay_filenames.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

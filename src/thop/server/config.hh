@@ -11,12 +11,12 @@ struct Config {
     const char *profile_directory = nullptr;
     const char *authorization_filename = nullptr;
 
+    mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 
     int port = 8888;
 
-    mco_DispenseMode dispense_mode = mco_DispenseMode::J;
 
     BlockAllocator str_alloc { Kibibytes(16) };
 };
