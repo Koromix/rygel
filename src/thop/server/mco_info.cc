@@ -50,7 +50,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
 
                         writer.StartObject();
                         writer.Key("name"); writer.String(desc.name);
-                        writer.Key("title"); writer.String(desc.help);
+                        writer.Key("help"); writer.String(desc.help);
                         writer.EndObject();
                     }
                 }

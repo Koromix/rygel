@@ -79,12 +79,12 @@ enum class mco_DispenseMode {
     ExJ2
 };
 static const struct OptionDesc mco_DispenseModeOptions[] = {
-    {"e", "E"},
-    {"ex", "Ex"},
-    {"ex2", "Ex'"},
-    {"j", "J"},
-    {"exj", "ExJ"},
-    {"exj2", "Ex'J"}
+    {"E", "E"},
+    {"Ex", "Ex"},
+    {"Ex'", "Ex'"},
+    {"J", "J"},
+    {"ExJ", "ExJ"},
+    {"Ex'J", "Ex'J"}
 };
 
 int64_t mco_PriceGhs(const mco_GhsPriceInfo &price_info, double ghs_coefficient,

@@ -480,7 +480,7 @@ let mco_casemix = {};
 
         select.innerHTML = '';
         for (const algorithm of settings.algorithms) {
-            let text ='Algorithme ' + algorithm.title;
+            let text ='Algorithme ' + algorithm.name;
             if (algorithm.name === settings.default_algorithm)
                 text += ' *';
             let option = html('option', {value: algorithm.name}, text);
