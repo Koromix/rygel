@@ -23,6 +23,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         config.dispense_mode = dispense_mode;
     };
 
+    Span<const char> root_dir;
+    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_dir);
+
     IniParser ini(&st);
     ini.reader.PushLogHandler();
     DEFER { PopLogHandler(); };
@@ -34,11 +37,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             if (prop.section == "Resources") {
                 do {
                     if (prop.key == "TableDirectory") {
-                        config.table_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
+                        config.table_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        config.profile_directory = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
                     } else if (prop.key == "AuthorizationFile") {
-                        config.authorization_filename = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        config.authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -56,9 +59,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         }
                         config.dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
                     } else if (prop.key == "StayDirectory") {
-                        config.mco_stay_directories.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
+                        config.mco_stay_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else if (prop.key == "StayFile") {
-                        config.mco_stay_filenames.Append(DuplicateString(prop.value, &config.str_alloc).ptr);
+                        config.mco_stay_filenames.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
