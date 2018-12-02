@@ -12,8 +12,6 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_common.hh
                mco_dump.cc
                mco_dump.hh
-               mco_init.cc
-               mco_init.hh
                mco_mapper.cc
                mco_mapper.hh
                mco_pricing.cc

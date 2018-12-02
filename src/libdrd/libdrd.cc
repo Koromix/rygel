@@ -9,5 +9,4 @@
 #include "mco_classifier.cc"
 #include "mco_mapper.cc"
 #include "mco_pricing.cc"
-#include "mco_init.cc"
 #include "mco_dump.cc"

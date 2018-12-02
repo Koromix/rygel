@@ -1783,6 +1783,61 @@ void mco_TableSetBuilder::HandleDependencies(mco_TableSetBuilder::TableLoadInfo 
     }
 }
 
+bool mco_LoadTableSet(Span<const char *const> table_directories,
+                      Span<const char *const> table_filenames,
+                      mco_TableSet *out_set)
+{
+    LogInfo("Load tables");
+
+    BlockAllocator temp_alloc(Kibibytes(8));
+
+    HeapArray<const char *> filenames;
+    {
+        const auto enumerate_directory_files = [&](const char *dir) {
+            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
+                                                   [&](const char *filename, const FileInfo &info) {
+                CompressionType compression_type;
+                const char *ext = GetPathExtension(filename, &compression_type).ptr;
+
+                if (info.type == FileType::File &&
+                        (TestStr(ext, ".tab") || TestStr(ext, ".dpri"))) {
+                    filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
+                }
+
+                return true;
+            });
+
+            return status != EnumStatus::Error;
+        };
+
+        bool success = true;
+        for (const char *resource_dir: table_directories) {
+            const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
+            if (TestPath(tab_dir, FileType::Directory)) {
+                success &= enumerate_directory_files(tab_dir);
+            }
+        }
+        filenames.Append(table_filenames);
+        if (!success)
+            return false;
+    }
+
+    if (!filenames.len) {
+        LogError("No table specified or found");
+    }
+
+    // Load tables
+    {
+        mco_TableSetBuilder table_set_builder;
+        if (!table_set_builder.LoadFiles(filenames))
+            return false;
+        if (!table_set_builder.Finish(out_set))
+            return false;
+    }
+
+    return true;
+}
+
 template <typename T, typename U, typename Handler>
 Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler> *map, U code)
 {

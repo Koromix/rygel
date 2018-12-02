@@ -384,6 +384,10 @@ private:
                             Span<const std::pair<mco_TableType, mco_TableType>> pairs);
 };
 
+bool mco_LoadTableSet(Span<const char *const> table_directories,
+                      Span<const char *const> table_filenames,
+                      mco_TableSet *out_set);
+
 class mco_ListSpecifier {
 public:
     enum class Table {

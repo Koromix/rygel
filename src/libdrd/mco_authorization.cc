@@ -6,6 +6,67 @@
 #include "mco_authorization.hh"
 #include "mco_tables.hh"
 
+Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) const
+{
+    Span<const mco_Authorization> auths;
+    auths.ptr = authorizations_map.FindValue(unit, nullptr);
+    if (!auths.ptr)
+        return {};
+
+    {
+        const mco_Authorization *end_auth = auths.ptr + 1;
+        while (end_auth < authorizations.end() &&
+               end_auth->unit == unit) {
+            end_auth++;
+        }
+        auths.len = end_auth - auths.ptr;
+    }
+
+    return auths;
+}
+
+const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date) const
+{
+    const mco_Authorization *auth = authorizations_map.FindValue(unit, nullptr);
+    if (!auth)
+        return nullptr;
+
+    do {
+        if (date >= auth->dates[0] && date < auth->dates[1])
+            return auth;
+    } while (++auth < authorizations.end() && auth->unit == unit);
+
+    return nullptr;
+}
+
+int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) const
+{
+    if (unit.number >= 10000) {
+        return (int8_t)(unit.number % 100);
+    } else if (unit.number) {
+        const mco_Authorization *auth = FindUnit(unit, date);
+        if (UNLIKELY(!auth)) {
+            LogDebug("Unit %1 is missing from authorization set", unit);
+            return 0;
+        }
+        return auth->type;
+    } else {
+        return 0;
+    }
+}
+
+bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const
+{
+    if (GetAuthorizationType(unit, date) == auth_type)
+        return true;
+    for (const mco_Authorization &auth: facility_authorizations) {
+        if (auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1])
+            return true;
+    }
+
+    return false;
+}
+
 bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
 {
     static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
@@ -181,63 +242,43 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
     SwapMemory(out_set, &set, SIZE(set));
 }
 
-Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) const
+bool mco_LoadAuthorizationSet(const char *config_directory,
+                              const char *authorization_filename,
+                              mco_AuthorizationSet *out_set)
 {
-    Span<const mco_Authorization> auths;
-    auths.ptr = authorizations_map.FindValue(unit, nullptr);
-    if (!auths.ptr)
-        return {};
+    LogInfo("Load authorizations");
 
+    static const char *const default_names[] = {
+        "mco_authorizations.ini",
+        "mco_authorizations.txt"
+    };
+
+    BlockAllocator temp_alloc(Kibibytes(8));
+
+    const char *filename = nullptr;
     {
-        const mco_Authorization *end_auth = auths.ptr + 1;
-        while (end_auth < authorizations.end() &&
-               end_auth->unit == unit) {
-            end_auth++;
+        if (authorization_filename) {
+            filename = authorization_filename;
+        } else {
+            for (const char *default_name: default_names) {
+                const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
+                                                config_directory, default_name).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    filename = test_filename;
+                    break;
+                }
+            }
         }
-        auths.len = end_auth - auths.ptr;
     }
 
-    return auths;
-}
-
-const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date) const
-{
-    const mco_Authorization *auth = authorizations_map.FindValue(unit, nullptr);
-    if (!auth)
-        return nullptr;
-
-    do {
-        if (date >= auth->dates[0] && date < auth->dates[1])
-            return auth;
-    } while (++auth < authorizations.end() && auth->unit == unit);
-
-    return nullptr;
-}
-
-int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) const
-{
-    if (unit.number >= 10000) {
-        return (int8_t)(unit.number % 100);
-    } else if (unit.number) {
-        const mco_Authorization *auth = FindUnit(unit, date);
-        if (UNLIKELY(!auth)) {
-            LogDebug("Unit %1 is missing from authorization set", unit);
-            return 0;
-        }
-        return auth->type;
+    if (filename && filename[0]) {
+        mco_AuthorizationSetBuilder authorization_set_builder;
+        if (!authorization_set_builder.LoadFiles(filename))
+            return false;
+        authorization_set_builder.Finish(out_set);
     } else {
-        return 0;
-    }
-}
-
-bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const
-{
-    if (GetAuthorizationType(unit, date) == auth_type)
-        return true;
-    for (const mco_Authorization &auth: facility_authorizations) {
-        if (auth.type == auth_type && date >= auth.dates[0] && date < auth.dates[1])
-            return true;
+        LogError("No authorization file specified or found");
     }
 
-    return false;
+    return true;
 }

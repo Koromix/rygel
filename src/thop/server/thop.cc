@@ -203,7 +203,7 @@ static bool InitUserSet(const char *config_directory)
 
 static bool InitTables(Span<const char *const> table_directories)
 {
-    if (!mco_InitTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
+    if (!mco_LoadTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
         return false;
     if (!InitCatalogSet(table_directories))
         return false;
@@ -213,7 +213,7 @@ static bool InitTables(Span<const char *const> table_directories)
 
 static bool InitConfig(const char *config_directory, const char *authorization_filename)
 {
-    if (!mco_InitAuthorizationSet(config_directory, authorization_filename, &thop_authorization_set))
+    if (!mco_LoadAuthorizationSet(config_directory, authorization_filename, &thop_authorization_set))
         return false;
     if (!InitStructureSet(config_directory))
         return false;

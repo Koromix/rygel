@@ -370,10 +370,10 @@ Dispensation modes:)");
     }
 
     mco_TableSet table_set;
-    if (!mco_InitTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
+    if (!mco_LoadTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
         return false;
     mco_AuthorizationSet authorization_set;
-    if (!mco_InitAuthorizationSet(config_directory, authorization_filename, &authorization_set))
+    if (!mco_LoadAuthorizationSet(config_directory, authorization_filename, &authorization_set))
         return false;
 
     mco_StaySet stay_set;
@@ -502,7 +502,7 @@ Options:
     }
 
     mco_TableSet table_set;
-    if (!mco_InitTableSet(table_directories, filenames, &table_set) || !table_set.indexes.len)
+    if (!mco_LoadTableSet(table_directories, filenames, &table_set) || !table_set.indexes.len)
         return false;
     mco_DumpTableSetHeaders(table_set, &stdout_st);
     if (dump) {
@@ -562,7 +562,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_InitTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
@@ -655,7 +655,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_InitTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
@@ -790,7 +790,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_InitTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
