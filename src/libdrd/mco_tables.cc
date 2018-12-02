@@ -1797,10 +1797,9 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
             EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
                                                    [&](const char *filename, const FileInfo &info) {
                 CompressionType compression_type;
-                const char *ext = GetPathExtension(filename, &compression_type).ptr;
+                Span<const char> ext = GetPathExtension(filename, &compression_type);
 
-                if (info.type == FileType::File &&
-                        (TestStr(ext, ".tab") || TestStr(ext, ".dpri"))) {
+                if (info.type == FileType::File && (ext == ".tab" || ext == ".dpri")) {
                     filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
                 }
 
