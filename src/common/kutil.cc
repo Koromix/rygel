@@ -1395,6 +1395,36 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     return extension;
 }
 
+const char *CanonicalizePath(Span<const char> root_dir, const char *path, Allocator *alloc)
+{
+    bool path_is_absolute = !root_dir.len ||
+                            strchr(PATH_SEPARATORS, path[0]);
+#ifdef _WIN32
+    path_is_absolute |= IsAsciiAlpha(path[0]) && path[1] == ':';
+#endif
+
+    Span<char> complete_path;
+    if (path_is_absolute) {
+        complete_path = DuplicateString(path, alloc);
+    } else {
+        complete_path = Fmt(alloc, "%1%/%2", root_dir, path);
+    }
+
+#ifdef _WIN32
+    char *real_path = _fullpath(nullptr, complete_path.ptr, 0);
+#else
+    char *real_path = realpath(complete_path.ptr, nullptr);
+#endif
+    if (real_path) {
+        DEFER { free(real_path); };
+
+        Allocator::Release(alloc, (void *)complete_path.ptr, complete_path.len + 1);
+        return DuplicateString(real_path, alloc).ptr;
+    } else {
+        return complete_path.ptr;
+    }
+}
+
 FILE *OpenFile(const char *path, OpenFileMode mode)
 {
     char mode_str[8] = {};

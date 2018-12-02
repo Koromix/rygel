@@ -3026,6 +3026,8 @@ CompressionType GetPathCompression(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
 
+const char *CanonicalizePath(Span<const char> root_dir, const char *path, Allocator *alloc);
+
 enum class FileType {
     Directory,
     File,
