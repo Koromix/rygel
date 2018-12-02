@@ -1604,9 +1604,9 @@ void Async::StealAndRunTasks()
 // Streams
 // ------------------------------------------------------------------------
 
-StreamReader stdin_st(stdin);
-StreamWriter stdout_st(stdout);
-StreamWriter stderr_st(stderr);
+StreamReader stdin_st(stdin, "<stdin>");
+StreamWriter stdout_st(stdout, "<stdout>");
+StreamWriter stderr_st(stderr, "<stderr>");
 
 #ifdef MZ_VERSION
 struct MinizInflateContext {
@@ -1639,9 +1639,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
         error = true;
     };
 
-    if (filename) {
-        this->filename = filename;
-    }
+    this->filename = filename ? filename : "<memory>";
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -1664,9 +1662,8 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
         error = true;
     };
 
-    if (filename) {
-        this->filename = filename;
-    }
+    DebugAssert(filename);
+    this->filename = filename;
 
     if (!InitDecompressor(compression_type))
         return false;
@@ -1686,6 +1683,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
+    DebugAssert(filename);
     this->filename = filename;
 
     if (!InitDecompressor(compression_type))
@@ -1704,7 +1702,7 @@ void StreamReader::Close()
 {
     ReleaseResources();
 
-    filename = "?";
+    filename = nullptr;
     source.eof = false;
     raw_len = -1;
     read = 0;
@@ -2134,9 +2132,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
         error = true;
     };
 
-    if (filename) {
-        this->filename = filename;
-    }
+    this->filename = filename ? filename : "<memory>";
 
     if (!InitCompressor(compression_type))
         return false;
@@ -2159,9 +2155,8 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
         error = true;
     };
 
-    if (filename) {
-        this->filename = filename;
-    }
+    DebugAssert(filename);
+    this->filename = filename;
 
     if (!InitCompressor(compression_type))
         return false;
@@ -2182,6 +2177,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         error = true;
     };
 
+    DebugAssert(filename);
     this->filename = filename;
 
     if (!InitCompressor(compression_type))
@@ -2249,7 +2245,7 @@ bool StreamWriter::Close()
 
     ReleaseResources();
 
-    filename = "?";
+    filename = nullptr;
     open = false;
     error = false;
 

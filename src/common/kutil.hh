@@ -2300,7 +2300,7 @@ public:
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(buf, filename, compression_type); }
-    StreamReader(FILE *fp, const char *filename = nullptr,
+    StreamReader(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
         { Open(fp, filename, compression_type); }
     StreamReader(const char *filename,
@@ -2313,7 +2313,7 @@ public:
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename = nullptr,
+    bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     void Close();
@@ -2411,7 +2411,7 @@ public:
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         { Open(mem, filename, compression_type); }
-    StreamWriter(FILE *fp, const char *filename = nullptr,
+    StreamWriter(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
         { Open(fp, filename, compression_type); }
     StreamWriter(const char *filename,
@@ -2424,7 +2424,7 @@ public:
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename = nullptr,
+    bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None);
     bool Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Close();
