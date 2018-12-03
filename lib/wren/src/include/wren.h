@@ -241,9 +241,19 @@ typedef struct
   // If zero, defaults to 50.
   int heapGrowthPercent;
 
+  // The VM's interpreter loop will keep track of how many operations have
+  // been executed (per invocation) and how much memory is being used, and
+  // abort with a runtime error when a limit is exceeded.
+  //
+  // The sandbox is unable to defend against native calls entering an
+  // infinite loop.
+  //
+  // Zero (disabled) by default.
+  int maxRunOps;
+  size_t maxHeapSize;
+
   // User-defined data associated with the VM.
   void* userData;
-
 } WrenConfiguration;
 
 typedef enum

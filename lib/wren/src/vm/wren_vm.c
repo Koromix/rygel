@@ -49,6 +49,8 @@ void wrenInitConfiguration(WrenConfiguration* config)
   config->initialHeapSize = 1024 * 1024 * 10;
   config->minHeapSize = 1024 * 1024;
   config->heapGrowthPercent = 50;
+  config->maxRunOps = 0;
+  config->maxHeapSize  = 0;
   config->userData = NULL;
 }
 
@@ -64,6 +66,8 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
   if (config != NULL)
   {
     memcpy(&vm->config, config, sizeof(WrenConfiguration));
+    vm->config.maxRunOps = 0;
+    vm->config.maxHeapSize = 0;
   }
   else
   {
@@ -81,6 +85,13 @@ WrenVM* wrenNewVM(WrenConfiguration* config)
 
   vm->modules = wrenNewMap(vm);
   wrenInitializeCore(vm);
+
+  if (config != NULL)
+  {
+    vm->config.maxRunOps = config->maxRunOps;
+    vm->config.maxHeapSize = config->maxHeapSize;
+  }
+
   return vm;
 }
 
@@ -216,13 +227,24 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
   // during the next GC.
   vm->bytesAllocated += newSize - oldSize;
 
+  if (newSize > 0)
+  {
+    if (vm->config.maxHeapSize && vm->bytesAllocated > vm->config.maxHeapSize)
+    {
+      size_t maxHeapSize = vm->config.maxHeapSize;
+      vm->config.maxHeapSize = 0;
+      vm->fiber->error = wrenStringFormat(vm, "Out of memory");
+      vm->config.maxHeapSize = maxHeapSize;
+    }
+
 #if WREN_DEBUG_GC_STRESS
-  // Since collecting calls this function to free things, make sure we don't
-  // recurse.
-  if (newSize > 0) wrenCollectGarbage(vm);
+    // Since collecting calls this function to free things, make sure we don't
+    // recurse.
+    wrenCollectGarbage(vm);
 #else
-  if (newSize > 0 && vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
+    if (vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 #endif
+  }
 
   return vm->config.reallocateFn(memory, oldSize, newSize);
 }
@@ -792,6 +814,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
   register Value* stackStart;
   register uint8_t* ip;
   register ObjFn* fn;
+  register int ops_count = vm->config.maxRunOps;
 
   // These macros are designed to only be invoked within this function.
   #define PUSH(value)  (*fiber->stackTop++ = value)
@@ -829,6 +852,19 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
       }                                                           \
       while (false)
 
+#define CHECK_OPS_COUNT()                                                   \
+      do                                                                    \
+      {                                                                     \
+        if (ops_count && !--ops_count)                                      \
+        {                                                                   \
+          vm->fiber->error = wrenStringFormat(vm, "Out of execution time"); \
+          STORE_FRAME();                                                    \
+          runtimeError(vm);                                                 \
+          return WREN_RESULT_RUNTIME_ERROR;                                 \
+        }                                                                   \
+      }                                                                     \
+      while (false)
+
   #if WREN_DEBUG_TRACE_INSTRUCTIONS
     // Prints the stack and instruction before each instruction is executed.
     #define DEBUG_TRACE_INSTRUCTIONS()                            \
@@ -857,6 +893,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
       do                                                        \
       {                                                         \
         DEBUG_TRACE_INSTRUCTIONS();                             \
+        CHECK_OPS_COUNT();                                      \
         goto *dispatchTable[instruction = (Code)READ_BYTE()];   \
       }                                                         \
       while (false)
@@ -866,6 +903,7 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
   #define INTERPRET_LOOP                                        \
       loop:                                                     \
         DEBUG_TRACE_INSTRUCTIONS();                             \
+        CHECK_OPS_COUNT();                                      \
         switch (instruction = (Code)READ_BYTE())
 
   #define CASE_CODE(name)  case CODE_##name
