@@ -182,8 +182,11 @@ void wrenCollectGarbage(WrenVM* vm)
 
   // Calculate the next gc point, this is the current allocation plus
   // a configured percentage of the current allocation.
-  vm->nextGC = vm->bytesAllocated + ((vm->bytesAllocated * vm->config.heapGrowthPercent) / 100);
-  if (vm->nextGC < vm->config.minHeapSize) vm->nextGC = vm->config.minHeapSize;
+  if (vm->nextGC)
+  {
+    vm->nextGC = vm->bytesAllocated + ((vm->bytesAllocated * vm->config.heapGrowthPercent) / 100);
+    if (vm->nextGC < vm->config.minHeapSize) vm->nextGC = vm->config.minHeapSize;
+  }
 
 #if WREN_DEBUG_TRACE_MEMORY || WREN_DEBUG_TRACE_GC
   double elapsed = ((double)clock() / CLOCKS_PER_SEC) - startTime;
@@ -218,7 +221,7 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
   // recurse.
   if (newSize > 0) wrenCollectGarbage(vm);
 #else
-  if (newSize > 0 && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
+  if (newSize > 0 && vm->nextGC && vm->bytesAllocated > vm->nextGC) wrenCollectGarbage(vm);
 #endif
 
   return vm->config.reallocateFn(memory, oldSize, newSize);
