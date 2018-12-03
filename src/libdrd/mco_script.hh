@@ -9,5 +9,4 @@
 #include "mco_pricing.hh"
 
 bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings,
-                   mco_StaySet *out_stay_set = nullptr);
+                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings);

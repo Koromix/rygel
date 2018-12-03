@@ -133,7 +133,13 @@ struct ScriptFilter {
     WrenHandle *object;
 };
 
-struct ScriptContext {
+class ScriptRunner {
+    // FIXME: Make sure all deallocations are disabled
+    BlockAllocator vm_allocator { Kibibytes(256) };
+
+public:
+    WrenVM *vm = nullptr;
+
     WrenHandle *date_class;
     WrenHandle *filter_class;
     WrenHandle *filter_method;
@@ -144,6 +150,10 @@ struct ScriptContext {
     ResultObject *result_object;
 
     HeapArray<ScriptFilter> filters;
+
+    bool Load(const char *script);
+    bool Run(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+             Span<mco_Result> results, Span<mco_Pricing> pricings);
 };
 
 static THREAD_LOCAL Allocator *thread_alloc;
@@ -206,9 +216,9 @@ static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
 {
     switch (wrenGetSlotType(vm, slot)) {
         case WREN_TYPE_FOREIGN: {
-            const ScriptContext &ctx = *(ScriptContext *)wrenGetUserData(vm);
+            const ScriptRunner &runner = *(ScriptRunner *)wrenGetUserData(vm);
 
-            if (UNLIKELY(!wrenForeignIsClass(vm, slot, ctx.date_class))) {
+            if (UNLIKELY(!wrenForeignIsClass(vm, slot, runner.date_class))) {
                 TriggerError(vm, "Expected Date or null");
                 return {};
             }
@@ -289,10 +299,10 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 #define ELSE_IF_GET_DATE(Signature, Type, Value) \
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
-            ScriptContext *ctx = (ScriptContext *)wrenGetUserData(vm); \
+            const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm); \
             const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
-            wrenSetSlotHandle(vm, 0, ctx->date_class); \
              \
+            wrenSetSlotHandle(vm, 0, runner.date_class); \
             Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(Date)); \
             *date = (Value); \
         }; \
@@ -362,7 +372,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         wrenSetSlotBool(vm, 0, date1 >= date2);
     })
     ELSE_IF_METHOD("-(_)", [](WrenVM *vm) {
-        const ScriptContext &ctx = *(const ScriptContext *)wrenGetUserData(vm);
+        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
 
         Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
         if (UNLIKELY(!date1.IsValid())) {
@@ -383,7 +393,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
             case WREN_TYPE_NUM: {
                 int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-                wrenSetSlotHandle(vm, 0, ctx.date_class);
+                wrenSetSlotHandle(vm, 0, runner.date_class);
                 Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(date1));
                 *ret = date1 - days;
             } break;
@@ -395,7 +405,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         }
     })
     ELSE_IF_METHOD("+(_)", [](WrenVM *vm) {
-        const ScriptContext &ctx = *(const ScriptContext *)wrenGetUserData(vm);
+        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
 
         Date date = *(Date *)wrenGetSlotForeign(vm, 0);
         if (UNLIKELY(!date.IsValid())) {
@@ -405,7 +415,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
 
         int16_t days = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        wrenSetSlotHandle(vm, 0, ctx.date_class);
+        wrenSetSlotHandle(vm, 0, runner.date_class);
         Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(date));
         *ret = date + days;
     })
@@ -489,7 +499,7 @@ static WrenForeignMethodFn BindFilterMethod(const char *signature)
 
 static void RegisterFilter(WrenVM *vm, int name_slot, int alias_slot, int fn_slot)
 {
-    ScriptContext *ctx = (ScriptContext *)wrenGetUserData(vm);
+    ScriptRunner *runner = (ScriptRunner *)wrenGetUserData(vm);
 
     ScriptFilter filter;
     filter.name = GetSlotStringSafe(vm, name_slot);
@@ -500,9 +510,9 @@ static void RegisterFilter(WrenVM *vm, int name_slot, int alias_slot, int fn_slo
     }
     filter.object = wrenGetSlotHandle(vm, fn_slot);
 
-    wrenSetSlotHandle(vm, 0, ctx->date_class);
+    wrenSetSlotHandle(vm, 0, runner->date_class);
     ScriptFilter **ptr = (ScriptFilter **)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ScriptFilter *));
-    *ptr = ctx->filters.Append(filter);
+    *ptr = runner->filters.Append(filter);
 }
 
 static WrenForeignMethodFn BindMcoMethod(const char *signature)
@@ -828,16 +838,13 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
     }
 }
 
-bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings,
-                   mco_StaySet *out_stay_set)
+bool ScriptRunner::Load(const char *script)
 {
-    // FIXME: Make sure all deallocations are disabled
-    BlockAllocator temp_alloc(Megabytes(1));
-    thread_alloc = &temp_alloc;
+    DebugAssert(!vm);
+
+    thread_alloc = &vm_allocator;
 
     // Init Wren VM
-    WrenVM* vm;
     {
         WrenConfiguration config;
         wrenInitConfiguration(&config);
@@ -867,7 +874,7 @@ bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &au
         config.bindForeignClassFn = BindForeignClass;
         config.bindForeignMethodFn = BindForeignMethod;
 
-        // Limit execution time and space, and (basically) disable GC
+        // Limit execution time and space, and disable GC
         config.maxRunOps = 20000;
         config.maxHeapSize = Mebibytes(8);
         config.initialHeapSize = 0;
@@ -877,82 +884,112 @@ bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &au
         vm = wrenNewVM(&config);
     }
 
-    ScriptContext ctx = {};
-    wrenSetUserData(vm, &ctx);
+    wrenSetUserData(vm, this);
 
-    Assert(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
+    DebugAssert(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
 
+    // Make handles to important classes and objects
     wrenEnsureSlots(vm, 1);
     wrenGetVariable(vm, "mco", "Date", 0);
-    ctx.date_class = wrenGetSlotHandle(vm, 0);
+    date_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "Filter", 0);
-    ctx.filter_class = wrenGetSlotHandle(vm, 0);
-    ctx.filter_method = wrenMakeCallHandle(vm, "call(_,_)");
+    filter_class = wrenGetSlotHandle(vm, 0);
+    filter_method = wrenMakeCallHandle(vm, "call(_,_)");
     wrenGetVariable(vm, "mco", "McoStay", 0);
-    ctx.stay_class = wrenGetSlotHandle(vm, 0);
+    stay_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ResultObject));
-    ctx.result_var = wrenGetSlotHandle(vm, 0);
-    ctx.result_object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+    result_var = wrenGetSlotHandle(vm, 0);
+    result_object = (ResultObject *)wrenGetSlotForeign(vm, 0);
     wrenGetVariable(vm, "mco", "ForeignList", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ListObject<char>));
-    ctx.stays_var = wrenGetSlotHandle(vm, 0);
-    ctx.stays_object = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+    stays_var = wrenGetSlotHandle(vm, 0);
+    stays_object = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
 
     if (wrenInterpret(vm, "script", script) != WREN_RESULT_SUCCESS)
         return false;
 
-    {
-        // Reuse for performance
-        HeapArray<WrenHandle *> stay_vars;
+    return true;
+}
 
-        for (Size i = 0; i < results.len; i++) {
-            mco_Result &result = results[i];
-            mco_Pricing &pricing = pricings[i];
+bool ScriptRunner::Run(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                       Span<mco_Result> results, Span<mco_Pricing> pricings)
+{
+    thread_alloc = &vm_allocator;
 
-            while (stay_vars.len < result.stays.len) {
-                wrenEnsureSlots(vm, 1);
-                wrenSetSlotHandle(vm, 0, ctx.stay_class);
-                wrenSetSlotNewForeign(vm, 0, 0, SIZE(StayObject));
+    // Reuse for performance
+    HeapArray<WrenHandle *> stay_vars;
 
-                WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
-                StayObject *stay_object = (StayObject *)wrenGetSlotForeign(vm, 0);
-                stay_object->list = ctx.stays_object;
-                stay_object->idx = stay_vars.len;
+    for (Size i = 0; i < results.len; i++) {
+        mco_Result &result = results[i];
+        mco_Pricing &pricing = pricings[i];
 
-                stay_vars.Append(stay_var);
-            }
+        while (stay_vars.len < result.stays.len) {
+            wrenEnsureSlots(vm, 1);
+            wrenSetSlotHandle(vm, 0, stay_class);
+            wrenSetSlotNewForeign(vm, 0, 0, SIZE(StayObject));
 
-            ctx.stays_object->vars = stay_vars.Take(0, result.stays.len);
-            ctx.stays_object->values = result.stays;
-            ctx.stays_object->copies.RemoveFrom(0);
-            ctx.result_object->result = &result;
-            ctx.result_object->pricing = &pricing;
+            WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
+            StayObject *stay_object = (StayObject *)wrenGetSlotForeign(vm, 0);
+            stay_object->list = stays_object;
+            stay_object->idx = stay_vars.len;
 
-            for (const ScriptFilter &filter: ctx.filters) {
-                wrenEnsureSlots(vm, 3);
-                wrenSetSlotHandle(vm, 0, filter.object);
-                wrenSetSlotHandle(vm, 1, ctx.stays_var);
-                wrenSetSlotHandle(vm, 2, ctx.result_var);
-                if (wrenCall(vm, ctx.filter_method) != WREN_RESULT_SUCCESS)
-                    return false;
-            }
+            stay_vars.Append(stay_var);
+        }
 
-            if (ctx.stays_object->copies.len) {
-                Span<const mco_Stay> prev_stays = result.stays;
+        stays_object->vars = stay_vars.Take(0, result.stays.len);
+        stays_object->values = result.stays;
+        stays_object->copies.RemoveFrom(0);
+        result_object->result = &result;
+        result_object->pricing = &pricing;
 
-                mco_RunClassifier(table_set, authorization_set, ctx.stays_object->copies, 0,
-                                  &result);
-                pricing = {};
-                mco_Price(result, false, &pricing);
+        for (const ScriptFilter &filter: filters) {
+            wrenEnsureSlots(vm, 3);
+            wrenSetSlotHandle(vm, 0, filter.object);
+            wrenSetSlotHandle(vm, 1, stays_var);
+            wrenSetSlotHandle(vm, 2, result_var);
+            if (wrenCall(vm, filter_method) != WREN_RESULT_SUCCESS)
+                return false;
+        }
 
-                if (!out_stay_set) {
-                    result.stays = prev_stays;
-                    pricing.stays = prev_stays;
-                }
-            }
+        if (stays_object->copies.len) {
+            Span<const mco_Stay> prev_stays = result.stays;
+
+            mco_RunClassifier(table_set, authorization_set, stays_object->copies, 0, &result);
+            pricing = {};
+            mco_Price(result, false, &pricing);
+
+            result.stays = prev_stays;
+            pricing.stays = prev_stays;
         }
     }
 
     return true;
+}
+
+bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings)
+{
+    static const int task_size = 16384;
+
+    Async async;
+    for (Size i = 0; i < results.len; i += task_size) {
+        Size task_offset = i;
+
+        async.AddTask([&, task_offset]() {
+            Size len = std::min(results.len, task_offset + task_size) - task_offset;
+            Span<mco_Result> task_results = results.Take(task_offset, len);
+            Span<mco_Pricing> task_pricings = pricings.Take(task_offset, len);
+
+            ScriptRunner runner;
+            if (!runner.Load(script))
+                return false;
+            if (!runner.Run(table_set, authorization_set, task_results, task_pricings))
+                return false;
+
+            return true;
+        });
+    }
+
+    return async.Sync();
 }
