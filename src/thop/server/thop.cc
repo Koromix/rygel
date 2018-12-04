@@ -271,25 +271,32 @@ static bool InitStays(Span<const char *const> stay_directories,
 
     HeapArray<const char *> filenames;
     {
+        const auto enumerate_directory_files = [&](const char *dir) {
+            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
+                                                   [&](const char *filename, const FileInfo &info) {
+                CompressionType compression_type;
+                const char *ext = GetPathExtension(filename, &compression_type).ptr;
+
+                if (info.type == FileType::File &&
+                        (TestStr(ext, ".grp") || TestStr(ext, ".rss") || TestStr(ext, ".dspak"))) {
+                    filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
+                }
+
+                return true;
+            });
+
+            return status != EnumStatus::Error;
+        };
+
         bool success = true;
         for (const char *resource_dir: mco_resource_directories) {
             const char *stay_dir = Fmt(&temp_alloc, "%1%/mco_stays", resource_dir).ptr;
             if (TestPath(stay_dir, FileType::Directory)) {
-                success &= EnumerateDirectoryFiles(stay_dir, "*.grp", 1024, &temp_alloc, &filenames);
-                success &= EnumerateDirectoryFiles(stay_dir, "*.rss", 1024, &temp_alloc, &filenames);
-                success &= EnumerateDirectoryFiles(stay_dir, "*.dspak", 1024, &temp_alloc, &filenames);
-                success &= EnumerateDirectoryFiles(stay_dir, "*.grp.gz", 1024, &temp_alloc, &filenames);
-                success &= EnumerateDirectoryFiles(stay_dir, "*.rss.gz", 1024, &temp_alloc, &filenames);
-                success &= EnumerateDirectoryFiles(stay_dir, "*.dspak.gz", 1024, &temp_alloc, &filenames);
+                success &= enumerate_directory_files(stay_dir);
             }
         }
         for (const char *dir: stay_directories) {
-            success &= EnumerateDirectoryFiles(dir, "*.grp", 1024, &temp_alloc, &filenames);
-            success &= EnumerateDirectoryFiles(dir, "*.rss", 1024, &temp_alloc, &filenames);
-            success &= EnumerateDirectoryFiles(dir, "*.dspak", 1024, &temp_alloc, &filenames);
-            success &= EnumerateDirectoryFiles(dir, "*.grp.gz", 1024, &temp_alloc, &filenames);
-            success &= EnumerateDirectoryFiles(dir, "*.rss.gz", 1024, &temp_alloc, &filenames);
-            success &= EnumerateDirectoryFiles(dir, "*.dspak.gz", 1024, &temp_alloc, &filenames);
+            success &= enumerate_directory_files(dir);
         }
         filenames.Append(stay_filenames);
         if (!success)

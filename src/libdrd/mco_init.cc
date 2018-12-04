@@ -19,34 +19,48 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
 
     BlockAllocator temp_alloc(Kibibytes(8));
 
-    HeapArray<const char *> filenames2;
+    HeapArray<const char *> filenames;
     {
+        const auto enumerate_directory_files = [&](const char *dir) {
+            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
+                                                   [&](const char *filename, const FileInfo &info) {
+                CompressionType compression_type;
+                const char *ext = GetPathExtension(filename, &compression_type).ptr;
+
+                if (info.type == FileType::File &&
+                        (TestStr(ext, ".tab") || TestStr(ext, ".dpri"))) {
+                    filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
+                }
+
+                return true;
+            });
+
+            return status != EnumStatus::Error;
+        };
+
         bool success = true;
         for (const char *resource_dir: resource_directories) {
             const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
             if (TestPath(tab_dir, FileType::Directory)) {
-                success &= EnumerateDirectoryFiles(tab_dir, "*.tab*", 1024,
-                                                   &temp_alloc, &filenames2);
-                success &= EnumerateDirectoryFiles(tab_dir, "*.dpri*", 1024,
-                                                   &temp_alloc, &filenames2);
+                success &= enumerate_directory_files(tab_dir);
             }
         }
         for (const char *dir: table_directories) {
-            success &= EnumerateDirectoryFiles(dir, "*.tab*", 1024, &temp_alloc, &filenames2);
-            success &= EnumerateDirectoryFiles(dir, "*.dpri*", 1024, &temp_alloc, &filenames2);
+            success &= enumerate_directory_files(dir);
         }
-        filenames2.Append(table_filenames);
+        filenames.Append(table_filenames);
         if (!success)
             return false;
     }
 
-    if (!filenames2.len) {
+    if (!filenames.len) {
         LogError("No table specified or found");
     }
 
+    // Load tables
     {
         mco_TableSetBuilder table_set_builder;
-        if (!table_set_builder.LoadFiles(filenames2))
+        if (!table_set_builder.LoadFiles(filenames))
             return false;
         if (!table_set_builder.Finish(out_set))
             return false;
