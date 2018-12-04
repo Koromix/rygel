@@ -3045,10 +3045,10 @@ enum class EnumStatus {
 
 bool TestPath(const char *path, FileType type = FileType::Unknown);
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, const FileInfo &)> func);
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
-                             HeapArray<const char *> *out_files, Size max_files);
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_files,
+                             Allocator *str_alloc, HeapArray<const char *> *out_files);
 
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL

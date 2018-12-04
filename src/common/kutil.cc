@@ -1084,7 +1084,7 @@ bool TestPath(const char *path, FileType type)
     return true;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, const FileInfo &)> func)
 {
     char find_filter[4096];
@@ -1112,7 +1112,13 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
     }
     DEFER { FindClose(handle); };
 
+    Size count = 0;
     do {
+        if (UNLIKELY(++count > max_files && max_files >= 0)) {
+            LogError("Partial enumation of directory '%1'", dirname);
+            return EnumStatus::Partial;
+        }
+
         FileInfo file_info;
 
         if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
@@ -1164,7 +1170,7 @@ bool TestPath(const char *path, FileType type)
     return true;
 }
 
-EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
+EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, const FileInfo &)> func)
 {
     DIR *dirp = opendir(dirname);
@@ -1174,6 +1180,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
     }
     DEFER { closedir(dirp); };
 
+    Size count = 0;
     dirent *dent;
     while ((dent = readdir(dirp))) {
         if ((dent->d_name[0] == '.' && !dent->d_name[1]) ||
@@ -1181,6 +1188,11 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
             continue;
 
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
+            if (UNLIKELY(++count > max_files && max_files >= 0)) {
+                LogError("Partial enumation of directory '%1'", dirname);
+                return EnumStatus::Partial;
+            }
+
             FileInfo file_info;
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -1225,26 +1237,21 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter,
 
 #endif
 
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Allocator *str_alloc,
-                             HeapArray<const char *> *out_files, Size max_files)
+bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_files,
+                             Allocator *str_alloc, HeapArray<const char *> *out_files)
 {
-    Assert(max_files > 0);
-
     DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
-    EnumStatus status = EnumerateDirectory(dirname, filter,
+    EnumStatus status = EnumerateDirectory(dirname, filter, max_files,
                                            [&](const char *filename, const FileInfo &info) {
         if (info.type == FileType::File) {
             out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
         }
+
         return true;
     });
     if (status == EnumStatus::Error)
         return false;
-
-    if (status == EnumStatus::Partial) {
-        LogError("Partial enumeration of directory '%1'", dirname);
-    }
 
     out_guard.disable();
     return true;

@@ -25,15 +25,15 @@ bool mco_InitTableSet(Span<const char *const> resource_directories,
         for (const char *resource_dir: resource_directories) {
             const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
             if (TestPath(tab_dir, FileType::Directory)) {
-                success &= EnumerateDirectoryFiles(tab_dir, "*.tab*", &temp_alloc,
-                                                   &filenames2, 1024);
-                success &= EnumerateDirectoryFiles(tab_dir, "*.dpri*", &temp_alloc,
-                                                   &filenames2, 1024);
+                success &= EnumerateDirectoryFiles(tab_dir, "*.tab*", 1024,
+                                                   &temp_alloc, &filenames2);
+                success &= EnumerateDirectoryFiles(tab_dir, "*.dpri*", 1024,
+                                                   &temp_alloc, &filenames2);
             }
         }
         for (const char *dir: table_directories) {
-            success &= EnumerateDirectoryFiles(dir, "*.tab*", &temp_alloc, &filenames2, 1024);
-            success &= EnumerateDirectoryFiles(dir, "*.dpri*", &temp_alloc, &filenames2, 1024);
+            success &= EnumerateDirectoryFiles(dir, "*.tab*", 1024, &temp_alloc, &filenames2);
+            success &= EnumerateDirectoryFiles(dir, "*.dpri*", 1024, &temp_alloc, &filenames2);
         }
         filenames2.Append(table_filenames);
         if (!success)
