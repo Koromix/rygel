@@ -140,28 +140,36 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         }
                     }
                 } else if (prop.key == "DispenseModes") {
-                    if (prop.value == "All") {
-                        user.dispense_modes = UINT_MAX;
-                    } else if (prop.value == "Default") {
-                        user.dispense_modes = 0;
-                    } else if (prop.value.len) {
-                        while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-                            if (part.len) {
-                                const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                                                      std::end(mco_DispenseModeOptions),
-                                                                      [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
+                        if (part.len) {
+                            bool enable;
+                            if (part[0] == '+') {
+                                enable = true;
+                                part = part.Take(1, part.len - 1);
+                            } else if (part[0] == '-') {
+                                enable = false;
+                                part = part.Take(1, part.len - 1);
+                            } else {
+                                enable = true;
+                            }
+
+                            if (part == "All") {
+                                user.dispense_modes = enable ? UINT_MAX : 0;
+                            } else {
+                                const OptionDesc *desc =
+                                    std::find_if(std::begin(mco_DispenseModeOptions),
+                                                 std::end(mco_DispenseModeOptions),
+                                                 [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
                                 if (desc != std::end(mco_DispenseModeOptions)) {
-                                    user.dispense_modes |= 1u << (desc - mco_DispenseModeOptions);
+                                    user.dispense_modes =
+                                        ApplyMask(user.dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
                                 } else {
                                     LogError("Unknown dispensation mode '%1'", part);
                                     valid = false;
                                 }
                             }
                         }
-                    } else {
-                        LogError("Incorrect value '%1' for DispenseModes attribute", prop.value);
-                        valid = false;
                     }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
