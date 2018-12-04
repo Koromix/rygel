@@ -1448,6 +1448,67 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
     return true;
 }
 
+static void BuildAdditionLists(const mco_TableIndex &index,
+                               Span<const ProcedureAdditionInfo> additions,
+                               HeapArray<mco_ProcedureLink> *out_links)
+{
+    int16_t next_addition_idx = 1;
+    for (const ProcedureAdditionInfo &addition_info: additions) {
+        int16_t addition_idx = 0;
+        if (LIKELY(addition_info.activity2 >= 0 &&
+                   addition_info.activity2 < ARRAY_SIZE(mco_ProcedureInfo::additions))) {
+            mco_ProcedureInfo *proc_info =
+                (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
+
+            if (LIKELY(proc_info)) {
+                bool new_match = false;
+                do {
+                    if (proc_info->phase == addition_info.phase2) {
+                        if (!proc_info->additions[addition_info.activity2]) {
+                            proc_info->additions[addition_info.activity2] = next_addition_idx;
+                            new_match = true;
+                        }
+                        addition_idx = proc_info->additions[addition_info.activity2];
+                    }
+                } while (++proc_info < index.procedures.end() &&
+                         proc_info->proc == addition_info.proc2);
+
+                next_addition_idx += new_match;
+            }
+        }
+
+        if (addition_idx) {
+            mco_ProcedureInfo *proc_info =
+                (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc1, nullptr);
+
+            if (LIKELY(proc_info)) {
+                bool match = false;
+                int16_t offset = (int16_t)out_links->len;
+                do {
+                    if (proc_info->phase == addition_info.phase1) {
+                        if (!proc_info->addition_list.len) {
+                            proc_info->addition_list.offset = offset;
+                        }
+                        proc_info->addition_list.len++;
+
+                        match = true;
+                    }
+                } while (++proc_info < index.procedures.end() &&
+                         proc_info->proc == addition_info.proc1);
+
+                if (match) {
+                    mco_ProcedureLink link = {};
+                    link.proc = addition_info.proc1;
+                    link.phase = addition_info.phase1;
+                    link.activity = addition_info.activity1;
+                    link.addition_idx = addition_idx;
+                    out_links->Append(link);
+                }
+            }
+        }
+    }
+}
+
 bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                       mco_TableSetBuilder::TableLoadInfo *current_tables[])
 {
@@ -1531,9 +1592,10 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
                     if (table_info) {
                         HeapArray<ProcedureAdditionInfo> additions;
-                        success &= ParseProcedureAdditionTable(load_info->raw_data.ptr,
-                                                               *table_info, &additions);
+                        success &= ParseProcedureAdditionTable(load_info->raw_data.ptr, *table_info,
+                                                               &additions);
 
+                        // Probably redundant, but make sure for BuildAdditionLists()
                         std::sort(additions.begin(), additions.end(),
                                   [](const ProcedureAdditionInfo &addition_info1,
                                      const ProcedureAdditionInfo &addition_info2) {
@@ -1541,61 +1603,7 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                             addition_info1.phase1 - addition_info2.phase1) < 0;
                         });
 
-                        int16_t next_addition_idx = 1;
-                        for (const ProcedureAdditionInfo &addition_info: additions) {
-                            int16_t addition_idx = 0;
-                            if (LIKELY(addition_info.activity2 >= 0 &&
-                                       addition_info.activity2 < ARRAY_SIZE(mco_ProcedureInfo::additions))) {
-                                mco_ProcedureInfo *proc_info =
-                                    (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc2, nullptr);
-
-                                if (LIKELY(proc_info)) {
-                                    bool new_match = false;
-                                    do {
-                                        if (proc_info->phase == addition_info.phase2) {
-                                            if (!proc_info->additions[addition_info.activity2]) {
-                                                proc_info->additions[addition_info.activity2] = next_addition_idx;
-                                                new_match = true;
-                                            }
-                                            addition_idx = proc_info->additions[addition_info.activity2];
-                                        }
-                                    } while (++proc_info < index.procedures.end() &&
-                                             proc_info->proc == addition_info.proc2);
-
-                                    next_addition_idx += new_match;
-                                }
-                            }
-
-                            if (addition_idx) {
-                                mco_ProcedureInfo *proc_info =
-                                    (mco_ProcedureInfo *)index.procedures_map->FindValue(addition_info.proc1, nullptr);
-
-                                if (LIKELY(proc_info)) {
-                                    bool match = false;
-                                    int16_t offset = (int16_t)links->len;
-                                    do {
-                                        if (proc_info->phase == addition_info.phase1) {
-                                            if (!proc_info->addition_list.len) {
-                                                proc_info->addition_list.offset = offset;
-                                            }
-                                            proc_info->addition_list.len++;
-
-                                            match = true;
-                                        }
-                                    } while (++proc_info < index.procedures.end() &&
-                                             proc_info->proc == addition_info.proc1);
-
-                                    if (match) {
-                                        mco_ProcedureLink link = {};
-                                        link.proc = addition_info.proc1;
-                                        link.phase = addition_info.phase1;
-                                        link.activity = addition_info.activity1;
-                                        link.addition_idx = addition_idx;
-                                        links->Append(link);
-                                    }
-                                }
-                            }
-                        }
+                        BuildAdditionLists(index, additions, links);
                     }
 
                     index.procedure_links = *links;
