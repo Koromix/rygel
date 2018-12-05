@@ -112,7 +112,6 @@ Available compression types:)", CompressionTypeNames[0]);
         }
     };
 
-    OptionParser opt_parser(argc, argv);
 
     const char *output_path = nullptr;
     int depth = -1;
@@ -123,12 +122,13 @@ Available compression types:)", CompressionTypeNames[0]);
     const char *merge_name = "packed";
     HeapArray<const char *> filenames;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(argc, argv);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (TestOption(opt, "-d", "--depth")) {
+            } else if (opt_parser.TestOption("-d", "--depth")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
@@ -138,17 +138,17 @@ Available compression types:)", CompressionTypeNames[0]);
                     LogError("Option --depth requires value > 0");
                     return 1;
                 }
-            } else if (TestOption(opt, "--span_name")) {
+            } else if (opt_parser.TestOption("--span_name")) {
                 span_name = opt_parser.RequireValue();
                 if (!span_name)
                     return 1;
-            } else if (TestOption(opt, "--export", "-e")) {
+            } else if (opt_parser.TestOption("--export", "-e")) {
                 export_span = true;
-            } else if (TestOption(opt, "-O")) {
+            } else if (opt_parser.TestOption("-O", "--output")) {
                 output_path = opt_parser.RequireValue();
                 if (!output_path)
                     return 1;
-            } else if (TestOption(opt, "-c", "--compress")) {
+            } else if (opt_parser.TestOption("-c", "--compress")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
@@ -163,7 +163,7 @@ Available compression types:)", CompressionTypeNames[0]);
                 }
 
                 compression_type = (CompressionType)i;
-            } else if (TestOption(opt, "-m", "--merge")) {
+            } else if (opt_parser.TestOption("-m", "--merge")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
@@ -175,12 +175,12 @@ Available compression types:)", CompressionTypeNames[0]);
                         merge_extensions.Append(extension);
                     }
                 }
-            } else if (TestOption(opt, "-M", "--merge_name")) {
+            } else if (opt_parser.TestOption("-M", "--merge_name")) {
                 merge_name = opt_parser.RequireValue();
                 if (!merge_name)
                     return 1;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return 1;
             }
         }

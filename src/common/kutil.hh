@@ -3168,12 +3168,6 @@ private:
 // Options
 // ------------------------------------------------------------------------
 
-static inline bool TestOption(const char *opt, const char *test1, const char *test2 = nullptr)
-{
-    return TestStr(opt, test1) ||
-           (test2 && TestStr(opt, test2));
-}
-
 struct OptionDesc {
     const char *name;
     const char *help;
@@ -3205,5 +3199,5 @@ public:
     const char *RequireValue(void (*usage_func)(FILE *fp) = nullptr);
 
     bool TestOption(const char *test1, const char *test2 = nullptr) const
-        { return ::TestOption(current_option, test1, test2); }
+        { return TestStr(current_option, test1) || (test2 && TestStr(current_option, test2)); }
 };

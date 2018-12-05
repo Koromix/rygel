@@ -283,7 +283,6 @@ Dispensation modes:)");
         }
     };
 
-    OptionParser opt_parser(arguments);
 
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
@@ -296,25 +295,26 @@ Dispensation modes:)");
     int torture = 0;
     HeapArray<const char *> filenames;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-P", "--profile_dir")) {
+            } else if (opt_parser.TestOption("-P", "--profile_dir")) {
                 profile_directory = opt_parser.RequireValue();
                 if (!profile_directory)
                     return false;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (opt_parser.TestOption("-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "--auth_file")) {
+            } else if (opt_parser.TestOption("--auth_file")) {
                 authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
                     return false;
-            } else if (TestOption(opt, "-o", "--option")) {
+            } else if (opt_parser.TestOption("-o", "--option")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
                     return false;
@@ -330,7 +330,7 @@ Dispensation modes:)");
                     }
                     flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
-            } else if (TestOption(opt, "-d", "--dispense")) {
+            } else if (opt_parser.TestOption("-d", "--dispense")) {
                 const char *mode_str = opt_parser.RequireValue();
                 if (!mode_str)
                     return false;
@@ -343,19 +343,19 @@ Dispensation modes:)");
                     return false;
                 }
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
-            } else if (TestOption(opt, "--coeff")) {
+            } else if (opt_parser.TestOption("--coeff")) {
                 apply_coefficient = true;
-            } else if (TestOption(opt, "-v", "--verbose")) {
+            } else if (opt_parser.TestOption("-v", "--verbose")) {
                 verbosity++;
-            } else if (TestOption(opt, "--test")) {
+            } else if (opt_parser.TestOption("--test")) {
                 test = true;
-            } else if (TestOption(opt, "--torture")) {
+            } else if (opt_parser.TestOption("--torture")) {
                 if (!opt_parser.RequireValue())
                     return false;
                 if (!ParseDec(opt_parser.current_value, &torture))
                     return false;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }
@@ -366,6 +366,7 @@ Dispensation modes:)");
             return false;
         }
     }
+
     if (dispense_mode >= 0) {
         flags |= (int)mco_ClassifyFlag::Mono;
     }
@@ -478,26 +479,25 @@ Options:
     -d, --dump                   Dump content of (readable) tables)");
     };
 
-    OptionParser opt_parser(arguments);
-
     HeapArray<const char *> table_directories;
     bool dump = false;
     HeapArray<const char *> filenames;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (opt_parser.TestOption("-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "-d", "--dump")) {
+            } else if (opt_parser.TestOption("-d", "--dump")) {
                 dump = true;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }
@@ -528,30 +528,30 @@ Options:
                                  (default: most recent tables))");
     };
 
-    OptionParser opt_parser(arguments);
 
     HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> spec_strings;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (opt_parser.TestOption("-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+            } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }
@@ -627,22 +627,21 @@ Options:
                                  (default: most recent tables))");
     };
 
-    OptionParser opt_parser(arguments);
-
     HeapArray<const char *> table_directories;
     Date index_date = {};
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (opt_parser.TestOption("-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+            } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
@@ -650,7 +649,7 @@ Options:
                 if (!index_date.value)
                     return false;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }
@@ -696,24 +695,23 @@ bool RunMcoPack(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file)");
     };
 
-    OptionParser opt_parser(arguments);
-
     HeapArray<const char *> table_directories;
     const char *dest_filename = nullptr;
     HeapArray<const char *> filenames;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-O", "--output")) {
+            } else if (opt_parser.TestOption("-O", "--output")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 dest_filename = opt_parser.current_value;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }
@@ -756,30 +754,29 @@ Options:
     -T, --table_dir <dir>        Add table directory)");
     };
 
-    OptionParser opt_parser(arguments);
-
     HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> names;
     {
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
-            if (TestOption(opt, "--help")) {
+        OptionParser opt_parser(arguments);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (TestOption(opt, "-T", "--table_dir")) {
+            } else if (opt_parser.TestOption("-T", "--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt_parser.current_option, "-d", "--date")) {
+            } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return false;
             }
         }

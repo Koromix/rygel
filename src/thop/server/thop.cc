@@ -875,35 +875,36 @@ Options:
         }
 
         OptionParser opt_parser(argc, argv);
-        while (const char *opt = opt_parser.Next()) {
-            if (TestOption(opt, "--help")) {
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (TestOption(opt, "-P", "--profile_dir")) {
+            } else if (opt_parser.TestOption("-P", "--profile_dir")) {
                 profile_directory = opt_parser.RequireValue();
                 if (!profile_directory)
                     return 1;
-            } else if (TestOption(opt, "-C", "--config_file")) {
+            } else if (opt_parser.TestOption("-C", "--config_file")) {
                 config_filename = opt_parser.RequireValue();
                 if (!config_filename)
                     return 1;
-            } else if (TestOption(opt, "--table_dir")) {
+            } else if (opt_parser.TestOption("--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
                 table_directories.Append(opt_parser.current_value);
-            } else if (TestOption(opt, "--auth_file")) {
+            } else if (opt_parser.TestOption("--auth_file")) {
                 authorization_filename = opt_parser.RequireValue();
                 if (!authorization_filename)
                     return 1;
-            } else if (TestOption(opt, "--port")) {
+            } else if (opt_parser.TestOption("--port")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
                 if (!ParseDec(opt_parser.current_value, &port))
                     return 1;
             } else {
-                LogError("Unknown option '%1'", opt);
+                LogError("Unknown option '%1'", opt_parser.current_option);
                 return 1;
             }
         }
