@@ -27,8 +27,6 @@ Commands:
                                  (diagnoses, procedures, GHM roots, etc.))");
     };
 
-    LinkedAllocator temp_alloc;
-
     if (argc < 2) {
         PrintUsage(stderr);
         return 1;
