@@ -3174,22 +3174,27 @@ struct OptionDesc {
 };
 
 class OptionParser {
+    Span<const char *> args;
+    unsigned int flags;
+
+    Size pos = 0;
     Size limit;
     Size smallopt_offset = 0;
     char buf[80];
 
 public:
-    Span<const char *> args;
-    Size pos = 0;
+    enum class Flag {
+        SkipNonOptions = 1 << 0
+    };
 
     const char *current_option = nullptr;
     const char *current_value = nullptr;
 
-    OptionParser(Span<const char *> args)
-        : limit(args.len), args(args) {}
-    OptionParser(int argc, char **argv)
-        : limit(argc > 0 ? argc - 1 : 0),
-          args(limit ? (const char **)(argv + 1) : nullptr, limit) {}
+    OptionParser(Span<const char *> args, unsigned int flags = 0)
+        : args(args), flags(flags), limit(args.len) {}
+    OptionParser(int argc, char **argv, unsigned int flags = 0)
+        : args(argc > 0 ? (const char **)(argv + 1) : nullptr, std::max(0, argc - 1)),
+          flags(flags), limit(args.len) {}
 
     const char *Next();
     const char *ConsumeValue();

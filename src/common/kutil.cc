@@ -2573,9 +2573,6 @@ static void RotateArgs(const char **args, Size start, Size mid, Size end)
 
 const char *OptionParser::Next()
 {
-    Size next_index;
-    const char *opt;
-
     current_option = nullptr;
     current_value = nullptr;
 
@@ -2583,7 +2580,7 @@ const char *OptionParser::Next()
     // parsed as the short option '-f' with value 'bar', if the user calls
     // ConsumeOptionValue() after getting '-f'.
     if (smallopt_offset) {
-        opt = args[pos];
+        const char *opt = args[pos];
         smallopt_offset++;
         if (opt[smallopt_offset]) {
             buf[1] = opt[smallopt_offset];
@@ -2596,15 +2593,20 @@ const char *OptionParser::Next()
     }
 
     // Skip non-options, do the permutation once we reach an option or the last argument
-    next_index = pos;
+    Size next_index = pos;
     while (next_index < limit && !IsOption(args[next_index])) {
         next_index++;
     }
-    RotateArgs(args.ptr, pos, next_index, args.len);
-    limit -= (next_index - pos);
+    if (flags & (int)Flag::SkipNonOptions) {
+        pos = next_index;
+    } else {
+        RotateArgs(args.ptr, pos, next_index, args.len);
+        limit -= (next_index - pos);
+    }
     if (pos >= limit)
         return nullptr;
-    opt = args[pos];
+
+    const char *opt = args[pos];
 
     if (IsLongOption(opt)) {
         const char *needle = strchr(opt, '=');
