@@ -2,7 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../libdrd/libdrd.hh"
+#include "drdc.hh"
+#include "config.hh"
 
 static void PrintSummary(const mco_Pricing &summary)
 {
@@ -254,15 +255,10 @@ bool RunMcoClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
-
-Options:
-    -P, --profile_dir <dir>      Set profile directory
-
-    -T, --table_dir <dir>        Add table directory
-        --auth_file <file>       Set authorization file
-                                 (default: <config_dir>%/mco_authorizations.ini
-                                           <config_dir>%/mco_authorizations.txt)
-
+)");
+        PrintLn(fp, CommonOptions);
+        PrintLn(fp, R"(
+Classify options:
     -o, --option <options>       Classifier options (see below)
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
@@ -283,10 +279,6 @@ Dispensation modes:)");
         }
     };
 
-
-    HeapArray<const char *> table_directories;
-    const char *profile_directory = nullptr;
-    const char *authorization_filename = nullptr;
     unsigned int flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
@@ -301,19 +293,6 @@ Dispensation modes:)");
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-P", "--profile_dir")) {
-                profile_directory = opt_parser.RequireValue();
-                if (!profile_directory)
-                    return false;
-            } else if (opt_parser.TestOption("-T", "--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                table_directories.Append(opt_parser.current_value);
-            } else if (opt_parser.TestOption("--auth_file")) {
-                authorization_filename = opt_parser.RequireValue();
-                if (!authorization_filename)
-                    return false;
             } else if (opt_parser.TestOption("-o", "--option")) {
                 const char *flags_str = opt_parser.RequireValue();
                 if (!flags_str)
@@ -354,8 +333,7 @@ Dispensation modes:)");
                     return false;
                 if (!ParseDec(opt_parser.current_value, &torture))
                     return false;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -373,12 +351,13 @@ Dispensation modes:)");
 
     LogInfo("Load tables");
     mco_TableSet table_set;
-    if (!mco_LoadTableSet(table_directories, {}, &table_set) || !table_set.indexes.len)
+    if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set) || !table_set.indexes.len)
         return false;
 
     LogInfo("Load authorizations");
     mco_AuthorizationSet authorization_set;
-    if (!mco_LoadAuthorizationSet(profile_directory, authorization_filename, &authorization_set))
+    if (!mco_LoadAuthorizationSet(drdc_config.profile_directory, drdc_config.authorization_filename,
+                                  &authorization_set))
         return false;
 
     mco_StaySet stay_set;
@@ -472,14 +451,13 @@ bool RunMcoDump(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
-
-Options:
-    -T, --table_dir <dir>        Add table directory
-
+)");
+        PrintLn(fp, CommonOptions);
+        PrintLn(fp, R"(
+Dump options:
     -d, --dump                   Dump content of (readable) tables)");
     };
 
-    HeapArray<const char *> table_directories;
     bool dump = false;
     HeapArray<const char *> filenames;
     {
@@ -489,15 +467,9 @@ Options:
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-T", "--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                table_directories.Append(opt_parser.current_value);
             } else if (opt_parser.TestOption("-d", "--dump")) {
                 dump = true;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -506,7 +478,8 @@ Options:
     }
 
     mco_TableSet table_set;
-    if (!mco_LoadTableSet(table_directories, filenames, &table_set) || !table_set.indexes.len)
+    if (!mco_LoadTableSet(drdc_config.table_directories, filenames, &table_set) ||
+            !table_set.indexes.len)
         return false;
     mco_DumpTableSetHeaders(table_set, &stdout_st);
     if (dump) {
@@ -520,16 +493,14 @@ bool RunMcoList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
-
-Options:
-    -T, --table_dir <dir>        Add table directory
-
+)");
+        PrintLn(fp, CommonOptions);
+        PrintLn(fp, R"(
+List options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
     };
 
-
-    HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> spec_strings;
     {
@@ -539,19 +510,13 @@ Options:
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-T", "--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                table_directories.Append(opt_parser.current_value);
             } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -566,7 +531,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_LoadTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
@@ -619,15 +584,14 @@ bool RunMcoMap(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_map [options]
-
-Options:
-    -T, --table_dir <dir>        Add table directory
-
+)");
+        PrintLn(fp, CommonOptions);
+        PrintLn(fp, R"(
+Map options:
     -d, --date <date>            Use tables valid on specified date
                                  (default: most recent tables))");
     };
 
-    HeapArray<const char *> table_directories;
     Date index_date = {};
     {
         OptionParser opt_parser(arguments);
@@ -636,11 +600,6 @@ Options:
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-T", "--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                table_directories.Append(opt_parser.current_value);
             } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
@@ -648,8 +607,7 @@ Options:
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -658,7 +616,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_LoadTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
@@ -692,10 +650,14 @@ Options:
 bool RunMcoPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file)");
+        PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
+)");
+        PrintLn(fp, CommonOptions);
+        PrintLn(fp, R"(
+Pack options:
+    -O, --output_file <file>     Set output file)");
     };
 
-    HeapArray<const char *> table_directories;
     const char *dest_filename = nullptr;
     HeapArray<const char *> filenames;
     {
@@ -705,13 +667,12 @@ bool RunMcoPack(Span<const char *> arguments)
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-O", "--output")) {
+            } else if (opt_parser.TestOption("-O", "--output_file")) {
                 if (!opt_parser.RequireValue())
                     return false;
 
                 dest_filename = opt_parser.current_value;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -749,12 +710,10 @@ bool RunMcoShow(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
-
-Options:
-    -T, --table_dir <dir>        Add table directory)");
+)");
+        PrintLn(fp, CommonOptions);
     };
 
-    HeapArray<const char *> table_directories;
     Date index_date = {};
     HeapArray<const char *> names;
     {
@@ -764,19 +723,13 @@ Options:
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-T", "--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                table_directories.Append(opt_parser.current_value);
             } else if (opt_parser.TestOption("-d", "--date")) {
                 if (!opt_parser.RequireValue())
                     return false;
                 index_date = Date::FromString(opt_parser.current_value);
                 if (!index_date.value)
                     return false;
-            } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+            } else if (!HandleCommonOption(opt_parser)) {
                 return false;
             }
         }
@@ -791,7 +744,7 @@ Options:
     mco_TableSet table_set;
     const mco_TableIndex *index;
     {
-        if (!mco_LoadTableSet(table_directories, {}, &table_set))
+        if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
             return false;
         index = table_set.FindIndex(index_date);
         if (!index) {
