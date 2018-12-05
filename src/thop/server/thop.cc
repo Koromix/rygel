@@ -834,10 +834,12 @@ int main(int argc, char **argv)
 
 Options:
     -P, --profile_dir <dir>      Set profile directory
+                                 (default: <executable_dir>%/profile)
     -C, --config_file <file>     Set configuration file
                                  (default: <profile_dir>%/thop.ini)
 
         --table_dir <dir>        Add table directory
+                                 (default: <executable_dir>%/tables)
         --auth_file <file>       Set authorization file
                                  (default: <profile_dir>%/mco_authorizations.ini
                                            <profile_dir>%/mco_authorizations.txt)
@@ -862,10 +864,18 @@ Options:
         int port = -1;
         HeapArray<const char *> stay_filenames;
 
-        OptionParser opt_parser(argc, argv);
+        // Default directories
+        if (const char *dir = Fmt(&temp_alloc, "%1%/profile", GetApplicationDirectory()).ptr;
+                TestPath(dir, FileType::Directory)) {
+            profile_directory = dir;
+        }
+        if (const char *dir = Fmt(&temp_alloc, "%1%/tables", GetApplicationDirectory()).ptr;
+                TestPath(dir, FileType::Directory)) {
+            table_directories.Append(dir);
+        }
 
-        const char *opt;
-        while ((opt = opt_parser.Next())) {
+        OptionParser opt_parser(argc, argv);
+        while (const char *opt = opt_parser.Next()) {
             if (TestOption(opt, "--help")) {
                 PrintUsage(stdout);
                 return 0;
