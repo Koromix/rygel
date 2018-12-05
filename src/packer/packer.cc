@@ -92,7 +92,7 @@ int main(int argc, char **argv)
 R"(Usage: packer <filename> ...
 
 Options:
-    -O, --output <path>          Redirect output to file
+    -O, --output_file <file>     Redirect output to file
 
     -d, --depth <depth>          Keep <depth> last components of filename
                                  (default: keep full path)
@@ -144,7 +144,7 @@ Available compression types:)", CompressionTypeNames[0]);
                     return 1;
             } else if (opt_parser.TestOption("--export", "-e")) {
                 export_span = true;
-            } else if (opt_parser.TestOption("-O", "--output")) {
+            } else if (opt_parser.TestOption("-O", "--output_file")) {
                 output_path = opt_parser.RequireValue();
                 if (!output_path)
                     return 1;
