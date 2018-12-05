@@ -38,6 +38,6 @@ public:
     void Finish(mco_AuthorizationSet *out_set);
 };
 
-bool mco_LoadAuthorizationSet(const char *config_directory,
+bool mco_LoadAuthorizationSet(const char *profile_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set);

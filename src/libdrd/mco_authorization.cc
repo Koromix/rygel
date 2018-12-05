@@ -242,7 +242,7 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
     SwapMemory(out_set, &set, SIZE(set));
 }
 
-bool mco_LoadAuthorizationSet(const char *config_directory,
+bool mco_LoadAuthorizationSet(const char *profile_directory,
                               const char *authorization_filename,
                               mco_AuthorizationSet *out_set)
 {
@@ -260,7 +260,7 @@ bool mco_LoadAuthorizationSet(const char *config_directory,
         } else {
             for (const char *default_name: default_names) {
                 const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
-                                                config_directory, default_name).ptr;
+                                                profile_directory, default_name).ptr;
                 if (TestPath(test_filename, FileType::File)) {
                     filename = test_filename;
                     break;
