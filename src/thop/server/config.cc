@@ -70,7 +70,14 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "Port") {
-                        valid &= ParseDec(prop.value, &config.port);
+                        if (ParseDec(prop.value, &config.port)) {
+                            if (!config.port) {
+                                LogError("Invalid port value 0");
+                                valid = false;
+                            }
+                        } else {
+                            valid = false;
+                        }
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

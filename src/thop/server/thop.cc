@@ -181,15 +181,12 @@ static bool InitTables(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitConfig(const char *profile_directory, const char *config_filename)
+static bool InitConfig(const char *config_filename)
 {
     BlockAllocator temp_alloc {Kibibytes(8)};
 
     LogInfo("Load configuration");
 
-    if (!config_filename) {
-        config_filename = Fmt(&temp_alloc, "%1%/thop.ini", profile_directory).ptr;
-    }
     if (!LoadConfig(config_filename, &thop_config))
         return false;
 
@@ -833,13 +830,11 @@ int main(int argc, char **argv)
         PrintLn(fp, R"(Usage: thop [options] [stay_file ..]
 
 Options:
-    -P, --profile_dir <dir>      Set profile directory
-                                 (default: <executable_dir>%/profile)
     -C, --config_file <file>     Set configuration file
-                                 (default: <profile_dir>%/thop.ini)
+                                 (default: <executable_dir>%/profile%/thop.ini)
 
+        --profile_dir <dir>      Set profile directory
         --table_dir <dir>        Add table directory
-                                 (default: <executable_dir>%/tables)
         --auth_file <file>       Set authorization file
                                  (default: <profile_dir>%/mco_authorizations.ini
                                            <profile_dir>%/mco_authorizations.txt)
@@ -853,99 +848,90 @@ Options:
         return 1;
     }
 
-    BlockAllocator temp_alloc(Kibibytes(8));
-
-    // Parse arguments and load config file
+    // Find config filename
+    const char *config_filename = nullptr;
     {
-        HeapArray<const char *> table_directories;
-        const char *profile_directory = nullptr;
-        const char *config_filename = nullptr;
-        const char *authorization_filename = nullptr;
-        int port = -1;
-        HeapArray<const char *> stay_filenames;
-
-        // Default directories
-        if (const char *dir = Fmt(&temp_alloc, "%1%/profile", GetApplicationDirectory()).ptr;
-                TestPath(dir, FileType::Directory)) {
-            profile_directory = dir;
-        }
-        if (const char *dir = Fmt(&temp_alloc, "%1%/tables", GetApplicationDirectory()).ptr;
-                TestPath(dir, FileType::Directory)) {
-            table_directories.Append(dir);
-        }
-
-        OptionParser opt_parser(argc, argv);
+        OptionParser opt_parser(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
         while (opt_parser.Next()) {
             if (opt_parser.TestOption("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (opt_parser.TestOption("-P", "--profile_dir")) {
-                profile_directory = opt_parser.RequireValue();
-                if (!profile_directory)
-                    return 1;
             } else if (opt_parser.TestOption("-C", "--config_file")) {
                 config_filename = opt_parser.RequireValue();
                 if (!config_filename)
+                    return 1;
+            }
+        }
+
+        if (!config_filename) {
+            const char *app_directory = GetApplicationDirectory();
+            if (app_directory) {
+                const char *test_filename = Fmt(&thop_config.str_alloc, "%1%/profile/thop.ini", app_directory).ptr;
+                if (TestPath(test_filename, FileType::File)) {
+                    config_filename = test_filename;
+                }
+            }
+        }
+    }
+
+    // Load config file
+    if (config_filename && !InitConfig(config_filename))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt_parser(argc, argv);
+
+        while (opt_parser.Next()) {
+            if (opt_parser.TestOption("-C", "--config_file")) {
+                // Already handled
+                opt_parser.ConsumeValue();
+            } else if (opt_parser.TestOption("--profile_dir")) {
+                thop_config.profile_directory = opt_parser.RequireValue();
+                if (!thop_config.profile_directory)
                     return 1;
             } else if (opt_parser.TestOption("--table_dir")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
-                table_directories.Append(opt_parser.current_value);
+                thop_config.table_directories.Append(opt_parser.current_value);
             } else if (opt_parser.TestOption("--auth_file")) {
-                authorization_filename = opt_parser.RequireValue();
-                if (!authorization_filename)
+                thop_config.authorization_filename = opt_parser.RequireValue();
+                if (!thop_config.authorization_filename)
                     return 1;
             } else if (opt_parser.TestOption("--port")) {
                 if (!opt_parser.RequireValue())
                     return 1;
 
-                if (!ParseDec(opt_parser.current_value, &port))
+                if (!ParseDec(opt_parser.current_value, &thop_config.port))
                     return 1;
+                if (!thop_config.port) {
+                    LogError("Invalid port value 0");
+                    return 1;
+                }
             } else {
                 LogError("Unknown option '%1'", opt_parser.current_option);
                 return 1;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&stay_filenames);
-
-        if (!config_filename && !profile_directory) {
-            LogError("Missing profile directory and config file");
-            return 1;
-        }
-        if (!InitConfig(profile_directory, config_filename))
-            return 1;
-
-        if (profile_directory) {
-            thop_config.profile_directory = profile_directory;
-        }
-        thop_config.table_directories.Append(table_directories);
-        if (authorization_filename) {
-            thop_config.authorization_filename = authorization_filename;
-        }
-        if (port >= 0) {
-            thop_config.port = port;
-        }
-        thop_config.mco_stay_filenames.Append(stay_filenames);
+        opt_parser.ConsumeNonOptions(&thop_config.mco_stay_filenames);
     }
 
+    // Missing resources
     if (!thop_config.table_directories.len || !thop_config.profile_directory) {
-        if (!thop_config.table_directories.len) {
-            LogError("No table directory is specified");
-        }
         if (!thop_config.profile_directory) {
             LogError("Profile directory is missing");
         }
+        if (!thop_config.table_directories.len) {
+            LogError("No table directory is specified");
+        }
 
         return 1;
     }
-    if (thop_config.port < 0 || thop_config.port > UINT16_MAX) {
-        LogError("Port must be between 0 and %1", UINT16_MAX);
-        return 1;
-    }
 
+    // Init
     if (!InitTables(thop_config.table_directories))
         return 1;
     if (thop_config.mco_stay_directories.len || thop_config.mco_stay_filenames.len) {
