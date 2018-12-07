@@ -8,6 +8,8 @@
 #include "../../lib/wren/src/include/wren.hpp"
 
 static const char *const InitCode = R"(
+import "meta" for Meta
+
 foreign class Date {
     construct new() {}
     foreign construct new(year, month, day)
@@ -34,16 +36,6 @@ foreign class ForeignList is Sequence {
     foreign [index]
     foreign iterate(it)
     foreign iteratorValue(it)
-}
-
-foreign class Filter {
-    foreign name
-    foreign alias
-}
-
-class MCO {
-    foreign static register(name, fn)
-    foreign static register(name, alias, fn)
 }
 
 foreign class McoStay {
@@ -108,6 +100,20 @@ foreign class McoResult {
     foreign exb_exh
     foreign total_cents
 }
+
+class MCO {
+    foreign static stays
+    foreign static result
+
+    static filter(fn) { fn.call() }
+    static build(exp) { Meta.compileExpression(exp) }
+}
+)";
+
+// Variables exposed to Meta.compileExpression
+static const char *VarCode = R"(
+var stays = MCO.stays
+var result = MCO.result
 )";
 
 template <typename T>
@@ -127,12 +133,6 @@ struct ResultObject {
     const mco_Pricing *pricing;
 };
 
-struct ScriptFilter {
-    const char *name;
-    const char *alias;
-    WrenHandle *object;
-};
-
 class ScriptRunner {
     // FIXME: Make sure all deallocations are disabled
     BlockAllocator vm_allocator { Kibibytes(256) };
@@ -141,17 +141,18 @@ public:
     WrenVM *vm = nullptr;
 
     WrenHandle *date_class;
-    WrenHandle *filter_class;
-    WrenHandle *filter_method;
     WrenHandle *stay_class;
     WrenHandle *stays_var;
     ListObject<mco_Stay> *stays_object;
     WrenHandle *result_var;
     ResultObject *result_object;
+    WrenHandle *mco_class;
+    WrenHandle *mco_build;
 
-    HeapArray<ScriptFilter> filters;
+    WrenHandle *expression_var = nullptr;
+    WrenHandle *expression_call;
 
-    bool Load(const char *script);
+    bool Load(const char *expression);
     bool Run(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
              Span<mco_Result> results, Span<mco_Pricing> pricings);
 };
@@ -487,44 +488,6 @@ static WrenForeignMethodFn BindForeignListMethod(const char *signature)
     return nullptr;
 }
 
-static WrenForeignMethodFn BindFilterMethod(const char *signature)
-{
-    if (false) {}
-
-    ELSE_IF_GET_STRING("name", ScriptFilter *, object->name)
-    ELSE_IF_GET_STRING("alias", ScriptFilter *, object->alias)
-
-    return nullptr;
-}
-
-static void RegisterFilter(WrenVM *vm, int name_slot, int alias_slot, int fn_slot)
-{
-    ScriptRunner *runner = (ScriptRunner *)wrenGetUserData(vm);
-
-    ScriptFilter filter;
-    filter.name = GetSlotStringSafe(vm, name_slot);
-    filter.alias = GetSlotStringSafe(vm, alias_slot);
-    if (wrenGetSlotType(vm, fn_slot) != WREN_TYPE_CLOSURE) {
-        TriggerError(vm, "Expected function argument");
-        return;
-    }
-    filter.object = wrenGetSlotHandle(vm, fn_slot);
-
-    wrenSetSlotHandle(vm, 0, runner->date_class);
-    ScriptFilter **ptr = (ScriptFilter **)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ScriptFilter *));
-    *ptr = runner->filters.Append(filter);
-}
-
-static WrenForeignMethodFn BindMcoMethod(const char *signature)
-{
-    if (false) {}
-
-    ELSE_IF_METHOD("register(_,_)", [](WrenVM *vm) { RegisterFilter(vm, 1, 1, 2); })
-    ELSE_IF_METHOD("register(_,_,_)", [](WrenVM *vm) { RegisterFilter(vm, 1, 2, 3); })
-
-    return nullptr;
-}
-
 static inline mco_Stay *GetMutableStay(StayObject *object)
 {
     ListObject<mco_Stay> *list = object->list;
@@ -811,6 +774,22 @@ static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
     return nullptr;
 }
 
+static WrenForeignMethodFn BindMcoMethod(const char *signature)
+{
+    if (false) {}
+
+    ELSE_IF_METHOD("result", [](WrenVM *vm) {
+        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        wrenSetSlotHandle(vm, 0, runner.result_var);
+    })
+    ELSE_IF_METHOD("stays", [](WrenVM *vm) {
+        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        wrenSetSlotHandle(vm, 0, runner.stays_var);
+    })
+
+    return nullptr;
+}
+
 #undef ELSE_IF_GET_MODE
 #undef ELSE_IF_GET_DATE
 #undef ELSE_IF_GET_STRING
@@ -825,20 +804,18 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
         return BindDateMethod(signature);
     } else if (!is_static && TestStr(class_name, "ForeignList")) {
         return BindForeignListMethod(signature);
-    } else if (!is_static && TestStr(class_name, "Filter")) {
-        return BindFilterMethod(signature);
-    } else if (is_static && TestStr(class_name, "MCO")) {
-        return BindMcoMethod(signature);
     } else if (!is_static && TestStr(class_name, "McoStay")) {
         return BindMcoStayMethod(signature);
     } else if (!is_static && TestStr(class_name, "McoResult")) {
         return BindMcoResultMethod(signature);
+    } else if (is_static && TestStr(class_name, "MCO")) {
+        return BindMcoMethod(signature);
     } else {
         return nullptr;
     }
 }
 
-bool ScriptRunner::Load(const char *script)
+bool ScriptRunner::Load(const char *expression)
 {
     DebugAssert(!vm);
 
@@ -882,15 +859,11 @@ bool ScriptRunner::Load(const char *script)
 
     wrenSetUserData(vm, this);
 
+    // Run init code
     DebugAssert(wrenInterpret(vm, "mco", InitCode) == WREN_RESULT_SUCCESS);
-
-    // Make handles to important classes and objects
     wrenEnsureSlots(vm, 1);
     wrenGetVariable(vm, "mco", "Date", 0);
     date_class = wrenGetSlotHandle(vm, 0);
-    wrenGetVariable(vm, "mco", "Filter", 0);
-    filter_class = wrenGetSlotHandle(vm, 0);
-    filter_method = wrenMakeCallHandle(vm, "call(_,_)");
     wrenGetVariable(vm, "mco", "McoStay", 0);
     stay_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
@@ -901,9 +874,19 @@ bool ScriptRunner::Load(const char *script)
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ListObject<char>));
     stays_var = wrenGetSlotHandle(vm, 0);
     stays_object = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+    wrenGetVariable(vm, "mco", "MCO", 0);
+    mco_class = wrenGetSlotHandle(vm, 0);
+    mco_build = wrenMakeCallHandle(vm, "build(_)");
+    expression_call = wrenMakeCallHandle(vm, "call()");
+    DebugAssert(wrenInterpret(vm, "mco", VarCode) == WREN_RESULT_SUCCESS);
 
-    if (wrenInterpret(vm, "script", script) != WREN_RESULT_SUCCESS)
+    // Compile expression
+    wrenEnsureSlots(vm, 2);
+    wrenSetSlotHandle(vm, 0, mco_class);
+    wrenSetSlotString(vm, 1, expression);
+    if (wrenCall(vm, mco_build) != WREN_RESULT_SUCCESS)
         return false;
+    expression_var = wrenGetSlotHandle(vm, 0);
 
     return true;
 }
@@ -939,14 +922,10 @@ bool ScriptRunner::Run(const mco_TableSet &table_set, const mco_AuthorizationSet
         result_object->result = &result;
         result_object->pricing = &pricing;
 
-        for (const ScriptFilter &filter: filters) {
-            wrenEnsureSlots(vm, 3);
-            wrenSetSlotHandle(vm, 0, filter.object);
-            wrenSetSlotHandle(vm, 1, stays_var);
-            wrenSetSlotHandle(vm, 2, result_var);
-            if (wrenCall(vm, filter_method) != WREN_RESULT_SUCCESS)
-                return false;
-        }
+        wrenEnsureSlots(vm, 1);
+        wrenSetSlotHandle(vm, 0, expression_var);
+        if (wrenCall(vm, expression_call) != WREN_RESULT_SUCCESS)
+            return false;
 
         if (stays_object->copies.len) {
             Span<const mco_Stay> prev_stays = result.stays;
@@ -964,7 +943,7 @@ bool ScriptRunner::Run(const mco_TableSet &table_set, const mco_AuthorizationSet
 }
 
 bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings)
+                   const char *expression, Span<mco_Result> results, Span<mco_Pricing> pricings)
 {
     static const int task_size = 16384;
 
@@ -978,7 +957,7 @@ bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &au
             Span<mco_Pricing> task_pricings = pricings.Take(task_offset, len);
 
             ScriptRunner runner;
-            if (!runner.Load(script))
+            if (!runner.Load(expression))
                 return false;
             if (!runner.Run(table_set, authorization_set, task_results, task_pricings))
                 return false;

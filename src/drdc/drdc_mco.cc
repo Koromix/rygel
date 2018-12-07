@@ -263,7 +263,8 @@ Classify options:
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
 
-    -S, --script_file <file>     Run Wren script
+    -e, --expression <expr>      Run Wren expression
+    -E, --expression_file <file> Run Wren expression in file
 
     -v, --verbose                Show more classification details (cumulative)
 
@@ -284,7 +285,8 @@ Dispensation modes:)");
     unsigned int flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
-    const char *script_path = nullptr;
+    const char *expression = nullptr;
+    const char *expression_path = nullptr;
     int verbosity = 0;
     bool test = false;
     int torture = 0;
@@ -327,9 +329,13 @@ Dispensation modes:)");
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (opt_parser.TestOption("--coeff")) {
                 apply_coefficient = true;
-            } else if (opt_parser.TestOption("-S", "--script_file")) {
-                script_path = opt_parser.RequireValue();
-                if (!script_path)
+            } else if (opt_parser.TestOption("-e", "--expression")) {
+                expression = opt_parser.RequireValue();
+                if (!expression)
+                    return false;
+            } else if (opt_parser.TestOption("-E", "--expression_file")) {
+                expression_path = opt_parser.RequireValue();
+                if (!expression_path)
                     return false;
             } else if (opt_parser.TestOption("-v", "--verbose")) {
                 verbosity++;
@@ -367,11 +373,14 @@ Dispensation modes:)");
                                   &authorization_set))
         return false;
 
-    HeapArray<char> script_buf;
-    if (script_path) {
-        if (ReadFile(script_path, Megabytes(4), &script_buf) < 0)
+    HeapArray<char> expression_buf;
+    if (expression) {
+        expression_buf.Append(expression);
+        expression_buf.Append(0);
+    } else if (expression_path) {
+        if (ReadFile(expression_path, Megabytes(1), &expression_buf) < 0)
             return false;
-        script_buf.Append(0);
+        expression_buf.Append(0);
     }
 
     mco_StaySet stay_set;
@@ -419,13 +428,13 @@ Dispensation modes:)");
         switch_perf_counter(&classify_time);
         mco_Classify(table_set, authorization_set, stay_set.stays, flags, &results, &mono_results);
 
-        if (dispense_mode >= 0 || verbosity || test || script_path) {
+        if (dispense_mode >= 0 || verbosity || test || expression_buf.len) {
             switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
 
-            if (script_path) {
+            if (expression_buf.len) {
                 switch_perf_counter(&script_time);
-                if (!mco_RunScript(table_set, authorization_set, script_buf.ptr, results, pricings))
+                if (!mco_RunScript(table_set, authorization_set, expression_buf.ptr, results, pricings))
                     return false;
             }
 
