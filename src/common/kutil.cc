@@ -2660,7 +2660,7 @@ const char *OptionParser::ConsumeValue()
         current_value = args[pos] + 2;
         pos++;
     // Support '-f bar' and '--foo bar', see ConsumeOption() for '--foo=bar'
-    } else if (!smallopt_offset && pos < args.len && !IsOption(args[pos])) {
+    } else if (!smallopt_offset && pos < limit && !IsOption(args[pos])) {
         current_value = args[pos];
         pos++;
     }
