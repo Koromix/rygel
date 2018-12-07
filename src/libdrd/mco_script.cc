@@ -857,10 +857,6 @@ bool ScriptRunner::Load(const char *script)
             return mem;
         };
 
-        config.writeFn = [](WrenVM *, const char *text) {
-            fputs(text, stdout);
-        };
-
         // Default issues stack-trace like errors, hack around it to show (when possible)
         // a single error message to the user.
         first_error = true;
