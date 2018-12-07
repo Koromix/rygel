@@ -174,16 +174,6 @@ static void TriggerError(WrenVM *vm, Args... args)
     wrenAbortFiber(vm, 63);
 }
 
-static inline bool GetSlotBoolSafe(WrenVM *vm, int slot)
-{
-    if (UNLIKELY(wrenGetSlotType(vm, slot) != WREN_TYPE_BOOL)) {
-        TriggerError(vm, "Expected bool value");
-        return false;
-    }
-
-    return wrenGetSlotBool(vm, slot);
-}
-
 template <typename T>
 static inline T GetSlotIntegerSafe(WrenVM *vm, int slot)
 {
@@ -716,13 +706,13 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
     })
     ELSE_IF_METHOD("confirmed", [](WrenVM *vm) {
         const StayObject &object = *(StayObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotBool(vm, 0, object.list->values[object.idx].flags & (int)mco_Stay::Flag::Confirmed);
+        wrenSetSlotDouble(vm, 0, !!(object.list->values[object.idx].flags & (int)mco_Stay::Flag::Confirmed));
     })
     ELSE_IF_METHOD("confirmed=(_)", [](WrenVM *vm) {
         StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
         ListObject<mco_Stay> *list = object->list;
 
-        bool new_value = GetSlotBoolSafe(vm, 1);
+        bool new_value = GetSlotIntegerSafe<int>(vm, 1);
         uint32_t new_flags = ApplyMask(list->values[object->idx].flags,
                                        (int)mco_Stay::Flag::Confirmed, new_value);
 
@@ -732,13 +722,13 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
     })
     ELSE_IF_METHOD("ucd", [](WrenVM *vm) {
         const StayObject &object = *(StayObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotBool(vm, 0, object.list->values[object.idx].flags & (int)mco_Stay::Flag::Ucd);
+        wrenSetSlotDouble(vm, 0, !!(object.list->values[object.idx].flags & (int)mco_Stay::Flag::Ucd));
     })
     ELSE_IF_METHOD("ucd=(_)", [](WrenVM *vm) {
         StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
         ListObject<mco_Stay> *list = object->list;
 
-        bool new_value = GetSlotBoolSafe(vm, 1);
+        bool new_value = GetSlotIntegerSafe<int>(vm, 1);
         uint32_t new_flags = ApplyMask(list->values[object->idx].flags,
                                        (int)mco_Stay::Flag::Ucd, new_value);
 
