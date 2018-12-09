@@ -8,6 +8,6 @@
 #include "mco_classifier.hh"
 #include "mco_pricing.hh"
 
-bool mco_RunScript(const char *script,
-                   Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                   Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings);
+bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
+                   const char *script, Span<mco_Result> results, Span<mco_Pricing> pricings,
+                   mco_StaySet *out_stay_set = nullptr);

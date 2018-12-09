@@ -408,6 +408,7 @@ Dispensation modes:)");
     mco_Pricing summary = {};
     uint64_t classify_time = 0;
     uint64_t pricing_time = 0;
+    uint64_t script_time = 0;
     for (int j = 0; j < std::max(torture, 1); j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
@@ -418,9 +419,17 @@ Dispensation modes:)");
         switch_perf_counter(&classify_time);
         mco_Classify(table_set, authorization_set, stay_set.stays, flags, &results, &mono_results);
 
-        switch_perf_counter(&pricing_time);
         if (dispense_mode >= 0 || verbosity || test || script_path) {
+            switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
+
+            if (script_path) {
+                switch_perf_counter(&script_time);
+                if (!mco_RunScript(table_set, authorization_set, script_buf.ptr, results, pricings))
+                    return false;
+            }
+
+            switch_perf_counter(&pricing_time);
             if (dispense_mode >= 0) {
                 mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
                              &mono_pricings);
@@ -429,15 +438,11 @@ Dispensation modes:)");
             }
             mco_Summarize(pricings, &summary);
         } else {
+            switch_perf_counter(&pricing_time);
             mco_PriceTotal(results, apply_coefficient, &summary);
         }
     }
     switch_perf_counter(nullptr);
-
-    if (script_path) {
-        LogInfo("Script");
-        mco_RunScript(script_buf.ptr, results, mono_results, pricings, mono_pricings);
-    }
 
     LogInfo("Export");
     if (verbosity - test >= 1) {
@@ -454,7 +459,7 @@ Dispensation modes:)");
     PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
 
     if (torture) {
-        uint64_t total_time = classify_time + pricing_time;
+        uint64_t total_time = classify_time + pricing_time + script_time;
         int64_t perf = (int64_t)summary.results_count * torture * 1000 / total_time;
         int64_t mono_perf = (int64_t)summary.stays_count * torture * 1000 / total_time;
 
@@ -463,9 +468,10 @@ Dispensation modes:)");
         PrintLn("  Results: %1/sec", perf);
         PrintLn("  Stays: %1/sec", mono_perf);
         PrintLn();
-        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%",
+        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%, Script = %3%%",
                 FmtDouble(100.0 * classify_time / total_time, 2),
-                FmtDouble(100.0 * pricing_time / total_time, 2));
+                FmtDouble(100.0 * pricing_time / total_time, 2),
+                FmtDouble(100.0 * script_time / total_time, 2));
     }
 
     return true;
