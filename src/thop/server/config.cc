@@ -71,6 +71,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 do {
                     if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.port);
+                    } else if (prop.key == "PoolSize") {
+                        valid &= ParseDec(prop.value, &config.pool_size);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

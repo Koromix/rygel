@@ -16,6 +16,7 @@ struct Config {
     HeapArray<const char *> mco_stay_filenames;
 
     int port = 8888;
+    int pool_size = 4;
 
     BlockAllocator str_alloc { Kibibytes(16) };
 };

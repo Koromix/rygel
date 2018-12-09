@@ -931,6 +931,10 @@ Options:
             LogError("HTTP port %1 is invalid (range: 1 - %2)", thop_config.port, UINT16_MAX);
             valid = false;
         }
+        if (thop_config.pool_size < 1 || thop_config.pool_size > 128) {
+            LogError("HTTP pool size %1 is invalid (range: 1 - 128)", thop_config.pool_size);
+            valid = false;
+        }
 
         if (!valid)
             return 1;
@@ -958,24 +962,26 @@ Options:
     MHD_Daemon *daemon;
     {
         int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
-        int thread_count = std::max(GetIdealThreadCount(), 2);
-
 #ifndef NDEBUG
         flags |= MHD_USE_DEBUG;
 #endif
 
-        // FIXME: Investigate why libmicrohttpd in thread pool mode works badly on MSVC builds
+        LocalArray<MHD_OptionItem, 16> mhd_options;
+        mhd_options.Append({MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)ReleaseConnectionData, nullptr});
+        if (thop_config.pool_size > 1) {
 #ifdef _MSC_VER
-        flags |= MHD_USE_THREAD_PER_CONNECTION;
-        daemon = MHD_start_daemon(flags, thop_config.port, nullptr, nullptr, HandleHttpConnection, nullptr,
-                                  MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
-                                  MHD_OPTION_END);
+            // FIXME: Investigate why libmicrohttpd in thread pool mode works badly on MSVC builds
+            LogError("Cannot use libmicrohttpd thread pool on MSVC builds");
+            flags |= MHD_USE_THREAD_PER_CONNECTION;
 #else
-        daemon = MHD_start_daemon(flags, thop_config.port, nullptr, nullptr, HandleHttpConnection, nullptr,
-                                  MHD_OPTION_THREAD_POOL_SIZE, thread_count,
-                                  MHD_OPTION_NOTIFY_COMPLETED, ReleaseConnectionData, nullptr,
-                                  MHD_OPTION_END);
+            mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, thop_config.pool_size});
 #endif
+        }
+        mhd_options.Append({MHD_OPTION_END, 0, nullptr});
+
+        daemon = MHD_start_daemon(flags, (int16_t)thop_config.port, nullptr, nullptr,
+                                  HandleHttpConnection, nullptr,
+                                  MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
         if (!daemon)
             return 1;
     }
