@@ -906,10 +906,6 @@ Options:
 
                 if (!ParseDec(opt_parser.current_value, &thop_config.port))
                     return 1;
-                if (!thop_config.port) {
-                    LogError("Invalid port value 0");
-                    return 1;
-                }
             } else {
                 LogError("Unknown option '%1'", opt_parser.current_option);
                 return 1;
@@ -919,16 +915,25 @@ Options:
         opt_parser.ConsumeNonOptions(&thop_config.mco_stay_filenames);
     }
 
-    // Missing resources
-    if (!thop_config.table_directories.len || !thop_config.profile_directory) {
+    // Configuration errors
+    {
+        bool valid = true;
+
         if (!thop_config.profile_directory) {
             LogError("Profile directory is missing");
+            valid = false;
         }
         if (!thop_config.table_directories.len) {
             LogError("No table directory is specified");
+            valid = false;
+        }
+        if (thop_config.port < 1 || thop_config.port > UINT16_MAX) {
+            LogError("HTTP port %1 is invalid (range: 1 - %2)", thop_config.port, UINT16_MAX);
+            valid = false;
         }
 
-        return 1;
+        if (!valid)
+            return 1;
     }
 
     // Init
