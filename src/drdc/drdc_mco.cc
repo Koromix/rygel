@@ -375,6 +375,19 @@ Dispensation modes:)");
             return false;
     }
 
+    // Performance counter
+    uint64_t *perf_counter = nullptr;
+    uint64_t perf_start;
+    const auto switch_perf_counter = [&](uint64_t *counter) {
+        uint64_t now = GetMonotonicTime();
+
+        if (perf_counter) {
+            *perf_counter += now - perf_start;
+        }
+        perf_start = now;
+        perf_counter = counter;
+    };
+
     LogInfo("Classify");
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
@@ -390,30 +403,24 @@ Dispensation modes:)");
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        {
-            uint64_t start_time = GetMonotonicTime();
-            mco_Classify(table_set, authorization_set, stay_set.stays, flags,
-                         &results, &mono_results);
-            classify_time += GetMonotonicTime() - start_time;
-        }
+        switch_perf_counter(&classify_time);
+        mco_Classify(table_set, authorization_set, stay_set.stays, flags, &results, &mono_results);
 
-        {
-            uint64_t start_time = GetMonotonicTime();
-            if (dispense_mode >= 0 || verbosity || test) {
-                mco_Price(results, apply_coefficient, &pricings);
-                if (dispense_mode >= 0) {
-                    mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
-                                 &mono_pricings);
-                } else {
-                    mco_Price(mono_results, apply_coefficient, &mono_pricings);
-                }
-                mco_Summarize(pricings, &summary);
+        switch_perf_counter(&pricing_time);
+        if (dispense_mode >= 0 || verbosity || test) {
+            mco_Price(results, apply_coefficient, &pricings);
+            if (dispense_mode >= 0) {
+                mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
+                             &mono_pricings);
             } else {
-                mco_PriceTotal(results, apply_coefficient, &summary);
+                mco_Price(mono_results, apply_coefficient, &mono_pricings);
             }
-            pricing_time += GetMonotonicTime() - start_time;
+            mco_Summarize(pricings, &summary);
+        } else {
+            mco_PriceTotal(results, apply_coefficient, &summary);
         }
     }
+    switch_perf_counter(nullptr);
 
     LogInfo("Export");
     if (verbosity - test >= 1) {
