@@ -69,7 +69,17 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "Port") {
+                    if (prop.key == "IPVersion") {
+                        if (prop.value == "Dual") {
+                            config.ip_version = Config::IPVersion::Dual;
+                        } else if (prop.value == "IPv4") {
+                            config.ip_version = Config::IPVersion::IPv4;
+                        } else if (prop.value == "IPv6") {
+                            config.ip_version = Config::IPVersion::IPv6;
+                        } else {
+                            LogError("Unknown IP version '%1'", prop.value);
+                        }
+                    } else if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.port);
                     } else if (prop.key == "PoolSize") {
                         valid &= ParseDec(prop.value, &config.pool_size);

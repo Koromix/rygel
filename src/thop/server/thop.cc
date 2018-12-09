@@ -962,6 +962,11 @@ Options:
     MHD_Daemon *daemon;
     {
         int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+        switch (thop_config.ip_version) {
+            case Config::IPVersion::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
+            case Config::IPVersion::IPv4: {} break;
+            case Config::IPVersion::IPv6: { flags |= MHD_USE_IPv6; } break;
+        }
 #ifndef NDEBUG
         flags |= MHD_USE_DEBUG;
 #endif
