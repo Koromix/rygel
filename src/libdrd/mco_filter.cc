@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../common/kutil.hh"
-#include "mco_script.hh"
+#include "mco_filter.hh"
 
 #include "../../lib/wren/src/include/wren.hpp"
 
@@ -152,9 +152,13 @@ public:
     WrenHandle *expression_var = nullptr;
     WrenHandle *expression_call;
 
-    bool Load(const char *expression);
-    bool Run(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-             Span<mco_Result> results, Span<mco_Pricing> pricings);
+    bool Init(const char *expression, Size max_memory);
+    bool Run(Span<const mco_Stay> stays,
+              std::function<Size(Span<const mco_Stay>,
+                                 mco_Result out_results[],
+                                 mco_Result out_mono_results[])> func,
+              mco_Stay out_stays[], mco_Result out_results[],
+              mco_Result out_mono_results[], Size *out_stays_len, Size *out_results_len);
 };
 
 static THREAD_LOCAL Allocator *thread_alloc;
@@ -805,7 +809,7 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
     }
 }
 
-bool ScriptRunner::Load(const char *expression)
+bool ScriptRunner::Init(const char *expression, Size max_memory)
 {
     DebugAssert(!vm);
 
@@ -839,7 +843,7 @@ bool ScriptRunner::Load(const char *expression)
 
         // Limit execution time and space, and disable GC
         config.maxRunOps = 20000;
-        config.maxHeapSize = Mebibytes(8);
+        config.maxHeapSize = max_memory;
         config.initialHeapSize = 0;
 
         // We don't need to free this because all allocations go through the
@@ -881,17 +885,25 @@ bool ScriptRunner::Load(const char *expression)
     return true;
 }
 
-bool ScriptRunner::Run(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                       Span<mco_Result> results, Span<mco_Pricing> pricings)
+bool ScriptRunner::Run(Span<const mco_Stay> stays,
+                       std::function<Size(Span<const mco_Stay> stays,
+                                          mco_Result out_results[],
+                                          mco_Result out_mono_results[])> func,
+                       mco_Stay out_stays[], mco_Result out_results[],
+                       mco_Result out_mono_results[], Size *out_stays_len, Size *out_results_len)
 {
     thread_alloc = &vm_allocator;
 
     // Reuse for performance
     HeapArray<WrenHandle *> stay_vars;
 
-    for (Size i = 0; i < results.len; i++) {
-        mco_Result &result = results[i];
-        mco_Pricing &pricing = pricings[i];
+    Size results_len = func(stays, out_results, out_mono_results);
+
+    bool reclassify = false;
+    Size j = 0, k = 0;
+    for (Size i = 0; i < results_len; i++) {
+        const mco_Result &result = out_results[i];
+        out_results[k] = result;
 
         while (stay_vars.len < result.stays.len) {
             wrenEnsureSlots(vm, 1);
@@ -910,51 +922,115 @@ bool ScriptRunner::Run(const mco_TableSet &table_set, const mco_AuthorizationSet
         stays_object->values = result.stays;
         stays_object->copies.RemoveFrom(0);
         result_object->result = &result;
-        result_object->pricing = &pricing;
+        // FIXME: result_object->pricing = &pricing;
 
         wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
         if (wrenCall(vm, expression_call) != WREN_RESULT_SUCCESS)
             return false;
 
-        if (stays_object->copies.len) {
-            Span<const mco_Stay> prev_stays = result.stays;
+        if (wrenGetSlotType(vm, 0) != WREN_TYPE_BOOL || wrenGetSlotBool(vm, 0)) {
+            // NOTE: When the filter changes a stay, a copy is made. In this case we get
+            // two copies, that should be improved.
+            memcpy(out_stays + j, stays_object->values.ptr,
+                   stays_object->values.len * SIZE(mco_Stay));
 
-            mco_RunClassifier(table_set, authorization_set, stays_object->copies, 0, &result);
-            pricing = {};
-            mco_Price(result, false, &pricing);
-
-            result.stays = prev_stays;
-            pricing.stays = prev_stays;
+            reclassify |= (bool)stays_object->copies.len;
+            j += stays_object->values.len;
+            k++;
         }
     }
+
+    if (reclassify) {
+        DebugAssert(func(MakeSpan(out_stays, j), out_results, out_mono_results) == k);
+    }
+
+    *out_stays_len = j;
+    *out_results_len = k;
 
     return true;
 }
 
-bool mco_RunScript(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                   const char *expression, Span<mco_Result> results, Span<mco_Pricing> pricings)
+bool mco_Filter(Span<const mco_Stay> stays, const char *filter,
+                std::function<Size(Span<const mco_Stay> stays,
+                                   mco_Result out_results[],
+                                   mco_Result out_mono_results[])> func,
+                HeapArray<mco_Stay> *out_stays, HeapArray<mco_Result> *out_results,
+                HeapArray<mco_Result> *out_mono_results)
 {
+    DEFER_NC(out_guard, stays_len = out_stays->len, results_len = out_results->len,
+                        mono_results_len = out_mono_results ? out_mono_results->len : 0) {
+        out_stays->RemoveFrom(stays_len);
+        out_results->RemoveFrom(results_len);
+        if (out_mono_results) {
+            out_mono_results->RemoveFrom(mono_results_len);
+        }
+    };
+
     static const int task_size = 16384;
 
-    Async async;
-    for (Size i = 0; i < results.len; i += task_size) {
-        Size task_offset = i;
-
-        async.AddTask([&, task_offset]() {
-            Size len = std::min(results.len, task_offset + task_size) - task_offset;
-            Span<mco_Result> task_results = results.Take(task_offset, len);
-            Span<mco_Pricing> task_pricings = pricings.Take(task_offset, len);
-
-            ScriptRunner runner;
-            if (!runner.Load(expression))
-                return false;
-            if (!runner.Run(table_set, authorization_set, task_results, task_pricings))
-                return false;
-
-            return true;
-        });
+    // Pessimistic assumptions (no multi-stay)
+    out_stays->Grow(stays.len);
+    out_results->Grow(stays.len);
+    if (out_mono_results) {
+        out_mono_results->Grow(stays.len);
     }
 
-    return async.Sync();
+    HeapArray<Size> task_lens;
+    HeapArray<Size> stays_lens;
+    HeapArray<Size> results_lens;
+    task_lens.AppendDefault((stays.len - 1) / task_size + 1);
+    stays_lens.AppendDefault((stays.len - 1) / task_size + 1);
+    results_lens.AppendDefault((stays.len - 1) / task_size + 1);
+
+    Async async;
+    {
+        Size i = 0, j = 0;
+        while (stays.len) {
+            Size split_size = std::min(stays.len, (Size)task_size);
+            Span<const mco_Stay> task_stays = mco_Split(stays, split_size, &stays);
+
+            task_lens[i] = task_stays.len;
+
+            async.AddTask([&, task_stays, i, j]() {
+                ScriptRunner runner;
+                if (!runner.Init(filter, Kibibytes(task_size) / 2))
+                    return false;
+                if (!runner.Run(task_stays, func, out_stays->end() + j, out_results->end() + j,
+                                out_mono_results ? (out_mono_results->end() + j) : nullptr,
+                                &stays_lens[i], &results_lens[i]))
+                    return false;
+
+                return true;
+            });
+
+            i++;
+            j += task_stays.len;
+        }
+    }
+    if (!async.Sync())
+        return false;
+
+    // Move data to get contiguous arrays and fix pointers
+    for (Size i = 0, j = out_stays->len; i < task_lens.len; i++) {
+        memmove(out_stays->end(), out_stays->ptr + j, stays_lens[i] * SIZE(mco_Stay));
+
+        for (Size k = 0, l = 0; k < results_lens[i]; k++) {
+            mco_Result *ptr = out_results->Append(out_results->ptr[j + k]);
+            ptr->stays.ptr = out_stays->end() + l;
+            l += out_results->ptr[j + k].stays.len;
+        }
+        if (out_mono_results) {
+            for (Size k = 0; k < stays_lens[i]; k++) {
+                mco_Result *ptr = out_mono_results->Append(out_mono_results->ptr[j + k]);
+                ptr->stays.ptr = out_stays->end() + k;
+            }
+        }
+
+        j += task_lens[i];
+        out_stays->len += stays_lens[i];
+    }
+
+    out_guard.disable();
+    return true;
 }

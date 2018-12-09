@@ -12,12 +12,12 @@ set(LIBDRD_SRC ../common/kutil.cc
                mco_common.hh
                mco_dump.cc
                mco_dump.hh
+               mco_filter.cc
+               mco_filter.hh
                mco_mapper.cc
                mco_mapper.hh
                mco_pricing.cc
                mco_pricing.hh
-               mco_script.cc
-               mco_script.hh
                mco_stay.cc
                mco_stay.hh
                mco_tables.cc

@@ -13,5 +13,5 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 #include "mco_pricing.hh"
-#include "mco_script.hh"
+#include "mco_filter.hh"
 #include "mco_dump.hh"

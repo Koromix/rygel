@@ -372,10 +372,12 @@ Dispensation modes:)");
     HeapArray<char> expression_buf;
     if (expression) {
         expression_buf.Append(expression);
-        expression_buf.Append(0);
     } else if (expression_path) {
         if (ReadFile(expression_path, Megabytes(1), &expression_buf) < 0)
             return false;
+    }
+    if (expression_buf.len) {
+        expression_buf.len = TrimStrRight((Span<char>)expression_buf).len;
         expression_buf.Append(0);
     }
 
@@ -421,19 +423,32 @@ Dispensation modes:)");
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        switch_perf_counter(&classify_time);
-        mco_Classify(table_set, authorization_set, stay_set.stays, flags,
-                     &results, dispense_mode >= 0 ? &mono_results : nullptr);
+        if (expression_buf.len) {
+            // Benchmarking script is a little wrong, because we mute the stays in place so
+            // subsequent runs (with torture >= 2) will get different data.
+            Span<const mco_Stay> stays = stay_set.stays;
+            stay_set.stays.len = 0;
 
-        if (dispense_mode >= 0 || verbosity || test || expression_buf.len) {
+            switch_perf_counter(&script_time);
+            if (!mco_Filter(stays, expression_buf.ptr,
+                            [&](Span<const mco_Stay> stays, mco_Result out_results[],
+                                mco_Result out_mono_results[]) {
+                DEFER { switch_perf_counter(&script_time); };
+
+                switch_perf_counter(&classify_time);
+                return mco_RunClassifier(table_set, authorization_set, stays, flags,
+                                         out_results, out_mono_results);
+            }, &stay_set.stays, &results, dispense_mode >= 0 ? &mono_results : nullptr))
+                return false;
+        } else {
+            switch_perf_counter(&classify_time);
+            mco_Classify(table_set, authorization_set, stay_set.stays, flags,
+                         &results, dispense_mode >= 0 ? &mono_results : nullptr);
+        }
+
+        if (dispense_mode >= 0 || verbosity || test) {
             switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
-
-            if (expression_buf.len) {
-                switch_perf_counter(&script_time);
-                if (!mco_RunScript(table_set, authorization_set, expression_buf.ptr, results, pricings))
-                    return false;
-            }
 
             switch_perf_counter(&pricing_time);
             if (dispense_mode >= 0) {
@@ -463,7 +478,7 @@ Dispensation modes:)");
     PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
 
     if (torture) {
-        uint64_t total_time = classify_time + pricing_time + script_time;
+        uint64_t total_time = classify_time + pricing_time;
         int64_t perf = (int64_t)summary.results_count * torture * 1000 / total_time;
         int64_t mono_perf = (int64_t)summary.stays_count * torture * 1000 / total_time;
 
@@ -472,10 +487,16 @@ Dispensation modes:)");
         PrintLn("  Results: %1/sec", perf);
         PrintLn("  Stays: %1/sec", mono_perf);
         PrintLn();
-        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%, Script = %3%%",
+        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%",
                 FmtDouble(100.0 * classify_time / total_time, 2),
-                FmtDouble(100.0 * pricing_time / total_time, 2),
-                FmtDouble(100.0 * script_time / total_time, 2));
+                FmtDouble(100.0 * pricing_time / total_time, 2));
+
+        if (script_time) {
+            int64_t script_perf = (int64_t)summary.stays_count * torture * 1000 / script_time;
+
+            PrintLn();
+            PrintLn("  Script: %1/sec", script_perf);
+        }
     }
 
     return true;
