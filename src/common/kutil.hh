@@ -2946,17 +2946,28 @@ Span<T> SplitStrReverseAny(T *str, const char *split_chars, Span<T> *out_remaind
     { return SplitStrReverseAny(Span<T>(str), split_chars, out_remainder); }
 
 template <typename T>
-Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
+Span<T> TrimStrLeft(Span<T> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[0])) {
         str.ptr++;
         str.len--;
     }
+
+    return str;
+}
+template <typename T>
+Span<T> TrimStrRight(Span<T> str, const char *trim_chars = " \t\r\n")
+{
     while (str.len && strchr(trim_chars, str[str.len - 1])) {
         str.len--;
     }
 
     return str;
+}
+template <typename T>
+Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
+{
+    return TrimStrLeft(TrimStrRight(str, trim_chars), trim_chars);
 }
 
 template <typename T>
