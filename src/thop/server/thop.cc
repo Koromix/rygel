@@ -974,17 +974,7 @@ Options:
         LocalArray<MHD_OptionItem, 16> mhd_options;
         mhd_options.Append({MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)ReleaseConnectionData, nullptr});
         if (thop_config.pool_size > 1) {
-#ifdef _MSC_VER
-            // In thread pool mode, each libmicrohttpd thread polls the same listening socket
-            // descriptor, set to non-blocking mode. They all call accept() but only one will
-            // succeed for each client. On MSVC builds, this does not seem to work correctly and
-            // some threads get stuck in accept() while others get WSAEWOULDBLOCK as expected.
-            // For now, work around this with MHD_USE_THREAD_PER_CONNECTION.
-            LogError("Cannot use libmicrohttpd thread pool on MSVC builds");
-            flags |= MHD_USE_THREAD_PER_CONNECTION;
-#else
             mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, thop_config.pool_size});
-#endif
         }
         mhd_options.Append({MHD_OPTION_END, 0, nullptr});
 
