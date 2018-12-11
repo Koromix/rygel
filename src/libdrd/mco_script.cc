@@ -756,10 +756,10 @@ static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
     ELSE_IF_GET_NUM("ghs", ResultObject, object.result->ghs.number)
     ELSE_IF_GET_NUM("ghs_duration", ResultObject, object.result->ghs_duration)
     ELSE_IF_GET_NUM("ghs_coefficient", ResultObject, object.pricing->ghs_coefficient)
-    ELSE_IF_GET_NUM("ghs_cents", ResultObject, object.pricing->ghs_cents)
-    ELSE_IF_GET_NUM("price_cents", ResultObject, object.pricing->price_cents)
+    ELSE_IF_GET_NUM("ghs_cents", ResultObject, (double)object.pricing->ghs_cents)
+    ELSE_IF_GET_NUM("price_cents", ResultObject, (double)object.pricing->price_cents)
     ELSE_IF_GET_NUM("exb_exh", ResultObject, object.pricing->exb_exh)
-    ELSE_IF_GET_NUM("total_cents", ResultObject, object.pricing->total_cents)
+    ELSE_IF_GET_NUM("total_cents", ResultObject, (double)object.pricing->total_cents)
 
     return nullptr;
 }
