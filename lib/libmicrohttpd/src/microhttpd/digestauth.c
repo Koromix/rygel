@@ -185,7 +185,7 @@ digest_calc_ha1_from_digest (const char *alg,
        (MHD_str_equal_caseless_(alg,
                                 "sha-256-sess")) )
     {
-      uint8_t dig[da->digest_size];
+      uint8_t dig[1024];
 
       da->init (da->ctx);
       da->update (da->ctx,
@@ -206,7 +206,7 @@ digest_calc_ha1_from_digest (const char *alg,
       da->digest (da->ctx,
                   dig);
       cvthex (dig,
-              sizeof (dig),
+              da->digest_size,
               da->sessionkey);
     }
   else
@@ -241,7 +241,7 @@ digest_calc_ha1_from_user (const char *alg,
 			   const char *cnonce,
                            struct DigestAlgorithm *da)
 {
-  unsigned char ha1[da->digest_size];
+  unsigned char ha1[1024];
 
   da->init (da->ctx);
   da->update (da->ctx,
@@ -296,8 +296,8 @@ digest_calc_response (const char *ha1,
 		      const char *hentity,
 		      struct DigestAlgorithm *da)
 {
-  unsigned char ha2[da->digest_size];
-  unsigned char resphash[da->digest_size];
+  unsigned char ha2[1024];
+  unsigned char resphash[1024];
   (void)hentity; /* Unused. Silence compiler warning. */
 
   da->init (da->ctx);
@@ -371,7 +371,7 @@ digest_calc_response (const char *ha1,
   da->digest (da->ctx,
               resphash);
   cvthex (resphash,
-          sizeof(resphash),
+          da->digest_size,
           da->sessionkey);
 }
 
@@ -638,7 +638,7 @@ calculate_nonce (uint32_t nonce_time,
 		 char *nonce)
 {
   unsigned char timestamp[TIMESTAMP_BIN_SIZE];
-  unsigned char tmpnonce[da->digest_size];
+  unsigned char tmpnonce[1024];
   char timestamphex[TIMESTAMP_BIN_SIZE * 2 + 1];
 
   da->init (da->ctx);
@@ -677,7 +677,7 @@ calculate_nonce (uint32_t nonce_time,
   da->digest (da->ctx,
               tmpnonce);
   cvthex (tmpnonce,
-          sizeof (tmpnonce),
+          da->digest_size,
           nonce);
   cvthex (timestamp,
           sizeof (timestamp),
@@ -815,12 +815,12 @@ digest_auth_check_all (struct MHD_Connection *connection,
   const char *header;
   char nonce[MAX_NONCE_LENGTH];
   char cnonce[MAX_NONCE_LENGTH];
-  char ha1[da->digest_size * 2 + 1];
+  char ha1[1024];
   char qop[15]; /* auth,auth-int */
   char nc[20];
   char response[MAX_AUTH_RESPONSE_LENGTH];
   const char *hentity = NULL; /* "auth-int" is not supported */
-  char noncehashexp[NONCE_STD_LEN(da->digest_size) + 1];
+  char noncehashexp[1024];
   uint32_t nonce_time;
   uint32_t t;
   size_t left; /* number of characters left in 'header' for 'uri' */
@@ -1023,7 +1023,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
       }
     memcpy (ha1,
             da->sessionkey,
-            sizeof (ha1));
+            da->digest_size * 2 + 1);
     /* This will initialize da->sessionkey (respexp) */
     digest_calc_response (ha1,
 			  nonce,
@@ -1294,7 +1294,7 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
   SETUP_DA (algo, da);
 
   {
-    char nonce[NONCE_STD_LEN(da.digest_size) + 1];
+    char nonce[1024];
     /* Generating the server nonce */
     calculate_nonce ((uint32_t) MHD_monotonic_sec_counter(),
                      connection->method,
