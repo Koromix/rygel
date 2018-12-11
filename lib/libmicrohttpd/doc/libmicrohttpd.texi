@@ -277,6 +277,9 @@ do not include epoll support, even if it supported (minimally smaller binary siz
 @item ``--enable-coverage''
 set flags for analysis of code-coverage with gcc/gcov (results in slow, large binaries)
 
+@item ``--with-threads=posix,w32,none,auto''
+sets threading library to use. With use ``none'' to not support threads. In this case, MHD will only support the ``external'' threading modes and not perform any locking of data structures! Use @code{MHD_is_feature_supported(MHD_FEATURE_THREADS)} to test if threads are available. Default is ``auto''.
+
 @item ``--with-gcrypt=PATH''
 specifies path to libgcrypt installation
 
@@ -869,6 +872,16 @@ information provided.  The callback is expected to access the SNI data
 using gnutls_server_name_get().  Using this option requires GnuTLS 3.0
 or higher.
 
+@item MHD_OPTION_GNUTLS_PSK_CRED_HANDLER
+@cindex SSL
+@cindex TLS
+@cindex PSK
+Use pre-shared key for TLS credentials.
+Pass a pointer to callback of type
+@code{MHD_PskServerCredentialsCallback} and a closure.
+The function will be called to
+retrieve the shared key for a given username.
+
 @item MHD_OPTION_DIGEST_AUTH_RANDOM
 @cindex digest auth
 @cindex random
@@ -928,10 +941,10 @@ with the "--disable-messages" flag.
 @cindex performance
 Number (unsigned int) of threads in thread pool. Enable
 thread pooling by setting this value to to something
-greater than 1. Currently, thread model must be
+greater than 1. Currently, thread mode must be
 MHD_USE_INTERNAL_POLLING_THREAD if thread pooling is enabled
 (@code{MHD_start_daemon} returns @code{NULL} for an unsupported thread
-model).
+mode).
 
 @item MHD_OPTION_ARRAY
 @cindex options
@@ -1134,6 +1147,33 @@ Only respond in conservative HTTP 1.0-mode.   In particular,
 do not (automatically) sent "Connection" headers and always
 close the connection after generating the response.
 
+By default, MHD will respond using the same HTTP version which
+was set in the request. You can also set the
+@code{MHD_RF_HTTP_VERSION_1_0_RESPONSE} flag to force version 1.0
+in the response.
+
+@item MHD_RF_HTTP_VERSION_1_0_RESPONSE
+Only respond in HTTP 1.0-mode. Contrary to the
+@code{MHD_RF_HTTP_VERSION_1_0_ONLY} flag, the response's HTTP version will
+always be set to 1.0 and ``Connection'' headers are still supported.
+
+You can even combine this option with MHD_RF_HTTP_VERSION_1_0_ONLY to
+change the response's HTTP version while maintaining strict compliance
+with HTTP 1.0 regarding connection management.
+
+This solution is not perfect as this flag is set on the response which
+is created after header processing. So MHD will behave as a HTTP 1.1
+server until the response is queued. It means that an invalid HTTP 1.1
+request will fail even if the response is sent with HTTP 1.0 and the
+request would be valid if interpreted with this version. For example,
+this request will fail in strict mode:
+
+@verbatim
+GET / HTTP/1.1
+@end verbatim
+
+as the ``Host'' header is missing and is mandatory in HTTP 1.1, but it
+should succeed when interpreted with HTTP 1.0.
 @end table
 @end deftp
 
@@ -1983,6 +2023,24 @@ Return @code{NULL} on error (i.e. invalid arguments, out of memory).
 @end deftypefun
 
 
+@deftypefun {struct MHD_Response *} MHD_create_response_from_buffer_with_free_callback (size_t size, void *data,  MHD_ContentReaderFreeCallback crfc)
+Create a response object.  The buffer at the end must be free'd
+by calling the @var{crfc} function.
+
+@table @var
+@item size
+size of the data portion of the response;
+
+@item buffer
+the data itself;
+
+@item crfc
+function to call at the end to free memory allocated at @var{buffer}.
+@end table
+
+Return @code{NULL} on error (i.e. invalid arguments, out of memory).
+@end deftypefun
+
 @deftypefun {struct MHD_Response *} MHD_create_response_from_data (size_t size, void *data, int must_free, int must_copy)
 Create a response object.  The response object can be extended with
 header information and then it can be used any number of times.
@@ -2039,6 +2097,17 @@ duplicated into memory blocks embedded in @var{response}.
 
 Notice that the strings must not hold newlines, carriage returns or tab
 chars.
+
+MHD_add_response_header() prevents applications from setting a
+``Transfer-Encoding'' header to values other than ``identity'' or
+``chunked'' as other transfer encodings are not supported by MHD. Note
+that usually MHD will pick the transfer encoding correctly
+automatically, but applications can use the header to force a
+particular behavior.
+
+MHD_add_response_header() also prevents applications from setting a
+``Content-Length'' header. MHD will automatically set a correct
+``Content-Length'' header if it is possible and allowed.
 
 Return @code{MHD_NO} on error (i.e. invalid header or content format or
 memory allocation error).
@@ -2371,13 +2440,34 @@ client with a 401 HTTP status.
 @node microhttpd-dauth digest
 @section Using Digest Authentication
 
+MHD supports MD5 (deprecated by IETF) and SHA-256 hash algorithms
+for digest authentication. The @code{MHD_DigestAuthAlgorithm} enumeration
+is used to specify which algorithm should be used.
+
+@deftp {Enumeration} MHD_DigestAuthAlgorithm
+Which digest algorithm should be used. Must be used consistently.
+
+@table @code
+@item MHD_DIGEST_ALG_AUTO
+Have MHD pick an algorithm currently considered secure.  For now defaults to SHA-256.
+
+@item MHD_DIGEST_ALG_MD5
+Force use of (deprecated, ancient, insecure) MD5.
+
+@item MHD_DIGEST_ALG_SHA256
+Force use of SHA-256.
+
+@end table
+@end deftp
+
+
 @deftypefun {char *} MHD_digest_auth_get_username (struct MHD_Connection *connection)
 Find and return a pointer to the username value from the request header.
 Return @code{NULL} if the value is not found or header does not exist.
 If returned value is not @code{NULL}, the value must be @code{MHD_free()}'ed.
 @end deftypefun
 
-@deftypefun int MHD_digest_auth_check (struct MHD_Connection *connection, const char *realm, const char *username, const char *password, unsigned int nonce_timeout)
+@deftypefun int MHD_digest_auth_check2 (struct MHD_Connection *connection, const char *realm, const char *username, const char *password, unsigned int nonce_timeout, enum MHD_DigestAuthAlgorithm algo)
 Checks if the provided values in the WWW-Authenticate header are valid
 and sound according to RFC2716. If valid return @code{MHD_YES}, otherwise return @code{MHD_NO}.
 
@@ -2391,7 +2481,88 @@ most probably it will be the result of a lookup of the username against a local 
 
 @var{nonce_timeout} is the amount of time in seconds for a nonce to be invalid.
 Most of the time it is sound to specify 300 seconds as its values.
+
+@var{algo} which digest algorithm should we use.
 @end deftypefun
+
+
+@deftypefun int MHD_digest_auth_check (struct MHD_Connection *connection, const char *realm, const char *username, const char *password, unsigned int nonce_timeout)
+Checks if the provided values in the WWW-Authenticate header are valid
+and sound according to RFC2716. If valid return @code{MHD_YES}, otherwise return @code{MHD_NO}.
+Deprecated, use @code{MHD_digest_auth_check2} instead.
+
+
+@var{realm} must reference to a zero-terminated string representing the realm.
+
+@var{username} must reference to a zero-terminated string representing the username,
+it is usually the returned value from MHD_digest_auth_get_username.
+
+@var{password} must reference to a zero-terminated string representing the password,
+most probably it will be the result of a lookup of the username against a local database.
+
+@var{nonce_timeout} is the amount of time in seconds for a nonce to be invalid.
+Most of the time it is sound to specify 300 seconds as its values.
+@end deftypefun
+
+
+
+@deftypefun int MHD_digest_auth_check_digest2 (struct MHD_Connection *connection, const char *realm, const char *username, const uint8_t *digest, unsigned int nonce_timeout, enum MHD_DigestAuthAlgorithm algo)
+Checks if the provided values in the WWW-Authenticate header are valid
+and sound according to RFC2716. If valid return @code{MHD_YES}, otherwise return @code{MHD_NO}.
+
+@var{realm} must reference to a zero-terminated string representing the realm.
+
+@var{username} must reference to a zero-terminated string representing the username,
+it is usually the returned value from MHD_digest_auth_get_username.
+
+@var{digest} pointer to the binary MD5 sum for the precalculated hash value ``userame:realm:password''. The size must match the selected @var{algo}!
+
+@var{nonce_timeout} is the amount of time in seconds for a nonce to be invalid.
+Most of the time it is sound to specify 300 seconds as its values.
+
+@var{algo} digest authentication algorithm to use.
+@end deftypefun
+
+@deftypefun int MHD_digest_auth_check_digest (struct MHD_Connection *connection, const char *realm, const char *username, const unsigned char digest[MHD_MD5_DIGEST_SIZE], unsigned int nonce_timeout)
+Checks if the provided values in the WWW-Authenticate header are valid
+and sound according to RFC2716. If valid return @code{MHD_YES}, otherwise return @code{MHD_NO}.
+Deprecated, use @code{MHD_digest_auth_check_digest2} instead.
+
+@var{realm} must reference to a zero-terminated string representing the realm.
+
+@var{username} must reference to a zero-terminated string representing the username,
+it is usually the returned value from MHD_digest_auth_get_username.
+
+@var{digest} pointer to the binary MD5 sum for the precalculated hash value ``userame:realm:password'' of @code{MHD_MD5_DIGEST_SIZE} bytes.
+
+@var{nonce_timeout} is the amount of time in seconds for a nonce to be invalid.
+Most of the time it is sound to specify 300 seconds as its values.
+@end deftypefun
+
+
+@deftypefun int MHD_queue_auth_fail_response2 (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale, enum MHD_DigestAuthAlgorithm algo)
+Queues a response to request authentication from the client,
+return @code{MHD_YES} if successful, otherwise @code{MHD_NO}.
+
+@var{realm} must reference to a zero-terminated string representing the realm.
+
+@var{opaque} must reference to a zero-terminated string representing a value
+that gets passed to the client and expected to be passed again to the server
+as-is. This value can be a hexadecimal or base64 string.
+
+@var{response} a response structure to specify what shall be presented to the
+client with a 401 HTTP status.
+
+@var{signal_stale} a value that signals "stale=true" in the response header to
+indicate the invalidity of the nonce and no need to ask for authentication
+parameters and only a new nonce gets generated. @code{MHD_YES} to generate a new
+nonce, @code{MHD_NO} to ask for authentication parameters.
+
+@var{algo} which digest algorithm should we use.  The same algorithm
+must then be selected when checking digests received from clients!
+
+@end deftypefun
+
 
 @deftypefun int MHD_queue_auth_fail_response (struct MHD_Connection *connection, const char *realm, const char *opaque, struct MHD_Response *response, int signal_stale)
 Queues a response to request authentication from the client,
@@ -2433,23 +2604,27 @@ ahc_echo (void *cls,
   const char *realm = "test@@example.com";
   int ret;
 
-  username = MHD_digest_auth_get_username(connection);
+  username = MHD_digest_auth_get_username (connection);
   if (username == NULL)
     @{
       response = MHD_create_response_from_buffer(strlen (DENIED),
 					         DENIED,
 					         MHD_RESPMEM_PERSISTENT);
-      ret = MHD_queue_auth_fail_response(connection, realm,
-					 OPAQUE,
-					 response,
-					 MHD_NO);
+      ret = MHD_queue_auth_fail_response2 (connection,
+                                           realm,
+					   OPAQUE,
+					   response,
+					   MHD_NO,
+                                           MHD_DIGEST_ALG_SHA256);
       MHD_destroy_response(response);
       return ret;
     @}
-  ret = MHD_digest_auth_check(connection, realm,
-			      username,
-			      password,
-			      300);
+  ret = MHD_digest_auth_check2 (connection,
+                                realm,
+			        username,
+			        password,
+			        300,
+                                MHD_DIGEST_ALG_SHA256);
   free(username);
   if ( (ret == MHD_INVALID_NONCE) ||
        (ret == MHD_NO) )
@@ -2459,16 +2634,21 @@ ahc_echo (void *cls,
 					         MHD_RESPMEM_PERSISTENT);
       if (NULL == response)
 	return MHD_NO;
-      ret = MHD_queue_auth_fail_response(connection, realm,
-					 OPAQUE,
-					 response,
-					 (ret == MHD_INVALID_NONCE) ? MHD_YES : MHD_NO);
+      ret = MHD_queue_auth_fail_response2 (connection,
+                                           realm,
+					   OPAQUE,
+					   response,
+					   (ret == MHD_INVALID_NONCE) ? MHD_YES : MHD_NO,
+                                           MHD_DIGEST_ALG_SHA256);
       MHD_destroy_response(response);
       return ret;
     @}
-  response = MHD_create_response_from_buffer (strlen(PAGE), PAGE,
+  response = MHD_create_response_from_buffer (strlen(PAGE),
+                                              PAGE,
  					      MHD_RESPMEM_PERSISTENT);
-  ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+  ret = MHD_queue_response (connection,
+                            MHD_HTTP_OK,
+                            response);
   MHD_destroy_response(response);
   return ret;
 @}

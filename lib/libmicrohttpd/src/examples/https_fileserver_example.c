@@ -24,7 +24,7 @@
  *
  *  'http_fileserver_example HTTP-PORT SECONDS-TO-RUN'
  *
- * The certificate & key are required by the server to operate,  Omitting the
+ * The certificate & key are required by the server to operate, omitting the
  * path arguments will cause the server to use the hard coded example certificate & key.
  *
  * 'certtool' may be used to generate these if required.

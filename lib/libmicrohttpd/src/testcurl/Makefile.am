@@ -16,11 +16,40 @@ AM_CPPFLAGS = \
 -I$(top_srcdir)/src/include \
 $(LIBCURL_CPPFLAGS)
 
+
+THREAD_ONLY_TESTS = \
+  test_urlparse \
+  test_long_header \
+  test_long_header11 \
+  test_iplimit11 \
+  test_termination \
+  test_timeout
+
+
+
+if HAVE_POSIX_THREADS
+THREAD_ONLY_TESTS += \
+  test_quiesce \
+  test_concurrent_stop \
+  perf_get_concurrent
+
+if HAVE_CURL_BINARY
+THREAD_ONLY_TESTS += \
+  test_quiesce_stream
+endif
+endif
+
+if ENABLE_DAUTH
+  THREAD_ONLY_TESTS += \
+    test_digestauth \
+    test_digestauth_sha256 \
+    test_digestauth_with_arguments
+endif
+
 if HAVE_CURL
 check_PROGRAMS = \
   test_get \
   test_get_sendfile \
-  test_urlparse \
   test_delete \
   test_put \
   test_process_headers \
@@ -32,32 +61,10 @@ check_PROGRAMS = \
   test_put11 \
   test_large_put11 \
   test_large_put_inc11 \
-  test_long_header \
-  test_long_header11 \
   test_get_chunked \
   test_put_chunked \
-  test_iplimit11 \
-  test_termination \
-  test_timeout \
   test_callback \
   perf_get
-
-if HAVE_FORK_WAITPID
-if HAVE_CURL_BINARY
-check_PROGRAMS += test_get_response_cleanup
-endif
-endif
-
-if HAVE_POSIX_THREADS
-check_PROGRAMS += \
-  test_quiesce \
-  test_concurrent_stop \
-  perf_get_concurrent
-
-if HAVE_CURL_BINARY
-check_PROGRAMS += test_quiesce_stream
-endif
-endif
 
 if HAVE_POSTPROCESSOR
  check_PROGRAMS += \
@@ -69,9 +76,19 @@ if HAVE_POSTPROCESSOR
   test_post_loop11
 endif
 
-if ENABLE_DAUTH
-  check_PROGRAMS += \
-	test_digestauth test_digestauth_with_arguments
+if HAVE_FORK_WAITPID
+if HAVE_CURL_BINARY
+check_PROGRAMS += test_get_response_cleanup
+endif
+endif
+
+if USE_POSIX_THREADS
+check_PROGRAMS += \
+  $(THREAD_ONLY_TESTS)
+endif
+if USE_W32_THREADS
+check_PROGRAMS += \
+  $(THREAD_ONLY_TESTS)
 endif
 
 TESTS = $(check_PROGRAMS)
@@ -137,6 +154,12 @@ perf_get_concurrent_LDADD = \
 test_digestauth_SOURCES = \
   test_digestauth.c
 test_digestauth_LDADD = \
+  $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  @LIBGCRYPT_LIBS@ @LIBCURL@
+
+test_digestauth_sha256_SOURCES = \
+  test_digestauth_sha256.c
+test_digestauth_sha256_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBGCRYPT_LIBS@ @LIBCURL@
 

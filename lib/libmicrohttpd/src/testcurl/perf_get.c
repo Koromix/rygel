@@ -207,7 +207,10 @@ testInternalGet (int port, int poll_flag)
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -278,7 +281,10 @@ testMultithreadedGet (int port, int poll_flag)
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -350,7 +356,10 @@ testMultithreadedPoolGet (int port, int poll_flag)
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
   start_timer ();
   for (i=0;i<ROUNDS;i++)
     {
@@ -424,8 +433,10 @@ testExternalGet (int port)
   cbc.buf = buf;
   cbc.size = 2048;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
-                        port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
-  if (d == NULL)
+                        port, NULL, NULL,
+                        &ahc_echo, "GET",
+                        MHD_OPTION_END);
+  if (NULL == d)
     return 256;
   if (0 == port)
     {
@@ -435,7 +446,10 @@ testExternalGet (int port)
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
   start_timer ();
   multi = curl_multi_init ();
   if (multi == NULL)
@@ -575,22 +589,25 @@ main (int argc, char *const *argv)
 					      "/hello_world",
 					      MHD_RESPMEM_MUST_COPY);
   errorCount += testExternalGet (port++);
-  errorCount += testInternalGet (port++, MHD_USE_AUTO);
-  errorCount += testMultithreadedGet (port++, MHD_USE_AUTO);
-  errorCount += testMultithreadedPoolGet (port++, MHD_USE_AUTO);
-  errorCount += testInternalGet (port++, 0);
-  errorCount += testMultithreadedGet (port++, 0);
-  errorCount += testMultithreadedPoolGet (port++, 0);
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
     {
-      errorCount += testInternalGet(port++, MHD_USE_POLL);
-      errorCount += testMultithreadedGet(port++, MHD_USE_POLL);
-      errorCount += testMultithreadedPoolGet(port++, MHD_USE_POLL);
-    }
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-    {
-      errorCount += testInternalGet(port++, MHD_USE_EPOLL);
-      errorCount += testMultithreadedPoolGet(port++, MHD_USE_EPOLL);
+      errorCount += testInternalGet (port++, MHD_USE_AUTO);
+      errorCount += testMultithreadedGet (port++, MHD_USE_AUTO);
+      errorCount += testMultithreadedPoolGet (port++, MHD_USE_AUTO);
+      errorCount += testInternalGet (port++, 0);
+      errorCount += testMultithreadedGet (port++, 0);
+      errorCount += testMultithreadedPoolGet (port++, 0);
+      if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
+	{
+	  errorCount += testInternalGet(port++, MHD_USE_POLL);
+	  errorCount += testMultithreadedGet(port++, MHD_USE_POLL);
+	  errorCount += testMultithreadedPoolGet(port++, MHD_USE_POLL);
+	}
+      if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
+	{
+	  errorCount += testInternalGet(port++, MHD_USE_EPOLL);
+	  errorCount += testMultithreadedPoolGet(port++, MHD_USE_EPOLL);
+	}
     }
   MHD_destroy_response (response);
   if (errorCount != 0)

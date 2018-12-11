@@ -78,7 +78,7 @@ main (void)
                              MHD_OPTION_END);
   if (NULL == daemon)
     return 1;
-  getchar();
-  MHD_stop_daemon(daemon);
+  (void) getchar();
+  MHD_stop_daemon (daemon);
   return 0;
 }

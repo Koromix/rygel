@@ -27,6 +27,8 @@
  *        run tests against.  Note that the number of threads may need
  *        to be adjusted depending on the number of available cores.
  *        Logic is identical to demo.c, just adds HTTPS support.
+ *        This demonstration uses key/cert stored in static string. Optionally,
+ *        use gnutls_load_file() to load them from file.
  * @author Christian Grothoff
  */
 #include "platform.h"
@@ -434,7 +436,7 @@ struct UploadContext
  * @param ret string to update, NULL or 0-terminated
  * @param data data to append
  * @param size number of bytes in 'data'
- * @return MHD_NO on allocation failure, MHD_YES on success
+ * @return #MHD_NO on allocation failure, #MHD_YES on success
  */
 static int
 do_append (char **ret,
@@ -448,13 +450,18 @@ do_append (char **ret,
     old_len = 0;
   else
     old_len = strlen (*ret);
-  buf = malloc (old_len + size + 1);
-  if (NULL == buf)
+  if (NULL == (buf = malloc (old_len + size + 1)))
     return MHD_NO;
-  memcpy (buf, *ret, old_len);
   if (NULL != *ret)
-    free (*ret);
-  memcpy (&buf[old_len], data, size);
+    {
+      memcpy (buf,
+	      *ret,
+	      old_len);
+      free (*ret);
+    }
+  memcpy (&buf[old_len],
+	  data,
+	  size);
   buf[old_len + size] = '\0';
   *ret = buf;
   return MHD_YES;
@@ -556,7 +563,7 @@ process_upload_data (void *cls,
 		uc->category,
 		filename);
       for (i=strlen (fn)-1;i>=0;i--)
-	if (! isprint ((int) fn[i]))
+	if (! isprint ((unsigned char) fn[i]))
 	  fn[i] = '_';
       uc->fd = open (fn,
 		     O_CREAT | O_EXCL
@@ -965,8 +972,10 @@ main (int argc, char *const *argv)
 			MHD_OPTION_CONNECTION_TIMEOUT, (unsigned int) (120 /* seconds */),
 			MHD_OPTION_THREAD_POOL_SIZE, (unsigned int) NUMBER_OF_THREADS,
 			MHD_OPTION_NOTIFY_COMPLETED, &response_completed_callback, NULL,
-                        MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
-                        MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
+			/* Optionally, the gnutls_load_file() can be used to
+			   load the key and the certificate from file. */
+			MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
+			MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
 			MHD_OPTION_END);
   if (NULL == d)
     return 1;

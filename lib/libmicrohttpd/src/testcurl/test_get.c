@@ -420,6 +420,8 @@ testExternalGet ()
         }
       tv.tv_sec = 0;
       tv.tv_usec = 1000;
+      if (maxsock > maxposixs)
+	maxposixs = maxsock;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
         {
 #ifdef MHD_POSIX_SOCKETS
@@ -737,38 +739,43 @@ int
 main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
-  (void)argc;   /* Unused. Silent compiler warning. */
+  (void) argc;   /* Unused. Silence compiler warning. */
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
   global_port = 0;
-  errorCount += testInternalGet (0);
-  errorCount += testMultithreadedGet (0);
-  errorCount += testMultithreadedPoolGet (0);
-  errorCount += testUnknownPortGet (0);
-  errorCount += testStopRace (0);
   errorCount += testExternalGet ();
-  errorCount += testEmptyGet (0);
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
     {
-      errorCount += testInternalGet(MHD_USE_POLL);
-      errorCount += testMultithreadedGet(MHD_USE_POLL);
-      errorCount += testMultithreadedPoolGet(MHD_USE_POLL);
-      errorCount += testUnknownPortGet(MHD_USE_POLL);
-      errorCount += testStopRace(MHD_USE_POLL);
-      errorCount += testEmptyGet(MHD_USE_POLL);
+      errorCount += testInternalGet (0);
+      errorCount += testMultithreadedGet (0);
+      errorCount += testMultithreadedPoolGet (0);
+      errorCount += testUnknownPortGet (0);
+      errorCount += testStopRace (0);
+      errorCount += testEmptyGet (0);
+      if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_POLL))
+	{
+	  errorCount += testInternalGet(MHD_USE_POLL);
+	  errorCount += testMultithreadedGet(MHD_USE_POLL);
+	  errorCount += testMultithreadedPoolGet(MHD_USE_POLL);
+	  errorCount += testUnknownPortGet(MHD_USE_POLL);
+	  errorCount += testStopRace(MHD_USE_POLL);
+	  errorCount += testEmptyGet(MHD_USE_POLL);
+	}
+      if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
+	{
+	  errorCount += testInternalGet(MHD_USE_EPOLL);
+	  errorCount += testMultithreadedPoolGet(MHD_USE_EPOLL);
+	  errorCount += testUnknownPortGet(MHD_USE_EPOLL);
+	  errorCount += testEmptyGet(MHD_USE_EPOLL);
+	}
     }
-  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-    {
-      errorCount += testInternalGet(MHD_USE_EPOLL);
-      errorCount += testMultithreadedPoolGet(MHD_USE_EPOLL);
-      errorCount += testUnknownPortGet(MHD_USE_EPOLL);
-      errorCount += testEmptyGet(MHD_USE_EPOLL);
-    }
-  if (errorCount != 0)
-    fprintf (stderr, "Error (code: %u)\n", errorCount);
+  if (0 != errorCount)
+    fprintf (stderr,
+	     "Error (code: %u)\n",
+	     errorCount);
   curl_global_cleanup ();
   return errorCount != 0;       /* 0 == pass */
 }

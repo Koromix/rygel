@@ -86,7 +86,9 @@ main (int argc, char *const *argv)
 {
   unsigned int errorCount = 0;
   char *aes256_sha = "AES256-SHA";
-  (void)argc; (void)argv;       /* Unused. Silent compiler warning. */
+  FILE *crt;
+  (void)argc;
+  (void)argv;       /* Unused. Silent compiler warning. */
 
 #ifdef MHD_HTTPS_REQUIRE_GRYPT
   gcry_control (GCRYCTL_ENABLE_QUICK_RANDOM, 0);
@@ -103,13 +105,13 @@ main (int argc, char *const *argv)
       return 77;
     }
 
-  if (setup_ca_cert () == NULL)
+  if (NULL == (crt = setup_ca_cert ()))
     {
       fprintf (stderr, MHD_E_TEST_FILE_CREAT);
       curl_global_cleanup ();
       return 99;
     }
-
+  fclose (crt);
   if (curl_uses_nss_ssl() == 0)
     {
       aes256_sha = "rsa_aes_256_sha";

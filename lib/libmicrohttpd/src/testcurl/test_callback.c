@@ -42,8 +42,7 @@ called_twice(void *cls, uint64_t pos, char *buf, size_t max)
 
   if (cls2->called == 0)
     {
-      memset(buf, 0, max);
-      strcat(buf, "test");
+      memcpy(buf, "test", 5);
       cls2->called = 1;
       return strlen(buf);
     }
@@ -71,10 +70,17 @@ callback(void *cls,
   struct callback_closure *cbc = calloc(1, sizeof(struct callback_closure));
   struct MHD_Response *r;
   int ret;
-  (void)cls;(void)url;                          /* Unused. Silent compiler warning. */
-  (void)method;(void)version;(void)upload_data; /* Unused. Silent compiler warning. */
-  (void)upload_data_size;(void)con_cls;         /* Unused. Silent compiler warning. */
 
+  (void)cls;
+  (void)url;                          /* Unused. Silent compiler warning. */
+  (void)method;
+  (void)version;
+  (void)upload_data; /* Unused. Silent compiler warning. */
+  (void)upload_data_size;
+  (void)con_cls;         /* Unused. Silent compiler warning. */
+
+  if (NULL == cbc)
+    return MHD_NO;
   r = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN, 1024,
 					 &called_twice, cbc,
 					 &free);

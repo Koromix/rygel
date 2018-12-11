@@ -119,6 +119,27 @@ MHD_add_response_header (struct MHD_Response *response,
                          const char *header,
                          const char *content)
 {
+  if ( (MHD_str_equal_caseless_ (header,
+                                 MHD_HTTP_HEADER_TRANSFER_ENCODING)) &&
+       (! MHD_str_equal_caseless_ (content,
+                                   "identity")) &&
+       (! MHD_str_equal_caseless_ (content,
+                                   "chunked")) )
+    {
+      /* Setting transfer encodings other than "identity" or
+         "chunked" is not allowed.  Note that MHD will set the
+         correct transfer encoding if required automatically. */
+      /* NOTE: for compressed bodies, use the "Content-encoding" header */
+      return MHD_NO;
+    }
+  if (MHD_str_equal_caseless_ (header,
+                               MHD_HTTP_HEADER_CONTENT_LENGTH))
+    {
+      /* MHD will set Content-length if allowed and possible,
+         reject attempt by application */
+      return MHD_NO;
+    }
+
   return add_response_entry (response,
 			     MHD_HEADER_KIND,
 			     header,
@@ -246,11 +267,12 @@ MHD_get_response_header (struct MHD_Response *response,
        NULL != pos;
        pos = pos->next)
     {
-      if ( MHD_str_equal_caseless_ (pos->header, key) )
+      if (MHD_str_equal_caseless_ (pos->header, key))
         return pos->value;
     }
   return NULL;
 }
+
 
 /**
  * Check whether response header contains particular token.
@@ -328,11 +350,13 @@ MHD_create_response_from_callback (uint64_t size,
   response->fd = -1;
   response->data = (void *) &response[1];
   response->data_buffer_size = block_size;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (! MHD_mutex_init_ (&response->mutex))
   {
     free (response);
     return NULL;
   }
+#endif
   response->crc = crc;
   response->crfc = crfc;
   response->crc_cls = crc_cls;
@@ -544,7 +568,7 @@ MHD_create_response_from_fd_at_offset64 (uint64_t size,
     return NULL;
 
   response = MHD_create_response_from_callback (size,
-						4 * 1024,
+						MHD_FD_BLOCK_SIZE,
 						&file_reader,
 						NULL,
 						&free_callback);
@@ -627,16 +651,20 @@ MHD_create_response_from_data (size_t size,
   if (NULL == (response = MHD_calloc_ (1, sizeof (struct MHD_Response))))
     return NULL;
   response->fd = -1;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (! MHD_mutex_init_ (&response->mutex))
     {
       free (response);
       return NULL;
     }
+#endif
   if ((must_copy) && (size > 0))
     {
       if (NULL == (tmp = malloc (size)))
         {
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
           MHD_mutex_destroy_chk_ (&response->mutex);
+#endif
           free (response);
           return NULL;
         }
@@ -676,6 +704,34 @@ MHD_create_response_from_buffer (size_t size,
 					buffer,
 					mode == MHD_RESPMEM_MUST_FREE,
 					mode == MHD_RESPMEM_MUST_COPY);
+}
+
+
+/**
+ * Create a response object.  The response object can be extended with
+ * header information and then be used any number of times.
+ *
+ * @param size size of the data portion of the response
+ * @param buffer size bytes containing the response's data portion
+ * @param crfc function to call to free the @a buffer
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_buffer_with_free_callback (size_t size,
+						    void *buffer,
+						    MHD_ContentReaderFreeCallback crfc)
+{
+  struct MHD_Response *r;
+
+  r = MHD_create_response_from_data (size,
+				     buffer,
+				     MHD_YES,
+				     MHD_NO);
+  if (NULL == r)
+    return r;
+  r->crfc = crfc;
+  return r;
 }
 
 
@@ -1056,11 +1112,13 @@ MHD_create_response_for_upgrade (MHD_UpgradeHandler upgrade_handler,
   response = MHD_calloc_ (1, sizeof (struct MHD_Response));
   if (NULL == response)
     return NULL;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   if (! MHD_mutex_init_ (&response->mutex))
     {
       free (response);
       return NULL;
     }
+#endif
   response->upgrade_handler = upgrade_handler;
   response->upgrade_handler_cls = upgrade_handler_cls;
   response->total_size = MHD_SIZE_UNKNOWN;
@@ -1094,14 +1152,20 @@ MHD_destroy_response (struct MHD_Response *response)
 
   if (NULL == response)
     return;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&response->mutex);
+#endif
   if (0 != --(response->reference_count))
     {
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
       MHD_mutex_unlock_chk_ (&response->mutex);
+#endif
       return;
     }
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&response->mutex);
   MHD_mutex_destroy_chk_ (&response->mutex);
+#endif
   if (NULL != response->crfc)
     response->crfc (response->crc_cls);
   while (NULL != response->first_header)
@@ -1124,9 +1188,13 @@ MHD_destroy_response (struct MHD_Response *response)
 void
 MHD_increment_response_rc (struct MHD_Response *response)
 {
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_lock_chk_ (&response->mutex);
+#endif
   (response->reference_count)++;
+#if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)
   MHD_mutex_unlock_chk_ (&response->mutex);
+#endif
 }
 
 

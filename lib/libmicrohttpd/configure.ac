@@ -1,5 +1,5 @@
 # This file is part of libmicrohttpd.
-# (C) 2006-2017 Christian Grothoff (and other contributing authors)
+# (C) 2006-2018 Christian Grothoff (and other contributing authors)
 #
 # libmicrohttpd is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published
@@ -22,41 +22,36 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.59],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.62],[libmicrohttpd@gnu.org])
+AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=58
+LIB_VERSION_CURRENT=61
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=46
+LIB_VERSION_AGE=49
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
 
 AC_MSG_CHECKING([[whether z/OS special settings are required]])
-if test `uname -s` = "OS/390"
-then
+AS_IF([test `uname -s` = "OS/390"],
+[
 # configure binaries for z/OS
-  if test -z "$CC"
-  then
-    CC=`pwd`"/contrib/xcc"
-    chmod +x $CC || true
-  fi
-  if test -z "$CPP"
-  then
-    CPP="c89 -E"
-  fi
-  if test -z "$CXXCPP"
-  then
-    CXXCPP="c++ -E -+"
-  fi
+  AS_IF([test -z "$CC"],
+        [CC=`pwd`"/contrib/xcc"
+         chmod +x $CC || true])
+  AS_IF([test -z "$CPP"],
+        CPP="c89 -E")
+  AS_IF([test -z "$CXXCPP"],
+        CXXCPP="c++ -E -+")
   AC_MSG_RESULT([[yes]])
 #  _CCC_CCMODE=1
 #  _C89_CCMODE=1
-else
+],
   AC_MSG_RESULT([[no]])
-fi
+)
 
 # Checks for programs.
 AC_PROG_AWK
@@ -68,6 +63,22 @@ AC_PROG_CC_STDC
 MHD_SYS_EXT
 LT_INIT([win32-dll])
 LT_LANG([Windows Resource])
+
+# Checks for gettext.
+m4_ifdef([AM_GNU_GETTEXT], [
+  AM_GNU_GETTEXT([external],[need-ngettext])
+  AC_CONFIG_FILES([po/Makefile.in])
+  have_po=yes
+], [
+  have_po=no
+])
+m4_ifdef([AM_GNU_GETTEXT_VERSION], [
+#do not indent here
+AM_GNU_GETTEXT_VERSION([0.19.8])
+])
+AM_CONDITIONAL([HAVE_PO], [ test "$have_po" = yes ])
+
+
 
 # Workaround for libgcrypt
 AS_IF([[test "x$lt_sysroot" != "x" && test "x$SYSROOT" = "x"]], [[SYSROOT="$lt_sysroot"]])
@@ -350,13 +361,14 @@ AM_CONDITIONAL([CYGWIN_TARGET], [[test "x$os_is_windows" = "xyes" && \
                                   test "x${os_is_native_w32}" != "xyes"]])
 
 AC_ARG_WITH([threads],
-   [AS_HELP_STRING([--with-threads=LIB],[choose threading library (posix, w32, auto) [auto]])],
+   [AS_HELP_STRING([--with-threads=LIB],[choose threading library (posix, w32, auto, none) [auto]])],
    [], [with_threads='auto'])
 AS_CASE([[$with_threads]],
   [[win32]], [[with_threads='w32']],
   [[pthreads]], [[with_threads='posix']],
   [[posix]], [[:]],
   [[w32]], [[:]],
+  [[none]], [[with_threads='none']],
   [[auto]], [[:]],
     [AC_MSG_ERROR([[incorrect parameter "$with_threads" specified for --with-threads]])]
 )
@@ -387,48 +399,50 @@ AS_IF([[test "x$with_threads" = "xauto"]],
  ]
 )
 
-AC_MSG_CHECKING([[for threading lib to use with libmicrohttpd]])
-AS_IF([[test "x$with_threads" = "xposix"]],
+AC_MSG_CHECKING([[for threading lib to use with libmicrohttpd ($with_threads)]])
+AS_IF([test "x$with_threads" = "xposix"],
   [ # forced posix threads
-    AS_IF([[test "x$mhd_have_posix_threads" = "xyes"]], [[ USE_THREADS='posix' ]],
+    AS_IF([test "x$mhd_have_posix_threads" = "xyes"], [USE_THREADS='posix'],
       [ AS_IF([[test "x$os_is_windows" = "xyes"]] ,
           [ AC_MSG_ERROR([[Posix threads are not available. Try to configure --with-threads=auto]])],
           [ AC_MSG_ERROR([[No threading lib is available. Consider installing pthreads]])] )
       ])
-    ] ,
-  [[ test "x$with_threads" = "xw32" ]] ,
+    ])
+AS_IF([test "x$with_threads" = "xw32"],
   [ # forced w32 threads
     AS_IF([[test "x$mhd_have_w32_threads" = "xyes"]],
       [[ USE_THREADS='w32' ]],
       [ AC_MSG_ERROR([[W32 threads are not available. Try to configure --with-threads=auto]])])
-    ] ,
-    [ # automatic threads lib selection
-      AS_IF([[test "x$os_is_native_w32" = "xyes" && test "x$mhd_have_w32_threads" = "xyes"]] ,
+    ])
+AS_IF([test "x$with_threads" = "xauto"],
+      [# automatic threads lib selection
+       AS_IF([[test "x$os_is_native_w32" = "xyes" && test "x$mhd_have_w32_threads" = "xyes"]] ,
         [[ USE_THREADS='w32' ]] ,
         [[ test "x$mhd_have_posix_threads" = "xyes" ]], [[ USE_THREADS='posix' ]],
         [[ test "x$mhd_have_w32_threads" = "xyes" ]], [[ USE_THREADS='w32' ]],
         [ AC_MSG_ERROR([[No threading lib is available. Consider installing pthreads]]) ]
-        )
-    ]
-  )
-if test "x$USE_THREADS" = "xposix"; then
-  CC="$PTHREAD_CC"
+        )])
+AS_IF([test "x$with_threads" = "xnone"],
+   [USE_THREADS='none'])
+
+AS_IF([test "x$USE_THREADS" = "xposix"],
+  [CC="$PTHREAD_CC"
   AC_DEFINE([MHD_USE_POSIX_THREADS],[1],[define to use pthreads])
   MHD_LIB_CFLAGS="$MHD_LIB_CFLAGS $PTHREAD_CFLAGS"
   MHD_LIBDEPS="$PTHREAD_LIBS $MHD_LIBDEPS"
-  MHD_LIBDEPS_PKGCFG="$PTHREAD_LIBS $MHD_LIBDEPS_PKGCFG"
-elif test "x$USE_THREADS" = "xw32"; then
-  AC_DEFINE([MHD_USE_W32_THREADS],[1],[define to use W32 threads])
-fi
+  MHD_LIBDEPS_PKGCFG="$PTHREAD_LIBS $MHD_LIBDEPS_PKGCFG"],
+  [AS_IF([test "x$USE_THREADS" = "xw32"],
+   [AC_DEFINE([MHD_USE_W32_THREADS],[1],[define to use W32 threads])])])
 AM_CONDITIONAL([USE_POSIX_THREADS], [test "x$USE_THREADS" = "xposix"])
 AM_CONDITIONAL([USE_W32_THREADS], [test "x$USE_THREADS" = "xw32"])
-AC_MSG_RESULT([[$USE_THREADS]])
+AM_CONDITIONAL([DISABLE_THREADS], [test "x$USE_THREADS" = "xnone"])
+AC_MSG_RESULT([$USE_THREADS])
 
 AC_ARG_ENABLE([[thread-names]],
    [AS_HELP_STRING([--disable-thread-names [auto] ],[do not set names on MHD generated threads])],
    [], [enable_thread_names='auto'])
 
-if test "x$enable_thread_names" != "xno" && test "x$USE_THREADS" = "xposix"; then
+AS_IF([test "x$enable_thread_names" != "xno" && test "x$USE_THREADS" = "xposix"],[
   # Check for thread name function
   HAVE_THREAD_NAME_FUNC="no"
   SAVE_LIBS="$LIBS"
@@ -584,10 +598,9 @@ AC_INCLUDES_DEFAULT
 
   LIBS="$SAVE_LIBS"
   CFLAGS="$SAVE_CFLAGS"
-fi
+])
 
-AS_IF(
-  [[test "x$enable_thread_names" != "xno"]],
+AS_IF([[test "x$enable_thread_names" != "xno"]],
   [
     AC_MSG_CHECKING([[whether to enable thread names]])
     AC_COMPILE_IFELSE(
@@ -674,31 +687,25 @@ AC_ARG_ENABLE([[poll]],
     [enable_poll='auto']
   )
 
-if test "$enable_poll" != "no"; then
-  if test "$os_is_native_w32" != "yes"; then
-    AC_CHECK_HEADERS([poll.h],
-      [
-        AC_CHECK_FUNCS([poll], [have_poll='yes'], [have_poll='no'])
-      ], [], [AC_INCLUDES_DEFAULT])
-  else
-    AC_MSG_CHECKING([for WSAPoll()])
-    AC_LINK_IFELSE([
-      AC_LANG_PROGRAM([[
+AS_IF([test "$enable_poll" != "no"],
+       [AS_IF([test "$os_is_native_w32" != "yes"],
+             AC_CHECK_HEADERS([poll.h],
+                [AC_CHECK_FUNCS([poll], [have_poll='yes'], [have_poll='no'])],
+		[],
+		[AC_INCLUDES_DEFAULT]),
+             [AC_MSG_CHECKING([for WSAPoll()])
+              AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <winsock2.h>
-       ]], [[
+              ]],[[
 WSAPOLLFD fda[2];
 WSAPoll(fda, 2, 0);]])],
-        [
-          have_poll='yes'
-          AC_DEFINE([HAVE_POLL],[1])
-        ], [have_poll='no'])
-    AC_MSG_RESULT([$have_poll])
-  fi
-  if test "$enable_poll" = "yes" && test "$have_poll" != "yes"; then
-    AC_MSG_ERROR([[Support for poll was explicitly requested but cannot be enabled on this platform.]])
-  fi
-  enable_poll="$have_poll"
-fi
+              [have_poll='yes'
+              AC_DEFINE([HAVE_POLL],[1])
+              ],[have_poll='no'])
+              AC_MSG_RESULT([$have_poll])])
+       AS_IF([test "$enable_poll" = "yes" && test "$have_poll" != "yes"],
+             AC_MSG_ERROR([[Support for poll was explicitly requested but cannot be enabled on this platform.]]))
+       enable_poll="$have_poll"])
 
 AC_ARG_ENABLE([[epoll]],
   [AS_HELP_STRING([[--enable-epoll[=ARG]]], [enable epoll support (yes, no, auto) [auto]])],
@@ -706,21 +713,20 @@ AC_ARG_ENABLE([[epoll]],
     [enable_epoll='auto']
   )
 
-if test "$enable_epoll" != "no"; then
-  AX_HAVE_EPOLL
-  if test "${ax_cv_have_epoll}" = "yes"; then
-    AC_DEFINE([[EPOLL_SUPPORT]],[[1]],[Define to 1 to enable epoll support])
-    enable_epoll='yes'
-  else
-    if test "$enable_epoll" = "yes"; then
-      AC_MSG_ERROR([[Support for epoll was explicitly requested but cannot be enabled on this platform.]])
-    fi
-    enable_epoll='no'
-  fi
-fi
+AS_IF([test "$enable_epoll" != "no"],
+      [AX_HAVE_EPOLL
+       AS_IF([test "${ax_cv_have_epoll}" = "yes"],
+          [AC_DEFINE([[EPOLL_SUPPORT]],[[1]],[Define to 1 to enable epoll support])
+           enable_epoll='yes'],
+       [AS_IF([test "$enable_epoll" = "yes"],
+              AC_MSG_ERROR([[Support for epoll was explicitly requested but cannot be enabled on this platform.]]))
+        enable_epoll='no'])])
 
-if test "x$enable_epoll" = "xyes"; then
-  AC_CACHE_CHECK([for epoll_create1()], [mhd_cv_have_epoll_create1], [
+AM_CONDITIONAL([MHD_HAVE_EPOLL], [[test "x$enable_epoll" = xyes]])
+
+AS_IF([test "x$enable_epoll" = "xyes"],
+  AC_CACHE_CHECK([for epoll_create1()],
+                 [mhd_cv_have_epoll_create1], [
     AC_LINK_IFELSE([
       AC_LANG_PROGRAM([[
 #include <sys/epoll.h>
@@ -730,8 +736,7 @@ fd = epoll_create1(EPOLL_CLOEXEC);]])],
       [mhd_cv_have_epoll_create1=yes],
       [mhd_cv_have_epoll_create1=no])])
   AS_IF([test "x$mhd_cv_have_epoll_create1" = "xyes"],[
-    AC_DEFINE([[HAVE_EPOLL_CREATE1]], [[1]], [Define if you have epoll_create1 function.])])
-fi
+    AC_DEFINE([[HAVE_EPOLL_CREATE1]], [[1]], [Define if you have epoll_create1 function.])]))
 
 # Check for headers that are ALWAYS required
 AC_CHECK_HEADERS([fcntl.h math.h errno.h limits.h stdio.h locale.h sys/stat.h sys/types.h], [], [AC_MSG_ERROR([Compiling libmicrohttpd requires standard UNIX headers files])], [AC_INCLUDES_DEFAULT])
@@ -753,6 +758,9 @@ AC_CHECK_HEADER([[search.h]],
   [], [AC_INCLUDES_DEFAULT])
 
 AM_CONDITIONAL([MHD_HAVE_TSEARCH], [[test "x$ac_cv_header_search_h" = xyes && test "x$HAVE_TSEARCH" = "x1" && test "x$REPLACE_TSEARCH" != "x1"]])
+
+AC_CHECK_HEADERS([dlfcn.h],[have_tlsplugin=yes],[have_tlsplugin=no], [AC_INCLUDES_DEFAULT])
+AM_CONDITIONAL([MHD_HAVE_TLS_PLUGIN], [[test "x$have_tlsplugin" = xyes]])
 
 # Check for generic functions
 AC_CHECK_FUNCS([rand random])
@@ -1499,6 +1507,8 @@ AC_ARG_WITH([[gnutls]],
         AC_MSG_RESULT([[-I$with_gnutls/include -L$with_gnutls/lib -lgnutls]])
         SAVE_LDFLAGS="$LDFLAGS"
         SAVE_CPPFLAGS="$CPPFLAGS"
+        SAVE_CFLAGS="$CFLAGS"
+        SAVE_LIBS="$LIBS"
         LDFLAGS="-L$with_gnutls/lib $LDFLAGS"
         CPPFLAGS="-I$with_gnutls/include $CPPFLAGS"
         have_gnutls_pkgcfg=no
@@ -1511,8 +1521,10 @@ AC_ARG_WITH([[gnutls]],
                 have_gnutls=yes
               ])], [], [AC_INCLUDES_DEFAULT])
         AS_IF([test "x$have_gnutls" != "xyes"], [AC_MSG_ERROR([can't find usable libgnutls at specified prefix $with_gnutls])])
-        LDFLAGS="$SAVE_LDFLAGS"
         CPPFLAGS="$SAVE_CPPFLAGS"
+        CFLAGS="$SAVE_CFLAGS"
+        LDFLAGS="$SAVE_LDFLAGS"
+        LIBS="$SAVE_LIBS"
         ;;
     esac
    ],
@@ -1658,7 +1670,8 @@ AS_IF([test "x$with_gnutls" != "xno" && test "x$have_gnutls" != "xyes"],
    )
   ]
 )
-AS_IF([test "x$have_gnutls" != "xyes" && test "x$with_gnutls" = "xyes"], [AC_MSG_ERROR([[can't find usable libgnutls]])])
+AS_IF([test "x$have_gnutls" != "xyes" && test "x$with_gnutls" = "xyes"],
+      [AC_MSG_ERROR([[can't find usable libgnutls]])])
 #
 # End of large unindented block
 #
@@ -1692,7 +1705,7 @@ AS_IF([test "x$have_gnutls" != "xyes" && test "x$with_gnutls" = "xyes"], [AC_MSG
             gnutls_free(data.data);
           ]])], [[have_gnutls_sni=yes]], [[have_gnutls_sni=no]])
      AC_MSG_RESULT([[$have_gnutls_sni]])
-     AC_CACHE_CHECK([[whether GnuTLS require libgcrypt initialisaion]], [mhd_cv_grypt_required],
+     AC_CACHE_CHECK([[whether GnuTLS require libgcrypt initialisaion]], [mhd_cv_gcrypt_required],
        [
         AC_COMPILE_IFELSE(
           [
@@ -1708,7 +1721,7 @@ choke me now
              ]
            )
           ],
-          [[mhd_cv_grypt_required='no']], [[mhd_cv_grypt_required='yes']]
+          [[mhd_cv_gcrypt_required='no']], [[mhd_cv_gcrypt_required='yes']]
         )
        ]
      )
@@ -1723,7 +1736,7 @@ choke me now
     ]
   )
 
-  AS_IF([[test "x$mhd_cv_grypt_required" = "xyes" && test "x$have_gcrypt" = "xunknown"]],
+  AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes" && test "x$have_gcrypt" = "xunknown"]],
     [
      AM_PATH_LIBGCRYPT([1.2.2], [have_gcrypt=yes], [have_gcrypt=no])
      AS_IF([[test "x$have_gcrypt" = "xyes"]],
@@ -1744,7 +1757,7 @@ choke me now
   AS_UNSET([[crypt_missing]])
   AS_IF([[test "x$have_gnutls" = "xyes"]],
     [
-     AS_IF([[test "x$mhd_cv_grypt_required" = "xyes" && test "x$have_gcrypt" != "xyes"]],
+     AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes" && test "x$have_gcrypt" != "xyes"]],
        [
         crypt_missing="required libgcrypt"
         AS_IF([[test "x$enable_https" = "xyes" ]], [AC_MSG_ERROR([[HTTPS support cannot be enabled without $crypt_missing.]])])
@@ -1760,35 +1773,35 @@ choke me now
          [
           AC_DEFINE([[HTTPS_SUPPORT]],[[1]],[Define to 1 if libmicrohttpd is compiled with HTTPS support.])
           enable_https=yes
-          AS_IF([[test "x$mhd_cv_grypt_required" = "xyes"]],
+          AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes"]],
             [
              MSG_HTTPS="yes (using libgnutls and libgcrypt)"
-             MHD_LIB_CPPFLAGS="$MHD_LIB_CPPFLAGS $LIBGCRYPT_CFLAGS $GNUTLS_CPPFLAGS"
-             MHD_LIB_CFLAGS="$MHD_LIB_CFLAGS $LIBGCRYPT_CFLAGS $GNUTLS_CFLAGS"
-             MHD_LIB_LDFLAGS="$MHD_LIB_LDFLAGS $GNUTLS_LDFLAGS"
-             MHD_LIBDEPS="$GNUTLS_LIBS $LIBGCRYPT_LIBS $MHD_LIBDEPS"
-             AC_DEFINE([[MHD_HTTPS_REQUIRE_GRYPT]], [[1]], [Define to `1' if HTTPS require initialisation of libgcrypt])
+	     MHD_TLS_LIB_CPPFLAGS="$LIBGCRYPT_CFLAGS $GNUTLS_CPPFLAGS"
+             MHD_TLS_LIB_CFLAGS="$LIBGCRYPT_CFLAGS $GNUTLS_CFLAGS"
+             MHD_TLS_LIB_LDFLAGS="$GNUTLS_LDFLAGS"
+             MHD_TLS_LIBDEPS="$GNUTLS_LIBS $LIBGCRYPT_LIBS"
+             AC_DEFINE([[MHD_HTTPS_REQUIRE_GCRYPT]], [[1]], [Define to `1' if HTTPS require initialisation of libgcrypt])
             ],
             [
              MSG_HTTPS="yes (using libgnutls)"
              AS_UNSET([LIBGCRYPT_CFLAGS])
              AS_UNSET([LIBGCRYPT_LIBS])
-             MHD_LIB_CPPFLAGS="$MHD_LIB_CPPFLAGS $GNUTLS_CPPFLAGS"
-             MHD_LIB_CFLAGS="$MHD_LIB_CFLAGS $GNUTLS_CFLAGS"
-             MHD_LIB_LDFLAGS="$MHD_LIB_LDFLAGS $GNUTLS_LDFLAGS"
-             MHD_LIBDEPS="$GNUTLS_LIBS $MHD_LIBDEPS"
+             MHD_TLS_LIB_CPPFLAGS="$GNUTLS_CPPFLAGS"
+             MHD_TLS_LIB_CFLAGS="$GNUTLS_CFLAGS"
+             MHD_TLS_LIB_LDFLAGS="$GNUTLS_LDFLAGS"
+             MHD_TLS_LIBDEPS="$GNUTLS_LIBS"
             ]
           )
           AS_IF([[ test "x$have_gnutls_pkgcfg" = "xyes" ]],
             [ # remove GnuTLS from private libs in .pc file as it defined in Requires.private
               MHD_REQ_PRIVATE='gnutls'
-              AS_IF([[test "x$mhd_cv_grypt_required" = "xyes"]],
+              AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes"]],
                 [[MHD_LIBDEPS_PKGCFG="$LIBGCRYPT_LIBS $MHD_LIBDEPS_PKGCFG"]]
               )
             ],
             [
               MHD_REQ_PRIVATE=''
-              AS_IF([[test "x$mhd_cv_grypt_required" = "xyes"]],
+              AS_IF([[test "x$mhd_cv_gcrypt_required" = "xyes"]],
                 [[MHD_LIBDEPS_PKGCFG="$LIBGCRYPT_LIBS $MHD_LIBDEPS_PKGCFG"]]
               )
               MHD_LIBDEPS_PKGCFG="$GNUTLS_LIBS $MHD_LIBDEPS_PKGCFG"
@@ -1818,7 +1831,7 @@ AC_MSG_RESULT([$MSG_HTTPS])
 AM_CONDITIONAL([HAVE_GNUTLS], [[test "x$have_gnutls" = "xyes"]])
 AM_CONDITIONAL([HAVE_GNUTLS_SNI], [[test "x$have_gnutls_sni" = "xyes"]])
 AM_CONDITIONAL([ENABLE_HTTPS], [test "x$enable_https" = "xyes"])
-AM_CONDITIONAL([HTTPS_REQUIRE_GRYPT], [[test "x$enable_https" = "xyes" && test "x$mhd_cv_grypt_required" = "xyes"]])
+AM_CONDITIONAL([HTTPS_REQUIRE_GCRYPT], [[test "x$enable_https" = "xyes" && test "x$mhd_cv_gcrypt_required" = "xyes"]])
 AC_SUBST([GNUTLS_CPPFLAGS])
 AC_SUBST([GNUTLS_CFLAGS])
 AC_SUBST([GNUTLS_LDFLAGS])
@@ -1990,6 +2003,10 @@ AC_SUBST(MHD_LIB_CPPFLAGS)
 AC_SUBST(MHD_LIB_CFLAGS)
 AC_SUBST(MHD_LIB_LDFLAGS)
 AC_SUBST(MHD_LIBDEPS)
+AC_SUBST(MHD_TLS_LIB_CPPFLAGS)
+AC_SUBST(MHD_TLS_LIB_CFLAGS)
+AC_SUBST(MHD_TLS_LIB_LDFLAGS)
+AC_SUBST(MHD_TLS_LIBDEPS)
 
 # for pkg-config
 AC_SUBST([MHD_REQ_PRIVATE])
@@ -2003,9 +2020,25 @@ AC_SUBST(LDFLAGS)
 AC_SUBST([ac_configure_args])
 AC_SUBST([EMPTY_VAR], [[]])
 
+# We define the paths here, because MinGW/GCC expands paths
+# passed through the command line ("-DDIR=..."). This would
+# lead to hard-coded paths ("C:\mingw\mingw\bin...") that do
+# not contain the actual installation.
+AC_DEFINE_DIR([MHD_PLUGIN_INSTALL_PREFIX], [libdir/libmicrohttpd], [tls plugins])
+
+
+# should experimental code be compiled (code that may not yet compile)?
+AC_MSG_CHECKING(whether to compile experimental code)
+AC_ARG_ENABLE([experimental],
+   [AS_HELP_STRING([--enable-experimental], [enable compiling experimental code])],
+   [enable_experimental=${enableval}],
+   [enable_experimental=no])
+AC_MSG_RESULT($enable_experimental)
+AM_CONDITIONAL([HAVE_EXPERIMENTAL], [test "x$enable_experimental" = "xyes"])
+
+
 AC_CONFIG_FILES([libmicrohttpd.pc
 w32/common/microhttpd_dll_res_vc.rc
-po/configure.acT:po/configure.ac.in
 Makefile
 contrib/Makefile
 doc/Makefile
@@ -2015,22 +2048,12 @@ doc/examples/Makefile
 m4/Makefile
 src/Makefile
 src/include/Makefile
+src/lib/Makefile
 src/microhttpd/Makefile
 src/examples/Makefile
 src/testcurl/Makefile
 src/testcurl/https/Makefile
 src/testzzuf/Makefile])
-AC_CONFIG_COMMANDS([po/configargs.stamp], [
-  $as_echo "$ac_configure_args" > "$ac_tmp/configargs.stamp" || AC_MSG_ERROR([[cannot create file $ac_tmp/configargs.stamp]])
-  AS_IF([[cmp -s "po/configargs.stamp" "$ac_tmp/configargs.stamp" >/dev/null 2>&1]],
-    [AC_MSG_NOTICE([[po/configargs.stamp is unchanged]])],
-    [
-      rm -f po/configargs.stamp
-      mv "$ac_tmp/configargs.stamp" po/configargs.stamp || AC_MSG_ERROR([[cannot create file $ac_tmp/configargs.stamp]])
-      AC_MSG_NOTICE([[po/configargs.stamp is updated]])
-    ]
-  )
-], [ac_configure_args="$ac_configure_args"])
 AC_OUTPUT
 
 # Finally: summary
@@ -2054,6 +2077,7 @@ AC_MSG_NOTICE([GNU libmicrohttpd ${PACKAGE_VERSION} Configuration Summary:
   Use thread names:  ${enable_thread_names}
   Use debug asserts: ${enable_asserts}
   Messages:          ${enable_messages}
+  Gettext:           ${have_po}
   Basic auth.:       ${enable_bauth}
   Digest auth.:      ${enable_dauth}
   HTTP "Upgrade":    ${enable_httpupgrade}

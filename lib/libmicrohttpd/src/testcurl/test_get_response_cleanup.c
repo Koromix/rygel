@@ -182,7 +182,10 @@ testInternalGet ()
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/",
+            port);
   curl = fork_curl (url);
   (void)sleep (1);
   kill_curl (curl);
@@ -227,7 +230,10 @@ testMultithreadedGet ()
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/",
+            port);
   //fprintf (stderr, "Forking cURL!\n");
   curl = fork_curl (url);
   (void)sleep (1);
@@ -283,7 +289,10 @@ testMultithreadedPoolGet ()
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/",
+            port);
   curl = fork_curl (url);
   (void)sleep (1);
   kill_curl (curl);
@@ -332,7 +341,10 @@ testExternalGet ()
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/",
+            port);
   curl = fork_curl (url);
 
   start = time (NULL);
@@ -405,9 +417,12 @@ main (int argc, char *const *argv)
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
-  errorCount += testInternalGet ();
-  errorCount += testMultithreadedGet ();
-  errorCount += testMultithreadedPoolGet ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalGet ();
+      errorCount += testMultithreadedGet ();
+      errorCount += testMultithreadedPoolGet ();
+    }
   errorCount += testExternalGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

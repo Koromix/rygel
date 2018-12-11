@@ -1,3 +1,94 @@
+Sat Dec  8 22:53:56 CET 2018
+	Added test for RFC 7616 and documented new API.
+	Releasing libmicrohttpd 0.9.62. -CG
+
+Sat Dec  8 17:34:58 CET 2018
+	Adding support for RFC 7616, experimental, needs
+	testing and documentation still! -CG
+
+Fri Dec  7 12:37:17 CET 2018
+	Add option to build MHD without any threads
+	and MHD_FEATURE_THREADS to test for it.  -CG
+
+Thu Dec  6 13:25:08 BRT 2018
+	Renamed all occurrences from _model(s)_ to _mode(s)_. -SC
+
+Thu Dec  6 12:50:11 BRT 2018
+	Optimized the function MHD_create_response_from_callback() for
+	Windows by increasing its internal buffer size and allowed to customize
+	it via macro MHD_FD_BLOCK_SIZE. -SC
+
+Thu Dec  6 02:11:15 BRT 2018
+	Referenced the gnutls_load_file() function in the HTTPs examples. -SC
+
+Wed Dec  5 18:08:59 CET 2018
+	Fix regression causing URLs to be unescaped twice. -CG
+
+Sun Nov 18 13:08:11 CET 2018
+	Parse arguments with (properly) escaped URLs correctly.
+	(making things work with recent cURL changes, #5473).
+	Replace sprintf with snprintf in testcases.
+	Releasing libmicrohttpd 0.9.61. -CG
+
+Wed Nov 14 14:01:21 CET 2018
+	Fix build issue with GnuTLS < 3.0. -CG
+
+Mon Nov 12 19:50:43 CET 2018
+	Fix #5473 (test case failure due to change in libcurl). -eworm
+
+Thu Nov  8 14:53:27 CET 2018
+	Add MHD_create_response_from_buffer_with_free_callback. -CG
+
+Tue Nov  6 19:43:47 CET 2018
+	Upgrading to gettext 0.19.8.
+	Releasing libmicrohttpd 0.9.60. -CG
+
+Thu Nov  1 16:29:59 CET 2018
+	Enable using epoll() without listen socket. -JB
+
+Sat Oct 20 12:44:16 CEST 2018
+	In thread-per-connection mode, signal main thread for
+	thread termination for instant clean-up and application
+	notification about closed connections. -CG
+
+Tue Oct 16 20:43:41 CEST 2018
+	Add MHD_RF_HTTP_VERSION_1_0_RESPONSE option to make MHD
+	act more like an HTTP/1.0 server. -GH
+
+Fri Oct  5 18:44:45 CEST 2018
+	MHD_add_response_header() now prevents applications from
+	setting a "Transfer-Encoding" header to values other than
+	"identity" or "chunked" as other transfer encodings are
+	not supported by MHD. (Note that usually MHD will pick the
+	transfer encoding correctly automatically, but applications
+	can use the header to force a particular behavior.)
+	Fixing #5411 (never set Content-length if Transfer-Encoding
+	is given). -CG
+
+Sat Jul 14 11:42:15 CEST 2018
+	Add MHD_OPTION_GNUTLS_PSK_CRED_HANDLER to allow use of PSK with
+	TLS connections. -CG/TM
+
+Sat Jul 14 11:03:37 CEST 2018
+	Integrate patch for checking digest authentication based on
+	a digest, allowing servers to store passwords only hashed.
+	Adding new function MHD_digest_auth_check_digest(). -CG/DB
+
+Sat Mar 10 12:15:35 CET 2018
+	Upgrade to gettext-0.19.8.1. Switching to more canonical
+	gettext integration. -CG
+
+Fri Mar  2 21:44:24 CET 2018
+	Ensure MHD_RequestCompletedCallback is always called from
+	the correct thread (even on shutdown and for upgraded connections). -CG
+
+Tue Feb 27 23:27:02 CET 2018
+	Ensure MHD_RequestCompletedCallback is also called for
+	upgraded connections. -CG
+
+Fri Feb 16 03:09:33 CET 2018
+	Fixing #5278 as suggested by reporter. -CG/texec
+
 Thu Feb  1 10:12:22 CET 2018
 	Releasing GNU libicrohttpd 0.9.59. -CG
 
@@ -1686,7 +1777,7 @@ Tue May 29 13:55:03 CEST 2012
 Tue May 29 13:45:15 CEST 2012
 	Fixing bug where MHD failed to call connection termination callback
 	if a connection either was closed due to read errors or if MHD
-	was terminated with certain threading models.  Added new
+	was terminated with certain threading modes.  Added new
 	termination code MHD_REQUEST_TERMINATED_READ_ERROR for the
 	read-termination cause. -CG
 

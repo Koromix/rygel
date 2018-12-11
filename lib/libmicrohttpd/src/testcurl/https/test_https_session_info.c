@@ -132,7 +132,11 @@ test_query_session ()
       const union MHD_DaemonInfo *dinfo;
       dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
       if (NULL == dinfo || 0 == dinfo->port)
-        { MHD_stop_daemon (d); return 32; }
+        {
+          MHD_stop_daemon (d);
+          free (cbc.buf);
+          return 32;
+        }
       port = (int)dinfo->port;
     }
 

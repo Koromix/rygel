@@ -373,8 +373,11 @@ main (int argc, char *const *argv)
     return 2;
   put_buffer = malloc (PUT_SIZE);
   memset (put_buffer, 1, PUT_SIZE);
-  errorCount += testInternalPut ();
-  errorCount += testMultithreadedPut ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPut ();
+      errorCount += testMultithreadedPut ();
+    }
   errorCount += testExternalPut ();
   free (put_buffer);
   if (errorCount != 0)

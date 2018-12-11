@@ -464,31 +464,22 @@ MHD_socket_noninheritable_ (MHD_socket sock)
 /**
  * Create a listen socket, with noninheritable flag if possible.
  *
- * @param use_ipv6 if set to non-zero IPv6 is used
+ * @param pf protocol family to use
  * @return created socket or MHD_INVALID_SOCKET in case of errors
  */
 MHD_socket
-MHD_socket_create_listen_ (int use_ipv6)
+MHD_socket_create_listen_ (int pf)
 {
-  int domain;
   MHD_socket fd;
   int cloexec_set;
 
-#ifdef HAVE_INET6
-  domain = (use_ipv6) ? PF_INET6 : PF_INET;
-#else  /* ! HAVE_INET6 */
-  if (use_ipv6)
-    return MHD_INVALID_SOCKET;
-  domain = PF_INET;
-#endif /* ! HAVE_INET6 */
-
 #if defined(MHD_POSIX_SOCKETS) && defined(SOCK_CLOEXEC)
-  fd = socket (domain,
+  fd = socket (pf,
                SOCK_STREAM | SOCK_CLOEXEC,
                0);
   cloexec_set = !0;
 #elif defined(MHD_WINSOCK_SOCKETS) && defined (WSA_FLAG_NO_HANDLE_INHERIT)
-  fd = WSASocketW (domain,
+  fd = WSASocketW (pf,
                    SOCK_STREAM,
                    0,
                    NULL,
@@ -500,7 +491,7 @@ MHD_socket_create_listen_ (int use_ipv6)
 #endif /* !SOCK_CLOEXEC */
   if (MHD_INVALID_SOCKET == fd)
     {
-      fd = socket (domain,
+      fd = socket (pf,
                    SOCK_STREAM,
                    0);
       cloexec_set = 0;

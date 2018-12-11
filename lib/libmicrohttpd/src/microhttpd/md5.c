@@ -42,16 +42,20 @@ static uint8_t PADDING[MD5_BLOCK_SIZE] = {
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 };
 
-/*
+
+/**
  * Start MD5 accumulation.  Set bit count to 0 and buffer to mysterious
  * initialization constants.
+ *
+ * @param ctx must be a `struct MD5Context *`
  */
 void
-MD5Init(struct MD5Context *ctx)
+MD5Init (void *ctx_)
 {
+  struct MD5Context *ctx = ctx_;
+
   if (!ctx)
     return;
-
   ctx->count = 0;
   ctx->state[0] = 0x67452301;
   ctx->state[1] = 0xefcdab89;
@@ -59,56 +63,13 @@ MD5Init(struct MD5Context *ctx)
   ctx->state[3] = 0x10325476;
 }
 
-/*
- * Update context to reflect the concatenation of another buffer full
- * of bytes.
- */
-void
-MD5Update(struct MD5Context *ctx, const unsigned char *input, size_t len)
-{
-  size_t have, need;
 
-  if (!ctx || !input)
-    return;
-
-  /* Check how many bytes we already have and how many more we need. */
-  have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_SIZE - 1));
-  need = MD5_BLOCK_SIZE - have;
-
-  /* Update bitcount */
-  ctx->count += (uint64_t)len << 3;
-
-  if (len >= need)
-  {
-    if (have != 0)
-    {
-      memcpy(ctx->buffer + have, input, need);
-      MD5Transform(ctx->state, ctx->buffer);
-      input += need;
-      len -= need;
-      have = 0;
-    }
-
-    /* Process data in MD5_BLOCK_SIZE-byte chunks. */
-    while (len >= MD5_BLOCK_SIZE)
-    {
-      MD5Transform(ctx->state, input);
-      input += MD5_BLOCK_SIZE;
-      len -= MD5_BLOCK_SIZE;
-    }
-  }
-
-  /* Handle any remaining bytes of data. */
-  if (len != 0)
-    memcpy(ctx->buffer + have, input, len);
-}
-
-/*
+/**
  * Pad pad to 64-byte boundary with the bit pattern
  * 1 0* (64-bit count of bits processed, MSB-first)
  */
-void
-MD5Pad(struct MD5Context *ctx)
+static void
+MD5Pad (struct MD5Context *ctx)
 {
   uint8_t count[8];
   size_t padlen;
@@ -128,12 +89,17 @@ MD5Pad(struct MD5Context *ctx)
   MD5Update(ctx, count, 8);
 }
 
-/*
+
+/**
  * Final wrapup--call MD5Pad, fill in digest and zero out ctx.
+ *
+ * @param ctx must be a `struct MD5Context *`
  */
 void
-MD5Final(unsigned char digest[MD5_DIGEST_SIZE], struct MD5Context *ctx)
+MD5Final (void *ctx_,
+          unsigned char digest[MD5_DIGEST_SIZE])
 {
+  struct MD5Context *ctx = ctx_;
   int i;
 
   if (!ctx || !digest)
@@ -159,13 +125,14 @@ MD5Final(unsigned char digest[MD5_DIGEST_SIZE], struct MD5Context *ctx)
 #define MD5STEP(f, w, x, y, z, data, s) \
 	( w += f(x, y, z) + data,  w = w<<s | w>>(32-s),  w += x )
 
-/*
+/**
  * The core of the MD5 algorithm, this alters an existing MD5 hash to
  * reflect the addition of 16 longwords of new data.  MD5Update blocks
  * the data and converts bytes into longwords for this routine.
  */
-void
-MD5Transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_SIZE])
+static void
+MD5Transform (uint32_t state[4],
+              const uint8_t block[MD5_BLOCK_SIZE])
 {
   uint32_t a, b, c, d, in[MD5_BLOCK_SIZE / 4];
 
@@ -260,5 +227,60 @@ MD5Transform(uint32_t state[4], const uint8_t block[MD5_BLOCK_SIZE])
   state[2] += c;
   state[3] += d;
 }
+
+
+/**
+ * Update context to reflect the concatenation of another buffer full
+ * of bytes.
+ */
+void
+MD5Update (void *ctx_,
+           const uint8_t *input,
+           size_t len)
+{
+  struct MD5Context *ctx = ctx_;
+  size_t have, need;
+
+  if (!ctx || !input)
+    return;
+
+  /* Check how many bytes we already have and how many more we need. */
+  have = (size_t)((ctx->count >> 3) & (MD5_BLOCK_SIZE - 1));
+  need = MD5_BLOCK_SIZE - have;
+
+  /* Update bitcount */
+  ctx->count += (uint64_t)len << 3;
+
+  if (len >= need)
+  {
+    if (have != 0)
+    {
+      memcpy (ctx->buffer + have,
+              input,
+              need);
+      MD5Transform(ctx->state, ctx->buffer);
+      input += need;
+      len -= need;
+      have = 0;
+    }
+
+    /* Process data in MD5_BLOCK_SIZE-byte chunks. */
+    while (len >= MD5_BLOCK_SIZE)
+    {
+      MD5Transform (ctx->state,
+                    (const unsigned char *) input);
+      input += MD5_BLOCK_SIZE;
+      len -= MD5_BLOCK_SIZE;
+    }
+  }
+
+  /* Handle any remaining bytes of data. */
+  if (0 != len)
+    memcpy (ctx->buffer + have,
+            input,
+            len);
+}
+
+
 
 /* end of md5.c */

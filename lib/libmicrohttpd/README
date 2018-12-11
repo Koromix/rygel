@@ -77,3 +77,13 @@ In particular, the following functions are not covered by 'make check':
 - parse_options (daemon.c)
 - MHD_set_panic_func (daemon.c)
 - MHD_get_version (daemon.c)
+
+
+Note that the working library is in src/microhttpd/ with the API in
+src/include/microhttpd.h.  An *experimental* (read: not yet working
+at all) newer implementation is in src/lib/, with the new API in
+src/include/microhttpd2.h.  The experimental code will need MUCH
+more testing and development, you are strongly advised to stick
+to microhttpd.h unless you are a MHD developer!
+
+

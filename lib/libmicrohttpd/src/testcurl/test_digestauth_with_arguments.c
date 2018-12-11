@@ -90,39 +90,39 @@ ahc_echo (void *cls,
   if ( (username == NULL) ||
        (0 != strcmp (username, "testuser")) )
     {
-      response = MHD_create_response_from_buffer(strlen (DENIED), 
+      response = MHD_create_response_from_buffer(strlen (DENIED),
 						 DENIED,
-						 MHD_RESPMEM_PERSISTENT);  
+						 MHD_RESPMEM_PERSISTENT);
       ret = MHD_queue_auth_fail_response(connection, realm,
 					 MY_OPAQUE,
 					 response,
-					 MHD_NO);    
-      MHD_destroy_response(response);  
+					 MHD_NO);
+      MHD_destroy_response(response);
       return ret;
     }
   ret = MHD_digest_auth_check(connection, realm,
-			      username, 
-			      password, 
+			      username,
+			      password,
 			      300);
   free(username);
   if ( (ret == MHD_INVALID_NONCE) ||
        (ret == MHD_NO) )
     {
-      response = MHD_create_response_from_buffer(strlen (DENIED), 
+      response = MHD_create_response_from_buffer(strlen (DENIED),
 						 DENIED,
-						 MHD_RESPMEM_PERSISTENT);  
-      if (NULL == response) 
+						 MHD_RESPMEM_PERSISTENT);
+      if (NULL == response)
 	return MHD_NO;
       ret = MHD_queue_auth_fail_response(connection, realm,
 					 MY_OPAQUE,
 					 response,
-					 (ret == MHD_INVALID_NONCE) ? MHD_YES : MHD_NO);  
-      MHD_destroy_response(response);  
+					 (ret == MHD_INVALID_NONCE) ? MHD_YES : MHD_NO);
+      MHD_destroy_response(response);
       return ret;
     }
   response = MHD_create_response_from_buffer(strlen(PAGE), PAGE,
 					     MHD_RESPMEM_PERSISTENT);
-  ret = MHD_queue_response(connection, MHD_HTTP_OK, response);  
+  ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
   MHD_destroy_response(response);
   return ret;
 }
@@ -157,24 +157,25 @@ testDigestAuth ()
   fd = open("/dev/urandom", O_RDONLY);
   if (-1 == fd)
     {
-	  fprintf(stderr, "Failed to open `%s': %s\n",
-	       "/dev/urandom",
-		   strerror(errno));
-	  return 1;
-	}
+      fprintf(stderr, "Failed to open `%s': %s\n",
+              "/dev/urandom",
+              strerror(errno));
+      return 1;
+    }
   while (off < 8)
-	{
-	  len = read(fd, rnd, 8);
-	  if (len == (size_t)-1)
-	    {
-		  fprintf(stderr, "Failed to read `%s': %s\n",
-		       "/dev/urandom",
-			   strerror(errno));
-		  (void) close(fd);
-		  return 1;
-		}
-	  off += len;
-	}
+    {
+      len = read(fd, rnd, 8);
+      if (len == (size_t)-1)
+        {
+          fprintf(stderr,
+                  "Failed to read `%s': %s\n",
+                  "/dev/urandom",
+                  strerror(errno));
+          (void) close(fd);
+          return 1;
+        }
+      off += len;
+    }
   (void) close(fd);
 #else
   {
@@ -213,7 +214,10 @@ testDigestAuth ()
         { MHD_stop_daemon (d); return 32; }
       port = (int)dinfo->port;
     }
-  sprintf(url, "http://127.0.0.1:%d/foo?key=value", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/bar%%20foo%%3Fkey%%3Dvalue",
+            port);
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, url);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);

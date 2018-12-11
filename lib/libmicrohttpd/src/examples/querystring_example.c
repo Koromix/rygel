@@ -77,16 +77,24 @@ int
 main (int argc, char *const *argv)
 {
   struct MHD_Daemon *d;
+  int port;
 
   if (argc != 2)
     {
       printf ("%s PORT\n", argv[0]);
       return 1;
     }
+  port = atoi (argv[1]);
+  if ( (port < 0) ||
+       (port > UINT16_MAX) )
+    {
+      printf ("%s PORT\n", argv[0]);
+      return 1;
+    }
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG,
-                        atoi (argv[1]),
+                        (uint16_t) port,
                         NULL, NULL, &ahc_echo, PAGE, MHD_OPTION_END);
-  if (d == NULL)
+  if (NULL == d)
     return 1;
   (void) getc (stdin);
   MHD_stop_daemon (d);

@@ -218,8 +218,10 @@ do_gets (void * param)
   int port = (int)(intptr_t)param;
   char *err = NULL;
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
-
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
   for (j=0;j<PAR;j++)
     {
       if (0 != pthread_create(&par[j], NULL, &thread_gets, (void*)url))

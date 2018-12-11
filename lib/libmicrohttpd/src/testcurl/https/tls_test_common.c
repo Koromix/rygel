@@ -526,7 +526,9 @@ test_wrap (const char *test_name, int
   return ret;
 }
 
-int testsuite_curl_global_init (void)
+
+int
+testsuite_curl_global_init (void)
 {
   CURLcode res;
 #if LIBCURL_VERSION_NUM >= 0x073800

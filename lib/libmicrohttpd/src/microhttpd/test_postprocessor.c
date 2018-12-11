@@ -171,8 +171,6 @@ test_multipart_garbage (void)
   xdata[1] = 'x';
   xdata[2] = '\r';
   memcpy (&xdata[3], FORM_DATA, size);
-
-  size = strlen (FORM_DATA);
   size += 3;
   for (splitpoint = 1; splitpoint < size; splitpoint++)
   {

@@ -207,7 +207,7 @@ MHD_tls_connection_shutdown (struct MHD_Connection *connection)
   if (MHD_TLS_CONN_WR_CLOSED > connection->tls_state)
     {
       const int res =
-          gnutls_bye(connection->tls_session, GNUTLS_SHUT_WR);
+          gnutls_bye (connection->tls_session, GNUTLS_SHUT_WR);
       if (GNUTLS_E_SUCCESS == res)
         {
           connection->tls_state = MHD_TLS_CONN_WR_CLOSED;

@@ -1,4 +1,4 @@
-This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.3
+This is libmicrohttpd-tutorial.info, produced by makeinfo version 6.5
 from libmicrohttpd-tutorial.texi.
 
 This tutorial documents GNU libmicrohttpd version 0.9.48, last updated 2
@@ -126,7 +126,7 @@ name of this callback function is arbitrary, its parameter list has to
 follow a certain layout.  So please, ignore the lot of parameters for
 now, they will be explained at the point they are needed.  We have to
 use only one of them, 'struct MHD_Connection *connection', for the
-minimalistic functionality we want to archive at the moment.
+minimalistic functionality we want to achieve at the moment.
 
    This parameter is set by the _libmicrohttpd_ daemon and holds the
 necessary information to relate the call with a certain connection.
@@ -192,7 +192,7 @@ int main ()
 {
   struct MHD_Daemon *daemon;
 
-  daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+  daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                              &answer_to_connection, NULL, MHD_OPTION_END);
   if (NULL == daemon) return 1;
 
@@ -347,14 +347,14 @@ function, thus we will just return MHD_NO after we have probed the
 request.  This way, the connection is closed without much ado by the
 server.
 
-static int
-answer_to_connection (void *cls, struct MHD_Connection *connection,
-                      const char *url,
-		      const char *method, const char *version,
-		      const char *upload_data,
+static int 
+answer_to_connection (void *cls, struct MHD_Connection *connection, 
+                      const char *url, 
+		      const char *method, const char *version, 
+		      const char *upload_data, 
                       size_t *upload_data_size, void **con_cls)
 {
-  ...
+  ...  
   return MHD_NO;
 }
 The ellipsis marks the position where the following instructions shall
@@ -377,7 +377,7 @@ pair is printed out one by one until there are no more left.  We do this
 by writing a separate function which will be called for each pair just
 like the above function is called for each HTTP request.  It can then
 print out the content of this pair.
-int print_out_key (void *cls, enum MHD_ValueKind kind,
+int print_out_key (void *cls, enum MHD_ValueKind kind, 
                    const char *key, const char *value)
 {
   printf ("%s: %s\n", key, value);
@@ -477,11 +477,11 @@ can base the new example on the 'hellobrowser' program.
 #define FILENAME "picture.png"
 #define MIMETYPE "image/png"
 
-static int
-answer_to_connection (void *cls, struct MHD_Connection *connection,
-		      const char *url,
-                      const char *method, const char *version,
-		      const char *upload_data,
+static int 
+answer_to_connection (void *cls, struct MHD_Connection *connection, 
+		      const char *url, 
+                      const char *method, const char *version, 
+		      const char *upload_data, 
               	      size_t *upload_data_size, void **con_cls)
 {
   unsigned char *buffer = NULL;
@@ -513,8 +513,8 @@ server side and if so, the client should be informed with
         "<html><body>An internal server error has occured!\
                               </body></html>";
       response =
-	MHD_create_response_from_buffer (strlen (errorstr),
-				         (void *) errorstr,
+	MHD_create_response_from_buffer (strlen (errorstr), 
+				         (void *) errorstr, 
 				         MHD_RESPMEM_PERSISTENT);
       if (response)
         {
@@ -527,25 +527,25 @@ server side and if so, the client should be informed with
         }
       else
         return MHD_NO;
-  if (!ret)
+  if (!ret) 
     {
       const char *errorstr = "<html><body>An internal server error has occured!\
                               </body></html>";
 
       if (buffer) free(buffer);
-
+    
       response = MHD_create_response_from_buffer (strlen(errorstr), (void*) errorstr,
                                                   MHD_RESPMEM_PERSISTENT);
 
       if (response)
-        {
-          ret = MHD_queue_response (connection,
-	      			    MHD_HTTP_INTERNAL_SERVER_ERROR,
+        {     
+          ret = MHD_queue_response (connection, 
+	      			    MHD_HTTP_INTERNAL_SERVER_ERROR, 
 				    response);
           MHD_destroy_response (response);
 
-          return MHD_YES;
-        }
+          return MHD_YES;    
+        } 
       else return MHD_NO;
     }
 
@@ -702,16 +702,16 @@ take this.
    The first time 'answer_to_connection' is called, we will not even
 look at the headers.
 
-static int
+static int 
 answer_to_connection (void *cls, struct MHD_Connection *connection,
-                      const char *url, const char *method, const char *version,
+                      const char *url, const char *method, const char *version, 
                       const char *upload_data, size_t *upload_data_size,
                       void **con_cls)
 {
   if (0 != strcmp(method, "GET")) return MHD_NO;
   if (NULL == *con_cls) {*con_cls = connection; return MHD_YES;}
 
-  ...
+  ... 
   /* else respond accordingly */
   ...
 }
@@ -758,14 +758,14 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
   user = MHD_basic_auth_get_username_password (connection, &pass);
   fail = ( (user == NULL) ||
 	   (0 != strcmp (user, "root")) ||
-	   (0 != strcmp (pass, "pa$$w0rd") ) );
+	   (0 != strcmp (pass, "pa$$w0rd") ) );  
   if (user != NULL) free (user);
   if (pass != NULL) free (pass);
   if (fail)
     {
       const char *page = "<html><body>Go away.</body></html>";
       response =
-	MHD_create_response_from_buffer (strlen (page), (void *) page,
+	MHD_create_response_from_buffer (strlen (page), (void *) page, 
 				       MHD_RESPMEM_PERSISTENT);
       ret = MHD_queue_basic_auth_fail_response (connection,
 						"my realm",
@@ -775,7 +775,7 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
     {
       const char *page = "<html><body>A secret.</body></html>";
       response =
-	MHD_create_response_from_buffer (strlen (page), (void *) page,
+	MHD_create_response_from_buffer (strlen (page), (void *) page, 
 				       MHD_RESPMEM_PERSISTENT);
       ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
     }
@@ -894,7 +894,7 @@ struct connection_info_struct
 {
   int connectiontype;
   char *answerstring;
-  struct MHD_PostProcessor *postprocessor;
+  struct MHD_PostProcessor *postprocessor; 
 };
 
    With these information available to the iterator function, it is able
@@ -906,10 +906,10 @@ posted in several chunks, we had to expand the namestring dynamically as
 additional parts of it with the same 'key' came in.  But in this
 example, the name is assumed to fit entirely inside one single packet.
 
-static int
+static int 
 iterate_post (void *coninfo_cls, enum MHD_ValueKind kind, const char *key,
               const char *filename, const char *content_type,
-              const char *transfer_encoding, const char *data,
+              const char *transfer_encoding, const char *data, 
 	      uint64_t off, size_t size)
 {
   struct connection_info_struct *con_info = coninfo_cls;
@@ -921,10 +921,10 @@ iterate_post (void *coninfo_cls, enum MHD_ValueKind kind, const char *key,
           char *answerstring;
           answerstring = malloc (MAXANSWERSIZE);
           if (!answerstring) return MHD_NO;
-
+      
           snprintf (answerstring, MAXANSWERSIZE, greatingpage, data);
-          con_info->answerstring = answerstring;
-        }
+          con_info->answerstring = answerstring;      
+        } 
       else con_info->answerstring = NULL;
 
       return MHD_NO;
@@ -940,7 +940,7 @@ been allocated for that connection by us, namely the post processor and
 the greetings string.  This cleanup function must take into account that
 it will also be called for finished requests other than _POST_ requests.
 
-void request_completed (void *cls, struct MHD_Connection *connection,
+void request_completed (void *cls, struct MHD_Connection *connection, 
      		        void **con_cls,
                         enum MHD_RequestTerminationCode toe)
 {
@@ -949,20 +949,20 @@ void request_completed (void *cls, struct MHD_Connection *connection,
   if (NULL == con_info) return;
   if (con_info->connectiontype == POST)
     {
-      MHD_destroy_post_processor (con_info->postprocessor);
+      MHD_destroy_post_processor (con_info->postprocessor);        
       if (con_info->answerstring) free (con_info->answerstring);
     }
-
+  
   free (con_info);
-  *con_cls = NULL;
+  *con_cls = NULL;   
 }
 
    _GNU libmicrohttpd_ is informed that it shall call the above function
 when the daemon is started in the main function.
 
 ...
-daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
-                           &answer_to_connection, NULL,
+daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
+                           &answer_to_connection, NULL, 
 			   MHD_OPTION_NOTIFY_COMPLETED, &request_completed, NULL,
 			   MHD_OPTION_END);
 ...
@@ -978,14 +978,14 @@ new instance of a 'struct connection_info_struct' structure, which will
 store all necessary information for later iterations and other
 functions.
 
-static int
-answer_to_connection (void *cls, struct MHD_Connection *connection,
-		      const char *url,
-                      const char *method, const char *version,
-		      const char *upload_data,
+static int 
+answer_to_connection (void *cls, struct MHD_Connection *connection, 
+		      const char *url, 
+                      const char *method, const char *version, 
+		      const char *upload_data, 
                       size_t *upload_data_size, void **con_cls)
 {
-  if(NULL == *con_cls)
+  if(NULL == *con_cls) 
     {
       struct connection_info_struct *con_info;
 
@@ -995,57 +995,57 @@ answer_to_connection (void *cls, struct MHD_Connection *connection,
 
    If the new request is a _POST_, the postprocessor must be created
 now.  In addition, the type of the request is stored for convenience.
-      if (0 == strcmp (method, "POST"))
-        {
-          con_info->postprocessor
-	    = MHD_create_post_processor (connection, POSTBUFFERSIZE,
-                                         iterate_post, (void*) con_info);
+      if (0 == strcmp (method, "POST")) 
+        {      
+          con_info->postprocessor 
+	    = MHD_create_post_processor (connection, POSTBUFFERSIZE, 
+                                         iterate_post, (void*) con_info);   
 
-          if (NULL == con_info->postprocessor)
+          if (NULL == con_info->postprocessor) 
             {
-              free (con_info);
+              free (con_info); 
               return MHD_NO;
             }
           con_info->connectiontype = POST;
-        }
+        } 
       else con_info->connectiontype = GET;
 
    The address of our structure will both serve as the indicator for
 successive iterations and to remember the particular details about the
 connection.
-      *con_cls = (void*) con_info;
+      *con_cls = (void*) con_info; 
       return MHD_YES;
     }
 
    The rest of the function will not be executed on the first iteration.
 A _GET_ request is easily satisfied by sending the question form.
-  if (0 == strcmp (method, "GET"))
+  if (0 == strcmp (method, "GET")) 
     {
-      return send_page (connection, askpage);
-    }
+      return send_page (connection, askpage);     
+    } 
 
    In case of _POST_, we invoke the post processor for as long as data
 keeps incoming, setting '*upload_data_size' to zero in order to indicate
 that we have processed--or at least have considered--all of it.
-  if (0 == strcmp (method, "POST"))
+  if (0 == strcmp (method, "POST")) 
     {
       struct connection_info_struct *con_info = *con_cls;
 
-      if (*upload_data_size != 0)
+      if (*upload_data_size != 0) 
         {
-          MHD_post_process (con_info->postprocessor, upload_data,
+          MHD_post_process (con_info->postprocessor, upload_data,	
 	                    *upload_data_size);
           *upload_data_size = 0;
-
+          
           return MHD_YES;
-        }
-      else if (NULL != con_info->answerstring)
+        } 
+      else if (NULL != con_info->answerstring) 
         return send_page (connection, con_info->answerstring);
-    }
+    } 
 
    Finally, if they are neither _GET_ nor _POST_ requests, the error
 page is returned.
-  return send_page(connection, errorpage);
+  return send_page(connection, errorpage); 
 }
 
    These were the important parts of the program 'simplepost.c'.
@@ -1078,7 +1078,7 @@ static unsigned int    nr_of_uploading_clients = 0;
 
    If there are too many clients uploading, we want the server to
 respond to all requests with a busy message.
-const char* busypage =
+const char* busypage = 
   "<html><body>This server is busy, please try again later.</body></html>";
 
    Otherwise, the server will send a _form_ that informs the user of the
@@ -1099,7 +1099,7 @@ const char* completepage = "<html><body>The upload has been completed.</body></h
 
    We want the server to report internal errors, such as memory shortage
 or file access problems, adequately.
-const char* servererrorpage
+const char* servererrorpage 
   = "<html><body>An internal server error has occured.</body></html>";
 const char* fileexistspage
   = "<html><body>This file already exists.</body></html>";
@@ -1109,17 +1109,17 @@ with a '200 HTTP_OK' status code but in order to improve the 'HTTP'
 conformance of our server a bit, we extend the 'send_page' function so
 that it accepts individual status codes.
 
-static int
-send_page (struct MHD_Connection *connection,
+static int 
+send_page (struct MHD_Connection *connection, 
 	   const char* page, int status_code)
 {
   int ret;
   struct MHD_Response *response;
-
-  response = MHD_create_response_from_buffer (strlen (page), (void*) page,
+  
+  response = MHD_create_response_from_buffer (strlen (page), (void*) page, 
   	     				      MHD_RESPMEM_MUST_COPY);
   if (!response) return MHD_NO;
-
+ 
   ret = MHD_queue_response (connection, status_code, response);
   MHD_destroy_response (response);
 
@@ -1139,18 +1139,18 @@ point, and 'MHD_YES' returned, _MHD_ will not sent any queued messages
 until a postprocessor has been created and the post iterator is called
 at least once.
 
-static int
-answer_to_connection (void *cls, struct MHD_Connection *connection,
-		      const char *url,
-                      const char *method, const char *version,
-		      const char *upload_data,
+static int 
+answer_to_connection (void *cls, struct MHD_Connection *connection, 
+		      const char *url, 
+                      const char *method, const char *version, 
+		      const char *upload_data, 
                       size_t *upload_data_size, void **con_cls)
 {
-  if (NULL == *con_cls)
+  if (NULL == *con_cls) 
     {
       struct connection_info_struct *con_info;
 
-      if (nr_of_uploading_clients >= MAXCLIENTS)
+      if (nr_of_uploading_clients >= MAXCLIENTS) 
         return send_page(connection, busypage, MHD_HTTP_SERVICE_UNAVAILABLE);
 
    If the server is not busy, the 'connection_info' structure is
@@ -1161,14 +1161,14 @@ connection.
       if (NULL == con_info) return MHD_NO;
       con_info->fp = 0;
 
-      if (0 == strcmp (method, "POST"))
-        {
+      if (0 == strcmp (method, "POST")) 
+        {  
           ...
-        }
+        } 
       else con_info->connectiontype = GET;
 
       *con_cls = (void*) con_info;
-
+ 
       return MHD_YES;
     }
 
@@ -1180,60 +1180,60 @@ message ready at all times.  Therefore, the 'connection_info' structure
 is extended to hold the most current response message so that whenever a
 response is sent, the client will get the most informative message.
 Here, the structure is initialized to "no error".
-      if (0 == strcmp (method, "POST"))
-        {
-          con_info->postprocessor
-	    = MHD_create_post_processor (connection, POSTBUFFERSIZE,
-                                         iterate_post, (void*) con_info);
+      if (0 == strcmp (method, "POST")) 
+        {  
+          con_info->postprocessor 
+	    = MHD_create_post_processor (connection, POSTBUFFERSIZE, 
+                                         iterate_post, (void*) con_info);   
 
-          if (NULL == con_info->postprocessor)
+          if (NULL == con_info->postprocessor) 
             {
-              free (con_info);
+              free (con_info); 
               return MHD_NO;
             }
 
           nr_of_uploading_clients++;
-
+          
           con_info->connectiontype = POST;
           con_info->answercode = MHD_HTTP_OK;
           con_info->answerstring = completepage;
-        }
+        } 
       else con_info->connectiontype = GET;
 
    If the connection handler is called for the second time, _GET_
 requests will be answered with the _form_.  We can keep the buffer under
 function scope, because we asked _MHD_ to make its own copy of it for as
 long as it is needed.
-  if (0 == strcmp (method, "GET"))
+  if (0 == strcmp (method, "GET")) 
     {
       int ret;
       char buffer[1024];
-
+        
       sprintf (buffer, askpage, nr_of_uploading_clients);
-      return send_page (connection, buffer, MHD_HTTP_OK);
-    }
+      return send_page (connection, buffer, MHD_HTTP_OK);     
+    } 
 
    The rest of the 'answer_to_connection' function is very similar to
 the 'simplepost.c' example, except the more flexible content of the
 responses.  The _POST_ data is processed until there is none left and
 the execution falls through to return an error page if the connection
 constituted no expected request method.
-  if (0 == strcmp (method, "POST"))
+  if (0 == strcmp (method, "POST")) 
     {
       struct connection_info_struct *con_info = *con_cls;
-
-      if (0 != *upload_data_size)
-        {
+       
+      if (0 != *upload_data_size) 
+        { 
           MHD_post_process (con_info->postprocessor,
 	                    upload_data, *upload_data_size);
           *upload_data_size = 0;
-
+          
           return MHD_YES;
-        }
-      else
-        return send_page (connection, con_info->answerstring,
+        } 
+      else 
+        return send_page (connection, con_info->answerstring, 
 	       		  con_info->answercode);
-    }
+    } 
 
   return send_page(connection, errorpage, MHD_HTTP_BAD_REQUEST);
 }
@@ -1247,11 +1247,11 @@ given connection (there might be several concurrent of them) the posted
 data has to be written to the correct file.  That is why we store a file
 handle in every 'connection_info', so that the it is preserved between
 successive iterations.
-static int
-iterate_post (void *coninfo_cls, enum MHD_ValueKind kind,
+static int 
+iterate_post (void *coninfo_cls, enum MHD_ValueKind kind, 
 	      const char *key,
 	      const char *filename, const char *content_type,
-              const char *transfer_encoding, const char *data,
+              const char *transfer_encoding, const char *data, 
 	      uint64_t off, size_t size)
 {
   struct connection_info_struct *con_info = coninfo_cls;
@@ -1284,16 +1284,16 @@ file of that name exists (or is being uploaded) before we create one
           con_info->answercode = MHD_HTTP_FORBIDDEN;
           return MHD_NO;
         }
-
+      
       con_info->fp = fopen (filename, "ab");
-      if (!con_info->fp) return MHD_NO;
+      if (!con_info->fp) return MHD_NO;    
     }
 
    Occasionally, the iterator function will be called even when there
 are 0 new bytes to process.  The server only needs to write data to the
 file if there is some.
-if (size > 0)
-    {
+if (size > 0) 
+    {  
       if (!fwrite (data, size, sizeof(char), con_info->fp))
         return MHD_NO;
     }
@@ -1310,7 +1310,7 @@ has finished, this iterator function will not be called again.
    The new client was registered when the postprocessor was created.
 Likewise, we unregister the client on destroying the postprocessor when
 the request is completed.
-void request_completed (void *cls, struct MHD_Connection *connection,
+void request_completed (void *cls, struct MHD_Connection *connection, 
      		        void **con_cls,
                         enum MHD_RequestTerminationCode toe)
 {
@@ -1320,17 +1320,17 @@ void request_completed (void *cls, struct MHD_Connection *connection,
 
   if (con_info->connectiontype == POST)
     {
-      if (NULL != con_info->postprocessor)
+      if (NULL != con_info->postprocessor) 
         {
-          MHD_destroy_post_processor (con_info->postprocessor);
+          MHD_destroy_post_processor (con_info->postprocessor); 
           nr_of_uploading_clients--;
         }
 
-      if (con_info->fp) fclose (con_info->fp);
+      if (con_info->fp) fclose (con_info->fp); 
     }
 
   free (con_info);
-  *con_cls = NULL;
+  *con_cls = NULL;      
 }
 
    This is essentially the whole example 'largepost.c'.
@@ -1512,7 +1512,7 @@ main ()
 
    and then we point the _MHD_ daemon to it upon initalization.
 
-  daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_USE_SSL,
+  daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_SSL,
   	   		     PORT, NULL, NULL,
                              &answer_to_connection, NULL,
                              MHD_OPTION_HTTPS_MEM_KEY, key_pem,
@@ -1575,7 +1575,7 @@ You can also use MHD to authenticate the client via SSL/TLS certificates
 authentication).  To do this, you will need to link your application
 against _gnutls_.  Next, when you start the MHD daemon, you must specify
 the root CA that you're willing to trust:
-  daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_USE_SSL,
+  daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_SSL,
   	   		     PORT, NULL, NULL,
                              &answer_to_connection, NULL,
                              MHD_OPTION_HTTPS_MEM_KEY, key_pem,
@@ -1752,7 +1752,7 @@ need at least GnuTLS 3.0.  The main change compared to the simple
 hosting of one domain is that you need to provide a callback instead of
 the key and certificate.  For example, when you start the MHD daemon,
 you could do this:
-  daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_USE_SSL,
+  daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_SSL,
   	   		     PORT, NULL, NULL,
                              &answer_to_connection, NULL,
                              MHD_OPTION_HTTPS_CERT_CALLBACK, &sni_callback,
@@ -2454,7 +2454,7 @@ C.1 hellobrowser.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2465,9 +2465,9 @@ C.1 hellobrowser.c
      #include <string.h>
      #include <microhttpd.h>
      #include <stdio.h>
-
+     
      #define PORT 8888
-
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
@@ -2477,29 +2477,36 @@ C.1 hellobrowser.c
        const char *page = "<html><body>Hello, browser!</body></html>";
        struct MHD_Response *response;
        int ret;
-
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)method;            /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+       (void)upload_data;       /* Unused. Silent compiler warning. */
+       (void)upload_data_size;  /* Unused. Silent compiler warning. */
+       (void)con_cls;           /* Unused. Silent compiler warning. */
+     
        response =
-         MHD_create_response_from_buffer (strlen (page), (void *) page,
+         MHD_create_response_from_buffer (strlen (page), (void *) page, 
      				     MHD_RESPMEM_PERSISTENT);
        ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
        MHD_destroy_response (response);
-
+     
        return ret;
      }
-
-
+     
+     
      int
-     main ()
+     main (void)
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+     
+       daemon = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                                   &answer_to_connection, NULL, MHD_OPTION_END);
        if (NULL == daemon)
          return 1;
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
        return 0;
      }
@@ -2512,7 +2519,7 @@ C.2 logging.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2522,46 +2529,53 @@ C.2 logging.c
      #endif
      #include <microhttpd.h>
      #include <stdio.h>
-
+     
      #define PORT 8888
-
-
+     
+     
      static int
      print_out_key (void *cls, enum MHD_ValueKind kind, const char *key,
                     const char *value)
      {
+       (void)cls;    /* Unused. Silent compiler warning. */
+       (void)kind;   /* Unused. Silent compiler warning. */
        printf ("%s: %s\n", key, value);
        return MHD_YES;
      }
-
-
+     
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
                            const char *version, const char *upload_data,
                            size_t *upload_data_size, void **con_cls)
      {
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+       (void)upload_data;       /* Unused. Silent compiler warning. */
+       (void)upload_data_size;  /* Unused. Silent compiler warning. */
+       (void)con_cls;           /* Unused. Silent compiler warning. */
        printf ("New %s request for %s using version %s\n", method, url, version);
-
+     
        MHD_get_connection_values (connection, MHD_HEADER_KIND, print_out_key,
                                   NULL);
-
+     
        return MHD_NO;
      }
-
-
+     
+     
      int
      main ()
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+     
+       daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                                   &answer_to_connection, NULL, MHD_OPTION_END);
        if (NULL == daemon)
          return 1;
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
        return 0;
      }
@@ -2574,7 +2588,7 @@ C.3 responseheaders.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2588,11 +2602,11 @@ C.3 responseheaders.c
      #include <fcntl.h>
      #include <string.h>
      #include <stdio.h>
-
+     
      #define PORT 8888
      #define FILENAME "picture.png"
      #define MIMETYPE "image/png"
-
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
@@ -2603,10 +2617,16 @@ C.3 responseheaders.c
        int fd;
        int ret;
        struct stat sbuf;
-
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+       (void)upload_data;       /* Unused. Silent compiler warning. */
+       (void)upload_data_size;  /* Unused. Silent compiler warning. */
+       (void)con_cls;           /* Unused. Silent compiler warning. */
+     
        if (0 != strcmp (method, "GET"))
          return MHD_NO;
-
+     
        if ( (-1 == (fd = open (FILENAME, O_RDONLY))) ||
             (0 != fstat (fd, &sbuf)) )
          {
@@ -2626,7 +2646,7 @@ C.3 responseheaders.c
                  MHD_queue_response (connection, MHD_HTTP_INTERNAL_SERVER_ERROR,
                                      response);
                MHD_destroy_response (response);
-
+     
                return ret;
              }
            else
@@ -2637,25 +2657,25 @@ C.3 responseheaders.c
        MHD_add_response_header (response, "Content-Type", MIMETYPE);
        ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
        MHD_destroy_response (response);
-
+     
        return ret;
      }
-
-
+     
+     
      int
      main ()
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+     
+       daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                                   &answer_to_connection, NULL, MHD_OPTION_END);
        if (NULL == daemon)
          return 1;
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
-
+     
        return 0;
      }
 
@@ -2667,7 +2687,7 @@ C.4 basicauthentication.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2680,10 +2700,10 @@ C.4 basicauthentication.c
      #include <string.h>
      #include <stdlib.h>
      #include <stdio.h>
-
+     
      #define PORT 8888
-
-
+     
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
@@ -2695,7 +2715,12 @@ C.4 basicauthentication.c
        int fail;
        int ret;
        struct MHD_Response *response;
-
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+       (void)upload_data;       /* Unused. Silent compiler warning. */
+       (void)upload_data_size;  /* Unused. Silent compiler warning. */
+     
        if (0 != strcmp (method, "GET"))
          return MHD_NO;
        if (NULL == *con_cls)
@@ -2704,12 +2729,13 @@ C.4 basicauthentication.c
            return MHD_YES;
          }
        pass = NULL;
-       user = MHD_basic_auth_get_username_password (connection, &pass);
-       fail = ( (user == NULL) ||
+       user = MHD_basic_auth_get_username_password (connection,
+                                                    &pass);
+       fail = ( (NULL == user) ||
      	   (0 != strcmp (user, "root")) ||
      	   (0 != strcmp (pass, "pa$$w0rd") ) );
-       if (user != NULL) free (user);
-       if (pass != NULL) free (pass);
+       if (NULL != user) MHD_free (user);
+       if (NULL != pass) MHD_free (pass);
        if (fail)
          {
            const char *page = "<html><body>Go away.</body></html>";
@@ -2731,20 +2757,20 @@ C.4 basicauthentication.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      int
-     main ()
+     main (void)
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+     
+       daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                                   &answer_to_connection, NULL, MHD_OPTION_END);
        if (NULL == daemon)
          return 1;
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
        return 0;
      }
@@ -2757,7 +2783,7 @@ C.5 simplepost.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2769,61 +2795,61 @@ C.5 simplepost.c
      #include <stdio.h>
      #include <string.h>
      #include <stdlib.h>
-
+     
      #if defined(_MSC_VER) && _MSC_VER+0 <= 1800
      /* Substitution is OK while return value is not used */
      #define snprintf _snprintf
      #endif
-
+     
      #define PORT            8888
      #define POSTBUFFERSIZE  512
      #define MAXNAMESIZE     20
      #define MAXANSWERSIZE   512
-
+     
      #define GET             0
      #define POST            1
-
+     
      struct connection_info_struct
      {
        int connectiontype;
        char *answerstring;
        struct MHD_PostProcessor *postprocessor;
      };
-
+     
      const char *askpage = "<html><body>\
                             What's your name, Sir?<br>\
                             <form action=\"/namepost\" method=\"post\">\
                             <input name=\"name\" type=\"text\">\
                             <input type=\"submit\" value=\" Send \"></form>\
                             </body></html>";
-
+     
      const char *greetingpage =
        "<html><body><h1>Welcome, %s!</center></h1></body></html>";
-
+     
      const char *errorpage =
        "<html><body>This doesn't seem to be right.</body></html>";
-
-
+     
+     
      static int
      send_page (struct MHD_Connection *connection, const char *page)
      {
        int ret;
        struct MHD_Response *response;
-
-
+     
+     
        response =
          MHD_create_response_from_buffer (strlen (page), (void *) page,
      				     MHD_RESPMEM_PERSISTENT);
        if (!response)
          return MHD_NO;
-
+     
        ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
        MHD_destroy_response (response);
-
+     
        return ret;
      }
-
-
+     
+     
      static int
      iterate_post (void *coninfo_cls, enum MHD_ValueKind kind, const char *key,
                    const char *filename, const char *content_type,
@@ -2831,7 +2857,12 @@ C.5 simplepost.c
                    size_t size)
      {
        struct connection_info_struct *con_info = coninfo_cls;
-
+       (void)kind;               /* Unused. Silent compiler warning. */
+       (void)filename;           /* Unused. Silent compiler warning. */
+       (void)content_type;       /* Unused. Silent compiler warning. */
+       (void)transfer_encoding;  /* Unused. Silent compiler warning. */
+       (void)off;                /* Unused. Silent compiler warning. */
+     
        if (0 == strcmp (key, "name"))
          {
            if ((size > 0) && (size <= MAXNAMESIZE))
@@ -2840,117 +2871,124 @@ C.5 simplepost.c
                answerstring = malloc (MAXANSWERSIZE);
                if (!answerstring)
                  return MHD_NO;
-
+     
                snprintf (answerstring, MAXANSWERSIZE, greetingpage, data);
                con_info->answerstring = answerstring;
              }
            else
              con_info->answerstring = NULL;
-
+     
            return MHD_NO;
          }
-
+     
        return MHD_YES;
      }
-
+     
      static void
      request_completed (void *cls, struct MHD_Connection *connection,
                         void **con_cls, enum MHD_RequestTerminationCode toe)
      {
        struct connection_info_struct *con_info = *con_cls;
-
+       (void)cls;         /* Unused. Silent compiler warning. */
+       (void)connection;  /* Unused. Silent compiler warning. */
+       (void)toe;         /* Unused. Silent compiler warning. */
+     
        if (NULL == con_info)
          return;
-
+     
        if (con_info->connectiontype == POST)
          {
            MHD_destroy_post_processor (con_info->postprocessor);
            if (con_info->answerstring)
              free (con_info->answerstring);
          }
-
+     
        free (con_info);
        *con_cls = NULL;
      }
-
-
+     
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
                            const char *version, const char *upload_data,
                            size_t *upload_data_size, void **con_cls)
      {
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+     
        if (NULL == *con_cls)
          {
            struct connection_info_struct *con_info;
-
+     
            con_info = malloc (sizeof (struct connection_info_struct));
            if (NULL == con_info)
              return MHD_NO;
            con_info->answerstring = NULL;
-
+     
            if (0 == strcmp (method, "POST"))
              {
                con_info->postprocessor =
                  MHD_create_post_processor (connection, POSTBUFFERSIZE,
                                             iterate_post, (void *) con_info);
-
+     
                if (NULL == con_info->postprocessor)
                  {
                    free (con_info);
                    return MHD_NO;
                  }
-
+     
                con_info->connectiontype = POST;
              }
            else
              con_info->connectiontype = GET;
-
+     
            *con_cls = (void *) con_info;
-
+     
            return MHD_YES;
          }
-
+     
        if (0 == strcmp (method, "GET"))
          {
            return send_page (connection, askpage);
          }
-
+     
        if (0 == strcmp (method, "POST"))
          {
            struct connection_info_struct *con_info = *con_cls;
-
+     
            if (*upload_data_size != 0)
              {
                MHD_post_process (con_info->postprocessor, upload_data,
                                  *upload_data_size);
                *upload_data_size = 0;
-
+     
                return MHD_YES;
              }
            else if (NULL != con_info->answerstring)
              return send_page (connection, con_info->answerstring);
          }
-
+     
        return send_page (connection, errorpage);
      }
-
+     
      int
      main ()
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
+     
+       daemon = MHD_start_daemon (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD, PORT, NULL, NULL,
                                   &answer_to_connection, NULL,
                                   MHD_OPTION_NOTIFY_COMPLETED, request_completed,
                                   NULL, MHD_OPTION_END);
        if (NULL == daemon)
          return 1;
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
-
+     
        return 0;
      }
 
@@ -2962,7 +3000,7 @@ C.6 largepost.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -2974,39 +3012,60 @@ C.6 largepost.c
      #include <stdlib.h>
      #include <string.h>
      #include <microhttpd.h>
-
+     
      #ifdef _MSC_VER
      #ifndef strcasecmp
      #define strcasecmp(a,b) _stricmp((a),(b))
      #endif /* !strcasecmp */
      #endif /* _MSC_VER */
-
+     
      #if defined(_MSC_VER) && _MSC_VER+0 <= 1800
      /* Substitution is OK while return value is not used */
      #define snprintf _snprintf
      #endif
-
+     
      #define PORT            8888
      #define POSTBUFFERSIZE  512
      #define MAXCLIENTS      2
-
+     
      enum ConnectionType
        {
          GET = 0,
          POST = 1
        };
-
+     
      static unsigned int nr_of_uploading_clients = 0;
-
+     
+     
+     /**
+      * Information we keep per connection.
+      */
      struct connection_info_struct
      {
        enum ConnectionType connectiontype;
+     
+       /**
+        * Handle to the POST processing state.
+        */
        struct MHD_PostProcessor *postprocessor;
+     
+       /**
+        * File handle where we write uploaded data.
+        */
        FILE *fp;
+     
+       /**
+        * HTTP response body we will return, NULL if not yet known.
+        */
        const char *answerstring;
-       int answercode;
+     
+       /**
+        * HTTP status code we will return, 0 for undecided.
+        */
+       unsigned int answercode;
      };
-
+     
+     
      const char *askpage = "<html><body>\n\
                             Upload a file, please!<br>\n\
                             There are %u clients uploading at the moment.<br>\n\
@@ -3014,23 +3073,22 @@ C.6 largepost.c
                             <input name=\"file\" type=\"file\">\n\
                             <input type=\"submit\" value=\" Send \"></form>\n\
                             </body></html>";
-
      const char *busypage =
        "<html><body>This server is busy, please try again later.</body></html>";
-
      const char *completepage =
        "<html><body>The upload has been completed.</body></html>";
-
      const char *errorpage =
        "<html><body>This doesn't seem to be right.</body></html>";
      const char *servererrorpage =
-       "<html><body>An internal server error has occured.</body></html>";
+       "<html><body>Invalid request.</body></html>";
      const char *fileexistspage =
        "<html><body>This file already exists.</body></html>";
+     const char *fileioerror =
+       "<html><body>IO error writing to disk.</body></html>";
      const char* const postprocerror =
        "<html><head><title>Error</title></head><body>Error processing POST data</body></html>";
-
-
+     
+     
      static int
      send_page (struct MHD_Connection *connection,
                 const char *page,
@@ -3038,7 +3096,7 @@ C.6 largepost.c
      {
        int ret;
        struct MHD_Response *response;
-
+     
        response =
          MHD_create_response_from_buffer (strlen (page),
                                           (void *) page,
@@ -3052,11 +3110,11 @@ C.6 largepost.c
                                  status_code,
                                  response);
        MHD_destroy_response (response);
-
+     
        return ret;
      }
-
-
+     
+     
      static int
      iterate_post (void *coninfo_cls,
                    enum MHD_ValueKind kind,
@@ -3070,41 +3128,55 @@ C.6 largepost.c
      {
        struct connection_info_struct *con_info = coninfo_cls;
        FILE *fp;
-
-       con_info->answerstring = servererrorpage;
-       con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
-
+       (void)kind;               /* Unused. Silent compiler warning. */
+       (void)content_type;       /* Unused. Silent compiler warning. */
+       (void)transfer_encoding;  /* Unused. Silent compiler warning. */
+       (void)off;                /* Unused. Silent compiler warning. */
+     
        if (0 != strcmp (key, "file"))
-         return MHD_NO;
-
+         {
+           con_info->answerstring = servererrorpage;
+           con_info->answercode = MHD_HTTP_BAD_REQUEST;
+           return MHD_YES;
+         }
+     
        if (! con_info->fp)
          {
+           if (0 != con_info->answercode) /* something went wrong */
+             return MHD_YES;
            if (NULL != (fp = fopen (filename, "rb")))
              {
                fclose (fp);
                con_info->answerstring = fileexistspage;
                con_info->answercode = MHD_HTTP_FORBIDDEN;
-               return MHD_NO;
+               return MHD_YES;
              }
-
+           /* NOTE: This is technically a race with the 'fopen()' above,
+              but there is no easy fix, short of moving to open(O_EXCL)
+              instead of using fopen(). For the example, we do not care. */
            con_info->fp = fopen (filename, "ab");
            if (!con_info->fp)
-             return MHD_NO;
+             {
+               con_info->answerstring = fileioerror;
+               con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+               return MHD_YES;
+             }
          }
-
+     
        if (size > 0)
          {
            if (! fwrite (data, sizeof (char), size, con_info->fp))
-             return MHD_NO;
+             {
+               con_info->answerstring = fileioerror;
+               con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
+               return MHD_YES;
+             }
          }
-
-       con_info->answerstring = completepage;
-       con_info->answercode = MHD_HTTP_OK;
-
+     
        return MHD_YES;
      }
-
-
+     
+     
      static void
      request_completed (void *cls,
                         struct MHD_Connection *connection,
@@ -3112,10 +3184,13 @@ C.6 largepost.c
                         enum MHD_RequestTerminationCode toe)
      {
        struct connection_info_struct *con_info = *con_cls;
-
+       (void)cls;         /* Unused. Silent compiler warning. */
+       (void)connection;  /* Unused. Silent compiler warning. */
+       (void)toe;         /* Unused. Silent compiler warning. */
+     
        if (NULL == con_info)
          return;
-
+     
        if (con_info->connectiontype == POST)
          {
            if (NULL != con_info->postprocessor)
@@ -3123,16 +3198,16 @@ C.6 largepost.c
                MHD_destroy_post_processor (con_info->postprocessor);
                nr_of_uploading_clients--;
              }
-
+     
            if (con_info->fp)
              fclose (con_info->fp);
          }
-
+     
        free (con_info);
        *con_cls = NULL;
      }
-
-
+     
+     
      static int
      answer_to_connection (void *cls,
                            struct MHD_Connection *connection,
@@ -3143,21 +3218,26 @@ C.6 largepost.c
                            size_t *upload_data_size,
                            void **con_cls)
      {
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+     
        if (NULL == *con_cls)
          {
+           /* First call, setup data structures */
            struct connection_info_struct *con_info;
-
+     
            if (nr_of_uploading_clients >= MAXCLIENTS)
              return send_page (connection,
                                busypage,
                                MHD_HTTP_SERVICE_UNAVAILABLE);
-
+     
            con_info = malloc (sizeof (struct connection_info_struct));
            if (NULL == con_info)
              return MHD_NO;
-
+           con_info->answercode = 0; /* none yet */
            con_info->fp = NULL;
-
+     
            if (0 == strcasecmp (method, MHD_HTTP_METHOD_POST))
              {
                con_info->postprocessor =
@@ -3165,31 +3245,32 @@ C.6 largepost.c
                                             POSTBUFFERSIZE,
                                             &iterate_post,
                                             (void *) con_info);
-
+     
                if (NULL == con_info->postprocessor)
                  {
                    free (con_info);
                    return MHD_NO;
                  }
-
+     
                nr_of_uploading_clients++;
-
+     
                con_info->connectiontype = POST;
-               con_info->answercode = MHD_HTTP_OK;
-               con_info->answerstring = completepage;
              }
            else
-             con_info->connectiontype = GET;
-
+             {
+               con_info->connectiontype = GET;
+             }
+     
            *con_cls = (void *) con_info;
-
+     
            return MHD_YES;
          }
-
+     
        if (0 == strcasecmp (method, MHD_HTTP_METHOD_GET))
          {
+           /* We just return the standard form for uploads on all GET requests */
            char buffer[1024];
-
+     
            snprintf (buffer,
                      sizeof (buffer),
                      askpage,
@@ -3198,59 +3279,72 @@ C.6 largepost.c
                              buffer,
                              MHD_HTTP_OK);
          }
-
+     
        if (0 == strcasecmp (method, MHD_HTTP_METHOD_POST))
          {
            struct connection_info_struct *con_info = *con_cls;
-
+     
            if (0 != *upload_data_size)
              {
-               if (MHD_post_process (con_info->postprocessor,
-                                     upload_data,
-                                     *upload_data_size) != MHD_YES)
+               /* Upload not yet done */
+               if (0 != con_info->answercode)
                  {
-                   return send_page (connection,
-                                     postprocerror,
-                                     MHD_HTTP_BAD_REQUEST);
+                   /* we already know the answer, skip rest of upload */
+                   *upload_data_size = 0;
+                   return MHD_YES;
+                 }
+               if (MHD_YES !=
+                   MHD_post_process (con_info->postprocessor,
+                                     upload_data,
+                                     *upload_data_size))
+                 {
+                   con_info->answerstring = postprocerror;
+                   con_info->answercode = MHD_HTTP_INTERNAL_SERVER_ERROR;
                  }
                *upload_data_size = 0;
-
+     
                return MHD_YES;
              }
-           else
-     	{
-     	  if (NULL != con_info->fp)
-     	  {
-     	    fclose (con_info->fp);
-     	    con_info->fp = NULL;
-     	  }
-     	  /* Now it is safe to open and inspect the file before
-                  calling send_page with a response */
-     	  return send_page (connection,
-                                 con_info->answerstring,
-     			    con_info->answercode);
-     	}
-
+           /* Upload finished */
+           if (NULL != con_info->fp)
+             {
+               fclose (con_info->fp);
+               con_info->fp = NULL;
+             }
+           if (0 == con_info->answercode)
+             {
+               /* No errors encountered, declare success */
+               con_info->answerstring = completepage;
+               con_info->answercode = MHD_HTTP_OK;
+             }
+           return send_page (connection,
+                             con_info->answerstring,
+                             con_info->answercode);
          }
-
+     
+       /* Note a GET or a POST, generate error */
        return send_page (connection,
                          errorpage,
                          MHD_HTTP_BAD_REQUEST);
      }
-
-
+     
+     
      int
      main ()
      {
        struct MHD_Daemon *daemon;
-
-       daemon = MHD_start_daemon (MHD_USE_SELECT_INTERNALLY,
+     
+       daemon = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD,
                                   PORT, NULL, NULL,
                                   &answer_to_connection, NULL,
                                   MHD_OPTION_NOTIFY_COMPLETED, &request_completed, NULL,
                                   MHD_OPTION_END);
        if (NULL == daemon)
-         return 1;
+         {
+           fprintf (stderr,
+                    "Failed to start daemon\n");
+           return 1;
+         }
        (void) getchar ();
        MHD_stop_daemon (daemon);
        return 0;
@@ -3264,17 +3358,17 @@ C.7 sessions.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      /* needed for asprintf */
      #define _GNU_SOURCE
-
+     
      #include <stdlib.h>
      #include <string.h>
      #include <stdio.h>
      #include <errno.h>
      #include <time.h>
      #include <microhttpd.h>
-
+     
      #if defined _WIN32 && !defined(__MINGW64_VERSION_MAJOR)
      static int
      asprintf (char **resultp, const char *format, ...)
@@ -3282,12 +3376,12 @@ C.7 sessions.c
        va_list argptr;
        char *result = NULL;
        int len = 0;
-
+     
        if (format == NULL)
          return -1;
-
+     
        va_start (argptr, format);
-
+     
        len = _vscprintf ((char *) format, argptr);
        if (len >= 0)
        {
@@ -3314,43 +3408,43 @@ C.7 sessions.c
        return len;
      }
      #endif
-
+     
      /**
       * Invalid method page.
       */
      #define METHOD_ERROR "<html><head><title>Illegal request</title></head><body>Go away.</body></html>"
-
+     
      /**
       * Invalid URL page.
       */
      #define NOT_FOUND_ERROR "<html><head><title>Not found</title></head><body>Go away.</body></html>"
-
+     
      /**
       * Front page. (/)
       */
      #define MAIN_PAGE "<html><head><title>Welcome</title></head><body><form action=\"/2\" method=\"post\">What is your name? <input type=\"text\" name=\"v1\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></body></html>"
-
+     
      /**
       * Second page. (/2)
       */
      #define SECOND_PAGE "<html><head><title>Tell me more</title></head><body><a href=\"/\">previous</a> <form action=\"/S\" method=\"post\">%s, what is your job? <input type=\"text\" name=\"v2\" value=\"%s\" /><input type=\"submit\" value=\"Next\" /></body></html>"
-
+     
      /**
       * Second page (/S)
       */
      #define SUBMIT_PAGE "<html><head><title>Ready to submit?</title></head><body><form action=\"/F\" method=\"post\"><a href=\"/2\">previous </a> <input type=\"hidden\" name=\"DONE\" value=\"yes\" /><input type=\"submit\" value=\"Submit\" /></body></html>"
-
+     
      /**
       * Last page.
       */
      #define LAST_PAGE "<html><head><title>Thank you</title></head><body>Thank you.</body></html>"
-
+     
      /**
       * Name of our cookie.
       */
      #define COOKIE_NAME "session"
-
-
+     
+     
      /**
       * State we keep for each user/session/browser.
       */
@@ -3360,71 +3454,71 @@ C.7 sessions.c
         * We keep all sessions in a linked list.
         */
        struct Session *next;
-
+     
        /**
         * Unique ID for this session.
         */
        char sid[33];
-
+     
        /**
         * Reference counter giving the number of connections
         * currently using this session.
         */
        unsigned int rc;
-
+     
        /**
         * Time when this session was last active.
         */
        time_t start;
-
+     
        /**
         * String submitted via form.
         */
        char value_1[64];
-
+     
        /**
         * Another value submitted via form.
         */
        char value_2[64];
-
+     
      };
-
-
+     
+     
      /**
       * Data kept per request.
       */
      struct Request
      {
-
+     
        /**
         * Associated session.
         */
        struct Session *session;
-
+     
        /**
         * Post processor handling form data (IF this is
         * a POST request).
         */
        struct MHD_PostProcessor *pp;
-
+     
        /**
         * URL to serve in response to this POST (if this request
         * was a 'POST')
         */
        const char *post_url;
-
+     
      };
-
-
+     
+     
      /**
       * Linked list of all active sessions.  Yes, O(n) but a
       * hash table would be overkill for a simple example...
       */
      static struct Session *sessions;
-
-
-
-
+     
+     
+     
+     
      /**
       * Return the session handle for this connection, or
       * create one if this is a new user.
@@ -3434,7 +3528,7 @@ C.7 sessions.c
      {
        struct Session *ret;
        const char *cookie;
-
+     
        cookie = MHD_lookup_connection_value (connection,
      					MHD_COOKIE_KIND,
      					COOKIE_NAME);
@@ -3476,8 +3570,8 @@ C.7 sessions.c
        sessions = ret;
        return ret;
      }
-
-
+     
+     
      /**
       * Type of handler that generates a reply.
       *
@@ -3491,8 +3585,8 @@ C.7 sessions.c
      			   const char *mime,
      			   struct Session *session,
      			   struct MHD_Connection *connection);
-
-
+     
+     
      /**
       * Entry we generate for each page served.
       */
@@ -3502,24 +3596,24 @@ C.7 sessions.c
         * Acceptable URL for this page.
         */
        const char *url;
-
+     
        /**
         * Mime type to set for the page.
         */
        const char *mime;
-
+     
        /**
         * Handler to call to generate response.
         */
        PageHandler handler;
-
+     
        /**
         * Extra argument to handler.
         */
        const void *handler_cls;
      };
-
-
+     
+     
      /**
       * Add header to response to set a session cookie.
       *
@@ -3545,8 +3639,8 @@ C.7 sessions.c
      	       "Failed to set session cookie header!\n");
          }
      }
-
-
+     
+     
      /**
       * Handler that returns a simple static HTTP page that
       * is passed in via 'cls'.
@@ -3565,7 +3659,7 @@ C.7 sessions.c
        int ret;
        const char *form = cls;
        struct MHD_Response *response;
-
+     
        /* return static form */
        response = MHD_create_response_from_buffer (strlen (form),
      					      (void *) form,
@@ -3580,8 +3674,8 @@ C.7 sessions.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      /**
       * Handler that adds the 'v1' value to the given HTML code.
       *
@@ -3600,7 +3694,7 @@ C.7 sessions.c
        const char *form = cls;
        char *reply;
        struct MHD_Response *response;
-
+     
        if (-1 == asprintf (&reply,
      		      form,
      		      session->value_1))
@@ -3622,8 +3716,8 @@ C.7 sessions.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      /**
       * Handler that adds the 'v1' and 'v2' values to the given HTML code.
       *
@@ -3642,7 +3736,7 @@ C.7 sessions.c
        const char *form = cls;
        char *reply;
        struct MHD_Response *response;
-
+     
        if (-1 == asprintf (&reply,
      		      form,
      		      session->value_1,
@@ -3665,8 +3759,8 @@ C.7 sessions.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      /**
       * Handler used to generate a 404 reply.
       *
@@ -3683,7 +3777,9 @@ C.7 sessions.c
      {
        int ret;
        struct MHD_Response *response;
-
+       (void)cls;     /* Unused. Silent compiler warning. */
+       (void)session; /* Unused. Silent compiler warning. */
+     
        /* unsupported HTTP method */
        response = MHD_create_response_from_buffer (strlen (NOT_FOUND_ERROR),
      					      (void *) NOT_FOUND_ERROR,
@@ -3697,8 +3793,8 @@ C.7 sessions.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      /**
       * List of all pages served by this HTTP server.
       */
@@ -3710,9 +3806,9 @@ C.7 sessions.c
          { "/F", "text/html", &serve_simple_form, LAST_PAGE },
          { NULL, NULL, &not_found_page, NULL } /* 404 */
        };
-
-
-
+     
+     
+     
      /**
       * Iterator over key-value pairs where the value
       * maybe made available in increments and/or may
@@ -3743,7 +3839,11 @@ C.7 sessions.c
      {
        struct Request *request = cls;
        struct Session *session = request->session;
-
+       (void)kind;               /* Unused. Silent compiler warning. */
+       (void)filename;           /* Unused. Silent compiler warning. */
+       (void)content_type;       /* Unused. Silent compiler warning. */
+       (void)transfer_encoding;  /* Unused. Silent compiler warning. */
+     
        if (0 == strcmp ("DONE", key))
          {
            fprintf (stdout,
@@ -3778,8 +3878,8 @@ C.7 sessions.c
        fprintf (stderr, "Unsupported form value `%s'\n", key);
        return MHD_YES;
      }
-
-
+     
+     
      /**
       * Main MHD callback for handling requests.
       *
@@ -3829,7 +3929,9 @@ C.7 sessions.c
        struct Session *session;
        int ret;
        unsigned int i;
-
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+     
        request = *ptr;
        if (NULL == request)
          {
@@ -3883,7 +3985,7 @@ C.7 sessions.c
            if (NULL != request->post_url)
      	url = request->post_url;
          }
-
+     
        if ( (0 == strcmp (method, MHD_HTTP_METHOD_GET)) ||
             (0 == strcmp (method, MHD_HTTP_METHOD_HEAD)) )
          {
@@ -3910,8 +4012,8 @@ C.7 sessions.c
        MHD_destroy_response (response);
        return ret;
      }
-
-
+     
+     
      /**
       * Callback called upon completion of a request.
       * Decrements session reference counter.
@@ -3928,7 +4030,10 @@ C.7 sessions.c
      			    enum MHD_RequestTerminationCode toe)
      {
        struct Request *request = *con_cls;
-
+       (void)cls;         /* Unused. Silent compiler warning. */
+       (void)connection;  /* Unused. Silent compiler warning. */
+       (void)toe;         /* Unused. Silent compiler warning. */
+     
        if (NULL == request)
          return;
        if (NULL != request->session)
@@ -3937,8 +4042,8 @@ C.7 sessions.c
          MHD_destroy_post_processor (request->pp);
        free (request);
      }
-
-
+     
+     
      /**
       * Clean up handles of sessions that have been idle for
       * too long.
@@ -3950,7 +4055,7 @@ C.7 sessions.c
        struct Session *prev;
        struct Session *next;
        time_t now;
-
+     
        now = time (NULL);
        prev = NULL;
        pos = sessions;
@@ -3971,8 +4076,8 @@ C.7 sessions.c
            pos = next;
          }
      }
-
-
+     
+     
      /**
       * Call with the port number as the only argument.
       * Never terminates (other than by signals, such as CTRL-C).
@@ -3988,7 +4093,7 @@ C.7 sessions.c
        fd_set es;
        MHD_socket max;
        MHD_UNSIGNED_LONG_LONG mhd_timeout;
-
+     
        if (argc != 2)
          {
            printf ("%s PORT\n", argv[0]);
@@ -3996,7 +4101,7 @@ C.7 sessions.c
          }
        /* initialize PRNG */
        srand ((unsigned int) time (NULL));
-       d = MHD_start_daemon (MHD_USE_DEBUG,
+       d = MHD_start_daemon (MHD_USE_ERROR_LOG,
                              atoi (argv[1]),
                              NULL, NULL,
      			&create_response, NULL,
@@ -4044,7 +4149,7 @@ C.8 tlsauthentication.c
 
      /* Feel free to use this example code in any way
         you see fit (Public Domain) */
-
+     
      #include <sys/types.h>
      #ifndef _WIN32
      #include <sys/select.h>
@@ -4056,93 +4161,93 @@ C.8 tlsauthentication.c
      #include <string.h>
      #include <stdio.h>
      #include <stdlib.h>
-
+     
      #define PORT 8888
-
+     
      #define REALM     "\"Maintenance\""
      #define USER      "a legitimate user"
      #define PASSWORD  "and his password"
-
+     
      #define SERVERKEYFILE "server.key"
      #define SERVERCERTFILE "server.pem"
-
-
+     
+     
      static char *
      string_to_base64 (const char *message)
      {
        const char *lookup =
          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
        unsigned long l;
-       int i;
+       size_t i;
        char *tmp;
        size_t length = strlen (message);
-
+     
        tmp = malloc (length * 2);
        if (NULL == tmp)
          return tmp;
-
+     
        tmp[0] = 0;
-
+     
        for (i = 0; i < length; i += 3)
          {
            l = (((unsigned long) message[i]) << 16)
              | (((i + 1) < length) ? (((unsigned long) message[i + 1]) << 8) : 0)
              | (((i + 2) < length) ? ((unsigned long) message[i + 2]) : 0);
-
-
+     
+     
            strncat (tmp, &lookup[(l >> 18) & 0x3F], 1);
            strncat (tmp, &lookup[(l >> 12) & 0x3F], 1);
-
+     
            if (i + 1 < length)
              strncat (tmp, &lookup[(l >> 6) & 0x3F], 1);
            if (i + 2 < length)
              strncat (tmp, &lookup[l & 0x3F], 1);
          }
-
+     
        if (length % 3)
          strncat (tmp, "===", 3 - length % 3);
-
+     
        return tmp;
      }
-
-
+     
+     
      static long
      get_file_size (const char *filename)
      {
        FILE *fp;
-
+     
        fp = fopen (filename, "rb");
        if (fp)
          {
            long size;
-
+     
            if ((0 != fseek (fp, 0, SEEK_END)) || (-1 == (size = ftell (fp))))
              size = 0;
-
+     
            fclose (fp);
-
+     
            return size;
          }
        else
          return 0;
      }
-
-
+     
+     
      static char *
      load_file (const char *filename)
      {
        FILE *fp;
        char *buffer;
        long size;
-
+     
        size = get_file_size (filename);
        if (0 == size)
          return NULL;
-
+     
        fp = fopen (filename, "rb");
        if (! fp)
          return NULL;
-
+     
        buffer = malloc (size + 1);
        if (! buffer)
          {
@@ -4150,62 +4255,70 @@ C.8 tlsauthentication.c
            return NULL;
          }
        buffer[size] = '\0';
-
-       if (size != fread (buffer, 1, size, fp))
+     
+       if (size != (long)fread (buffer, 1, size, fp))
          {
            free (buffer);
            buffer = NULL;
          }
-
+     
        fclose (fp);
        return buffer;
      }
-
-
+     
+     
      static int
      ask_for_authentication (struct MHD_Connection *connection, const char *realm)
      {
        int ret;
        struct MHD_Response *response;
        char *headervalue;
+       size_t slen;
        const char *strbase = "Basic realm=";
-
+     
        response = MHD_create_response_from_buffer (0, NULL,
      					      MHD_RESPMEM_PERSISTENT);
        if (!response)
          return MHD_NO;
-
-       headervalue = malloc (strlen (strbase) + strlen (realm) + 1);
-       if (!headervalue)
+     
+       slen = strlen (strbase) + strlen (realm) + 1;
+       if (NULL == (headervalue = malloc (slen)))
          return MHD_NO;
-
-       strcpy (headervalue, strbase);
-       strcat (headervalue, realm);
-
-       ret = MHD_add_response_header (response, "WWW-Authenticate", headervalue);
+       snprintf (headervalue,
+     	    slen,
+     	    "%s%s",
+     	    strbase,
+     	    realm);
+       ret = MHD_add_response_header (response,
+     				 "WWW-Authenticate",
+     				 headervalue);
        free (headervalue);
-       if (!ret)
+       if (! ret)
          {
            MHD_destroy_response (response);
            return MHD_NO;
          }
-
-       ret = MHD_queue_response (connection, MHD_HTTP_UNAUTHORIZED, response);
-
+     
+       ret = MHD_queue_response (connection,
+     			    MHD_HTTP_UNAUTHORIZED,
+     			    response);
        MHD_destroy_response (response);
-
        return ret;
      }
-
+     
+     
      static int
      is_authenticated (struct MHD_Connection *connection,
-                       const char *username, const char *password)
+                       const char *username,
+     		  const char *password)
      {
        const char *headervalue;
-       char *expected_b64, *expected;
+       char *expected_b64;
+       char *expected;
        const char *strbase = "Basic ";
        int authenticated;
-
+       size_t slen;
+       
        headervalue =
          MHD_lookup_connection_value (connection, MHD_HEADER_KIND,
                                       "Authorization");
@@ -4213,55 +4326,59 @@ C.8 tlsauthentication.c
          return 0;
        if (0 != strncmp (headervalue, strbase, strlen (strbase)))
          return 0;
-
-       expected = malloc (strlen (username) + 1 + strlen (password) + 1);
-       if (NULL == expected)
+     
+       slen = strlen (username) + 1 + strlen (password) + 1;
+       if (NULL == (expected = malloc (slen)))
          return 0;
-
-       strcpy (expected, username);
-       strcat (expected, ":");
-       strcat (expected, password);
-
+       snprintf (expected,
+     	    slen,
+     	    "%s:%s",
+     	    username,
+     	    password);
        expected_b64 = string_to_base64 (expected);
        free (expected);
        if (NULL == expected_b64)
          return 0;
-
+     
        authenticated =
          (strcmp (headervalue + strlen (strbase), expected_b64) == 0);
-
        free (expected_b64);
-
        return authenticated;
      }
-
-
+     
+     
      static int
      secret_page (struct MHD_Connection *connection)
      {
        int ret;
        struct MHD_Response *response;
        const char *page = "<html><body>A secret.</body></html>";
-
+     
        response =
          MHD_create_response_from_buffer (strlen (page), (void *) page,
      				     MHD_RESPMEM_PERSISTENT);
        if (!response)
          return MHD_NO;
-
+     
        ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
        MHD_destroy_response (response);
-
+     
        return ret;
      }
-
-
+     
+     
      static int
      answer_to_connection (void *cls, struct MHD_Connection *connection,
                            const char *url, const char *method,
                            const char *version, const char *upload_data,
                            size_t *upload_data_size, void **con_cls)
      {
+       (void)cls;               /* Unused. Silent compiler warning. */
+       (void)url;               /* Unused. Silent compiler warning. */
+       (void)version;           /* Unused. Silent compiler warning. */
+       (void)upload_data;       /* Unused. Silent compiler warning. */
+       (void)upload_data_size;  /* Unused. Silent compiler warning. */
+     
        if (0 != strcmp (method, "GET"))
          return MHD_NO;
        if (NULL == *con_cls)
@@ -4269,51 +4386,55 @@ C.8 tlsauthentication.c
            *con_cls = connection;
            return MHD_YES;
          }
-
+     
        if (!is_authenticated (connection, USER, PASSWORD))
          return ask_for_authentication (connection, REALM);
-
+     
        return secret_page (connection);
      }
-
-
+     
+     
      int
      main ()
      {
        struct MHD_Daemon *daemon;
        char *key_pem;
        char *cert_pem;
-
+     
        key_pem = load_file (SERVERKEYFILE);
        cert_pem = load_file (SERVERCERTFILE);
-
+     
        if ((key_pem == NULL) || (cert_pem == NULL))
          {
            printf ("The key/certificate files could not be read.\n");
+           if (NULL != key_pem)
+             free (key_pem);
+           if (NULL != cert_pem)
+             free (cert_pem);
            return 1;
          }
-
+     
        daemon =
-         MHD_start_daemon (MHD_USE_SELECT_INTERNALLY | MHD_USE_TLS, PORT, NULL,
+         MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_TLS, PORT, NULL,
                            NULL, &answer_to_connection, NULL,
                            MHD_OPTION_HTTPS_MEM_KEY, key_pem,
                            MHD_OPTION_HTTPS_MEM_CERT, cert_pem, MHD_OPTION_END);
        if (NULL == daemon)
          {
            printf ("%s\n", cert_pem);
-
+     
            free (key_pem);
            free (cert_pem);
-
+     
            return 1;
          }
-
+     
        (void) getchar ();
-
+     
        MHD_stop_daemon (daemon);
        free (key_pem);
        free (cert_pem);
-
+     
        return 0;
      }
 
@@ -4323,23 +4444,23 @@ Tag Table:
 Node: Top858
 Node: Introduction1906
 Node: Hello browser example3211
-Node: Exploring requests14460
-Node: Response headers19876
-Node: Supporting basic authentication27782
-Node: Processing POST data35190
-Node: Improved processing of POST data43853
-Node: Session management54564
-Node: Adding a layer of security58078
-Node: Bibliography72643
-Node: License text73837
-Node: Example programs98993
-Node: hellobrowser.c99306
-Node: logging.c100849
-Node: responseheaders.c102432
-Node: basicauthentication.c105058
-Node: simplepost.c107597
-Node: largepost.c113433
-Node: sessions.c122430
-Node: tlsauthentication.c144775
+Node: Exploring requests14466
+Node: Response headers19890
+Node: Supporting basic authentication27820
+Node: Processing POST data35235
+Node: Improved processing of POST data43981
+Node: Session management54798
+Node: Adding a layer of security58312
+Node: Bibliography72895
+Node: License text74089
+Node: Example programs99245
+Node: hellobrowser.c99558
+Node: logging.c101674
+Node: responseheaders.c103803
+Node: basicauthentication.c106926
+Node: simplepost.c109940
+Node: largepost.c116781
+Node: sessions.c128442
+Node: tlsauthentication.c151908
 
 End Tag Table

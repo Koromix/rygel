@@ -589,9 +589,12 @@ main (int argc, char *const *argv)
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalPost ();
-  errorCount += testMultithreadedPost ();
-  errorCount += testMultithreadedPoolPost ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPost ();
+      errorCount += testMultithreadedPost ();
+      errorCount += testMultithreadedPoolPost ();
+    }
   errorCount += testExternalPost ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

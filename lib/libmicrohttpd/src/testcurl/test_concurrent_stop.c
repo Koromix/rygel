@@ -169,7 +169,10 @@ do_gets (void * param)
   char url[64];
   int port = (int)(intptr_t)param;
 
-  sprintf(url, "http://127.0.0.1:%d/hello_world", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d/hello_world",
+            port);
 
   for (j=0;j<PAR;j++)
     {

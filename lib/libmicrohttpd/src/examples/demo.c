@@ -433,7 +433,7 @@ struct UploadContext
  * @param ret string to update, NULL or 0-terminated
  * @param data data to append
  * @param size number of bytes in 'data'
- * @return MHD_NO on allocation failure, MHD_YES on success
+ * @return #MHD_NO on allocation failure, #MHD_YES on success
  */
 static int
 do_append (char **ret,
@@ -447,13 +447,18 @@ do_append (char **ret,
     old_len = 0;
   else
     old_len = strlen (*ret);
-  buf = malloc (old_len + size + 1);
-  if (NULL == buf)
+  if (NULL == (buf = malloc (old_len + size + 1)))
     return MHD_NO;
-  memcpy (buf, *ret, old_len);
   if (NULL != *ret)
-    free (*ret);
-  memcpy (&buf[old_len], data, size);
+    {
+      memcpy (buf,
+	      *ret,
+	      old_len);
+      free (*ret);
+    }
+  memcpy (&buf[old_len],
+	  data,
+	  size);
   buf[old_len + size] = '\0';
   *ret = buf;
   return MHD_YES;
@@ -476,8 +481,8 @@ do_append (char **ret,
  *              specified offset
  * @param off offset of data in the overall value
  * @param size number of bytes in data available
- * @return MHD_YES to continue iterating,
- *         MHD_NO to abort the iteration
+ * @return #MHD_YES to continue iterating,
+ *         #MHD_NO to abort the iteration
  */
 static int
 process_upload_data (void *cls,
@@ -678,9 +683,9 @@ return_directory_response (struct MHD_Connection *connection)
  * @param method GET, PUT, POST, etc.
  * @param version HTTP version
  * @param upload_data data from upload (PUT/POST)
- * @param upload_data_size number of bytes in "upload_data"
+ * @param upload_data_size number of bytes in @a upload_data
  * @param ptr our context
- * @return MHD_YES on success, MHD_NO to drop connection
+ * @return #MHD_YES on success, #MHD_NO to drop connection
  */
 static int
 generate_page (void *cls,
@@ -695,8 +700,8 @@ generate_page (void *cls,
   int ret;
   int fd;
   struct stat buf;
-  (void)cls;               /* Unused. Silent compiler warning. */
-  (void)version;           /* Unused. Silent compiler warning. */
+  (void) cls;               /* Unused. Silent compiler warning. */
+  (void) version;           /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (url, "/"))
     {

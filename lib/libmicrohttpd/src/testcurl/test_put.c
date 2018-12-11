@@ -462,6 +462,8 @@ curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
           MHD_stop_daemon (d);
           return 4096;
         }
+      if (maxsock > maxposixs)
+	maxposixs = maxsock;
       tv.tv_sec = 0;
       tv.tv_usec = 1000;
       if (-1 == select (maxposixs + 1, &rs, &ws, &es, &tv))
@@ -523,9 +525,12 @@ main (int argc, char *const *argv)
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalPut ();
-  errorCount += testMultithreadedPut ();
-  errorCount += testMultithreadedPoolPut ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPut ();
+      errorCount += testMultithreadedPut ();
+      errorCount += testMultithreadedPoolPut ();
+    }
   errorCount += testExternalPut ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

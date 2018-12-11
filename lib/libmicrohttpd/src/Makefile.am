@@ -14,6 +14,11 @@ if BUILD_EXAMPLES
 SUBDIRS += examples
 endif
 
+# Finally (last!) also build experimental lib...
+if HAVE_EXPERIMENTAL
+SUBDIRS += lib
+endif
+
 EXTRA_DIST = \
  datadir/cert-and-key.pem \
  datadir/cert-and-key-for-wireshark.pem 

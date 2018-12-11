@@ -1,6 +1,6 @@
 /*
      This file is part of libmicrohttpd
-     Copyright (C) 2006-2017 Christian Grothoff (and other contributing authors)
+     Copyright (C) 2006-2018 Christian Grothoff (and other contributing authors)
 
      This library is free software; you can redistribute it and/or
      modify it under the terms of the GNU Lesser General Public
@@ -126,7 +126,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00095900
+#define MHD_VERSION 0x00096200
 
 /**
  * MHD-internal return code for "YES".
@@ -291,6 +291,12 @@ _MHD_DEPR_MACRO("Macro MHD_LONG_LONG is deprecated, use MHD_UNSIGNED_LONG_LONG")
 #else /* MHD_LONG_LONG_PRINTF */
 _MHD_DEPR_MACRO("Macro MHD_LONG_LONG_PRINTF is deprecated, use MHD_UNSIGNED_LONG_LONG_PRINTF")
 #endif
+
+
+/**
+ * Length of the binary output of the MD5 hash function.
+ */
+#define	 MHD_MD5_DIGEST_SIZE 16
 
 
 /**
@@ -1161,6 +1167,25 @@ typedef void
 
 
 /**
+ * Function called to lookup the pre shared key (@a psk) for a given
+ * HTTP connection based on the @a username.
+ *
+ * @param cls closure
+ * @param connection the HTTPS connection
+ * @param username the user name claimed by the other side
+ * @param psk[out] to be set to the pre-shared-key; should be allocated with malloc(),
+ *                 will be freed by MHD
+ * @param psk_size[out] to be set to the number of bytes in @a psk
+ * @return 0 on success, -1 on errors
+ */
+typedef int
+(*MHD_PskServerCredentialsCallback)(void *cls,
+				    const struct MHD_Connection *connection,
+				    const char *username,
+				    void **psk,
+				    size_t *psk_size);
+
+/**
  * @brief MHD options.
  *
  * Passed in the varargs portion of #MHD_start_daemon.
@@ -1315,10 +1340,10 @@ enum MHD_OPTION
   /**
    * Number (`unsigned int`) of threads in thread pool. Enable
    * thread pooling by setting this value to to something
-   * greater than 1. Currently, thread model must be
+   * greater than 1. Currently, thread mode must be
    * #MHD_USE_INTERNAL_POLLING_THREAD if thread pooling is enabled
    * (#MHD_start_daemon returns NULL for an unsupported thread
-   * model).
+   * mode).
    */
   MHD_OPTION_THREAD_POOL_SIZE = 14,
 
@@ -1389,7 +1414,7 @@ enum MHD_OPTION
 
   /**
    * Memory pointer for the certificate (ca.pem) to be used by the
-   * HTTPS daemon for client authentification.
+   * HTTPS daemon for client authentication.
    * This option should be followed by a `const char *` argument.
    */
   MHD_OPTION_HTTPS_MEM_TRUST = 20,
@@ -1470,16 +1495,28 @@ enum MHD_OPTION
   MHD_OPTION_LISTEN_BACKLOG_SIZE = 28,
 
   /**
-   * If set to 1 - be strict about the protocol (as opposed to as
-   * tolerant as possible).  Specifically, at the moment, this flag
-   * causes MHD to reject HTTP 1.1 connections without a "Host" header.
-   * This is required by the standard, but of course in violation of
-   * the "be as liberal as possible in what you accept" norm.  It is
-   * recommended to set this to 1 if you are testing clients against
-   * MHD, and 0 in production.
-   * This option should be followed by an `int` argument.
+   * If set to 1 - be strict about the protocol.  Use -1 to be
+   * as tolerant as possible.
+   *
+   * Specifically, at the moment, at 1 this flag
+   * causes MHD to reject HTTP 1.1 connections without a "Host" header,
+   * and to disallow spaces in the URL or (at -1) in HTTP header key strings.
+   *
+   * These are required by some versions of the standard, but of
+   * course in violation of the "be as liberal as possible in what you
+   * accept" norm.  It is recommended to set this to 1 if you are
+   * testing clients against MHD, and 0 in production.  This option
+   * should be followed by an `int` argument.
    */
-  MHD_OPTION_STRICT_FOR_CLIENT = 29
+  MHD_OPTION_STRICT_FOR_CLIENT = 29,
+
+  /**
+   * This should be a pointer to callback of type
+   * gnutls_psk_server_credentials_function that will be given to
+   * gnutls_psk_set_server_credentials_function. It is used to
+   * retrieve the shared key for a given username.
+   */
+  MHD_OPTION_GNUTLS_PSK_CRED_HANDLER = 30
 };
 
 
@@ -2558,10 +2595,10 @@ MHD_suspend_connection (struct MHD_Connection *connection);
  * result in undefined behavior.
  *
  * If you are using this function in ``external'' select mode, you must
- * make sure to run #MHD_run() afterwards (before again calling
- * #MHD_get_fdset(), as otherwise the change may not be reflected in
- * the set returned by #MHD_get_fdset() and you may end up with a
- * connection that is stuck until the next network activity.
+ * make sure to run #MHD_run() and #MHD_get_timeout() afterwards (before
+ * again calling #MHD_get_fdset()), as otherwise the change may not be
+ * reflected in the set returned by #MHD_get_fdset() and you may end up
+ * with a connection that is stuck until the next network activity.
  *
  * @param connection the connection to resume
  */
@@ -2586,8 +2623,19 @@ enum MHD_ResponseFlags
    * Only respond in conservative HTTP 1.0-mode.   In particular,
    * do not (automatically) sent "Connection" headers and always
    * close the connection after generating the response.
+   * By default, MHD will respond using the same HTTP version which
+   * was set in the request. You can also set the
+   * #MHD_RF_HTTP_VERSION_1_0_RESPONSE flag to force version 1.0
+   * in the response.
    */
-  MHD_RF_HTTP_VERSION_1_0_ONLY = 1
+  MHD_RF_HTTP_VERSION_1_0_ONLY = 1,
+
+  /**
+   * Only respond in HTTP 1.0-mode. Contrary to the
+   * #MHD_RF_HTTP_VERSION_1_0_ONLY flag, the response's HTTP version will
+   * always be set to 1.0 and "Connection" headers are still supported.
+   */
+  MHD_RF_HTTP_VERSION_1_0_RESPONSE = 2
 
 };
 
@@ -2713,6 +2761,24 @@ _MHD_EXTERN struct MHD_Response *
 MHD_create_response_from_buffer (size_t size,
 				 void *buffer,
 				 enum MHD_ResponseMemoryMode mode);
+
+
+
+
+/**
+ * Create a response object.  The response object can be extended with
+ * header information and then be used any number of times.
+ *
+ * @param size size of the data portion of the response
+ * @param buffer size bytes containing the response's data portion
+ * @param crfc function to call to free the @a buffer
+ * @return NULL on error (i.e. invalid arguments, out of memory)
+ * @ingroup response
+ */
+_MHD_EXTERN struct MHD_Response *
+MHD_create_response_from_buffer_with_free_callback (size_t size,
+						    void *buffer,
+						    MHD_ContentReaderFreeCallback crfc);
 
 
 /**
@@ -3142,7 +3208,57 @@ MHD_free (void *ptr);
 
 
 /**
- * Authenticates the authorization header sent by the client
+ * Which digest algorithm should MHD use for HTTP digest authentication?
+ */
+enum MHD_DigestAuthAlgorithm {
+
+  /**
+   * MHD should pick (currently defaults to SHA-256).
+   */
+  MHD_DIGEST_ALG_AUTO = 0,
+
+  /**
+   * Force use of MD5.
+   */
+  MHD_DIGEST_ALG_MD5,
+
+  /**
+   * Force use of SHA-256.
+   */
+  MHD_DIGEST_ALG_SHA256
+
+};
+
+
+/**
+ * Authenticates the authorization header sent by the client.
+ *
+ * @param connection The MHD connection structure
+ * @param realm The realm presented to the client
+ * @param username The username needs to be authenticated
+ * @param password The password used in the authentication
+ * @param nonce_timeout The amount of time for a nonce to be
+ * 			invalid in seconds
+ * @param algo digest algorithms allowed for verification
+ * @return #MHD_YES if authenticated, #MHD_NO if not,
+ * 			#MHD_INVALID_NONCE if nonce is invalid
+ * @ingroup authentication
+ */
+_MHD_EXTERN int
+MHD_digest_auth_check2 (struct MHD_Connection *connection,
+			const char *realm,
+			const char *username,
+			const char *password,
+			unsigned int nonce_timeout,
+			enum MHD_DigestAuthAlgorithm algo);
+
+
+/**
+ * Authenticates the authorization header sent by the client.
+ * Uses #MHD_DIGEST_ALG_MD5 (for now, for backwards-compatibility).
+ * Note that this MAY change to #MHD_DIGEST_ALG_AUTO in the future.
+ * If you want to be sure you get MD5, use #MHD_digest_auth_check2()
+ * and specifiy MD5 explicitly.
  *
  * @param connection The MHD connection structure
  * @param realm The realm presented to the client
@@ -3153,6 +3269,7 @@ MHD_free (void *ptr);
  * @return #MHD_YES if authenticated, #MHD_NO if not,
  * 			#MHD_INVALID_NONCE if nonce is invalid
  * @ingroup authentication
+ * @deprecated use MHD_digest_auth_check2()
  */
 _MHD_EXTERN int
 MHD_digest_auth_check (struct MHD_Connection *connection,
@@ -3163,7 +3280,86 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
 
 
 /**
+ * Authenticates the authorization header sent by the client.
+ *
+ * @param connection The MHD connection structure
+ * @param realm The realm presented to the client
+ * @param username The username needs to be authenticated
+ * @param digest An `unsigned char *' pointer to the binary MD5 sum
+ * 			for the precalculated hash value "username:realm:password"
+ * 			of @a digest_size bytes
+ * @param digest_size number of bytes in @a digest (size must match @a algo!)
+ * @param nonce_timeout The amount of time for a nonce to be
+ * 			invalid in seconds
+ * @param algo digest algorithms allowed for verification
+ * @return #MHD_YES if authenticated, #MHD_NO if not,
+ * 			#MHD_INVALID_NONCE if nonce is invalid
+ * @ingroup authentication
+ */
+_MHD_EXTERN int
+MHD_digest_auth_check_digest2 (struct MHD_Connection *connection,
+			       const char *realm,
+			       const char *username,
+			       const uint8_t *digest,
+                               size_t digest_size,
+			       unsigned int nonce_timeout,
+			       enum MHD_DigestAuthAlgorithm algo);
+
+
+/**
+ * Authenticates the authorization header sent by the client
+ * Uses #MHD_DIGEST_ALG_MD5 (required, as @a digest is of fixed
+ * size).
+ *
+ * @param connection The MHD connection structure
+ * @param realm The realm presented to the client
+ * @param username The username needs to be authenticated
+ * @param digest An `unsigned char *' pointer to the binary hash
+ * 		for the precalculated hash value "username:realm:password";
+ * 		length must be #MHD_MD5_DIGEST_SIZE bytes
+ * @param nonce_timeout The amount of time for a nonce to be
+ * 			invalid in seconds
+ * @return #MHD_YES if authenticated, #MHD_NO if not,
+ * 			#MHD_INVALID_NONCE if nonce is invalid
+ * @ingroup authentication
+ * @deprecated use #MHD_digest_auth_check_digest2()
+ */
+_MHD_EXTERN int
+MHD_digest_auth_check_digest (struct MHD_Connection *connection,
+			      const char *realm,
+			      const char *username,
+			      const uint8_t digest[MHD_MD5_DIGEST_SIZE],
+			      unsigned int nonce_timeout);
+
+
+/**
  * Queues a response to request authentication from the client
+ *
+ * @param connection The MHD connection structure
+ * @param realm the realm presented to the client
+ * @param opaque string to user for opaque value
+ * @param response reply to send; should contain the "access denied"
+ *        body; note that this function will set the "WWW Authenticate"
+ *        header and that the caller should not do this
+ * @param signal_stale #MHD_YES if the nonce is invalid to add
+ * 			'stale=true' to the authentication header
+ * @param algo digest algorithm to use
+ * @return #MHD_YES on success, #MHD_NO otherwise
+ * @ingroup authentication
+ */
+_MHD_EXTERN int
+MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
+			       const char *realm,
+			       const char *opaque,
+			       struct MHD_Response *response,
+			       int signal_stale,
+			       enum MHD_DigestAuthAlgorithm algo);
+
+
+/**
+ * Queues a response to request authentication from the client
+ * For now uses MD5 (for backwards-compatibility). Still, if you
+ * need to be sure, use #MHD_queue_fail_auth_response2().
  *
  * @param connection The MHD connection structure
  * @param realm The realm presented to the client
@@ -3175,6 +3371,7 @@ MHD_digest_auth_check (struct MHD_Connection *connection,
  * 			'stale=true' to the authentication header
  * @return #MHD_YES on success, #MHD_NO otherwise
  * @ingroup authentication
+ * @deprecated use MHD_queue_auth_fail_response2()
  */
 _MHD_EXTERN int
 MHD_queue_auth_fail_response (struct MHD_Connection *connection,
@@ -3501,7 +3698,12 @@ enum MHD_FEATURE
    * file-FD based responses over non-TLS connections.
    * @note Since v0.9.56
    */
-  MHD_FEATURE_SENDFILE = 21
+  MHD_FEATURE_SENDFILE = 21,
+
+  /**
+   * Get whether MHD supports threads.
+   */
+  MHD_FEATURE_THREADS
 };
 
 

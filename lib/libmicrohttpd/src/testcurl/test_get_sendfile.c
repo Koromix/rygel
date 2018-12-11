@@ -576,15 +576,20 @@ main (int argc, char *const *argv)
   FILE *f;
   (void)argc;   /* Unused. Silent compiler warning. */
 
+  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
+    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
+
   if ( (NULL == (tmp = getenv ("TMPDIR"))) &&
        (NULL == (tmp = getenv ("TMP"))) &&
        (NULL == (tmp = getenv ("TEMP"))) )
     tmp = "/tmp";
   sourcefile = malloc (strlen (tmp) + 32);
-  sprintf (sourcefile,
-	   "%s/%s",
-	   tmp,
-	   "test-mhd-sendfile");
+  snprintf (sourcefile,
+            strlen (tmp) + 32,
+            "%s/%s%s",
+            tmp,
+            "test-mhd-sendfile",
+            oneone ? "11" : "");
   f = fopen (sourcefile, "w");
   if (NULL == f)
     {
@@ -592,17 +597,20 @@ main (int argc, char *const *argv)
       free (sourcefile);
       return 1;
     }
-  fwrite (TESTSTR, strlen (TESTSTR), 1, f);
+  if (1 !=
+      fwrite (TESTSTR, strlen (TESTSTR), 1, f))
+    abort ();
   fclose (f);
-  oneone = (NULL != strrchr (argv[0], (int) '/')) ?
-    (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalGet ();
-  errorCount += testMultithreadedGet ();
-  errorCount += testMultithreadedPoolGet ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalGet ();
+      errorCount += testMultithreadedGet ();
+      errorCount += testMultithreadedPoolGet ();
+      errorCount += testUnknownPortGet ();
+    }
   errorCount += testExternalGet ();
-  errorCount += testUnknownPortGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);
   curl_global_cleanup ();

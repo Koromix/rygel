@@ -204,8 +204,10 @@ main (int argc, char *const *argv)
 			MHD_OPTION_URI_LOG_CALLBACK, &uri_logger_cb, NULL,
 			MHD_OPTION_NOTIFY_COMPLETED, &completed_callback, NULL,
 			MHD_OPTION_CONNECTION_LIMIT, (unsigned int) 1000,
-                        MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
-                        MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
+			/* Optionally, the gnutls_load_file() can be used to
+			   load the key and the certificate from file. */
+			MHD_OPTION_HTTPS_MEM_KEY, srv_signed_key_pem,
+			MHD_OPTION_HTTPS_MEM_CERT, srv_signed_cert_pem,
 			MHD_OPTION_END);
   if (d == NULL)
     return 1;

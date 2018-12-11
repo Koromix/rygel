@@ -103,8 +103,10 @@ gnutlscli_connect (int *sock,
   MHD_socket_close_chk_ (sp[1]);
   (void) close (0);
   (void) close (1);
-  dup2 (sp[0], 0);
-  dup2 (sp[0], 1);
+  if (-1 == dup2 (sp[0], 0))
+    abort ();
+  if (-1 == dup2 (sp[0], 1))
+    abort ();
   MHD_socket_close_chk_ (sp[0]);
   if (TLS_CLI_GNUTLS == use_tls_tool)
     {
@@ -143,7 +145,7 @@ gnutlscli_connect (int *sock,
 /**
  * Wrapper structure for plain&TLS sockets
  */
-struct wr_socket_strc
+struct wr_socket
 {
   /**
    * Real network socket
@@ -179,18 +181,6 @@ struct wr_socket_strc
 
 
 /**
- * Pseudo type for plain&TLS sockets
- */
-typedef struct wr_socket_strc* wr_socket;
-
-
-/**
- * Invalid value of wr_socket
- */
-#define WR_BAD (NULL)
-
-
-/**
  * Get underlying real socket.
  * @return FD of real socket
  */
@@ -199,34 +189,34 @@ typedef struct wr_socket_strc* wr_socket;
 
 /**
  * Create wr_socket with plain TCP underlying socket
- * @return created socket on success, WR_BAD otherwise
+ * @return created socket on success, NULL otherwise
  */
-static wr_socket
+static struct wr_socket *
 wr_create_plain_sckt(void)
 {
-  wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
-  if (WR_BAD == s)
-    return WR_BAD;
+  struct wr_socket *s = malloc(sizeof(struct wr_socket));
+  if (NULL == s)
+    return NULL;
   s->t = wr_plain;
   s->fd = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (MHD_INVALID_SOCKET != s->fd)
     return s;
   free(s);
-  return WR_BAD;
+  return NULL;
 }
 
 
 /**
  * Create wr_socket with TLS TCP underlying socket
- * @return created socket on success, WR_BAD otherwise
+ * @return created socket on success, NULL otherwise
  */
-static wr_socket
+static struct wr_socket *
 wr_create_tls_sckt(void)
 {
 #ifdef HTTPS_SUPPORT
-  wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
-  if (WR_BAD == s)
-    return WR_BAD;
+  struct wr_socket *s = malloc(sizeof(struct wr_socket));
+  if (NULL == s)
+    return NULL;
   s->t = wr_tls;
   s->tls_connected = 0;
   s->fd = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -256,7 +246,7 @@ wr_create_tls_sckt(void)
     }
   free(s);
 #endif /* HTTPS_SUPPORT */
-  return WR_BAD;
+  return NULL;
 }
 
 
@@ -264,15 +254,15 @@ wr_create_tls_sckt(void)
  * Create wr_socket with plain TCP underlying socket
  * from already created TCP socket.
  * @param plain_sk real TCP socket
- * @return created socket on success, WR_BAD otherwise
+ * @return created socket on success, NULL otherwise
  */
-static wr_socket
+static struct wr_socket *
 wr_create_from_plain_sckt(MHD_socket plain_sk)
 {
-  wr_socket s = (wr_socket)malloc(sizeof(struct wr_socket_strc));
+  struct wr_socket *s = malloc(sizeof(struct wr_socket));
 
-  if (WR_BAD == s)
-    return WR_BAD;
+  if (NULL == s)
+    return NULL;
   s->t = wr_plain;
   s->fd = plain_sk;
   return s;
@@ -287,7 +277,7 @@ wr_create_from_plain_sckt(MHD_socket plain_sk)
  * @return zero on success, -1 otherwise.
  */
 static int
-wr_connect(wr_socket s,
+wr_connect(struct wr_socket *s,
            const struct sockaddr *addr,
            int length)
 {
@@ -312,7 +302,8 @@ wr_connect(wr_socket s,
 
 #ifdef HTTPS_SUPPORT
 /* Only to be called from wr_send() and wr_recv() ! */
-static bool wr_handshake(wr_socket s)
+static bool
+wr_handshake(struct wr_socket *s)
 {
   int res = gnutls_handshake (s->tls_s);
   if (GNUTLS_E_SUCCESS == res)
@@ -336,7 +327,7 @@ static bool wr_handshake(wr_socket s)
  *         to get socket error.
  */
 static ssize_t
-wr_send (wr_socket s,
+wr_send (struct wr_socket *s,
          const void *buf,
          size_t len)
 {
@@ -372,7 +363,7 @@ wr_send (wr_socket s,
  *         to get socket error.
  */
 static ssize_t
-wr_recv (wr_socket s,
+wr_recv (struct wr_socket *s,
          void *buf,
          size_t len)
 {
@@ -404,7 +395,7 @@ wr_recv (wr_socket s,
  * @return zero on succeed, -1 otherwise
  */
 static int
-wr_close (wr_socket s)
+wr_close (struct wr_socket *s)
 {
   int ret = (MHD_socket_close_(s->fd)) ? 0 : -1;
 #ifdef HTTPS_SUPPORT
@@ -414,7 +405,7 @@ wr_close (wr_socket s)
       gnutls_certificate_free_credentials (s->tls_crd);
     }
 #endif /* HTTPS_SUPPORT */
-  free(s);
+  free (s);
   return ret;
 }
 
@@ -427,7 +418,7 @@ static pthread_t pt;
 /**
  * Will be set to the upgraded socket.
  */
-static wr_socket usock;
+static struct wr_socket *usock;
 
 /**
  * Thread we use to run the interaction with the upgraded socket.
@@ -440,20 +431,35 @@ static pthread_t pt_client;
 static volatile bool done;
 
 
+/**
+ * Callback used by MHD to notify the application about completed
+ * requests.  Frees memory.
+ *
+ * @param cls client-defined closure
+ * @param connection connection handle
+ * @param con_cls value as set by the last call to
+ *        the #MHD_AccessHandlerCallback
+ * @param toe reason for request termination
+ */
 static void
 notify_completed_cb (void *cls,
                      struct MHD_Connection *connection,
                      void **con_cls,
                      enum MHD_RequestTerminationCode toe)
 {
-  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
+  pthread_t* ppth = *con_cls;
+
+  (void) cls;
+  (void) connection;  /* Unused. Silent compiler warning. */
   if ( (toe != MHD_REQUEST_TERMINATED_COMPLETED_OK) &&
        (toe != MHD_REQUEST_TERMINATED_CLIENT_ABORT) &&
        (toe != MHD_REQUEST_TERMINATED_DAEMON_SHUTDOWN) )
     abort ();
-  if (! pthread_equal (**((pthread_t**)con_cls), pthread_self ()))
+  if (! pthread_equal (**((pthread_t**)con_cls),
+                       pthread_self ()))
     abort ();
-  free (*con_cls);
+  if (NULL != ppth)
+    free (*con_cls);
   *con_cls = NULL;
 }
 
@@ -471,13 +477,14 @@ log_cb (void *cls,
         const char *uri,
         struct MHD_Connection *connection)
 {
-  pthread_t* ppth;
-  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
+  pthread_t *ppth;
 
+  (void) cls;
+  (void) connection;  /* Unused. Silent compiler warning. */
   if (0 != strcmp (uri,
                    "/"))
     abort ();
-  ppth = (pthread_t*) malloc (sizeof(pthread_t));
+  ppth = malloc (sizeof (pthread_t));
   if (NULL == ppth)
     abort();
   *ppth = pthread_self ();
@@ -511,8 +518,9 @@ notify_connection_cb (void *cls,
                       enum MHD_ConnectionNotificationCode toe)
 {
   static int started;
-  (void)cls; (void)connection;  /* Unused. Silent compiler warning. */
 
+  (void) cls;
+  (void) connection;  /* Unused. Silent compiler warning. */
   switch (toe)
   {
   case MHD_CONNECTION_NOTIFY_STARTED:
@@ -561,7 +569,7 @@ make_blocking (MHD_socket fd)
 
 
 static void
-send_all (wr_socket sock,
+send_all (struct wr_socket *sock,
           const char *text)
 {
   size_t len = strlen (text);
@@ -572,8 +580,8 @@ send_all (wr_socket sock,
   for (off = 0; off < len; off += ret)
     {
       ret = wr_send (sock,
-                       &text[off],
-                       len - off);
+                     &text[off],
+                     len - off);
       if (0 > ret)
         {
           if (MHD_SCKT_ERR_IS_EAGAIN_ (MHD_socket_get_error_ ()))
@@ -592,7 +600,7 @@ send_all (wr_socket sock,
  * get '\r\n\r\n'.
  */
 static void
-recv_hdr (wr_socket sock)
+recv_hdr (struct wr_socket *sock)
 {
   unsigned int i;
   char next;
@@ -637,7 +645,7 @@ recv_hdr (wr_socket sock)
 
 
 static void
-recv_all (wr_socket sock,
+recv_all (struct wr_socket *sock,
           const char *text)
 {
   size_t len = strlen (text);
@@ -685,6 +693,8 @@ run_usock (void *cls)
             "Finished");
   MHD_upgrade_action (urh,
                       MHD_UPGRADE_ACTION_CLOSE);
+  free (usock);
+  usock = NULL;
   return NULL;
 }
 
@@ -698,18 +708,18 @@ run_usock (void *cls)
 static void *
 run_usock_client (void *cls)
 {
-  wr_socket *sock = cls;
+  struct wr_socket *sock = cls;
 
-  send_all (*sock,
+  send_all (sock,
             "GET / HTTP/1.1\r\nConnection: Upgrade\r\n\r\n");
-  recv_hdr (*sock);
-  recv_all (*sock,
+  recv_hdr (sock);
+  recv_all (sock,
             "Hello");
-  send_all (*sock,
+  send_all (sock,
             "World");
-  recv_all (*sock,
+  recv_all (sock,
             "Finished");
-  wr_close (*sock);
+  wr_close (sock);
   done = true;
   return NULL;
 }
@@ -768,7 +778,11 @@ upgrade_cb (void *cls,
             MHD_socket sock,
             struct MHD_UpgradeResponseHandle *urh)
 {
-  (void)cls; (void)connection; (void)con_cls; (void)extra_in; /* Unused. Silent compiler warning. */
+  (void) cls;
+  (void) connection;
+  (void) con_cls;
+  (void) extra_in; /* Unused. Silent compiler warning. */
+
   usock = wr_create_from_plain_sckt (sock);
   if (0 != extra_in_size)
     abort ();
@@ -831,8 +845,12 @@ ahc_upgrade (void *cls,
 {
   struct MHD_Response *resp;
   int ret;
-  (void)cls;(void)url;(void)method;                        /* Unused. Silent compiler warning. */
-  (void)version;(void)upload_data;(void)upload_data_size;  /* Unused. Silent compiler warning. */
+  (void) cls;
+  (void) url;
+  (void) method;                        /* Unused. Silent compiler warning. */
+  (void) version;
+  (void) upload_data;
+  (void) upload_data_size;  /* Unused. Silent compiler warning. */
 
   if (NULL == *con_cls)
     abort ();
@@ -930,6 +948,7 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
   fd_set rs;
   MHD_UNSIGNED_LONG_LONG to;
   struct timeval tv;
+  int ret;
 
   di = MHD_get_daemon_info (daemon,
                             MHD_DAEMON_INFO_EPOLL_FD);
@@ -946,11 +965,15 @@ run_mhd_epoll_loop (struct MHD_Daemon *daemon)
         to = 1000;
       tv.tv_sec = to / 1000;
       tv.tv_usec = 1000 * (to % 1000);
-      select (ep + 1,
-              &rs,
-              NULL,
-              NULL,
-              &tv);
+      ret = select (ep + 1,
+                    &rs,
+                    NULL,
+                    NULL,
+                    &tv);
+      if ( (-1 == ret) &&
+           (EAGAIN != errno) &&
+           (EINTR != errno) )
+        abort ();
       MHD_run (daemon);
     }
 }
@@ -979,6 +1002,7 @@ run_mhd_loop (struct MHD_Daemon *daemon,
     abort ();
 }
 
+
 static bool test_tls;
 
 /**
@@ -992,7 +1016,7 @@ test_upgrade (int flags,
               unsigned int pool)
 {
   struct MHD_Daemon *d = NULL;
-  wr_socket sock;
+  struct wr_socket *sock;
   struct sockaddr_in sa;
   const union MHD_DaemonInfo *real_flags;
   const union MHD_DaemonInfo *dinfo;
@@ -1002,7 +1026,7 @@ test_upgrade (int flags,
 
   done = false;
 
-  if (!test_tls)
+  if (! test_tls)
     d = MHD_start_daemon (flags | MHD_USE_ERROR_LOG | MHD_ALLOW_UPGRADE,
 			  MHD_is_feature_supported(MHD_FEATURE_AUTODETECT_BIND_PORT) ?
 			      0 : 1090,
@@ -1030,16 +1054,19 @@ test_upgrade (int flags,
 #endif /* HTTPS_SUPPORT */
   if (NULL == d)
     return 2;
-  real_flags = MHD_get_daemon_info(d, MHD_DAEMON_INFO_FLAGS);
+  real_flags = MHD_get_daemon_info (d,
+                                    MHD_DAEMON_INFO_FLAGS);
   if (NULL == real_flags)
     abort ();
-  dinfo = MHD_get_daemon_info (d, MHD_DAEMON_INFO_BIND_PORT);
-  if (NULL == dinfo || 0 == dinfo->port)
+  dinfo = MHD_get_daemon_info (d,
+                               MHD_DAEMON_INFO_BIND_PORT);
+  if ( (NULL == dinfo) ||
+       (0 == dinfo->port) )
     abort ();
   if (!test_tls || TLS_LIB_GNUTLS == use_tls_tool)
     {
       sock = test_tls ? wr_create_tls_sckt () : wr_create_plain_sckt ();
-      if (WR_BAD == sock)
+      if (NULL == sock)
         abort ();
       sa.sin_family = AF_INET;
       sa.sin_port = htons (dinfo->port);
@@ -1053,13 +1080,21 @@ test_upgrade (int flags,
     {
 #if defined(HTTPS_SUPPORT) && defined(HAVE_FORK) && defined(HAVE_WAITPID)
       MHD_socket tls_fork_sock;
-      if (-1 == (pid = gnutlscli_connect (&tls_fork_sock, dinfo->port)))
+      uint16_t port;
+
+      /* make address sanitizer happy */
+      memcpy (&port,
+              dinfo /* ->port */,
+              sizeof (port));
+      if (-1 == (pid = gnutlscli_connect (&tls_fork_sock,
+                                          port)))
         {
           MHD_stop_daemon (d);
           return 4;
         }
+
       sock =  wr_create_from_plain_sckt (tls_fork_sock);
-      if (WR_BAD == sock)
+      if (NULL == sock)
         abort ();
 #else  /* !HTTPS_SUPPORT || !HAVE_FORK || !HAVE_WAITPID */
       abort ();
@@ -1069,10 +1104,18 @@ test_upgrade (int flags,
   if (0 != pthread_create (&pt_client,
                            NULL,
                            &run_usock_client,
-                           &sock))
+                           sock))
     abort ();
   if (0 == (flags & MHD_USE_INTERNAL_POLLING_THREAD) )
-    run_mhd_loop (d, real_flags->flags);
+    {
+      enum MHD_FLAG flags;
+
+      /* make address sanitizer happy */
+      memcpy (&flags,
+              real_flags /* ->flags */,
+              sizeof (flags));
+      run_mhd_loop (d, flags);
+    }
   pthread_join (pt_client,
                 NULL);
   pthread_join (pt,
@@ -1097,7 +1140,8 @@ main (int argc,
   test_tls = has_in_name(argv[0], "_tls");
 
   verbose = 1;
-  if (has_param(argc, argv, "-q") || has_param(argc, argv, "--quiet"))
+  if (has_param(argc, argv, "-q") ||
+      has_param(argc, argv, "--quiet"))
     verbose = 0;
 
   if (test_tls)
@@ -1146,13 +1190,16 @@ main (int argc,
 
   /* run tests */
   if (verbose)
-    printf ("Starting HTTP \"Upgrade\" tests with %s connections.\n", test_tls ? "TLS" : "plain");
+    printf ("Starting HTTP \"Upgrade\" tests with %s connections.\n",
+            test_tls ? "TLS" : "plain");
   /* try external select */
   res = test_upgrade (0,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with external select, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with external select, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with external select.\n");
 
@@ -1161,7 +1208,9 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with external 'auto', return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with external 'auto', return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with external 'auto'.\n");
 
@@ -1170,7 +1219,9 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with external select with EPOLL, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with external select with EPOLL, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with external select with EPOLL.\n");
 #endif
@@ -1180,7 +1231,9 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with thread per connection, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with thread per connection, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with thread per connection.\n");
 
@@ -1188,7 +1241,9 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with thread per connection and 'auto', return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with thread per connection and 'auto', return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with thread per connection and 'auto'.\n");
 #ifdef HAVE_POLL
@@ -1196,7 +1251,9 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with thread per connection and poll, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with thread per connection and poll, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with thread per connection and poll.\n");
 #endif /* HAVE_POLL */
@@ -1206,28 +1263,36 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal select, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal select, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal select.\n");
   res = test_upgrade (MHD_USE_INTERNAL_POLLING_THREAD,
                       2);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal select with thread pool, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal select with thread pool, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal select with thread pool.\n");
   res = test_upgrade (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal 'auto' return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal 'auto' return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal 'auto'.\n");
   res = test_upgrade (MHD_USE_AUTO | MHD_USE_INTERNAL_POLLING_THREAD,
                       2);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal 'auto' with thread pool, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal 'auto' with thread pool, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal 'auto' with thread pool.\n");
 #ifdef HAVE_POLL
@@ -1235,13 +1300,17 @@ main (int argc,
                       0);
   error_count += res;
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal poll, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal poll, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal poll.\n");
   res = test_upgrade (MHD_USE_POLL_INTERNAL_THREAD,
                       2);
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal poll with thread pool, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal poll with thread pool, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal poll with thread pool.\n");
 #endif
@@ -1249,13 +1318,17 @@ main (int argc,
   res = test_upgrade (MHD_USE_EPOLL_INTERNAL_THREAD,
                       0);
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal epoll, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal epoll, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal epoll.\n");
   res = test_upgrade (MHD_USE_EPOLL_INTERNAL_THREAD,
                       2);
   if (res)
-    fprintf (stderr, "FAILED: Upgrade with internal epoll, return code %d.\n", res);
+    fprintf (stderr,
+             "FAILED: Upgrade with internal epoll, return code %d.\n",
+             res);
   else if (verbose)
     printf ("PASSED: Upgrade with internal epoll.\n");
 #endif

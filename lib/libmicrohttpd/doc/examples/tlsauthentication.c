@@ -33,12 +33,10 @@ string_to_base64 (const char *message)
   char *tmp;
   size_t length = strlen (message);
 
-  tmp = malloc (length * 2);
+  tmp = malloc (length * 2 + 1);
   if (NULL == tmp)
-    return tmp;
-
+    return NULL;
   tmp[0] = 0;
-
   for (i = 0; i < length; i += 3)
     {
       l = (((unsigned long) message[i]) << 16)
@@ -124,6 +122,7 @@ ask_for_authentication (struct MHD_Connection *connection, const char *realm)
   int ret;
   struct MHD_Response *response;
   char *headervalue;
+  size_t slen;
   const char *strbase = "Basic realm=";
 
   response = MHD_create_response_from_buffer (0, NULL,
@@ -131,36 +130,43 @@ ask_for_authentication (struct MHD_Connection *connection, const char *realm)
   if (!response)
     return MHD_NO;
 
-  headervalue = malloc (strlen (strbase) + strlen (realm) + 1);
-  if (!headervalue)
+  slen = strlen (strbase) + strlen (realm) + 1;
+  if (NULL == (headervalue = malloc (slen)))
     return MHD_NO;
-
-  strcpy (headervalue, strbase);
-  strcat (headervalue, realm);
-
-  ret = MHD_add_response_header (response, "WWW-Authenticate", headervalue);
+  snprintf (headervalue,
+	    slen,
+	    "%s%s",
+	    strbase,
+	    realm);
+  ret = MHD_add_response_header (response,
+				 "WWW-Authenticate",
+				 headervalue);
   free (headervalue);
-  if (!ret)
+  if (! ret)
     {
       MHD_destroy_response (response);
       return MHD_NO;
     }
 
-  ret = MHD_queue_response (connection, MHD_HTTP_UNAUTHORIZED, response);
-
+  ret = MHD_queue_response (connection,
+			    MHD_HTTP_UNAUTHORIZED,
+			    response);
   MHD_destroy_response (response);
-
   return ret;
 }
 
+
 static int
 is_authenticated (struct MHD_Connection *connection,
-                  const char *username, const char *password)
+                  const char *username,
+		  const char *password)
 {
   const char *headervalue;
-  char *expected_b64, *expected;
+  char *expected_b64;
+  char *expected;
   const char *strbase = "Basic ";
   int authenticated;
+  size_t slen;
 
   headervalue =
     MHD_lookup_connection_value (connection, MHD_HEADER_KIND,
@@ -170,14 +176,14 @@ is_authenticated (struct MHD_Connection *connection,
   if (0 != strncmp (headervalue, strbase, strlen (strbase)))
     return 0;
 
-  expected = malloc (strlen (username) + 1 + strlen (password) + 1);
-  if (NULL == expected)
+  slen = strlen (username) + 1 + strlen (password) + 1;
+  if (NULL == (expected = malloc (slen)))
     return 0;
-
-  strcpy (expected, username);
-  strcat (expected, ":");
-  strcat (expected, password);
-
+  snprintf (expected,
+	    slen,
+	    "%s:%s",
+	    username,
+	    password);
   expected_b64 = string_to_base64 (expected);
   free (expected);
   if (NULL == expected_b64)
@@ -185,9 +191,7 @@ is_authenticated (struct MHD_Connection *connection,
 
   authenticated =
     (strcmp (headervalue + strlen (strbase), expected_b64) == 0);
-
   free (expected_b64);
-
   return authenticated;
 }
 

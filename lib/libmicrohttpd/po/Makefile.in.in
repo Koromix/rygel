@@ -18,12 +18,8 @@ SHELL = /bin/sh
 @SET_MAKE@
 
 srcdir = @srcdir@
-# Modified to fit MHD needs
-top_po_srcdir = @top_srcdir@
-top_srcdir = @top_srcdir@/..
-top_po_builddir = $(top_builddir)/po
-# See '$(POTFILES):' rule
-VPATH = @srcdir@:@srcdir@/po
+top_srcdir = @top_srcdir@
+VPATH = @srcdir@
 
 prefix = @prefix@
 exec_prefix = @exec_prefix@
@@ -159,7 +155,6 @@ stamp-po: $(srcdir)/$(DOMAIN).pot
 # The determination of whether the package xyz is a GNU one is based on the
 # heuristic whether some file in the top level directory mentions "GNU xyz".
 # If GNU 'find' is available, we avoid grepping through monster files.
-# Modified to fit MHD needs
 $(DOMAIN).pot-update: $(POTFILES) $(srcdir)/POTFILES.in remove-potcdate.sed
 	package_gnu="$(PACKAGE_GNU)"; \
 	test -n "$$package_gnu" || { \
@@ -188,19 +183,19 @@ $(DOMAIN).pot-update: $(POTFILES) $(srcdir)/POTFILES.in remove-potcdate.sed
 	fi; \
 	case `$(XGETTEXT) --version | sed 1q | sed -e 's,^[^0-9]*,,'` in \
 	  '' | 0.[0-9] | 0.[0-9].* | 0.1[0-5] | 0.1[0-5].* | 0.16 | 0.16.[0-1]*) \
-	    $(XGETTEXT) --default-domain=$(DOMAIN) --directory=$(top_po_srcdir) \
+	    $(XGETTEXT) --default-domain=$(DOMAIN) --directory=$(top_srcdir) \
 	      --add-comments=TRANSLATORS: $(XGETTEXT_OPTIONS) @XGETTEXT_EXTRA_OPTIONS@ \
 	      --files-from=$(srcdir)/POTFILES.in \
 	      --copyright-holder='$(COPYRIGHT_HOLDER)' \
 	      --msgid-bugs-address="$$msgid_bugs_address" \
 	    ;; \
 	  *) \
-	    $(XGETTEXT) --default-domain=$(DOMAIN) --directory=$(top_po_srcdir) \
+	    $(XGETTEXT) --default-domain=$(DOMAIN) --directory=$(top_srcdir) \
 	      --add-comments=TRANSLATORS: $(XGETTEXT_OPTIONS) @XGETTEXT_EXTRA_OPTIONS@ \
 	      --files-from=$(srcdir)/POTFILES.in \
 	      --copyright-holder='$(COPYRIGHT_HOLDER)' \
 	      --package-name="$${package_prefix}@PACKAGE@" \
-	      --package-version='$(VERSION)' \
+	      --package-version='@VERSION@' \
 	      --msgid-bugs-address="$$msgid_bugs_address" \
 	    ;; \
 	esac
@@ -378,51 +373,24 @@ check: all
 
 info dvi ps pdf html tags TAGS ctags CTAGS ID:
 
-# Modified for MHD
 mostlyclean:
 	rm -f remove-potcdate.sed
 	rm -f stamp-poT
 	rm -f core core.* $(DOMAIN).po $(DOMAIN).1po $(DOMAIN).2po *.new.po
 	rm -fr *.o
-	rm -fr po
 
 clean: mostlyclean
 
-# Modified to fit MHD needs
 distclean: clean
 	rm -f Makefile Makefile.in POTFILES *.mo
-	rm -f config.status config.cache config.log configure.lineno config.status.lineno stamp-po
 
-# Modified to fit MHD needs
 maintainer-clean: distclean
 	@echo "This command is intended for maintainers to use;"
 	@echo "it deletes files that may require special tools to rebuild."
-	rm -f $(GMOFILES)
+	rm -f stamp-po $(GMOFILES)
 
 distdir = $(top_builddir)/$(PACKAGE)-$(VERSION)/$(subdir)
-
-# Added for MHD
-# If source path is in absolute form, POTFILES generated with correct path,
-# but if source path in relative form (forced by 'configure' for inplace builds)
-# then POTFILES is generated with extra '..' ('po-directories' in config.status
-# think that '.' is subdirectory and add additional '..' to path to source files)
-# This rule create additional 'po' subdirectory which is included in VPATH.
-$(POTFILES):
-	@ case "$(srcdir)" in \
-	  /* ) : ;; \
-	  * ) @mkdir_p@ po ;; \
-	  esac
-
-# Modified to fit MHD needs
-mkdistdir:
-	@ $(mkdir_p) $(distdir)
-	@ case "$(srcdir)" in \
-	  /* ) : ;; \
-	  * ) @mkdir_p@ po ;; \
-	  esac
-
-# Modified to fit MHD needs
-dist distdir: mkdistdir
+dist distdir:
 	test -z "$(DISTFILESDEPS)" || $(MAKE) $(DISTFILESDEPS)
 	@$(MAKE) dist2
 # This is a separate target because 'update-po' must be executed before.
@@ -504,10 +472,9 @@ update-gmo: Makefile $(GMOFILES)
 # because execution permission bits may not work on the current file system.
 # Use @SHELL@, which is the shell determined by autoconf for the use by its
 # scripts, not $(SHELL) which is hardwired to /bin/sh and may be deficient.
-# Note: Fixed missging 'srcdir', Modified to fit MHD needs
-Makefile: $(srcdir)/Makefile.in.in $(srcdir)/Makevars $(top_po_builddir)/config.status @POMAKEFILEDEPS@
-	cd $(top_po_builddir) \
-	  && @SHELL@ ./config.status ./$@.in po-directories
+Makefile: Makefile.in.in Makevars $(top_builddir)/config.status @POMAKEFILEDEPS@
+	cd $(top_builddir) \
+	  && @SHELL@ ./config.status $(subdir)/$@.in po-directories
 
 force:
 

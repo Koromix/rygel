@@ -12,6 +12,7 @@ DISTCLEANFILES = \
   libmicrohttpd.dvi \
   libmicrohttpd-tutorial.cps \
   libmicrohttpd-tutorial.dvi
+
 info_TEXINFOS = \
   libmicrohttpd.texi \
   libmicrohttpd-tutorial.texi
@@ -40,7 +41,7 @@ install-info-local:
 	@echo " $(MKDIR_P) '$(DESTDIR)$(infodir)'"; \
 	$(MKDIR_P) "$(DESTDIR)$(infodir)" || exit 1; \
 	echo " $(INSTALL_DATA) libmicrohttpd_performance_data.png '$(DESTDIR)$(infodir)'"; \
-	$(INSTALL_DATA) $(srcdir)/libmicrohttpd_performance_data.png "$(DESTDIR)$(infodir)" || exit 1; 
+	$(INSTALL_DATA) $(srcdir)/libmicrohttpd_performance_data.png "$(DESTDIR)$(infodir)" || exit 1;
 
 install-html-local:
 	@if test -n "$(htmldir)"; then \
@@ -55,3 +56,5 @@ uninstall-local:
 	  echo " rm -f '$(DESTDIR)$(infodir)/libmicrohttpd_performance_data.png'"; \
 	  rm -f "$(DESTDIR)$(infodir)/libmicrohttpd_performance_data.png" \
 	else : ; fi
+
+# end of 'if BUILD_DOC'

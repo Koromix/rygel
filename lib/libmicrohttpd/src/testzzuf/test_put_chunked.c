@@ -363,8 +363,11 @@ main (int argc, char *const *argv)
 
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalPut ();
-  errorCount += testMultithreadedPut ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPut ();
+      errorCount += testMultithreadedPut ();
+    }
   errorCount += testExternalPut ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

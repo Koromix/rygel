@@ -605,47 +605,50 @@ main (int argc, char *const *argv)
   put_buffer = alloc_init (PUT_SIZE);
   if (NULL == put_buffer)
     return 99;
-  lastErr = testPutInternalThread (0);
-  if (verbose && 0 != lastErr)
-    fprintf (stderr, "Error during testing with internal thread with select().\n");
-  errorCount += lastErr;
-  lastErr = testPutThreadPerConn (0);
-  if (verbose && 0 != lastErr)
-    fprintf (stderr, "Error during testing with internal thread per connection with select().\n");
-  errorCount += lastErr;
-  lastErr = testPutThreadPool (0);
-  if (verbose && 0 != lastErr)
-    fprintf (stderr, "Error during testing with thread pool per connection with select().\n");
-  errorCount += lastErr;
   lastErr = testPutExternal ();
   if (verbose && 0 != lastErr)
     fprintf (stderr, "Error during testing with external select().\n");
   errorCount += lastErr;
-  if (MHD_is_feature_supported(MHD_FEATURE_POLL))
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
     {
-      lastErr = testPutInternalThread (MHD_USE_POLL);
+      lastErr = testPutInternalThread (0);
       if (verbose && 0 != lastErr)
-        fprintf (stderr, "Error during testing with internal thread with poll().\n");
+	fprintf (stderr, "Error during testing with internal thread with select().\n");
       errorCount += lastErr;
-      lastErr = testPutThreadPerConn (MHD_USE_POLL);
+      lastErr = testPutThreadPerConn (0);
       if (verbose && 0 != lastErr)
-        fprintf (stderr, "Error during testing with internal thread per connection with poll().\n");
+	fprintf (stderr, "Error during testing with internal thread per connection with select().\n");
       errorCount += lastErr;
-      lastErr = testPutThreadPool (MHD_USE_POLL);
+      lastErr = testPutThreadPool (0);
       if (verbose && 0 != lastErr)
-        fprintf (stderr, "Error during testing with thread pool per connection with poll().\n");
+	fprintf (stderr, "Error during testing with thread pool per connection with select().\n");
       errorCount += lastErr;
-    }
-  if (MHD_is_feature_supported(MHD_FEATURE_EPOLL))
-    {
-      lastErr = testPutInternalThread (MHD_USE_EPOLL);
-      if (verbose && 0 != lastErr)
-        fprintf (stderr, "Error during testing with internal thread with epoll.\n");
-      errorCount += lastErr;
-      lastErr = testPutThreadPool (MHD_USE_EPOLL);
-      if (verbose && 0 != lastErr)
-        fprintf (stderr, "Error during testing with thread pool per connection with epoll.\n");
-      errorCount += lastErr;
+      if (MHD_is_feature_supported(MHD_FEATURE_POLL))
+	{
+	  lastErr = testPutInternalThread (MHD_USE_POLL);
+	  if (verbose && 0 != lastErr)
+	    fprintf (stderr, "Error during testing with internal thread with poll().\n");
+	  errorCount += lastErr;
+	  lastErr = testPutThreadPerConn (MHD_USE_POLL);
+	  if (verbose && 0 != lastErr)
+	    fprintf (stderr, "Error during testing with internal thread per connection with poll().\n");
+	  errorCount += lastErr;
+	  lastErr = testPutThreadPool (MHD_USE_POLL);
+	  if (verbose && 0 != lastErr)
+	    fprintf (stderr, "Error during testing with thread pool per connection with poll().\n");
+	  errorCount += lastErr;
+	}
+      if (MHD_is_feature_supported(MHD_FEATURE_EPOLL))
+	{
+	  lastErr = testPutInternalThread (MHD_USE_EPOLL);
+	  if (verbose && 0 != lastErr)
+	    fprintf (stderr, "Error during testing with internal thread with epoll.\n");
+	  errorCount += lastErr;
+	  lastErr = testPutThreadPool (MHD_USE_EPOLL);
+	  if (verbose && 0 != lastErr)
+	    fprintf (stderr, "Error during testing with thread pool per connection with epoll.\n");
+	  errorCount += lastErr;
+	}
     }
   free (put_buffer);
   if (errorCount != 0)

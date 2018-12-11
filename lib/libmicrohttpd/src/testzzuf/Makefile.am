@@ -11,6 +11,9 @@ AM_CPPFLAGS = -I$(top_srcdir)/src/include \
 
 EXTRA_DIST = README socat.c
 
+THREAD_ONLY_TESTS = \
+  test_long_header 
+
 check_PROGRAMS = \
   test_get \
   test_get_chunked \
@@ -23,8 +26,17 @@ check_PROGRAMS = \
   test_post11 \
   test_post_form11 \
   test_put11 \
-  test_put_large11 \
-  test_long_header 
+  test_put_large11 
+
+if USE_POSIX_THREADS
+check_PROGRAMS += \
+  $(THREAD_ONLY_TESTS)
+endif
+if USE_W32_THREADS
+check_PROGRAMS += \
+  $(THREAD_ONLY_TESTS)
+endif
+
 
 TESTS = $(check_PROGRAMS)
 

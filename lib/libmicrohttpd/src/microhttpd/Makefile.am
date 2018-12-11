@@ -62,24 +62,34 @@ libmicrohttpd_la_SOURCES = \
   mhd_limits.h mhd_byteorder.h \
   sysfdsetsize.c sysfdsetsize.h \
   mhd_str.c mhd_str.h \
-  mhd_threads.c mhd_threads.h \
-  mhd_locks.h mhd_assert.h \
+  mhd_assert.h \
   mhd_sockets.c mhd_sockets.h \
   mhd_itc.c mhd_itc.h mhd_itc_types.h \
   mhd_compat.c mhd_compat.h \
   response.c response.h
 
+if USE_POSIX_THREADS
+libmicrohttpd_la_SOURCES += \
+  mhd_threads.c mhd_threads.h \
+  mhd_locks.h
+endif
+if USE_W32_THREADS
+libmicrohttpd_la_SOURCES += \
+  mhd_threads.c mhd_threads.h \
+  mhd_locks.h
+endif
+
 libmicrohttpd_la_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(MHD_LIB_CPPFLAGS) \
+  $(AM_CPPFLAGS) $(MHD_LIB_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS) \
   -DBUILDING_MHD_LIB=1
 libmicrohttpd_la_CFLAGS = \
-  $(AM_CFLAGS) $(MHD_LIB_CFLAGS)
+  $(AM_CFLAGS) $(MHD_LIB_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 libmicrohttpd_la_LDFLAGS = \
-  $(MHD_LIB_LDFLAGS) \
+  $(MHD_LIB_LDFLAGS) $(MHD_TLS_LIB_LDFLAGS) \
   $(W32_MHD_LIB_LDFLAGS) \
   -version-info @LIB_VERSION_CURRENT@:@LIB_VERSION_REVISION@:@LIB_VERSION_AGE@
 libmicrohttpd_la_LIBADD = \
-  $(MHD_LIBDEPS)
+  $(MHD_LIBDEPS) $(MHD_TLS_LIBDEPS)
 
 if HAVE_W32
 MHD_DLL_RES_SRC = microhttpd_dll_res.rc
@@ -123,7 +133,8 @@ endif
 if ENABLE_DAUTH
 libmicrohttpd_la_SOURCES += \
   digestauth.c \
-  md5.c md5.h
+  md5.c md5.h \
+  sha256.c sha256.h
 endif
 
 if ENABLE_BAUTH
@@ -150,9 +161,19 @@ check_PROGRAMS = \
 
 if HAVE_POSIX_THREADS
 if ENABLE_UPGRADE
+if USE_POSIX_THREADS
   check_PROGRAMS += test_upgrade
+endif
+if USE_W32_THREADS
+  check_PROGRAMS += test_upgrade
+endif
 if ENABLE_HTTPS
-  check_PROGRAMS += test_upgrade_tls
+if USE_POSIX_THREADS
+check_PROGRAMS += test_upgrade_tls
+endif
+if USE_W32_THREADS
+check_PROGRAMS += test_upgrade_tls
+endif
 endif
 endif
 endif
@@ -170,6 +191,7 @@ TESTS = $(check_PROGRAMS)
 # on Cygwin as this ability is deliberately ignored on Cygwin
 # to improve compatibility with core OS.
 if !CYGWIN_TARGET
+if USE_POSIX_THREADS
 if HAVE_LISTEN_SHUTDOWN
 check_PROGRAMS += \
   test_shutdown_select \
@@ -178,6 +200,7 @@ else
 check_PROGRAMS += \
   test_shutdown_select_ignore \
   test_shutdown_poll_ignore
+endif
 endif
 endif
 
@@ -194,11 +217,11 @@ test_daemon_LDADD = \
 test_upgrade_SOURCES = \
   test_upgrade.c test_helpers.h mhd_sockets.h
 test_upgrade_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(GNUTLS_CPPFLAGS)
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_CFLAGS = \
-  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(GNUTLS_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_upgrade_LDFLAGS = \
-  $(GNUTLS_LDFLAGS)
+  $(MHD_TLS_LIB_LDFLAGS)
 test_upgrade_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS)
@@ -206,11 +229,11 @@ test_upgrade_LDADD = \
 test_upgrade_tls_SOURCES = \
   test_upgrade.c test_helpers.h mhd_sockets.h
 test_upgrade_tls_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(GNUTLS_CPPFLAGS)
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_upgrade_tls_CFLAGS = \
-  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(GNUTLS_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_upgrade_tls_LDFLAGS = \
-  $(GNUTLS_LDFLAGS)
+  $(MHD_TLS_LIB_LDFLAGS)
 test_upgrade_tls_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   $(PTHREAD_LIBS)
@@ -218,27 +241,27 @@ test_upgrade_tls_LDADD = \
 test_postprocessor_SOURCES = \
   test_postprocessor.c
 test_postprocessor_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(GNUTLS_CPPFLAGS)
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_postprocessor_CFLAGS = \
-  $(AM_CFLAGS) $(GNUTLS_CFLAGS)
+  $(AM_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_postprocessor_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 test_postprocessor_amp_SOURCES = \
   test_postprocessor_amp.c
 test_postprocessor_amp_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(GNUTLS_CPPFLAGS)
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_postprocessor_amp_CFLAGS = \
-  $(AM_CFLAGS) $(GNUTLS_CFLAGS)
+  $(AM_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_postprocessor_amp_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 test_postprocessor_large_SOURCES = \
   test_postprocessor_large.c
 test_postprocessor_large_CPPFLAGS = \
-  $(AM_CPPFLAGS) $(GNUTLS_CPPFLAGS)
+  $(AM_CPPFLAGS) $(MHD_TLS_LIB_CPPFLAGS)
 test_postprocessor_large_CFLAGS = \
-  $(AM_CFLAGS) $(GNUTLS_CFLAGS)
+  $(AM_CFLAGS) $(MHD_TLS_LIB_CFLAGS)
 test_postprocessor_large_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la
 

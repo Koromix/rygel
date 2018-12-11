@@ -520,9 +520,12 @@ main (int argc, char *const *argv)
 
   oneone = (NULL != strrchr (argv[0], (int) '/')) ?
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
-  errorCount += testInternalGet ();
-  errorCount += testMultithreadedGet ();
-  errorCount += testMultithreadedPoolGet ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalGet ();
+      errorCount += testMultithreadedGet ();
+      errorCount += testMultithreadedPoolGet ();
+    }
   errorCount += testExternalGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

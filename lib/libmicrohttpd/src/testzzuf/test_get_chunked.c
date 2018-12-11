@@ -99,8 +99,11 @@ ahc_echo (void *cls,
   struct MHD_Response *response;
   struct MHD_Response **responseptr;
   int ret;
-  (void)url;(void)version;                      /* Unused. Silent compiler warning. */
-  (void)upload_data;(void)upload_data_size;     /* Unused. Silent compiler warning. */
+
+  (void) url;
+  (void) version;                      /* Unused. Silent compiler warning. */
+  (void) upload_data;
+  (void) upload_data_size;     /* Unused. Silent compiler warning. */
 
   if (0 != strcmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -111,11 +114,20 @@ ahc_echo (void *cls,
       return MHD_YES;
     }
   responseptr = malloc (sizeof (struct MHD_Response *));
+  if (NULL == responseptr)
+    return MHD_NO;
   response = MHD_create_response_from_callback (MHD_SIZE_UNKNOWN,
                                                 1024,
                                                 &crc, responseptr, &crcf);
+  if (NULL == response)
+  {
+    free (responseptr);
+    return MHD_NO;
+  }
   *responseptr = response;
-  ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  ret = MHD_queue_response (connection,
+                            MHD_HTTP_OK,
+                            response);
   MHD_destroy_response (response);
   return ret;
 }
@@ -323,8 +335,11 @@ main (int argc, char *const *argv)
 
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalGet ();
-  errorCount += testMultithreadedGet ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalGet ();
+      errorCount += testMultithreadedGet ();
+    }
   errorCount += testExternalGet ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

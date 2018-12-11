@@ -181,7 +181,7 @@ testInternalPost ()
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080, NULL, NULL, &ahc_echo, NULL, 
+                        11080, NULL, NULL, &ahc_echo, NULL,
 			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
 			MHD_OPTION_END);
   if (d == NULL)
@@ -232,7 +232,7 @@ testMultithreadedPost ()
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD /* | MHD_USE_ERROR_LOG */ ,
-                        11080, NULL, NULL, &ahc_echo, NULL, 
+                        11080, NULL, NULL, &ahc_echo, NULL,
 			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
 			MHD_OPTION_END);
   if (d == NULL)
@@ -293,8 +293,8 @@ testExternalPost ()
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_NO_FLAG /* | MHD_USE_ERROR_LOG */ ,
-                        1082, NULL, NULL, &ahc_echo, NULL, 
-			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,			
+                        1082, NULL, NULL, &ahc_echo, NULL,
+			MHD_OPTION_NOTIFY_COMPLETED, &completed_cb, NULL,
 			MHD_OPTION_END);
   if (d == NULL)
     return 256;
@@ -326,7 +326,6 @@ testExternalPost ()
        *   setting NOSIGNAL results in really weird
        *   crashes on my system! */
       curl_easy_setopt (c, CURLOPT_NOSIGNAL, 1);
-
 
       mret = curl_multi_add_handle (multi, c);
       if (mret != CURLM_OK)
@@ -389,6 +388,7 @@ testExternalPost ()
     }
   fprintf (stderr, "\n");
   zzuf_socat_stop ();
+  curl_multi_cleanup (multi);
 
   MHD_stop_daemon (d);
   return 0;
@@ -405,8 +405,11 @@ main (int argc, char *const *argv)
     (NULL != strstr (strrchr (argv[0], (int) '/'), "11")) : 0;
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalPost ();
-  errorCount += testMultithreadedPost ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPost ();
+      errorCount += testMultithreadedPost ();
+    }
   errorCount += testExternalPost ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

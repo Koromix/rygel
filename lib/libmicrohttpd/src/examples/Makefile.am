@@ -29,6 +29,11 @@ noinst_PROGRAMS = \
  fileserver_example_external_select \
  refuse_post_example
 
+if MHD_HAVE_EPOLL
+noinst_PROGRAMS += \
+  suspend_resume_epoll
+endif
+
 EXTRA_DIST = msgs_i18n.c
 noinst_EXTRA_DIST = msgs_i18n.c
 
@@ -121,6 +126,13 @@ benchmark_SOURCES = \
 benchmark_CPPFLAGS = \
  $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
 benchmark_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
+suspend_resume_epoll_SOURCES = \
+ suspend_resume_epoll.c
+suspend_resume_epoll_CPPFLAGS = \
+ $(AM_CPPFLAGS) $(CPU_COUNT_DEF)
+suspend_resume_epoll_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
 benchmark_https_SOURCES = \

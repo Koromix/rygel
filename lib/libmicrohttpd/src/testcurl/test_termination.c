@@ -94,6 +94,8 @@ main (void)
 {
   struct MHD_Daemon *daemon;
   int port;
+  char url[255];
+  CURL *curl;
 
   if (MHD_NO != MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     port = 0;
@@ -120,10 +122,12 @@ main (void)
       port = (int)dinfo->port;
     }
 
-  CURL *curl = curl_easy_init ();
+  curl = curl_easy_init ();
   /* curl_easy_setopt(curl, CURLOPT_POST, 1L); */
-  char url[255];
-  sprintf (url, "http://127.0.0.1:%d", port);
+  snprintf (url,
+            sizeof (url),
+            "http://127.0.0.1:%d",
+            port);
   curl_easy_setopt (curl, CURLOPT_URL, url);
   curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, write_data);
 

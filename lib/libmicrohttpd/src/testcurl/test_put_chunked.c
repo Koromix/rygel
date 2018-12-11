@@ -104,6 +104,8 @@ ahc_echo (void *cls,
           printf ("Invalid upload data `%8s'!\n", upload_data);
           return MHD_NO;
         }
+      if (0 == have)
+        return MHD_YES;
       if (0 == memcmp (upload_data, &"Hello123"[*done], have))
         {
           *done += have;
@@ -516,9 +518,12 @@ main (int argc, char *const *argv)
 
   if (0 != curl_global_init (CURL_GLOBAL_WIN32))
     return 2;
-  errorCount += testInternalPut ();
-  errorCount += testMultithreadedPut ();
-  errorCount += testMultithreadedPoolPut ();
+  if (MHD_YES == MHD_is_feature_supported(MHD_FEATURE_THREADS))
+    {
+      errorCount += testInternalPut ();
+      errorCount += testMultithreadedPut ();
+      errorCount += testMultithreadedPoolPut ();
+    }
   errorCount += testExternalPut ();
   if (errorCount != 0)
     fprintf (stderr, "Error (code: %u)\n", errorCount);

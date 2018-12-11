@@ -12,6 +12,10 @@
 /* Define to 1 if libmicrohttpd is compiled with digest Auth support. */
 #undef DAUTH_SUPPORT
 
+/* Define to 1 if translation of program messages to the user's native
+   language is requested. */
+#undef ENABLE_NLS
+
 /* Define to 1 to enable epoll support */
 #undef EPOLL_SUPPORT
 
@@ -36,6 +40,14 @@
 /* Define to 1 if you have the usable `calloc' function. */
 #undef HAVE_CALLOC
 
+/* Define to 1 if you have the Mac OS X function CFLocaleCopyCurrent in the
+   CoreFoundation framework. */
+#undef HAVE_CFLOCALECOPYCURRENT
+
+/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
+   the CoreFoundation framework. */
+#undef HAVE_CFPREFERENCESCOPYAPPVALUE
+
 /* Have clock_gettime */
 #undef HAVE_CLOCK_GETTIME
 
@@ -45,6 +57,10 @@
 
 /* Define to 1 if you have Darwin-style sendfile(2). */
 #undef HAVE_DARWIN_SENDFILE
+
+/* Define if the GNU dcgettext() function is already present or preinstalled.
+   */
+#undef HAVE_DCGETTEXT
 
 /* Define to 1 if you have the declaration of `getsockname', and to 0 if you
    don't. */
@@ -87,6 +103,9 @@
 /* Define to 1 if you have the `getsockname' function. */
 #undef HAVE_GETSOCKNAME
 
+/* Define if the GNU gettext() function is already present or preinstalled. */
+#undef HAVE_GETTEXT
+
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
@@ -95,6 +114,9 @@
 
 /* Define to 1 if you have the <gnutls/gnutls.h> header file. */
 #undef HAVE_GNUTLS_GNUTLS_H
+
+/* Define if you have the iconv() function and it works. */
+#undef HAVE_ICONV
 
 /* Provides IPv6 headers */
 #undef HAVE_INET6
@@ -404,10 +426,13 @@
 #undef LT_OBJDIR
 
 /* Define to `1' if HTTPS require initialisation of libgcrypt */
-#undef MHD_HTTPS_REQUIRE_GRYPT
+#undef MHD_HTTPS_REQUIRE_GCRYPT
 
 /* Define to 1 to disable setting name on generated threads */
 #undef MHD_NO_THREAD_NAMES
+
+/* tls plugins */
+#undef MHD_PLUGIN_INSTALL_PREFIX
 
 /* gnuTLS lib version - used in conjunction with cURL */
 #undef MHD_REQ_CURL_GNUTLS_VERSION
