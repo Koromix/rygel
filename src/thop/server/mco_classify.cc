@@ -724,8 +724,8 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                     writer.EndArray();
                 }
 
-                writer.Key("price_cents"); writer.Int(mono_pricing.price_cents);
-                writer.Key("total_cents"); writer.Int(mono_pricing.total_cents);
+                writer.Key("price_cents"); writer.Int64(mono_pricing.price_cents);
+                writer.Key("total_cents"); writer.Int64(mono_pricing.total_cents);
 
                 writer.EndObject();
             }
