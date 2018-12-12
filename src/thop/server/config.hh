@@ -23,7 +23,7 @@ struct Config {
 
     IPVersion ip_version = IPVersion::Dual;
     int port = 8888;
-    int pool_size = 4;
+    int threads = 4;
 
     BlockAllocator str_alloc { Kibibytes(16) };
 };

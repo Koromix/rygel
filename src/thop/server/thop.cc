@@ -931,8 +931,8 @@ Options:
             LogError("HTTP port %1 is invalid (range: 1 - %2)", thop_config.port, UINT16_MAX);
             valid = false;
         }
-        if (thop_config.pool_size < 1 || thop_config.pool_size > 128) {
-            LogError("HTTP pool size %1 is invalid (range: 1 - 128)", thop_config.pool_size);
+        if (thop_config.threads < 0 || thop_config.threads > 128) {
+            LogError("HTTP threads %1 is invalid (range: 0 - 128)", thop_config.threads);
             valid = false;
         }
 
@@ -962,21 +962,22 @@ Options:
     MHD_Daemon *daemon;
     {
         int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+        LocalArray<MHD_OptionItem, 16> mhd_options;
         switch (thop_config.ip_version) {
             case Config::IPVersion::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
             case Config::IPVersion::IPv4: {} break;
             case Config::IPVersion::IPv6: { flags |= MHD_USE_IPv6; } break;
         }
+        mhd_options.Append({MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)ReleaseConnectionData, nullptr});
+        if (!thop_config.threads) {
+            flags |= MHD_USE_THREAD_PER_CONNECTION;
+        } else if (thop_config.threads > 1) {
+            mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, thop_config.threads});
+        }
+        mhd_options.Append({MHD_OPTION_END, 0, nullptr});
 #ifndef NDEBUG
         flags |= MHD_USE_DEBUG;
 #endif
-
-        LocalArray<MHD_OptionItem, 16> mhd_options;
-        mhd_options.Append({MHD_OPTION_NOTIFY_COMPLETED, (intptr_t)ReleaseConnectionData, nullptr});
-        if (thop_config.pool_size > 1) {
-            mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, thop_config.pool_size});
-        }
-        mhd_options.Append({MHD_OPTION_END, 0, nullptr});
 
         daemon = MHD_start_daemon(flags, (int16_t)thop_config.port, nullptr, nullptr,
                                   HandleHttpConnection, nullptr,
