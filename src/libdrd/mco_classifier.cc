@@ -239,8 +239,7 @@ static bool CheckDiagnosisErrors(const mco_PreparedStay &prep, const mco_Diagnos
     return true;
 }
 
-static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int flags,
-                                 mco_ErrorSet *out_errors)
+static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet *out_errors)
 {
     const mco_TableIndex &index = *out_prepared_set->index;
     mco_PreparedStay *out_prep = &out_prepared_set->prep;
@@ -328,10 +327,6 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, unsigned int
             } else {
                 valid &= SetError(out_errors, 94);
             }
-        }
-
-        if (flags & (int)mco_ClassifyFlag::Mono) {
-            std::sort(mono_prep.diagnoses.begin(), mono_prep.diagnoses.end());
         }
     }
 
@@ -546,10 +541,6 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
             }
 
             additions.Clear();
-        }
-
-        if (flags & (int)mco_ClassifyFlag::Mono) {
-            std::sort(mono_prep.procedures.begin(), mono_prep.procedures.end());
         }
 
         out_prep->proc_activities |= proc_activities;
@@ -1087,7 +1078,7 @@ mco_GhmCode mco_Prepare(const mco_TableSet &table_set, Span<const mco_Stay> mono
         }
 
         // Aggregate diagnoses and procedures
-        valid &= AppendValidDiagnoses(out_prepared_set, flags, out_errors);
+        valid &= AppendValidDiagnoses(out_prepared_set, out_errors);
         valid &= AppendValidProcedures(out_prepared_set, flags, out_errors);
 
         // Pick main stay
@@ -2142,6 +2133,13 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
                     mono_result->duration = mono_prep.duration;
 
                     if (!result.ghm.IsError()) {
+                        // Some tests in RunGhmTree() need this to avoid counting duplicates,
+                        // it's done for the global prep in AppendValidDiagnoses() and
+                        // AppendValidProcedures(), but not for individual mono_preps for
+                        // performance reason.
+                        std::sort(mono_prep.diagnoses.begin(), mono_prep.diagnoses.end());
+                        std::sort(mono_prep.procedures.begin(), mono_prep.procedures.end());
+
                         int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
 
                         mono_errors.main_error = 0;
@@ -2197,12 +2195,6 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
                   Span<const mco_Stay> mono_stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
-    if (flags & (int)mco_ClassifyFlag::Mono) {
-        DebugAssert(out_mono_results);
-    } else {
-        out_mono_results = nullptr;
-    }
-
     static const int task_size = 2048;
 
     // Pessimistic assumption (no multi-stay), but we cannot resize the

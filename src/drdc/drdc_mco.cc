@@ -358,10 +358,6 @@ Dispensation modes:)");
         }
     }
 
-    if (dispense_mode >= 0) {
-        flags |= (int)mco_ClassifyFlag::Mono;
-    }
-
     LogInfo("Load tables");
     mco_TableSet table_set;
     if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set) || !table_set.indexes.len)
@@ -426,7 +422,8 @@ Dispensation modes:)");
         summary = {};
 
         switch_perf_counter(&classify_time);
-        mco_Classify(table_set, authorization_set, stay_set.stays, flags, &results, &mono_results);
+        mco_Classify(table_set, authorization_set, stay_set.stays, flags,
+                     &results, dispense_mode >= 0 ? &mono_results : nullptr);
 
         if (dispense_mode >= 0 || verbosity || test || expression_buf.len) {
             switch_perf_counter(&pricing_time);
@@ -442,8 +439,6 @@ Dispensation modes:)");
             if (dispense_mode >= 0) {
                 mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
                              &mono_pricings);
-            } else {
-                mco_Price(mono_results, apply_coefficient, &mono_pricings);
             }
             mco_Summarize(pricings, &summary);
         } else {

@@ -10,14 +10,12 @@
 #include "mco_tables.hh"
 
 enum class mco_ClassifyFlag {
-    Mono = 1 << 0,
-    MonoOriginalStay = 1 << 1,
-    IgnoreConfirmation = 1 << 2,
-    IgnoreProcedureAddition = 1 << 3,
-    IgnoreProcedureExtension = 1 << 4
+    MonoOriginalStay = 1 << 0,
+    IgnoreConfirmation = 1 << 1,
+    IgnoreProcedureAddition = 1 << 2,
+    IgnoreProcedureExtension = 1 << 3
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
-    {"mono", "Perform mono-stay classification"},
     {"mono_orig_stay", "Use original stays in mono algorithm"},
     {"ignore_confirm", "Ignore RSS confirmation flag"},
     {"ignore_proc_add", "Ignore completementary procedure check"},

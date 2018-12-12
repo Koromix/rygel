@@ -480,9 +480,6 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             Rcc_StopWithLastError();
         }
         dispense_mode = (int)(desc - mco_DispenseModeOptions);
-        flags |= (int)mco_ClassifyFlag::Mono;
-    } else {
-        flags &= (int)mco_ClassifyFlag::Mono;
     }
 
     bool export_supplement_cents;
@@ -578,7 +575,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     HeapArray<HeapArray<mco_Pricing>> pricing_sets(sets_count);
     HeapArray<HeapArray<mco_Result>> mono_result_sets;
     HeapArray<HeapArray<mco_Pricing>> mono_pricing_sets(sets_count);
-    if (flags & (int)mco_ClassifyFlag::Mono) {
+    if (dispense_mode >= 0) {
         mono_result_sets.Reserve(sets_count);
         mono_pricing_sets.Reserve(sets_count);
     }
@@ -614,7 +611,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             HeapArray<mco_Pricing> *task_pricings = pricing_sets.AppendDefault();
             HeapArray<mco_Result> *task_mono_results = nullptr;
             HeapArray<mco_Pricing> *task_mono_pricings = nullptr;
-            if (flags & (int)mco_ClassifyFlag::Mono) {
+            if (dispense_mode >= 0) {
                 task_mono_results = mono_result_sets.AppendDefault();
                 task_mono_pricings = mono_pricing_sets.AppendDefault();
             }
@@ -688,7 +685,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     Rcc_AutoSexp mono_results_df;
-    if (flags & (int)mco_ClassifyFlag::Mono) {
+    if (dispense_mode >= 0) {
         mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true,
                                                  export_supplement_cents, export_supplement_counts);
     }

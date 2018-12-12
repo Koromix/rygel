@@ -285,8 +285,8 @@ static bool InitStays(Span<const char *const> stay_directories,
     LogInfo("Classify stays");
 
     // Classify
-    mco_Classify(thop_table_set, thop_authorization_set, thop_stay_set.stays,
-                 (int)mco_ClassifyFlag::Mono, &thop_results, &thop_mono_results);
+    mco_Classify(thop_table_set, thop_authorization_set, thop_stay_set.stays, 0,
+                 &thop_results, &thop_mono_results);
     thop_results.Trim();
     thop_mono_results.Trim();
 
