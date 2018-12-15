@@ -263,8 +263,8 @@ Classify options:
     -d, --dispense <mode>        Run dispensation algorithm (see below)
         --coeff                  Apply GHS coefficients
 
-    -e, --expression <expr>      Run Wren expression
-    -E, --expression_file <file> Run Wren expression in file
+    -f, --filter <expr>          Run Wren filter
+    -F, --filter_file <file>     Run Wren filter in file
 
     -v, --verbose                Show more classification details (cumulative)
 
@@ -285,8 +285,8 @@ Dispensation modes:)");
     unsigned int flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
-    const char *expression = nullptr;
-    const char *expression_path = nullptr;
+    const char *filter = nullptr;
+    const char *filter_path = nullptr;
     int verbosity = 0;
     bool test = false;
     int torture = 0;
@@ -329,13 +329,13 @@ Dispensation modes:)");
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (opt_parser.TestOption("--coeff")) {
                 apply_coefficient = true;
-            } else if (opt_parser.TestOption("-e", "--expression")) {
-                expression = opt_parser.RequireValue();
-                if (!expression)
+            } else if (opt_parser.TestOption("-f", "--filter")) {
+                filter = opt_parser.RequireValue();
+                if (!filter)
                     return false;
-            } else if (opt_parser.TestOption("-E", "--expression_file")) {
-                expression_path = opt_parser.RequireValue();
-                if (!expression_path)
+            } else if (opt_parser.TestOption("-F", "--filter_file")) {
+                filter_path = opt_parser.RequireValue();
+                if (!filter_path)
                     return false;
             } else if (opt_parser.TestOption("-v", "--verbose")) {
                 verbosity++;
@@ -369,16 +369,16 @@ Dispensation modes:)");
                                   &authorization_set))
         return false;
 
-    HeapArray<char> expression_buf;
-    if (expression) {
-        expression_buf.Append(expression);
-    } else if (expression_path) {
-        if (ReadFile(expression_path, Megabytes(1), &expression_buf) < 0)
+    HeapArray<char> filter_buf;
+    if (filter) {
+        filter_buf.Append(filter);
+    } else if (filter_path) {
+        if (ReadFile(filter_path, Megabytes(1), &filter_buf) < 0)
             return false;
     }
-    if (expression_buf.len) {
-        expression_buf.len = TrimStrRight((Span<char>)expression_buf).len;
-        expression_buf.Append(0);
+    if (filter_buf.len) {
+        filter_buf.len = TrimStrRight((Span<char>)filter_buf).len;
+        filter_buf.Append(0);
     }
 
     mco_StaySet stay_set;
@@ -423,14 +423,14 @@ Dispensation modes:)");
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        if (expression_buf.len) {
+        if (filter_buf.len) {
             // Benchmarking script is a little wrong, because we mute the stays in place so
             // subsequent runs (with torture >= 2) will get different data.
             Span<const mco_Stay> stays = stay_set.stays;
             stay_set.stays.len = 0;
 
             switch_perf_counter(&script_time);
-            if (!mco_Filter(stays, expression_buf.ptr,
+            if (!mco_Filter(stays, filter_buf.ptr,
                             [&](Span<const mco_Stay> stays, mco_Result out_results[],
                                 mco_Result out_mono_results[]) {
                 DEFER { switch_perf_counter(&script_time); };
