@@ -192,10 +192,11 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
 
     // First, calculate naive mono-stay prices, which we will use as coefficients (for
     // some modes at least) below.
+    Size mono_pricings_start_len = out_mono_pricings->len;
     mco_Price(mono_results, false, out_mono_pricings);
 
     Async async;
-    Size i = 0, j = 0;
+    Size i = 0, j = mono_pricings_start_len;
     while (i < pricings.len) {
         Size task_offset = i;
         Size task_mono_offset = j;
