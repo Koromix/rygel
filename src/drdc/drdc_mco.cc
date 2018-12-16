@@ -415,7 +415,6 @@ Dispensation modes:)");
     mco_Pricing summary = {};
     uint64_t classify_time = 0;
     uint64_t pricing_time = 0;
-    uint64_t script_time = 0;
     for (int j = 0; j < std::max(torture, 1); j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
@@ -429,13 +428,10 @@ Dispensation modes:)");
             Span<const mco_Stay> stays = stay_set.stays;
             stay_set.stays.len = 0;
 
-            switch_perf_counter(&script_time);
+            switch_perf_counter(&classify_time);
             if (!mco_Filter(stays, filter_buf.ptr,
                             [&](Span<const mco_Stay> stays, mco_Result out_results[],
                                 mco_Result out_mono_results[]) {
-                DEFER { switch_perf_counter(&script_time); };
-
-                switch_perf_counter(&classify_time);
                 return mco_RunClassifier(table_set, authorization_set, stays, flags,
                                          out_results, out_mono_results);
             }, &stay_set.stays, &results, dispense_mode >= 0 ? &mono_results : nullptr))
@@ -490,13 +486,6 @@ Dispensation modes:)");
         PrintLn("  Profile: Classify = %1%%, Pricing = %2%%",
                 FmtDouble(100.0 * classify_time / total_time, 2),
                 FmtDouble(100.0 * pricing_time / total_time, 2));
-
-        if (script_time) {
-            int64_t script_perf = (int64_t)summary.stays_count * torture * 1000 / script_time;
-
-            PrintLn();
-            PrintLn("  Script: %1/sec", script_perf);
-        }
     }
 
     return true;
