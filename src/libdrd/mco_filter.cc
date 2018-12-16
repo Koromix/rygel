@@ -4,6 +4,7 @@
 
 #include "../common/kutil.hh"
 #include "mco_filter.hh"
+#include "mco_pricing.hh"
 
 #include "../../lib/wren/src/include/wren.hpp"
 
