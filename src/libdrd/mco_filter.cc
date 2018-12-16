@@ -976,7 +976,7 @@ bool ScriptRunner::Run(Span<const mco_Stay> stays,
     return true;
 }
 
-bool mco_Filter(Span<const mco_Stay> stays, const char *filter,
+bool mco_Filter(Span<const mco_Stay> stays, Span<const char> filter,
                 std::function<Size(Span<const mco_Stay> stays,
                                    mco_Result out_results[],
                                    mco_Result out_mono_results[])> func,
@@ -993,6 +993,11 @@ bool mco_Filter(Span<const mco_Stay> stays, const char *filter,
     };
 
     static const int task_size = 16384;
+
+    // Wren expressions must not start or end with newlines
+    HeapArray<char> filter_buf;
+    filter_buf.Append(TrimStr(filter));
+    filter_buf.Append(0);
 
     // Pessimistic assumptions (no multi-stay)
     out_stays->Grow(stays.len);
@@ -1019,7 +1024,7 @@ bool mco_Filter(Span<const mco_Stay> stays, const char *filter,
 
             async.AddTask([&, task_stays, i, j]() {
                 ScriptRunner runner;
-                if (!runner.Init(filter, Kibibytes(task_size) / 2))
+                if (!runner.Init(filter_buf.ptr, Kibibytes(task_size) / 2))
                     return false;
                 if (!runner.Run(task_stays, func, out_stays->end() + j, out_results->end() + j,
                                 out_mono_results ? (out_mono_results->end() + j) : nullptr,

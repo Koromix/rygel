@@ -376,10 +376,6 @@ Dispensation modes:)");
         if (ReadFile(filter_path, Megabytes(1), &filter_buf) < 0)
             return false;
     }
-    if (filter_buf.len) {
-        filter_buf.len = TrimStrRight((Span<char>)filter_buf).len;
-        filter_buf.Append(0);
-    }
 
     mco_StaySet stay_set;
     HashTable<int32_t, mco_Test> tests;
@@ -429,7 +425,7 @@ Dispensation modes:)");
             stay_set.stays.len = 0;
 
             switch_perf_counter(&classify_time);
-            if (!mco_Filter(stays, filter_buf.ptr,
+            if (!mco_Filter(stays, filter_buf,
                             [&](Span<const mco_Stay> stays, mco_Result out_results[],
                                 mco_Result out_mono_results[]) {
                 return mco_RunClassifier(table_set, authorization_set, stays, flags,

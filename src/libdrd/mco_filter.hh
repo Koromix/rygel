@@ -8,7 +8,7 @@
 #include "mco_classifier.hh"
 #include "mco_pricing.hh"
 
-bool mco_Filter(Span<const mco_Stay> stays, const char *filter,
+bool mco_Filter(Span<const mco_Stay> stays, Span<const char> filter,
                 std::function<Size(Span<const mco_Stay> stays,
                                    mco_Result out_results[],
                                    mco_Result out_mono_results[])> func,
