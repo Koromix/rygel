@@ -47,11 +47,11 @@
 #define DEFAULT_ALLOCATOR MallocAllocator
 
 #define HEAPARRAY_BASE_CAPACITY 8
-#define HEAPARRAY_GROWTH_FACTOR 1.5f
+#define HEAPARRAY_GROWTH_FACTOR 1.5
 
 // Must be a power-of-two
 #define HASHTABLE_BASE_CAPACITY 32
-#define HASHTABLE_MAX_LOAD_FACTOR 0.5f
+#define HASHTABLE_MAX_LOAD_FACTOR 0.5
 
 #define FMT_STRING_BASE_CAPACITY 256
 #define FMT_STRING_PRINT_BUFFER_SIZE 1024
@@ -1042,7 +1042,7 @@ public:
             new_capacity = capacity;
         }
         do {
-            new_capacity = (Size)((float)new_capacity * HEAPARRAY_GROWTH_FACTOR);
+            new_capacity = (Size)((double)new_capacity * HEAPARRAY_GROWTH_FACTOR);
         } while (new_capacity < needed_capacity);
 
         SetCapacity(new_capacity);
@@ -1814,7 +1814,7 @@ private:
             Size idx = HashToIndex(hash);
             ValueType *it = Find(&idx, key);
             if (!it) {
-                if (count >= (Size)((float)capacity * HASHTABLE_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((double)capacity * HASHTABLE_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                     while (!IsEmpty(idx)) {
