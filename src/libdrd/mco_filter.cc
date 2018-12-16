@@ -130,7 +130,7 @@ struct StayObject {
 
 struct ResultObject {
     const mco_Result *result;
-    const mco_Pricing *pricing;
+    mco_Pricing pricing;
 };
 
 class ScriptRunner {
@@ -744,6 +744,15 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
     return nullptr;
 }
 
+static inline const mco_Pricing &GetResultPricing(ResultObject *object)
+{
+    if (!object->pricing.stays_count) {
+        mco_Price(*object->result, false, &object->pricing);
+    }
+
+    return object->pricing;
+}
+
 static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
 {
     if (false) {}
@@ -759,11 +768,27 @@ static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
     ELSE_IF_GET_NUM("main_error", ResultObject, object.result->main_error)
     ELSE_IF_GET_NUM("ghs", ResultObject, object.result->ghs.number)
     ELSE_IF_GET_NUM("ghs_duration", ResultObject, object.result->ghs_duration)
-    ELSE_IF_GET_NUM("ghs_coefficient", ResultObject, object.pricing->ghs_coefficient)
-    ELSE_IF_GET_NUM("ghs_cents", ResultObject, (double)object.pricing->ghs_cents)
-    ELSE_IF_GET_NUM("price_cents", ResultObject, (double)object.pricing->price_cents)
-    ELSE_IF_GET_NUM("exb_exh", ResultObject, object.pricing->exb_exh)
-    ELSE_IF_GET_NUM("total_cents", ResultObject, (double)object.pricing->total_cents)
+
+    ELSE_IF_METHOD("ghs_coefficient", [](WrenVM *vm) {
+        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(object).ghs_coefficient);
+    })
+    ELSE_IF_METHOD("ghs_cents", [](WrenVM *vm) {
+        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(object).ghs_cents);
+    })
+    ELSE_IF_METHOD("price_cents", [](WrenVM *vm) {
+        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(object).price_cents);
+    })
+    ELSE_IF_METHOD("exb_exh", [](WrenVM *vm) {
+        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(object).exb_exh);
+    })
+    ELSE_IF_METHOD("total_cents", [](WrenVM *vm) {
+        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(object).total_cents);
+    })
 
     return nullptr;
 }
@@ -922,7 +947,7 @@ bool ScriptRunner::Run(Span<const mco_Stay> stays,
         stays_object->values = result.stays;
         stays_object->copies.RemoveFrom(0);
         result_object->result = &result;
-        // FIXME: result_object->pricing = &pricing;
+        result_object->pricing = {};
 
         wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
