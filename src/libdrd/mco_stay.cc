@@ -98,8 +98,8 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         LogError("Testing is not supported by '.dmpak' files");
     }
 
-    HeapArray<DiagnosisCode> diagnoses(&set.other_diagnoses_alloc);
-    HeapArray<mco_ProcedureRealisation> procedures(&set.procedures_alloc);
+    HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
     if (st.Read(SIZE(bh), &bh) != SIZE(bh))
@@ -133,11 +133,11 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         goto corrupt_error;
     set.stays.len += (Size)bh.stays_len;
 
-    diagnoses.Reserve((Size)bh.diagnoses_len);
-    if (st.Read(SIZE(*diagnoses.ptr) * (Size)bh.diagnoses_len,
-                diagnoses.ptr) != SIZE(*diagnoses.ptr) * (Size)bh.diagnoses_len)
+    other_diagnoses.Reserve((Size)bh.diagnoses_len);
+    if (st.Read(SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len,
+                other_diagnoses.ptr) != SIZE(*other_diagnoses.ptr) * (Size)bh.diagnoses_len)
         goto corrupt_error;
-    diagnoses.len += (Size)bh.diagnoses_len;
+    other_diagnoses.len += (Size)bh.diagnoses_len;
 
     procedures.Grow((Size)bh.procedures_len);
     if (st.Read(SIZE(*procedures.ptr) * (Size)bh.procedures_len,
@@ -171,7 +171,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
             if (stay->other_diagnoses.len) {
                 if (UNLIKELY(stay->other_diagnoses.len < 0))
                     goto corrupt_error;
-                stay->other_diagnoses.ptr = &diagnoses[diagnoses_offset];
+                stay->other_diagnoses.ptr = &other_diagnoses[diagnoses_offset];
                 diagnoses_offset += stay->other_diagnoses.len;
                 if (UNLIKELY(diagnoses_offset <= 0 || diagnoses_offset > bh.diagnoses_len))
                     goto corrupt_error;
@@ -188,7 +188,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         }
     }
 
-    diagnoses.Leak();
+    other_diagnoses.Leak();
     procedures.Leak();
 
     // We assume stays are already sorted in pak files
@@ -252,8 +252,7 @@ static bool ParsePmsiDate(Span<const char> str, Date *out_date)
     return true;
 }
 
-static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
-                         HashTable<int32_t, mco_Test> *out_tests)
+bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (UNLIKELY(line.len < 12)) {
         LogError("Truncated RUM line");
@@ -287,7 +286,7 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     }
     if (UNLIKELY(version < 16 || version > 18)) {
         stay.errors |= (int)mco_Stay::Error::UnknownRumVersion;
-        out_set->stays.Append(stay);
+        set.stays.Append(stay);
         return true;
     }
     if (UNLIKELY(line.len < offset + 165)) {
@@ -360,8 +359,8 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
     }
     offset += 33; // Skip a bunch of fields
 
-    HeapArray<DiagnosisCode> other_diagnoses(&out_set->other_diagnoses_alloc);
-    HeapArray<mco_ProcedureRealisation> procedures(&out_set->procedures_alloc);
+    HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
     if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
         if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
                                 (version >= 17 ? 29 : 26) * procedures_count)) {
@@ -434,12 +433,11 @@ static bool ParseRssLine(Span<const char> line, mco_StaySet *out_set,
         }
     }
 
-    out_set->stays.Append(stay);
+    set.stays.Append(stay);
     return true;
 }
 
-static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
-                         HashTable<int32_t, mco_Test> *out_tests)
+bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests)
 {
     if (UNLIKELY(line.len < 12)) {
         LogError("Truncated RSA line");
@@ -469,7 +467,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
     ParsePmsiInt(ReadFragment(3), &version);
     if (UNLIKELY(version < 220 || version > 224)) {
         SetErrorFlag(mco_Stay::Error::UnknownRumVersion);
-        out_set->stays.Append(rsa);
+        set.stays.Append(rsa);
         return true;
     }
     if (UNLIKELY(line.len < (version >= 222 ? 174 : 182))) {
@@ -624,7 +622,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         ParsePmsiInt(ReadFragment(2), &stay.other_diagnoses.len);
         ParsePmsiInt(ReadFragment(3), &stay.procedures.len);
         if (i) {
-            stay.entry.date = out_set->stays[out_set->stays.len - 1].exit.date;
+            stay.entry.date = set.stays[set.stays.len - 1].exit.date;
             stay.entry.mode = '6';
             stay.entry.origin = '1';
         }
@@ -685,7 +683,7 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
             offset += 16;
         }
 
-        out_set->stays.Append(stay);
+        set.stays.Append(stay);
 
         stay.entry.date = stay.exit.date;
         das_count += stay.other_diagnoses.len;
@@ -698,10 +696,10 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         return false;
     }
 
-    for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
-        mco_Stay &stay = out_set->stays[i];
+    for (Size i = set.stays.len - test.cluster_len; i < set.stays.len; i++) {
+        mco_Stay &stay = set.stays[i];
 
-        HeapArray<DiagnosisCode> other_diagnoses(&out_set->other_diagnoses_alloc);
+        HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
         for (Size j = 0; j < stay.other_diagnoses.len; j++) {
             DiagnosisCode diag =
                 DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
@@ -715,10 +713,10 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
         stay.other_diagnoses = other_diagnoses.TrimAndLeak();
     }
 
-    for (Size i = out_set->stays.len - test.cluster_len; i < out_set->stays.len; i++) {
-        mco_Stay &stay = out_set->stays[i];
+    for (Size i = set.stays.len - test.cluster_len; i < set.stays.len; i++) {
+        mco_Stay &stay = set.stays[i];
 
-        HeapArray<mco_ProcedureRealisation> procedures(&out_set->procedures_alloc);
+        HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
         for (Size j = 0; j < stay.procedures.len; j++) {
             mco_ProcedureRealisation proc = {};
 
@@ -761,8 +759,8 @@ static bool ParseRsaLine(Span<const char> line, mco_StaySet *out_set,
 }
 
 bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
-                                  bool (*parse_func)(Span<const char> line, mco_StaySet *out_set,
-                                                     HashTable<int32_t, mco_Test> *out_tests),
+                                  bool (mco_StaySetBuilder::*parse_func)(Span<const char> line,
+                                                                         HashTable<int32_t, mco_Test> *out_tests),
                                   HashTable<int32_t, mco_Test> *out_tests)
 {
     Size stays_len = set.stays.len;
@@ -777,7 +775,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
 
         Span<const char> line;
         while (reader.Next(&line)) {
-            errors += !parse_func(line, &set, out_tests);
+            errors += !(this->*parse_func)(line, out_tests);
         }
         if (reader.error)
             return false;
@@ -797,7 +795,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
 
 bool mco_StaySetBuilder::LoadRss(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
 {
-    return LoadAtih(st, ParseRssLine, out_tests);
+    return LoadAtih(st, &mco_StaySetBuilder::ParseRssLine, out_tests);
 }
 
 bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> *out_tests)
@@ -808,7 +806,7 @@ bool mco_StaySetBuilder::LoadRsa(StreamReader &st, HashTable<int32_t, mco_Test> 
                  " (such as procedure date errors)");
     }
 
-    return LoadAtih(st, ParseRsaLine, out_tests);
+    return LoadAtih(st, &mco_StaySetBuilder::ParseRsaLine, out_tests);
 }
 
 bool mco_StaySetBuilder::LoadFichComp(StreamReader &st, HashTable<int32_t, mco_Test> *)

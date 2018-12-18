@@ -11,7 +11,7 @@ struct Config {
     const char *profile_directory = nullptr;
     const char *authorization_filename = nullptr;
 
-    BlockAllocator str_alloc { Kibibytes(16) };
+    TempAllocator str_alloc;
 };
 
 class ConfigBuilder {

@@ -19,7 +19,7 @@ struct Structure {
 struct StructureSet {
     HeapArray<Structure> structures;
 
-    BlockAllocator str_alloc {Kibibytes(16)};
+    TempAllocator str_alloc;
 };
 
 class StructureSetBuilder {

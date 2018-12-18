@@ -173,12 +173,14 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
 
     // TODO: Parallelize and optimize aggregation
     HeapArray<AggregateStatistics> statistics;
+    LinkedAllocator statistics_alloc;
     HeapArray<mco_GhmRootCode> ghm_roots;
-    BlockAllocator statistics_units_alloc(Kibibytes(4));
-    BlockAllocator statistics_parts_alloc(Kibibytes(16));
     {
         HashMap<AggregateStatistics::Key, Size> statistics_map;
         HashSet<mco_GhmRootCode> ghm_roots_set;
+
+        BlockAllocator units_alloc(&statistics_alloc, Kibibytes(4));
+        BlockAllocator parts_alloc(&statistics_alloc, Kibibytes(16));
 
         // Reuse for performance
         HeapArray<mco_Pricing> pricings;
@@ -218,7 +220,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 }
 
                 bool match = false;
-                HeapArray<UnitCode> agg_units(&statistics_units_alloc);
+                HeapArray<UnitCode> agg_units(&units_alloc);
                 for (Size k = 0; k < sub_mono_results.len; k++) {
                     const mco_Result &mono_result = sub_mono_results[k];
                     const mco_Pricing &mono_pricing = sub_mono_pricings[k];
@@ -243,7 +245,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
                 if (match) {
                     std::sort(agg_units.begin(), agg_units.end());
 
-                    HeapArray<AggregateStatistics::Part> agg_parts(&statistics_parts_alloc);
+                    HeapArray<AggregateStatistics::Part> agg_parts(&parts_alloc);
                     for (UnitCode unit: agg_units) {
                         AggregateStatistics::Part *part = agg_parts_map.Find(unit);
                         if (part) {

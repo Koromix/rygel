@@ -251,7 +251,7 @@ bool mco_LoadAuthorizationSet(const char *profile_directory,
         "mco_authorizations.txt"
     };
 
-    BlockAllocator temp_alloc(Kibibytes(8));
+    TempAllocator temp_alloc;
 
     const char *filename = nullptr;
     {

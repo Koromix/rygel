@@ -25,7 +25,7 @@ struct Config {
     int port = 8888;
     int threads = 4;
 
-    BlockAllocator str_alloc { Kibibytes(16) };
+    TempAllocator str_alloc;
 };
 
 class ConfigBuilder {

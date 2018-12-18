@@ -139,8 +139,7 @@ struct mco_Test {
 struct mco_StaySet {
     HeapArray<mco_Stay> stays;
 
-    BlockAllocator other_diagnoses_alloc {2048 * SIZE(DiagnosisCode)};
-    BlockAllocator procedures_alloc {2048 * SIZE(mco_ProcedureRealisation)};
+    LinkedAllocator array_alloc;
 
     bool SavePack(StreamWriter &st) const;
     bool SavePack(const char *filename) const;
@@ -148,6 +147,9 @@ struct mco_StaySet {
 
 class mco_StaySetBuilder {
     mco_StaySet set;
+
+    BlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(DiagnosisCode)};
+    BlockAllocator procedures_alloc {&set.array_alloc, 2048 * SIZE(mco_ProcedureRealisation)};
 
     struct FichCompData {
         enum class Type {
@@ -177,7 +179,9 @@ public:
 
 private:
     bool LoadAtih(StreamReader &st,
-                  bool (*parse_func)(Span<const char> line, mco_StaySet *out_set,
-                                     HashTable<int32_t, mco_Test> *out_tests),
+                  bool (mco_StaySetBuilder::*parse_func)(Span<const char> line,
+                                                         HashTable<int32_t, mco_Test> *out_tests),
                   HashTable<int32_t, mco_Test> *out_tests);
+    bool ParseRssLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests);
+    bool ParseRsaLine(Span<const char> line, HashTable<int32_t, mco_Test> *out_tests);
 };

@@ -133,8 +133,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
 
-    HeapArray<DiagnosisCode> other_diagnoses2(&out_stay_set->other_diagnoses_alloc);
-    HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->other_diagnoses_alloc);
+    HeapArray<DiagnosisCode> other_diagnoses2(&out_stay_set->array_alloc);
+    HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->array_alloc);
     other_diagnoses2.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
     procedures2.Reserve(procedures_end - procedures_offset);
 

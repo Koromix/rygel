@@ -33,7 +33,7 @@ struct UserSet {
     HeapArray<User> users;
     HashTable<const char *, const User *> map;
 
-    BlockAllocator str_alloc {Kibibytes(16)};
+    TempAllocator str_alloc;
 
     const User *FindUser(const char *name) const { return map.FindValue(name, nullptr); }
 };
@@ -49,8 +49,8 @@ class UserSetBuilder {
     HashMap<const char *, Size> map;
 
     HeapArray<UnitRuleSet> rule_sets;
-    BlockAllocator allow_alloc {Kibibytes(4)};
-    BlockAllocator deny_alloc {Kibibytes(4)};
+    TempAllocator allow_alloc;
+    TempAllocator deny_alloc;
 
 public:
     bool LoadIni(StreamReader &st);

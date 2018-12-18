@@ -95,7 +95,7 @@ extern const Span<const PackerAsset> packer_assets;
 #endif
 
 static HashTable<Span<const char>, Route> routes;
-static BlockAllocator routes_alloc(Kibibytes(16));
+static TempAllocator routes_alloc;
 static char etag[64];
 
 static const char *GetMimeType(Span<const char> path)
@@ -124,7 +124,7 @@ static const char *GetMimeType(Span<const char> path)
 
 static bool InitCatalogSet(Span<const char *const> table_directories)
 {
-    BlockAllocator temp_alloc(Kibibytes(8));
+    TempAllocator temp_alloc;
 
     HeapArray<const char *> filenames;
     {
@@ -183,7 +183,7 @@ static bool InitTables(Span<const char *const> table_directories)
 
 static bool InitConfig(const char *config_filename)
 {
-    BlockAllocator temp_alloc {Kibibytes(8)};
+    TempAllocator temp_alloc;
 
     LogInfo("Load configuration");
 
@@ -195,7 +195,7 @@ static bool InitConfig(const char *config_filename)
 
 static bool InitProfile(const char *profile_directory, const char *authorization_filename)
 {
-    BlockAllocator temp_alloc {Kibibytes(8)};
+    TempAllocator temp_alloc;
 
     LogInfo("Load profile");
 
@@ -216,7 +216,7 @@ static bool InitProfile(const char *profile_directory, const char *authorization
 static bool InitStays(Span<const char *const> stay_directories,
                       Span<const char *const> stay_filenames)
 {
-    BlockAllocator temp_alloc(Kibibytes(8));
+    TempAllocator temp_alloc;
 
     LogInfo("Load stays");
 
@@ -581,7 +581,7 @@ static void InitRoutes()
 #ifndef NDEBUG
 static bool UpdateStaticAssets()
 {
-    BlockAllocator temp_alloc(Kibibytes(8));
+    TempAllocator temp_alloc;
 
     const char *filename = nullptr;
     const Span<const PackerAsset> *lib_assets = nullptr;

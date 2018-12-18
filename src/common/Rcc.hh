@@ -391,7 +391,7 @@ class Rcc_ListBuilder {
     };
 
     LocalArray<Variable, 64> variables;
-    BlockAllocator str_alloc {Kibibytes(2)};
+    TempAllocator str_alloc;
 
 public:
     Rcc_ListBuilder() = default;
