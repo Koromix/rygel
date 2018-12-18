@@ -438,7 +438,7 @@ Dispensation modes:)");
                          &results, dispense_mode >= 0 ? &mono_results : nullptr);
         }
 
-        if (dispense_mode >= 0 || verbosity || test) {
+        if (verbosity || test) {
             switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
 
