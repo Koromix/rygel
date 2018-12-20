@@ -286,7 +286,7 @@ let mco_casemix = {};
     function updateCasemixParams(start, end, mode, diff_start, diff_end, apply_coefficient, refresh)
     {
         let params = {
-            dates: (start && end) ? (start + '..' + end) : null,
+            period: (start && end) ? (start + '..' + end) : null,
             dispense_mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             apply_coefficient: 0 + apply_coefficient,

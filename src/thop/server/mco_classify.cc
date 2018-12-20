@@ -6,33 +6,7 @@
 #include "mco_classify.hh"
 #include "user.hh"
 
-static bool ParseDateRange(Span<const char> date_str, Date *out_start_date, Date *out_end_date)
-{
-    Date start_date = {};
-    Date end_date = {};
-
-    if (date_str.len) {
-        Span<const char> str = date_str;
-        start_date = Date::FromString(str, 0, &str);
-        if (str.len < 2 || str[0] != '.' || str[1] != '.')
-            goto invalid;
-        end_date = Date::FromString(str.Take(2, str.len - 2), 0, &str);
-        if (str.len)
-            goto invalid;
-        if (!start_date.IsValid() || !end_date.IsValid() || end_date <= start_date)
-            goto invalid;
-    }
-
-    *out_start_date = start_date;
-    *out_end_date = end_date;
-    return true;
-
-invalid:
-    LogError("Invalid date range '%1'", date_str);
-    return false;
-}
-
-struct AggregateStatistics {
+struct Aggregate {
     struct Key {
         mco_GhmCode ghm;
         mco_GhsCode ghs;
@@ -73,10 +47,145 @@ struct AggregateStatistics {
     int64_t price_cents;
     Span<Part> parts;
 
-    HASH_TABLE_HANDLER(AggregateStatistics, key);
+    HASH_TABLE_HANDLER(Aggregate, key);
 };
 
-struct AggregationGhmGhs {
+enum class AggregationFlag {
+    KeyOnDuration = 1 << 0,
+    KeyOnUnits = 1 << 1,
+    ExportGhmGhsInfo = 1 << 2
+};
+
+struct AggregateSet {
+    HeapArray<Aggregate> aggregates;
+
+    LinkedAllocator array_alloc;
+};
+
+class AggregateSetBuilder {
+    const HashSet<UnitCode> *allowed_units;
+    unsigned int flags;
+
+    AggregateSet set;
+    HeapArray<mco_GhmRootCode> ghm_roots;
+
+    HashMap<Aggregate::Key, Size> aggregates_map;
+    HashSet<mco_GhmRootCode> ghm_roots_set;
+    BlockAllocator units_alloc {&set.array_alloc, Kibibytes(4)};
+    BlockAllocator parts_alloc {&set.array_alloc, Kibibytes(16)};
+
+    // Reuse for performance
+    HashMap<UnitCode, Aggregate::Part> agg_parts_map;
+
+public:
+    AggregateSetBuilder(const HashSet<UnitCode> *allowed_units, unsigned int flags)
+        : allowed_units(allowed_units), flags(flags) {}
+
+    void Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                 Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
+                 int multiplier = 1)
+    {
+        for (Size i = 0, j = 0; i < results.len; i++) {
+            agg_parts_map.RemoveAll();
+
+            const mco_Result &result = results[i];
+            const mco_Pricing &pricing = pricings[i];
+            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+            j += result.stays.len;
+
+            bool match = false;
+            HeapArray<UnitCode> agg_units(&units_alloc);
+            for (Size k = 0; k < sub_mono_results.len; k++) {
+                const mco_Result &mono_result = sub_mono_results[k];
+                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+                UnitCode unit = mono_result.stays[0].unit;
+                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+
+                if (allowed_units->Find(unit)) {
+                    std::pair<Aggregate::Part *, bool> ret =
+                        agg_parts_map.AppendDefault(mono_result.stays[0].unit);
+
+                    ret.first->mono_count += multiplier;
+                    ret.first->price_cents += multiplier * mono_pricing.price_cents;
+
+                    if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
+                        agg_units.Append(unit);
+                    }
+
+                    match = true;
+                }
+            }
+
+            if (match) {
+                std::sort(agg_units.begin(), agg_units.end());
+
+                HeapArray<Aggregate::Part> agg_parts(&parts_alloc);
+                for (UnitCode unit: agg_units) {
+                    Aggregate::Part *part = agg_parts_map.Find(unit);
+                    if (part) {
+                        agg_parts.Append(*part);
+                    }
+                }
+
+                Aggregate::Key key = {};
+                key.ghm = result.ghm;
+                key.ghs = result.ghs;
+                if (flags & (int)AggregationFlag::KeyOnDuration) {
+                    key.duration = result.duration;
+                }
+                if (flags & (int)AggregationFlag::KeyOnUnits) {
+                    key.units = agg_units.TrimAndLeak();
+                }
+
+                Aggregate *agg;
+                {
+                    std::pair<Size *, bool> ret = aggregates_map.Append(key, set.aggregates.len);
+                    if (ret.second) {
+                        agg = set.aggregates.AppendDefault();
+                        agg->key = key;
+                    } else {
+                        agg = &set.aggregates[*ret.first];
+                    }
+                }
+
+                agg->count += multiplier;
+                agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
+                agg->mono_count += multiplier * (int32_t)result.stays.len;
+                agg->price_cents += multiplier * pricing.price_cents;
+                if (agg->parts.ptr) {
+                    DebugAssert(agg->parts.len == agg_parts.len);
+                    for (Size k = 0; k < agg->parts.len; k++) {
+                        agg->parts[k].mono_count += agg_parts[k].mono_count;
+                        agg->parts[k].price_cents += agg_parts[k].price_cents;
+                    }
+                } else {
+                    agg->parts = agg_parts.TrimAndLeak();
+                }
+
+                if (ghm_roots_set.Append(result.ghm.Root()).second) {
+                    ghm_roots.Append(result.ghm.Root());
+                }
+            }
+        }
+    }
+
+    void Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots = nullptr)
+    {
+        std::sort(set.aggregates.begin(), set.aggregates.end(),
+                  [](const Aggregate &agg1, const Aggregate &agg2) {
+            return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
+                            agg1.key.ghs.number - agg2.key.ghs.number) < 0;
+        });
+
+        SwapMemory(out_set, &set, SIZE(set));
+        if (out_ghm_roots) {
+            std::swap(ghm_roots, *out_ghm_roots);
+        }
+    }
+};
+
+struct GhmGhsInfo {
     struct Key {
         mco_GhmCode ghm;
         mco_GhsCode ghs;
@@ -104,11 +213,154 @@ struct AggregationGhmGhs {
     uint32_t durations;
 };
 
-enum class AggregationFlag {
-    KeyOnDuration = 1 << 0,
-    KeyOnUnits = 1 << 1,
-    ExportGhsInfo = 1 << 2
-};
+static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_date, Date max_date,
+                             HeapArray<GhmGhsInfo> *out_ghm_ghs)
+{
+    HashMap<GhmGhsInfo::Key, Size> ghm_ghs_map;
+
+    for (const mco_TableIndex &index: thop_table_set.indexes) {
+        const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
+            *thop_index_to_constraints[&index - thop_table_set.indexes.ptr];
+
+        if (min_date < index.limit_dates[1] && index.limit_dates[0] < max_date) {
+            for (mco_GhmRootCode ghm_root: ghm_roots) {
+                Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm_root);
+
+                for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+                    const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
+                    const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
+
+                    GhmGhsInfo *agg_ghm_ghs;
+                    {
+                        GhmGhsInfo::Key key;
+                        key.ghm = ghm_to_ghs_info.ghm;
+                        key.ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+
+                        std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, out_ghm_ghs->len);
+                        if (ret.second) {
+                            agg_ghm_ghs = out_ghm_ghs->AppendDefault();
+                            agg_ghm_ghs->key = key;
+                            agg_ghm_ghs->ghm_to_ghs_info = &ghm_to_ghs_info;
+                        } else {
+                            agg_ghm_ghs = &(*out_ghm_ghs)[*ret.first];
+                        }
+                    }
+
+                    if (constraint) {
+                        agg_ghm_ghs->durations |= constraint->durations &
+                                                  ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                    }
+
+                    if (ghs_price_info) {
+                        if (!agg_ghm_ghs->exh_treshold ||
+                                ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
+                            agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
+                        }
+                        if (!agg_ghm_ghs->exb_treshold ||
+                                ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
+                            agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+static int GetQueryDateRange(MHD_Connection *conn, const char *key, Response *out_response,
+                             Date *out_start_date, Date *out_end_date)
+{
+    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    if (!str) {
+        LogError("Missing '%1' argument", key);
+        return CreateErrorPage(422, out_response);
+    }
+
+    Date start_date;
+    Date end_date = {};
+    {
+        Span<const char> remain = str;
+
+        start_date = Date::FromString(remain, 0, &remain);
+        if (remain.len < 2 || remain[0] != '.' || remain[1] != '.')
+            goto invalid;
+        end_date = Date::FromString(remain.Take(2, remain.len - 2), 0, &remain);
+        if (remain.len)
+            goto invalid;
+
+        if (!start_date.IsValid() || !end_date.IsValid() || end_date <= start_date)
+            goto invalid;
+    }
+
+    *out_start_date = start_date;
+    *out_end_date = end_date;
+    return 0;
+
+invalid:
+    LogError("Invalid date range '%1'", str);
+    return false;
+}
+
+static int GetQueryDispenseMode(MHD_Connection *conn, const char *key, Response *out_response,
+                                mco_DispenseMode *out_dispense_mode)
+{
+    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    if (!str) {
+        LogError("Missing '%1' argument", key);
+        return CreateErrorPage(422, out_response);
+    }
+
+    const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
+                                          std::end(mco_DispenseModeOptions),
+                                          [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
+    if (desc == std::end(mco_DispenseModeOptions)) {
+        LogError("Invalid '%1' parameter value '%2'", key, str);
+        return CreateErrorPage(422, out_response);
+    }
+
+    *out_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+    return 0;
+}
+
+static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key, Response *out_response,
+                                    bool *out_apply_coefficient)
+{
+    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    if (!str) {
+        LogError("Missing '%1' argument", key);
+        return CreateErrorPage(422, out_response);
+    }
+
+    bool apply_coefficient;
+    if (TestStr(str, "1")) {
+        apply_coefficient = true;
+    } else if (TestStr(str, "0")) {
+        apply_coefficient = false;
+    } else {
+        LogError("Invalid '%1' parameter value '%2'", key, str);
+        return CreateErrorPage(422, out_response);
+    }
+
+    *out_apply_coefficient = apply_coefficient;
+    return 0;
+}
+
+static int GetQueryGhmRoot(MHD_Connection *conn, const char *key, Response *out_response,
+                           mco_GhmRootCode *out_ghm_root)
+{
+    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    if (!str) {
+        LogError("Missing 'ghm_root' argument");
+        return CreateErrorPage(422, out_response);
+    }
+
+    mco_GhmRootCode ghm_root = mco_GhmRootCode::FromString(str);
+    if (!ghm_root.IsValid())
+        return CreateErrorPage(422, out_response);
+
+    *out_ghm_root = ghm_root;
+    return 0;
+}
 
 template <typename T>
 int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
@@ -117,76 +369,43 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     if (!conn->user)
         return CreateErrorPage(403, out_response);
 
-    Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};
-    Date diff_dates[2] = {};
+    // Get query parameters
+    Date period[2] = {};
+    Date diff[2] = {};
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
-    {
-        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
-                            &dates[0], &dates[1]))
-            return CreateErrorPage(422, out_response);
-        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff"),
-                            &diff_dates[0], &diff_dates[1]))
-            return CreateErrorPage(422, out_response);
-        if (dates[0].value && diff_dates[0].value &&
-                dates[0] < diff_dates[1] && dates[1] > diff_dates[0]) {
-            LogError("Parameters 'dates' and 'diff' must not overlap");
-            return CreateErrorPage(422, out_response);
-        }
-
-        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dispense_mode");
-        if (mode_str) {
-            const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                                  std::end(mco_DispenseModeOptions),
-                                                  [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
-            if (desc == std::end(mco_DispenseModeOptions)) {
-                LogError("Invalid 'dispense_mode' parameter value '%1'", mode_str);
-                return CreateErrorPage(422, out_response);
-            }
-            dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
-        } else {
-            LogError("Missing 'dispense_mode' argument");
-            return CreateErrorPage(422, out_response);
-        }
-
-        const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
-        if (apply_coefficent_str) {
-            if (TestStr(apply_coefficent_str, "1")) {
-                apply_coefficent = true;
-            } else if (TestStr(apply_coefficent_str, "0")) {
-                apply_coefficent = false;
-            } else {
-                LogError("Invalid 'apply_coefficent' parameter value '%1'", apply_coefficent_str);
-                return CreateErrorPage(422, out_response);
-            }
-        } else {
-            LogError("Missing 'apply_coefficent' argument");
-            return CreateErrorPage(422, out_response);
-        }
+    if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
+        return code;
+    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff")) {
+        if (int code = GetQueryDateRange(conn->conn, "diff", out_response, &diff[0], &diff[1]); code)
+            return code;
     }
+    if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
+        return code;
+    if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficent); code)
+        return code;
 
-    // Permissions
+    // Check errors and permissions
+    if (diff[0].value && period[0] < diff[1] && period[1] > diff[0]) {
+        LogError("Parameters 'period' and 'diff' must not overlap");
+        return CreateErrorPage(422, out_response);
+    }
     if (!conn->user->CheckDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
 
-    // TODO: Parallelize and optimize aggregation
-    HeapArray<AggregateStatistics> statistics;
-    LinkedAllocator statistics_alloc;
+    // Aggregate results
+    AggregateSet aggregate_set;
     HeapArray<mco_GhmRootCode> ghm_roots;
     {
-        HashMap<AggregateStatistics::Key, Size> statistics_map;
-        HashSet<mco_GhmRootCode> ghm_roots_set;
-
-        BlockAllocator units_alloc(&statistics_alloc, Kibibytes(4));
-        BlockAllocator parts_alloc(&statistics_alloc, Kibibytes(16));
+        AggregateSetBuilder aggregate_set_builder(&conn->user->allowed_units, flags);
 
         // Reuse for performance
         HeapArray<mco_Pricing> pricings;
         HeapArray<mco_Pricing> mono_pricings;
-        HashMap<UnitCode, AggregateStatistics::Part> agg_parts_map;
 
+        // TODO: Parallelize and optimize aggregation
         for (;;) {
             Span<const mco_Result> results;
             Span<const mco_Result> mono_results;
@@ -198,184 +417,41 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
             mco_Price(results, apply_coefficent, &pricings);
             mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-            for (Size i = 0, j = 0; i < results.len; i++) {
-                agg_parts_map.RemoveAll();
-
-                const mco_Result &result = results[i];
-                const mco_Pricing &pricing = pricings[i];
-                Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-                Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-                j += result.stays.len;
-
-                int multiplier;
-                if (result.stays[result.stays.len - 1].exit.date >= dates[0] &&
-                         result.stays[result.stays.len - 1].exit.date < dates[1]) {
-                    multiplier = 1;
-                } else if (diff_dates[0].value &&
-                           result.stays[result.stays.len - 1].exit.date >= diff_dates[0] &&
-                           result.stays[result.stays.len - 1].exit.date < diff_dates[1]) {
-                    multiplier = -1;
-                } else {
-                    continue;
-                }
-
-                bool match = false;
-                HeapArray<UnitCode> agg_units(&units_alloc);
-                for (Size k = 0; k < sub_mono_results.len; k++) {
-                    const mco_Result &mono_result = sub_mono_results[k];
-                    const mco_Pricing &mono_pricing = sub_mono_pricings[k];
-                    UnitCode unit = mono_result.stays[0].unit;
-                    DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
-
-                    if (conn->user->allowed_units.Find(unit)) {
-                        std::pair<AggregateStatistics::Part *, bool> ret =
-                            agg_parts_map.AppendDefault(mono_result.stays[0].unit);
-
-                        ret.first->mono_count += multiplier;
-                        ret.first->price_cents += multiplier * mono_pricing.price_cents;
-
-                        if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
-                            agg_units.Append(unit);
-                        }
-
-                        match = true;
-                    }
-                }
-
-                if (match) {
-                    std::sort(agg_units.begin(), agg_units.end());
-
-                    HeapArray<AggregateStatistics::Part> agg_parts(&parts_alloc);
-                    for (UnitCode unit: agg_units) {
-                        AggregateStatistics::Part *part = agg_parts_map.Find(unit);
-                        if (part) {
-                            agg_parts.Append(*part);
-                        }
-                    }
-
-                    AggregateStatistics::Key key = {};
-                    key.ghm = result.ghm;
-                    key.ghs = result.ghs;
-                    if (flags & (int)AggregationFlag::KeyOnDuration) {
-                        key.duration = result.duration;
-                    }
-                    if (flags & (int)AggregationFlag::KeyOnUnits) {
-                        key.units = agg_units.TrimAndLeak();
-                    }
-
-                    AggregateStatistics *agg;
-                    {
-                        std::pair<Size *, bool> ret = statistics_map.Append(key, statistics.len);
-                        if (ret.second) {
-                            agg = statistics.AppendDefault();
-                            agg->key = key;
-                        } else {
-                            agg = &statistics[*ret.first];
-                        }
-                    }
-
-                    agg->count += multiplier;
-                    agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
-                    agg->mono_count += multiplier * (int32_t)result.stays.len;
-                    agg->price_cents += multiplier * pricing.price_cents;
-                    if (agg->parts.ptr) {
-                        DebugAssert(agg->parts.len == agg_parts.len);
-                        for (Size k = 0; k < agg->parts.len; k++) {
-                            agg->parts[k].mono_count += agg_parts[k].mono_count;
-                            agg->parts[k].price_cents += agg_parts[k].price_cents;
-                        }
-                    } else {
-                        agg->parts = agg_parts.TrimAndLeak();
-                    }
-
-                    if ((flags & (int)AggregationFlag::ExportGhsInfo) &&
-                            ghm_roots_set.Append(result.ghm.Root()).second) {
-                        ghm_roots.Append(result.ghm.Root());
-                    }
-                }
-            }
+            aggregate_set_builder.Process(results, mono_results, pricings, mono_pricings);
         }
-    }
-    std::sort(statistics.begin(), statistics.end(),
-              [](const AggregateStatistics &agg1, const AggregateStatistics &agg2) {
-        return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
-                        agg1.key.ghs.number - agg2.key.ghs.number) < 0;
-    });
 
-    HeapArray<AggregationGhmGhs> ghm_ghs;
-    if (flags & (int)AggregationFlag::ExportGhsInfo) {
-        HashMap<AggregationGhmGhs::Key, Size> ghm_ghs_map;
-
-        for (const mco_TableIndex &index: thop_table_set.indexes) {
-            const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-                *thop_index_to_constraints[&index - thop_table_set.indexes.ptr];
-
-            if ((dates[0] < index.limit_dates[1] && index.limit_dates[0] < dates[1]) ||
-                    (diff_dates[0].value && diff_dates[0] < index.limit_dates[1] &&
-                     index.limit_dates[0] < diff_dates[1])) {
-                for (mco_GhmRootCode ghm_root: ghm_roots) {
-                    Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm_root);
-
-                    for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                        const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
-                        const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
-
-                        AggregationGhmGhs *agg_ghm_ghs;
-                        {
-                            AggregationGhmGhs::Key key;
-                            key.ghm = ghm_to_ghs_info.ghm;
-                            key.ghs = ghm_to_ghs_info.Ghs(Sector::Public);
-
-                            std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, ghm_ghs.len);
-                            if (ret.second) {
-                                agg_ghm_ghs = ghm_ghs.AppendDefault();
-                                agg_ghm_ghs->key = key;
-                                agg_ghm_ghs->ghm_to_ghs_info = &ghm_to_ghs_info;
-                            } else {
-                                agg_ghm_ghs = &ghm_ghs[*ret.first];
-                            }
-                        }
-
-                        if (constraint) {
-                            agg_ghm_ghs->durations |= constraint->durations &
-                                                      ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
-                        }
-
-                        if (ghs_price_info) {
-                            if (!agg_ghm_ghs->exh_treshold ||
-                                    ghs_price_info->exh_treshold < agg_ghm_ghs->exh_treshold) {
-                                agg_ghm_ghs->exh_treshold = ghs_price_info->exh_treshold;
-                            }
-                            if (!agg_ghm_ghs->exb_treshold ||
-                                    ghs_price_info->exb_treshold > agg_ghm_ghs->exb_treshold) {
-                                agg_ghm_ghs->exb_treshold = ghs_price_info->exb_treshold;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        aggregate_set_builder.Finish(&aggregate_set, &ghm_roots);
     }
 
+    // Gather GHM and GHS info for results
+    HeapArray<GhmGhsInfo> ghm_ghs;
+    if (flags & (int)AggregationFlag::ExportGhmGhsInfo) {
+        Date min_date = diff[0].value ? std::min(period[0], diff[0]) : period[0];
+        Date max_date = diff[0].value ? std::max(period[1], diff[1]) : period[1];
+
+        GatherGhmGhsInfo(ghm_roots, min_date, max_date, &ghm_ghs);
+    }
+
+    // Export data
     out_response->flags |= (int)Response::Flag::DisableCache;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         char buf[32];
 
         writer.StartObject();
-        if (flags & (int)AggregationFlag::ExportGhsInfo) {
+        if (flags & (int)AggregationFlag::ExportGhmGhsInfo) {
             writer.Key("ghs"); writer.StartArray();
-            for (const AggregationGhmGhs &agg_ghm_ghs: ghm_ghs) {
+            for (const GhmGhsInfo &ghm_ghs_info: ghm_ghs) {
                 writer.StartObject();
-                writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg_ghm_ghs.key.ghm).ptr);
-                writer.Key("ghs"); writer.Int(agg_ghm_ghs.key.ghs.number);
-                writer.Key("conditions"); writer.Bool(agg_ghm_ghs.ghm_to_ghs_info->conditions_count);
-                writer.Key("durations"); writer.Uint(agg_ghm_ghs.durations);
+                writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_ghs_info.key.ghm).ptr);
+                writer.Key("ghs"); writer.Int(ghm_ghs_info.key.ghs.number);
+                writer.Key("conditions"); writer.Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
+                writer.Key("durations"); writer.Uint(ghm_ghs_info.durations);
 
-                if (agg_ghm_ghs.exh_treshold) {
-                    writer.Key("exh_treshold"); writer.Int(agg_ghm_ghs.exh_treshold);
+                if (ghm_ghs_info.exh_treshold) {
+                    writer.Key("exh_treshold"); writer.Int(ghm_ghs_info.exh_treshold);
                 }
-                if (agg_ghm_ghs.exb_treshold) {
-                    writer.Key("exb_treshold"); writer.Int(agg_ghm_ghs.exb_treshold);
+                if (ghm_ghs_info.exb_treshold) {
+                    writer.Key("exb_treshold"); writer.Int(ghm_ghs_info.exb_treshold);
                 }
                 writer.EndObject();
             }
@@ -383,7 +459,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
         }
 
         writer.Key("rows"); writer.StartArray();
-        for (const AggregateStatistics &agg: statistics) {
+        for (const Aggregate &agg: aggregate_set.aggregates) {
             writer.StartObject();
             writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
             writer.Key("ghs"); writer.Int(agg.key.ghs.number);
@@ -402,12 +478,12 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
             writer.Key("mono_count_total"); writer.Int(agg.mono_count);
             writer.Key("price_cents_total"); writer.Int64(agg.price_cents);
             writer.Key("mono_count"); writer.StartArray();
-            for (const AggregateStatistics::Part &part: agg.parts) {
+            for (const Aggregate::Part &part: agg.parts) {
                 writer.Int(part.mono_count);
             }
             writer.EndArray();
             writer.Key("price_cents"); writer.StartArray();
-            for (const AggregateStatistics::Part &part: agg.parts) {
+            for (const Aggregate::Part &part: agg.parts) {
                 writer.Int64(part.price_cents);
             }
             writer.EndArray();
@@ -450,17 +526,9 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
 {
     const int split_size = 8192;
 
-    mco_GhmRootCode ghm_root;
-    {
-        const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
-        if (!ghm_root_str) {
-            LogError("Missing 'ghm_root' argument");
-            return CreateErrorPage(422, out_response);
-        }
-        ghm_root = mco_GhmRootCode::FromString(ghm_root_str);
-        if (!ghm_root.IsValid())
-            return CreateErrorPage(422, out_response);
-    }
+    mco_GhmRootCode ghm_root = {};
+    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+        return code;
 
     Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
 
@@ -471,7 +539,7 @@ int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response
     Size i = 0;
     return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnDuration |
                                    (int)AggregationFlag::KeyOnUnits |
-                                   (int)AggregationFlag::ExportGhsInfo,
+                                   (int)AggregationFlag::ExportGhmGhsInfo,
                              [&](Span<const mco_Result> *out_results,
                                  Span<const mco_Result> *out_mono_results) {
         results.RemoveFrom(0);
@@ -498,64 +566,30 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     if (!conn->user || !(conn->user->permissions & (int)UserPermission::FullResults))
         return CreateErrorPage(403, out_response);
 
-    Date dates[2] = {thop_stay_set_dates[0], thop_stay_set_dates[1]};
-    mco_GhmRootCode ghm_root;
+    // Get query parameters
+    Date period[2] = {};
+    mco_GhmRootCode ghm_root = {};
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
-    {
-        if (!ParseDateRange(MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dates"),
-                            &dates[0], &dates[1]))
-            return CreateErrorPage(422, out_response);
+    if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
+        return code;
+    if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
+        return code;
+    if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficent); code)
+        return code;
+    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+        return code;
 
-        const char *ghm_root_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root");
-        if (!ghm_root_str) {
-            LogError("Missing 'ghm_root' argument");
-            return CreateErrorPage(422, out_response);
-        }
-        ghm_root = mco_GhmRootCode::FromString(ghm_root_str);
-        if (!ghm_root.IsValid())
-            return CreateErrorPage(422, out_response);
-
-        const char *mode_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "dispense_mode");
-        if (mode_str) {
-            const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                                  std::end(mco_DispenseModeOptions),
-                                                  [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
-            if (desc == std::end(mco_DispenseModeOptions)) {
-                LogError("Invalid 'dispense_mode' parameter value '%1'", mode_str);
-                return CreateErrorPage(422, out_response);
-            }
-            dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
-        } else {
-            LogError("Missing 'dispense_mode' argument");
-            return CreateErrorPage(422, out_response);
-        }
-
-        const char *apply_coefficent_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "apply_coefficient");
-        if (apply_coefficent_str) {
-            if (TestStr(apply_coefficent_str, "1")) {
-                apply_coefficent = true;
-            } else if (TestStr(apply_coefficent_str, "0")) {
-                apply_coefficent = false;
-            } else {
-                LogError("Invalid 'apply_coefficent' parameter value '%1'", apply_coefficent_str);
-                return CreateErrorPage(422, out_response);
-            }
-        } else {
-            LogError("Missing 'apply_coefficent' argument");
-            return CreateErrorPage(422, out_response);
-        }
-    }
-
+    // Check permissions
     if (!conn->user->CheckDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
 
+    // Gather results
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
     {
-
         Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
 
         for (const mco_ResultPointers &p: results_index) {
@@ -571,11 +605,13 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
         }
     }
 
+    // Compute prices
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
     mco_Price(results, apply_coefficent, &pricings);
     mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
+    // Export data
     out_response->flags |= (int)Response::Flag::DisableCache;
     return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
         writer.StartArray();
@@ -588,8 +624,8 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
             Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
 
-            if (result.stays[result.stays.len - 1].exit.date < dates[0] ||
-                    result.stays[result.stays.len - 1].exit.date >= dates[1])
+            if (result.stays[result.stays.len - 1].exit.date < period[0] ||
+                    result.stays[result.stays.len - 1].exit.date >= period[1])
                 continue;
 
             const mco_GhmRootInfo *ghm_root_info = nullptr;
