@@ -260,6 +260,8 @@ static bool InitStays(Span<const char *const> stay_directories,
         return false;
     }
 
+    LogInfo("Check and sort stays");
+
     // Check units
     {
         HashSet<UnitCode> known_units;
@@ -282,6 +284,50 @@ static bool InitStays(Span<const char *const> stay_directories,
             return false;
     }
 
+    // Sort by date
+    {
+        HeapArray<Span<const mco_Stay>> groups;
+        {
+            Span<const mco_Stay> remain = thop_stay_set.stays;
+            while (remain.len) {
+                Span<const mco_Stay> group = mco_Split(remain, 1, &remain);
+                groups.Append(group);
+            }
+        }
+        std::sort(groups.begin(), groups.end(),
+                  [](const Span<const mco_Stay> &group1, const Span<const mco_Stay> &group2) {
+            return group1[group1.len - 1].exit.date < group2[group2.len - 1].exit.date;
+        });
+
+        for (const Span<const mco_Stay> &group: groups) {
+            Date exit_date = group[group.len - 1].exit.date;
+
+            if (LIKELY(exit_date.IsValid())) {
+                thop_stay_set_dates[0] = exit_date;
+                break;
+            }
+        }
+        for (Size i = groups.len - 1; i >= 0; i--) {
+            const Span<const mco_Stay> &group = groups[i];
+            Date exit_date = group[group.len - 1].exit.date;
+
+            if (LIKELY(exit_date.IsValid())) {
+                thop_stay_set_dates[1] = exit_date + 1;
+                break;
+            }
+        }
+        if (!thop_stay_set_dates[1].value) {
+            LogError("Could not determine date range for stay set");
+            return false;
+        }
+
+        HeapArray<mco_Stay> stays(thop_stay_set.stays.len);
+        for (Span<const mco_Stay> group: groups) {
+            stays.Append(group);
+        }
+        std::swap(stays, thop_stay_set.stays);
+    }
+
     LogInfo("Classify stays");
 
     // Classify
@@ -291,27 +337,6 @@ static bool InitStays(Span<const char *const> stay_directories,
     thop_mono_results.Trim();
 
     LogInfo("Index results");
-
-    // Limit dates
-    {
-        thop_stay_set_dates[0].value = INT32_MAX;
-
-        for (const mco_Result &result: thop_results) {
-            const mco_Stay &last_stay = result.stays[result.stays.len - 1];
-
-            if (LIKELY(last_stay.exit.date.IsValid())) {
-                thop_stay_set_dates[0] = std::min(thop_stay_set_dates[0], last_stay.exit.date);
-                thop_stay_set_dates[1] = std::max(thop_stay_set_dates[1], last_stay.exit.date);
-            }
-        }
-
-        if (!thop_stay_set_dates[1].value) {
-            LogError("Could not determine date range for stay set");
-            return false;
-        }
-
-        thop_stay_set_dates[1]++;
-    }
 
     // Index by GHM
     for (Size i = 0, j = 0; i < thop_results.len; i++) {
@@ -325,7 +350,7 @@ static bool InitStays(Span<const char *const> stay_directories,
 
         j += result.stays.len;
     }
-    std::sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
+    std::stable_sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
               [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
         return p1.result->ghm.Root() < p2.result->ghm.Root();
     });
