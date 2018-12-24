@@ -705,6 +705,11 @@ static inline constexpr Span<T> MakeSpan(T *ptr, Size len)
 {
     return Span<T>(ptr, len);
 }
+template <typename T>
+static inline constexpr Span<T> MakeSpan(T *ptr, T *end)
+{
+    return Span<T>(ptr, end - ptr);
+}
 template <typename T, Size N>
 static inline constexpr Span<T> MakeSpan(T (&arr)[N])
 {
