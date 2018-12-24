@@ -70,21 +70,22 @@ struct Route {
     HASH_TABLE_HANDLER(Route, url);
 };
 
+Config thop_config;
+
 mco_TableSet thop_table_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
-Config thop_config;
 mco_AuthorizationSet thop_authorization_set;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 mco_StaySet thop_stay_set;
 Date thop_stay_set_dates[2];
+
 HeapArray<mco_Result> thop_results;
 HeapArray<mco_Result> thop_mono_results;
 HeapArray<mco_ResultPointers> thop_results_index_ghm;
 HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
-HashMap<int32_t, mco_ResultPointers> thop_results_index_bill_id;
 
 static CatalogSet catalog_set;
 #ifndef NDEBUG
@@ -361,21 +362,6 @@ static bool InitStays(Span<const char *const> stay_directories,
         ret.first->len += !ret.second;
     }
     thop_results_index_ghm.Trim();
-
-    // Index by bill id
-    {
-        Size i = 0;
-        for (const mco_Result &result: thop_results) {
-            DebugAssert(thop_mono_results[i].stays[0].bill_id == result.stays[0].bill_id);
-
-            mco_ResultPointers p;
-            p.result = &result;
-            p.mono_result = &thop_mono_results[i];
-
-            thop_results_index_bill_id.Append(result.stays[0].bill_id, p);
-            i += result.stays.len;
-        }
-    }
 
     return true;
 }

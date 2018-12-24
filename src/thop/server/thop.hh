@@ -45,21 +45,22 @@ struct mco_ResultPointers {
     const mco_Result *mono_result;
 };
 
+extern Config thop_config;
+
 extern mco_TableSet thop_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
 
-extern Config thop_config;
 extern mco_AuthorizationSet thop_authorization_set;
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;
 extern mco_StaySet thop_stay_set;
 extern Date thop_stay_set_dates[2];
+
 extern HeapArray<mco_Result> thop_results;
 extern HeapArray<mco_Result> thop_mono_results;
 extern HeapArray<mco_ResultPointers> thop_results_index_ghm;
 extern HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
-extern HashMap<int32_t, mco_ResultPointers> thop_results_index_bill_id;
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,
