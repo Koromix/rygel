@@ -59,6 +59,7 @@ extern Date thop_stay_set_dates[2];
 
 extern HeapArray<mco_Result> thop_results;
 extern HeapArray<mco_Result> thop_mono_results;
+extern HashMap<const void *, const mco_Result *> thop_results_to_mono_results;
 extern HeapArray<mco_ResultPointers> thop_results_index_ghm;
 extern HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 

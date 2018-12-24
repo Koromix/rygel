@@ -84,6 +84,7 @@ Date thop_stay_set_dates[2];
 
 HeapArray<mco_Result> thop_results;
 HeapArray<mco_Result> thop_mono_results;
+HashMap<const void *, const mco_Result *> thop_results_to_mono_results;
 HeapArray<mco_ResultPointers> thop_results_index_ghm;
 HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
@@ -340,7 +341,7 @@ static bool InitStays(Span<const char *const> stay_directories,
 
     LogInfo("Index results");
 
-    // Index by GHM
+    // Index results
     for (Size i = 0, j = 0; i < thop_results.len; i++) {
         const mco_Result &result = thop_results[i];
 
@@ -349,9 +350,12 @@ static bool InitStays(Span<const char *const> stay_directories,
         p.mono_result = &thop_mono_results[j];
 
         thop_results_index_ghm.Append(p);
+        thop_results_to_mono_results.Append(&result, &thop_mono_results[j]);
 
         j += result.stays.len;
     }
+    thop_results_to_mono_results.Append(thop_results.end(), thop_mono_results.end());
+
     std::stable_sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
               [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
         return p1.result->ghm.Root() < p2.result->ghm.Root();
