@@ -23,7 +23,7 @@ struct ConnectionInfo {
 
     MHD_PostProcessor *pp = nullptr;
 
-    TempAllocator temp_alloc;
+    BlockAllocator temp_alloc;
 };
 
 struct Response {

@@ -85,7 +85,7 @@ static SourceInfo CreateSource(const char *filename, const char *extension, bool
 
 int main(int argc, char **argv)
 {
-    TempAllocator temp_alloc;
+    BlockAllocator temp_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,

@@ -148,8 +148,8 @@ struct mco_StaySet {
 class mco_StaySetBuilder {
     mco_StaySet set;
 
-    BlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(DiagnosisCode)};
-    BlockAllocator procedures_alloc {&set.array_alloc, 2048 * SIZE(mco_ProcedureRealisation)};
+    IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(DiagnosisCode)};
+    IndirectBlockAllocator procedures_alloc {&set.array_alloc, 2048 * SIZE(mco_ProcedureRealisation)};
 
     struct FichCompData {
         enum class Type {

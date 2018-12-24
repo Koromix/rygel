@@ -19,7 +19,7 @@ struct Structure {
 struct StructureSet {
     HeapArray<Structure> structures;
 
-    TempAllocator str_alloc;
+    BlockAllocator str_alloc;
 };
 
 class StructureSetBuilder {

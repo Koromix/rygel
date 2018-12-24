@@ -540,21 +540,20 @@ private:
         { return (Bucket *)((uint8_t *)ptr - OFFSET_OF(Bucket, data)); }
 };
 
-class BlockAllocator: public Allocator {
+class BlockAllocatorBase: public Allocator {
     struct Bucket {
         Size used;
         alignas(8) uint8_t data[];
     };
 
-    LinkedAllocator *allocator;
     Size block_size;
 
     Bucket *current_bucket = nullptr;
     uint8_t *last_alloc = nullptr;
 
 public:
-    BlockAllocator(LinkedAllocator *alloc, Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : allocator(alloc), block_size(block_size)
+    BlockAllocatorBase(Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : block_size(block_size)
     {
         DebugAssert(block_size > 0);
     }
@@ -566,6 +565,8 @@ protected:
 
     void ForgetCurrentBlock();
 
+    virtual LinkedAllocator *GetAllocator() = 0;
+
 private:
     bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
 
@@ -573,12 +574,28 @@ private:
         { return (SIZE(Bucket) + size + 7) / 8 * 8 - SIZE(Bucket); }
 };
 
-class TempAllocator: public BlockAllocator {
+class BlockAllocator: public BlockAllocatorBase {
     LinkedAllocator allocator;
 
+protected:
+    virtual LinkedAllocator *GetAllocator() { return &allocator; }
+
 public:
-    TempAllocator(Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : BlockAllocator(&allocator, block_size) {}
+    BlockAllocator(Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : BlockAllocatorBase(block_size) {}
+
+    void ReleaseAll();
+};
+
+class IndirectBlockAllocator: public BlockAllocatorBase {
+    LinkedAllocator *allocator;
+
+protected:
+    virtual LinkedAllocator *GetAllocator() { return allocator; }
+
+public:
+    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+        : BlockAllocatorBase(block_size), allocator(alloc) {}
 
     void ReleaseAll();
 };

@@ -214,25 +214,27 @@ void LinkedAllocator::Release(void *ptr, Size size)
     }
 }
 
-void BlockAllocator::ForgetCurrentBlock()
+void BlockAllocatorBase::ForgetCurrentBlock()
 {
     current_bucket = nullptr;
     last_alloc = nullptr;
 }
 
-void *BlockAllocator::Allocate(Size size, unsigned int flags)
+void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
 {
     DebugAssert(size >= 0);
+
+    LinkedAllocator *alloc = GetAllocator();
 
     // Keep alignement requirements
     Size aligned_size = AlignSizeValue(size);
 
     if (AllocateSeparately(aligned_size)) {
-        uint8_t *ptr = (uint8_t *)Allocator::Allocate(allocator, size, flags);
+        uint8_t *ptr = (uint8_t *)Allocator::Allocate(alloc, size, flags);
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)Allocator::Allocate(allocator, SIZE(Bucket) + block_size,
+            current_bucket = (Bucket *)Allocator::Allocate(alloc, SIZE(Bucket) + block_size,
                                                            flags & ~(int)Allocator::Flag::Zero);
             current_bucket->used = 0;
         }
@@ -249,7 +251,7 @@ void *BlockAllocator::Allocate(Size size, unsigned int flags)
     }
 }
 
-void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
+void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
     DebugAssert(old_size >= 0);
     DebugAssert(new_size >= 0);
@@ -274,7 +276,8 @@ void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned i
                 memset(ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
-            Allocator::Resize(allocator, ptr, old_size, new_size, flags);
+            LinkedAllocator *alloc = GetAllocator();
+            Allocator::Resize(alloc, ptr, old_size, new_size, flags);
         } else {
             void *new_ptr = Allocate(new_size, flags & ~(int)Allocator::Flag::Zero);
             if (new_size > old_size) {
@@ -292,27 +295,29 @@ void BlockAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned i
     }
 }
 
-void BlockAllocator::Release(void *ptr, Size size)
+void BlockAllocatorBase::Release(void *ptr, Size size)
 {
     DebugAssert(size >= 0);
 
     if (ptr) {
+        LinkedAllocator *alloc = GetAllocator();
+
         Size aligned_size = AlignSizeValue(size);
 
         if (ptr == last_alloc) {
             current_bucket->used -= aligned_size;
             if (!current_bucket->used) {
-                Allocator::Release(allocator, current_bucket, SIZE(Bucket) + block_size);
+                Allocator::Release(alloc, current_bucket, SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
             last_alloc = nullptr;
         } else if (AllocateSeparately(aligned_size)) {
-            Allocator::Release(allocator, ptr, size);
+            Allocator::Release(alloc, ptr, size);
         }
     }
 }
 
-void TempAllocator::ReleaseAll()
+void BlockAllocator::ReleaseAll()
 {
     ForgetCurrentBlock();
     allocator.ReleaseAll();

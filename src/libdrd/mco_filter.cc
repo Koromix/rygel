@@ -136,7 +136,7 @@ struct ResultObject {
 
 class ScriptRunner {
     // FIXME: Make sure all deallocations are disabled
-    TempAllocator vm_allocator { Kibibytes(256) };
+    BlockAllocator vm_allocator { Kibibytes(256) };
 
 public:
     WrenVM *vm = nullptr;

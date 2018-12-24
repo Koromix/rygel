@@ -711,7 +711,7 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_re
         return code;
 
     // TODO: Generate ahead of time
-    TempAllocator readable_nodes_alloc;
+    BlockAllocator readable_nodes_alloc;
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
         return CreateErrorPage(500, out_response);

@@ -352,7 +352,7 @@ public:
         BlockQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;
 
-    TempAllocator str_alloc;
+    BlockAllocator str_alloc;
 
     const mco_TableIndex *FindIndex(Date date = {}) const;
     mco_TableIndex *FindIndex(Date date = {})
