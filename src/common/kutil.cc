@@ -2094,9 +2094,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
                 error = true;
                 return -1;
             }
-            if (feof(source.u.fp)) {
-                source.eof = true;
-            }
+            source.eof |= (bool)feof(source.u.fp);
         } break;
 
         case SourceType::Memory: {
@@ -2106,6 +2104,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
             }
             memcpy(out_buf, source.u.memory.buf.ptr + source.u.memory.pos, (size_t)read_len);
             source.u.memory.pos += read_len;
+            source.eof |= (source.u.memory.pos >= source.u.memory.buf.len);
         } break;
     }
 
