@@ -325,6 +325,7 @@ static bool InitStays(Span<const char *const> stay_directories,
         for (Span<const mco_Stay> group: groups) {
             stays.Append(group);
         }
+
         std::swap(stays, thop_stay_set.stays);
     }
 
@@ -344,7 +345,7 @@ static bool InitStays(Span<const char *const> stay_directories,
 
         mco_ResultPointers p;
         p.result = &result;
-        p.mono_results = thop_mono_results.Take(j, result.stays.len);
+        p.mono_result = &thop_mono_results[j];
 
         thop_results_index_ghm.Append(p);
 
@@ -369,10 +370,10 @@ static bool InitStays(Span<const char *const> stay_directories,
 
             mco_ResultPointers p;
             p.result = &result;
-            p.mono_results = thop_mono_results.Take(i, result.stays.len);
-            i += result.stays.len;
+            p.mono_result = &thop_mono_results[i];
 
             thop_results_index_bill_id.Append(result.stays[0].bill_id, p);
+            i += result.stays.len;
         }
     }
 
@@ -577,10 +578,7 @@ static void InitRoutes()
     routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_results", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/mco_casemix_units.json", "GET", Route::Matching::Exact,
-                ProduceMcoCasemixUnits});
-    routes.Set({"/api/mco_casemix_duration.json", "GET", Route::Matching::Exact,
-                ProduceMcoCasemixDuration});
+    routes.Set({"/api/mco_casemix.json", "GET", Route::Matching::Exact, ProduceMcoCasemix});
     routes.Set({"/api/mco_results.json", "GET", Route::Matching::Exact, ProduceMcoResults});
     routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
     routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});

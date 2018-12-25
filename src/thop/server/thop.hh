@@ -42,7 +42,7 @@ struct Response {
 
 struct mco_ResultPointers {
     const mco_Result *result;
-    Span<const mco_Result> mono_results;
+    const mco_Result *mono_result;
 };
 
 extern mco_TableSet thop_table_set;

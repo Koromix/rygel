@@ -6,7 +6,5 @@
 
 #include "thop.hh"
 
-int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response);
-int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response);
-
+int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response);
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response);

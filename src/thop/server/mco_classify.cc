@@ -363,8 +363,8 @@ static int GetQueryGhmRoot(MHD_Connection *conn, const char *key, Response *out_
 }
 
 template <typename T>
-int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
-                      T func, Response *out_response)
+int ProduceMcoCasemixFor(const ConnectionInfo *conn, unsigned int flags,
+                         T func, Response *out_response)
 {
     if (!conn->user)
         return CreateErrorPage(403, out_response);
@@ -496,69 +496,68 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, unsigned int flags,
     }, conn->compression_type, out_response);
 }
 
-int ProduceMcoCasemixUnits(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
 {
-    const int split_size = 65536;
+    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
+        const int split_size = 8192;
 
-    Size i = 0, j = 0;
-    return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnUnits,
-                             [&](Span<const mco_Result> *out_results,
-                                 Span<const mco_Result> *out_mono_results) {
-        if (i >= thop_results.len)
-            return false;
+        mco_GhmRootCode ghm_root = {};
+        if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+            return code;
 
-        Size len = std::min((Size)split_size, thop_results.len - i);
-        Size mono_len = 0;
-        for (Size k = i, end = i + len; k < end; k++) {
-            mono_len += thop_results[k].stays.len;
-        }
+        Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
 
-        *out_results = thop_results.Take(i, len);
-        *out_mono_results = thop_mono_results.Take(j, mono_len);
-        i += len;
-        j += mono_len;
+        // Reuse for performance
+        HeapArray<mco_Result> results;
+        HeapArray<mco_Result> mono_results;
 
-        return true;
-    }, out_response);
-}
+        Size i = 0;
+        return ProduceMcoCasemixFor(conn, (int)AggregationFlag::KeyOnDuration |
+                                          (int)AggregationFlag::KeyOnUnits |
+                                          (int)AggregationFlag::ExportGhmGhsInfo,
+                                    [&](Span<const mco_Result> *out_results,
+                                        Span<const mco_Result> *out_mono_results) {
+            results.RemoveFrom(0);
+            mono_results.RemoveFrom(0);
 
-int ProduceMcoCasemixDuration(const ConnectionInfo *conn, const char *, Response *out_response)
-{
-    const int split_size = 8192;
+            for (; i < results_index.len && results.len < split_size; i++) {
+                const mco_ResultPointers &p = results_index[i];
 
-    mco_GhmRootCode ghm_root = {};
-    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
-        return code;
+                results.Append(*p.result);
+                mono_results.Append(MakeSpan(p.mono_result, p.result->stays.len));
+            }
+            if (!results.len)
+                return false;
 
-    Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
+            *out_results = results;
+            *out_mono_results = mono_results;
 
-    // Reuse for performance
-    HeapArray<mco_Result> results;
-    HeapArray<mco_Result> mono_results;
+            return true;
+        }, out_response);
+    } else {
+        const int split_size = 65536;
 
-    Size i = 0;
-    return ProduceMcoCasemix(conn, (int)AggregationFlag::KeyOnDuration |
-                                   (int)AggregationFlag::KeyOnUnits |
-                                   (int)AggregationFlag::ExportGhmGhsInfo,
-                             [&](Span<const mco_Result> *out_results,
-                                 Span<const mco_Result> *out_mono_results) {
-        results.RemoveFrom(0);
-        mono_results.RemoveFrom(0);
+        Size i = 0, j = 0;
+        return ProduceMcoCasemixFor(conn, (int)AggregationFlag::KeyOnUnits,
+                                    [&](Span<const mco_Result> *out_results,
+                                        Span<const mco_Result> *out_mono_results) {
+            if (i >= thop_results.len)
+                return false;
 
-        for (; i < results_index.len && results.len < split_size; i++) {
-            const mco_ResultPointers &p = results_index[i];
+            Size len = std::min((Size)split_size, thop_results.len - i);
+            Size mono_len = 0;
+            for (Size k = i, end = i + len; k < end; k++) {
+                mono_len += thop_results[k].stays.len;
+            }
 
-            results.Append(*p.result);
-            mono_results.Append(p.mono_results);
-        }
-        if (!results.len)
-            return false;
+            *out_results = thop_results.Take(i, len);
+            *out_mono_results = thop_mono_results.Take(j, mono_len);
+            i += len;
+            j += mono_len;
 
-        *out_results = results;
-        *out_mono_results = mono_results;
-
-        return true;
-    }, out_response);
+            return true;
+        }, out_response);
+    }
 }
 
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
@@ -600,7 +599,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
 
             if (allow) {
                 results.Append(*p.result);
-                mono_results.Append(p.mono_results);
+                mono_results.Append(MakeSpan(p.mono_result, p.result->stays.len));
             }
         }
     }
