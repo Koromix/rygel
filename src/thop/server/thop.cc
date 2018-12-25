@@ -535,6 +535,41 @@ static uint32_t ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
+static void PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
+{
+    StreamWriter writer(out_buf, nullptr, st.compression.type);
+
+    HeapArray<char> buf;
+    Assert(st.ReadAll(Megabytes(1), &buf) > 0);
+    buf.Append(0);
+
+    Span<const char> html = buf.Take(0, buf.len - 1);
+    do {
+        Span<const char> part = SplitStr(html, '$', &html);
+
+        writer.Write(part);
+
+        if (html.ptr[0] == '{') {
+            Span<const char> var = MakeSpan(html.ptr,
+                                            strspn(html.ptr + 1, "ABCDEFGHIJKLMNOPQRSTUVWXYZ_") + 2);
+
+            if (var == "{THOP_BASE_URL}") {
+                writer.Write(thop_config.base_url);
+                html = html.Take(var.len, html.len - var.len);
+            } else if (var == "{THOP_SHOW_USER}") {
+                writer.Write(thop_stay_set.stays.len ? "true" : "false");
+                html = html.Take(var.len, html.len - var.len);
+            } else {
+                writer.Write('$');
+            }
+        } else if (html.len) {
+            writer.Write('$');
+        }
+    } while (html.len);
+
+    Assert(writer.Close());
+}
+
 static void InitRoutes()
 {
     routes.Clear();
@@ -547,6 +582,16 @@ static void InitRoutes()
         routes.Set({url, "GET", Route::Matching::Exact, asset, GetMimeType(asset.name)});
     }
 
+    // Patch HTML
+    Route html = *routes.Find("/static/thop.html");
+    {
+        StreamReader st(html.u.st.asset.data, nullptr, html.u.st.asset.compression_type);
+        HeapArray<uint8_t> buf(&routes_alloc);
+        PatchTextFile(st, &buf);
+
+        html.u.st.asset.data = buf.Leak();
+    }
+
     // Catalogs
     for (const PackerAsset &desc: catalog_set.catalogs) {
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
@@ -554,7 +599,6 @@ static void InitRoutes()
     }
 
     // Root
-    Route html = *routes.Find("/static/thop.html");
     routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
 
     // User
@@ -852,8 +896,10 @@ Options:
                                  (default: <profile_dir>%/mco_authorizations.ini
                                            <profile_dir>%/mco_authorizations.txt)
 
-        --port <port>            Web server port
-                                 (default: 8888))");
+        --port <port>            Change web server port
+                                 (default: 8888))
+        --base_url <url>         Change base URL
+                                 (default: /))");
     };
 
     if (sodium_init() < 0) {
@@ -919,6 +965,10 @@ Options:
 
                 if (!ParseDec(opt_parser.current_value, &thop_config.port))
                     return 1;
+            } else if (opt_parser.TestOption("--base_url")) {
+                thop_config.base_url = opt_parser.RequireValue();
+                if (!thop_config.base_url)
+                    return 1;
             } else {
                 LogError("Unknown option '%1'", opt_parser.current_option);
                 return 1;
@@ -946,6 +996,11 @@ Options:
         }
         if (thop_config.threads < 0 || thop_config.threads > 128) {
             LogError("HTTP threads %1 is invalid (range: 0 - 128)", thop_config.threads);
+            valid = false;
+        }
+        if (thop_config.base_url[0] != '/' ||
+                thop_config.base_url[strlen(thop_config.base_url) - 1] != '/') {
+            LogError("Base URL '%1' does not start or end with '/'", thop_config.base_url);
             valid = false;
         }
 

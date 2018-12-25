@@ -89,6 +89,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         } else {
                             LogError("Invalid value '%1' for Threads attribute", prop.value);
                         }
+                    } else if (prop.key == "BaseUrl") {
+                        config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

@@ -24,6 +24,7 @@ struct Config {
     IPVersion ip_version = IPVersion::Dual;
     int port = 8888;
     int threads = 4;
+    const char *base_url = "/";
 
     BlockAllocator str_alloc;
 };

@@ -6,22 +6,11 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(THOP_BASE_URL / CACHE STRING "Base URL used to access THOP")
-set(THOP_SHOW_USER ON CACHE BOOL "Enable user support in THOP")
-
-if(THOP_SHOW_USER)
-    set(THOP_SHOW_USER 1)
-else()
-    set(THOP_SHOW_USER 0)
-endif()
-configure_file(client/thop.html "${CMAKE_CURRENT_BINARY_DIR}/thop.html")
-configure_file(client/thop.js "${CMAKE_CURRENT_BINARY_DIR}/thop.js")
-
-set(THOP_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/thop.html"
+set(THOP_RESOURCES client/thop.html
 
                    client/compat.js
                    client/util.js
-                   "${CMAKE_CURRENT_BINARY_DIR}/thop.js"
+                   client/thop.js
                    client/data.js
                    client/user.js
                    client/mco_common.js
