@@ -734,6 +734,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     UpdateStaticAssets();
 #endif
 
+    // Gather connection info
     ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
     if (!conn) {
         conn = new ConnectionInfo;
@@ -741,6 +742,22 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         conn->user = CheckSessionUser(conn2);
         *con_cls = conn;
     }
+
+    // Handle base URL
+    for (Size i = 0; thop_config.base_url[i]; i++, url++) {
+        if (url[0] != thop_config.base_url[i]) {
+            if (!url[0] && thop_config.base_url[i] == '/' && !thop_config.base_url[i + 1]) {
+                MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                MHD_add_response_header(response, "Location", thop_config.base_url);
+                return MHD_queue_response(conn->conn, 303, response);
+            } else {
+                Response response;
+                CreateErrorPage(404, &response);
+                return MHD_queue_response(conn->conn, 404, response.response.get());
+            }
+        }
+    }
+    url--;
 
     // Process POST data if any
     if (TestStr(method, "POST")) {
@@ -1000,7 +1017,7 @@ Options:
         }
         if (thop_config.base_url[0] != '/' ||
                 thop_config.base_url[strlen(thop_config.base_url) - 1] != '/') {
-            LogError("Base URL '%1' does not start or end with '/'", thop_config.base_url);
+            LogError("Base URL '%1' does not start and end with '/'", thop_config.base_url);
             valid = false;
         }
 
