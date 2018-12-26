@@ -15,6 +15,51 @@ struct AssetInfo {
     HeapArray<SourceInfo> sources;
 };
 
+// For simplicity, I've replicated the required data structures from kutil.hh
+// and packer.hh directly below. Don't forget to keep them in sync.
+static const char *const OutputPrefix =
+R"(// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include <initializer_list>
+#include <stdint.h>
+
+#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
+    typedef int64_t Size;
+#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
+    typedef int32_t Size;
+#endif
+
+#ifdef _WIN32
+    #define EXPORT __declspec(dllexport)
+#else
+    #define EXPORT __attribute__((visibility("default")))
+#endif
+
+template <typename T>
+struct Span {
+    T *ptr;
+    Size len;
+
+    Span() = default;
+    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
+    template <Size N>
+    constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
+};
+
+enum class CompressionType {
+    None,
+    Zlib,
+    Gzip
+};
+
+struct PackerAsset {
+    const char *name;
+    CompressionType compression_type;
+    Span<const uint8_t> data;
+};)";
+
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
     for (uint8_t byte: bytes) {
@@ -201,52 +246,10 @@ Available compression types:)", CompressionTypeNames[0]);
     if (st.error)
         return 1;
 
-    // For simplicity, I've replicated the required data structures from kutil.hh
-    // and packer.hh directly below. Don't forget to keep them in sync.
     PrintLn(&st,
-R"(// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+R"(%1
 
-#include <initializer_list>
-#include <stdint.h>
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-    typedef int64_t Size;
-#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
-    typedef int32_t Size;
-#endif
-
-#ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
-#else
-    #define EXPORT __attribute__((visibility("default")))
-#endif
-
-template <typename T>
-struct Span {
-    T *ptr;
-    Size len;
-
-    Span() = default;
-    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    template <Size N>
-    constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
-};
-
-enum class CompressionType {
-    None,
-    Zlib,
-    Gzip
-};
-
-struct PackerAsset {
-    const char *name;
-    CompressionType compression_type;
-    Span<const uint8_t> data;
-};
-
-static const uint8_t raw_data[] = {)");
+static const uint8_t raw_data[] = {)", OutputPrefix);
 
     HeapArray<AssetInfo> assets;
     {
