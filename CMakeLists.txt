@@ -100,6 +100,18 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 -Wno-class-memaccess -Wno-missing-field-initializers -Wno-old-style-cast -Wno-cast-function-type")
 endif()
 
-add_projects("src/lib*" EXCLUDE_FROM_ALL)
-add_projects("src/*")
-add_subdirectory(tools)
+# Libraries and utilities
+add_project(src/libdrd EXCLUDE_FROM_ALL)
+add_project(src/libgui EXCLUDE_FROM_ALL)
+add_project(src/libheimdall EXCLUDE_FROM_ALL)
+add_project(src/packer EXCLUDE_FROM_ALL)
+
+# Main projects
+add_project(src/drdc)
+add_project(src/drdR)
+add_project(src/thop)
+add_project(src/heimdallR)
+add_project(src/heimdallw)
+
+# Misc tools
+add_project(tools)
