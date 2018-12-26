@@ -4,6 +4,26 @@
 
 #include "../common/kutil.hh"
 
+#ifdef _WIN32
+    // Avoid windows.h
+    extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
+#else
+    #include <fnmatch.h>
+#endif
+
+enum class MergeMode {
+    Naive,
+    CSS,
+    JS,
+};
+
+struct MergeRule {
+    const char *filename;
+    MergeMode merge_mode;
+    HeapArray<const char *> include;
+    HeapArray<const char *> exclude;
+};
+
 struct SourceInfo {
     const char *prefix;
     const char *suffix;
@@ -59,6 +79,81 @@ struct PackerAsset {
     CompressionType compression_type;
     Span<const uint8_t> data;
 };)";
+
+static MergeMode FindDefaultMergeMode(const char *filename)
+{
+    Span<const char> extension = GetPathExtension(filename);
+
+    if (extension == ".css") {
+        return MergeMode::CSS;
+    } else if (extension == ".js") {
+        return MergeMode::JS;
+    } else {
+        LogError("Using naive merge method for '%1'", filename);
+        return MergeMode::Naive;
+    }
+}
+
+static bool LoadMergeRules(const char *filename, HeapArray<MergeRule> *out_rules, Allocator *alloc)
+{
+    DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
+
+    StreamReader st(filename);
+    if (st.error)
+        return false;
+
+    IniParser ini(&st);
+    ini.reader.PushLogHandler();
+    DEFER { PopLogHandler(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                LogError("Property is outside section");
+                return false;
+            }
+
+            MergeRule *rule = out_rules->AppendDefault();
+            rule->filename = DuplicateString(prop.section, alloc).ptr;
+
+            bool changed_merge_mode = false;
+            do {
+                if (prop.key == "MergeMode") {
+                    if (prop.value == "Naive") {
+                        rule->merge_mode = MergeMode::Naive;
+                    } else if (prop.value == "CSS") {
+                        rule->merge_mode = MergeMode::CSS;
+                    } else if (prop.value == "JS") {
+                        rule->merge_mode = MergeMode::JS;
+                    } else {
+                        LogError("Invalid MergeMode value '%1'", prop.value);
+                        valid = false;
+                    }
+
+                    changed_merge_mode = true;
+                } else if (prop.key == "Include") {
+                    rule->include.Append(DuplicateString(prop.value, alloc).ptr);
+                } else if (prop.key == "Exclude") {
+                    rule->exclude.Append(DuplicateString(prop.value, alloc).ptr);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } while (ini.NextInSection(&prop));
+
+            if (!changed_merge_mode) {
+                rule->merge_mode = FindDefaultMergeMode(rule->filename);
+            }
+        }
+    }
+    if (ini.error || !valid)
+        return false;
+
+    out_guard.disable();
+    return true;
+}
 
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
@@ -116,24 +211,41 @@ static Size PackFile(const char *filename, Span<const SourceInfo> sources,
     return written_len;
 }
 
-static SourceInfo CreateSource(const char *filename, const char *extension, bool merge, Allocator *alloc)
+static SourceInfo CreateSource(const char *filename, MergeMode merge_mode, Allocator *alloc)
 {
     SourceInfo src = {};
 
     src.filename = filename;
-    if (merge) {
-        if (TestStr(extension, ".css")) {
+    switch (merge_mode) {
+        case MergeMode::Naive: {} break;
+        case MergeMode::CSS: {
             src.prefix = Fmt(alloc, "/* %1\n   ------------------------------------ */\n\n", filename).ptr;
             src.suffix = "\n";
-        } else if (TestStr(extension, ".js")) {
+        } break;
+        case MergeMode::JS: {
             src.prefix = Fmt(alloc, "// %1\n// ------------------------------------\n\n", filename).ptr;
             src.suffix = "\n";
-        } else {
-            LogError("Doing naive merge for '%1' files", extension);
-        }
+        } break;
     }
 
     return src;
+}
+
+static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *filename)
+{
+#ifdef _WIN32
+    const auto test_pattern = [&](const char *pattern) { return PathMatchSpecA(filename, pattern); };
+#else
+    const auto test_pattern = [&](const char *pattern) { return !fnmatch(pattern, filename, 0); };
+#endif
+
+    for (const MergeRule &rule: rules) {
+        if (std::any_of(rule.include.begin(), rule.include.end(), test_pattern) &&
+                !std::any_of(rule.exclude.begin(), rule.exclude.end(), test_pattern))
+            return &rule;
+    }
+
+    return nullptr;
 }
 
 int main(int argc, char **argv)
@@ -155,9 +267,7 @@ Options:
                                  (default: packer_assets)
     -e, --export                 Export span symbol
 
-    -M, --merge_name <name>      Base name for merged files
-                                 (default: packed)
-    -m, --merge <extensions>     Merge files with extensions together
+    -M, --merge_file <file>      Load merge rules from file
 
 Available compression types:)", CompressionTypeNames[0]);
         for (const char *type: CompressionTypeNames) {
@@ -165,14 +275,12 @@ Available compression types:)", CompressionTypeNames[0]);
         }
     };
 
-
     const char *output_path = nullptr;
     int depth = -1;
     const char *span_name = "packer_assets";
     bool export_span = false;
     CompressionType compression_type = CompressionType::None;
-    HashSet<const char *> merge_extensions;
-    const char *merge_name = "packed";
+    const char *merge_file = nullptr;
     HeapArray<const char *> filenames;
     {
         OptionParser opt_parser(argc, argv);
@@ -216,21 +324,9 @@ Available compression types:)", CompressionTypeNames[0]);
                 }
 
                 compression_type = (CompressionType)i;
-            } else if (opt_parser.TestOption("-m", "--merge")) {
-                if (!opt_parser.RequireValue())
-                    return 1;
-
-                Span<const char> remain = opt_parser.current_value;
-                while (remain.len) {
-                    Span<const char> part = TrimStr(SplitStrAny(remain, ", ", &remain));
-                    if (part.len) {
-                        const char *extension = Fmt(&temp_alloc, ".%1", part).ptr;
-                        merge_extensions.Append(extension);
-                    }
-                }
-            } else if (opt_parser.TestOption("-M", "--merge_name")) {
-                merge_name = opt_parser.RequireValue();
-                if (!merge_name)
+            } else if (opt_parser.TestOption("-M", "--merge_file")) {
+                merge_file = opt_parser.RequireValue();
+                if (!merge_file)
                     return 1;
             } else {
                 LogError("Unknown option '%1'", opt_parser.current_option);
@@ -244,6 +340,10 @@ Available compression types:)", CompressionTypeNames[0]);
             return 1;
         }
     }
+
+    HeapArray<MergeRule> merge_rules;
+    if (merge_file && !LoadMergeRules(merge_file, &merge_rules, &temp_alloc))
+        return 1;
 
     StreamWriter st;
     if (output_path) {
@@ -261,34 +361,31 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
 
     HeapArray<AssetInfo> assets;
     {
-        HashMap<const char *, Size> merge_map;
+        HashMap<const void *, Size> merge_map;
         for (const char *filename: filenames) {
-            const char *extension = GetPathExtension(filename).ptr;
+            const char *basename = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
+            const MergeRule *rule = FindMergeRule(merge_rules, basename);
 
-            Size asset_idx = merge_map.FindValue(extension, -1);
-            bool merge;
+            Size asset_idx = merge_map.FindValue(rule, -1);
             if (asset_idx >= 0) {
-                merge = true;
-            } else if (merge_extensions.Find(extension)) {
+                // Nothing to do
+            } else if (rule) {
                 asset_idx = assets.len;
 
                 AssetInfo asset = {};
-                asset.filename = Fmt(&temp_alloc, "%1%2", merge_name, extension).ptr;
+                asset.filename = rule->filename;
                 assets.Append(asset);
 
-                merge_map.Append(extension, asset_idx);
-                merge = true;
+                merge_map.Append(rule, asset_idx);
             } else {
                 asset_idx = assets.len;
 
                 AssetInfo asset = {};
                 asset.filename = filename;
                 assets.Append(asset);
-
-                merge = false;
             }
 
-            SourceInfo src = CreateSource(filename, extension, merge, &temp_alloc);
+            SourceInfo src = CreateSource(filename, rule ? rule->merge_mode : MergeMode::Naive, &temp_alloc);
             assets[asset_idx].sources.Append(src);
         }
     }

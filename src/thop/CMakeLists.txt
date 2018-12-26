@@ -56,9 +56,9 @@ set(THOP_SRC server/config.cc
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
-                   ARGS -Mthop -mcss,js -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
+                   ARGS -Mclient/packer.ini -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                   DEPENDS packer ${THOP_RESOURCES})
+                   DEPENDS packer client/packer.ini ${THOP_RESOURCES})
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_library(thop_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
     set_target_properties(thop_assets PROPERTIES PREFIX "")
