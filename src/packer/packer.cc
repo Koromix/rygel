@@ -241,7 +241,7 @@ Available compression types:)", CompressionTypeNames[0]);
     if (output_path) {
         st.Open(output_path);
     } else {
-        st.Open(stdout, nullptr);
+        st.Open(stdout, "<stdout>");
     }
     if (st.error)
         return 1;
