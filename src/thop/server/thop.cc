@@ -917,9 +917,10 @@ Options:
                                            <profile_dir>%/mco_authorizations.txt)
 
         --port <port>            Change web server port
-                                 (default: 8888))
+                                 (default: %1))
         --base_url <url>         Change base URL
-                                 (default: /))");
+                                 (default: %2))",
+                thop_config.port, thop_config.base_url);
     };
 
     if (sodium_init() < 0) {
