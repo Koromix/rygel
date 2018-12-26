@@ -38,7 +38,7 @@ set(THOP_RESOURCES client/thop.html
                    client/wt_version_line.css
 
                    client/images/thop_logo.svg
-                   client/images/favicon.ico)
+                   client/images/favicon.png)
 
 set(THOP_SRC server/config.cc
              server/config.hh

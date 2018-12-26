@@ -621,10 +621,11 @@ static void InitRoutes()
     routes.Set({"/api/mco_tree.json", "GET", Route::Matching::Exact, ProduceMcoTree});
 
     // Special cases
-    if (Route *favicon = routes.Find("/static/favicon.ico"); favicon) {
-        routes.Set({"/favicon.ico", "GET", Route::Matching::Exact,
+    if (Route *favicon = routes.Find("/static/favicon.png"); favicon) {
+        routes.Set({"/favicon.png", "GET", Route::Matching::Exact,
                     favicon->u.st.asset, favicon->u.st.mime_type});
     }
+    routes.Remove("/static/favicon.png");
     routes.Remove("/static/thop.html");
 
     // We can use a global ETag because everything is in the binary
