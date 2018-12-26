@@ -572,6 +572,8 @@ static void PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
 
 static void InitRoutes()
 {
+    LogInfo("Init routes");
+
     routes.Clear();
     routes_alloc.ReleaseAll();
 
