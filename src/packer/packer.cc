@@ -10,7 +10,7 @@ struct SourceInfo {
     const char *filename;
 };
 
-struct PackFileInfo {
+struct AssetInfo {
     const char *filename;
     HeapArray<SourceInfo> sources;
 };
@@ -248,46 +248,46 @@ struct PackerAsset {
 
 static const uint8_t raw_data[] = {)");
 
-    HeapArray<PackFileInfo> files;
+    HeapArray<AssetInfo> assets;
     {
         HashMap<const char *, Size> merge_map;
         for (const char *filename: filenames) {
             const char *extension = GetPathExtension(filename).ptr;
 
-            Size file_idx = merge_map.FindValue(extension, -1);
+            Size asset_idx = merge_map.FindValue(extension, -1);
             bool merge;
-            if (file_idx >= 0) {
+            if (asset_idx >= 0) {
                 merge = true;
             } else if (merge_extensions.Find(extension)) {
-                file_idx = files.len;
+                asset_idx = assets.len;
 
-                PackFileInfo file = {};
-                file.filename = Fmt(&temp_alloc, "%1%2", merge_name, extension).ptr;
-                files.Append(file);
+                AssetInfo asset = {};
+                asset.filename = Fmt(&temp_alloc, "%1%2", merge_name, extension).ptr;
+                assets.Append(asset);
 
-                merge_map.Append(extension, file_idx);
+                merge_map.Append(extension, asset_idx);
                 merge = true;
             } else {
-                file_idx = files.len;
+                asset_idx = assets.len;
 
-                PackFileInfo file = {};
-                file.filename = filename;
-                files.Append(file);
+                AssetInfo asset = {};
+                asset.filename = filename;
+                assets.Append(asset);
 
                 merge = false;
             }
 
             SourceInfo src = CreateSource(filename, extension, merge, &temp_alloc);
-            files[file_idx].sources.Append(src);
+            assets[asset_idx].sources.Append(src);
         }
     }
 
     HeapArray<Size> lengths;
-    for (const PackFileInfo &file: files) {
-        Size file_len = PackFile(file.filename, file.sources, compression_type, &st);
-        if (file_len < 0)
+    for (const AssetInfo &asset: assets) {
+        Size asset_len = PackFile(asset.filename, asset.sources, compression_type, &st);
+        if (asset_len < 0)
             return 1;
-        lengths.Append(file_len);
+        lengths.Append(asset_len);
     }
 
     PrintLn(&st,
@@ -295,8 +295,8 @@ R"(};
 
 static PackerAsset assets[] = {)");
 
-    for (Size i = 0, cumulative_len = 0; i < files.len; i++) {
-        Span<const char> filename = files[i].filename;
+    for (Size i = 0, cumulative_len = 0; i < assets.len; i++) {
+        Span<const char> filename = assets[i].filename;
 
         Span<const char> name = filename;
         {
