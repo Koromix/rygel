@@ -189,7 +189,7 @@ let mco_common = {};
     {
         if (user.getUrlKey() !== settings.url_key) {
             let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
-            data.get(url, function(json) {
+            data.get(url, 'json', function(json) {
                 settings = json;
 
                 if (settings.start_date) {
@@ -229,7 +229,7 @@ let mco_common = {};
                     set.map[concept[info.key]] = concept;
             } else {
                 let url = thop.baseUrl(info.path);
-                data.get(url, function(json) {
+                data.get(url, 'json', function(json) {
                     set.concepts = json;
                     for (const concept of json)
                         set.map[concept[info.key]] = concept;

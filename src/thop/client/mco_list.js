@@ -348,7 +348,7 @@ let mco_list = {};
             };
             list = list_cache[list_name];
 
-            data.get(url, function(json) {
+            data.get(url, 'json', function(json) {
                 list.url = url;
                 list.items = json;
             });

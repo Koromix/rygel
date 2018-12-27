@@ -155,7 +155,7 @@ let mco_pricing = {};
         if (!available_dates.has(date_key)) {
             let url = buildUrl(thop.baseUrl('api/mco_ghm_ghs.json'),
                                {date: indexes[index].begin_date, sector: sector});
-            data.get(url, function(json) {
+            data.get(url, 'json', function(json) {
                 for (let ghm_ghs of json) {
                     const ghm_root = ghm_ghs.ghm_root;
 

@@ -43,7 +43,12 @@ let user = {};
     function connect(username, password, func)
     {
         let url = buildUrl(thop.baseUrl('api/connect.json'));
-        data.post(url, {username: username, password: password}, function() {
+        let params = {
+            username: username,
+            password: password
+        };
+
+        data.post(url, 'json', params, function() {
             updateSession();
             if (func)
                 func();
@@ -54,7 +59,9 @@ let user = {};
     function disconnect(func)
     {
         let url = buildUrl(thop.baseUrl('api/disconnect.json'));
-        data.post(url, {}, function(json) {
+        let params = {};
+
+        data.post(url, 'json', params, function(json) {
             updateSession();
             if (func)
                 func();

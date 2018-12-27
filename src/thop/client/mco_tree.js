@@ -70,7 +70,7 @@ let mco_tree = {};
             return;
 
         nodes = [];
-        data.get(url, function(json) {
+        data.get(url, 'json', function(json) {
             nodes = json;
             tree_url = url;
         });

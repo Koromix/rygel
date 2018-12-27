@@ -11,65 +11,56 @@ let data = {};
     let queue = new Set();
     let busy = 0;
 
-    function get(url, proceed, fail)
+    function get(url, type, proceed, fail)
     {
-        if (queue.has(url))
+        let xhr = openRequest('GET', url, type, proceed, fail);
+        if (!xhr)
             return;
-        queue.add(url);
-        busy++;
-
-        function handleFinishedRequest(status, response)
-        {
-            callRequestHandlers(url, proceed, fail, status, response);
-            if (!--busy)
-                callIdleHandler();
-        }
-
-        let xhr = new XMLHttpRequest();
-        xhr.responseType = 'json';
-        xhr.timeout = 14000;
-        xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
-        xhr.onerror = function(e) { handleFinishedRequest(503); };
-        xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-        xhr.open('GET', url, true);
 
         xhr.send();
-
-        if (self.busyHandler)
-            self.busyHandler(true);
     }
     this.get = get;
 
-    function post(url, parameters, proceed, fail)
+    function post(url, type, parameters, proceed, fail)
     {
-        if (queue.has(url))
+        let xhr = openRequest('POST', url, type, proceed, fail);
+        if (!xhr)
             return;
-        queue.add(url);
-        busy++;
-
-        function handleFinishedRequest(status, response)
-        {
-            callRequestHandlers(url, proceed, fail, status, response);
-            if (!--busy)
-                callIdleHandler();
-        }
-
-        let xhr = new XMLHttpRequest();
-        xhr.responseType = 'json';
-        xhr.timeout = 14000;
-        xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
-        xhr.onerror = function(e) { handleFinishedRequest(503); };
-        xhr.ontimeout = function(e) { handleFinishedRequest(504); };
-        xhr.open('POST', url, true);
 
         let encoded_parameters = buildUrl('', parameters).substr(1);
         xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         xhr.send(encoded_parameters || null);
+    }
+    this.post = post;
+
+    function openRequest(method, url, type, proceed, fail)
+    {
+        if (queue.has(url))
+            return;
+        queue.add(url);
+        busy++;
+
+        function handleFinishedRequest(status, response)
+        {
+            callRequestHandlers(url, proceed, fail, status, response);
+            if (!--busy)
+                callIdleHandler();
+        }
+
+        let xhr = new XMLHttpRequest();
+        xhr.timeout = 14000;
+        xhr.onload = function(e) { handleFinishedRequest(this.status, xhr.response); };
+        xhr.onerror = function(e) { handleFinishedRequest(503); };
+        xhr.ontimeout = function(e) { handleFinishedRequest(504); };
+        if (type)
+            xhr.responseType = type;
+        xhr.open(method, url, true);
 
         if (self.busyHandler)
             self.busyHandler(true);
+
+        return xhr;
     }
-    this.post = post;
 
     function callRequestHandlers(url, proceed, fail, status, response)
     {

@@ -306,7 +306,7 @@ let mco_casemix = {};
     function updateCasemixUnits()
     {
         if (!mix_rows.length) {
-            data.get(mix_url, function(json) {
+            data.get(mix_url, 'json', function(json) {
                 mix_rows = json.rows;
 
                 for (let row of mix_rows) {
@@ -323,7 +323,7 @@ let mco_casemix = {};
             let params = Object.assign({ghm_root: ghm_root}, mix_params);
             let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
 
-            data.get(url, function(json) {
+            data.get(url, 'json', function(json) {
                 let mismatch = false;
                 {
                     let finished_ghms = new Set;
@@ -387,7 +387,7 @@ let mco_casemix = {};
         let url = buildUrl(thop.baseUrl('api/mco_results.json'), params);
 
         if (url !== rt_url) {
-            data.get(url, function(json) {
+            data.get(url, 'json', function(json) {
                 rt_results = json;
                 rt_url = url;
 
