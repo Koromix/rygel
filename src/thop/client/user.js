@@ -30,13 +30,16 @@ let user = {};
 
     function routeToUrl(args)
     {
-        return thop.baseUrl('login');
+        return {
+            url: thop.baseUrl('login'),
+            allowed: true
+        };
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        thop.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args).url, delay);
     }
     this.go = go;
 
@@ -106,7 +109,7 @@ let user = {};
         if (url_key) {
             div = html('div',
                 username + ' (',
-                html('a', {href: routeToUrl()}, 'changer'),
+                html('a', {href: routeToUrl().url}, 'changer'),
                 ', ',
                 html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
                      'déconnexion'),
@@ -114,7 +117,7 @@ let user = {};
             );
         } else {
             div = html('div',
-                html('a', {href: routeToUrl('login')}, 'Se connecter')
+                html('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
 
@@ -133,7 +136,7 @@ let user = {};
             );
         } else {
             menu_item = html('li',
-                html('a', {href: user.routeToUrl()}, 'Se connecter')
+                html('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
 

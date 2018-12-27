@@ -115,9 +115,9 @@ let thop = {};
         // Update URL to reflect real state (module may have set default values, etc.)
         {
             let real_url = null;
-            if (module)
-                real_url = module.object.routeToUrl({});
-            if (real_url) {
+            if (module) {
+                real_url = module.object.routeToUrl({}).url;
+
                 if (url_parts.hash)
                     real_url += '#' + url_parts.hash;
 
@@ -132,11 +132,10 @@ let thop = {};
 
         // Update side menu state and links
         queryAll('#side_menu li a').forEach(function(anchor) {
-            if (anchor.dataset.url) {
-                let url = eval(anchor.dataset.url);
-                anchor.classList.toggle('hide', !url);
-                if (url)
-                    anchor.href = url;
+            if (anchor.dataset.path) {
+                let path = eval(anchor.dataset.path);
+                anchor.classList.toggle('hide', !path.allowed);
+                anchor.href = path.url;
             }
 
             let active = (route_url_parts.href.startsWith(anchor.href) &&
@@ -185,7 +184,7 @@ let thop = {};
 
     function goHome()
     {
-        let first_anchor = query('#side_menu a[data-url]');
+        let first_anchor = query('#side_menu a[data-path]');
         route(first_anchor.href);
     }
     this.goHome = goHome;
@@ -214,8 +213,8 @@ let thop = {};
         if (window.location.pathname !== BaseUrl) {
             new_url = window.location.href;
         } else {
-            let first_anchor = query('#side_menu a[data-url]');
-            new_url = eval(first_anchor.dataset.url);
+            let first_anchor = query('#side_menu a[data-path]');
+            new_url = eval(first_anchor.dataset.path).url;
         }
         route(new_url, 0, false);
 

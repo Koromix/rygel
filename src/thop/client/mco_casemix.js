@@ -75,8 +75,9 @@ let mco_casemix = {};
         }
 
         // Permissions
-        if (!settings.start_date) {
-            errors.add('Vous n\'êtes pas connecté(e)');
+        if (!user.isConnected() || !settings.permissions) {
+            if (!user.isConnected())
+                errors.add('Vous n\'êtes pas connecté(e)');
             query('#cm').addClass('hide');
             return;
         }
@@ -251,18 +252,19 @@ let mco_casemix = {};
 
         // Hide links if not available for user
         let settings = mco_common.updateSettings();
-        if (!settings.start_date)
-            return null;
-        if (new_route.view === 'results' && !settings.permissions.has('FullResults'))
-            return null;
+        let allowed = !!settings.permissions &&
+                      (new_route.view !== 'results' || settings.permissions.has('FullResults'));
 
-        return url;
+        return {
+            url: url,
+            allowed: allowed
+        };
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        thop.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args).url, delay);
     }
     this.go = go;
 
@@ -792,7 +794,7 @@ let mco_casemix = {};
                     }
 
                     let elements = [
-                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root})}, ghm_root),
+                        html('a', {href: routeToUrl({view: 'durations', ghm_root: ghm_root}).url}, ghm_root),
                         ghm_root_info ? ' - ' + ghm_root_info.desc : null
                     ];
                     let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
@@ -851,7 +853,7 @@ let mco_casemix = {};
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
-                    return html('a', {href: routeToUrl({page: active_page})}, '' + text);
+                    return html('a', {href: routeToUrl({page: active_page}).url}, '' + text);
                 }
                 builder.render();
 
@@ -1157,7 +1159,7 @@ let mco_casemix = {};
                                            'GHS : ' + result.ghs},
                             html('a', {href: mco_pricing.routeToUrl({view: 'table',
                                                                      date: result.index_date,
-                                                                     ghm_root: result.ghm.substr(0, 5)})},
+                                                                     ghm_root: result.ghm.substr(0, 5)}).url},
                                  result.ghm),
                             result.ghm.startsWith('90') ? (' [' + result.main_error + ']')
                                                         : (' (' + result.ghs + ')')

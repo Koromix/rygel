@@ -319,13 +319,16 @@ let mco_list = {};
             sort: new_route.sort || null
         });
 
-        return url;
+        return {
+            url: url,
+            allowed: true
+        };
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        thop.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args).url, delay);
     }
     this.go = go;
 
@@ -362,7 +365,7 @@ let mco_list = {};
         if (spec) {
             h1.innerHTML = '';
             h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(html('a', {href: routeToUrl({spec: null})}, '(retirer)'));
+            h1.appendChild(html('a', {href: routeToUrl({spec: null}).url}, '(retirer)'));
             h1.removeClass('hide');
         } else {
             h1.innerText = '';
@@ -538,14 +541,14 @@ let mco_list = {};
         let url = null;
         let cls = null;
         if (str[0] === 'A') {
-            url = routeToUrl({list: 'procedures', spec: str});
+            url = routeToUrl({list: 'procedures', spec: str}).url;
         } else if (str[0] === 'D') {
-            url = routeToUrl({list: 'diagnoses', spec: str});
+            url = routeToUrl({list: 'diagnoses', spec: str}).url;
         } else if (str.match(/^[0-9]{2}[CMZKH][0-9]{2}[ZJT0-9ABCDE]?$/)) {
-            url = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)});
+            url = mco_pricing.routeToUrl({view: 'table', ghm_root: str.substr(0, 5)}).url;
             cls = 'ghm';
         } else if (str.match(/[Nn]oeud [0-9]+/)) {
-            url = mco_tree.routeToUrl() + '#n' + str.substr(6);
+            url = mco_tree.routeToUrl().url + '#n' + str.substr(6);
         } else {
             return str;
         }
@@ -580,7 +583,7 @@ let mco_list = {};
             if (last_page) {
                 let builder = new Pager(pager, active_page, last_page);
                 builder.anchorBuilder = function(text, active_page) {
-                    return html('a', {href: routeToUrl({page: active_page})}, '' + text);
+                    return html('a', {href: routeToUrl({page: active_page}).url}, '' + text);
                 }
                 builder.render();
 

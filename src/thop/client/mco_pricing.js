@@ -125,13 +125,16 @@ let mco_pricing = {};
             apply_coefficient: new_route.apply_coefficient ? 1 : null
         });
 
-        return url;
+        return {
+            url: url,
+            allowed: true
+        };
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        thop.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args).url, delay);
     }
     this.go = go;
 

@@ -53,13 +53,16 @@ let mco_tree = {};
             url = url_parts.join('/');
         }
 
-        return url;
+        return {
+            url: url,
+            allowed: true
+        };
     }
     this.routeToUrl = routeToUrl;
 
     function go(args, delay)
     {
-        thop.route(routeToUrl(args), delay);
+        thop.route(routeToUrl(args).url, delay);
     }
     this.go = go;
 

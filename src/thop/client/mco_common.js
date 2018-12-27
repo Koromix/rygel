@@ -179,15 +179,17 @@ let mco_common = {};
     };
 
     // Cache
-    let settings = {
-        indexes: [],
-        url_key: null
-    };
+    let settings = {};
     let catalogs = {};
 
     function updateSettings()
     {
         if (user.getUrlKey() !== settings.url_key) {
+            settings = {
+                indexes: settings.indexes || [],
+                url_key: null
+            };
+
             let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
             data.get(url, 'json', function(json) {
                 settings = json;
@@ -250,7 +252,7 @@ let mco_common = {};
 
         let builder = new VersionLine(svg);
         builder.anchorBuilder = function(version) {
-            return thop.routeToUrl({date: version.date});
+            return thop.routeToUrl({date: version.date}).url;
         };
         builder.changeHandler = function() {
             thop.go({date: this.object.getValue()});
