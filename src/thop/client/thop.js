@@ -101,6 +101,7 @@ let thop = {};
                 prev_module = module;
             }
             queryAll('#opt_menu > *').addClass('hide');
+            document.body.removeClass('hide');
 
             module = new_module;
             if (module)
@@ -166,7 +167,6 @@ let thop = {};
 
         // Done
         query('main').toggleClass('busy', data.isBusy());
-        document.body.removeClass('hide');
     }
     this.route = route;
 

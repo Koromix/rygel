@@ -12,7 +12,11 @@ let user = {};
     function runLogin(route, path, parameters, hash, errors)
     {
         query('#user button').disabled = false;
+
+        let focus = query('#user').hasClass('hide');
         query('#user').removeClass('hide');
+        if (focus)
+            query('#user_username').focus();
     }
 
     function runSession()
