@@ -293,6 +293,8 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 
 static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 {
+    DebugAssert(out_address.len);
+
     int family;
     void *addr;
     {
@@ -338,58 +340,64 @@ static void PruneStaleSessions()
 }
 
 // Call with sessions_mutex locked
-static Session *FindSession(MHD_Connection *conn)
+static Session *FindSession(MHD_Connection *conn, bool *out_mismatch = nullptr)
 {
     uint64_t now = GetMonotonicTime();
 
     char address[65];
-    if (!GetClientAddress(conn, address))
+    if (!GetClientAddress(conn, address)) {
+        if (out_mismatch) {
+            *out_mismatch = false;
+        }
         return nullptr;
+    }
 
     const char *session_key = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "session_key");
     const char *username = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "username");
     const char *user_agent = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "User-Agent");
-    if (!session_key || !username || !user_agent)
+    if (!session_key || !username || !user_agent) {
+        if (out_mismatch) {
+            *out_mismatch = session_key || username;
+        }
         return nullptr;
+    }
 
     Session *session = sessions.Find(session_key);
-    if (!session)
+    if (!session ||
+            !TestStr(session->client_addr, address) ||
+            !TestStr(session->user->name, username) ||
+            strncmp(session->user_agent, user_agent, SIZE(session->user_agent) - 1) ||
+            now - session->last_seen > IdleSessionDelay) {
+        if (out_mismatch) {
+            *out_mismatch = true;
+        }
         return nullptr;
-    if (!TestStr(session->client_addr, address))
-        return nullptr;
-    if (!TestStr(session->user->name, username))
-        return nullptr;
-    if (strncmp(session->user_agent, user_agent, SIZE(session->user_agent) - 1))
-        return nullptr;
-    if (now - session->last_seen > IdleSessionDelay)
-        return nullptr;
+    }
 
+    // Avoid pruning (not idle)
     session->last_seen = now;
+
+    if (out_mismatch) {
+        *out_mismatch = false;
+    }
     return session;
 }
 
-static void DeleteSessionCookies(MHD_Response *response)
-{
-    AddCookieHeader(response, "session_key", nullptr);
-    AddCookieHeader(response, "url_key", nullptr);
-    AddCookieHeader(response, "username", nullptr);
-}
-
-const User *CheckSessionUser(MHD_Connection *conn)
+const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch)
 {
     PruneStaleSessions();
 
     std::shared_lock<std::shared_mutex> lock(sessions_mutex);
-    Session *session = FindSession(conn);
+    Session *session = FindSession(conn, out_mismatch);
 
     return session ? session->user : nullptr;
 }
 
-void AddSessionHeaders(MHD_Connection *conn, const User *user, MHD_Response *response)
+void DeleteSessionCookies(MHD_Response *response)
 {
-    if (!user && MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "session_key")) {
-        DeleteSessionCookies(response);
-    }
+    AddCookieHeader(response, "session_key", nullptr);
+    AddCookieHeader(response, "url_key", nullptr);
+    AddCookieHeader(response, "username", nullptr);
 }
 
 int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_response)

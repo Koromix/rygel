@@ -729,6 +729,16 @@ static bool UpdateStaticAssets()
 }
 #endif
 
+static int QueueResponse(ConnectionInfo *conn, int code, const Response &response)
+{
+    MHD_add_response_header(response, "Referrer-Policy", "no-referrer");
+    if (conn->user_mismatch) {
+        DeleteSessionCookies(response);
+    }
+
+    return MHD_queue_response(conn->conn, (unsigned int)code, response);
+}
+
 static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, const char *method,
                                 const char *, const char *upload_data, size_t *upload_data_size,
                                 void **con_cls)
@@ -737,12 +747,14 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     UpdateStaticAssets();
 #endif
 
+    Response response = {};
+
     // Gather connection info
     ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
     if (!conn) {
         conn = new ConnectionInfo;
         conn->conn = conn2;
-        conn->user = CheckSessionUser(conn2);
+        conn->user = CheckSessionUser(conn2, &conn->user_mismatch);
         *con_cls = conn;
     }
 
@@ -750,13 +762,12 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     for (Size i = 0; thop_config.base_url[i]; i++, url++) {
         if (url[0] != thop_config.base_url[i]) {
             if (!url[0] && thop_config.base_url[i] == '/' && !thop_config.base_url[i + 1]) {
-                MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                 MHD_add_response_header(response, "Location", thop_config.base_url);
-                return MHD_queue_response(conn->conn, 303, response);
+                return QueueResponse(conn, 303, response);
             } else {
-                Response response;
                 CreateErrorPage(404, &response);
-                return MHD_queue_response(conn->conn, 404, response.response.get());
+                return QueueResponse(conn, 404, response);
             }
         }
     }
@@ -778,17 +789,15 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
                 return MHD_YES;
             }, conn);
             if (!conn->pp) {
-                Response response;
                 CreateErrorPage(422, &response);
-                return MHD_queue_response(conn->conn, 422, response.response.get());
+                return QueueResponse(conn, 422, response);
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(conn->pp, upload_data, *upload_data_size) != MHD_YES) {
-                Response response;
                 CreateErrorPage(422, &response);
-                return MHD_queue_response(conn->conn, 422, response.response.get());
+                return QueueResponse(conn, 422, response);
             }
 
             *upload_data_size = 0;
@@ -806,9 +815,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         } else if (acceptable_encodings) {
             conn->compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
         } else {
-            Response response;
             CreateErrorPage(406, &response);
-            return MHD_queue_response(conn->conn, 406, response.response.get());
+            return QueueResponse(conn, 406, response);
         }
     }
 
@@ -832,9 +840,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
             }
 
             if (!route) {
-                Response response;
                 CreateErrorPage(404, &response);
-                return MHD_queue_response(conn->conn, 404, response.response.get());
+                return QueueResponse(conn, 404, response);
             }
         }
 
@@ -845,15 +852,13 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     if (try_cache) {
         const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            DEFER { MHD_destroy_response(response); };
-            return MHD_queue_response(conn->conn, 304, response);
+            response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            return QueueResponse(conn, 304, response);
         }
     }
 
     // Execute route
     int code = 0;
-    Response response;
     switch (route->type) {
         case Route::Type::Static: {
             code = ProduceStaticAsset(*route, conn->compression_type, &response);
@@ -865,9 +870,6 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     }
     DebugAssert(response.response);
 
-    MHD_add_response_header(response.response.get(), "Referrer-Policy", "no-referrer");
-    AddSessionHeaders(conn->conn, conn->user, response.response.get());
-
     // Add caching information
     if (try_cache) {
 #ifndef NDEBUG
@@ -875,17 +877,17 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
 #endif
 
         if (!(response.flags & (int)Response::Flag::DisableCache)) {
-            MHD_add_response_header(response.response.get(), "Cache-Control", "max-age=3600");
+            MHD_add_response_header(response, "Cache-Control", "max-age=3600");
 
             if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
-                MHD_add_response_header(response.response.get(), "ETag", etag);
+                MHD_add_response_header(response, "ETag", etag);
             }
         } else {
-            MHD_add_response_header(response.response.get(), "Cache-Control", "no-store");
+            MHD_add_response_header(response, "Cache-Control", "no-store");
         }
     }
 
-    return MHD_queue_response(conn->conn, (unsigned int)code, response.response.get());
+    return QueueResponse(conn, code, response);
 }
 
 static void ReleaseConnectionData(void *, struct MHD_Connection *,

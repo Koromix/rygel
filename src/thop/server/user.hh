@@ -66,8 +66,8 @@ private:
 bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
                  mco_DispenseMode dispense_mode, UserSet *out_set);
 
-const User *CheckSessionUser(MHD_Connection *conn);
-void AddSessionHeaders(MHD_Connection *conn, const User *user, MHD_Response *response);
+const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch = nullptr);
+void DeleteSessionCookies(MHD_Response *response);
 
 int HandleConnect(const ConnectionInfo *conn, const char *url, Response *out_response);
 int HandleDisconnect(const ConnectionInfo *conn, const char *url, Response *out_response);

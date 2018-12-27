@@ -18,6 +18,7 @@ struct ConnectionInfo {
     MHD_Connection *conn;
 
     const User *user;
+    bool user_mismatch;
     HashMap<const char *, Span<const char>> post;
     CompressionType compression_type;
 
@@ -38,6 +39,12 @@ struct Response {
 
     std::unique_ptr<MHD_Response, ResponseDeleter> response;
     unsigned int flags = 0;
+
+    Response &operator=(MHD_Response *response) {
+        this->response.reset(response);
+        return *this;
+    }
+    operator MHD_Response *() const { return response.get(); }
 };
 
 struct mco_ResultPointers {
