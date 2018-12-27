@@ -24,15 +24,10 @@ struct MergeRule {
     HeapArray<const char *> exclude;
 };
 
-struct SourceInfo {
-    const char *prefix;
-    const char *suffix;
-    const char *filename;
-};
-
 struct AssetInfo {
     const char *filename;
-    HeapArray<SourceInfo> sources;
+    MergeMode merge_mode;
+    HeapArray<const char *> sources;
 };
 
 // For simplicity, I've replicated the required data structures from kutil.hh
@@ -170,22 +165,31 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-static Size PackFile(const char *filename, Span<const SourceInfo> sources,
-                     CompressionType compression_type, StreamWriter *out_st)
+static Size PackAsset(const AssetInfo &asset, CompressionType compression_type, StreamWriter *out_st)
 {
-    PrintLn(out_st, "    // %1", filename);
-    Print(out_st, "    ");
-
     Size written_len = 0;
     {
         HeapArray<uint8_t> buf;
         StreamWriter writer(&buf, nullptr, compression_type);
-        for (const SourceInfo &src: sources) {
-            if (src.prefix) {
-                writer.Write(src.prefix);
+
+        const auto flush_buffer = [&]() {
+            written_len += buf.len;
+            PrintAsHexArray(buf, out_st);
+            buf.RemoveFrom(0);
+        };
+
+        for (const char *src: asset.sources) {
+            switch (asset.merge_mode) {
+                case MergeMode::Naive: {} break;
+                case MergeMode::CSS: {
+                    PrintLn(&writer, "/* %1\n   ------------------------------------ */\n", src);
+                } break;
+                case MergeMode::JS: {
+                    PrintLn(&writer, "// %1\n// ------------------------------------\n", src);
+                } break;
             }
 
-            StreamReader reader(src.filename);
+            StreamReader reader(src);
             while (!reader.eof) {
                 uint8_t read_buf[128 * 1024];
                 Size read_len = reader.Read(SIZE(read_buf), read_buf);
@@ -193,42 +197,21 @@ static Size PackFile(const char *filename, Span<const SourceInfo> sources,
                     return false;
 
                 writer.Write(read_buf, read_len);
-                written_len += buf.len;
-                PrintAsHexArray(buf, out_st);
-                buf.RemoveFrom(0);
+                flush_buffer();
             }
 
-            if (src.suffix) {
-                writer.Write(src.suffix);
+            switch (asset.merge_mode) {
+                case MergeMode::Naive: {} break;
+                case MergeMode::CSS:
+                case MergeMode::JS: { writer.Write('\n'); } break;
             }
         }
+
         writer.Close();
-        written_len += buf.len;
-        PrintAsHexArray(buf, out_st);
+        flush_buffer();
     }
-    PrintLn(out_st);
 
     return written_len;
-}
-
-static SourceInfo CreateSource(const char *filename, MergeMode merge_mode, Allocator *alloc)
-{
-    SourceInfo src = {};
-
-    src.filename = filename;
-    switch (merge_mode) {
-        case MergeMode::Naive: {} break;
-        case MergeMode::CSS: {
-            src.prefix = Fmt(alloc, "/* %1\n   ------------------------------------ */\n\n", filename).ptr;
-            src.suffix = "\n";
-        } break;
-        case MergeMode::JS: {
-            src.prefix = Fmt(alloc, "// %1\n// ------------------------------------\n\n", filename).ptr;
-            src.suffix = "\n";
-        } break;
-    }
-
-    return src;
 }
 
 static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *filename)
@@ -374,6 +357,7 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
 
                 AssetInfo asset = {};
                 asset.filename = rule->filename;
+                asset.merge_mode = rule->merge_mode;
                 assets.Append(asset);
 
                 merge_map.Append(rule, asset_idx);
@@ -382,20 +366,25 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
 
                 AssetInfo asset = {};
                 asset.filename = filename;
+                asset.merge_mode = MergeMode::Naive;
                 assets.Append(asset);
             }
 
-            SourceInfo src = CreateSource(filename, rule ? rule->merge_mode : MergeMode::Naive, &temp_alloc);
-            assets[asset_idx].sources.Append(src);
+            assets[asset_idx].sources.Append(filename);
         }
     }
 
     HeapArray<Size> lengths;
     for (const AssetInfo &asset: assets) {
-        Size asset_len = PackFile(asset.filename, asset.sources, compression_type, &st);
+        PrintLn(&st, "    // %1", asset.filename);
+        Print(&st, "    ");
+
+        Size asset_len = PackAsset(asset, compression_type, &st);
         if (asset_len < 0)
             return 1;
         lengths.Append(asset_len);
+
+        PrintLn(&st);
     }
 
     PrintLn(&st,
