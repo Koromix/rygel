@@ -257,27 +257,15 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, mco_DispenseMode 
 
 bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent)
 {
-    const auto CheckNeedle = [&](const char *needle) {
-        return !!strstr(ent.path, needle);
-    };
+    const auto check_needle = [&](const char *needle) { return !!strstr(ent.path, needle); };
 
     if (rule_set.allow_default) {
-        bool deny = std::any_of(rule_set.deny.begin(), rule_set.deny.end(), CheckNeedle);
-        if (deny) {
-            bool allow = std::any_of(rule_set.allow.begin(), rule_set.allow.end(), CheckNeedle);
-            if (!allow)
-                return false;
-        }
+        return !std::any_of(rule_set.deny.begin(), rule_set.deny.end(), check_needle) ||
+               std::any_of(rule_set.allow.begin(), rule_set.allow.end(), check_needle);
     } else {
-        bool allow = std::any_of(rule_set.allow.begin(), rule_set.allow.end(), CheckNeedle);
-        if (!allow)
-            return false;
-        bool deny = std::any_of(rule_set.deny.begin(), rule_set.deny.end(), CheckNeedle);
-        if (deny)
-            return false;
+        return std::any_of(rule_set.allow.begin(), rule_set.allow.end(), check_needle) &&
+               !std::any_of(rule_set.deny.begin(), rule_set.deny.end(), check_needle);
     }
-
-    return true;
 }
 
 bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
