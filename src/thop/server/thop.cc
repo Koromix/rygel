@@ -411,8 +411,8 @@ void AddCookieHeader(MHD_Response *response, const char *name, const char *value
 {
     char cookie_buf[512];
     if (value) {
-        Fmt(cookie_buf, "%1=%2; Path=%3;%4", name, value, thop_config.base_url,
-            http_only ? " HttpOnly;" : "");
+        Fmt(cookie_buf, "%1=%2; Path=%3; SameSite=Lax;%4",
+            name, value, thop_config.base_url, http_only ? " HttpOnly;" : "");
     } else {
         Fmt(cookie_buf, "%1=; Path=%2; Max-Age=0;", name, thop_config.base_url);
     }
