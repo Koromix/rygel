@@ -11,6 +11,11 @@
             const BaseUrl = '${THOP_BASE_URL}';
             const ShowUser = ${THOP_SHOW_USER};
             const TableLen = 100;
+
+            const LazyModules = {
+                chartjs: '${THOP_BASE_URL}static/chart.min.js',
+                xlsx: '${THOP_BASE_URL}static/xlsx.core.min.js'
+            };
         </script>
 
         <link rel="stylesheet" href="${THOP_BASE_URL}static/thop.css"/>

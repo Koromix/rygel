@@ -270,3 +270,17 @@ function generateRandomInt(min, max)
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
 }
+
+function lazyLoad(module, func)
+{
+    if (typeof LazyModules !== 'object' || !LazyModules[module]) {
+        console.log('Cannot load module ' + module);
+        return;
+    }
+
+    data.get(LazyModules[module], null, function(js) {
+        eval.call(window, js);
+        if (func)
+            func();
+    });
+}

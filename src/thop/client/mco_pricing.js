@@ -399,6 +399,11 @@ let mco_pricing = {};
     function refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff)
     {
+        if (typeof Chart === 'undefined') {
+            lazyLoad('chartjs');
+            return;
+        }
+
         if (!needsRefresh(refreshPriceChart, null, [pricing_info, main_index, diff_index,
                                                     max_duration, apply_coeff]))
             return;
@@ -434,9 +439,7 @@ let mco_pricing = {};
             }[mode] || "black";
         }
 
-        let data = {
-            datasets: []
-        };
+        let datasets = [];
 
         let max_price = 0.0;
         for (const col of ghs) {
@@ -468,7 +471,7 @@ let mco_pricing = {};
                     dataset.data.push(null);
                 }
             }
-            data.datasets.push(dataset);
+            datasets.push(dataset);
         }
 
         let min_price;
@@ -491,14 +494,16 @@ let mco_pricing = {};
         }
 
         if (chart) {
-            chart.data = data;
+            chart.data.datasets = datasets;
             chart.options.scales.yAxes[0].ticks.suggestedMin = min_price;
             chart.options.scales.yAxes[0].ticks.suggestedMax = max_price;
             chart.update({duration: 0});
         } else {
             chart = new Chart(chart_ctx, {
                 type: 'line',
-                data: data,
+                data: {
+                    datasets: datasets
+                },
                 options: {
                     responsive: true,
                     tooltips: {
