@@ -7,7 +7,7 @@
 #include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 
 #include "../../libdrd/libdrd.hh"
-#include "json.hh"
+#include "../../common/json.hh"
 
 struct Config;
 struct StructureSet;

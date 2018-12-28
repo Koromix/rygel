@@ -18,7 +18,7 @@
 #include "mco_classify.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "../../packer/packer.hh"
+#include "../../packer/asset.hh"
 
 struct CatalogSet {
     HeapArray<PackerAsset> catalogs;

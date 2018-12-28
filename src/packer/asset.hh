@@ -6,21 +6,11 @@
 
 #include "../common/kutil.hh"
 
-enum class MergeMode {
-    Naive,
-    CSS,
-    JS
-};
-
-enum class SourceMapType {
-    None,
-    JSv3
-};
-
-struct SourceInfo {
-    const char *filename;
+// Keep in sync with version in packer.cc
+struct PackerAsset {
     const char *name;
+    CompressionType compression_type;
+    Span<const uint8_t> data;
 
-    const char *prefix;
-    const char *suffix;
+    const char *source_map;
 };
