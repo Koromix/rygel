@@ -1441,8 +1441,10 @@ bool mco_TableSetBuilder::Finish(mco_TableSet *out_set)
         }
     }
 
-    if (failures && !set.indexes.len)
+    if (failures && failures == set.indexes.len) {
+        LogError("All classifier indexes are invalid");
         return false;
+    }
 
     SwapMemory(out_set, &set, SIZE(set));
     return true;
@@ -1512,12 +1514,11 @@ static void BuildAdditionLists(const mco_TableIndex &index,
 bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
                                       mco_TableSetBuilder::TableLoadInfo *current_tables[])
 {
-    bool success = true;
-
     mco_TableIndex index = {};
 
     index.limit_dates[0] = start_date;
     index.limit_dates[1] = end_date;
+    index.valid = true;
 
     // Some tables are used to modify existing tables (e.g. procedure extensions from
     // ccamdesc.tab are added to the ProcedureInfo table). Two consequences:
@@ -1592,8 +1593,8 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
 
                     if (table_info) {
                         HeapArray<ProcedureAdditionInfo> additions;
-                        success &= ParseProcedureAdditionTable(load_info->raw_data.ptr, *table_info,
-                                                               &additions);
+                        valid &= ParseProcedureAdditionTable(load_info->raw_data.ptr, *table_info,
+                                                             &additions);
 
                         // Probably redundant, but make sure for BuildAdditionLists()
                         std::sort(additions.begin(), additions.end(),
@@ -1729,44 +1730,27 @@ bool mco_TableSetBuilder::CommitIndex(Date start_date, Date end_date,
         }
         load_info->prev_index_idx = set.indexes.len;
 
-        success &= valid;
+        index.valid &= valid;
     }
 
     // Check index validity
     // FIXME: Validate all tables (some were not always needed)
-    {
-        LocalArray<FmtArg, ARRAY_SIZE(mco_TableTypeNames)> pieces;
-
-#define CHECK_PIECE(Test, TableType) \
-            do { \
-                if (!(Test)) { \
-                    pieces.Append(mco_TableTypeNames[(int)(TableType)]); \
-                } \
-            } while (false)
-
-        // Hard errors, check lengths to avoid problems with existing but empty tables
-        CHECK_PIECE(index.ghm_nodes.len, mco_TableType::GhmDecisionTree);
-        CHECK_PIECE(index.diagnoses.len, mco_TableType::DiagnosisTable);
-        CHECK_PIECE(index.procedures.len, mco_TableType::ProcedureTable);
-        CHECK_PIECE(index.ghm_roots.len, mco_TableType::GhmRootTable);
-        CHECK_PIECE(index.ghs.len, mco_TableType::GhmToGhsTable);
-        CHECK_PIECE(index.ghs_prices[0].len && index.ghs_prices[1].len,
-                    mco_TableType::GhmToGhsTable);
-
-#undef CHECK_PIECE
-
-        index.valid = !pieces.len;
-        if (pieces.len) {
-            LogDebug("Missing pieces to make index from %1 to %2: %3", start_date, end_date,
-                     pieces);
-        }
+    index.valid &= index.ghm_nodes.len &&
+                   index.diagnoses.len &&
+                   index.procedures.len &&
+                   index.ghm_roots.len &&
+                   index.ghs.len &&
+                   index.ghs_prices[0].len &&
+                   index.ghs_prices[1].len;
+    if (!index.valid) {
+        LogDebug("Missing pieces for index: %1 to %2", start_date, end_date);
     }
 
 #undef BUILD_MAP
 #undef LOAD_TABLE
 
     set.indexes.Append(index);
-    return success;
+    return index.valid;
 }
 
 void mco_TableSetBuilder::HandleDependencies(mco_TableSetBuilder::TableLoadInfo *current_tables[],
