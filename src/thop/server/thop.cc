@@ -535,12 +535,13 @@ static uint32_t ParseAcceptableEncodings(Span<const char> encodings)
     return acceptable_encodings;
 }
 
-static void PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
+static bool PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
 {
     StreamWriter writer(out_buf, nullptr, st.compression.type);
 
     HeapArray<char> buf;
-    Assert(st.ReadAll(Megabytes(1), &buf) > 0);
+    if (st.ReadAll(Megabytes(1), &buf) < 0)
+        return false;
     buf.Append(0);
 
     Span<const char> html = buf.Take(0, buf.len - 1);
@@ -567,7 +568,7 @@ static void PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
         }
     } while (html.len);
 
-    Assert(writer.Close());
+    return writer.Close();
 }
 
 static void InitRoutes()
@@ -589,7 +590,7 @@ static void InitRoutes()
     {
         StreamReader st(html.u.st.asset.data, nullptr, html.u.st.asset.compression_type);
         HeapArray<uint8_t> buf(&routes_alloc);
-        PatchTextFile(st, &buf);
+        Assert(PatchTextFile(st, &buf));
 
         html.u.st.asset.data = buf.Leak();
     }
