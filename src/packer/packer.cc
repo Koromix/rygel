@@ -196,7 +196,7 @@ static Size PackAsset(const AssetInfo &asset, CompressionType compression_type, 
                 if (read_len < 0)
                     return false;
 
-                writer.Write(read_buf, read_len);
+                Assert(writer.Write(read_buf, read_len));
                 flush_buffer();
             }
 
@@ -207,7 +207,7 @@ static Size PackAsset(const AssetInfo &asset, CompressionType compression_type, 
             }
         }
 
-        writer.Close();
+        Assert(writer.Close());
         flush_buffer();
     }
 
