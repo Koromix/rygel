@@ -2505,8 +2505,7 @@ public:
         Hexadecimal,
         MemorySize,
         DiskSize,
-        Date,
-        List
+        Date
     };
 
     Type type;
@@ -2524,10 +2523,6 @@ public:
         const void *ptr;
         Size size;
         Date date;
-        struct {
-            Span<FmtArg> args;
-            const char *separator;
-        } list;
     } value;
 
     int pad_len = 0;
@@ -2552,11 +2547,6 @@ public:
     FmtArg(double d) : type(Type::Double) { value.d = { d, -1 }; }
     FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
-    FmtArg(Span<FmtArg> args) : type(Type::List)
-    {
-        value.list.args = args;
-        value.list.separator = ", ";
-    }
 
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
     FmtArg &Pad0(int len) { return Pad(len, '0'); }
@@ -2599,14 +2589,6 @@ static inline FmtArg FmtDiskSize(Size size)
     FmtArg arg;
     arg.type = FmtArg::Type::DiskSize;
     arg.value.size = size;
-    return arg;
-}
-static inline FmtArg FmtList(Span<FmtArg> args, const char *sep = ", ")
-{
-    FmtArg arg;
-    arg.type = FmtArg::Type::List;
-    arg.value.list.args = args;
-    arg.value.list.separator = sep;
     return arg;
 }
 

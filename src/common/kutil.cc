@@ -689,20 +689,6 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out_buf.Append(FormatUnsignedToDecimal((uint64_t)arg.value.date.st.day, num_buf));
                 out = out_buf;
             } break;
-
-            // NOTE: Padding is not supported with FmtList()
-            case FmtArg::Type::List: {
-                if (arg.value.list.args.len) {
-                    ProcessArg(arg.value.list.args[0], append);
-
-                    Span<const char> separator = arg.value.list.separator;
-                    for (Size j = 1; j < arg.value.list.args.len; j++) {
-                        append(separator);
-                        ProcessArg(arg.value.list.args[j], append);
-                    }
-                }
-                out = {};
-            } break;
         }
 
         if (arg.pad_len < 0) {
