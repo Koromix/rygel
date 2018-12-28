@@ -118,6 +118,8 @@ static const char *GetMimeType(Span<const char> path)
         return "image/png";
     } else if (extension == ".svg") {
         return "image/svg+xml";
+    } else if (extension == ".map") {
+        return "application/json";
     } else {
         LogError("Unknown MIME type for path '%1'", path);
         return "application/octet-stream";
@@ -493,6 +495,9 @@ static int ProduceStaticAsset(const Route &route, CompressionType compression_ty
     if (route.u.st.mime_type) {
         MHD_add_response_header(response, "Content-Type", route.u.st.mime_type);
     }
+    if (route.u.st.asset.source_map) {
+        MHD_add_response_header(response, "SourceMap", route.u.st.asset.source_map);
+    }
 
     return 200;
 }
@@ -582,7 +587,9 @@ static void InitRoutes()
     Assert(packer_assets.len > 0);
     for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        routes.Set({url, "GET", Route::Matching::Exact, asset, GetMimeType(asset.name)});
+        const char *mime_type = GetMimeType(asset.name);
+
+        routes.Set({url, "GET", Route::Matching::Exact, asset, mime_type});
     }
 
     // Patch HTML
@@ -720,6 +727,7 @@ static bool UpdateStaticAssets()
         memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
         asset_copy.data = {data_ptr, asset.data.len};
         asset_copy.compression_type = asset.compression_type;
+        asset_copy.source_map = DuplicateString(asset.source_map, &packer_alloc).ptr;
         packer_assets.Append(asset_copy);
     }
 
