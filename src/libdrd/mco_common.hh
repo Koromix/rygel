@@ -93,8 +93,8 @@ union mco_GhmRootCode {
     operator FmtArg() const
     {
         FmtArg arg;
-        arg.type = FmtArg::Type::StrBuf;
-        ToString(arg.value.str_buf);
+        arg.type = FmtArg::Type::Buffer;
+        ToString(arg.value.buf);
         return arg;
     }
 
@@ -202,8 +202,8 @@ union mco_GhmCode {
     operator FmtArg() const
     {
         FmtArg arg;
-        arg.type = FmtArg::Type::StrBuf;
-        ToString(arg.value.str_buf);
+        arg.type = FmtArg::Type::Buffer;
+        ToString(arg.value.buf);
         return arg;
     }
 
