@@ -630,7 +630,7 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stat0 = aggregate(rows, filterUnitParts).getList()[0];
                 stats1 = aggregate(rows, unitToEntities, filterUnitParts);
             }
 
@@ -642,7 +642,7 @@ let mco_casemix = {};
                 let prev_groups = [];
                 let prev_totals = [stat0];
                 for (const ent of structure.entities) {
-                    let unit_stat = findAggregate(stats1, ent.path[ent.path.length - 1]);
+                    let unit_stat = stats1.find(ent.path[ent.path.length - 1]);
                     if (!unit_stat)
                         continue;
 
@@ -657,7 +657,7 @@ let mco_casemix = {};
                     }
 
                     for (let k = common_len; k < ent.path.length - 1; k++) {
-                        let group_stat = findAggregate(stats1, ent.path[k]);
+                        let group_stat = stats1.find(ent.path[k]);
 
                         units_summary.beginRow();
                         units_summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
@@ -743,13 +743,13 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stat0 = aggregate(rows, filterUnitParts).getList()[0];
                 stats1 = aggregate(rows, 'ghm_root', filterUnitParts);
                 stats2 = aggregate(rows, ghmRootToGroup, filterUnitParts);
             }
 
             if (stat0) {
-                let ghm_roots = stats1.list.map(function(stat) { return stat.ghm_root; });
+                let ghm_roots = stats1.getList().map(function(stat) { return stat.ghm_root; });
                 ghm_roots = ghm_roots.sort(function(ghm_root1, ghm_root2) {
                     const ghm_root_info1 = ghm_roots_map[ghm_root1] || {};
                     const ghm_root_info2 = ghm_roots_map[ghm_root2] || {};
@@ -770,7 +770,7 @@ let mco_casemix = {};
                 let prev_group = null;
                 let total = stat0;
                 for (const ghm_root of ghm_roots) {
-                    let root_stat = findAggregate(stats1, ghm_root);
+                    let root_stat = stats1.find(ghm_root);
                     let ghm_root_info = ghm_roots_map[ghm_root];
                     let group = ghm_root_info ? ghm_root_info[regroup] : null;
 
@@ -781,7 +781,7 @@ let mco_casemix = {};
                         }
 
                         if (group) {
-                            let group_stat = findAggregate(stats2, group);
+                            let group_stat = stats2.find(group);
 
                             ghm_roots_summary.beginRow();
                             ghm_roots_summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
@@ -903,7 +903,7 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts).list[0];
+                stat0 = aggregate(rows, filterUnitParts).getList()[0];
                 stats1 = aggregate(rows, 'ghm', 'ghs', filterUnitParts);
                 stats1_units = aggregate(rows, 'ghm', 'ghs', 'unit');
                 stats2 = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
@@ -914,7 +914,7 @@ let mco_casemix = {};
             let max_duration = 10;
             let max_count = 0;
             let max_price_cents = 0;
-            for (const duration_stat of stats2.list) {
+            for (const duration_stat of stats2.getList()) {
                 max_duration = Math.max(max_duration, duration_stat.duration + 1);
                 max_count = Math.max(max_count, duration_stat.count);
                 max_price_cents = Math.max(max_price_cents, duration_stat.price_cents);
@@ -988,12 +988,12 @@ let mco_casemix = {};
                 );
 
                 for (const col of columns) {
-                    let col_stat = findAggregate(stats1, col.ghm, col.ghs);
+                    let col_stat = stats1.find(col.ghm, col.ghs);
 
                     if (col_stat) {
                         let tooltip =
                             makeTooltip('Total', col, col_stat, stat0, col_stat,
-                                        findPartialAggregate(stats1_units, col.ghm, col.ghs));
+                                        stats1_units.findPartial(col.ghm, col.ghs));
 
                         tr.appendChildren([
                             html('td', {class: 'count total' + diffClass(col_stat.count),
@@ -1016,7 +1016,7 @@ let mco_casemix = {};
 
             // Durations
             for (let duration = 0; duration < max_duration; duration++) {
-                let row_stat = findAggregate(stats3, duration);
+                let row_stat = stats3.find(duration);
 
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
@@ -1031,8 +1031,8 @@ let mco_casemix = {};
                     html('th', mco_common.durationText(duration))
                 );
                 for (const col of columns) {
-                    let col_stat = findAggregate(stats1, col.ghm, col.ghs);
-                    let duration_stat = findAggregate(stats2, col.ghm, col.ghs, duration);
+                    let col_stat = stats1.find(col.ghm, col.ghs);
+                    let duration_stat = stats2.find(col.ghm, col.ghs, duration);
 
                     let cls;
                     if (col.exb_treshold && duration < col.exb_treshold) {
@@ -1047,7 +1047,7 @@ let mco_casemix = {};
                         let tooltip =
                             makeTooltip(mco_common.durationText(duration),
                                         col, col_stat, row_stat, duration_stat,
-                                        findPartialAggregate(stats2_units, col.ghm, col.ghs, duration));
+                                        stats2_units.findPartial(col.ghm, col.ghs, duration));
 
                         tr.appendChildren([
                             html('td', {class: 'count ' + cls + diffClass(duration_stat.count),
@@ -1367,9 +1367,6 @@ let mco_casemix = {};
         if (!Array.isArray(by))
             by = Array.prototype.slice.call(arguments, 1);
 
-        let list = [];
-        let map = {};
-
         let template = {
             count: 0,
             deaths: 0,
@@ -1379,99 +1376,22 @@ let mco_casemix = {};
             price_cents: 0
         };
 
-        function aggregateRec(row, row_ptrs, ptr, col_idx, key_idx)
+        function aggregateRow(row, col_idx, first, ptr)
         {
-            for (let i = key_idx; i < by.length; i++) {
-                let key = by[i];
-                let value;
-                if (typeof key === 'function') {
-                    let ret = key(row);
-                    key = ret[0];
-                    value = ret[1];
-                } else {
-                    value = row[key];
-                }
-
-                if (Array.isArray(value))
-                    value = value[col_idx];
-
-                if (value === true) {
-                    continue;
-                } else if (value === false) {
-                    return;
-                }
-
-                if (Array.isArray(value)) {
-                    const values = value;
-                    for (const value of values) {
-                        if (ptr[value] === undefined)
-                            ptr[value] = {};
-                        template[key] = value;
-
-                        aggregateRec(row, row_ptrs, ptr[value], col_idx, key_idx + 1);
-                    }
-
-                    return;
-                }
-
-                if (ptr[value] === undefined)
-                    ptr[value] = {};
-                template[key] = value;
-
-                ptr = ptr[value];
-            }
-
-            if (ptr.count === undefined) {
-                Object.assign(ptr, template);
-                list.push(ptr);
-            }
-
-            if (!row_ptrs.has(ptr)) {
+            if (first) {
                 ptr.count += row.count;
                 ptr.deaths += row.deaths;
                 ptr.mono_count_total += row.mono_count_total;
                 ptr.price_cents_total += row.price_cents_total;
-
-                row_ptrs.add(ptr);
             }
-
             ptr.mono_count += row.mono_count[col_idx];
             ptr.price_cents += row.price_cents[col_idx];
         }
 
-        for (const row of rows) {
-            const max_idx = row.mono_count.length;
+        let agg = new Aggregator(template, aggregateRow, by);
+        agg.aggregate(rows);
 
-            let row_ptrs = new Set;
-            for (let i = 0; i < max_idx; i++)
-                aggregateRec(row, row_ptrs, map, i, 0);
-        }
-
-        return {list: list, map: map};
-    }
-
-    function findPartialAggregate(agg, values)
-    {
-        if (!Array.isArray(values))
-            values = Array.prototype.slice.call(arguments, 1);
-
-        let ptr = agg.map;
-        for (const value of values) {
-            ptr = ptr[value];
-            if (ptr === undefined)
-                return null;
-        }
-
-        return ptr;
-    }
-
-    function findAggregate(agg, values)
-    {
-        let ptr = findPartialAggregate.apply(null, arguments);
-        if (ptr && ptr.count === undefined)
-            return null;
-
-        return ptr;
+        return agg;
     }
 
     // Clear casemix data when user changes or disconnects
