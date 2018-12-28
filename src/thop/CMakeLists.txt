@@ -11,7 +11,6 @@ set(THOP_RESOURCES client/thop.html
                    client/compat.js
                    client/util.js
                    client/thop.js
-                   client/data.js
                    client/user.js
                    client/mco_common.js
                    client/mco_casemix.js
