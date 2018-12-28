@@ -39,9 +39,10 @@ set(THOP_RESOURCES client/thop.html
                    client/images/thop_logo.svg
                    client/images/favicon.png)
 
-set(THOP_SRC server/config.cc
+set(THOP_SRC ../common/json.hh
+
+             server/config.cc
              server/config.hh
-             server/json.hh
              server/mco_classify.cc
              server/mco_classify.hh
              server/mco_info.cc
