@@ -2511,7 +2511,7 @@ public:
     Type type;
     union {
         Span<const char> str_ref;
-        char str_buf[12];
+        char str_buf[32];
         char ch;
         bool b;
         int64_t i;
