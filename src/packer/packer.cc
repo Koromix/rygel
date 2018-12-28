@@ -415,5 +415,5 @@ R"(};
 %1extern const Span<const PackerAsset> %2;
 const Span<const PackerAsset> %2 = assets;)", export_span ? "EXPORT " : "", span_name);
 
-    return 0;
+    return !st.Close();
 }
