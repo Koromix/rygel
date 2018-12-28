@@ -509,7 +509,7 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 // Format
 // ------------------------------------------------------------------------
 
-static inline Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
+static Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
 {
     static char digit_pairs[201] = "00010203040506070809101112131415161718192021222324"
                                    "25262728293031323334353637383940414243444546474849"
@@ -531,7 +531,7 @@ static inline Span<const char> FormatUnsignedToDecimal(uint64_t value, char out_
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static inline Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
+static Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[32])
 {
     static const char literals[] = "0123456789ABCDEF";
 
@@ -545,7 +545,7 @@ static inline Span<const char> FormatUnsignedToHex(uint64_t value, char out_buf[
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-static inline Span<const char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
+static Span<const char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
 {
     Size msb = 64 - (Size)CountLeadingZeros(value);
     if (!msb) {
@@ -560,7 +560,7 @@ static inline Span<const char> FormatUnsignedToBinary(uint64_t value, char out_b
     return MakeSpan(out_buf, msb);
 }
 
-static inline Span<const char> FormatDouble(double value, int precision, char out_buf[256])
+static Span<const char> FormatDouble(double value, int precision, char out_buf[256])
 {
     // That's the lazy way to do it, it'll do for now
     int buf_len;
@@ -582,6 +582,8 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
         char num_buf[256];
         Span<const char> out;
 
+        Size pad_len = arg.pad_len;
+
         switch (arg.type) {
             case FmtArg::Type::StrRef: { out = arg.value.str_ref; } break;
             case FmtArg::Type::StrBuf: { out = arg.value.str_buf; } break;
@@ -597,7 +599,12 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Integer: {
                 if (arg.value.i < 0) {
-                    out_buf.Append('-');
+                    if (arg.pad_len < 0 && arg.pad_char == '0') {
+                        append('-');
+                        pad_len++;
+                    } else {
+                        out_buf.Append('-');
+                    }
                     out_buf.Append(FormatUnsignedToDecimal((uint64_t)-arg.value.i, num_buf));
                     out = out_buf;
                 } else {
@@ -608,7 +615,14 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 out = FormatUnsignedToDecimal(arg.value.u, num_buf);
             } break;
             case FmtArg::Type::Double: {
-                out = FormatDouble(arg.value.d.value, arg.value.d.precision, num_buf);
+                if (arg.value.i < 0 && arg.pad_len < 0 && arg.pad_char == '0') {
+                    append('-');
+                    pad_len++;
+
+                    out = FormatDouble(-arg.value.d.value, arg.value.d.precision, num_buf);
+                } else {
+                    out = FormatDouble(arg.value.d.value, arg.value.d.precision, num_buf);
+                }
             } break;
             case FmtArg::Type::Binary: {
                 out = FormatUnsignedToBinary(arg.value.u, num_buf);
@@ -621,7 +635,12 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size < 0) {
                     size_unsigned = (size_t)-arg.value.size;
-                    out_buf.Append('-');
+                    if (arg.pad_len < 0 && arg.pad_char == '0') {
+                        append('-');
+                        pad_len++;
+                    } else {
+                        out_buf.Append('-');
+                    }
                 } else {
                     size_unsigned = (size_t)arg.value.size;
                 }
@@ -643,7 +662,12 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 size_t size_unsigned;
                 if (arg.value.size < 0) {
                     size_unsigned = (size_t)-arg.value.size;
-                    out_buf.Append('-');
+                    if (arg.pad_len < 0 && arg.pad_char == '0') {
+                        append('-');
+                        pad_len++;
+                    } else {
+                        out_buf.Append('-');
+                    }
                 } else {
                     size_unsigned = (size_t)arg.value.size;
                 }
@@ -664,6 +688,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
 
             case FmtArg::Type::Date: {
                 DebugAssert(!arg.value.date.value || arg.value.date.IsValid());
+
                 int year = arg.value.date.st.year;
                 if (year < 0) {
                     out_buf.Append('-');
@@ -691,15 +716,15 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
         }
 
-        if (arg.pad_len < 0) {
-            Size pad_len = (-arg.pad_len) - out.len;
+        if (pad_len < 0) {
+            pad_len = (-pad_len) - out.len;
             for (Size i = 0; i < pad_len; i++) {
                 append(arg.pad_char);
             }
             append(out);
-        } else if (arg.pad_len > 0) {
+        } else if (pad_len > 0) {
             append(out);
-            Size pad_len = arg.pad_len - out.len;
+            pad_len -= out.len;
             for (Size i = 0; i < pad_len; i++) {
                 append(arg.pad_char);
             }
