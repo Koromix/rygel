@@ -2494,8 +2494,9 @@ extern StreamWriter stderr_st;
 class FmtArg {
 public:
     enum class Type {
-        StrRef,
-        StrBuf,
+        Str1,
+        Str2,
+        Buffer,
         Char,
         Bool,
         Integer,
@@ -2505,13 +2506,15 @@ public:
         Hexadecimal,
         MemorySize,
         DiskSize,
-        Date
+        Date,
+        Span
     };
 
     Type type;
     union {
-        Span<const char> str_ref;
-        char str_buf[32];
+        const char *str1;
+        Span<const char> str2;
+        char buf[32];
         char ch;
         bool b;
         int64_t i;
@@ -2523,15 +2526,23 @@ public:
         const void *ptr;
         Size size;
         Date date;
+
+        struct {
+            Type type;
+            int type_len;
+            const void *ptr;
+            Size len;
+            const char *separator;
+        } span;
     } value;
 
+    int repeat = 1;
     int pad_len = 0;
     char pad_char;
-    int repeat = 1;
 
     FmtArg() = default;
-    FmtArg(const char *str) : type(Type::StrRef) { value.str_ref = str ? str : "(null)"; }
-    FmtArg(Span<const char> str) : type(Type::StrRef) { value.str_ref = str; }
+    FmtArg(const char *str) : type(Type::Str1) { value.str1 = str ? str : "(null)"; }
+    FmtArg(Span<const char> str) : type(Type::Str2) { value.str2 = str; }
     FmtArg(char c) : type(Type::Char) { value.ch = c; }
     FmtArg(bool b) : type(Type::Bool) { value.b = b; }
     FmtArg(unsigned char u)  : type(Type::Unsigned) { value.u = u; }
@@ -2548,9 +2559,9 @@ public:
     FmtArg(const void *ptr) : type(Type::Hexadecimal) { value.u = (uint64_t)ptr; }
     FmtArg(const Date &date) : type(Type::Date) { value.date = date; }
 
+    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
     FmtArg &Pad(int len, char c = ' ') { pad_char = c; pad_len = len; return *this; }
     FmtArg &Pad0(int len) { return Pad(len, '0'); }
-    FmtArg &Repeat(int new_repeat) { repeat = new_repeat; return *this; }
 };
 
 static inline FmtArg FmtBin(uint64_t u)
@@ -2591,6 +2602,21 @@ static inline FmtArg FmtDiskSize(Size size)
     arg.value.size = size;
     return arg;
 }
+
+template <typename T>
+FmtArg FmtSpan(Span<T> arr, const char *sep = ", ")
+{
+    FmtArg arg;
+    arg.type = FmtArg::Type::Span;
+    arg.value.span.type = FmtArg(T()).type;
+    arg.value.span.type_len = SIZE(T);
+    arg.value.span.ptr = (const void *)arr.ptr;
+    arg.value.span.len = arr.len;
+    arg.value.span.separator = sep;
+    return arg;
+}
+template <typename T, Size N>
+FmtArg FmtSpan(T (&arr)[N], const char *sep = ", ") { return FmtSpan(MakeSpan(arr), sep); }
 
 enum class LogLevel {
     Debug,
