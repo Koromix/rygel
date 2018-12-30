@@ -107,10 +107,10 @@ let mco_casemix = {};
         switch (route.view) {
             case 'ghm_roots':
             case 'units': {
-                updateCasemixUnits();
+                updateCasemix();
             } break;
             case 'durations': {
-                updateCasemixDuration(route.ghm_root);
+                updateCasemixGhmRoot(route.ghm_root);
             } break;
             case 'results': {
                 updateResults(route.ghm_root);
@@ -305,7 +305,7 @@ let mco_casemix = {};
         }
     }
 
-    function updateCasemixUnits()
+    function updateCasemix()
     {
         if (!mix_rows.length) {
             data.get(mix_url, 'json', function(json) {
@@ -319,7 +319,7 @@ let mco_casemix = {};
         }
     }
 
-    function updateCasemixDuration(ghm_root)
+    function updateCasemixGhmRoot(ghm_root)
     {
         if (!mix_durations[ghm_root]) {
             let params = Object.assign({ghm_root: ghm_root}, mix_params);
