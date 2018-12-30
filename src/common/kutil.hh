@@ -42,8 +42,6 @@
 // Config
 // ------------------------------------------------------------------------
 
-#define DEBUG_ENV_PREFIX "RYGEL_"
-
 #define DEFAULT_ALLOCATOR MallocAllocator
 #define BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
 
