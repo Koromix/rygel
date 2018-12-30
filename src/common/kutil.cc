@@ -967,7 +967,12 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 static THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
 static THREAD_LOCAL Size log_handlers_len;
 
-bool enable_debug = []() {
+bool enable_debug = GetDebugFlag("RYGEL_DEBUG");
+
+bool GetDebugFlag(const char *name)
+{
+    LogDebug("Checked debug flag '%1'", name);
+
 #ifdef __EMSCRIPTEN__
     return EM_ASM_INT({
         try {
@@ -976,19 +981,20 @@ bool enable_debug = []() {
         } catch (error) {
             return 0;
         }
-    }, "RYGEL_DEBUG");
+    }, name);
 #else
-    const char *debug = getenv("RYGEL_DEBUG");
+    const char *debug = getenv(name);
+
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("RYGEL_DEBUG should contain value '0' or '1'");
+        LogError("%1 should contain value '0' or '1'", name);
         return true;
     }
 #endif
-}();
+}
 
 static bool ConfigLogTerminalOutput()
 {
