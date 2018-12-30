@@ -284,7 +284,7 @@ static bool InitStays(Span<const char *const> stay_directories,
                 valid = false;
             }
         }
-        if (!valid)
+        if (!valid && !GetDebugFlag("THOP_IGNORE_MISSING_UNITS"))
             return false;
     }
 
