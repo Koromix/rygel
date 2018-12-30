@@ -976,15 +976,15 @@ bool enable_debug = []() {
         } catch (error) {
             return 0;
         }
-    }, DEBUG_ENV_PREFIX "DEBUG");
+    }, "RYGEL_DEBUG");
 #else
-    const char *debug = getenv(DEBUG_ENV_PREFIX "DEBUG");
+    const char *debug = getenv("RYGEL_DEBUG");
     if (!debug || TestStr(debug, "0")) {
         return false;
     } else if (TestStr(debug, "1")) {
         return true;
     } else {
-        LogError("%1 should contain value '0' or '1'", DEBUG_ENV_PREFIX "DEBUG");
+        LogError("RYGEL_DEBUG should contain value '0' or '1'");
         return true;
     }
 #endif
@@ -1538,14 +1538,14 @@ int GetIdealThreadCount()
     static const int max_threads = 1;
 #else
     static const int max_threads = []() {
-        const char *env = getenv(DEBUG_ENV_PREFIX "THREADS");
+        const char *env = getenv("RYGEL_THREADS");
         if (env) {
             char *end_ptr;
             long threads = strtol(env, &end_ptr, 10);
             if (end_ptr > env && !end_ptr[0] && threads > 0) {
                 return (int)threads;
             } else {
-                LogError("%1 must be positive number, ignoring", DEBUG_ENV_PREFIX "THREADS");
+                LogError("RYGEL_THREADS must be positive number (ignored)");
             }
         }
         return (int)std::thread::hardware_concurrency();
