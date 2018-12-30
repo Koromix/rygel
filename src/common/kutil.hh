@@ -2678,6 +2678,8 @@ extern bool enable_debug;
 typedef void LogHandlerFunc(LogLevel level, const char *ctx,
                             const char *fmt, Span<const FmtArg> args);
 
+bool GetDebugFlag(const char *name);
+
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
 // Log text line to stderr with context, for the Log() macros below
