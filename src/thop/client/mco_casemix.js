@@ -574,70 +574,67 @@ let mco_casemix = {};
             el.value = select_ghm_root;
     }
 
-    function refreshUnitsTable(units, ghm_roots, structure, page, sort)
+    function refreshUnitsTable(filter_units, filter_ghm_roots, structure, page, sort)
     {
         if (!needsRefresh(refreshUnitsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
 
-        if (!units_summary ||
-                needsRefresh(refreshUnitsTable, 'init', [mix_url, units, ghm_roots, structure])) {
-            units = new Set(units);
-            ghm_roots = new Set(ghm_roots);
+        let summary = units_summary;
+
+        let refresh = !summary ||
+                      needsRefresh(refreshUnitsTable, 'init',
+                                   [mix_url, filter_units, filter_ghm_roots, structure]);
+        if (refresh) {
+            filter_units = new Set(filter_units);
+            filter_ghm_roots = new Set(filter_ghm_roots);
             structure = settings.structures[structure];
 
-            const rows = mix_rows.filter(function(row) {
-                if (!ghm_roots.has(row.ghm_root))
-                    return false;
-                for (const unit of row.unit) {
-                    if (units.has(unit))
-                        return true;
-                }
-                return false;
-            });
+            const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
-            units_summary = createPagedDataTable(query('#cm_units'));
-            units_summary.sortHandler = function(sort) { go({sort: sort}); };
+            summary = createPagedDataTable(query('#cm_units'));
+            summary.sortHandler = function(sort) { go({sort: sort}); };
+            units_summary = summary;
 
-            units_summary.addColumn('unit', null, 'Unité');
-            units_summary.addColumn('rss', '#,##0', 'RSS');
+            summary.addColumn('unit', null, 'Unité');
+            summary.addColumn('rss', '#,##0', 'RSS');
             if (!mix_params.diff)
-                units_summary.addColumn('rss_pct', '0.00%', '%');
-            units_summary.addColumn('rum', '#,##0', 'RUM');
+                summary.addColumn('rss_pct', '0.00%', '%');
+            summary.addColumn('rum', '#,##0', 'RUM');
             if (!mix_params.diff)
-                units_summary.addColumn('rum_pct', '0.00%', '%');
-            units_summary.addColumn('total', '#,##0.00', 'Total');
+                summary.addColumn('rum_pct', '0.00%', '%');
+            summary.addColumn('total', '#,##0.00', 'Total');
             if (!mix_params.diff)
-                units_summary.addColumn('total_pct', '0.00%', '%');
-            units_summary.addColumn('pay', '#,##0.00', 'Rétribué');
+                summary.addColumn('total_pct', '0.00%', '%');
+            summary.addColumn('pay', '#,##0.00', 'Rétribué');
             if (!mix_params.diff)
-                units_summary.addColumn('pay_pct', '0.00%', '%');
-            units_summary.addColumn('deaths', '#,##0', 'Décès');
+                summary.addColumn('pay_pct', '0.00%', '%');
+            summary.addColumn('deaths', '#,##0', 'Décès');
             if (!mix_params.diff)
-                units_summary.addColumn('deaths_pct', '0.00%', '%');
+                summary.addColumn('deaths_pct', '0.00%', '%');
 
             // Aggregate
             let stat0;
             let stats1;
             {
-                function unitToEntities(row)
+                function rowToGroup(row)
                 {
                     let values = row.unit.map(function(unit) { return structure.units[unit].path; });
-                    return ['entities', values];
+                    return ['group', values];
                 }
                 function filterUnitParts(row)
                 {
-                    let values = row.unit.map(function(unit) { return units.has(unit); });
+                    let values = row.unit.map(function(unit) { return filter_units.has(unit); });
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts).getList()[0];
-                stats1 = aggregate(rows, unitToEntities, filterUnitParts);
+                stat0 = aggregateCasemix(rows, filterUnitParts).getList()[0];
+                stats1 = aggregateCasemix(rows, rowToGroup, filterUnitParts);
             }
 
             if (stat0) {
-                units_summary.beginRow();
-                units_summary.addCell('Total');
-                addSummaryCells(units_summary, stat0, stat0);
+                summary.beginRow();
+                summary.addCell('Total');
+                addSummaryCells(summary, stat0, stat0);
 
                 let prev_groups = [];
                 let prev_totals = [stat0];
@@ -651,7 +648,7 @@ let mco_casemix = {};
                            ent.path[common_len] === prev_groups[common_len])
                         common_len++;
                     while (prev_groups.length > common_len) {
-                        units_summary.endRow();
+                        summary.endRow();
                         prev_groups.pop();
                         prev_totals.pop();
                     }
@@ -659,135 +656,132 @@ let mco_casemix = {};
                     for (let k = common_len; k < ent.path.length - 1; k++) {
                         let group_stat = stats1.find(ent.path[k]);
 
-                        units_summary.beginRow();
-                        units_summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
-                        addSummaryCells(units_summary, group_stat, prev_totals[prev_totals.length - 1]);
+                        summary.beginRow();
+                        summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
+                        addSummaryCells(summary, group_stat, prev_totals[prev_totals.length - 1]);
 
                         prev_groups.push(ent.path[k]);
                         prev_totals.push(group_stat);
                     }
 
-                    units_summary.beginRow();
-                    units_summary.addCell(ent.path[ent.path.length - 1],
+                    summary.beginRow();
+                    summary.addCell(ent.path[ent.path.length - 1],
                                           {title: ent.path[ent.path.length - 1]}, ent.path[ent.path.length - 1]);
-                    addSummaryCells(units_summary, unit_stat, prev_totals[prev_totals.length - 1]);
-                    units_summary.endRow();
+                    addSummaryCells(summary, unit_stat, prev_totals[prev_totals.length - 1]);
+                    summary.endRow();
                 }
             }
         }
 
-        units_summary.sort(sort);
+        summary.sort(sort);
 
-        let render_count = units_summary.render((page - 1) * TableLen, TableLen,
-                                                {render_empty: false});
+        let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_units .pagr'), page,
-                   computeLastPage(render_count, units_summary.getRowCount(), TableLen));
+                   computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
-    function refreshGhmRootsTable(units, ghm_roots, regroup, page, sort)
+    function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort)
     {
         if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
             return;
 
-        if (!ghm_roots_summary ||
-                needsRefresh(refreshGhmRootsTable, 'init', [mix_url, units, ghm_roots, regroup])) {
-            units = new Set(units);
-            ghm_roots = new Set(ghm_roots);
+        let summary = ghm_roots_summary;
 
-            const rows = mix_rows.filter(function(row) {
-                if (!ghm_roots.has(row.ghm_root))
-                    return false;
-                for (const unit of row.unit) {
-                    if (units.has(unit))
-                        return true;
-                }
-                return false;
-            });
+        let refresh = !summary ||
+                      needsRefresh(refreshGhmRootsTable, 'init',
+                                   [mix_url, filter_units, filter_ghm_roots, regroup]);
+        if (refresh) {
+            filter_units = new Set(filter_units);
+            filter_ghm_roots = new Set(filter_ghm_roots);
 
-            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+            const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
-            ghm_roots_summary = createPagedDataTable(query('#cm_ghm_roots'));
-            ghm_roots_summary.sortHandler = function(sort) { go({sort: sort}); };
-
-            ghm_roots_summary.addColumn('ghm_root', null, 'Racine');
-            ghm_roots_summary.addColumn('rss', '#,##0', 'RSS');
-            if (!mix_params.diff)
-                ghm_roots_summary.addColumn('rss_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('rum', '#,##0', 'RUM');
-            if (!mix_params.diff)
-                ghm_roots_summary.addColumn('rum_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('total', '#,##0.00', 'Total');
-            if (!mix_params.diff)
-                ghm_roots_summary.addColumn('total_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('pay', '#,##0.00', 'Rétribué');
-            if (!mix_params.diff)
-                ghm_roots_summary.addColumn('pay_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('deaths', '#,##0', 'Décès');
-            if (!mix_params.diff)
-                ghm_roots_summary.addColumn('deaths_pct', '0.00%', '%');
-
-            // Aggregate
-            let stat0;
-            let stats1;
-            let stats2;
-            {
-                function ghmRootToGroup(row)
-                {
-                    let ghm_root_info = ghm_roots_map[row.ghm_root];
-                    let group = ghm_root_info ? (ghm_root_info[regroup] || null) : null;
-                    return ['group', group];
-                }
-                function filterUnitParts(row)
-                {
-                    let values = row.unit.map(function(unit) { return units.has(unit); });
-                    return ['include', values];
-                }
-
-                stat0 = aggregate(rows, filterUnitParts).getList()[0];
-                stats1 = aggregate(rows, 'ghm_root', filterUnitParts);
-                stats2 = aggregate(rows, ghmRootToGroup, filterUnitParts);
-            }
-
-            if (stat0) {
-                let ghm_roots = stats1.getList().map(function(stat) { return stat.ghm_root; });
-                ghm_roots = ghm_roots.sort(function(ghm_root1, ghm_root2) {
-                    const ghm_root_info1 = ghm_roots_map[ghm_root1] || {};
-                    const ghm_root_info2 = ghm_roots_map[ghm_root2] || {};
-
-                    if (ghm_root_info1[regroup] !== ghm_root_info2[regroup]) {
-                        return (ghm_root_info1[regroup] < ghm_root_info2[regroup]) ? -1 : 1;
-                    } else if (ghm_root_info1.ghm_root !== ghm_root_info2.ghm_root) {
-                        return (ghm_root_info1.ghm_root < ghm_root_info2.ghm_root) ? -1 : 1;
+            let ghm_roots = mco_common.updateCatalog('mco_ghm_roots')
+                .concepts.slice().sort(function(ghm_root1, ghm_root2) {
+                    if (ghm_root1[regroup] !== ghm_root2[regroup]) {
+                        return (ghm_root1[regroup] < ghm_root2[regroup]) ? -1 : 1;
+                    } else if (ghm_root1.ghm_root !== ghm_root2.ghm_root) {
+                        return (ghm_root1.ghm_root < ghm_root2.ghm_root) ? -1 : 1;
                     } else {
                         return 0;
                     }
                 });
+            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
-                ghm_roots_summary.beginRow();
-                ghm_roots_summary.addCell('Total');
-                addSummaryCells(ghm_roots_summary, stat0, stat0);
+            summary = createPagedDataTable(query('#cm_ghm_roots'));
+            summary.sortHandler = function(sort) { go({sort: sort}); };
+            ghm_roots_summary = summary;
+
+            summary.addColumn('ghm_root', null, 'Racine');
+            summary.addColumn('rss', '#,##0', 'RSS');
+            if (!mix_params.diff)
+                summary.addColumn('rss_pct', '0.00%', '%');
+            summary.addColumn('rum', '#,##0', 'RUM');
+            if (!mix_params.diff)
+                summary.addColumn('rum_pct', '0.00%', '%');
+            summary.addColumn('total', '#,##0.00', 'Total');
+            if (!mix_params.diff)
+                summary.addColumn('total_pct', '0.00%', '%');
+            summary.addColumn('pay', '#,##0.00', 'Rétribué');
+            if (!mix_params.diff)
+                summary.addColumn('pay_pct', '0.00%', '%');
+            summary.addColumn('deaths', '#,##0', 'Décès');
+            if (!mix_params.diff)
+                summary.addColumn('deaths_pct', '0.00%', '%');
+
+            // Aggregate
+            let stat0;
+            let stats1;
+            {
+                function rowToGroup(row)
+                {
+                    if (regroup) {
+                        let ghm_root_info = ghm_roots_map[row.ghm_root];
+                        if (ghm_root_info) {
+                            return ['group', [ghm_root_info[regroup], row.ghm_root]];
+                        } else {
+                            return ['group', row.ghm_root];
+                        }
+                    } else {
+                        return ['group', row.ghm_root];
+                    }
+                }
+                function filterUnitParts(row)
+                {
+                    let values = row.unit.map(function(unit) { return filter_units.has(unit); });
+                    return ['include', values];
+                }
+
+                stat0 = aggregateCasemix(rows, filterUnitParts).getList()[0];
+                stats1 = aggregateCasemix(rows, rowToGroup, filterUnitParts);
+            }
+
+            if (stat0) {
+                summary.beginRow();
+                summary.addCell('Total');
+                addSummaryCells(summary, stat0, stat0);
 
                 let prev_group = null;
                 let total = stat0;
-                for (const ghm_root of ghm_roots) {
-                    let root_stat = stats1.find(ghm_root);
-                    let ghm_root_info = ghm_roots_map[ghm_root];
-                    let group = ghm_root_info ? ghm_root_info[regroup] : null;
+                for (const ghm_root_info of ghm_roots) {
+                    let ghm_root = ghm_root_info.ghm_root;
+                    let stat = stats1.find(ghm_root);
+                    if (!stat)
+                        continue;
 
+                    let group = ghm_root_info ? ghm_root_info[regroup] : null;
                     if (group !== prev_group) {
                         if (prev_group) {
-                            ghm_roots_summary.endRow();
+                            summary.endRow();
                             total = stat0;
                         }
 
                         if (group) {
-                            let group_stat = stats2.find(group);
-
-                            ghm_roots_summary.beginRow();
-                            ghm_roots_summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
-                            addSummaryCells(ghm_roots_summary, group_stat, total);
-
-                            total = group_stat;
+                            let stat = stats1.find(group);
+                            summary.beginRow();
+                            summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
+                            addSummaryCells(summary, stat, total);
+                            total = stat;
                         }
 
                         prev_group = group;
@@ -799,20 +793,19 @@ let mco_casemix = {};
                     ];
                     let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
 
-                    ghm_roots_summary.beginRow();
-                    ghm_roots_summary.addCell(ghm_root, {title: title}, elements);
-                    addSummaryCells(ghm_roots_summary, root_stat, total);
-                    ghm_roots_summary.endRow();
+                    summary.beginRow();
+                    summary.addCell(ghm_root, {title: title}, elements);
+                    addSummaryCells(summary, stat, total);
+                    summary.endRow();
                 }
             }
         }
 
-        ghm_roots_summary.sort(sort);
+        summary.sort(sort);
 
-        let render_count = ghm_roots_summary.render((page - 1) * TableLen, TableLen,
-                                                    {render_empty: false});
+        let render_count = summary.render((page - 1) * TableLen, TableLen, {render_empty: false});
         syncPagers(queryAll('#cm_ghm_roots .pagr'), page,
-                   computeLastPage(render_count, ghm_roots_summary.getRowCount(), TableLen));
+                   computeLastPage(render_count, summary.getRowCount(), TableLen));
     }
 
     function addSummaryCells(dtab, stat, total)
@@ -829,19 +822,15 @@ let mco_casemix = {};
         dtab.addCell(stat.count, numberText(stat.count));
         if (!mix_params.diff)
             addPercentCell(stat.count / total.count);
-
         dtab.addCell(stat.mono_count, numberText(stat.mono_count));
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
-
         dtab.addCell(stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
-
         dtab.addCell(stat.price_cents / 100.0, priceText(stat.price_cents, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
-
         dtab.addCell(stat.deaths, numberText(stat.deaths));
         if (!mix_params.diff)
             addPercentCell(stat.deaths / stat.count);
@@ -903,12 +892,12 @@ let mco_casemix = {};
                     return ['include', values];
                 }
 
-                stat0 = aggregate(rows, filterUnitParts).getList()[0];
-                stats1 = aggregate(rows, 'ghm', 'ghs', filterUnitParts);
-                stats1_units = aggregate(rows, 'ghm', 'ghs', 'unit');
-                stats2 = aggregate(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
-                stats2_units = aggregate(rows, 'ghm', 'ghs', 'duration', 'unit');
-                stats3 = aggregate(rows, 'duration', filterUnitParts);
+                stat0 = aggregateCasemix(rows, filterUnitParts).getList()[0];
+                stats1 = aggregateCasemix(rows, 'ghm', 'ghs', filterUnitParts);
+                stats1_units = aggregateCasemix(rows, 'ghm', 'ghs', 'unit');
+                stats2 = aggregateCasemix(rows, 'ghm', 'ghs', 'duration', filterUnitParts);
+                stats2_units = aggregateCasemix(rows, 'ghm', 'ghs', 'duration', 'unit');
+                stats3 = aggregateCasemix(rows, 'duration', filterUnitParts);
             }
 
             let max_duration = 10;
@@ -1362,7 +1351,20 @@ let mco_casemix = {};
         ]);
     }
 
-    function aggregate(rows, by)
+    function filterCasemix(rows, units, ghm_roots)
+    {
+        return rows.filter(function(row) {
+            if (!ghm_roots.has(row.ghm_root))
+                return false;
+            for (const unit of row.unit) {
+                if (units.has(unit))
+                    return true;
+            }
+            return false;
+        });
+    }
+
+    function aggregateCasemix(rows, by)
     {
         if (!Array.isArray(by))
             by = Array.prototype.slice.call(arguments, 1);
