@@ -16,10 +16,10 @@ enum class mco_ClassifyFlag {
     IgnoreProcedureExtension = 1 << 3
 };
 static const OptionDesc mco_ClassifyFlagOptions[] = {
-    {"mono_orig_stay", "Use original stays in mono algorithm"},
-    {"ignore_confirm", "Ignore RSS confirmation flag"},
-    {"ignore_proc_add", "Ignore completementary procedure check"},
-    {"ignore_proc_ext", "Ignore ATIH procedure extension check"}
+    {"MonoOrigStay",   "Use original stays in mono algorithm"},
+    {"IgnoreConfirm",  "Ignore RSS confirmation flag"},
+    {"IgnoreCompProc", "Ignore completementary procedure check"},
+    {"IgnoreProcExt",  "Ignore ATIH procedure extension check"}
 };
 
 struct mco_PreparedStay {
