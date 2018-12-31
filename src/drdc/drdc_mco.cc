@@ -5,6 +5,23 @@
 #include "drdc.hh"
 #include "config.hh"
 
+enum class TestFlag {
+    ClusterLen = 1 << 0,
+    Ghm = 1 << 1,
+    MainError = 1 << 2,
+    Ghs = 1 << 3,
+    Supplements = 1 << 4,
+    ExbExh = 1 << 5
+};
+static const OptionDesc TestFlagOptions[] = {
+    {"ClusterLen",  "Test cluster length"},
+    {"GHM",         "Test GHM"},
+    {"MainError",   "Test main error"},
+    {"GHS",         "Test GHS"},
+    {"Supplements", "Test supplements"},
+    {"ExbExh",      "Test EXB/EXH counts"}
+};
+
 static void PrintSummary(const mco_Pricing &summary)
 {
     PrintLn("  Results: %1", summary.results_count);
@@ -86,11 +103,12 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
 }
 
 static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> pricings,
-                        Span<const mco_Result> mono_results,
-                        const HashTable<int32_t, mco_Test> &tests, bool verbose)
+                        Span<const mco_Result> mono_results, const HashTable<int32_t, mco_Test> &tests,
+                        unsigned int flags, bool verbose)
 {
     Size tested_clusters = 0, failed_clusters = 0;
     Size tested_ghm = 0, failed_ghm = 0;
+    Size tested_main_errors = 0, failed_main_errors = 0;
     Size tested_ghs = 0, failed_ghs = 0;
     Size tested_supplements = 0, failed_supplements = 0;
     Size tested_auth_supplements = 0, failed_auth_supplements = 0;
@@ -111,7 +129,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
         if (!test)
             continue;
 
-        if (test->cluster_len) {
+        if ((flags & (int)TestFlag::ClusterLen) && test->cluster_len) {
             tested_clusters++;
             if (result.stays.len != test->cluster_len) {
                 failed_clusters++;
@@ -123,20 +141,31 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             }
         }
 
-        if (test->ghm.IsValid()) {
+        if ((flags & (int)TestFlag::Ghm) && test->ghm.IsValid()) {
             tested_ghm++;
-            if (test->ghm != result.ghm || test->error != result.main_error) {
+            if (test->ghm != result.ghm) {
                 failed_ghm++;
                 if (verbose) {
-                    PrintLn("    %1 [%2] has inadequate GHM %3 [%4] != %5 [%6]",
+                    PrintLn("    %1 [%2] has inadequate GHM %3 != %4",
                             test->bill_id, result.stays[result.stays.len - 1].exit.date,
-                            result.ghm, FmtArg(result.main_error).Pad(-3),
-                            test->ghm, FmtArg(test->error).Pad(-3));
+                            result.ghm, test->ghm);
                 }
             }
         }
 
-        if (test->ghs.IsValid()) {
+        if ((flags & (int)TestFlag::MainError) && test->ghm.IsValid()) {
+            tested_main_errors++;
+            if (test->error != result.main_error) {
+                failed_main_errors++;
+                if (verbose) {
+                    PrintLn("    %1 [%2] has inadequate main error %3 != %4",
+                            test->bill_id, result.stays[result.stays.len - 1].exit.date,
+                            result.main_error, test->error);
+                }
+            }
+        }
+
+        if ((flags & (int)TestFlag::Ghs) && test->ghs.IsValid()) {
             tested_ghs++;
             if (test->ghs != result.ghs) {
                 failed_ghs++;
@@ -148,7 +177,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             }
         }
 
-        if (test->ghs.IsValid()) {
+        if ((flags & (int)TestFlag::Supplements) && test->ghs.IsValid()) {
             tested_supplements++;
             if (test->supplement_days != result.supplement_days) {
                 failed_supplements++;
@@ -165,7 +194,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             }
         }
 
-        if (test->ghs.IsValid() && mono_results.len) {
+        if ((flags & (int)TestFlag::Supplements) && test->ghs.IsValid() && mono_results.len) {
             tested_auth_supplements += sub_mono_results.len;
 
             Size max_auth_tests = sub_mono_results.len;
@@ -214,7 +243,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             }
         }
 
-        if (test->ghs.IsValid()) {
+        if ((flags & (int)TestFlag::ExbExh) && test->ghs.IsValid()) {
             tested_exb_exh++;
             if (test->exb_exh != pricing.exb_exh) {
                 failed_exb_exh++;
@@ -226,28 +255,42 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
             }
         }
     }
-    if (verbose && (failed_clusters || failed_ghm || failed_ghs ||
-                    failed_supplements || failed_auth_supplements)) {
+    if (verbose && (failed_clusters || failed_ghm || failed_main_errors || failed_ghs ||
+                    failed_supplements || failed_auth_supplements || failed_exb_exh)) {
         PrintLn();
     }
 
-    PrintLn("    Failed cluster tests: %1 / %2 (missing %3)",
-            failed_clusters, tested_clusters, results.len - tested_clusters);
+    if (flags & (int)TestFlag::ClusterLen) {
+        PrintLn("    Failed cluster tests: %1 / %2 (missing %3)",
+                failed_clusters, tested_clusters, results.len - tested_clusters);
+    }
+    if (flags & (int)TestFlag::Ghm) {
     PrintLn("    Failed GHM tests: %1 / %2 (missing %3)",
             failed_ghm, tested_ghm, results.len - tested_ghm);
+    }
+    if (flags & (int)TestFlag::MainError) {
+    PrintLn("    Failed main errors tests: %1 / %2 (missing %3)",
+            failed_main_errors, tested_main_errors, results.len - tested_main_errors);
+    }
+    if (flags & (int)TestFlag::Ghs) {
     PrintLn("    Failed GHS tests: %1 / %2 (missing %3)",
             failed_ghs, tested_ghs, results.len - tested_ghs);
-    PrintLn("    Failed supplements tests: %1 / %2 (missing %3)",
-            failed_supplements, tested_supplements, results.len - tested_supplements);
-    if (mono_results.len) {
-        PrintLn("    Failed auth supplements tests: %1 / %2 (missing %3)",
-                failed_auth_supplements, tested_auth_supplements,
-                mono_results.len - tested_auth_supplements);
-    } else {
-        PrintLn("    Auth supplements tests not performed, needs --mono");
     }
-    PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
-            failed_exb_exh, tested_exb_exh, results.len - tested_exb_exh);
+    if (flags & (int)TestFlag::Supplements) {
+        PrintLn("    Failed supplements tests: %1 / %2 (missing %3)",
+                failed_supplements, tested_supplements, results.len - tested_supplements);
+        if (mono_results.len) {
+            PrintLn("    Failed auth supplements tests: %1 / %2 (missing %3)",
+                    failed_auth_supplements, tested_auth_supplements,
+                    mono_results.len - tested_auth_supplements);
+        } else {
+            PrintLn("    Auth supplements tests not performed, needs --mono");
+        }
+    }
+    if (flags & (int)TestFlag::ExbExh) {
+        PrintLn("    Failed EXB/EXH tests: %1 / %2 (missing %3)",
+                failed_exb_exh, tested_exb_exh, results.len - tested_exb_exh);
+    }
     PrintLn();
 }
 
@@ -268,7 +311,7 @@ Classify options:
 
     -v, --verbose                Show more classification details (cumulative)
 
-        --test                   Enable testing against GenRSA values
+        --test [options]         Enable testing against GenRSA values (see below)
         --torture [N]            Benchmark classifier with N runs
 
 Classifier options:)");
@@ -280,15 +323,20 @@ Dispensation modes:)");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
             PrintLn(fp, "    %1  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
         }
+        PrintLn(fp, R"(
+Test options:)");
+        for (const OptionDesc &desc: TestFlagOptions) {
+            PrintLn(fp, "    %1  %2", FmtArg(desc.name).Pad(27), desc.help);
+        }
     };
 
-    unsigned int flags = 0;
+    unsigned int classifier_flags = 0;
     int dispense_mode = -1;
     bool apply_coefficient = false;
     const char *filter = nullptr;
     const char *filter_path = nullptr;
     int verbosity = 0;
-    bool test = false;
+    unsigned int test_flags = 0;
     int torture = 0;
     HeapArray<const char *> filenames;
     {
@@ -312,7 +360,7 @@ Dispensation modes:)");
                         LogError("Unknown classifier flag '%1'", flag);
                         return false;
                     }
-                    flags |= 1u << (desc - mco_ClassifyFlagOptions);
+                    classifier_flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
             } else if (opt_parser.TestOption("-d", "--dispense")) {
                 const char *mode_str = opt_parser.RequireValue();
@@ -340,7 +388,22 @@ Dispensation modes:)");
             } else if (opt_parser.TestOption("-v", "--verbose")) {
                 verbosity++;
             } else if (opt_parser.TestOption("--test")) {
-                test = true;
+                const char *flags_str = opt_parser.ConsumeValue();
+                if (flags_str) {
+                    while (flags_str[0]) {
+                        Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
+                        const OptionDesc *desc = std::find_if(std::begin(TestFlagOptions),
+                                                              std::end(TestFlagOptions),
+                                                              [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
+                        if (desc == std::end(TestFlagOptions)) {
+                            LogError("Unknown test flag '%1'", flag);
+                            return false;
+                        }
+                        test_flags |= 1u << (desc - TestFlagOptions);
+                    }
+                } else {
+                    test_flags = UINT_MAX;
+                }
             } else if (opt_parser.TestOption("--torture")) {
                 if (!opt_parser.RequireValue())
                     return false;
@@ -383,7 +446,7 @@ Dispensation modes:)");
         mco_StaySetBuilder stay_set_builder;
         for (const char *filename: filenames) {
             LogInfo("Load '%1'", filename);
-            if (!stay_set_builder.LoadFiles(filename, test ? &tests : nullptr))
+            if (!stay_set_builder.LoadFiles(filename, test_flags ? &tests : nullptr))
                 return false;
         }
         if (!stay_set_builder.Finish(&stay_set))
@@ -428,17 +491,17 @@ Dispensation modes:)");
             if (!mco_Filter(stays, filter_buf,
                             [&](Span<const mco_Stay> stays, mco_Result out_results[],
                                 mco_Result out_mono_results[]) {
-                return mco_RunClassifier(table_set, authorization_set, stays, flags,
+                return mco_RunClassifier(table_set, authorization_set, stays, classifier_flags,
                                          out_results, out_mono_results);
             }, &stay_set.stays, &results, dispense_mode >= 0 ? &mono_results : nullptr))
                 return false;
         } else {
             switch_perf_counter(&classify_time);
-            mco_Classify(table_set, authorization_set, stay_set.stays, flags,
+            mco_Classify(table_set, authorization_set, stay_set.stays, classifier_flags,
                          &results, dispense_mode >= 0 ? &mono_results : nullptr);
         }
 
-        if (verbosity || test) {
+        if (verbosity || test_flags) {
             switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
 
@@ -456,15 +519,15 @@ Dispensation modes:)");
     switch_perf_counter(nullptr);
 
     LogInfo("Export");
-    if (verbosity - test >= 1) {
+    if (verbosity - !!test_flags >= 1) {
         PrintLn("Results:");
-        ExportResults(results, mono_results, pricings, mono_pricings, verbosity - test >= 2);
+        ExportResults(results, mono_results, pricings, mono_pricings, verbosity - !!test_flags >= 2);
     }
     PrintLn("Summary:");
     PrintSummary(summary);
-    if (test) {
+    if (test_flags) {
         PrintLn("Tests:");
-        ExportTests(results, pricings, mono_results, tests, verbosity >= 1);
+        ExportTests(results, pricings, mono_results, tests, test_flags, verbosity >= 1);
     }
 
     PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
