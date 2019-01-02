@@ -35,3 +35,12 @@ public:
         buf.Clear();
     }
 };
+
+class JsonWriter : public rapidjson::Writer<JsonStreamWriter> {
+    JsonStreamWriter writer;
+
+public:
+    JsonWriter(StreamWriter *st) : rapidjson::Writer<JsonStreamWriter>(writer), writer(st) {}
+
+    void Flush() { writer.Flush(); }
+};

@@ -76,5 +76,5 @@ void AddCookieHeader(MHD_Response *response, const char *name, const char *value
 
 int CreateErrorPage(int code, Response *out_response);
 
-int BuildJson(std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func,
+int BuildJson(std::function<bool(JsonWriter &)> func,
               CompressionType compression_type, Response *out_response);

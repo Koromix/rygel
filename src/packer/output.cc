@@ -72,8 +72,7 @@ static Size CountNewLines(Span<const char> buf)
 
 static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *out_writer)
 {
-    JsonStreamWriter json_st(out_writer);
-    rapidjson::Writer<JsonStreamWriter> writer(json_st);
+    JsonWriter writer(out_writer);
 
     writer.StartObject();
 
@@ -85,7 +84,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
     writer.EndArray();
     writer.Key("names"); writer.StartArray(); writer.EndArray();
 
-    writer.Key("mappings"); json_st.Flush(); out_writer->Write(":\"");
+    writer.Key("mappings"); writer.Flush(); out_writer->Write(":\"");
     for (Size i = 0, prev_lines = 0; i < sources.len; i++) {
         const SourceInfo &src = sources[i];
 

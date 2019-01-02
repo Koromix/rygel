@@ -11,7 +11,7 @@
 int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     out_response->flags |= (int)Response::Flag::DisableETag;
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         char buf[32];
 
         writer.StartObject();
@@ -170,7 +170,7 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *o
         }
     }
 
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         char buf[512];
 
         const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
@@ -239,7 +239,7 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
         }
     }
 
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -272,7 +272,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *thop_index_to_constraints[index - thop_table_set.indexes.ptr];
 
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         char buf[512];
 
         writer.StartArray();
@@ -716,7 +716,7 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_re
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
         return CreateErrorPage(500, out_response);
 
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         writer.StartArray();
         for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
             writer.StartObject();

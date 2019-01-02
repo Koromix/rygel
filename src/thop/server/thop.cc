@@ -441,14 +441,13 @@ int CreateErrorPage(int code, Response *out_response)
     return code;
 }
 
-int BuildJson(std::function<bool(rapidjson::Writer<JsonStreamWriter> &)> func,
+int BuildJson(std::function<bool(JsonWriter &)> func,
               CompressionType compression_type, Response *out_response)
 {
     HeapArray<uint8_t> buf;
     {
         StreamWriter st(&buf, nullptr, compression_type);
-        JsonStreamWriter json_stream(&st);
-        rapidjson::Writer<JsonStreamWriter> writer(json_stream);
+        JsonWriter writer(&st);
 
         if (!func(writer))
             return CreateErrorPage(500, out_response);
