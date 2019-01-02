@@ -605,10 +605,10 @@ let mco_casemix = {};
             units_summary.addColumn('rum', '#,##0', 'RUM');
             if (!mix_params.diff)
                 units_summary.addColumn('rum_pct', '0.00%', '%');
-            units_summary.addColumn('total', '#,##0', 'Total');
+            units_summary.addColumn('total', '#,##0.00', 'Total');
             if (!mix_params.diff)
                 units_summary.addColumn('total_pct', '0.00%', '%');
-            units_summary.addColumn('pay', '#,##0', 'Rétribué');
+            units_summary.addColumn('pay', '#,##0.00', 'Rétribué');
             if (!mix_params.diff)
                 units_summary.addColumn('pay_pct', '0.00%', '%');
             units_summary.addColumn('deaths', '#,##0', 'Décès');
@@ -716,10 +716,10 @@ let mco_casemix = {};
             ghm_roots_summary.addColumn('rum', '#,##0', 'RUM');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('rum_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('total', '#,##0', 'Total');
+            ghm_roots_summary.addColumn('total', '#,##0.00', 'Total');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('total_pct', '0.00%', '%');
-            ghm_roots_summary.addColumn('pay', '#,##0', 'Rétribué');
+            ghm_roots_summary.addColumn('pay', '#,##0.00', 'Rétribué');
             if (!mix_params.diff)
                 ghm_roots_summary.addColumn('pay_pct', '0.00%', '%');
             ghm_roots_summary.addColumn('deaths', '#,##0', 'Décès');
@@ -834,11 +834,11 @@ let mco_casemix = {};
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
 
-        dtab.addCell(stat.price_cents_total, priceText(stat.price_cents_total, false));
+        dtab.addCell(stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
 
-        dtab.addCell(stat.price_cents, priceText(stat.price_cents, false));
+        dtab.addCell(stat.price_cents / 100.0, priceText(stat.price_cents, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
 
