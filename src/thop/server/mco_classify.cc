@@ -566,7 +566,7 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
 
     // Export data
     out_response->flags |= (int)Response::Flag::DisableCache;
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         char buf[32];
 
         writer.StartObject();
@@ -680,7 +680,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
 
     // Export data
     out_response->flags |= (int)Response::Flag::DisableCache;
-    return BuildJson([&](rapidjson::Writer<JsonStreamWriter> &writer) {
+    return BuildJson([&](JsonWriter &writer) {
         writer.StartArray();
         for (Size i = 0, j = 0; i < results.len; i++) {
             char buf[32];
