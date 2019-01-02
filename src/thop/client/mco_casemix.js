@@ -82,7 +82,7 @@ let mco_casemix = {};
             return;
         }
         if (route.view === 'results' && !settings.permissions.has('FullResults')) {
-            errors.add('Vous n\'avez pas les droits pour voir cette page');
+            errors.add('Vous n\'avez pas les droits pour utiliser cette page');
             query('#cm').addClass('hide');
             return;
         }
