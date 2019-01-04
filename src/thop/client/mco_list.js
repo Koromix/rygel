@@ -363,12 +363,13 @@ let mco_list = {};
         let h1 = query('#ls_spec');
 
         if (spec) {
-            h1.innerHTML = '';
-            h1.appendChild(document.createTextNode('Filtre : ' + spec + ' '));
-            h1.appendChild(html('a', {href: routeToUrl({spec: null}).url}, '(retirer)'));
+            h1.replaceContent(
+                'Filtre : ' + spec + ' ',
+                html('a', {href: routeToUrl({spec: null}).url}, '(retirer)')
+            );
             h1.removeClass('hide');
         } else {
-            h1.innerText = '';
+            h1.innerHTML = '';
             h1.addClass('hide');
         }
     }
@@ -376,12 +377,13 @@ let mco_list = {};
     function refreshGroupsMenu(list_info, select_group)
     {
         let el = query('#opt_group > select');
-        el.innerHTML = '';
 
-        for (const group of list_info.groups) {
-            let opt = html('option', {value: group.type}, group.name);
-            el.appendChild(opt);
-        }
+        el.replaceContent(
+            list_info.groups.map(function(group) {
+                return html('option', {value: group.type}, group.name)
+            })
+        );
+
         if (select_group)
             el.value = select_group;
     }

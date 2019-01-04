@@ -84,16 +84,11 @@ let mco_tree = {};
         if (!needsRefresh(refreshTree, null, arguments))
             return;
 
-        let ul;
         if (nodes.length) {
-            ul = recurseNodes(0, '', []);
+            query('#tr_tree').replaceContent(recurseNodes(0, '', []).childNodes);
         } else {
-            ul = html('ul');
+            query('#tr_tree').innerHTML = '';
         }
-
-        let old_ul = query('#tr_tree');
-        ul.copyAttributesFrom(old_ul);
-        old_ul.replaceWith(ul);
     }
 
     function recurseNodes(start_idx, chain_str, parent_next_indices)
@@ -134,9 +129,8 @@ let mco_tree = {};
                     let children = recurseNodes(node.children_idx + j, recurse_str, indices);
                     let li = createNodeLi(pseudo_idx, pseudo_text,
                                           children.tagName === 'UL' ? recurse_str : null);
-
-                    li.appendChildren(children);
-                    ul.appendChild(li);
+                    li.appendContent(children);
+                    ul.appendContent(li);
                 }
             } else if (node.children_count === 2 && node.reverse) {
                 let recurse_str = chain_str + node.key;
@@ -144,9 +138,8 @@ let mco_tree = {};
                 let children = recurseNodes(node.children_idx, recurse_str, indices);
                 let li = createNodeLi(node_idx, node.reverse,
                                       children.tagName === 'UL' ? recurse_str  : null);
-
-                li.appendChildren(children);
-                ul.appendChild(li);
+                li.appendContent(children);
+                ul.appendContent(li);
             } else if (node.children_count === 2) {
                 let recurse_str = chain_str + node.key;
 
@@ -158,36 +151,35 @@ let mco_tree = {};
                 while (indices.length && nodes[indices[0]].children_count === 2 &&
                        nodes[nodes[indices[0]].children_idx + 1].test === 20 &&
                        nodes[nodes[indices[0]].children_idx + 1].children_idx === node.children_idx + 1) {
-                    li.appendChild(html('br'));
+                    li.appendContent(html('br'));
 
                     let li2 = createNodeLi(indices[0], nodes[indices[0]].text, recurse_str);
                     li2.children[0].id = li2.id;
-                    li.appendChildren(li2.childNodes);
+                    li.appendContent(li2.childNodes);
 
                     indices.shift();
                 }
 
-                li.appendChildren(children);
-                ul.appendChild(li);
+                li.appendContent(children);
+                ul.appendContent(li);
             } else {
                 let recurse_str = chain_str + node.key;
 
-                let li = createNodeLi(node_idx, node.text,
-                                      (node.children_count && node.children_count > 1) ? recurse_str : null);
-                ul.appendChild(li);
-
+                let leaf = !node.children_count || node.children_count == 1;
+                let li = createNodeLi(node_idx, node.text, leaf ? null : recurse_str);
                 for (let j = 1; j < node.children_count; j++) {
                     let children = recurseNodes(node.children_idx + j, recurse_str, indices);
-                    li.appendChildren(children);
+                    li.appendContent(children);
                 }
+                ul.appendContent(li);
 
                 // Hide repeated subtrees, this happens with error-generating nodes 80 and 222
                 if (node.test !== 20 && parent_next_indices.includes(node.children_idx)) {
                     if (node.children_idx != parent_next_indices[0]) {
                         let pseudo_idx = '' + node_idx + '-2';
                         let pseudo_text = 'Saut noeud ' + node.children_idx;
-                        let goto_li = createNodeLi(pseudo_idx, pseudo_text, null);
-                        ul.appendChild(goto_li);
+                        let li = createNodeLi(pseudo_idx, pseudo_text, null);
+                        ul.appendContent(li);
                     }
 
                     break;
@@ -226,9 +218,12 @@ let mco_tree = {};
     {
         if (chain_str) {
             return (
-                html('li', {id: 'n' + idx,
-                            class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
-                            'data-chain': chain_str},
+                html('li',
+                    {
+                         id: 'n' + idx,
+                         class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
+                         'data-chain': chain_str
+                    },
                     html('span',
                         html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
                         mco_list.addSpecLinks(text)
@@ -237,8 +232,8 @@ let mco_tree = {};
             );
         } else {
             return (
-                html('li', {id: 'n' + idx,
-                            class: 'leaf'},
+                html('li',
+                    {id: 'n' + idx, class: 'leaf'},
                     html('span',
                         html('span', {class: 'n'}, '' + idx + ' '),
                         mco_list.addSpecLinks(text)

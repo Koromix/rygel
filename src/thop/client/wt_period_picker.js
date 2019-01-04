@@ -188,9 +188,8 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     this.getValues = function() { return [handles[0].lastChild.value, handles[1].lastChild.value]; }
     this.getWidget = function() { return widget; }
 
-    widget.innerHTML = '';
     widget.addClass('ppik');
-    widget.appendChildren([
+    widget.replaceContent(
         // This dummy button catches click events that happen when a label encloses the widget
         html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
@@ -211,7 +210,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
                                change: handleDateChange, focusout: handleDateFocusOut})
             )
         )
-    ]);
+    );
     main = widget.query('.ppik_main');
     handles = widget.queryAll('.ppik_handle');
     bar = widget.query('.ppik_bar');

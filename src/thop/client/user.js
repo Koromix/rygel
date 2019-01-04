@@ -109,9 +109,8 @@ let user = {};
 
     function refreshSessionBox()
     {
-        let div = null;
         if (url_key) {
-            div = html('div',
+            query('#side_session_box').replaceContent(
                 username + ' (',
                 html('a', {href: routeToUrl().url}, 'changer'),
                 ', ',
@@ -120,33 +119,24 @@ let user = {};
                 ')'
             );
         } else {
-            div = html('div',
+            query('#side_session_box').replaceContent(
                 html('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
-
-        let old_div = query('#side_session_box');
-        div.copyAttributesFrom(old_div);
-        old_div.replaceWith(div);
     }
 
     function refreshSessionMenu()
     {
-        let menu_item;
         if (url_key) {
-            menu_item = html('li',
+            query('#side_session_menu').replaceContent(
                 html('a', {href: '#', click: function(e) { logout(); e.preventDefault(); }},
                      'Se déconnecter (' + username + ')')
             );
         } else {
-            menu_item = html('li',
+            query('#side_session_menu').replaceContent(
                 html('a', {href: routeToUrl().url}, 'Se connecter')
             );
         }
-
-        let old_menu_item = query('#side_session_menu');
-        menu_item.copyAttributesFrom(old_menu_item);
-        old_menu_item.replaceWith(menu_item);
     }
 
     this.addChangeHandler = function(func) { change_handlers.push(func); }

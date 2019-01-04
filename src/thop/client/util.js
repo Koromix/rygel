@@ -51,20 +51,32 @@ Element.prototype.hasClass = function(cls) {
     return this.classList.contains(cls);
 };
 
-Element.prototype.appendChildren = function(els)
-{
-    if (els === null || els === undefined) {
-        // Skip
-    } else if (typeof els === 'string') {
-        this.appendChild(document.createTextNode(els));
-    } else if (Array.isArray(els) || els instanceof NodeList) {
-        let self = this;
-        els.forEach(function(el) {
-            self.appendChildren(el);
-        });
-    } else {
-        this.appendChild(els);
+Element.prototype.appendContent = function() {
+    for (const el of arguments) {
+        if (Array.isArray(el) || el instanceof NodeList) {
+            let self = this;
+            el.forEach(function(el) {
+                self.appendContent(el);
+            });
+        } else if (el === null || el === undefined) {
+            // Skip
+        } else if (typeof el === 'string') {
+            this.appendChild(document.createTextNode(el));
+        } else {
+            this.appendChild(el);
+        }
     }
+}
+
+Element.prototype.replaceContent = function() {
+    if (this.innerHTML !== undefined) {
+        this.innerHTML = '';
+    } else {
+        while (widget.lastChild)
+            widget.removeChild(widget.lastChild);
+    }
+
+    this.appendContent.apply(this, arguments);
 }
 
 function expandNamespace(ns)
@@ -82,21 +94,25 @@ function createElement(ns, tag, attributes, children)
 
     for (const key in attributes) {
         let value = attributes[key];
-        if (value !== null && value !== undefined) {
-            if (typeof value === 'function') {
-                el.addEventListener(key, value.bind(el));
-            } else if (Array.isArray(value)) {
-                value = value.filter(function(x) { return !!x; })
-                             .map(function(x) { return '' + x; })
-                             .join(' ');
-                el.setAttribute(key, value);
-            } else {
-                el.setAttribute(key, value);
-            }
+
+        if (Array.isArray(value)) {
+            value = value.filter(function(x) { return !!x; })
+                         .map(function(x) { return '' + x; })
+                         .join(' ');
+            el.setAttribute(key, value);
+        } else if (value === null || value === undefined) {
+            // Skip attribute
+        } else if (typeof value === 'function') {
+            el.addEventListener(key, value.bind(el));
+        } else if (typeof value === 'boolean') {
+            if (value)
+                el.setAttribute(key, '');
+        } else {
+            el.setAttribute(key, value);
         }
     }
 
-    el.appendChildren(children);
+    el.appendContent(children);
 
     return el;
 }
@@ -114,7 +130,7 @@ function createElementProxy(ns, tag, args, args_idx)
 
     let el = createElement(ns, tag, attributes, []);
     for (let i = args_idx; i < args.length; i++)
-        el.appendChildren(args[i]);
+        el.appendContent(args[i]);
 
     return el;
 }
@@ -122,16 +138,6 @@ function createElementProxy(ns, tag, args, args_idx)
 function elem(ns, tag) { return createElementProxy(ns, tag, arguments, 2); }
 function html(tag) { return createElementProxy('html', tag, arguments, 1); }
 function svg(tag) { return createElementProxy('svg', tag, arguments, 1); }
-
-Element.prototype.copyAttributesFrom = function(el) {
-    let attributes = el.attributes;
-    for (let i = 0; i < attributes.length; i++)
-        this.setAttribute(attributes[i].nodeName, attributes[i].nodeValue);
-}
-
-Element.prototype.replaceWith = function(el) {
-    this.parentNode.replaceChild(el, this);
-}
 
 // ------------------------------------------------------------------------
 // Text
