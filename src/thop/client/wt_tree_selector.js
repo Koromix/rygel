@@ -271,17 +271,17 @@ function TreeSelector(widget, prefix)
 
         html('div', {class: 'tsel_main'},
             html('div', {class: 'tsel_rect', click: function(e) { self.toggle(); }},
-                 html('div', {class: 'tsel_curtab hide'}),
+                 html('div', {class: ['tsel_curtab', 'hide']}),
                  html('div', {class: 'tsel_summary'})
             ),
             html('div', {class: 'tsel_view'},
-                html('div', {class: 'tsel_tabbar hide'}),
+                html('div', {class: ['tsel_tabbar', 'hide']}),
                 html('div', {class: 'tsel_shortcuts'},
                     html('a', {href: '#', click: handleCheckAll}, 'Tout cocher'), ' / ',
                     html('a', {href: '#', click: handleUncheckAll}, 'Tout décocher')
                 ),
                 html('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
-                html('div', {class: 'tsel_list active'})
+                html('div', {class: ['tsel_list', 'active']})
             )
         ),
     ]);

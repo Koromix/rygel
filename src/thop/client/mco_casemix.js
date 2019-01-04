@@ -955,18 +955,18 @@ let mco_casemix = {};
                 return tooltip;
             }
 
-            function diffClass(value)
+            function diffToClasses(value)
             {
                 if (mix_params.diff) {
                     if (value > 0) {
-                        return ' diff higher';
+                        return ['diff', 'higher'];
                     } else if (value < 0) {
-                        return ' diff lower';
+                        return ['diff', 'lower'];
                     } else {
-                        return ' diff neutral';
+                        return ['diff', 'neutral'];
                     }
                 } else {
-                    return '';
+                    return [null];
                 }
             }
 
@@ -985,17 +985,17 @@ let mco_casemix = {};
                                         stats1_units.findPartial(col.ghm, col.ghs));
 
                         tr.appendChildren([
-                            html('td', {class: 'count total' + diffClass(col_stat.count),
+                            html('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
                                         title: tooltip},
                                  '' + col_stat.count),
-                            html('td', {class: 'price total' + diffClass(col_stat.price_cents_total),
+                            html('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
                                         title: tooltip},
                                  priceText(col_stat.price_cents_total, false))
                         ]);
                     } else {
                         tr.appendChildren([
-                            html('td', {class: 'count total empty'}),
-                            html('td', {class: 'price total empty'})
+                            html('td', {class: ['count', 'total', 'empty']}),
+                            html('td', {class: ['price', 'total', 'empty']})
                         ]);
                     }
                 }
@@ -1039,18 +1039,18 @@ let mco_casemix = {};
                                         stats2_units.findPartial(col.ghm, col.ghs, duration));
 
                         tr.appendChildren([
-                            html('td', {class: 'count ' + cls + diffClass(duration_stat.count),
+                            html('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
                                         title: tooltip},
                                  '' + duration_stat.count),
-                            html('td', {class: 'price ' + cls + diffClass(duration_stat.price_cents_total),
+                            html('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
                                         title: tooltip},
                                  priceText(duration_stat.price_cents_total, false))
                         ]);
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
                         tr.appendChildren([
-                            html('td', {class: 'count ' + cls}),
-                            html('td', {class: 'price ' + cls})
+                            html('td', {class: ['count', cls]}),
+                            html('td', {class: ['price', cls]})
                         ]);
                     } else {
                         tr.appendChildren([
