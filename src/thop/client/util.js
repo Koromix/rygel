@@ -81,10 +81,15 @@ function createElement(ns, tag, attributes, children)
     let el = document.createElementNS(ns, tag);
 
     for (const key in attributes) {
-        const value = attributes[key];
+        let value = attributes[key];
         if (value !== null && value !== undefined) {
             if (typeof value === 'function') {
                 el.addEventListener(key, value.bind(el));
+            } else if (Array.isArray(value)) {
+                value = value.filter(function(x) { return !!x; })
+                             .map(function(x) { return '' + x; })
+                             .join(' ');
+                el.setAttribute(key, value);
             } else {
                 el.setAttribute(key, value);
             }

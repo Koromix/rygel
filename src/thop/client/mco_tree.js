@@ -224,29 +224,28 @@ let mco_tree = {};
 
     function createNodeLi(idx, text, chain_str)
     {
-        let content = mco_list.addSpecLinks(text);
-
-        let li;
         if (chain_str) {
-            li = html('li', {id: 'n' + idx, class: 'parent'},
-                html('span',
-                    html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
-                    content
+            return (
+                html('li', {id: 'n' + idx,
+                            class: ['parent', collapse_nodes.has(chain_str) ? 'collapse' : null],
+                            'data-chain': chain_str},
+                    html('span',
+                        html('span', {class: 'n', click: handleNodeClick}, '' + idx + ' '),
+                        mco_list.addSpecLinks(text)
+                    )
                 )
             );
-            if (collapse_nodes.has(chain_str))
-                li.addClass('collapse');
-            li.dataset.chain = chain_str;
         } else {
-            li = html('li', {id: 'n' + idx, class: 'leaf'},
-                html('span',
-                    html('span', {class: 'n'}, '' + idx + ' '),
-                    content
+            return (
+                html('li', {id: 'n' + idx,
+                            class: 'leaf'},
+                    html('span',
+                        html('span', {class: 'n'}, '' + idx + ' '),
+                        mco_list.addSpecLinks(text)
+                    )
                 )
             );
         }
-
-        return li;
     }
 
     function handleNodeClick(e)
