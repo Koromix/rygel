@@ -240,17 +240,17 @@ function DataTable(widget)
         widget.innerHTML = '';
         widget.addClass('dtab');
         if (sorted_rows.length) {
-            widget.appendChildren([
+            widget.appendContent(
                 html('p', {class: 'dtab_count'}),
                 html('a', {class: 'dtab_excel', href: '#', click: handleExcelClick})
-            ]);
+            );
         }
-        widget.appendChildren([
+        widget.appendContent(
             html('table', {class: 'dtab_table'},
                 html('thead'),
                 html('tbody')
             )
-        ]);
+        );
 
         let render_count = 0;
         if (sorted_rows.length || options.render_empty) {
@@ -332,11 +332,11 @@ function DataTable(widget)
 function createPagedDataTable(el)
 {
     if (!el.childNodes.length) {
-        el.appendChildren([
+        el.appendContent(
             html('table', {class: 'pagr'}),
             html('div', {class: 'dtab'}),
             html('table', {class: 'pagr'})
-        ]);
+        );
     }
 
     let dtab = new DataTable(el.query('.dtab'));

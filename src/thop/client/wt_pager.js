@@ -42,9 +42,8 @@ function Pager(widget, active_page, last_page)
     }
 
     this.render = function() {
-        widget.innerHTML = '';
         widget.addClass('pagr');
-        widget.appendChild(html('tr'));
+        widget.replaceContent(html('tr'));
         let tr = widget.firstChild;
 
         let start_page, end_page;

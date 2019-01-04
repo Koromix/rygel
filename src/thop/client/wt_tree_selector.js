@@ -72,8 +72,7 @@ function TreeSelector(widget, prefix)
         if (!curtab.hasClass('hide'))
             curtab.innerHTML = tabbar.childNodes[self.getActiveTab()].innerHTML;
 
-        summary.innerHTML = '';
-        summary.appendChild(document.createTextNode(prefix));
+        summary.replaceContent(prefix);
         if (!values.length) {
             let a = html('a', 'Aucune sélection');
             summary.appendChild(a);
@@ -262,10 +261,9 @@ function TreeSelector(widget, prefix)
 
     this.getWidget = function() { return widget; }
 
-    widget.innerHTML = '';
     widget.addClass('tsel');
     widget.addEventListener('click', function(e) { e.stopPropagation(); });
-    widget.appendChildren([
+    widget.replaceContent(
         // This dummy button catches click events that happen when a label encloses the widget
         html('button', {style: 'display: none;', click: function(e) { e.preventDefault(); }}),
 
@@ -284,7 +282,7 @@ function TreeSelector(widget, prefix)
                 html('div', {class: ['tsel_list', 'active']})
             )
         ),
-    ]);
+    );
     curtab = widget.query('.tsel_curtab');
     summary = widget.query('.tsel_summary');
     tabbar = widget.query('.tsel_tabbar');

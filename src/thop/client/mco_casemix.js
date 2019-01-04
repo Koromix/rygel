@@ -478,17 +478,17 @@ let mco_casemix = {};
 
     function refreshAlgorithmsMenu(algorithm)
     {
-        let select = query('#opt_algorithm > select');
+        let el = query('#opt_algorithm > select');
 
-        select.innerHTML = '';
-        for (const algorithm of settings.algorithms) {
-            let text ='Algorithme ' + algorithm.name;
-            if (algorithm.name === settings.default_algorithm)
-                text += ' *';
-            let option = html('option', {value: algorithm.name}, text);
-            select.appendChild(option);
-        }
-        select.value = algorithm;
+        el.replaceContent(
+            settings.algorithms.map(function(algorithm) {
+                return html('option',
+                    {value: algorithm.name},
+                    'Algorithme ' + algorithm.name + (algorithm.name === settings.default_algorithm ? ' *' : '')
+                );
+            })
+        );
+        el.value = algorithm;
     }
 
     function refreshGhmRootsTree(ghm_roots, select_ghm_roots, regroup)
@@ -557,21 +557,17 @@ let mco_casemix = {};
     function refreshGhmRootsMenu(ghm_roots, select_ghm_root)
     {
         let el = query('#opt_ghm_root > select');
-        el.innerHTML = '';
 
-        for (const ghm_root of ghm_roots) {
-            let opt = html('option', {value: ghm_root.ghm_root},
-                           ghm_root.ghm_root + ' – ' + ghm_root.desc);
-
-            if (!checkCasemixGhmRoot(ghm_root.ghm_root)) {
-                opt.setAttribute('disabled', '');
-                opt.text += '*';
-            }
-
-            el.appendChild(opt);
-        }
-        if (select_ghm_root)
-            el.value = select_ghm_root;
+        el.replaceContent(
+            ghm_roots.map(function(ghm_root_info) {
+                let disabled = !checkCasemixGhmRoot(ghm_root_info.ghm_root);
+                return html('option',
+                    {value: ghm_root_info.ghm_root, disabled: disabled},
+                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
+                );
+            })
+        );
+        el.value = select_ghm_root || el.value;
     }
 
     function refreshUnitsTable(filter_units, filter_ghm_roots, structure, page, sort)
@@ -859,7 +855,8 @@ let mco_casemix = {};
         if (!needsRefresh(refreshDurationTable, null, [mix_url, units, ghm_root, merge_cells]))
             return;
 
-        let table = html('table',
+        let table = query('#cm_table');
+        table.replaceContent(
             html('thead'),
             html('tbody')
         );
@@ -984,23 +981,23 @@ let mco_casemix = {};
                             makeTooltip('Total', col, col_stat, stat0, col_stat,
                                         stats1_units.findPartial(col.ghm, col.ghs));
 
-                        tr.appendChildren([
+                        tr.appendContent(
                             html('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
                                         title: tooltip},
                                  '' + col_stat.count),
                             html('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
                                         title: tooltip},
                                  priceText(col_stat.price_cents_total, false))
-                        ]);
+                        );
                     } else {
-                        tr.appendChildren([
+                        tr.appendContent(
                             html('td', {class: ['count', 'total', 'empty']}),
                             html('td', {class: ['price', 'total', 'empty']})
-                        ]);
+                        );
                     }
                 }
 
-                tbody.appendChild(tr);
+                tbody.appendContent(tr);
             }
 
             // Durations
@@ -1013,7 +1010,7 @@ let mco_casemix = {};
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
                     );
-                    tbody.appendChild(tr);
+                    tbody.appendContent(tr);
                 }
 
                 let tr = html('tr',
@@ -1038,34 +1035,30 @@ let mco_casemix = {};
                                         col, col_stat, row_stat, duration_stat,
                                         stats2_units.findPartial(col.ghm, col.ghs, duration));
 
-                        tr.appendChildren([
+                        tr.appendContent(
                             html('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
                                         title: tooltip},
                                  '' + duration_stat.count),
                             html('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
                                         title: tooltip},
                                  priceText(duration_stat.price_cents_total, false))
-                        ]);
+                        );
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
-                        tr.appendChildren([
+                        tr.appendContent(
                             html('td', {class: ['count', cls]}),
                             html('td', {class: ['price', cls]})
-                        ]);
+                        );
                     } else {
-                        tr.appendChildren([
+                        tr.appendContent(
                             html('td', {class: 'count'}),
                             html('td', {class: 'price'})
-                        ]);
+                        );
                     }
                 }
-                tbody.appendChild(tr);
+                tbody.appendContent(tr);
             }
         }
-
-        let old_table = query('#cm_table');
-        table.copyAttributesFrom(old_table);
-        old_table.replaceWith(table);
     }
 
     function refreshResults(units, page)
@@ -1169,16 +1162,18 @@ let mco_casemix = {};
             for (let j = 0; j < result.stays.length; j++) {
                 const stay = result.stays[j];
 
-                tbody.appendChildren(html('tr', {class: 'rt_stay'},
-                    html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
-                    html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                    html('td', stay.duration !== undefined ? mco_common.durationText(stay.duration) : null),
-                    html('td'),
-                    html('td', {style: 'text-align: right;'},
-                         stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
-                    html('td', {style: 'text-align: right;'},
-                         stay.price_cents ? (priceText(stay.total_cents) + '€') : '')
-                ));
+                tbody.appendContent(
+                    html('tr', {class: 'rt_stay'},
+                        html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
+                        html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
+                        html('td', stay.duration !== undefined ? mco_common.durationText(stay.duration) : null),
+                        html('td'),
+                        html('td', {style: 'text-align: right;'},
+                             stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
+                        html('td', {style: 'text-align: right;'},
+                             stay.price_cents ? (priceText(stay.total_cents) + '€') : '')
+                    )
+                );
 
                 if (stay.sex) {
                     let tr = html('tr', {class: 'rt_details'},
@@ -1195,7 +1190,7 @@ let mco_casemix = {};
                     let table1 = div.childNodes[1].firstChild;
                     let table2 = div.childNodes[2].firstChild;
 
-                    table0.appendChildren([
+                    table0.appendContent(
                         html('tr',
                             html('th', 'Sexe'),
                             html('td', ['Homme', 'Femme'][stay.sex - 1] || '')
@@ -1251,9 +1246,9 @@ let mco_casemix = {};
                             html('th', 'Présence UCD'),
                             html('td', 'Oui')
                         ) : null
-                    ]);
+                    );
 
-                    table1.appendChildren([
+                    table1.appendContent(
                         stay.main_diagnosis ? html('tr',
                             html('th', 'Diagnostic principal'),
                             html('td', {title: codeWithDesc(cim10_map, stay.main_diagnosis)},
@@ -1264,7 +1259,7 @@ let mco_casemix = {};
                             html('td', {title: codeWithDesc(cim10_map, stay.linked_diagnosis)},
                                  stay.linked_diagnosis)
                         ) : null
-                    ]);
+                    );
 
                     let other_diagnoses = stay.other_diagnoses.slice().sort(function(diag1, diag2) {
                         return compareValues(diag1.diag, diag2.diag);
@@ -1288,7 +1283,7 @@ let mco_casemix = {};
                             html('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
                         );
 
-                        table1.appendChild(tr);
+                        table1.appendContent(tr);
                     }
 
                     let procedures = [];
@@ -1327,10 +1322,10 @@ let mco_casemix = {};
                             html('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
                         );
 
-                        table2.appendChild(tr);
+                        table2.appendContent(tr);
                     }
 
-                    tbody.appendChild(tr);
+                    tbody.appendContent(tr);
                 }
             }
 
@@ -1343,12 +1338,11 @@ let mco_casemix = {};
         ];
         syncPagers(pagers, page, computeLastPage(end - offset, results.length, TableLen));
 
-        query('#rt').innerHTML = '';
-        query('#rt').appendChildren([
+        query('#rt').replaceContent(
             pagers[0],
             elements,
             pagers[1]
-        ]);
+        );
     }
 
     function filterCasemix(rows, units, ghm_roots)
@@ -1402,7 +1396,8 @@ let mco_casemix = {};
         deploy_results.clear();
 
         queryAll('#cm > *').forEach(function(el) {
-            el.innerHTML = '';
+            if (el.innerHTML)
+                el.innerHTML = '';
         });
     });
 

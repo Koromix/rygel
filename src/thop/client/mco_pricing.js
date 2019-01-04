@@ -196,39 +196,35 @@ let mco_pricing = {};
     function refreshGhmRootsMenu(indexes, main_index, sector, select_ghm_root)
     {
         let el = query('#opt_ghm_root > select');
-        el.innerHTML = '';
 
-        for (const ghm_root of ghm_roots) {
-            let opt = html('option', {value: ghm_root.ghm_root},
-                           ghm_root.ghm_root + ' – ' + ghm_root.desc);
-
-            if (!checkIndexGhmRoot(indexes, main_index, sector, ghm_root.ghm_root)) {
-                opt.setAttribute('disabled', '');
-                opt.text += '*';
-            }
-
-            el.appendChild(opt);
-        }
-        if (select_ghm_root)
-            el.value = select_ghm_root;
+        el.replaceContent(
+            ghm_roots.map(function(ghm_root_info) {
+                let disabled = !checkIndexGhmRoot(indexes, main_index, sector, ghm_root_info.ghm_root);
+                return html('option',
+                    {value: ghm_root_info.ghm_root, disabled: disabled},
+                    ghm_root_info.ghm_root + ' – ' + ghm_root_info.desc + (disabled ? ' *' : '')
+                );
+            })
+        );
+        el.value = select_ghm_root || el.value;
     }
 
     function refreshDiffMenu(indexes, diff_index, sector, test_ghm_root)
     {
         let el = query("#opt_diff_index > select");
-        el.innerHTML = '';
 
-        el.appendChild(html('option', {value: ''}, 'Désactiver'));
-        for (let i = 0; i < indexes.length; i++) {
-            let opt = html('option', {value: indexes[i].begin_date}, indexes[i].begin_date);
-            if (i === diff_index)
-                opt.setAttribute('selected', '');
-            if (!checkIndexGhmRoot(indexes, i, sector, test_ghm_root)) {
-                opt.setAttribute('disabled', '');
-                opt.text += '*';
-            }
-            el.appendChild(opt);
-        }
+        el.replaceContent(
+            html('option', {value: ''}, 'Désactiver'),
+            indexes.map(function(index, i) {
+                let disabled = !checkIndexGhmRoot(indexes, i, sector, test_ghm_root);
+                return html('option',
+                    {value: indexes[i].begin_date, disabled: disabled},
+                    indexes[i].begin_date + (disabled ? ' *' : '')
+                );
+            })
+        );
+        if (diff_index >= 0)
+            el.value = indexes[diff_index].begin_date;
     }
 
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
@@ -237,7 +233,8 @@ let mco_pricing = {};
         if (!needsRefresh(refreshPriceTable, null, arguments))
             return;
 
-        let table = html('table',
+        let table = query('#pr_table');
+        table.replaceContent(
             html('thead'),
             html('tbody')
         );
@@ -259,7 +256,7 @@ let mco_pricing = {};
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: ghs.length + 1}, text)
                     );
-                    tbody.appendChild(tr);
+                    tbody.appendContent(tr);
                 }
 
                 let tr = html('tr',
@@ -292,17 +289,11 @@ let mco_pricing = {};
                     } else {
                         td = html('td');
                     }
-                    tr.appendChild(td);
+                    tr.appendContent(td);
                 }
-                tbody.appendChild(tr);
+                tbody.appendContent(tr);
             }
-        } else {
-            table = html('table');
         }
-
-        let old_table = query('#pr_table');
-        table.copyAttributesFrom(old_table);
-        old_table.replaceWith(table);
     }
 
     function addPricingHeader(thead, ghm_root, columns, show_pricing, apply_coeff, merge_cells)
@@ -321,9 +312,11 @@ let mco_pricing = {};
                 title += ' - '  + ghm_roots_map[ghm_root].desc;
         }
 
-        thead.appendChild(html('tr',
-            html('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
-        ));
+        thead.appendContent(
+            html('tr',
+                html('td', {colspan: 1 + columns.length, class: 'ghm_root'}, title)
+            )
+        );
 
         function appendRow(name, func)
         {
@@ -352,7 +345,7 @@ let mco_pricing = {};
                 prev_cell = cell;
             }
 
-            thead.appendChild(tr);
+            thead.appendContent(tr);
         }
 
         appendRow('GHS', function(col) { return ['' + col.ghs, {class: 'desc'}, false]; });

@@ -29,10 +29,10 @@ function VersionLine(widget)
         widget.addClass('vlin');
 
         if (versions.length >= 2) {
-            widget.appendChildren([
+            widget.appendContent(
                 svg('line', {class: 'vlin_line', x1: '2%', y1: 20, x2: '98%', y2: 20}),
                 svg('g')
-            ]);
+            );
             let g = widget.query('g');
 
             let min_date = new Date(versions[0].date);
