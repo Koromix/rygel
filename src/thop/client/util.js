@@ -214,7 +214,7 @@ function parseUrl(url)
         host: a.hostname,
         port: a.port,
         query: a.search,
-        params: (function(){
+        params: (function() {
             let ret = {};
             let seg = a.search.replace(/^\?/, '').split('&');
             let len = seg.length;
@@ -440,8 +440,7 @@ function Aggregator(template, func, by)
         row_ptrs.add(ptr);
     }
 
-    this.aggregate = function(rows)
-    {
+    this.aggregate = function(rows) {
         for (const row of rows) {
             const max_idx = row.mono_count.length;
 
@@ -461,21 +460,6 @@ function Aggregator(template, func, by)
 // ------------------------------------------------------------------------
 // Misc
 // ------------------------------------------------------------------------
-
-function needsRefresh(func, key, args)
-{
-    if (func.prev_args_json === undefined)
-        func.prev_args_json = {};
-
-    let args_json = JSON.stringify(args);
-
-    if (args_json !== func.prev_args_json[key]) {
-        func.prev_args_json[key] = args_json;
-        return true;
-    } else {
-        return false;
-    }
-}
 
 function compareValues(value1, value2)
 {

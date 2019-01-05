@@ -8,14 +8,14 @@ function DataTable(widget)
 
     let self = this;
 
-    let columns = [];
-    let columns_map = {};
+    let columns;
+    let columns_map;
 
-    let row_sets = [[]];
-    let sorted_rows = [];
-    let ptr = null;
+    let row_sets;
+    let sorted_rows;
+    let ptr;
 
-    let sort_idx = null;
+    let sort_idx;
     let sort_descending;
 
     let prev_offset;
@@ -323,8 +323,21 @@ function DataTable(widget)
         return render_count;
     };
 
+    this.clearData = function() {
+        columns = [];
+        columns_map = {};
+
+        row_sets = [[]];
+        sorted_rows = [];
+        ptr = null;
+
+        sort_idx = null;
+    };
+
     this.getRowCount = function() { return sorted_rows.length; }
     this.getWidget = function() { return widget; }
+
+    self.clearData();
 
     widget.object = this;
 }

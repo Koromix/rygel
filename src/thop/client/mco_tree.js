@@ -81,7 +81,7 @@ let mco_tree = {};
 
     function refreshTree(nodes)
     {
-        if (!needsRefresh(refreshTree, null, arguments))
+        if (!thop.needsRefresh(refreshTree, arguments))
             return;
 
         if (nodes.length) {

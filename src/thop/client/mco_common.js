@@ -245,7 +245,7 @@ let mco_common = {};
 
     function refreshIndexesLine(indexes, main_index)
     {
-        if (!needsRefresh(refreshIndexesLine, null, arguments))
+        if (!thop.needsRefresh(refreshIndexesLine, arguments))
             return;
 
         let svg = query('#opt_index');
