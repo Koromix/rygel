@@ -281,7 +281,7 @@ function TreeSelector(widget, prefix)
                 html('button', {class: 'tsel_validate', click: self.close}, 'Fermer'),
                 html('div', {class: ['tsel_list', 'active']})
             )
-        ),
+        )
     );
     curtab = widget.query('.tsel_curtab');
     summary = widget.query('.tsel_summary');
