@@ -1127,6 +1127,18 @@ let mco_casemix = {};
             }
         }
 
+        function createInfoRow(key, value, title)
+        {
+            if (value !== null && value !== undefined) {
+                return html('tr',
+                    html('th', key),
+                    html('td', {title: title}, '' + (value || ''))
+                );
+            } else {
+                return null;
+            }
+        }
+
         let results = rt_results.filter(function(result) {
             for (const stay of result.stays) {
                 if (units.has(stay.unit))
@@ -1162,10 +1174,8 @@ let mco_casemix = {};
                             result.ghm.startsWith('90') ? (' [' + result.main_error + ']')
                                                         : (' (' + result.ghs + ')')
                         ),
-                        html('td', {style: 'text-align: right;'},
-                             priceText(result.price_cents) + '€'),
-                        html('td', {style: 'text-align: right;'},
-                             priceText(result.total_cents) + '€')
+                        html('td', {style: 'text-align: right;'}, priceText(result.price_cents) + '€'),
+                        html('td', {style: 'text-align: right;'}, priceText(result.total_cents) + '€')
                     )
                 )
             );
@@ -1206,139 +1216,104 @@ let mco_casemix = {};
                     let table1 = div.childNodes[1].firstChild;
                     let table2 = div.childNodes[2].firstChild;
 
+                    // Main info
                     table0.appendContent(
-                        html('tr',
-                            html('th', 'Sexe'),
-                            html('td', ['Homme', 'Femme'][stay.sex - 1] || '')
-                        ),
-                        html('tr',
-                            html('th', 'Date de naissance'),
-                            html('td', (stay.birthdate || '') +
-                                       (stay.age !== undefined ? ' (' + mco_common.ageText(stay.age) + ')' : ''))
-                        ),
-                        html('tr',
-                            html('th', 'Entrée'),
-                            html('td', '' + stay.entry_date + ' ' + stay.entry_mode +
-                                       (stay.entry_origin ? '-' + stay.entry_origin : ''))
-                        ),
-                        html('tr',
-                            html('th', 'Sortie'),
-                            html('td', '' + stay.exit_date + ' ' + stay.exit_mode +
-                                       (stay.exit_destination ? '-' + stay.exit_destination : ''))
-                        ),
-                        stay.bed_authorization ? html('tr',
-                            html('th', 'Autorisation de Lit'),
-                            html('td', '' + stay.bed_authorization)
-                        ) : null,
-                        stay.igs2 ? html('tr',
-                            html('th', 'IGS 2'),
-                            html('td', '' + stay.igs2)
-                        ) : null,
-                        stay.session_count ? html('tr',
-                            html('th', 'Séances'),
-                            html('td', '' + stay.session_count)
-                        ) : null,
-                        stay.last_menstrual_period ? html('tr',
-                            html('th', 'Dernières règles'),
-                            html('td', '' + stay.last_menstrual_period)
-                        ) : null,
-                        stay.gestational_age ? html('tr',
-                            html('th', 'Âge gestationnel'),
-                            html('td', '' + stay.gestational_age + ' SA')
-                        ) : null,
-                        stay.newborn_weight ? html('tr',
-                            html('th', 'Poids du nouveau-né'),
-                            html('td', '' + stay.newborn_weight + ' grammes')
-                        ) : null,
-                        stay.confirm ? html('tr',
-                            html('th', 'Confirmation'),
-                            html('td', 'Oui')
-                        ) : null,
-                        stay.dip_count ? html('tr',
-                            html('th', 'Séances de DIP'),
-                            html('td', '' + stay.dip_count)
-                        ) : null,
-                        stay.ucd ? html('tr',
-                            html('th', 'Présence UCD'),
-                            html('td', 'Oui')
-                        ) : null
+                        createInfoRow('Sexe', ['Homme', 'Femme'][stay.sex - 1] || ''),
+                        createInfoRow('Date de naissance', (stay.birthdate || '') +
+                                                           (stay.age !== undefined ? ' (' + mco_common.ageText(stay.age) + ')' : '')),
+                        createInfoRow('Entrée', '' + stay.entry_date + ' ' + stay.entry_mode +
+                                                (stay.entry_origin ? '-' + stay.entry_origin : '')),
+                        createInfoRow('Sortie', '' + stay.exit_date + ' ' + stay.exit_mode +
+                                                (stay.exit_destination ? '-' + stay.exit_destination : '')),
+                        createInfoRow('Autorisation de Lit', stay.bed_authorization),
+                        createInfoRow('IGS 2', stay.igs2),
+                        createInfoRow('Séances', stay.session_count),
+                        createInfoRow('Dernières règles', stay.last_menstrual_period),
+                        createInfoRow('Âge gestationnel',
+                                      stay.gestational_age ? (stay.gestational_age + ' SA') : null),
+                        createInfoRow('Poids du nouveau-né',
+                                      stay.newborn_weight ? (stay.newborn_weight + ' grammes') : null),
+                        createInfoRow('Confirmation', stay.confirmed),
+                        createInfoRow('Séances de DIP', stay.dip_count),
+                        createInfoRow('Présence UCD', stay.ucd ? 'Oui' : null)
                     );
 
-                    table1.appendContent(
-                        stay.main_diagnosis ? html('tr',
-                            html('th', 'Diagnostic principal'),
-                            html('td', {title: codeWithDesc(cim10_map, stay.main_diagnosis)},
-                                 stay.main_diagnosis)
-                        ) : null,
-                        stay.linked_diagnosis ? html('tr',
-                            html('th', 'Diagnostic relié'),
-                            html('td', {title: codeWithDesc(cim10_map, stay.linked_diagnosis)},
-                                 stay.linked_diagnosis)
-                        ) : null
-                    );
-
-                    let other_diagnoses = stay.other_diagnoses.slice().sort(function(diag1, diag2) {
-                        return compareValues(diag1.diag, diag2.diag);
-                    });
-
-                    for (let k = 0; k < other_diagnoses.length; k++) {
-                        const diag = other_diagnoses[k];
-
-                        let contents = [diag.diag];
-                        if (diag.severity) {
-                            if (diag.exclude) {
-                                contents.push(' ');
-                                contents.push(html('s', '(' + (diag.severity + 1) + ')'));
-                            } else {
-                                contents.push(' (' + (diag.severity + 1) + ')');
-                            }
-                        }
-
-                        let tr = html('tr',
-                            !k ? html('th', 'Diagnostics associés') : html('td'),
-                            html('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
-                        );
-
-                        table1.appendContent(tr);
-                    }
-
-                    let procedures = [];
+                    // Diagnoses
                     {
-                        let procedures_map = {};
-
-                        for (let proc of stay.procedures) {
-                            let map_key = proc.proc + '/' + proc.phase + ':' + proc.activity;
-                            let prev_proc = procedures_map[map_key];
-
-                            if (prev_proc) {
-                                prev_proc.count += proc.count;
-                            } else {
-                                proc = Object.assign({}, proc);
-                                proc.key = map_key;
-
-                                procedures_map[map_key] = proc;
-                                procedures.push(proc);
-                            }
-                        }
-
-                        procedures.sort(function(proc1, proc2) {
-                            return compareValues(proc1.key, proc2.key);
-                        });
-                    }
-
-                    for (let k = 0; k < procedures.length; k++) {
-                        const proc = procedures[k];
-
-                        let text = proc.proc + (proc.phase ? '/' + proc.phase : '') +
-                                   ' (' + proc.activity + ')' +
-                                   (proc.count !== 1 ? ' * ' + proc.count : '');
-
-                        let tr = html('tr',
-                            !k ? html('th', 'Actes') : html('td'),
-                            html('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
+                        table1.appendContent(
+                            createInfoRow('Diagnostic principal', stay.main_diagnosis,
+                                          codeWithDesc(cim10_map, stay.main_diagnosis)),
+                            createInfoRow('Diagnostic relié', stay.linked_diagnosis,
+                                          codeWithDesc(cim10_map, stay.linked_diagnosis))
                         );
 
-                        table2.appendContent(tr);
+                        let other_diagnoses = stay.other_diagnoses.slice();
+                        other_diagnoses.sort(function(diag1, diag2) {
+                            return compareValues(diag1.diag, diag2.diag);
+                        });
+
+                        for (let k = 0; k < other_diagnoses.length; k++) {
+                            const diag = other_diagnoses[k];
+
+                            let contents = [diag.diag];
+                            if (diag.severity) {
+                                if (diag.exclude) {
+                                    contents.push(' ');
+                                    contents.push(html('s', '(' + (diag.severity + 1) + ')'));
+                                } else {
+                                    contents.push(' (' + (diag.severity + 1) + ')');
+                                }
+                            }
+
+                            table1.appendContent(
+                                html('tr',
+                                    html('th', k ? '' : 'Diagnostics associés'),
+                                    html('td', {title: codeWithDesc(cim10_map, diag.diag)}, contents)
+                                )
+                            );
+                        }
+                    }
+
+                    // Procedures (deduplicated)
+                    {
+                        let procedures = [];
+                        {
+                            let procedures_map = {};
+
+                            for (let proc of stay.procedures) {
+                                let map_key = proc.proc + '/' + proc.phase + ':' + proc.activity;
+                                let prev_proc = procedures_map[map_key];
+
+                                if (prev_proc) {
+                                    prev_proc.count += proc.count;
+                                } else {
+                                    proc = Object.assign({}, proc);
+                                    proc.key = map_key;
+
+                                    procedures_map[map_key] = proc;
+                                    procedures.push(proc);
+                                }
+                            }
+
+                            procedures.sort(function(proc1, proc2) {
+                                return compareValues(proc1.key, proc2.key);
+                            });
+                        }
+
+                        for (let k = 0; k < procedures.length; k++) {
+                            const proc = procedures[k];
+
+                            let text = proc.proc + (proc.phase ? '/' + proc.phase : '') +
+                                       ' (' + proc.activity + ')' +
+                                       (proc.count !== 1 ? ' * ' + proc.count : '');
+
+                            table2.appendContent(
+                                html('tr',
+                                    html('th', k ? '' : 'Actes'),
+                                    html('td', {title: codeWithDesc(ccam_map, proc.proc)}, text)
+                                )
+                            );
+                        }
                     }
 
                     tbody.appendContent(tr);
