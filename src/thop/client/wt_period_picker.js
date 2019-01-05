@@ -11,6 +11,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     let handles = null;
     let bar = null;
 
+    let grab_capture = false;
     let grab_offset;
     let grab_diff_year;
     let grab_diff_month;
@@ -91,11 +92,12 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     function handleHandleDown(e)
     {
         this.setPointerCapture(e.pointerId);
+        grab_capture = true;
     }
 
     function handleHandleMove(e)
     {
-        if (this.hasPointerCapture(e.pointerId)) {
+        if (grab_capture) {
             let handle = this.parentNode;
             let input = handle.lastChild;
 
@@ -136,6 +138,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     function handleBarDown(e)
     {
         this.setPointerCapture(e.pointerId);
+        grab_capture = true;
 
         let start_date = handles[0].lastChild.valueAsDate;
         let end_date = handles[1].lastChild.valueAsDate;
@@ -149,7 +152,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 
     function handleBarMove(e)
     {
-        if (this.hasPointerCapture(e.pointerId)) {
+        if (grab_capture) {
             let new_start_date = positionToDate(e.clientX - main.offsetLeft - grab_offset);
             let new_end_date = new Date(new_start_date.getFullYear() + grab_diff_year,
                                         new_start_date.getMonth() + grab_diff_month,
@@ -171,6 +174,8 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 
     function handlePointerUp(e)
     {
+        grab_capture = false;
+
         if (self.changeHandler)
             setTimeout(function() { self.changeHandler.call(widget); }, 0);
     }
