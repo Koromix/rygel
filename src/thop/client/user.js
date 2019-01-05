@@ -11,12 +11,12 @@ let user = {};
 
     function runLogin(route, path, parameters, hash, errors)
     {
-        query('#user button').disabled = false;
+        query('#usr button').disabled = false;
 
-        let focus = query('#user').hasClass('hide');
-        query('#user').removeClass('hide');
+        let focus = query('#usr').hasClass('hide');
+        query('#usr').removeClass('hide');
         if (focus)
-            query('#user_username').focus();
+            query('#usr_username').focus();
     }
 
     function runSession()
@@ -78,11 +78,11 @@ let user = {};
 
     function login()
     {
-        let username = query('#user_username').value;
-        let password = query('#user_password').value;
-        query('#user_username').value = '';
-        query('#user_password').value = '';
-        query('#user button').disabled = true;
+        let username = query('#usr_username').value;
+        let password = query('#usr_password').value;
+        query('#usr_username').value = '';
+        query('#usr_password').value = '';
+        query('#usr button').disabled = true;
 
         connect(username, password, thop.goBackOrHome);
     }
