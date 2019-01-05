@@ -188,10 +188,26 @@ let mco_casemix = {};
             }
         }
 
-        query('#cm_ghm_roots').toggleClass('hide', route.view !== 'ghm_roots');
-        query('#cm_units').toggleClass('hide', route.view !== 'units');
-        query('#cm_table').toggleClass('hide', route.view !== 'durations');
-        query('#rt').toggleClass('hide', route.view !== 'results');
+        // Update visible view
+        {
+            const ViewNodes = {
+                'ghm_roots': query('#cm_ghm_roots'),
+                'units': query('#cm_units'),
+                'durations': query('#cm_table'),
+                'results': query('#rt')
+            };
+
+            for (const k in ViewNodes) {
+                if (k === route.view) {
+                    if (!data.isBusy())
+                        ViewNodes[k].removeClass('hide');
+                } else {
+                    ViewNodes[k].addClass('hide');
+                }
+            }
+        }
+
+        // Reveal casemix
         if (!data.isBusy() && !mix_ready) {
             query('#cm').addClass('busy');
         } else if (!data.isBusy()) {
