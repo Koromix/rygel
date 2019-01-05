@@ -69,10 +69,6 @@ let mco_casemix = {};
 
             unspecified = false;
         }
-        if (route.view === 'results') {
-            mco_common.updateCatalog('cim10');
-            mco_common.updateCatalog('ccam');
-        }
 
         // Permissions
         if (!user.isConnected() || !settings.permissions) {
@@ -452,7 +448,7 @@ let mco_casemix = {};
 
     function refreshStructuresTree(units, structure_idx)
     {
-        if (!needsRefresh(refreshStructuresTree, null, [settings.url_key].concat(Array.from(arguments))))
+        if (!thop.needsRefresh(refreshStructuresTree, arguments))
             return;
 
         units = new Set(units);
@@ -509,7 +505,7 @@ let mco_casemix = {};
 
     function refreshGhmRootsTree(ghm_roots, select_ghm_roots, regroup)
     {
-        if (!needsRefresh(refreshGhmRootsTree, null, [settings.url_key].concat(Array.from(arguments))))
+        if (!thop.needsRefresh(refreshGhmRootsTree, arguments))
             return;
 
         // TODO: This should probably not be hard-coded here
@@ -588,24 +584,25 @@ let mco_casemix = {};
 
     function refreshUnitsTable(filter_units, filter_ghm_roots, structure, page, sort)
     {
-        if (!needsRefresh(refreshUnitsTable, null, [mix_url].concat(Array.from(arguments))))
+        if (!thop.needsRefresh(refreshUnitsTable, arguments))
             return;
 
         let summary = units_summary;
+        if (!summary) {
+            summary = createPagedDataTable(query('#cm_units'));
+            summary.sortHandler = function(sort) { go({sort: sort}); };
 
-        let refresh = !summary ||
-                      needsRefresh(refreshUnitsTable, 'init',
-                                   [mix_url, filter_units, filter_ghm_roots, structure]);
-        if (refresh) {
+            units_summary = summary;
+        }
+
+        if (thop.needsRefresh(summary, filter_units, filter_ghm_roots, structure)) {
             filter_units = new Set(filter_units);
             filter_ghm_roots = new Set(filter_ghm_roots);
             structure = settings.structures[structure];
 
             const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
-            summary = createPagedDataTable(query('#cm_units'));
-            summary.sortHandler = function(sort) { go({sort: sort}); };
-            units_summary = summary;
+            summary.clearData();
 
             summary.addColumn('unit', null, 'Unité');
             summary.addColumn('rss', '#,##0', 'RSS');
@@ -694,15 +691,18 @@ let mco_casemix = {};
 
     function refreshGhmRootsTable(filter_units, filter_ghm_roots, regroup, page, sort)
     {
-        if (!needsRefresh(refreshGhmRootsTable, null, [mix_url].concat(Array.from(arguments))))
+        if (!thop.needsRefresh(refreshGhmRootsTable, arguments))
             return;
 
         let summary = ghm_roots_summary;
+        if (!summary) {
+            summary = createPagedDataTable(query('#cm_ghm_roots'));
+            summary.sortHandler = function(sort) { go({sort: sort}); };
 
-        let refresh = !summary ||
-                      needsRefresh(refreshGhmRootsTable, 'init',
-                                   [mix_url, filter_units, filter_ghm_roots, regroup]);
-        if (refresh) {
+            ghm_roots_summary = summary;
+        }
+
+        if (thop.needsRefresh(summary, filter_units, filter_ghm_roots, regroup)) {
             filter_units = new Set(filter_units);
             filter_ghm_roots = new Set(filter_ghm_roots);
 
@@ -720,9 +720,7 @@ let mco_casemix = {};
                 });
             let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
 
-            summary = createPagedDataTable(query('#cm_ghm_roots'));
-            summary.sortHandler = function(sort) { go({sort: sort}); };
-            ghm_roots_summary = summary;
+            summary.clearData();
 
             summary.addColumn('ghm_root', null, 'Racine');
             summary.addColumn('rss', '#,##0', 'RSS');
@@ -868,7 +866,7 @@ let mco_casemix = {};
 
     function refreshDurationTable(units, ghm_root, apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshDurationTable, null, [mix_url, units, ghm_root, merge_cells]))
+        if (!thop.needsRefresh(refreshDurationTable, arguments))
             return;
 
         let table = query('#cm_table');
@@ -1079,7 +1077,7 @@ let mco_casemix = {};
 
     function refreshResults(units, page)
     {
-        if (!needsRefresh(refreshResults, null, [mix_url, rt_url, units, page]))
+        if (!thop.needsRefresh(refreshResults, arguments))
             return;
 
         units = new Set(units);

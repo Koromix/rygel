@@ -15,6 +15,8 @@ let thop = {};
     let module = null;
     let prev_module = null;
 
+    let data_idx = 0;
+
     function toggleMenu(selector, enable)
     {
         let el = query(selector);
@@ -199,6 +201,20 @@ let thop = {};
     }
     this.goBackOrHome = goBackOrHome;
 
+    function needsRefresh(obj) {
+        let args_json = JSON.stringify(Array.from(arguments).slice(1));
+
+        if (data_idx !== obj.prev_data_idx || args_json !== obj.prev_args_json) {
+            obj.prev_data_idx = data_idx;
+            obj.prev_args_json = args_json;
+
+            return true;
+        } else {
+            return false;
+        }
+    }
+    this.needsRefresh = needsRefresh;
+
     function refreshErrors(errors)
     {
         let log = query('#log');
@@ -232,8 +248,10 @@ let thop = {};
         });
 
         data.busyHandler = function(busy) {
-            if (!busy)
+            if (!busy) {
+                data_idx++;
                 route();
+            }
         }
     }
 

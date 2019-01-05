@@ -397,11 +397,11 @@ let mco_list = {};
         let list = list_cache[list_name];
         let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
 
-        if (!list || !needsRefresh(refreshListTable, null, [list.url].concat(Array.from(arguments))))
+        if (!list || !thop.needsRefresh(refreshListTable, arguments))
             return;
 
         let builder;
-        if (needsRefresh(refreshListTable, list_name, [list.url, group_info, search])) {
+        if (thop.needsRefresh(list, group_info, search)) {
             builder = createPagedDataTable(query('#ls_' + list_name));
             builder.sortHandler = function(sort) { go({sort: sort}); }
             list.builder = builder;

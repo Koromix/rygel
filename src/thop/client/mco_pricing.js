@@ -94,8 +94,7 @@ let mco_pricing = {};
                 } break;
 
                 case 'chart': {
-                    let chart_ctx = query('#pr_chart').getContext('2d');
-                    refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
+                    refreshPriceChart(pricing_info, main_index, diff_index,
                                       max_duration, route.apply_coefficient);
                 } break;
             }
@@ -230,7 +229,7 @@ let mco_pricing = {};
     function refreshPriceTable(ghm_root, pricing_info, main_index, diff_index,
                                max_duration, apply_coeff, merge_cells)
     {
-        if (!needsRefresh(refreshPriceTable, null, arguments))
+        if (!thop.needsRefresh(refreshPriceTable, arguments))
             return;
 
         let table = query('#pr_table');
@@ -392,17 +391,15 @@ let mco_pricing = {};
     }
     this.addPricingHeader = addPricingHeader;
 
-    function refreshPriceChart(chart_ctx, pricing_info, main_index, diff_index,
-                               max_duration, apply_coeff)
+    function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff)
     {
+        if (!thop.needsRefresh(refreshPriceChart, Array.from(arguments)))
+            return;
+
         if (typeof Chart === 'undefined') {
             lazyLoad('chartjs');
             return;
         }
-
-        if (!needsRefresh(refreshPriceChart, null, [pricing_info, main_index, diff_index,
-                                                    max_duration, apply_coeff]))
-            return;
 
         if (!pricing_info || !pricing_info[main_index]) {
             if (chart)
@@ -495,6 +492,7 @@ let mco_pricing = {};
             chart.options.scales.yAxes[0].ticks.suggestedMax = max_price;
             chart.update({duration: 0});
         } else {
+            let chart_ctx = query('#pr_chart').getContext('2d');
             chart = new Chart(chart_ctx, {
                 type: 'line',
                 data: {
