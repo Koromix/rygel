@@ -2694,13 +2694,16 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     LogFmt(level, ctx, fmt, fmt_args);
 }
 
-#define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
+#ifdef NDEBUG
+    #define LOG_LOCATION nullptr
+#else
+    #define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
+#endif
 #define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
 #define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
 
-void DefaultLogHandler(LogLevel level, const char *ctx,
-                       const char *fmt, Span<const FmtArg> args);
+void DefaultLogHandler(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
 void StartConsoleLog(LogLevel level);
 void EndConsoleLog();
