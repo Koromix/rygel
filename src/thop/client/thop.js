@@ -15,7 +15,9 @@ let thop = {};
     let module = null;
     let prev_module = null;
 
+    // Cache
     let data_idx = 0;
+    let mco_settings = {};
 
     function toggleMenu(selector, enable)
     {
@@ -214,6 +216,37 @@ let thop = {};
         }
     }
     this.needsRefresh = needsRefresh;
+
+    function updateMcoSettings()
+    {
+        if (user.getUrlKey() !== mco_settings.url_key) {
+            mco_settings = {
+                indexes: mco_settings.indexes || [],
+                url_key: null
+            };
+
+            let url = buildUrl(thop.baseUrl('api/mco_settings.json'), {key: user.getUrlKey()});
+            data.get(url, 'json', function(json) {
+                mco_settings = json;
+
+                if (mco_settings.start_date) {
+                    mco_settings.permissions = new Set(mco_settings.permissions);
+                    for (let structure of mco_settings.structures) {
+                        structure.units = {};
+                        for (let ent of structure.entities) {
+                            ent.path = ent.path.substr(1).split('|');
+                            structure.units[ent.unit] = ent;
+                        }
+                    }
+                }
+
+                mco_settings.url_key = user.getUrlKey();
+            });
+        }
+
+        return mco_settings;
+    }
+    this.updateMcoSettings = updateMcoSettings;
 
     function refreshErrors(errors)
     {

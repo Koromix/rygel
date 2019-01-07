@@ -54,11 +54,11 @@ let mco_casemix = {};
         sorts[route.view] = route.sort;
 
         // Resources
-        settings = mco_common.updateSettings();
+        settings = thop.updateMcoSettings();
         let indexes = settings.indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
-        let ghm_roots = mco_common.updateCatalog('mco_ghm_roots').concepts;
+        let ghm_roots = catalog.update('mco_ghm_roots').concepts;
         if (['durations', 'results'].includes(route.view) && !route.ghm_root && ghm_roots.length)
             route.ghm_root = ghm_roots[0].ghm_root;
         if (unspecified && settings.structures.length && ghm_roots.length) {
@@ -263,7 +263,7 @@ let mco_casemix = {};
         });
 
         // Hide links if not available for user
-        let settings = mco_common.updateSettings();
+        let settings = thop.updateMcoSettings();
         let allowed = !!settings.permissions &&
                       (new_route.view !== 'results' || settings.permissions.has('FullResults'));
 
@@ -518,7 +518,7 @@ let mco_casemix = {};
 
         select_ghm_roots = new Set(select_ghm_roots);
 
-        let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+        let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
         let select = query('#opt_ghm_roots > div');
 
@@ -708,7 +708,7 @@ let mco_casemix = {};
 
             const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
-            let ghm_roots = mco_common.updateCatalog('mco_ghm_roots')
+            let ghm_roots = catalog.update('mco_ghm_roots')
                 .concepts.slice().sort(function(ghm_root1, ghm_root2) {
                     if (ghm_root1[regroup] !== ghm_root2[regroup]) {
                         return (ghm_root1[regroup] < ghm_root2[regroup]) ? -1 : 1;
@@ -718,7 +718,7 @@ let mco_casemix = {};
                         return 0;
                     }
                 });
-            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+            let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
             summary.clearData();
 
@@ -1082,10 +1082,10 @@ let mco_casemix = {};
 
         units = new Set(units);
 
-        let cim10_map = mco_common.updateCatalog('cim10').map;
-        let ccam_map = mco_common.updateCatalog('ccam').map;
-        let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
-        let errors_map = mco_common.updateCatalog('mco_errors').map;
+        let cim10_map = catalog.update('cim10').map;
+        let ccam_map = catalog.update('ccam').map;
+        let ghm_roots_map = catalog.update('mco_ghm_roots').map;
+        let errors_map = catalog.update('mco_errors').map;
 
         function handleIdClick(e)
         {

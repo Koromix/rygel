@@ -16,7 +16,7 @@ let mco_tree = {};
         route.date = path_parts[1] || null;
 
         // Resources
-        let indexes = mco_common.updateSettings().indexes;
+        let indexes = thop.updateMcoSettings().indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
@@ -29,7 +29,7 @@ let mco_tree = {};
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');
-        mco_common.refreshIndexesLine(indexes, main_index);
+        refreshIndexesLine(indexes, main_index);
 
         // Refresh view
         if (!data.isBusy()) {

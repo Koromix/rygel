@@ -13,7 +13,6 @@ set(THOP_RESOURCES client/thop.html
                    client/common.js
                    client/thop.js
                    client/user.js
-                   client/mco_common.js
                    client/mco_casemix.js
                    client/mco_list.js
                    client/mco_pricing.js

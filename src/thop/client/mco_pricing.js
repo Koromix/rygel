@@ -33,9 +33,9 @@ let mco_pricing = {};
         route.apply_coefficient = !!parseInt(parameters.apply_coefficient) || false;
 
         // Resources
-        let indexes = mco_common.updateSettings().indexes;
+        let indexes = thop.updateMcoSettings().indexes;
         {
-            let ret = mco_common.updateCatalog('mco_ghm_roots');
+            let ret = catalog.update('mco_ghm_roots');
             ghm_roots = ret.concepts;
             ghm_roots_map = ret.map;
         }
@@ -73,7 +73,7 @@ let mco_pricing = {};
         // Refresh settings
         queryAll('#opt_index, #opt_sector, #opt_ghm_root, #opt_diff_index, #opt_max_duration, #opt_apply_coefficient')
             .removeClass('hide');
-        mco_common.refreshIndexesLine(indexes, main_index);
+        refreshIndexesLine(indexes, main_index);
         query('#opt_sector > select').value = route.sector;
         refreshGhmRootsMenu(indexes, main_index, route.sector, route.ghm_root);
         refreshDiffMenu(indexes, diff_index, route.sector, route.ghm_root);
@@ -151,7 +151,7 @@ let mco_pricing = {};
 
     function updatePriceMap(index, sector)
     {
-        const indexes = mco_common.updateSettings().indexes;
+        const indexes = thop.updateMcoSettings().indexes;
         const date_key = indexes[index].begin_date + '@' + sector;
 
         if (!available_dates.has(date_key)) {
@@ -304,7 +304,7 @@ let mco_pricing = {};
 
         let title;
         {
-            let ghm_roots_map = mco_common.updateCatalog('mco_ghm_roots').map;
+            let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
             title = ghm_root;
             if (ghm_roots_map[ghm_root])
