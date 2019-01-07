@@ -1034,7 +1034,7 @@ static bool ConfigLogTerminalOutput()
     return output_is_terminal;
 }
 
-void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
+void LogFmt(LogLevel level, const char *ctx MAYBE_UNUSED, const char *fmt, Span<const FmtArg> args)
 {
     if (level == LogLevel::Debug && !enable_debug)
         return;
@@ -1042,12 +1042,17 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     char ctx_buf[128];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
+
+#ifdef NDEBUG
+        Fmt(ctx_buf, " [%1]  ", FmtDouble(time, 3).Pad(-8));
+#else
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
             Fmt(ctx_buf, " ...%1 [%2]  ", ctx + ctx_len - 17, FmtDouble(time, 3).Pad(-8));
         } else {
             Fmt(ctx_buf, " ...%1 [%2]  ", FmtArg(ctx).Pad(-21), FmtDouble(time, 3).Pad(-8));
         }
+#endif
     }
 
     static std::mutex log_mutex;
