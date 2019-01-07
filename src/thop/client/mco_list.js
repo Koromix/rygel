@@ -216,7 +216,7 @@ let mco_list = {};
         sorts[route.list + route.spec] = route.sort;
 
         // Resources
-        let indexes = mco_common.updateSettings().indexes;
+        let indexes = thop.updateMcoSettings().indexes;
         if (!route.date && indexes.length)
             route.date = indexes[indexes.length - 1].begin_date;
         let main_index = indexes.findIndex(function(info) { return info.begin_date === route.date; });
@@ -245,7 +245,7 @@ let mco_list = {};
 
         // Refresh settings
         queryAll('#opt_index').removeClass('hide');
-        mco_common.refreshIndexesLine(indexes, main_index);
+        refreshIndexesLine(indexes, main_index);
         if (Lists[route.list] && Lists[route.list].sector) {
             query('#opt_sector').removeClass('hide');
             query('#opt_sector > select').value = route.sector;
@@ -343,7 +343,7 @@ let mco_list = {};
         let list = list_cache[list_name];
 
         if (!list || url !== list.url) {
-            mco_common.updateCatalog(Lists[list_name].catalog);
+            catalog.update(Lists[list_name].catalog);
 
             list_cache[list_name] = {
                 url: null,
@@ -395,7 +395,7 @@ let mco_list = {};
 
         let list_info = Lists[list_name];
         let list = list_cache[list_name];
-        let concepts_map = mco_common.updateCatalog(list_info.catalog).map;
+        let concepts_map = catalog.update(list_info.catalog).map;
 
         if (!list || !thop.needsRefresh(refreshListTable, arguments))
             return;
