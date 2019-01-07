@@ -8,8 +8,9 @@ endif()
 
 set(THOP_RESOURCES client/thop.html
 
-                   client/compat.js
-                   client/util.js
+                   ../libweb/compat.js
+                   ../libweb/util.js
+                   client/common.js
                    client/thop.js
                    client/user.js
                    client/mco_common.js
@@ -17,11 +18,11 @@ set(THOP_RESOURCES client/thop.html
                    client/mco_list.js
                    client/mco_pricing.js
                    client/mco_tree.js
-                   client/wt_data_table.js
-                   client/wt_pager.js
-                   client/wt_period_picker.js
-                   client/wt_tree_selector.js
-                   client/wt_version_line.js
+                   ../libweb/data_table.js
+                   ../libweb/pager.js
+                   ../libweb/period_picker.js
+                   ../libweb/tree_selector.js
+                   ../libweb/version_line.js
                    ../../lib/chartjs/chart.min.js
                    ../../lib/sheetjs/xlsx.core.min.js
 
@@ -30,11 +31,11 @@ set(THOP_RESOURCES client/thop.html
                    client/mco_list.css
                    client/mco_pricing.css
                    client/mco_tree.css
-                   client/wt_data_table.css
-                   client/wt_pager.css
-                   client/wt_period_picker.css
-                   client/wt_tree_selector.css
-                   client/wt_version_line.css
+                   ../libweb/data_table.css
+                   ../libweb/pager.css
+                   ../libweb/period_picker.css
+                   ../libweb/tree_selector.css
+                   ../libweb/version_line.css
 
                    client/images/thop_logo.svg
                    client/images/favicon.png)

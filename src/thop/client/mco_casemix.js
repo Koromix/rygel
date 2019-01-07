@@ -1020,7 +1020,7 @@ let mco_casemix = {};
 
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
-                                    mco_common.durationText(Math.min(max_duration - 1, duration + 9));
+                                    durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: columns.length * 2 + 1}, text)
                     );
@@ -1028,7 +1028,7 @@ let mco_casemix = {};
                 }
 
                 let tr = html('tr',
-                    html('th', mco_common.durationText(duration))
+                    html('th', durationText(duration))
                 );
                 for (const col of columns) {
                     let col_stat = stats1.find(col.ghm, col.ghs);
@@ -1045,7 +1045,7 @@ let mco_casemix = {};
 
                     if (duration_stat) {
                         let tooltip =
-                            makeTooltip(mco_common.durationText(duration),
+                            makeTooltip(durationText(duration),
                                         col, col_stat, row_stat, duration_stat,
                                         stats2_units.findPartial(col.ghm, col.ghs, duration));
 
@@ -1159,8 +1159,8 @@ let mco_casemix = {};
                             html('a', {class: 'rt_id', href: '#', click: handleIdClick},
                                  '' + result.bill_id)
                         ),
-                        html('td', (['♂ ', '♀ '][result.sex - 1] || '') + mco_common.ageText(result.age)),
-                        html('td', result.duration !== undefined ? mco_common.durationText(result.duration) : null),
+                        html('td', (['♂ ', '♀ '][result.sex - 1] || '') + ageText(result.age)),
+                        html('td', result.duration !== undefined ? durationText(result.duration) : null),
                         html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
                                            'GHM : ' + result.ghm + '\n' +
                                            'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
@@ -1190,7 +1190,7 @@ let mco_casemix = {};
                     html('tr', {class: 'rt_stay'},
                         html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
                         html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                        html('td', stay.duration !== undefined ? mco_common.durationText(stay.duration) : null),
+                        html('td', stay.duration !== undefined ? durationText(stay.duration) : null),
                         html('td'),
                         html('td', {style: 'text-align: right;'},
                              stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
@@ -1218,7 +1218,7 @@ let mco_casemix = {};
                     table0.appendContent(
                         createInfoRow('Sexe', ['Homme', 'Femme'][stay.sex - 1] || ''),
                         createInfoRow('Date de naissance', (stay.birthdate || '') +
-                                                           (stay.age !== undefined ? ' (' + mco_common.ageText(stay.age) + ')' : '')),
+                                                           (stay.age !== undefined ? ' (' + ageText(stay.age) + ')' : '')),
                         createInfoRow('Entrée', '' + stay.entry_date + ' ' + stay.entry_mode +
                                                 (stay.entry_origin ? '-' + stay.entry_origin : '')),
                         createInfoRow('Sortie', '' + stay.exit_date + ' ' + stay.exit_mode +

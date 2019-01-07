@@ -251,7 +251,7 @@ let mco_pricing = {};
             for (let duration = 0; duration < max_duration; duration++) {
                 if (duration % 10 == 0) {
                     let text = '' + duration + ' - ' +
-                                    mco_common.durationText(Math.min(max_duration - 1, duration + 9));
+                                    durationText(Math.min(max_duration - 1, duration + 9));
                     let tr = html('tr',
                         html('th', {class: 'repeat', colspan: ghs.length + 1}, text)
                     );
@@ -259,7 +259,7 @@ let mco_pricing = {};
                 }
 
                 let tr = html('tr',
-                    html('th', mco_common.durationText(duration))
+                    html('th', durationText(duration))
                 );
                 for (const col of ghs) {
                     let info;
@@ -356,9 +356,9 @@ let mco_pricing = {};
                               col.conditions.length ? col.conditions.length.toString() : '');
                 return [el, {class: 'conditions'}, true];
             });
-            appendRow('Borne basse', function(col) { return [mco_common.durationText(col.exb_treshold), {class: 'exb'}, true]; });
+            appendRow('Borne basse', function(col) { return [durationText(col.exb_treshold), {class: 'exb'}, true]; });
             appendRow('Borne haute',
-                      function(col) { return [mco_common.durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
+                      function(col) { return [durationText(col.exh_treshold && col.exh_treshold - 1), {class: 'exh'}, true]; });
             appendRow('Tarif €', function(col) {
                 let cents = applyGhsCoefficient(col, col.ghs_cents, apply_coeff);
                 return [priceText(cents), {class: 'noex'}, true];
@@ -505,7 +505,7 @@ let mco_pricing = {};
                         intersect: false,
                         callbacks: {
                             title: function(items, data) {
-                                return mco_common.durationText(items[0].xLabel)
+                                return durationText(items[0].xLabel)
                             },
                             label: function(item, data) {
                                 return 'GHS ' + data.datasets[item.datasetIndex].label + ': ' +
@@ -523,7 +523,7 @@ let mco_pricing = {};
                             type: 'linear',
                             ticks: {
                                 stepSize: 10,
-                                callback: function(value) { return mco_common.durationText(value); }
+                                callback: function(value) { return durationText(value); }
                             }
                         }],
                         yAxes: [{
