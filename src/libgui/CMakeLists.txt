@@ -4,11 +4,12 @@
 
 # The platform layer is only available for Win32, for now
 
-set(GUI_SRC libgui.cc
-            libgui.hh
-            ../common/opengl.cc
-            ../common/opengl.hh
-            ../common/opengl_func.inc)
+set(GUI_SRC ../libcc/opengl.cc
+            ../libcc/opengl.hh
+            ../libcc/opengl_func.inc
+
+            libgui.cc
+            libgui.hh)
 if (WIN32)
     list(APPEND GUI_SRC runner_win32.cc)
 elseif(EMSCRIPTEN)

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "kutil.hh"
+#include "util.hh"
 
 #include <Rcpp.h>
 

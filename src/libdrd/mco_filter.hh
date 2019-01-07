@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
 #include "mco_classifier.hh"
 
 bool mco_Filter(Span<const mco_Stay> stays, Span<const char> filter,

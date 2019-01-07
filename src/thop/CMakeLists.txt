@@ -40,7 +40,7 @@ set(THOP_RESOURCES client/thop.html
                    client/images/thop_logo.svg
                    client/images/favicon.png)
 
-set(THOP_SRC ../common/json.hh
+set(THOP_SRC ../libcc/json.hh
 
              server/config.cc
              server/config.hh

@@ -2,10 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#include "../libcc/util.hh"
 #include "../packer/asset.hh"
-#include "../common/opengl.hh"
-#include "render.hh"
+#include "../libcc/opengl.hh"
 #include "../libgui/libgui.hh"
+#include "render.hh"
 
 extern const Span<const PackerAsset> packer_assets;
 #define IMGUI_FONT "Roboto-Medium.ttf"

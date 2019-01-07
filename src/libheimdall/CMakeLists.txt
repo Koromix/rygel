@@ -7,15 +7,16 @@ if(NOT TARGET gui)
 endif()
 
 set(LIBHEIMDALL_RESOURCES ../../lib/imgui/misc/fonts/Roboto-Medium.ttf)
-set(LIBHEIMDALL_SRC ../common/kutil.cc
-                    ../common/kutil.hh
+set(LIBHEIMDALL_SRC ../libcc/util.cc
+                    ../libcc/util.hh
+                    ../libcc/opengl.cc
+                    ../libcc/opengl.hh
+                    ../libcc/opengl_func.inc
+
                     animation.hh
                     core.cc
                     core.hh
                     data.hh
-                    ../common/opengl.cc
-                    ../common/opengl.hh
-                    ../common/opengl_func.inc
                     render.cc
                     render.hh)
 

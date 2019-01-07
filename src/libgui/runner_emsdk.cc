@@ -5,9 +5,9 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
+#include "../libcc/opengl.hh"
 #include "../libheimdall/core.hh"
-#include "../common/opengl.hh"
 #include "libgui.hh"
 
 THREAD_LOCAL RunIO *g_io;
