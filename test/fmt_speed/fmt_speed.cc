@@ -1,6 +1,6 @@
 #include "stb_sprintf.h"
 #include "fmt/format.h"
-#include "../../src/common/kutil.hh"
+#include "../../src/libcc/util.hh"
 
 #define ITERATIONS 4000000
 

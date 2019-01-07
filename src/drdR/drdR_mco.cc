@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libdrd/libdrd.hh"
-#include "../common/Rcc.hh"
+#include "../libcc/Rcc.hh"
 
 struct ClassifierInstance {
     mco_TableSet table_set;

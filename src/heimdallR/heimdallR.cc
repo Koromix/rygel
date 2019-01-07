@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libheimdall/libheimdall.hh"
-#include "../common/Rcc.hh"
+#include "../libcc/Rcc.hh"
 #include <thread>
 
 struct Instance {

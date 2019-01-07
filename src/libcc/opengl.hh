@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "util.hh"
 
 #ifdef __EMSCRIPTEN__
     #include <GLES3/gl3.h>

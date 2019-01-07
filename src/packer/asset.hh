@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
 
 // Keep in sync with version in packer.cc
 struct PackerAsset {

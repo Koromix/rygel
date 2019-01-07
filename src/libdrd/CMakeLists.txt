@@ -2,8 +2,9 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-set(LIBDRD_SRC ../common/kutil.cc
-               ../common/kutil.hh
+set(LIBDRD_SRC ../libcc/util.cc
+               ../libcc/util.hh
+
                common.hh
                mco_authorization.cc
                mco_authorization.hh

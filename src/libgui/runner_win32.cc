@@ -8,8 +8,8 @@
 #endif
 #include <windows.h>
 
-#include "../common/kutil.hh"
-#include "../common/opengl.hh"
+#include "../libcc/util.hh"
+#include "../libcc/opengl.hh"
 #include "libgui.hh"
 
 static GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,

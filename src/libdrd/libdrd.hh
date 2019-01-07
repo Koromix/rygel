@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
 #include "common.hh"
 #include "mco_common.hh"
 #include "mco_authorization.hh"

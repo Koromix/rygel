@@ -31,7 +31,7 @@
 #include <condition_variable>
 #include <thread>
 
-#ifndef KUTIL_NO_MINIZ
+#ifndef LIBCC_NO_MINIZ
     #define MINIZ_NO_STDIO
     #define MINIZ_NO_TIME
     #define MINIZ_NO_ARCHIVE_APIS
@@ -42,7 +42,7 @@
     #include "../../lib/miniz/miniz.h"
 #endif
 
-#include "kutil.hh"
+#include "util.hh"
 
 // ------------------------------------------------------------------------
 // Assert
@@ -967,7 +967,7 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 static THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
 static THREAD_LOCAL Size log_handlers_len;
 
-bool enable_debug = GetDebugFlag("RYGEL_DEBUG");
+bool enable_debug = GetDebugFlag("LIBCC_DEBUG");
 
 bool GetDebugFlag(const char *name)
 {
@@ -1544,14 +1544,14 @@ int GetIdealThreadCount()
     static const int max_threads = 1;
 #else
     static const int max_threads = []() {
-        const char *env = getenv("RYGEL_THREADS");
+        const char *env = getenv("LIBCC_THREADS");
         if (env) {
             char *end_ptr;
             long threads = strtol(env, &end_ptr, 10);
             if (end_ptr > env && !end_ptr[0] && threads > 0) {
                 return (int)threads;
             } else {
-                LogError("RYGEL_THREADS must be positive number (ignored)");
+                LogError("LIBCC_THREADS must be positive number (ignored)");
             }
         }
         return (int)std::thread::hardware_concurrency();

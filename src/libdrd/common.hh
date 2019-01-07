@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
 
 enum class Sector: int8_t {
     Public,

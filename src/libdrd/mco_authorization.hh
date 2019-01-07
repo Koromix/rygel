@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../common/kutil.hh"
+#include "../libcc/util.hh"
 #include "mco_common.hh"
 
 struct mco_Authorization {
