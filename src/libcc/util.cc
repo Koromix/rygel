@@ -2734,6 +2734,14 @@ const char *OptionParser::Next()
         buf[2] = 0;
         current_option = buf;
         smallopt_offset = 1;
+
+        // The main point of SkipNonOptions is to be able to parse arguments in
+        // multiple passes. This does not work well with ambiguous short options
+        // (such as -oOption, which can be interpeted as multiple one-char options
+        // or one -o option with a value), so force the value interpretation.
+        if (flags & (int)Flag::SkipNonOptions) {
+            ConsumeValue();
+        }
     } else {
         current_option = opt;
         pos++;
