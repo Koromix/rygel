@@ -1087,10 +1087,20 @@ Options:
     DEFER { MHD_stop_daemon(daemon); };
 
     LogInfo("Listening on port %1", MHD_get_daemon_info(daemon, MHD_DAEMON_INFO_BIND_PORT)->port);
-#ifdef _WIN32
-    (void)getchar();
-#else
+
+    // Run
     {
+#ifdef _WIN32
+        static HANDLE event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+        Assert(event);
+
+        SetConsoleCtrlHandler([](DWORD) {
+            SetEvent(event);
+            return (BOOL)TRUE;
+        }, TRUE);
+
+        WaitForSingleObject(event, INFINITE);
+#else
         static volatile bool run = true;
 
         signal(SIGINT, [](int) { run = false; });
@@ -1099,8 +1109,8 @@ Options:
         while (run) {
             pause();
         }
-    }
 #endif
+    }
 
     return 0;
 }
