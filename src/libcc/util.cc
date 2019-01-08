@@ -1002,20 +1002,24 @@ static bool ConfigLogTerminalOutput()
 
     if (!init) {
 #ifdef _WIN32
-        static HANDLE stderr_handle;
+        static HANDLE stderr_handle = (HANDLE)_get_osfhandle(_fileno(stderr));
         static DWORD orig_console_mode;
 
-        stderr_handle = (HANDLE)_get_osfhandle(_fileno(stderr));
-        output_is_terminal = GetConsoleMode(stderr_handle, &orig_console_mode);
-        if (output_is_terminal && !(orig_console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+        if (GetConsoleMode(stderr_handle, &orig_console_mode) &&
+                !(orig_console_mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
             // Enable VT100 escape sequences, introduced in Windows 10
             DWORD new_mode = orig_console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
             output_is_terminal = SetConsoleMode(stderr_handle, new_mode);
+
             if (output_is_terminal) {
                 atexit([]() {
                     WriteFile(stderr_handle, "\x1B[0m", (DWORD)strlen("\x1B[0m"), nullptr, nullptr);
                     SetConsoleMode(stderr_handle, orig_console_mode);
                 });
+            } else {
+                // Try ConEmu ANSI support for Windows < 10
+                const char *conemuansi_str = getenv("ConEmuANSI");
+                output_is_terminal = conemuansi_str && TestStr(conemuansi_str, "ON");
             }
         }
 #else
