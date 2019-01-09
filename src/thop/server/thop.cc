@@ -1085,5 +1085,6 @@ Options:
 #endif
     }
 
+    LogInfo("Exit");
     return 0;
 }
