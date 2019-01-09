@@ -114,10 +114,9 @@ static bool InitImGui()
                           (GLvoid *)OFFSET_OF(ImDrawVert, col));
 
     if (!font_texture) {
-        const PackerAsset *font_data =
-            std::find_if(std::begin(packer_assets), std::end(packer_assets),
-                         [&](const PackerAsset &asset) { return TestStr(asset.name, IMGUI_FONT); });
-        if (font_data != std::end(packer_assets)) {
+        const PackerAsset *font_data = FindIf(packer_assets,
+                                              [](const PackerAsset &asset) { return TestStr(asset.name, IMGUI_FONT); });
+        if (font_data) {
             ImFontConfig font_config;
             font_config.FontDataOwnedByAtlas = false;
 

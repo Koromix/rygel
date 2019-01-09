@@ -462,20 +462,18 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
-        const OptionDesc *desc = std::find_if(std::begin(mco_ClassifyFlagOptions),
-                                              std::end(mco_ClassifyFlagOptions),
-                                              [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
-        if (desc == std::end(mco_ClassifyFlagOptions))
+        const OptionDesc *desc = FindIf(mco_ClassifyFlagOptions,
+                                        [&](const OptionDesc &desc) { return TestStr(desc.name, opt); });
+        if (!desc)
             Rcpp::stop("Unknown classifier option '%1'", opt);
         flags |= 1u << (desc - mco_ClassifyFlagOptions);
     }
 
     int dispense_mode = -1;
     if (dispense_mode_str) {
-        const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                              std::end(mco_DispenseModeOptions),
-                                              [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
-        if (desc == std::end(mco_DispenseModeOptions)) {
+        const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
+                                        [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
+        if (!desc) {
             LogError("Unknown dispensation mode '%1'", dispense_mode_str);
             Rcc_StopWithLastError();
         }
