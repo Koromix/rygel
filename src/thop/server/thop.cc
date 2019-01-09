@@ -185,18 +185,6 @@ static bool InitTables(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitConfig(const char *config_filename)
-{
-    BlockAllocator temp_alloc;
-
-    LogInfo("Load configuration");
-
-    if (!LoadConfig(config_filename, &thop_config))
-        return false;
-
-    return true;
-}
-
 static bool InitProfile(const char *profile_directory, const char *authorization_filename)
 {
     BlockAllocator temp_alloc;
@@ -964,7 +952,7 @@ Options:
     }
 
     // Load config file
-    if (config_filename && !InitConfig(config_filename))
+    if (config_filename && !LoadConfig(config_filename, &thop_config))
         return 1;
 
     // Parse arguments
