@@ -16,7 +16,6 @@ let thop = {};
     let prev_module = null;
 
     // Cache
-    let data_idx = 0;
     let mco_settings = {};
 
     function toggleMenu(selector, enable)
@@ -206,10 +205,8 @@ let thop = {};
     function needsRefresh(obj) {
         let args_json = JSON.stringify(Array.from(arguments).slice(1));
 
-        if (data_idx !== obj.prev_data_idx || args_json !== obj.prev_args_json) {
-            obj.prev_data_idx = data_idx;
+        if (args_json !== obj.prev_args_json) {
             obj.prev_args_json = args_json;
-
             return true;
         } else {
             return false;
@@ -281,10 +278,8 @@ let thop = {};
         });
 
         data.busyHandler = function(busy) {
-            if (!busy) {
-                data_idx++;
+            if (!busy)
                 route();
-            }
         }
     }
 
