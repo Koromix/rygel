@@ -49,7 +49,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
     endif()
 elseif(MSVC)
     foreach(lang C CXX)
-        set(CMAKE_${lang}_FLAGS "${CMAKE_C_FLAGS} /wd4200 -D_CRT_SECURE_NO_WARNINGS")
+        set(CMAKE_${lang}_FLAGS "${CMAKE_C_FLAGS} /wd4200 /wd4996 -D_CRT_SECURE_NO_WARNINGS -D_HAS_EXCEPTIONS=0")
     endforeach()
 
     set(STATIC_CRT ON CACHE BOOL "Link CRT statically")

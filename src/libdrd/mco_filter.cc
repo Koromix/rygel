@@ -776,11 +776,11 @@ static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
     })
     ELSE_IF_METHOD("ghs_cents", [](WrenVM *vm) {
         ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, GetResultPricing(object).ghs_cents);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).ghs_cents);
     })
     ELSE_IF_METHOD("price_cents", [](WrenVM *vm) {
         ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, GetResultPricing(object).price_cents);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).price_cents);
     })
     ELSE_IF_METHOD("exb_exh", [](WrenVM *vm) {
         ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
@@ -788,7 +788,7 @@ static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
     })
     ELSE_IF_METHOD("total_cents", [](WrenVM *vm) {
         ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, GetResultPricing(object).total_cents);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).total_cents);
     })
 
     return nullptr;
