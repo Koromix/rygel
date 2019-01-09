@@ -12,4 +12,4 @@ extern const char *const CommonOptions;
 
 extern Config drdc_config;
 
-bool HandleCommonOption(OptionParser &opt_parser);
+bool HandleCommonOption(OptionParser &opt);

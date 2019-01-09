@@ -2750,6 +2750,33 @@ const char *OptionParser::Next()
     return current_option;
 }
 
+bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
+{
+    if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
+        switch (type) {
+            case OptionType::NoValue: {
+                if (current_value) {
+                    LogError("Option '%1' does not support values", current_option);
+                    return false;
+                }
+            } break;
+            case OptionType::Value: {
+                if (!ConsumeValue()) {
+                    LogError("Option '%1' requires a value", current_option);
+                    return false;
+                }
+            } break;
+            case OptionType::OptionalValue: {
+                ConsumeValue();
+            } break;
+        }
+
+        return true;
+    } else {
+        return false;
+    }
+}
+
 const char *OptionParser::ConsumeValue()
 {
     if (current_value)
@@ -2788,16 +2815,4 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
     while ((non_option = ConsumeNonOption())) {
         non_options->Append(non_option);
     }
-}
-
-const char *OptionParser::RequireValue(void (*usage_func)(FILE *fp))
-{
-    if (!ConsumeValue()) {
-        LogError("Option '%1' needs an argument", current_option);
-        if (usage_func) {
-            usage_func(stderr);
-        }
-    }
-
-    return current_value;
 }
