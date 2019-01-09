@@ -542,8 +542,13 @@ Test options:)");
         PrintLn("  Results: %1/sec", perf);
         PrintLn("  Stays: %1/sec", mono_perf);
         PrintLn();
-        PrintLn("  Profile: Classify = %1%%, Pricing = %2%%",
-                FmtDouble(100.0 * classify_time / total_time, 2),
+        PrintLn("  Time: %1 sec/run",
+                FmtDouble((double)((classify_time + pricing_time) / torture) / 1000.0, 3));
+        PrintLn("  Classify: %1 sec/run (%2%%)",
+                FmtDouble((double)(classify_time / torture) / 1000.0, 3),
+                FmtDouble(100.0 * classify_time / total_time, 2));
+        PrintLn("  Pricing: %1 sec/run (%2%%)",
+                FmtDouble((double)(pricing_time / torture) / 1000.0, 3),
                 FmtDouble(100.0 * pricing_time / total_time, 2));
     }
 
