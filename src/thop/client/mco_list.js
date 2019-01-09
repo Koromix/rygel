@@ -262,7 +262,7 @@ let mco_list = {};
         }
 
         // Refresh view
-        if (!data.isBusy()) {
+        if (!thop.isBusy()) {
             refreshHeader(route.spec);
 
             queryAll('.ls_table').addClass('hide');

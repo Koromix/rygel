@@ -316,7 +316,6 @@ let data = {};
         }
     }
 
-    this.isBusy = function() { return !!busy; }
     this.getErrors = function() { return errors; }
     this.clearErrors = function() { errors = []; }
 }).call(data);
