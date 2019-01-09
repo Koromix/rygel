@@ -397,7 +397,7 @@ let mco_list = {};
         let list = list_cache[list_name];
         let concepts_map = catalog.update(list_info.catalog).map;
 
-        if (!list || !thop.needsRefresh(refreshListTable, arguments))
+        if (!list || !thop.needsRefresh(refreshListTable, list.url, arguments))
             return;
 
         let builder;
