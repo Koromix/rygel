@@ -744,13 +744,10 @@ let mco_casemix = {};
             {
                 function rowToGroup(row)
                 {
-                    if (regroup) {
-                        let ghm_root_info = ghm_roots_map[row.ghm_root];
-                        if (ghm_root_info) {
-                            return ['group', [ghm_root_info[regroup], row.ghm_root]];
-                        } else {
-                            return ['group', row.ghm_root];
-                        }
+                    let ghm_root_info = ghm_roots_map[row.ghm_root]
+                    if (ghm_root_info) {
+                        let values = row.unit.map(function(unit) { return [ghm_root_info[regroup], row.ghm_root]; });
+                        return ['group', values];
                     } else {
                         return ['group', row.ghm_root];
                     }
