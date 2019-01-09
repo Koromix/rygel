@@ -163,7 +163,7 @@ let mco_casemix = {};
         }
 
         // Refresh view
-        if (!data.isBusy()) {
+        if (!thop.isBusy()) {
             switch (route.view) {
                 case 'ghm_roots': {
                     refreshGhmRootsTable(route.units, route.ghm_roots, route.regroup,
@@ -194,7 +194,7 @@ let mco_casemix = {};
 
             for (const k in ViewNodes) {
                 if (k === route.view) {
-                    if (!data.isBusy())
+                    if (!thop.isBusy())
                         ViewNodes[k].removeClass('hide');
                 } else {
                     ViewNodes[k].addClass('hide');
@@ -203,9 +203,9 @@ let mco_casemix = {};
         }
 
         // Reveal casemix
-        if (!data.isBusy() && !mix_ready) {
+        if (!thop.isBusy() && !mix_ready) {
             query('#cm').addClass('busy');
-        } else if (!data.isBusy()) {
+        } else if (!thop.isBusy()) {
             query('#cm').removeClass('busy');
         }
         query('#cm').removeClass('hide');

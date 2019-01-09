@@ -385,11 +385,16 @@ let catalog = {};
                     set.map[concept[info.key]] = concept;
             } else {
                 let url = thop.baseUrl(info.path);
+
+                thop.setIgnoreBusy(true);
                 data.get(url, 'json', function(json) {
                     set.concepts = json;
                     for (const concept of json)
                         set.map[concept[info.key]] = concept;
+
+                    thop.forceRefresh();
                 });
+                thop.setIgnoreBusy(false);
             }
         }
 

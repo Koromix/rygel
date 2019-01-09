@@ -80,7 +80,7 @@ let mco_pricing = {};
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
 
         // Refresh view
-        if (!data.isBusy()) {
+        if (!thop.isBusy()) {
             const ghm_root_info = ghm_roots_map[route.ghm_root];
             let pricing_info = pricings_map[route.ghm_root];
             if (pricing_info)

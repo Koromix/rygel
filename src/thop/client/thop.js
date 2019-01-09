@@ -15,6 +15,11 @@ let thop = {};
     let module = null;
     let prev_module = null;
 
+    // Refresh
+    let ignore_busy = false;
+    let data_busy = false;
+    let force_idx = 0;
+
     // Cache
     let mco_settings = {};
 
@@ -113,7 +118,7 @@ let thop = {};
 
         // Show errors if any
         refreshErrors(Array.from(errors));
-        if (!data.isBusy())
+        if (!data_busy)
             data.clearErrors();
 
         // Update URL to reflect real state (module may have set default values, etc.)
@@ -169,7 +174,7 @@ let thop = {};
         }
 
         // Done
-        query('main').toggleClass('busy', data.isBusy());
+        query('main').toggleClass('busy', isBusy());
     }
     this.route = route;
 
@@ -205,7 +210,8 @@ let thop = {};
     function needsRefresh(obj) {
         let args_json = JSON.stringify(Array.from(arguments).slice(1));
 
-        if (args_json !== obj.prev_args_json) {
+        if (force_idx !== obj.prev_force_idx || args_json !== obj.prev_args_json) {
+            obj.prev_force_idx = force_idx;
             obj.prev_args_json = args_json;
             return true;
         } else {
@@ -213,6 +219,15 @@ let thop = {};
         }
     }
     this.needsRefresh = needsRefresh;
+
+    function isBusy() { return data_busy; }
+    this.isBusy = isBusy;
+
+    function setIgnoreBusy(ignore) { ignore_busy = !!ignore; }
+    this.setIgnoreBusy = setIgnoreBusy;
+
+    function forceRefresh() { force_idx++; }
+    this.forceRefresh = forceRefresh;
 
     function updateMcoSettings()
     {
@@ -278,8 +293,12 @@ let thop = {};
         });
 
         data.busyHandler = function(busy) {
-            if (!busy)
+            if (busy) {
+                data_busy |= !ignore_busy;
+            } else {
+                data_busy = false;
                 route();
+            }
         }
     }
 

@@ -32,7 +32,7 @@ let mco_tree = {};
         refreshIndexesLine(indexes, main_index);
 
         // Refresh view
-        if (!data.isBusy()) {
+        if (!thop.isBusy()) {
             refreshTree(nodes);
             deploySelectedNode(hash);
         }
