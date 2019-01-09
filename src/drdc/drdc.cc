@@ -25,26 +25,18 @@ R"(Common options:
 
 Config drdc_config;
 
-bool HandleCommonOption(OptionParser &opt_parser)
+bool HandleCommonOption(OptionParser &opt)
 {
-    if (opt_parser.TestOption("-C", "--config_file")) {
+    if (opt.Test("-C", "--config_file", OptionType::Value)) {
         // Already handled
-        opt_parser.ConsumeValue();
-    } else if (opt_parser.TestOption("--profile_dir")) {
-        drdc_config.profile_directory = opt_parser.RequireValue();
-        if (!drdc_config.profile_directory)
-            return false;
-    } else if (opt_parser.TestOption("--table_dir")) {
-        if (!opt_parser.RequireValue())
-            return false;
-
-        drdc_config.table_directories.Append(opt_parser.current_value);
-    } else if (opt_parser.TestOption("--auth_file")) {
-        drdc_config.authorization_filename = opt_parser.RequireValue();
-        if (!drdc_config.authorization_filename)
-            return false;
+    } else if (opt.Test("--profile_dir", OptionType::Value)) {
+        drdc_config.profile_directory = opt.current_value;
+    } else if (opt.Test("--table_dir", OptionType::Value)) {
+        drdc_config.table_directories.Append(opt.current_value);
+    } else if (opt.Test("--auth_file", OptionType::Value)) {
+        drdc_config.authorization_filename = opt.current_value;
     } else {
-        LogError("Unknown option '%1'", opt_parser.current_option);
+        LogError("Cannot handle option '%1'", opt.current_option);
         return false;
     }
 
@@ -89,17 +81,15 @@ Commands:
 
     const char *config_filename = nullptr;
     {
-        OptionParser opt_parser(arguments, (int)OptionParser::Flag::SkipNonOptions);
+        OptionParser opt(arguments, (int)OptionParser::Flag::SkipNonOptions);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help", OptionType::OptionalValue)) {
                 // Don't try to load anything in this case
                 config_filename = nullptr;
                 break;
-            } else if (opt_parser.TestOption("-C", "--config_file")) {
-                config_filename = opt_parser.RequireValue();
-                if (!config_filename)
-                    return 1;
+            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+                config_filename = opt.current_value;
             }
         }
 

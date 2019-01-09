@@ -247,60 +247,48 @@ Available compression types:)", CompressionTypeNames[0]);
     bool source_maps = false;
     HeapArray<const char *> filenames;
     {
-        OptionParser opt_parser(argc, argv);
+        OptionParser opt(argc, argv);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (opt_parser.TestOption("-d", "--depth")) {
-                if (!opt_parser.RequireValue())
-                    return 1;
-
-                if (!ParseDec<int>(opt_parser.current_value, &depth))
+            } else if (opt.Test("-d", "--depth", OptionType::Value)) {
+                if (!ParseDec<int>(opt.current_value, &depth))
                     return 1;
                 if (depth <= 0) {
                     LogError("Option --depth requires value > 0");
                     return 1;
                 }
-            } else if (opt_parser.TestOption("--span_name")) {
-                span_name = opt_parser.RequireValue();
-                if (!span_name)
-                    return 1;
-            } else if (opt_parser.TestOption("--export", "-e")) {
+            } else if (opt.Test("--span_name", OptionType::Value)) {
+                span_name = opt.current_value;
+            } else if (opt.Test("--export", "-e")) {
                 export_span = true;
-            } else if (opt_parser.TestOption("-O", "--output_file")) {
-                output_path = opt_parser.RequireValue();
-                if (!output_path)
-                    return 1;
-            } else if (opt_parser.TestOption("-c", "--compress")) {
-                if (!opt_parser.RequireValue())
-                    return 1;
-
+            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+                output_path = opt.current_value;
+            } else if (opt.Test("-c", "--compress", OptionType::Value)) {
                 Size i = 0;
                 for (; i < ARRAY_SIZE(CompressionTypeNames); i++) {
-                    if (TestStrI(CompressionTypeNames[i], opt_parser.current_value))
+                    if (TestStrI(CompressionTypeNames[i], opt.current_value))
                         break;
                 }
                 if (i >= ARRAY_SIZE(CompressionTypeNames)) {
-                    LogError("Unknown compression type '%1'", opt_parser.current_value);
+                    LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
                 }
 
                 compression_type = (CompressionType)i;
-            } else if (opt_parser.TestOption("-M", "--merge_file")) {
-                merge_file = opt_parser.RequireValue();
-                if (!merge_file)
-                    return 1;
-            } else if (opt_parser.TestOption("--source_map")) {
+            } else if (opt.Test("-M", "--merge_file", OptionType::Value)) {
+                merge_file = opt.current_value;
+            } else if (opt.Test("--source_map")) {
                 source_maps = true;
             } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+                LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&filenames);
+        opt.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             LogError("No filename specified");
             return 1;

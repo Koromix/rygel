@@ -3234,6 +3234,12 @@ struct OptionDesc {
     const char *help;
 };
 
+enum class OptionType {
+    NoValue,
+    Value,
+    OptionalValue
+};
+
 class OptionParser {
     Span<const char *> args;
     unsigned int flags;
@@ -3258,12 +3264,11 @@ public:
           flags(flags), limit(args.len) {}
 
     const char *Next();
+    bool Test(const char *test1, const char *test2, OptionType type = OptionType::NoValue);
+    bool Test(const char *test1, OptionType type = OptionType::NoValue)
+        { return Test(test1, nullptr, type); }
+
     const char *ConsumeValue();
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
-
-    const char *RequireValue(void (*usage_func)(FILE *fp) = nullptr);
-
-    bool TestOption(const char *test1, const char *test2 = nullptr) const
-        { return TestStr(current_option, test1) || (test2 && TestStr(current_option, test2)); }
 };

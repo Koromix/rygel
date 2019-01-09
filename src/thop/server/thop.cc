@@ -941,16 +941,14 @@ Options:
     // Find config filename
     const char *config_filename = nullptr;
     {
-        OptionParser opt_parser(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
+        OptionParser opt(argc, argv, (int)OptionParser::Flag::SkipNonOptions);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return 0;
-            } else if (opt_parser.TestOption("-C", "--config_file")) {
-                config_filename = opt_parser.RequireValue();
-                if (!config_filename)
-                    return 1;
+            } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
+                config_filename = opt.current_value;
             }
         }
 
@@ -971,42 +969,29 @@ Options:
 
     // Parse arguments
     {
-        OptionParser opt_parser(argc, argv);
+        OptionParser opt(argc, argv);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("-C", "--config_file")) {
+        while (opt.Next()) {
+            if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
-                opt_parser.ConsumeValue();
-            } else if (opt_parser.TestOption("--profile_dir")) {
-                thop_config.profile_directory = opt_parser.RequireValue();
-                if (!thop_config.profile_directory)
+            } else if (opt.Test("--profile_dir", OptionType::Value)) {
+                thop_config.profile_directory = opt.current_value;
+            } else if (opt.Test("--table_dir", OptionType::Value)) {
+                thop_config.table_directories.Append(opt.current_value);
+            } else if (opt.Test("--auth_file", OptionType::Value)) {
+                thop_config.authorization_filename = opt.current_value;
+            } else if (opt.Test("--port", OptionType::Value)) {
+                if (!ParseDec(opt.current_value, &thop_config.port))
                     return 1;
-            } else if (opt_parser.TestOption("--table_dir")) {
-                if (!opt_parser.RequireValue())
-                    return 1;
-
-                thop_config.table_directories.Append(opt_parser.current_value);
-            } else if (opt_parser.TestOption("--auth_file")) {
-                thop_config.authorization_filename = opt_parser.RequireValue();
-                if (!thop_config.authorization_filename)
-                    return 1;
-            } else if (opt_parser.TestOption("--port")) {
-                if (!opt_parser.RequireValue())
-                    return 1;
-
-                if (!ParseDec(opt_parser.current_value, &thop_config.port))
-                    return 1;
-            } else if (opt_parser.TestOption("--base_url")) {
-                thop_config.base_url = opt_parser.RequireValue();
-                if (!thop_config.base_url)
-                    return 1;
+            } else if (opt.Test("--base_url", OptionType::Value)) {
+                thop_config.base_url = opt.current_value;
             } else {
-                LogError("Unknown option '%1'", opt_parser.current_option);
+                LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&thop_config.mco_stay_filenames);
+        opt.ConsumeNonOptions(&thop_config.mco_stay_filenames);
     }
 
     // Configuration errors

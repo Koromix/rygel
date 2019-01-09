@@ -340,16 +340,14 @@ Test options:)");
     int torture = 0;
     HeapArray<const char *> filenames;
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-o", "--option")) {
-                const char *flags_str = opt_parser.RequireValue();
-                if (!flags_str)
-                    return false;
+            } else if (opt.Test("-o", "--option", OptionType::Value)) {
+                const char *flags_str = opt.current_value;
 
                 while (flags_str[0]) {
                     Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
@@ -362,10 +360,8 @@ Test options:)");
                     }
                     classifier_flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
-            } else if (opt_parser.TestOption("-d", "--dispense")) {
-                const char *mode_str = opt_parser.RequireValue();
-                if (!mode_str)
-                    return false;
+            } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
+                const char *mode_str = opt.current_value;
 
                 const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
                                                       std::end(mco_DispenseModeOptions),
@@ -375,20 +371,17 @@ Test options:)");
                     return false;
                 }
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
-            } else if (opt_parser.TestOption("--coeff")) {
+            } else if (opt.Test("--coeff")) {
                 apply_coefficient = true;
-            } else if (opt_parser.TestOption("-f", "--filter")) {
-                filter = opt_parser.RequireValue();
-                if (!filter)
-                    return false;
-            } else if (opt_parser.TestOption("-F", "--filter_file")) {
-                filter_path = opt_parser.RequireValue();
-                if (!filter_path)
-                    return false;
-            } else if (opt_parser.TestOption("-v", "--verbose")) {
+            } else if (opt.Test("-f", "--filter", OptionType::Value)) {
+                filter = opt.current_value;
+            } else if (opt.Test("-F", "--filter_file", OptionType::Value)) {
+                filter_path = opt.current_value;
+            } else if (opt.Test("-v", "--verbose")) {
                 verbosity++;
-            } else if (opt_parser.TestOption("--test")) {
-                const char *flags_str = opt_parser.ConsumeValue();
+            } else if (opt.Test("--test", OptionType::OptionalValue)) {
+                const char *flags_str = opt.current_value;
+
                 if (flags_str) {
                     while (flags_str[0]) {
                         Span<const char> flag = TrimStr(SplitStr(flags_str, ',', &flags_str), " ");
@@ -404,17 +397,15 @@ Test options:)");
                 } else {
                     test_flags = UINT_MAX;
                 }
-            } else if (opt_parser.TestOption("--torture")) {
-                if (!opt_parser.RequireValue())
+            } else if (opt.Test("--torture", OptionType::Value)) {
+                if (!ParseDec(opt.current_value, &torture))
                     return false;
-                if (!ParseDec(opt_parser.current_value, &torture))
-                    return false;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&filenames);
+        opt.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             LogError("No filename provided");
             return false;
@@ -569,20 +560,20 @@ Dump options:
     bool dump = false;
     HeapArray<const char *> filenames;
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-d", "--dump")) {
+            } else if (opt.Test("-d", "--dump")) {
                 dump = true;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&filenames);
+        opt.ConsumeNonOptions(&filenames);
     }
 
     mco_TableSet table_set;
@@ -612,24 +603,22 @@ List options:
     Date index_date = {};
     HeapArray<const char *> spec_strings;
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-d", "--date")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-                index_date = Date::FromString(opt_parser.current_value);
+            } else if (opt.Test("-d", "--date", OptionType::Value)) {
+                index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&spec_strings);
+        opt.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
             LogError("No specifier string provided");
             return false;
@@ -702,20 +691,17 @@ Map options:
 
     Date index_date = {};
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-d", "--date")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                index_date = Date::FromString(opt_parser.current_value);
+            } else if (opt.Test("-d", "--date", OptionType::Value)) {
+                index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
@@ -769,23 +755,20 @@ Pack options:
     const char *dest_filename = nullptr;
     HeapArray<const char *> filenames;
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-O", "--output_file")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-
-                dest_filename = opt_parser.current_value;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+                dest_filename = opt.current_value;
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&filenames);
+        opt.ConsumeNonOptions(&filenames);
         if (!dest_filename) {
             LogError("A destination file must be provided (--output)");
             return false;
@@ -825,24 +808,22 @@ bool RunMcoShow(Span<const char *> arguments)
     Date index_date = {};
     HeapArray<const char *> names;
     {
-        OptionParser opt_parser(arguments);
+        OptionParser opt(arguments);
 
-        while (opt_parser.Next()) {
-            if (opt_parser.TestOption("--help")) {
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return true;
-            } else if (opt_parser.TestOption("-d", "--date")) {
-                if (!opt_parser.RequireValue())
-                    return false;
-                index_date = Date::FromString(opt_parser.current_value);
+            } else if (opt.Test("-d", "--date", OptionType::Value)) {
+                index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
                     return false;
-            } else if (!HandleCommonOption(opt_parser)) {
+            } else if (!HandleCommonOption(opt)) {
                 return false;
             }
         }
 
-        opt_parser.ConsumeNonOptions(&names);
+        opt.ConsumeNonOptions(&names);
         if (!names.len) {
             LogError("No element name provided");
             return false;
