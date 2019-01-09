@@ -42,6 +42,7 @@ let mco_casemix = {};
         route.regroup = route.regroup || 'none';
         route.mode = route.mode || 'none';
         route.algorithm = route.algorithm || null;
+        route.filter = route.filter || null;
         route.units = route.units || [];
         route.ghm_roots = route.ghm_roots || [];
         route.refresh = route.refresh || false;
@@ -96,9 +97,8 @@ let mco_casemix = {};
         if (!route.algorithm)
             route.algorithm = settings.default_algorithm;
         let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-        updateCasemixParams(route.period[0], route.period[1], route.algorithm,
-                            prev_period[0], prev_period[1], route.apply_coefficient,
-                            route.refresh);
+        updateCasemixParams(route.period[0], route.period[1], route.filter, route.algorithm,
+                            prev_period[0], prev_period[1], route.apply_coefficient, route.refresh);
         switch (route.view) {
             case 'ghm_roots':
             case 'units': {
@@ -137,13 +137,14 @@ let mco_casemix = {};
             errors.add('Algorithme inconnu');
 
         // Refresh settings
-        queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient')
+        queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient, #opt_filter')
             .removeClass('hide');
         query('#opt_mode').toggleClass('hide', !['units', 'ghm_roots', 'durations'].includes(route.view));
         query('#opt_ghm_roots').toggleClass('hide', !['units', 'ghm_roots'].includes(route.view));
         query('#opt_ghm_root').toggleClass('hide', !['durations', 'results'].includes(route.view));
         refreshPeriodsPickers(route.period, route.prev_period,
                               route.view !== 'results' ? route.mode : 'none');
+        query('#opt_filter > textarea').value = route.filter;
         query('#opt_mode > select').value = route.mode;
         refreshAlgorithmsMenu(route.algorithm);
         query('#opt_apply_coefficient > input').checked = route.apply_coefficient;
@@ -220,6 +221,7 @@ let mco_casemix = {};
             'regroup',
             'mode',
             'algorithm',
+            'filter',
             'ghm_root',
             'apply_coefficient',
             'refresh'
@@ -294,10 +296,12 @@ let mco_casemix = {};
         mix_ready = false;
     }
 
-    function updateCasemixParams(start, end, mode, diff_start, diff_end, apply_coefficient, refresh)
+    function updateCasemixParams(start, end, filter, mode, diff_start, diff_end,
+                                 apply_coefficient, refresh)
     {
         let params = {
             period: (start && end) ? (start + '..' + end) : null,
+            filter: filter || null,
             dispense_mode: mode,
             diff: (diff_start && diff_end) ? (diff_start + '..' + diff_end) : null,
             apply_coefficient: 0 + apply_coefficient,

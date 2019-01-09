@@ -99,6 +99,13 @@
                     <div></div><br/>
                 </label>
 
+                <label id="opt_filter">
+                    <textarea placeholder="Filtre"
+                              oninput="this.rows = Math.min(this.value.split('\n').length, 5);
+                                       thop.go({filter: this.value}, 500);"
+                              rows="1" style="overflow-x: hidden; width: 85%; margin-bottom: 0.5em;"></textarea><br/>
+                </label>
+
                 <label id="opt_mode">
                     Comparer
                     <select onchange="thop.go({mode: this.value});">
@@ -119,7 +126,7 @@
                 </label>
 
                 <button id="opt_update" onclick="thop.go({refresh: true});"
-                        style="margin-bottom: 1em;">Mettre à jour</button>
+                        style="margin-bottom: 0.5em;">Mettre à jour</button>
 
                 <label id="opt_units">
                     <div style="width: 100%;"></div><br/>
