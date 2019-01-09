@@ -50,10 +50,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             } else if (prop.section == "MCO") {
                 do {
                     if (prop.key == "DispenseMode") {
-                        const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                                              std::end(mco_DispenseModeOptions),
-                                                              [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
-                        if (desc == std::end(mco_DispenseModeOptions)) {
+                        const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
+                                                        [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
+                        if (!desc) {
                             LogError("Unknown dispensation mode '%1'", prop.value);
                             valid = false;
                         }

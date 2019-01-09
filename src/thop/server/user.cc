@@ -125,11 +125,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             if (part == "All") {
                                 user.permissions = enable ? UINT_MAX : 0;
                             } else {
-                                const char *const *name =
-                                    std::find_if(std::begin(UserPermissionNames),
-                                                 std::end(UserPermissionNames),
-                                                 [&](const char *str) { return TestStr(str, part); });
-                                if (name != std::end(UserPermissionNames)) {
+                                const char *const *name = FindIf(UserPermissionNames,
+                                                                 [&](const char *str) { return TestStr(str, part); });
+                                if (name) {
                                     user.permissions =
                                         ApplyMask(user.permissions, 1u << (name - UserPermissionNames), enable);
                                 } else {
@@ -157,11 +155,9 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             if (part == "All") {
                                 user.dispense_modes = enable ? UINT_MAX : 0;
                             } else {
-                                const OptionDesc *desc =
-                                    std::find_if(std::begin(mco_DispenseModeOptions),
-                                                 std::end(mco_DispenseModeOptions),
-                                                 [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
-                                if (desc != std::end(mco_DispenseModeOptions)) {
+                                const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
+                                                                [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
+                                if (desc) {
                                     user.dispense_modes =
                                         ApplyMask(user.dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
                                 } else {

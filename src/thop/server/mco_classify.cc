@@ -49,10 +49,9 @@ static int GetQueryDispenseMode(MHD_Connection *conn, const char *key, Response 
         return CreateErrorPage(422, out_response);
     }
 
-    const OptionDesc *desc = std::find_if(std::begin(mco_DispenseModeOptions),
-                                          std::end(mco_DispenseModeOptions),
-                                          [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
-    if (desc == std::end(mco_DispenseModeOptions)) {
+    const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
+                                    [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
+    if (!desc) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
         return CreateErrorPage(422, out_response);
     }

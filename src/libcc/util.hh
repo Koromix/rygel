@@ -473,6 +473,16 @@ T ApplyMask(T value, U mask, bool enable)
     }
 }
 
+template <typename T, typename Func>
+auto FindIf(const T &arr, Func func) -> decltype(&(*std::begin(arr)))
+{
+    for (auto &it: arr) {
+        if (func(it))
+            return &it;
+    }
+    return nullptr;
+}
+
 enum class ParseFlag {
     Log = 1 << 0,
     Validate = 1 << 1,
