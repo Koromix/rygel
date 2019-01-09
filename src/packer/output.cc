@@ -57,9 +57,9 @@ static FmtArg FormatZigzagVLQ64(int value)
     return arg;
 }
 
-static Size CountNewLines(Span<const char> buf)
+static int CountNewLines(Span<const char> buf)
 {
-    Size lines = 0;
+    int lines = 0;
     for (Size i = 0;; lines++) {
         const char *ptr = (const char *)memchr(buf.ptr + i, '\n', buf.len - i);
         if (!ptr)
@@ -103,7 +103,7 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
 
         Print(out_writer, "%1", FmtArg(";").Repeat(CountNewLines(src.prefix)));
         if (lines) {
-            Print(out_writer, "A%1%2A;", i ? "C" : "A", FormatZigzagVLQ64(-prev_lines));
+            Print(out_writer, "A%1%2A;", i ? "C" : "A", FormatZigzagVLQ64((int)-prev_lines));
             lines--;
 
             for (Size j = 0; j < lines; j++) {
