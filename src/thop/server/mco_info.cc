@@ -10,7 +10,9 @@
 
 int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
 {
-    out_response->flags |= (int)Response::Flag::DisableETag;
+    if (conn->user) {
+        out_response->flags |= (int)Response::Flag::DisableCache;
+    }
     return BuildJson([&](JsonWriter &writer) {
         char buf[32];
 
