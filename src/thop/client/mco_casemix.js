@@ -125,8 +125,6 @@ let mco_casemix = {};
         if (!['none', 'cmd', 'da', 'ga'].includes(route.regroup))
             errors.add('Regroupement incorrect');
         if (['durations', 'results'].includes(route.view)) {
-            if (!route.ghm_root)
-                errors.add('Aucune racine de GHM sélectionnée');
             if (!checkCasemixGhmRoot(route.ghm_root))
                 errors.add('Cette racine n\'existe pas dans cette période');
             if (route.view === 'durations' && mix_mismatched_roots.has(route.ghm_root))
@@ -332,7 +330,7 @@ let mco_casemix = {};
 
     function updateCasemixGhmRoot(ghm_root)
     {
-        if (!mix_durations[ghm_root]) {
+        if (ghm_root && !mix_durations[ghm_root]) {
             let params = Object.assign({ghm_root: ghm_root}, mix_params);
             let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
 
@@ -395,18 +393,20 @@ let mco_casemix = {};
 
     function updateResults(ghm_root)
     {
-        let params = Object.assign({ghm_root: ghm_root}, mix_params);
-        delete params.diff;
-        let url = buildUrl(thop.baseUrl('api/mco_results.json'), params);
+        if (ghm_root) {
+            let params = Object.assign({ghm_root: ghm_root}, mix_params);
+            delete params.diff;
+            let url = buildUrl(thop.baseUrl('api/mco_results.json'), params);
 
-        if (url !== rt_url) {
-            data.get(url, 'json', function(json) {
-                rt_results = json;
-                rt_url = url;
+            if (url !== rt_url) {
+                data.get(url, 'json', function(json) {
+                    rt_results = json;
+                    rt_url = url;
 
-                for (let result of json)
-                    result.ghm_root = result.ghm.substr(0, 5);
-            });
+                    for (let result of json)
+                        result.ghm_root = result.ghm.substr(0, 5);
+                });
+            }
         }
     }
 
