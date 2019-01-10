@@ -393,13 +393,13 @@ let mco_pricing = {};
 
     function refreshPriceChart(pricing_info, main_index, diff_index, max_duration, apply_coeff)
     {
-        if (!thop.needsRefresh(refreshPriceChart, Array.from(arguments)))
-            return;
-
         if (typeof Chart === 'undefined') {
             lazyLoad('chartjs');
             return;
         }
+
+        if (!thop.needsRefresh(refreshPriceChart, Array.from(arguments)))
+            return;
 
         if (!pricing_info || !pricing_info[main_index]) {
             if (chart)
