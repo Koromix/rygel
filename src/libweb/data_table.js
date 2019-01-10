@@ -133,12 +133,12 @@ function DataTable(widget)
         ptr = ptr.parent;
     };
 
-    this.addCell = function(value) {
+    this.addCell = function(type, value) {
         let td;
-        if (arguments.length >= 2) {
-            td = createElementProxy('html', 'td', arguments, 1);
+        if (arguments.length >= 3) {
+            td = createElementProxy('html', type, arguments, 2);
         } else {
-            td = html('td', '' + value);
+            td = html(type, '' + value);
         }
         if (!ptr.cells.length && ptr.depth) {
             let spacer = html('span', {style: 'display: inline-block; width: ' + (ptr.depth * 0.8) + 'em;'});
@@ -148,10 +148,10 @@ function DataTable(widget)
         ptr.values.push(value);
         ptr.cells.push(td);
     };
-    this.addCells = function(values) {
+    this.addCells = function(type, values) {
         for (let value of values) {
             if (value !== null && value !== undefined)
-                self.addCell(value);
+                self.addCell(type, value);
         }
     };
 
@@ -323,7 +323,7 @@ function DataTable(widget)
         return render_count;
     };
 
-    this.clearData = function() {
+    this.clear = function() {
         columns = [];
         columns_map = {};
 
@@ -332,12 +332,15 @@ function DataTable(widget)
         ptr = null;
 
         sort_idx = null;
+
+        prev_offset = null;
+        prev_len = null;
     };
 
     this.getRowCount = function() { return sorted_rows.length; }
     this.getWidget = function() { return widget; }
 
-    self.clearData();
+    self.clear();
 
     widget.object = this;
 }

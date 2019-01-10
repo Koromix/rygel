@@ -601,7 +601,7 @@ let mco_casemix = {};
 
             const rows = filterCasemix(mix_rows, filter_units, filter_ghm_roots);
 
-            summary.clearData();
+            summary.clear();
 
             summary.addColumn('unit', null, 'Unité');
             summary.addColumn('rss', '#,##0', 'RSS');
@@ -641,7 +641,7 @@ let mco_casemix = {};
 
             if (stat0) {
                 summary.beginRow();
-                summary.addCell('Total');
+                summary.addCell('td', 'Total');
                 addSummaryCells(summary, stat0, stat0);
 
                 let prev_groups = [];
@@ -665,7 +665,7 @@ let mco_casemix = {};
                         let group_stat = stats1.find(ent.path[k]);
 
                         summary.beginRow();
-                        summary.addCell(ent.path[k], {title: ent.path[k]}, ent.path[k]);
+                        summary.addCell('td', ent.path[k], {title: ent.path[k]}, ent.path[k]);
                         addSummaryCells(summary, group_stat, prev_totals[prev_totals.length - 1]);
 
                         prev_groups.push(ent.path[k]);
@@ -673,8 +673,8 @@ let mco_casemix = {};
                     }
 
                     summary.beginRow();
-                    summary.addCell(ent.path[ent.path.length - 1],
-                                          {title: ent.path[ent.path.length - 1]}, ent.path[ent.path.length - 1]);
+                    summary.addCell('td', ent.path[ent.path.length - 1],
+                                    {title: ent.path[ent.path.length - 1]}, ent.path[ent.path.length - 1]);
                     addSummaryCells(summary, unit_stat, prev_totals[prev_totals.length - 1]);
                     summary.endRow();
                 }
@@ -719,7 +719,7 @@ let mco_casemix = {};
                 });
             let ghm_roots_map = catalog.update('mco_ghm_roots').map;
 
-            summary.clearData();
+            summary.clear();
 
             summary.addColumn('ghm_root', null, 'Racine');
             summary.addColumn('rss', '#,##0', 'RSS');
@@ -764,7 +764,7 @@ let mco_casemix = {};
 
             if (stat0) {
                 summary.beginRow();
-                summary.addCell('Total');
+                summary.addCell('td', 'Total');
                 addSummaryCells(summary, stat0, stat0);
 
                 let prev_group = null;
@@ -785,7 +785,7 @@ let mco_casemix = {};
                         if (group) {
                             let stat = stats1.find(group);
                             summary.beginRow();
-                            summary.addCell(group + ' - ' + ghm_root_info[regroup + '_desc']);
+                            summary.addCell('td', group + ' - ' + ghm_root_info[regroup + '_desc']);
                             addSummaryCells(summary, stat, total);
                             total = stat;
                         }
@@ -800,7 +800,7 @@ let mco_casemix = {};
                     let title = ghm_root_info ? (ghm_root + ' - ' + ghm_root_info.desc) : null;
 
                     summary.beginRow();
-                    summary.addCell(ghm_root, {title: title}, elements);
+                    summary.addCell('td', ghm_root, {title: title}, elements);
                     addSummaryCells(summary, stat, total);
                     summary.endRow();
                 }
@@ -819,25 +819,25 @@ let mco_casemix = {};
         function addPercentCell(value)
         {
             if (!isNaN(value)) {
-                dtab.addCell(value, percentText(value));
+                dtab.addCell('td', value, percentText(value));
             } else {
-                dtab.addCell(null, null);
+                dtab.addCell('td', null, null);
             }
         }
 
-        dtab.addCell(stat.count, numberText(stat.count));
+        dtab.addCell('td', stat.count, numberText(stat.count));
         if (!mix_params.diff)
             addPercentCell(stat.count / total.count);
-        dtab.addCell(stat.mono_count, numberText(stat.mono_count));
+        dtab.addCell('td', stat.mono_count, numberText(stat.mono_count));
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
-        dtab.addCell(stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false));
+        dtab.addCell('td', stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
-        dtab.addCell(stat.price_cents / 100.0, priceText(stat.price_cents, false));
+        dtab.addCell('td', stat.price_cents / 100.0, priceText(stat.price_cents, false));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
-        dtab.addCell(stat.deaths, numberText(stat.deaths));
+        dtab.addCell('td', stat.deaths, numberText(stat.deaths));
         if (!mix_params.diff)
             addPercentCell(stat.deaths / stat.count);
     }
