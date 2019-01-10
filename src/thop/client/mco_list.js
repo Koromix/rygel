@@ -449,7 +449,7 @@ let mco_list = {};
                             if (prev_cell0)
                                 builder.endRow();
                             builder.beginRow();
-                            builder.addCell(cells[0], {colspan: cells.length - 1},
+                            builder.addCell('td', cells[0], {colspan: cells.length - 1},
                                             addSpecLinks(cells[0]));
                             prev_cell0 = cells[0];
                         }
@@ -458,7 +458,7 @@ let mco_list = {};
                     builder.beginRow();
                     for (let i = first_column; i < cells.length; i++) {
                         const cell = cells[i];
-                        builder.addCell(cell, addSpecLinks(cell));
+                        builder.addCell('td', cell, addSpecLinks(cell));
                     }
                     builder.endRow();
                 }
