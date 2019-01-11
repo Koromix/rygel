@@ -303,7 +303,7 @@ let mco_casemix = {};
             apply_coefficient: 0 + apply_coefficient,
             key: user.getUrlKey()
         };
-        let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
+        let url = buildUrl(thop.baseUrl('api/mco_aggregate.json'), params);
 
         mix_ready = (url === mix_url);
         if ((refresh && !mix_ready) || user.getUrlKey() !== mix_params.key) {
@@ -332,7 +332,7 @@ let mco_casemix = {};
     {
         if (ghm_root && !mix_durations[ghm_root]) {
             let params = Object.assign({ghm_root: ghm_root}, mix_params);
-            let url = buildUrl(thop.baseUrl('api/mco_casemix.json'), params);
+            let url = buildUrl(thop.baseUrl('api/mco_aggregate.json'), params);
 
             data.get(url, 'json', function(json) {
                 let mismatch = false;

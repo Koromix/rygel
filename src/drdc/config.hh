@@ -9,7 +9,8 @@
 struct Config {
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
-    const char *authorization_filename = nullptr;
+
+    const char *mco_authorization_filename = nullptr;
 
     BlockAllocator str_alloc;
 };

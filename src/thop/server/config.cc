@@ -9,18 +9,18 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
                         profile_directory = config.profile_directory,
-                        authorization_filename = config.authorization_filename,
+                        mco_authorization_filename = config.mco_authorization_filename,
+                        mco_dispense_mode = config.mco_dispense_mode,
                         mco_stay_directories_len = config.mco_stay_directories.len,
                         mco_stay_filenames_len = config.mco_stay_filenames.len,
-                        port = config.port,
-                        dispense_mode = config.dispense_mode) {
+                        port = config.port) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
-        config.authorization_filename = authorization_filename;
+        config.mco_authorization_filename = mco_authorization_filename;
+        config.mco_dispense_mode = mco_dispense_mode;
         config.mco_stay_directories.RemoveFrom(mco_stay_directories_len);
         config.mco_stay_filenames.RemoveFrom(mco_stay_filenames_len);
         config.port = port;
-        config.dispense_mode = dispense_mode;
     };
 
     Span<const char> root_dir;
@@ -40,8 +40,6 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         config.table_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else if (prop.key == "ProfileDirectory") {
                         config.profile_directory = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
-                    } else if (prop.key == "AuthorizationFile") {
-                        config.authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -49,14 +47,16 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "MCO") {
                 do {
-                    if (prop.key == "DispenseMode") {
+                    if (prop.key == "AuthorizationFile") {
+                        config.mco_authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
+                    } else if (prop.key == "DispenseMode") {
                         const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                                         [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
                         if (!desc) {
                             LogError("Unknown dispensation mode '%1'", prop.value);
                             valid = false;
                         }
-                        config.dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+                        config.mco_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
                     } else if (prop.key == "StayDirectory") {
                         config.mco_stay_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else if (prop.key == "StayFile") {

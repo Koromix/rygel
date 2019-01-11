@@ -3,7 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "thop.hh"
-#include "mco_classify.hh"
+#include "mco_casemix.hh"
+#include "mco.hh"
 #include "user.hh"
 
 static int GetQueryDateRange(MHD_Connection *conn, const char *key, Response *out_response,
@@ -156,9 +157,7 @@ struct AggregateSet {
 };
 
 class AggregateSetBuilder {
-    mco_DispenseMode dispense_mode;
-    bool apply_coefficient;
-    const HashSet<UnitCode> *allowed_units;
+    const User *user;
     unsigned int flags;
 
     AggregateSet set;
@@ -173,10 +172,22 @@ class AggregateSetBuilder {
     HashMap<UnitCode, Aggregate::Part> agg_parts_map;
 
 public:
-    AggregateSetBuilder(mco_DispenseMode dispense_mode, bool apply_coefficient,
-                        const HashSet<UnitCode> &allowed_units, unsigned int flags)
-        : dispense_mode(dispense_mode), apply_coefficient(apply_coefficient),
-          allowed_units(&allowed_units), flags(flags) {}
+    AggregateSetBuilder(const User *user, unsigned int flags)
+        : user(user), flags(flags) {}
+
+    void Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots = nullptr)
+    {
+        std::sort(set.aggregates.begin(), set.aggregates.end(),
+                  [](const Aggregate &agg1, const Aggregate &agg2) {
+            return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
+                            agg1.key.ghs.number - agg2.key.ghs.number) < 0;
+        });
+
+        SwapMemory(out_set, &set, SIZE(set));
+        if (out_ghm_roots) {
+            std::swap(ghm_roots, *out_ghm_roots);
+        }
+    }
 
     void Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
                  Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
@@ -199,7 +210,7 @@ public:
                 UnitCode unit = mono_result.stays[0].unit;
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-                if (allowed_units->Find(unit)) {
+                if (user->mco_allowed_units.Find(unit)) {
                     std::pair<Aggregate::Part *, bool> ret =
                         agg_parts_map.AppendDefault(mono_result.stays[0].unit);
 
@@ -266,100 +277,6 @@ public:
             }
         }
     }
-
-    void ProcessIndexedResults(Span<const mco_ResultPointers> index, int multiplier = 1)
-    {
-        const int split_size = 8192;
-
-        // Reuse for performance
-        HeapArray<mco_Result> results;
-        HeapArray<mco_Result> mono_results;
-
-        Size i = 0;
-        RunAggregationLoop([&](Span<const mco_Result> *out_results,
-                             Span<const mco_Result> *out_mono_results) {
-            results.RemoveFrom(0);
-            mono_results.RemoveFrom(0);
-
-            for (; i < index.len && results.len < split_size; i++) {
-                const mco_ResultPointers &p = index[i];
-
-                results.Append(*p.result);
-                mono_results.Append(MakeSpan(p.mono_result, p.result->stays.len));
-            }
-            if (!results.len)
-                return false;
-
-            *out_results = results;
-            *out_mono_results = mono_results;
-
-            return true;
-        }, multiplier);
-    }
-
-    void ProcessResults(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                        int multiplier = 1)
-    {
-        const int split_size = 65536;
-
-        Size i = 0, j = 0;
-        RunAggregationLoop([&](Span<const mco_Result> *out_results,
-                             Span<const mco_Result> *out_mono_results) {
-            if (i >= results.len)
-                return false;
-
-            Size len = std::min((Size)split_size, results.len - i);
-            Size mono_len = 0;
-            for (Size k = i, end = i + len; k < end; k++) {
-                mono_len += results[k].stays.len;
-            }
-
-            *out_results = results.Take(i, len);
-            *out_mono_results = mono_results.Take(j, mono_len);
-            i += len;
-            j += mono_len;
-
-            return true;
-        }, multiplier);
-    }
-
-    void Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots = nullptr)
-    {
-        std::sort(set.aggregates.begin(), set.aggregates.end(),
-                  [](const Aggregate &agg1, const Aggregate &agg2) {
-            return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
-                            agg1.key.ghs.number - agg2.key.ghs.number) < 0;
-        });
-
-        SwapMemory(out_set, &set, SIZE(set));
-        if (out_ghm_roots) {
-            std::swap(ghm_roots, *out_ghm_roots);
-        }
-    }
-
-private:
-    template <typename T>
-    void RunAggregationLoop(T func, int multiplier)
-    {
-        // Reuse for performance
-        HeapArray<mco_Pricing> pricings;
-        HeapArray<mco_Pricing> mono_pricings;
-
-        // TODO: Parallelize and optimize aggregation
-        for (;;) {
-            Span<const mco_Result> results;
-            Span<const mco_Result> mono_results;
-            if (!func(&results, &mono_results))
-                break;
-
-            pricings.RemoveFrom(0);
-            mono_pricings.RemoveFrom(0);
-            mco_Price(results, apply_coefficient, &pricings);
-            mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
-
-            Process(results, mono_results, pricings, mono_pricings, multiplier);
-        }
-    }
 };
 
 struct GhmGhsInfo {
@@ -395,9 +312,9 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
 {
     HashMap<GhmGhsInfo::Key, Size> ghm_ghs_map;
 
-    for (const mco_TableIndex &index: thop_table_set.indexes) {
+    for (const mco_TableIndex &index: mco_table_set.indexes) {
         const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-            *thop_index_to_constraints[&index - thop_table_set.indexes.ptr];
+            *mco_index_to_constraints[&index - mco_table_set.indexes.ptr];
 
         if (min_date < index.limit_dates[1] && index.limit_dates[0] < max_date) {
             for (mco_GhmRootCode ghm_root: ghm_roots) {
@@ -444,41 +361,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
     }
 }
 
-static Span<const mco_Result> GetResultsRange(Span<const mco_Result> results,
-                                              Date min_date, Date max_date)
-{
-    const mco_Result *start =
-        std::lower_bound(results.begin(), results.end(), min_date,
-                         [](const mco_Result &result, Date date) {
-        return result.stays[result.stays.len - 1].exit.date < date;
-    });
-    const mco_Result *end =
-        std::upper_bound(start, (const mco_Result *)results.end(), max_date,
-                         [](Date date, const mco_Result &result) {
-        return date < result.stays[result.stays.len - 1].exit.date;
-    });
-
-    return MakeSpan(start, end);
-}
-
-static Span<const mco_ResultPointers> GetIndexedResultsRange(Span<const mco_ResultPointers> index,
-                                                             Date min_date, Date max_date)
-{
-    const mco_ResultPointers *start =
-        std::lower_bound(index.begin(), index.end(), min_date,
-                         [](const mco_ResultPointers &p, Date date) {
-        return p.result->stays[p.result->stays.len - 1].exit.date < date;
-    });
-    const mco_ResultPointers *end =
-        std::upper_bound(start, index.end(), max_date,
-                         [](Date date, const mco_ResultPointers &p) {
-        return date < p.result->stays[p.result->stays.len - 1].exit.date;
-    });
-
-    return MakeSpan(start, end);
-}
-
-int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!conn->user)
         return CreateErrorPage(403, out_response);
@@ -486,73 +369,69 @@ int ProduceMcoCasemix(const ConnectionInfo *conn, const char *, Response *out_re
     // Get query parameters
     Date period[2] = {};
     Date diff[2] = {};
+    const char *filter = nullptr;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficient = false;
+    mco_GhmRootCode ghm_root = {};
     if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
         return code;
     if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff")) {
         if (int code = GetQueryDateRange(conn->conn, "diff", out_response, &diff[0], &diff[1]); code)
             return code;
     }
+    filter = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "filter");
     if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
         return code;
     if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficient); code)
         return code;
+    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
+        if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+            return code;
+    }
 
     // Check errors and permissions
     if (diff[0].value && period[0] < diff[1] && period[1] > diff[0]) {
         LogError("Parameters 'period' and 'diff' must not overlap");
         return CreateErrorPage(422, out_response);
     }
-    if (!conn->user->CheckDispenseMode(dispense_mode)) {
+    if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
 
-    // Aggregate casemix
+    McoResultProvider provider;
     int flags;
-    AggregateSet aggregate_set;
-    HeapArray<mco_GhmRootCode> ghm_roots;
-    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
-        mco_GhmRootCode ghm_root = {};
-        if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
-            return code;
-
+    provider.SetDateRange(period[0], period[1]);
+    provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
+    if (ghm_root.IsValid()) {
+        provider.SetGhmRoot(ghm_root);
         flags = (int)AggregationFlag::KeyOnUnits | (int)AggregationFlag::KeyOnDuration;
-        AggregateSetBuilder aggregate_set_builder(dispense_mode, apply_coefficient,
-                                                  conn->user->allowed_units, flags);
-
-        Span<const mco_ResultPointers> index = thop_results_index_ghm_map.FindValue(ghm_root, {});
-
-        // Run aggregation
-        aggregate_set_builder.ProcessIndexedResults(GetIndexedResultsRange(index, period[0], period[1]), 1);
-        if (diff[0].value) {
-            aggregate_set_builder.ProcessIndexedResults(GetIndexedResultsRange(index, diff[0], diff[1]), -1);
-        }
-
-        aggregate_set_builder.Finish(&aggregate_set, &ghm_roots);
     } else {
         flags = (int)AggregationFlag::KeyOnUnits;
-        AggregateSetBuilder aggregate_set_builder(dispense_mode, apply_coefficient,
-                                                  conn->user->allowed_units, flags);
+    }
 
-        // Main aggregation
-        {
-            Span<const mco_Result> results = GetResultsRange(thop_results, period[0], period[1]);
-            Span<const mco_Result> mono_results = MakeSpan(thop_results_to_mono_results.FindValue(results.begin(), nullptr),
-                                                           thop_results_to_mono_results.FindValue(results.end(), nullptr));
-            aggregate_set_builder.ProcessResults(results, mono_results, 1);
-        }
+    AggregateSet aggregate_set;
+    HeapArray<mco_GhmRootCode> ghm_roots;
+    {
+        AggregateSetBuilder aggregate_set_builder(conn->user, flags);
 
-        // Diff aggregation
-        if (diff[0].value) {
-            Span<const mco_Result> results = GetResultsRange(thop_results, diff[0], diff[1]);
-            Span<const mco_Result> mono_results = MakeSpan(thop_results_to_mono_results.FindValue(results.begin(), nullptr),
-                                                           thop_results_to_mono_results.FindValue(results.end(), nullptr));
-            aggregate_set_builder.ProcessResults(results, mono_results, -1);
-        }
+        // Reuse for performance
+        HeapArray<mco_Pricing> pricings;
+        HeapArray<mco_Pricing> mono_pricings;
 
-        aggregate_set_builder.Finish(&aggregate_set);
+        bool success = provider.Run([&](Span<const mco_Result> results,
+                                        Span<const mco_Result> mono_results) {
+            pricings.RemoveFrom(0);
+            mono_pricings.RemoveFrom(0);
+            mco_Price(results, apply_coefficient, &pricings);
+            mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+
+            aggregate_set_builder.Process(results, mono_results, pricings, mono_pricings);
+        });
+        if (!success)
+            return CreateErrorPage(500, out_response);
+
+        aggregate_set_builder.Finish(&aggregate_set, ghm_root.IsValid() ? &ghm_roots : nullptr);
     }
 
     // GHM and GHS info
@@ -635,40 +514,43 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     // Get query parameters
     Date period[2] = {};
     mco_GhmRootCode ghm_root = {};
+    const char *filter;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
     if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
         return code;
+    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+        return code;
+    filter = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "filter");
     if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
         return code;
     if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficent); code)
         return code;
-    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
-        return code;
 
     // Check permissions
-    if (!conn->user->CheckDispenseMode(dispense_mode)) {
+    if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
 
-    // Gather results
+    // Execute query
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
     {
-        Span<const mco_ResultPointers> results_index = thop_results_index_ghm_map.FindValue(ghm_root, {});
+        McoResultProvider provider;
+        provider.SetDateRange(period[0], period[1]);
+        provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
+        provider.SetGhmRoot(ghm_root);
 
-        for (const mco_ResultPointers &p: results_index) {
-            bool allow = std::any_of(p.result->stays.begin(), p.result->stays.end(),
-                                 [&](const mco_Stay &stay) {
-                return !!conn->user->allowed_units.Find(stay.unit);
-            });
-
-            if (allow) {
-                results.Append(*p.result);
-                mono_results.Append(MakeSpan(p.mono_result, p.result->stays.len));
-            }
-        }
+        // FIXME: Slow and memory intensive for bad reason: we can't error out inside
+        // BuildJson() and it will crash on stay mutation anyway.
+        bool success = provider.Run([&](Span<const mco_Result> results2,
+                                        Span<const mco_Result> mono_results2) {
+            results.Append(results2);
+            mono_results.Append(mono_results2);
+        });
+        if (!success)
+            return CreateErrorPage(500, out_response);
     }
 
     // Compute prices
@@ -689,10 +571,6 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
             Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
             Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
             j += result.stays.len;
-
-            if (result.stays[result.stays.len - 1].exit.date < period[0] ||
-                    result.stays[result.stays.len - 1].exit.date >= period[1])
-                continue;
 
             const mco_GhmRootInfo *ghm_root_info = nullptr;
             const mco_DiagnosisInfo *main_diag_info = nullptr;
@@ -738,7 +616,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
                     writer.Key("duration"); writer.Int(mono_result.duration);
                 }
                 writer.Key("unit"); writer.Int(stay.unit.number);
-                if (conn->user->allowed_units.Find(stay.unit)) {
+                if (conn->user->mco_allowed_units.Find(stay.unit)) {
                     writer.Key("sex"); writer.Int(stay.sex);
                     writer.Key("age"); writer.Int(mono_result.age);
                     writer.Key("birthdate"); writer.String(Fmt(buf, "%1", stay.birthdate).ptr);

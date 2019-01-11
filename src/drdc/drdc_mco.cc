@@ -422,7 +422,7 @@ Test options:)");
 
     LogInfo("Load authorizations");
     mco_AuthorizationSet authorization_set;
-    if (!mco_LoadAuthorizationSet(drdc_config.profile_directory, drdc_config.authorization_filename,
+    if (!mco_LoadAuthorizationSet(drdc_config.profile_directory, drdc_config.mco_authorization_filename,
                                   &authorization_set))
         return false;
 

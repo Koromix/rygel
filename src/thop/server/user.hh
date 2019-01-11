@@ -9,10 +9,12 @@
 struct StructureEntity;
 
 enum class UserPermission {
-    FullResults = 1 << 0
+    FullResults = 1 << 0,
+    MutateFilter = 1 << 1
 };
 static const char *const UserPermissionNames[] = {
-    "FullResults"
+    "FullResults",
+    "MutateFilter"
 };
 
 struct User {
@@ -20,11 +22,12 @@ struct User {
     const char *password_hash;
 
     unsigned int permissions;
-    unsigned int dispense_modes;
-    HashSet<UnitCode> allowed_units;
 
-    bool CheckDispenseMode(mco_DispenseMode dispense_mode) const
-        { return (dispense_modes & (1 << (int)dispense_mode)); }
+    unsigned int mco_dispense_modes;
+    HashSet<UnitCode> mco_allowed_units;
+
+    bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const
+        { return (mco_dispense_modes & (1 << (int)dispense_mode)); }
 
     HASH_TABLE_HANDLER(User, name);
 };
@@ -56,15 +59,14 @@ public:
     bool LoadIni(StreamReader &st);
     bool LoadFiles(Span<const char *const> filenames);
 
-    void Finish(const StructureSet &structure_set, mco_DispenseMode dispense_mode,
-                UserSet *out_set);
+    void Finish(const StructureSet &structure_set, UserSet *out_set);
 
 private:
     bool CheckUnitPermission(const UnitRuleSet &rule_set, const StructureEntity &ent);
 };
 
 bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
-                 mco_DispenseMode dispense_mode, UserSet *out_set);
+                 UserSet *out_set);
 
 const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch = nullptr);
 void DeleteSessionCookies(MHD_Response *response);

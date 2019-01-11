@@ -15,9 +15,9 @@ struct Config {
 
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
-    const char *authorization_filename = nullptr;
 
-    mco_DispenseMode dispense_mode = mco_DispenseMode::J;
+    const char *mco_authorization_filename = nullptr;
+    mco_DispenseMode mco_dispense_mode = mco_DispenseMode::J;
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 

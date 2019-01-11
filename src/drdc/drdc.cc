@@ -19,7 +19,8 @@ R"(Common options:
 
          --profile_dir <dir>      Set profile directory
          --table_dir <dir>        Add table directory
-         --auth_file <file>       Set authorization file
+
+         --mco_auth_file <file>   Set MCO authorization file
                                   (default: <profile_dir>%/mco_authorizations.ini
                                             <profile_dir>%/mco_authorizations.txt))";
 
@@ -33,8 +34,8 @@ bool HandleCommonOption(OptionParser &opt)
         drdc_config.profile_directory = opt.current_value;
     } else if (opt.Test("--table_dir", OptionType::Value)) {
         drdc_config.table_directories.Append(opt.current_value);
-    } else if (opt.Test("--auth_file", OptionType::Value)) {
-        drdc_config.authorization_filename = opt.current_value;
+    } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
+        drdc_config.mco_authorization_filename = opt.current_value;
     } else {
         LogError("Cannot handle option '%1'", opt.current_option);
         return false;
