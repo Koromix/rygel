@@ -429,9 +429,11 @@ Test options:)");
     HeapArray<char> filter_buf;
     if (filter) {
         filter_buf.Append(filter);
+        filter_buf.Append(0);
     } else if (filter_path) {
         if (ReadFile(filter_path, Megabytes(1), &filter_buf) < 0)
             return false;
+        filter_buf.Append(0);
     }
 
     mco_StaySet stay_set;
@@ -463,50 +465,61 @@ Test options:)");
     LogInfo("Classify");
     HeapArray<mco_Result> results;
     HeapArray<mco_Result> mono_results;
+    mco_StaySet filter_stay_set;
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
     mco_Pricing summary = {};
     uint64_t classify_time = 0;
+    uint64_t filter_time = 0;
     uint64_t pricing_time = 0;
     for (int j = 0; j < std::max(torture, 1); j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
+        filter_stay_set.stays.RemoveFrom(0);
+        filter_stay_set.array_alloc.ReleaseAll();
         pricings.RemoveFrom(0);
         mono_pricings.RemoveFrom(0);
         summary = {};
 
-        if (filter_buf.len) {
-            // Benchmarking script is a little wrong, because we mute the stays in place so
-            // subsequent runs (with torture >= 2) will get different data.
-            Span<const mco_Stay> stays = stay_set.stays;
-            stay_set.stays.len = 0;
+        switch_perf_counter(&classify_time);
+        mco_Classify(table_set, authorization_set, stay_set.stays, classifier_flags,
+                     &results, dispense_mode >= 0 ? &mono_results : nullptr);
 
-            switch_perf_counter(&classify_time);
-            if (!mco_Filter(stays, filter_buf,
-                            [&](Span<const mco_Stay> stays, mco_Result out_results[],
-                                mco_Result out_mono_results[]) {
-                return mco_RunClassifier(table_set, authorization_set, stays, classifier_flags,
-                                         out_results, out_mono_results);
-            }, &stay_set.stays, &results, dispense_mode >= 0 ? &mono_results : nullptr))
+        if (filter_buf.len) {
+            mco_FilterRunner filter;
+
+            switch_perf_counter(&filter_time);
+            HeapArray<const mco_Result *> filter_results;
+            HeapArray<const mco_Result *> filter_mono_results;
+            if (!filter.Init(filter_buf.ptr))
                 return false;
-        } else {
-            switch_perf_counter(&classify_time);
-            mco_Classify(table_set, authorization_set, stay_set.stays, classifier_flags,
+            if (!filter.Process(results, mono_results, &filter_results,
+                                dispense_mode >= 0 ? &filter_mono_results : nullptr, &filter_stay_set))
+                return false;
+
+            for (Size k = 0; k < filter_results.len; k++) {
+                results[k] = *filter_results[k];
+            }
+            for (Size k = 0; k < filter_mono_results.len; k++) {
+                mono_results[k] = *filter_mono_results[k];
+            }
+            results.RemoveFrom(filter_results.len);
+            mono_results.RemoveFrom(filter_mono_results.len);
+
+            mco_Classify(table_set, authorization_set, filter_stay_set.stays, classifier_flags,
                          &results, dispense_mode >= 0 ? &mono_results : nullptr);
         }
 
+        switch_perf_counter(&pricing_time);
         if (verbosity || test_flags) {
-            switch_perf_counter(&pricing_time);
             mco_Price(results, apply_coefficient, &pricings);
 
-            switch_perf_counter(&pricing_time);
             if (dispense_mode >= 0) {
                 mco_Dispense(pricings, mono_results, (mco_DispenseMode)dispense_mode,
                              &mono_pricings);
             }
             mco_Summarize(pricings, &summary);
         } else {
-            switch_perf_counter(&pricing_time);
             mco_PriceTotal(results, apply_coefficient, &summary);
         }
     }
@@ -527,7 +540,7 @@ Test options:)");
     PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
 
     if (torture) {
-        uint64_t total_time = classify_time + pricing_time;
+        uint64_t total_time = classify_time + filter_time + pricing_time;
         int64_t perf = (int64_t)summary.results_count * torture * 1000 / total_time;
         int64_t mono_perf = (int64_t)summary.stays_count * torture * 1000 / total_time;
 
@@ -541,6 +554,11 @@ Test options:)");
         PrintLn("  Classify: %1 sec/run (%2%%)",
                 FmtDouble((double)(classify_time / torture) / 1000.0, 3),
                 FmtDouble(100.0 * classify_time / total_time, 2));
+        if (filter_buf.len) {
+            PrintLn("  Filter: %1 sec/run (%2%%)",
+                    FmtDouble((double)(filter_time / torture) / 1000.0, 3),
+                    FmtDouble(100.0 * filter_time / total_time, 2));
+        }
         PrintLn("  Pricing: %1 sec/run (%2%%)",
                 FmtDouble((double)(pricing_time / torture) / 1000.0, 3),
                 FmtDouble(100.0 * pricing_time / total_time, 2));
