@@ -2208,7 +2208,7 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         mco_Result *task_results = out_results->ptr + results_offset;
 
         if (out_mono_results) {
-            mco_Result *task_mono_results = out_mono_results->ptr +
+            mco_Result *task_mono_results = out_mono_results->end() +
                                             (task_stays.ptr - mono_stays.ptr);
             return mco_RunClassifier(table_set, authorization_set, task_stays, flags,
                                      task_results, task_mono_results);
@@ -2251,7 +2251,7 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
 
         async.Sync();
     } else {
-        results_count = run_classifier_task(mono_stays, 0);
+        results_count = run_classifier_task(mono_stays, out_results->len);
     }
 
     out_results->len += results_count;
