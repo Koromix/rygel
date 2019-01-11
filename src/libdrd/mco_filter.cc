@@ -866,7 +866,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
         config.bindForeignMethodFn = BindForeignMethod;
 
         // Limit execution time and space, and disable GC
-        config.maxRunOps = 20000;
+        config.maxRunOps = 200000;
         config.maxHeapSize = Kibibytes(max_results) / 2;
         config.initialHeapSize = 0;
 
