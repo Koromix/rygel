@@ -82,6 +82,9 @@ foreign class McoStay {
     foreign confirmed=(value)
     foreign ucd
     foreign ucd=(value)
+
+    foreign other_diagnoses
+    foreign procedures
 }
 
 foreign class McoResult {
@@ -149,6 +152,8 @@ public:
     ResultObject *result_object;
     WrenHandle *mco_class;
     WrenHandle *mco_build;
+    HeapArray<WrenHandle *> other_diagnoses_vars;
+    HeapArray<WrenHandle *> procedures_vars;
 
     WrenHandle *expression_var = nullptr;
     WrenHandle *expression_call;
@@ -741,6 +746,45 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         }
     })
 
+    ELSE_IF_METHOD("other_diagnoses", [](WrenVM *vm) {
+        mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
+        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = object->list->values[object->idx];
+
+        // TODO: Use ForeignList instead? (same for procedures)
+        if (runner->other_diagnoses_vars[object->idx]) {
+            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[object->idx]);
+        } else {
+            wrenEnsureSlots(vm, 2);
+            wrenSetSlotNewList(vm, 0);
+            for (DiagnosisCode diag: stay.other_diagnoses) {
+                wrenSetSlotString(vm, 1, diag.str);
+                wrenInsertInList(vm, 0, -1, 1);
+            }
+
+            runner->other_diagnoses_vars[object->idx] = wrenGetSlotHandle(vm, 0);
+        }
+
+    })
+    ELSE_IF_METHOD("procedures", [](WrenVM *vm) {
+        mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
+        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = object->list->values[object->idx];
+
+        if (runner->procedures_vars[object->idx]) {
+            wrenSetSlotHandle(vm, 0, runner->procedures_vars[object->idx]);
+        } else {
+            wrenEnsureSlots(vm, 2);
+            wrenSetSlotNewList(vm, 0);
+            for (const mco_ProcedureRealisation &proc: stay.procedures) {
+                wrenSetSlotString(vm, 1, proc.proc.str);
+                wrenInsertInList(vm, 0, -1, 1);
+            }
+
+            runner->procedures_vars[object->idx] = wrenGetSlotHandle(vm, 0);
+        }
+    })
+
     return nullptr;
 }
 
@@ -933,6 +977,11 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 
             stay_vars.Append(stay_var);
         }
+
+        other_diagnoses_vars.RemoveFrom(0);
+        other_diagnoses_vars.AppendDefault(result.stays.len);
+        procedures_vars.RemoveFrom(0);
+        procedures_vars.AppendDefault(result.stays.len);
 
         stays_object->vars = stay_vars.Take(0, result.stays.len);
         stays_object->values = result.stays;
