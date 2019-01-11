@@ -18,6 +18,8 @@ public:
 
     bool Init(const char *filter);
 
+    bool IsValid() const { return wren; }
+
     bool Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
                  HeapArray<const mco_Result *> *out_results,
                  HeapArray<const mco_Result *> *out_mono_results,

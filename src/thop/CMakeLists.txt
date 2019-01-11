@@ -43,8 +43,10 @@ set(THOP_SRC ../libcc/json.hh
 
              server/config.cc
              server/config.hh
-             server/mco_classify.cc
-             server/mco_classify.hh
+             server/mco.cc
+             server/mco.hh
+             server/mco_casemix.cc
+             server/mco_casemix.hh
              server/mco_info.cc
              server/mco_info.hh
              server/structure.cc

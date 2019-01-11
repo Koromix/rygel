@@ -47,28 +47,11 @@ struct Response {
     operator MHD_Response *() const { return response.get(); }
 };
 
-struct mco_ResultPointers {
-    const mco_Result *result;
-    const mco_Result *mono_result;
-};
-
 extern Config thop_config;
+extern bool thop_has_casemix;
 
-extern mco_TableSet thop_table_set;
-extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
-extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
-
-extern mco_AuthorizationSet thop_authorization_set;
 extern StructureSet thop_structure_set;
 extern UserSet thop_user_set;
-extern mco_StaySet thop_stay_set;
-extern Date thop_stay_set_dates[2];
-
-extern HeapArray<mco_Result> thop_results;
-extern HeapArray<mco_Result> thop_mono_results;
-extern HashMap<const void *, const mco_Result *> thop_results_to_mono_results;
-extern HeapArray<mco_ResultPointers> thop_results_index_ghm;
-extern HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type);
 void AddCookieHeader(MHD_Response *response, const char *name, const char *value,

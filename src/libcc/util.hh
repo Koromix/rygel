@@ -1183,6 +1183,12 @@ public:
         Trim();
         return Leak();
     }
+    Span<T> GetAndRemoveAll()
+    {
+        Span<T> ret = *this;
+        len = 0;
+        return ret;
+    }
 };
 
 template <typename T, Size BucketSize = 1024>

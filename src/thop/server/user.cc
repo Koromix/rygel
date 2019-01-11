@@ -94,19 +94,6 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                         LogError("Failed to hash password");
                         valid = false;
                     }
-                } else if (prop.key == "Default") {
-                    if (prop.value == "Allow") {
-                        rule_set.allow_default = true;
-                    } else if (prop.value == "Deny") {
-                        rule_set.allow_default = false;
-                    } else {
-                        LogError("Incorrect value '%1' for Default attribute", prop.value);
-                        valid = false;
-                    }
-                } else if (prop.key == "Allow") {
-                    allow.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
-                } else if (prop.key == "Deny") {
-                    deny.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
                 } else if (prop.key == "Permissions") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
@@ -137,7 +124,20 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             }
                         }
                     }
-                } else if (prop.key == "DispenseModes") {
+                } else if (prop.key == "McoDefault") {
+                    if (prop.value == "Allow") {
+                        rule_set.allow_default = true;
+                    } else if (prop.value == "Deny") {
+                        rule_set.allow_default = false;
+                    } else {
+                        LogError("Incorrect value '%1' for Default attribute", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "McoAllow") {
+                    allow.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
+                } else if (prop.key == "McoDeny") {
+                    deny.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
+                } else if (prop.key == "McoDispenseModes") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
                         if (part.len) {
@@ -153,13 +153,13 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                             }
 
                             if (part == "All") {
-                                user.dispense_modes = enable ? UINT_MAX : 0;
+                                user.mco_dispense_modes = enable ? UINT_MAX : 0;
                             } else {
                                 const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                                                 [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
                                 if (desc) {
-                                    user.dispense_modes =
-                                        ApplyMask(user.dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
+                                    user.mco_dispense_modes =
+                                        ApplyMask(user.mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
                                 } else {
                                     LogError("Unknown dispensation mode '%1'", part);
                                     valid = false;
@@ -224,8 +224,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
     return success;
 }
 
-void UserSetBuilder::Finish(const StructureSet &structure_set, mco_DispenseMode dispense_mode,
-                            UserSet *out_set)
+void UserSetBuilder::Finish(const StructureSet &structure_set, UserSet *out_set)
 {
     DebugAssert(set.users.len == rule_sets.len);
 
@@ -233,12 +232,10 @@ void UserSetBuilder::Finish(const StructureSet &structure_set, mco_DispenseMode 
         User &user = set.users[i];
         const UnitRuleSet &rule_set = rule_sets[i];
 
-        user.dispense_modes |= 1 << (int)dispense_mode;
-
         for (const Structure &structure: structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
                 if (CheckUnitPermission(rule_set, ent))
-                    user.allowed_units.Append(ent.unit);
+                    user.mco_allowed_units.Append(ent.unit);
             }
         }
 
@@ -262,12 +259,12 @@ bool UserSetBuilder::CheckUnitPermission(const UnitRuleSet &rule_set, const Stru
 }
 
 bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structure_set,
-                 mco_DispenseMode dispense_mode, UserSet *out_set)
+                 UserSet *out_set)
 {
     UserSetBuilder user_set_builder;
     if (!user_set_builder.LoadFiles(filenames))
         return false;
-    user_set_builder.Finish(structure_set, dispense_mode, out_set);
+    user_set_builder.Finish(structure_set, out_set);
 
     return true;
 }

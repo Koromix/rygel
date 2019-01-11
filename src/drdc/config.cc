@@ -9,10 +9,10 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
                         profile_directory = config.profile_directory,
-                        authorization_filename = config.authorization_filename) {
+                        mco_authorization_filename = config.mco_authorization_filename) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
-        config.authorization_filename = authorization_filename;
+        config.mco_authorization_filename = mco_authorization_filename;
     };
 
     Span<const char> root_dir;
@@ -32,13 +32,18 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         config.table_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
                     } else if (prop.key == "ProfileDirectory") {
                         config.profile_directory = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
-                    } else if (prop.key == "AuthorizationFile") {
-                        config.authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "MCO") {
+                if (prop.key == "AuthorizationFile") {
+                    config.mco_authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
             } else {
                 LogError("Unknown section '%1'", prop.section);
                 while (ini.NextInSection(&prop));

@@ -4,96 +4,7 @@
 
 #include "thop.hh"
 #include "mco_info.hh"
-#include "config.hh"
-#include "structure.hh"
-#include "user.hh"
-
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
-{
-    if (conn->user) {
-        out_response->flags |= (int)Response::Flag::DisableCache;
-    }
-    return BuildJson([&](JsonWriter &writer) {
-        char buf[32];
-
-        writer.StartObject();
-
-        writer.Key("indexes"); writer.StartArray();
-        for (const mco_TableIndex &index: thop_table_set.indexes) {
-            if (!index.valid)
-                continue;
-
-            char buf[32];
-
-            writer.StartObject();
-            writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
-            writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_tables"); writer.Bool(true);
-            }
-            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_prices"); writer.Bool(true);
-            }
-            writer.EndObject();
-        }
-        writer.EndArray();
-
-        if (conn->user) {
-            writer.Key("start_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[0]).ptr);
-            writer.Key("end_date"); writer.String(Fmt(buf, "%1", thop_stay_set_dates[1]).ptr);
-
-            // Algorithms
-            {
-                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.dispense_mode];
-
-                writer.Key("algorithms"); writer.StartArray();
-                for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
-                    if (conn->user->CheckDispenseMode((mco_DispenseMode)i)) {
-                        const OptionDesc &desc = mco_DispenseModeOptions[i];
-
-                        writer.StartObject();
-                        writer.Key("name"); writer.String(desc.name);
-                        writer.Key("help"); writer.String(desc.help);
-                        writer.EndObject();
-                    }
-                }
-                writer.EndArray();
-
-                writer.Key("default_algorithm"); writer.String(default_desc.name);
-            }
-
-            writer.Key("permissions"); writer.StartArray();
-            for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
-                if (conn->user->permissions & (1 << i)) {
-                    writer.String(UserPermissionNames[i]);
-                }
-            }
-            writer.EndArray();
-
-            writer.Key("structures"); writer.StartArray();
-            for (const Structure &structure: thop_structure_set.structures) {
-                writer.StartObject();
-                writer.Key("name"); writer.String(structure.name);
-                writer.Key("entities"); writer.StartArray();
-                for (const StructureEntity &ent: structure.entities) {
-                    if (conn->user->allowed_units.Find(ent.unit)) {
-                        writer.StartObject();
-                        writer.Key("unit"); writer.Int(ent.unit.number);
-                        writer.Key("path"); writer.String(ent.path);
-                        writer.EndObject();
-                    }
-                }
-                writer.EndArray();
-                writer.EndObject();
-            }
-            writer.EndArray();
-        }
-
-        writer.EndObject();
-
-        return true;
-    }, conn->compression_type, out_response);
-}
+#include "mco.hh"
 
 static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
                                Response *out_response, const mco_TableIndex **out_index,
@@ -127,7 +38,7 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
         }
     }
 
-    const mco_TableIndex *index = thop_table_set.FindIndex(date);
+    const mco_TableIndex *index = mco_table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
         return CreateErrorPage(404, out_response);
@@ -272,7 +183,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
         return code;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
-        *thop_index_to_constraints[index - thop_table_set.indexes.ptr];
+        *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
 
     return BuildJson([&](JsonWriter &writer) {
         char buf[512];

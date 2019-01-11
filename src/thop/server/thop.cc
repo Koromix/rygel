@@ -15,7 +15,8 @@
 #include "thop.hh"
 #include "config.hh"
 #include "structure.hh"
-#include "mco_classify.hh"
+#include "mco.hh"
+#include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
 #include "../../packer/asset.hh"
@@ -71,22 +72,10 @@ struct Route {
 };
 
 Config thop_config;
+bool thop_has_casemix;
 
-mco_TableSet thop_table_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> thop_constraints_set;
-HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint> *> thop_index_to_constraints;
-
-mco_AuthorizationSet thop_authorization_set;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
-mco_StaySet thop_stay_set;
-Date thop_stay_set_dates[2];
-
-HeapArray<mco_Result> thop_results;
-HeapArray<mco_Result> thop_mono_results;
-HashMap<const void *, const mco_Result *> thop_results_to_mono_results;
-HeapArray<mco_ResultPointers> thop_results_index_ghm;
-HashMap<mco_GhmRootCode, Span<const mco_ResultPointers>> thop_results_index_ghm_map;
 
 static CatalogSet catalog_set;
 #ifndef NDEBUG
@@ -173,217 +162,22 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     return true;
 }
 
-static bool InitTables(Span<const char *const> table_directories)
-{
-    LogInfo("Load tables");
-
-    if (!mco_LoadTableSet(table_directories, {}, &thop_table_set) || !thop_table_set.indexes.len)
-        return false;
-    if (!InitCatalogSet(table_directories))
-        return false;
-
-    return true;
-}
-
-static bool InitProfile(const char *profile_directory, const char *authorization_filename)
+static bool InitUsers(const char *profile_directory)
 {
     BlockAllocator temp_alloc;
 
-    LogInfo("Load profile");
+    LogInfo("Load users");
 
-    if (!mco_LoadAuthorizationSet(profile_directory, authorization_filename,
-                                  &thop_authorization_set))
-        return false;
-
-    if (const char *filename = Fmt(&temp_alloc, "%1%/mco_structures.ini", profile_directory).ptr;
-            !LoadStructureSet(filename, &thop_structure_set))
-        return false;
     if (const char *filename = Fmt(&temp_alloc, "%1%/users.ini", profile_directory).ptr;
-            !LoadUserSet(filename, thop_structure_set, thop_config.dispense_mode, &thop_user_set))
+            !LoadUserSet(filename, thop_structure_set, &thop_user_set))
         return false;
+
+    // Everyone can use the default dispense mode
+    for (User &user: thop_user_set.users) {
+        user.mco_dispense_modes |= 1 << (int)thop_config.mco_dispense_mode;
+    }
 
     return true;
-}
-
-static bool InitStays(Span<const char *const> stay_directories,
-                      Span<const char *const> stay_filenames)
-{
-    BlockAllocator temp_alloc;
-
-    LogInfo("Load stays");
-
-    // Aggregate stay files
-    HeapArray<const char *> filenames;
-    {
-        const auto enumerate_directory_files = [&](const char *dir) {
-            EnumStatus status = EnumerateDirectory(dir, nullptr, 1024,
-                                                   [&](const char *filename, const FileInfo &info) {
-                CompressionType compression_type;
-                Span<const char> ext = GetPathExtension(filename, &compression_type);
-
-                if (info.type == FileType::File &&
-                        (ext == ".grp" || ext == ".rss" || ext == ".dmpak")) {
-                    filenames.Append(Fmt(&temp_alloc, "%1%/%2", dir, filename).ptr);
-                }
-
-                return true;
-            });
-
-            return status != EnumStatus::Error;
-        };
-
-        bool success = true;
-        for (const char *dir: stay_directories) {
-            success &= enumerate_directory_files(dir);
-        }
-        filenames.Append(stay_filenames);
-        if (!success)
-            return false;
-    }
-
-    // Load stays
-    mco_StaySetBuilder stay_set_builder;
-    if (!stay_set_builder.LoadFiles(filenames))
-        return false;
-    if (!stay_set_builder.Finish(&thop_stay_set))
-        return false;
-    if (!thop_stay_set.stays.len) {
-        LogError("Cannot continue without any loaded stay");
-        return false;
-    }
-
-    LogInfo("Check and sort stays");
-
-    // Check units
-    {
-        HashSet<UnitCode> known_units;
-        for (const Structure &structure: thop_structure_set.structures) {
-            for (const StructureEntity &ent: structure.entities) {
-                known_units.Append(ent.unit);
-            }
-        }
-
-        bool valid = true;
-        for (const mco_Stay &stay: thop_stay_set.stays) {
-            if (stay.unit.number && !known_units.Find(stay.unit)) {
-                LogError("Structure set is missing unit %1", stay.unit);
-                known_units.Append(stay.unit);
-
-                valid = false;
-            }
-        }
-        if (!valid && !GetDebugFlag("THOP_IGNORE_MISSING_UNITS"))
-            return false;
-    }
-
-    // Sort by date
-    {
-        HeapArray<Span<const mco_Stay>> groups;
-        {
-            Span<const mco_Stay> remain = thop_stay_set.stays;
-            while (remain.len) {
-                Span<const mco_Stay> group = mco_Split(remain, 1, &remain);
-                groups.Append(group);
-            }
-        }
-        std::sort(groups.begin(), groups.end(),
-                  [](const Span<const mco_Stay> &group1, const Span<const mco_Stay> &group2) {
-            return group1[group1.len - 1].exit.date < group2[group2.len - 1].exit.date;
-        });
-
-        for (const Span<const mco_Stay> &group: groups) {
-            Date exit_date = group[group.len - 1].exit.date;
-
-            if (LIKELY(exit_date.IsValid())) {
-                thop_stay_set_dates[0] = exit_date;
-                break;
-            }
-        }
-        for (Size i = groups.len - 1; i >= 0; i--) {
-            const Span<const mco_Stay> &group = groups[i];
-            Date exit_date = group[group.len - 1].exit.date;
-
-            if (LIKELY(exit_date.IsValid())) {
-                thop_stay_set_dates[1] = exit_date + 1;
-                break;
-            }
-        }
-        if (!thop_stay_set_dates[1].value) {
-            LogError("Could not determine date range for stay set");
-            return false;
-        }
-
-        HeapArray<mco_Stay> stays(thop_stay_set.stays.len);
-        for (Span<const mco_Stay> group: groups) {
-            stays.Append(group);
-        }
-
-        std::swap(stays, thop_stay_set.stays);
-    }
-
-    LogInfo("Classify stays");
-
-    // Classify
-    mco_Classify(thop_table_set, thop_authorization_set, thop_stay_set.stays, 0,
-                 &thop_results, &thop_mono_results);
-    thop_results.Trim();
-    thop_mono_results.Trim();
-
-    LogInfo("Index results");
-
-    // Index results
-    for (Size i = 0, j = 0; i < thop_results.len; i++) {
-        const mco_Result &result = thop_results[i];
-
-        mco_ResultPointers p;
-        p.result = &result;
-        p.mono_result = &thop_mono_results[j];
-
-        thop_results_index_ghm.Append(p);
-        thop_results_to_mono_results.Append(&result, &thop_mono_results[j]);
-
-        j += result.stays.len;
-    }
-    thop_results_to_mono_results.Append(thop_results.end(), thop_mono_results.end());
-
-    std::stable_sort(thop_results_index_ghm.begin(), thop_results_index_ghm.end(),
-              [](const mco_ResultPointers &p1, const mco_ResultPointers &p2) {
-        return p1.result->ghm.Root() < p2.result->ghm.Root();
-    });
-    for (const mco_ResultPointers &p: thop_results_index_ghm) {
-        std::pair<Span<const mco_ResultPointers> *, bool> ret =
-            thop_results_index_ghm_map.Append(p.result->ghm.Root(), p);
-        ret.first->len += !ret.second;
-    }
-    thop_results_index_ghm.Trim();
-
-    return true;
-}
-
-static bool ComputeConstraints()
-{
-    LogInfo("Compute constraints");
-
-    Async async;
-
-    thop_constraints_set.Reserve(thop_table_set.indexes.len);
-    for (Size i = 0; i < thop_table_set.indexes.len; i++) {
-        if (thop_table_set.indexes[i].valid) {
-            // Extend or remove this check when constraints go beyond the tree info (diagnoses, etc.)
-            if (thop_table_set.indexes[i].changed_tables & MaskEnum(mco_TableType::GhmDecisionTree) ||
-                    !thop_index_to_constraints[thop_index_to_constraints.len - 1]) {
-                HashTable<mco_GhmCode, mco_GhmConstraint> *constraints = thop_constraints_set.AppendDefault();
-                async.AddTask([=]() {
-                    return mco_ComputeGhmConstraints(thop_table_set.indexes[i], constraints);
-                });
-            }
-            thop_index_to_constraints.Append(&thop_constraints_set[thop_constraints_set.len - 1]);
-        } else {
-            thop_index_to_constraints.Append(nullptr);
-        }
-    }
-
-    return async.Sync();
 }
 
 void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
@@ -550,7 +344,7 @@ static bool PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
                 writer.Write(thop_config.base_url);
                 html = html.Take(var.len, html.len - var.len);
             } else if (var == "{THOP_SHOW_USER}") {
-                writer.Write(thop_stay_set.stays.len ? "true" : "false");
+                writer.Write(thop_has_casemix ? "true" : "false");
                 html = html.Take(var.len, html.len - var.len);
             } else {
                 writer.Write('$');
@@ -609,7 +403,7 @@ static void InitRoutes()
     routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_results", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
     routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/mco_casemix.json", "GET", Route::Matching::Exact, ProduceMcoCasemix});
+    routes.Set({"/api/mco_aggregate.json", "GET", Route::Matching::Exact, ProduceMcoAggregate});
     routes.Set({"/api/mco_results.json", "GET", Route::Matching::Exact, ProduceMcoResults});
     routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
     routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
@@ -901,6 +695,8 @@ static void ReleaseConnectionData(void *, struct MHD_Connection *,
 
 int main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: thop [options] [stay_file ..]
 
@@ -910,7 +706,8 @@ Options:
 
         --profile_dir <dir>      Set profile directory
         --table_dir <dir>        Add table directory
-        --auth_file <file>       Set authorization file
+
+        --mco_auth_file <file>   Set MCO authorization file
                                  (default: <profile_dir>%/mco_authorizations.ini
                                            <profile_dir>%/mco_authorizations.txt)
 
@@ -966,8 +763,8 @@ Options:
                 thop_config.profile_directory = opt.current_value;
             } else if (opt.Test("--table_dir", OptionType::Value)) {
                 thop_config.table_directories.Append(opt.current_value);
-            } else if (opt.Test("--auth_file", OptionType::Value)) {
-                thop_config.authorization_filename = opt.current_value;
+            } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
+                thop_config.mco_authorization_filename = opt.current_value;
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &thop_config.port))
                     return 1;
@@ -1012,17 +809,24 @@ Options:
             return 1;
     }
 
+    // Do we have any site-specific (sensitive) data?
+    thop_has_casemix = thop_config.mco_stay_directories.len || thop_config.mco_stay_filenames.len;
+
     // Init
-    if (!InitTables(thop_config.table_directories))
-        return 1;
-    if (thop_config.mco_stay_directories.len || thop_config.mco_stay_filenames.len) {
-        if (!InitProfile(thop_config.profile_directory, thop_config.authorization_filename))
+    if (thop_has_casemix) {
+        if (!InitMcoProfile(thop_config.profile_directory, thop_config.mco_authorization_filename))
             return 1;
-        if (!InitStays(thop_config.mco_stay_directories, thop_config.mco_stay_filenames))
+        if (!InitUsers(thop_config.profile_directory))
             return 1;
     }
-    if (!ComputeConstraints())
+    if (!InitCatalogSet(thop_config.table_directories))
         return 1;
+    if (!InitMcoTables(thop_config.table_directories))
+        return 1;
+    if (thop_has_casemix) {
+        if (!InitMcoStays(thop_config.mco_stay_directories, thop_config.mco_stay_filenames))
+            return 1;
+    }
 
 #ifndef NDEBUG
     if (!UpdateStaticAssets())
