@@ -1227,7 +1227,7 @@ let mco_casemix = {};
                                       stay.gestational_age ? (stay.gestational_age + ' SA') : null),
                         createInfoRow('Poids du nouveau-né',
                                       stay.newborn_weight ? (stay.newborn_weight + ' grammes') : null),
-                        createInfoRow('Confirmation', stay.confirmed),
+                        createInfoRow('Confirmation', stay.confirm ? 'Oui' : null),
                         createInfoRow('Séances de DIP', stay.dip_count),
                         createInfoRow('Présence UCD', stay.ucd ? 'Oui' : null)
                     );
