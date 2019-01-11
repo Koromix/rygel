@@ -134,12 +134,12 @@ struct ResultObject {
     mco_Pricing pricing;
 };
 
-class ScriptRunner {
+class mco_WrenRunner {
     // FIXME: Make sure all deallocations are disabled
-    BlockAllocator vm_allocator { Kibibytes(256) };
+    BlockAllocator vm_alloc { Kibibytes(256) };
 
 public:
-    WrenVM *vm = nullptr;
+    WrenVM *vm;
 
     WrenHandle *date_class;
     WrenHandle *stay_class;
@@ -153,13 +153,12 @@ public:
     WrenHandle *expression_var = nullptr;
     WrenHandle *expression_call;
 
-    bool Init(const char *expression, Size max_memory);
-    bool Run(Span<const mco_Stay> stays,
-              std::function<Size(Span<const mco_Stay>,
-                                 mco_Result out_results[],
-                                 mco_Result out_mono_results[])> func,
-              mco_Stay out_stays[], mco_Result out_results[],
-              mco_Result out_mono_results[], Size *out_stays_len, Size *out_results_len);
+    bool Init(const char *filter, Size max_results);
+
+    Size Process(Span<const mco_Result> results, const mco_Result mono_results[],
+                 HeapArray<const mco_Result *> *out_results,
+                 HeapArray<const mco_Result *> *out_mono_results,
+                 mco_StaySet *out_stay_set);
 };
 
 static THREAD_LOCAL Allocator *thread_alloc;
@@ -212,7 +211,7 @@ static inline Date GetSlotDateSafe(WrenVM *vm, int slot)
 {
     switch (wrenGetSlotType(vm, slot)) {
         case WREN_TYPE_FOREIGN: {
-            const ScriptRunner &runner = *(ScriptRunner *)wrenGetUserData(vm);
+            const mco_WrenRunner &runner = *(mco_WrenRunner *)wrenGetUserData(vm);
 
             if (UNLIKELY(!wrenForeignIsClass(vm, slot, runner.date_class))) {
                 TriggerError(vm, "Expected Date or null");
@@ -295,7 +294,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 #define ELSE_IF_GET_DATE(Signature, Type, Value) \
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
-            const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm); \
+            const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm); \
             const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
              \
             wrenSetSlotHandle(vm, 0, runner.date_class); \
@@ -368,7 +367,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         wrenSetSlotBool(vm, 0, date1 >= date2);
     })
     ELSE_IF_METHOD("-(_)", [](WrenVM *vm) {
-        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         Date date1 = *(Date *)wrenGetSlotForeign(vm, 0);
         if (UNLIKELY(!date1.IsValid())) {
@@ -401,7 +400,7 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         }
     })
     ELSE_IF_METHOD("+(_)", [](WrenVM *vm) {
-        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
 
         Date date = *(Date *)wrenGetSlotForeign(vm, 0);
         if (UNLIKELY(!date.IsValid())) {
@@ -799,11 +798,11 @@ static WrenForeignMethodFn BindMcoMethod(const char *signature)
     if (false) {}
 
     ELSE_IF_METHOD("result", [](WrenVM *vm) {
-        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
         wrenSetSlotHandle(vm, 0, runner.result_var);
     })
     ELSE_IF_METHOD("stays", [](WrenVM *vm) {
-        const ScriptRunner &runner = *(const ScriptRunner *)wrenGetUserData(vm);
+        const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
         wrenSetSlotHandle(vm, 0, runner.stays_var);
     })
 
@@ -835,11 +834,10 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
     }
 }
 
-bool ScriptRunner::Init(const char *expression, Size max_memory)
+bool mco_WrenRunner::Init(const char *expression, Size max_results)
 {
-    DebugAssert(!vm);
-
-    thread_alloc = &vm_allocator;
+    vm_alloc.ReleaseAll();
+    thread_alloc = &vm_alloc;
 
     // Init Wren VM
     {
@@ -869,7 +867,7 @@ bool ScriptRunner::Init(const char *expression, Size max_memory)
 
         // Limit execution time and space, and disable GC
         config.maxRunOps = 20000;
-        config.maxHeapSize = max_memory;
+        config.maxHeapSize = Kibibytes(max_results) / 2;
         config.initialHeapSize = 0;
 
         // We don't need to free this because all allocations go through the
@@ -911,26 +909,18 @@ bool ScriptRunner::Init(const char *expression, Size max_memory)
     return true;
 }
 
-bool ScriptRunner::Run(Span<const mco_Stay> stays,
-                       std::function<Size(Span<const mco_Stay> stays,
-                                          mco_Result out_results[],
-                                          mco_Result out_mono_results[])> func,
-                       mco_Stay out_stays[], mco_Result out_results[],
-                       mco_Result out_mono_results[], Size *out_stays_len, Size *out_results_len)
+Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mono_results[],
+                               HeapArray<const mco_Result *> *out_results,
+                               HeapArray<const mco_Result *> *out_mono_results,
+                               mco_StaySet *out_stay_set)
 {
-    thread_alloc = &vm_allocator;
+    thread_alloc = &vm_alloc;
 
     // Reuse for performance
     HeapArray<WrenHandle *> stay_vars;
 
-    Size results_len = func(stays, out_results, out_mono_results);
-
-    bool reclassify = false;
-    Size j = 0, k = 0;
-    for (Size i = 0; i < results_len; i++) {
-        const mco_Result &result = out_results[i];
-        out_results[k] = result;
-
+    Size stays_count = 0;
+    for (const mco_Result &result: results) {
         while (stay_vars.len < result.stays.len) {
             wrenEnsureSlots(vm, 1);
             wrenSetSlotHandle(vm, 0, stay_class);
@@ -953,115 +943,93 @@ bool ScriptRunner::Run(Span<const mco_Stay> stays,
         wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
         if (wrenCall(vm, expression_call) != WREN_RESULT_SUCCESS)
-            return false;
+            return -1;
 
         if (wrenGetSlotType(vm, 0) != WREN_TYPE_BOOL || wrenGetSlotBool(vm, 0)) {
-            // NOTE: When the filter changes a stay, a copy is made. In this case we get
-            // two copies, that should be improved.
-            memcpy(out_stays + j, stays_object->values.ptr,
-                   stays_object->values.len * SIZE(mco_Stay));
+            if (stays_object->copies.len) {
+                if (UNLIKELY(!out_stay_set)) {
+                    LogError("Cannot mutate stays");
+                    return -1;
+                }
 
-            reclassify |= (bool)stays_object->copies.len;
-            j += stays_object->values.len;
-            k++;
-        }
-    }
+                out_stay_set->stays.Append(stays_object->copies);
+            } else {
+                out_results->Append(&result);
+                if (out_mono_results) {
+                    for (Size i = 0; i < result.stays.len; i++) {
+                        const mco_Result &mono_result = mono_results[stays_count + i];
+                        DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-    if (reclassify) {
-        DebugAssert(func(MakeSpan(out_stays, j), out_results, out_mono_results) == k);
-    }
-
-    *out_stays_len = j;
-    *out_results_len = k;
-
-    return true;
-}
-
-bool mco_Filter(Span<const mco_Stay> stays, Span<const char> filter,
-                std::function<Size(Span<const mco_Stay> stays,
-                                   mco_Result out_results[],
-                                   mco_Result out_mono_results[])> func,
-                HeapArray<mco_Stay> *out_stays, HeapArray<mco_Result> *out_results,
-                HeapArray<mco_Result> *out_mono_results)
-{
-    DEFER_NC(out_guard, stays_len = out_stays->len, results_len = out_results->len,
-                        mono_results_len = out_mono_results ? out_mono_results->len : 0) {
-        out_stays->RemoveFrom(stays_len);
-        out_results->RemoveFrom(results_len);
-        if (out_mono_results) {
-            out_mono_results->RemoveFrom(mono_results_len);
-        }
-    };
-
-    static const int task_size = 16384;
-
-    // Wren expressions must not start or end with newlines
-    HeapArray<char> filter_buf;
-    filter_buf.Append(TrimStr(filter));
-    filter_buf.Append(0);
-
-    // Pessimistic assumptions (no multi-stay)
-    out_stays->Grow(stays.len);
-    out_results->Grow(stays.len);
-    if (out_mono_results) {
-        out_mono_results->Grow(stays.len);
-    }
-
-    HeapArray<Size> task_lens;
-    HeapArray<Size> stays_lens;
-    HeapArray<Size> results_lens;
-    task_lens.AppendDefault((stays.len - 1) / task_size + 1);
-    stays_lens.AppendDefault((stays.len - 1) / task_size + 1);
-    results_lens.AppendDefault((stays.len - 1) / task_size + 1);
-
-    Async async;
-    {
-        Size i = 0, j = 0;
-        while (stays.len) {
-            Size split_size = std::min(stays.len, (Size)task_size);
-            Span<const mco_Stay> task_stays = mco_Split(stays, split_size, &stays);
-
-            task_lens[i] = task_stays.len;
-
-            async.AddTask([&, task_stays, i, j]() {
-                ScriptRunner runner;
-                if (!runner.Init(filter_buf.ptr, Kibibytes(task_size) / 2))
-                    return false;
-                if (!runner.Run(task_stays, func, out_stays->end() + j, out_results->end() + j,
-                                out_mono_results ? (out_mono_results->end() + j) : nullptr,
-                                &stays_lens[i], &results_lens[i]))
-                    return false;
-
-                return true;
-            });
-
-            i++;
-            j += task_stays.len;
-        }
-    }
-    if (!async.Sync())
-        return false;
-
-    // Move data to get contiguous arrays and fix pointers
-    for (Size i = 0, j = out_stays->len; i < task_lens.len; i++) {
-        memmove(out_stays->end(), out_stays->ptr + j, stays_lens[i] * SIZE(mco_Stay));
-
-        for (Size k = 0, l = 0; k < results_lens[i]; k++) {
-            mco_Result *ptr = out_results->Append(out_results->ptr[j + k]);
-            ptr->stays.ptr = out_stays->end() + l;
-            l += out_results->ptr[j + k].stays.len;
-        }
-        if (out_mono_results) {
-            for (Size k = 0; k < stays_lens[i]; k++) {
-                mco_Result *ptr = out_mono_results->Append(out_mono_results->ptr[j + k]);
-                ptr->stays.ptr = out_stays->end() + k;
+                        out_mono_results->Append(&mono_result);
+                    }
+                }
             }
         }
 
-        j += task_lens[i];
-        out_stays->len += stays_lens[i];
+        stays_count += result.stays.len;
+    }
+
+    return stays_count;
+}
+
+mco_FilterRunner::~mco_FilterRunner()
+{
+    if (wren)
+        delete wren;
+}
+
+bool mco_FilterRunner::Init(const char *filter)
+{
+    // Wren expressions must not start or end with newlines
+    filter_buf.Clear();
+    filter_buf.Append(TrimStr((Span<const char>)filter));
+    filter_buf.Append(0);
+
+    return ResetRunner();
+}
+
+// TODO: Parallelize filtering, see old mco_Filter() API
+bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                         HeapArray<const mco_Result *> *out_results,
+                         HeapArray<const mco_Result *> *out_mono_results,
+                         mco_StaySet *out_stay_set)
+{
+    DEFER_NC(out_guard, results_len = out_results->len,
+                        stays_len = out_stay_set ? out_stay_set->stays.len : 0) {
+        out_results->RemoveFrom(results_len);
+        if (out_stay_set) {
+            out_stay_set->stays.RemoveFrom(stays_len);
+        }
+    };
+
+    while (results.len) {
+        if (!wren_count && !ResetRunner())
+            return false;
+
+        Size process_results = std::min(results.len, wren_count);
+        Size process_stays = wren->Process(results.Take(0, process_results), mono_results.ptr,
+                                           out_results, out_mono_results, out_stay_set);
+        if (process_stays < 0)
+            return false;
+
+        results = results.Take(process_results, results.len - process_results);
+        if (out_mono_results) {
+            mono_results = mono_results.Take(process_stays, mono_results.len - process_stays);
+        }
+
+        wren_count -= process_results;
     }
 
     out_guard.disable();
     return true;
+}
+
+bool mco_FilterRunner::ResetRunner()
+{
+    if (wren)
+        delete wren;
+    wren = new mco_WrenRunner;
+    wren_count = 16384;
+
+    return wren->Init(filter_buf.ptr, wren_count);
 }
