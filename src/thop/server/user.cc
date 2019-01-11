@@ -227,10 +227,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
 void UserSetBuilder::Finish(const StructureSet &structure_set, mco_DispenseMode dispense_mode,
                             UserSet *out_set)
 {
-    std::sort(set.users.begin(), set.users.end(),
-              [](const User &user1, const User &user2) {
-        return CmpStr(user1.name, user2.name) < 0;
-    });
+    DebugAssert(set.users.len == rule_sets.len);
 
     for (Size i = 0; i < set.users.len; i++) {
         User &user = set.users[i];
