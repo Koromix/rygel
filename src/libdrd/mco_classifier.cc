@@ -2054,10 +2054,10 @@ static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)
     return mono_stay;
 }
 
-Size mco_RunClassifier(const mco_TableSet &table_set,
-                       const mco_AuthorizationSet &authorization_set,
-                       Span<const mco_Stay> mono_stays, unsigned int flags,
-                       mco_Result out_results[], Strider<mco_Result> out_mono_results)
+static Size RunClassifier(const mco_TableSet &table_set,
+                          const mco_AuthorizationSet &authorization_set,
+                          Span<const mco_Stay> mono_stays, unsigned int flags,
+                          mco_Result out_results[], Strider<mco_Result> out_mono_results)
 {
     // Reuse for performance
     mco_PreparedSet prepared_set;
@@ -2185,11 +2185,11 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         if (out_mono_results) {
             mco_Result *task_mono_results = out_mono_results->end() +
                                             (task_stays.ptr - mono_stays.ptr);
-            return mco_RunClassifier(table_set, authorization_set, task_stays, flags,
-                                     task_results, task_mono_results);
+            return RunClassifier(table_set, authorization_set, task_stays, flags,
+                                 task_results, task_mono_results);
         } else {
-            return mco_RunClassifier(table_set, authorization_set, task_stays, flags,
-                                     task_results);
+            return RunClassifier(table_set, authorization_set, task_stays, flags,
+                                 task_results, nullptr);
         }
     };
 
