@@ -122,6 +122,7 @@ var result = MCO.result
 
 template <typename T>
 struct ListObject {
+    WrenHandle *var;
     Span<WrenHandle *> vars;
     Span<const T> values;
     HeapArray<T> copies;
@@ -133,6 +134,7 @@ struct StayObject {
 };
 
 struct ResultObject {
+    WrenHandle *var;
     const mco_Result *result;
     mco_Pricing pricing;
 };
@@ -146,9 +148,7 @@ public:
 
     WrenHandle *date_class;
     WrenHandle *stay_class;
-    WrenHandle *stays_var;
     ListObject<mco_Stay> *stays_object;
-    WrenHandle *result_var;
     ResultObject *result_object;
     WrenHandle *mco_class;
     WrenHandle *mco_build;
@@ -764,7 +764,6 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
             runner->other_diagnoses_vars[object->idx] = wrenGetSlotHandle(vm, 0);
         }
-
     })
     ELSE_IF_METHOD("procedures", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
@@ -843,11 +842,11 @@ static WrenForeignMethodFn BindMcoMethod(const char *signature)
 
     ELSE_IF_METHOD("result", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
-        wrenSetSlotHandle(vm, 0, runner.result_var);
+        wrenSetSlotHandle(vm, 0, runner.result_object->var);
     })
     ELSE_IF_METHOD("stays", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
-        wrenSetSlotHandle(vm, 0, runner.stays_var);
+        wrenSetSlotHandle(vm, 0, runner.stays_object->var);
     })
 
     return nullptr;
@@ -930,12 +929,12 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     stay_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ResultObject));
-    result_var = wrenGetSlotHandle(vm, 0);
     result_object = (ResultObject *)wrenGetSlotForeign(vm, 0);
+    result_object->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "ForeignList", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ListObject<char>));
-    stays_var = wrenGetSlotHandle(vm, 0);
     stays_object = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+    stays_object->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "MCO", 0);
     mco_class = wrenGetSlotHandle(vm, 0);
     mco_build = wrenMakeCallHandle(vm, "build(_)");
