@@ -128,8 +128,9 @@ struct ListObject {
     HeapArray<T> copies;
 };
 
-struct StayObject {
-    ListObject<mco_Stay> *list;
+template <typename T>
+struct ListProxy {
+    ListObject<T> *list;
     Size idx;
 };
 
@@ -148,8 +149,8 @@ public:
 
     WrenHandle *date_class;
     WrenHandle *stay_class;
-    ListObject<mco_Stay> *stays_object;
-    ResultObject *result_object;
+    ListObject<mco_Stay> *stays_obj;
+    ResultObject *result_obj;
     WrenHandle *mco_class;
     WrenHandle *mco_build;
     HeapArray<WrenHandle *> other_diagnoses_vars;
@@ -285,14 +286,14 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 #define ELSE_IF_GET_NUM(Signature, Type, Value) \
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
-            const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
+            const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
             wrenSetSlotDouble(vm, 0, (Value)); \
         }; \
     }
 #define ELSE_IF_GET_STRING(Signature, Type, Value) \
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
-            const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
+            const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
             wrenSetSlotString(vm, 0, (Value)); \
         }; \
     }
@@ -300,7 +301,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
             const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm); \
-            const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
+            const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
              \
             wrenSetSlotHandle(vm, 0, runner.date_class); \
             Date *date = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(Date)); \
@@ -310,7 +311,7 @@ static WrenForeignClassMethods BindForeignClass(WrenVM *, const char *, const ch
 #define ELSE_IF_GET_MODE(Signature, Type, Value) \
     else if (TestStr(signature, (Signature))) { \
         return [](WrenVM *vm) { \
-            const Type &object = *(const Type *)wrenGetSlotForeign(vm, 0); \
+            const Type &obj = *(const Type *)wrenGetSlotForeign(vm, 0); \
             if ((Value) >= '0' && (Value) <= '9') { \
                 wrenSetSlotDouble(vm, 0, (Value) - '0'); \
             } else { \
@@ -419,9 +420,9 @@ static WrenForeignMethodFn BindDateMethod(const char *signature)
         Date *ret = (Date *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(date));
         *ret = date + days;
     })
-    ELSE_IF_GET_NUM("year", Date, object.st.year)
-    ELSE_IF_GET_NUM("month", Date, object.st.month)
-    ELSE_IF_GET_NUM("day", Date, object.st.day)
+    ELSE_IF_GET_NUM("year", Date, obj.st.year)
+    ELSE_IF_GET_NUM("month", Date, obj.st.month)
+    ELSE_IF_GET_NUM("day", Date, obj.st.day)
     ELSE_IF_METHOD("toString", [](WrenVM *vm) {
         Date date = *(Date *)wrenGetSlotForeign(vm, 0);
 
@@ -438,23 +439,23 @@ static WrenForeignMethodFn BindForeignListMethod(const char *signature)
     if (false) {}
 
     ELSE_IF_METHOD("count", [](WrenVM *vm) {
-        const ListObject<char> &object = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)object.vars.len);
+        const ListObject<char> &obj = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, (double)obj.vars.len);
     })
     ELSE_IF_METHOD("[_]", [](WrenVM *vm) {
-        const ListObject<char> &object = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
+        const ListObject<char> &obj = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIntegerSafe<Size>(vm, 1);
 
-        if (idx >= 0 && idx < object.vars.len) {
-            wrenSetSlotHandle(vm, 0, object.vars[idx]);
-        } else if (idx < 0 && idx >= -object.vars.len) {
-            wrenSetSlotHandle(vm, 0, object.vars[object.vars.len + idx]);
+        if (idx >= 0 && idx < obj.vars.len) {
+            wrenSetSlotHandle(vm, 0, obj.vars[idx]);
+        } else if (idx < 0 && idx >= -obj.vars.len) {
+            wrenSetSlotHandle(vm, 0, obj.vars[obj.vars.len + idx]);
         } else {
             TriggerError(vm, "Index is out-of-bound");
         }
     })
     ELSE_IF_METHOD("iterate(_)", [](WrenVM *vm) {
-        const ListObject<char> &object = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
+        const ListObject<char> &obj = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
 
         Size idx;
         switch (wrenGetSlotType(vm, 1)) {
@@ -467,18 +468,18 @@ static WrenForeignMethodFn BindForeignListMethod(const char *signature)
             } break;
         }
 
-        if (++idx < object.vars.len) {
+        if (++idx < obj.vars.len) {
             wrenSetSlotDouble(vm, 0, (double)idx);
         } else {
             wrenSetSlotBool(vm, 0, false);
         }
     })
     ELSE_IF_METHOD("iteratorValue(_)", [](WrenVM *vm) {
-        const ListObject<char> &object = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
+        const ListObject<char> &obj = *(const ListObject<char> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIntegerSafe<Size>(vm, 1);
 
-        if (LIKELY(idx >= 0 && idx < object.vars.len)) {
-            wrenSetSlotHandle(vm, 0, object.vars[idx]);
+        if (LIKELY(idx >= 0 && idx < obj.vars.len)) {
+            wrenSetSlotHandle(vm, 0, obj.vars[idx]);
         } else {
             TriggerError(vm, "Index is out-of-bound");
         }
@@ -487,204 +488,204 @@ static WrenForeignMethodFn BindForeignListMethod(const char *signature)
     return nullptr;
 }
 
-static inline mco_Stay *GetMutableStay(StayObject *object)
+static inline mco_Stay *GetMutableStay(ListProxy<mco_Stay> *obj)
 {
-    ListObject<mco_Stay> *list = object->list;
+    ListObject<mco_Stay> *list = obj->list;
 
     if (!list->copies.len) {
         list->copies.Append(list->values);
         list->values = list->copies;
     }
 
-    return &list->copies[object->idx];
+    return &list->copies[obj->idx];
 }
 
 static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 {
     if (false) {}
 
-    ELSE_IF_GET_NUM("admin_id", StayObject, object.list->values[object.idx].admin_id)
-    ELSE_IF_GET_NUM("bill_id", StayObject, object.list->values[object.idx].bill_id)
-    ELSE_IF_GET_NUM("sex", StayObject, object.list->values[object.idx].sex)
+    ELSE_IF_GET_NUM("admin_id", ListProxy<mco_Stay>, obj.list->values[obj.idx].admin_id)
+    ELSE_IF_GET_NUM("bill_id", ListProxy<mco_Stay>, obj.list->values[obj.idx].bill_id)
+    ELSE_IF_GET_NUM("sex", ListProxy<mco_Stay>, obj.list->values[obj.idx].sex)
     ELSE_IF_METHOD("sex=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int8_t new_value = GetSlotIntegerSafe<int8_t>(vm, 1);
 
-        if (list->values[object->idx].sex != new_value) {
-            GetMutableStay(object)->sex = new_value;
+        if (list->values[obj->idx].sex != new_value) {
+            GetMutableStay(obj)->sex = new_value;
         }
     })
-    ELSE_IF_GET_DATE("birthdate", StayObject, object.list->values[object.idx].birthdate)
+    ELSE_IF_GET_DATE("birthdate", ListProxy<mco_Stay>, obj.list->values[obj.idx].birthdate)
     ELSE_IF_METHOD("birthdate=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         Date new_date = GetSlotDateSafe(vm, 1);
 
-        if (list->values[object->idx].birthdate != new_date) {
-            GetMutableStay(object)->birthdate = new_date;
+        if (list->values[obj->idx].birthdate != new_date) {
+            GetMutableStay(obj)->birthdate = new_date;
         }
     })
-    ELSE_IF_GET_DATE("entry_date", StayObject, object.list->values[object.idx].entry.date)
+    ELSE_IF_GET_DATE("entry_date", ListProxy<mco_Stay>, obj.list->values[obj.idx].entry.date)
     ELSE_IF_METHOD("entry_date=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         Date new_date = GetSlotDateSafe(vm, 1);
 
-        if (list->values[object->idx].entry.date != new_date) {
-            GetMutableStay(object)->entry.date = new_date;
+        if (list->values[obj->idx].entry.date != new_date) {
+            GetMutableStay(obj)->entry.date = new_date;
         }
     })
-    ELSE_IF_GET_MODE("entry_mode", StayObject, object.list->values[object.idx].entry.mode)
+    ELSE_IF_GET_MODE("entry_mode", ListProxy<mco_Stay>, obj.list->values[obj.idx].entry.mode)
     ELSE_IF_METHOD("entry_mode=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         char new_value = GetSlotModeSafe(vm, 1);
 
-        if (list->values[object->idx].entry.mode != new_value) {
-            GetMutableStay(object)->entry.mode = new_value;
+        if (list->values[obj->idx].entry.mode != new_value) {
+            GetMutableStay(obj)->entry.mode = new_value;
         }
     })
-    ELSE_IF_GET_MODE("entry_origin", StayObject, object.list->values[object.idx].entry.origin)
+    ELSE_IF_GET_MODE("entry_origin", ListProxy<mco_Stay>, obj.list->values[obj.idx].entry.origin)
     ELSE_IF_METHOD("entry_origin=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         char new_value = GetSlotModeSafe(vm, 1);
 
-        if (list->values[object->idx].entry.origin != new_value) {
-            GetMutableStay(object)->entry.origin = new_value;
+        if (list->values[obj->idx].entry.origin != new_value) {
+            GetMutableStay(obj)->entry.origin = new_value;
         }
     })
-    ELSE_IF_GET_DATE("exit_date", StayObject, object.list->values[object.idx].exit.date)
+    ELSE_IF_GET_DATE("exit_date", ListProxy<mco_Stay>, obj.list->values[obj.idx].exit.date)
     ELSE_IF_METHOD("exit_date=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         Date new_date = GetSlotDateSafe(vm, 1);
 
-        if (list->values[object->idx].exit.date != new_date) {
-            GetMutableStay(object)->exit.date = new_date;
+        if (list->values[obj->idx].exit.date != new_date) {
+            GetMutableStay(obj)->exit.date = new_date;
         }
     })
-    ELSE_IF_GET_MODE("exit_mode", StayObject, object.list->values[object.idx].exit.mode)
+    ELSE_IF_GET_MODE("exit_mode", ListProxy<mco_Stay>, obj.list->values[obj.idx].exit.mode)
     ELSE_IF_METHOD("exit_mode=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         char new_value = GetSlotModeSafe(vm, 1);
 
-        if (list->values[object->idx].exit.mode != new_value) {
-            GetMutableStay(object)->exit.mode = new_value;
+        if (list->values[obj->idx].exit.mode != new_value) {
+            GetMutableStay(obj)->exit.mode = new_value;
         }
     })
-    ELSE_IF_GET_MODE("exit_destination", StayObject, object.list->values[object.idx].exit.destination)
+    ELSE_IF_GET_MODE("exit_destination", ListProxy<mco_Stay>, obj.list->values[obj.idx].exit.destination)
     ELSE_IF_METHOD("exit_destination=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         char new_value = GetSlotModeSafe(vm, 1);
 
-        if (list->values[object->idx].exit.destination != new_value) {
-            GetMutableStay(object)->exit.destination = new_value;
+        if (list->values[obj->idx].exit.destination != new_value) {
+            GetMutableStay(obj)->exit.destination = new_value;
         }
     })
-    ELSE_IF_GET_NUM("unit", StayObject, object.list->values[object.idx].unit.number)
+    ELSE_IF_GET_NUM("unit", ListProxy<mco_Stay>, obj.list->values[obj.idx].unit.number)
     ELSE_IF_METHOD("unit=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].unit.number != new_value) {
-            GetMutableStay(object)->unit = UnitCode(new_value);
+        if (list->values[obj->idx].unit.number != new_value) {
+            GetMutableStay(obj)->unit = UnitCode(new_value);
         }
     })
-    ELSE_IF_GET_NUM("bed_authorization", StayObject, object.list->values[object.idx].bed_authorization)
+    ELSE_IF_GET_NUM("bed_authorization", ListProxy<mco_Stay>, obj.list->values[obj.idx].bed_authorization)
     ELSE_IF_METHOD("bed_authorization=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int8_t new_value = GetSlotIntegerSafe<int8_t>(vm, 1);
 
-        if (list->values[object->idx].bed_authorization != new_value) {
-            GetMutableStay(object)->bed_authorization = new_value;
+        if (list->values[obj->idx].bed_authorization != new_value) {
+            GetMutableStay(obj)->bed_authorization = new_value;
         }
     })
-    ELSE_IF_GET_NUM("session_count", StayObject, object.list->values[object.idx].session_count)
+    ELSE_IF_GET_NUM("session_count", ListProxy<mco_Stay>, obj.list->values[obj.idx].session_count)
     ELSE_IF_METHOD("session_count=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].session_count != new_value) {
-            GetMutableStay(object)->session_count = new_value;
+        if (list->values[obj->idx].session_count != new_value) {
+            GetMutableStay(obj)->session_count = new_value;
         }
     })
-    ELSE_IF_GET_NUM("igs2", StayObject, object.list->values[object.idx].igs2)
+    ELSE_IF_GET_NUM("igs2", ListProxy<mco_Stay>, obj.list->values[obj.idx].igs2)
     ELSE_IF_METHOD("igs2=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].igs2 != new_value) {
-            GetMutableStay(object)->igs2 = new_value;
+        if (list->values[obj->idx].igs2 != new_value) {
+            GetMutableStay(obj)->igs2 = new_value;
         }
     })
-    ELSE_IF_GET_DATE("last_menstrual_period", StayObject, object.list->values[object.idx].last_menstrual_period)
+    ELSE_IF_GET_DATE("last_menstrual_period", ListProxy<mco_Stay>, obj.list->values[obj.idx].last_menstrual_period)
     ELSE_IF_METHOD("last_menstrual_period=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         Date new_date = GetSlotDateSafe(vm, 1);
 
-        if (list->values[object->idx].last_menstrual_period != new_date) {
-            GetMutableStay(object)->last_menstrual_period = new_date;
+        if (list->values[obj->idx].last_menstrual_period != new_date) {
+            GetMutableStay(obj)->last_menstrual_period = new_date;
         }
     })
-    ELSE_IF_GET_NUM("gestational_age", StayObject, object.list->values[object.idx].gestational_age)
+    ELSE_IF_GET_NUM("gestational_age", ListProxy<mco_Stay>, obj.list->values[obj.idx].gestational_age)
     ELSE_IF_METHOD("gestational_age=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].gestational_age != new_value) {
-            GetMutableStay(object)->gestational_age = new_value;
+        if (list->values[obj->idx].gestational_age != new_value) {
+            GetMutableStay(obj)->gestational_age = new_value;
         }
     })
-    ELSE_IF_GET_NUM("newborn_weight", StayObject, object.list->values[object.idx].newborn_weight)
+    ELSE_IF_GET_NUM("newborn_weight", ListProxy<mco_Stay>, obj.list->values[obj.idx].newborn_weight)
     ELSE_IF_METHOD("newborn_weight=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].newborn_weight != new_value) {
-            GetMutableStay(object)->newborn_weight = new_value;
+        if (list->values[obj->idx].newborn_weight != new_value) {
+            GetMutableStay(obj)->newborn_weight = new_value;
         }
     })
-    ELSE_IF_GET_NUM("dip_count", StayObject, object.list->values[object.idx].dip_count)
+    ELSE_IF_GET_NUM("dip_count", ListProxy<mco_Stay>, obj.list->values[obj.idx].dip_count)
     ELSE_IF_METHOD("dip_count=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
-        if (list->values[object->idx].dip_count != new_value) {
-            GetMutableStay(object)->dip_count = new_value;
+        if (list->values[obj->idx].dip_count != new_value) {
+            GetMutableStay(obj)->dip_count = new_value;
         }
     })
-    ELSE_IF_GET_STRING("main_diagnosis", StayObject, object.list->values[object.idx].main_diagnosis.str)
+    ELSE_IF_GET_STRING("main_diagnosis", ListProxy<mco_Stay>, obj.list->values[obj.idx].main_diagnosis.str)
     ELSE_IF_METHOD("main_diagnosis=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         DiagnosisCode new_diag = DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
@@ -693,14 +694,14 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
             return;
         }
 
-        if (list->values[object->idx].main_diagnosis != new_diag) {
-            GetMutableStay(object)->main_diagnosis = new_diag;
+        if (list->values[obj->idx].main_diagnosis != new_diag) {
+            GetMutableStay(obj)->main_diagnosis = new_diag;
         }
     })
-    ELSE_IF_GET_STRING("linked_diagnosis", StayObject, object.list->values[object.idx].linked_diagnosis.str)
+    ELSE_IF_GET_STRING("linked_diagnosis", ListProxy<mco_Stay>, obj.list->values[obj.idx].linked_diagnosis.str)
     ELSE_IF_METHOD("linked_diagnosis=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
         DiagnosisCode new_diag = DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
@@ -709,51 +710,51 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
             return;
         }
 
-        if (list->values[object->idx].linked_diagnosis != new_diag) {
-            GetMutableStay(object)->linked_diagnosis = new_diag;
+        if (list->values[obj->idx].linked_diagnosis != new_diag) {
+            GetMutableStay(obj)->linked_diagnosis = new_diag;
         }
     })
     ELSE_IF_METHOD("confirmed", [](WrenVM *vm) {
-        const StayObject &object = *(StayObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, !!(object.list->values[object.idx].flags & (int)mco_Stay::Flag::Confirmed));
+        const ListProxy<mco_Stay> &obj = *(ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, !!(obj.list->values[obj.idx].flags & (int)mco_Stay::Flag::Confirmed));
     })
     ELSE_IF_METHOD("confirmed=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         bool new_value = GetSlotIntegerSafe<int>(vm, 1);
-        uint32_t new_flags = ApplyMask(list->values[object->idx].flags,
+        uint32_t new_flags = ApplyMask(list->values[obj->idx].flags,
                                        (int)mco_Stay::Flag::Confirmed, new_value);
 
-        if (new_flags != list->values[object->idx].flags) {
-            GetMutableStay(object)->flags = new_flags;
+        if (new_flags != list->values[obj->idx].flags) {
+            GetMutableStay(obj)->flags = new_flags;
         }
     })
     ELSE_IF_METHOD("ucd", [](WrenVM *vm) {
-        const StayObject &object = *(StayObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, !!(object.list->values[object.idx].flags & (int)mco_Stay::Flag::Ucd));
+        const ListProxy<mco_Stay> &obj = *(ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, !!(obj.list->values[obj.idx].flags & (int)mco_Stay::Flag::Ucd));
     })
     ELSE_IF_METHOD("ucd=(_)", [](WrenVM *vm) {
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        ListObject<mco_Stay> *list = object->list;
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        ListObject<mco_Stay> *list = obj->list;
 
         bool new_value = GetSlotIntegerSafe<int>(vm, 1);
-        uint32_t new_flags = ApplyMask(list->values[object->idx].flags,
+        uint32_t new_flags = ApplyMask(list->values[obj->idx].flags,
                                        (int)mco_Stay::Flag::Ucd, new_value);
 
-        if (new_flags != list->values[object->idx].flags) {
-            GetMutableStay(object)->flags = new_flags;
+        if (new_flags != list->values[obj->idx].flags) {
+            GetMutableStay(obj)->flags = new_flags;
         }
     })
 
     ELSE_IF_METHOD("other_diagnoses", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = object->list->values[object->idx];
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = obj->list->values[obj->idx];
 
         // TODO: Use ForeignList instead? (same for procedures)
-        if (runner->other_diagnoses_vars[object->idx]) {
-            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[object->idx]);
+        if (runner->other_diagnoses_vars[obj->idx]) {
+            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[obj->idx]);
         } else {
             wrenEnsureSlots(vm, 2);
             wrenSetSlotNewList(vm, 0);
@@ -762,16 +763,16 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
                 wrenInsertInList(vm, 0, -1, 1);
             }
 
-            runner->other_diagnoses_vars[object->idx] = wrenGetSlotHandle(vm, 0);
+            runner->other_diagnoses_vars[obj->idx] = wrenGetSlotHandle(vm, 0);
         }
     })
     ELSE_IF_METHOD("procedures", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
-        StayObject *object = (StayObject *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = object->list->values[object->idx];
+        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = obj->list->values[obj->idx];
 
-        if (runner->procedures_vars[object->idx]) {
-            wrenSetSlotHandle(vm, 0, runner->procedures_vars[object->idx]);
+        if (runner->procedures_vars[obj->idx]) {
+            wrenSetSlotHandle(vm, 0, runner->procedures_vars[obj->idx]);
         } else {
             wrenEnsureSlots(vm, 2);
             wrenSetSlotNewList(vm, 0);
@@ -780,57 +781,57 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
                 wrenInsertInList(vm, 0, -1, 1);
             }
 
-            runner->procedures_vars[object->idx] = wrenGetSlotHandle(vm, 0);
+            runner->procedures_vars[obj->idx] = wrenGetSlotHandle(vm, 0);
         }
     })
 
     return nullptr;
 }
 
-static inline const mco_Pricing &GetResultPricing(ResultObject *object)
+static inline const mco_Pricing &GetResultPricing(ResultObject *obj)
 {
-    if (!object->pricing.stays_count) {
-        mco_Price(*object->result, false, &object->pricing);
+    if (!obj->pricing.stays_count) {
+        mco_Price(*obj->result, false, &obj->pricing);
     }
 
-    return object->pricing;
+    return obj->pricing;
 }
 
 static WrenForeignMethodFn BindMcoResultMethod(const char *signature)
 {
     if (false) {}
 
-    ELSE_IF_GET_NUM("main_stay_idx", ResultObject, object.result->main_stay_idx)
-    ELSE_IF_GET_NUM("duration", ResultObject, object.result->duration)
-    ELSE_IF_GET_NUM("age", ResultObject, object.result->age)
+    ELSE_IF_GET_NUM("main_stay_idx", ResultObject, obj.result->main_stay_idx)
+    ELSE_IF_GET_NUM("duration", ResultObject, obj.result->duration)
+    ELSE_IF_GET_NUM("age", ResultObject, obj.result->age)
     ELSE_IF_METHOD("ghm", [](WrenVM *vm) {
-        const ResultObject &object = *(const ResultObject *)wrenGetSlotForeign(vm, 0);
+        const ResultObject &obj = *(const ResultObject *)wrenGetSlotForeign(vm, 0);
         char buf[32];
-        wrenSetSlotString(vm, 0, object.result->ghm.ToString(buf).ptr);
+        wrenSetSlotString(vm, 0, obj.result->ghm.ToString(buf).ptr);
     })
-    ELSE_IF_GET_NUM("main_error", ResultObject, object.result->main_error)
-    ELSE_IF_GET_NUM("ghs", ResultObject, object.result->ghs.number)
-    ELSE_IF_GET_NUM("ghs_duration", ResultObject, object.result->ghs_duration)
+    ELSE_IF_GET_NUM("main_error", ResultObject, obj.result->main_error)
+    ELSE_IF_GET_NUM("ghs", ResultObject, obj.result->ghs.number)
+    ELSE_IF_GET_NUM("ghs_duration", ResultObject, obj.result->ghs_duration)
 
     ELSE_IF_METHOD("ghs_coefficient", [](WrenVM *vm) {
-        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, GetResultPricing(object).ghs_coefficient);
+        ResultObject *obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(obj).ghs_coefficient);
     })
     ELSE_IF_METHOD("ghs_cents", [](WrenVM *vm) {
-        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).ghs_cents);
+        ResultObject *obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(obj).ghs_cents);
     })
     ELSE_IF_METHOD("price_cents", [](WrenVM *vm) {
-        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).price_cents);
+        ResultObject *obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(obj).price_cents);
     })
     ELSE_IF_METHOD("exb_exh", [](WrenVM *vm) {
-        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, GetResultPricing(object).exb_exh);
+        ResultObject *obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, GetResultPricing(obj).exb_exh);
     })
     ELSE_IF_METHOD("total_cents", [](WrenVM *vm) {
-        ResultObject *object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(object).total_cents);
+        ResultObject *obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+        wrenSetSlotDouble(vm, 0, (double)GetResultPricing(obj).total_cents);
     })
 
     return nullptr;
@@ -842,11 +843,11 @@ static WrenForeignMethodFn BindMcoMethod(const char *signature)
 
     ELSE_IF_METHOD("result", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
-        wrenSetSlotHandle(vm, 0, runner.result_object->var);
+        wrenSetSlotHandle(vm, 0, runner.result_obj->var);
     })
     ELSE_IF_METHOD("stays", [](WrenVM *vm) {
         const mco_WrenRunner &runner = *(const mco_WrenRunner *)wrenGetUserData(vm);
-        wrenSetSlotHandle(vm, 0, runner.stays_object->var);
+        wrenSetSlotHandle(vm, 0, runner.stays_obj->var);
     })
 
     return nullptr;
@@ -929,12 +930,12 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     stay_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ResultObject));
-    result_object = (ResultObject *)wrenGetSlotForeign(vm, 0);
-    result_object->var = wrenGetSlotHandle(vm, 0);
+    result_obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
+    result_obj->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "ForeignList", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ListObject<char>));
-    stays_object = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-    stays_object->var = wrenGetSlotHandle(vm, 0);
+    stays_obj = (ListObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+    stays_obj->var = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "MCO", 0);
     mco_class = wrenGetSlotHandle(vm, 0);
     mco_build = wrenMakeCallHandle(vm, "build(_)");
@@ -967,12 +968,12 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
         while (stay_vars.len < result.stays.len) {
             wrenEnsureSlots(vm, 1);
             wrenSetSlotHandle(vm, 0, stay_class);
-            wrenSetSlotNewForeign(vm, 0, 0, SIZE(StayObject));
+            wrenSetSlotNewForeign(vm, 0, 0, SIZE(ListProxy<mco_Stay>));
 
             WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
-            StayObject *stay_object = (StayObject *)wrenGetSlotForeign(vm, 0);
-            stay_object->list = stays_object;
-            stay_object->idx = stay_vars.len;
+            ListProxy<mco_Stay> *stay_obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+            stay_obj->list = stays_obj;
+            stay_obj->idx = stay_vars.len;
 
             stay_vars.Append(stay_var);
         }
@@ -982,11 +983,11 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
         procedures_vars.RemoveFrom(0);
         procedures_vars.AppendDefault(result.stays.len);
 
-        stays_object->vars = stay_vars.Take(0, result.stays.len);
-        stays_object->values = result.stays;
-        stays_object->copies.RemoveFrom(0);
-        result_object->result = &result;
-        result_object->pricing = {};
+        stays_obj->vars = stay_vars.Take(0, result.stays.len);
+        stays_obj->values = result.stays;
+        stays_obj->copies.RemoveFrom(0);
+        result_obj->result = &result;
+        result_obj->pricing = {};
 
         wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
@@ -994,13 +995,13 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
             return -1;
 
         if (wrenGetSlotType(vm, 0) != WREN_TYPE_BOOL || wrenGetSlotBool(vm, 0)) {
-            if (stays_object->copies.len) {
+            if (stays_obj->copies.len) {
                 if (UNLIKELY(!out_stay_set)) {
                     LogError("Cannot mutate stays");
                     return -1;
                 }
 
-                out_stay_set->stays.Append(stays_object->copies);
+                out_stay_set->stays.Append(stays_obj->copies);
             } else {
                 out_results->Append(&result);
                 if (out_mono_results) {
