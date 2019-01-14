@@ -1744,10 +1744,9 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
 
     if (LIKELY(ghm.IsValid() && !ghm.IsError())) {
         // Deal with UHCD-only stays
-        bool uhcd = false;
         if (prep.duration > 0 && stay.entry.mode == '8' && stay.exit.mode == '8') {
-            uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
-                               [&](const mco_PreparedStay &mono_prep) {
+            bool uhcd = std::all_of(mono_preps.begin(), mono_preps.end(),
+                                    [&](const mco_PreparedStay &mono_prep) {
                 const mco_Stay &mono_stay = *mono_prep.stay;
                 int8_t auth_type = authorization_set.GetAuthorizationType(mono_stay.unit,
                                                                           mono_stay.exit.date);
