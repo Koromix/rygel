@@ -273,7 +273,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
         }
 
         out_prepared_set->store.diagnoses.RemoveFrom(0);
-        out_prepared_set->store.diagnoses.Grow(2 * diagnoses_count);
+        out_prepared_set->store.diagnoses.Grow(diagnoses_count);
     }
 
     for (mco_PreparedStay &mono_prep: out_prepared_set->mono_preps) {
@@ -330,27 +330,8 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
         }
     }
 
-    // Deduplicate diagnoses
-    if (out_prepared_set->store.diagnoses.len > 1) {
-        Span<const mco_DiagnosisInfo *> diagnoses = MakeSpan(out_prepared_set->store.diagnoses.end(),
-                                                             out_prepared_set->store.diagnoses.len);
-        memcpy(diagnoses.ptr, out_prepared_set->store.diagnoses.ptr,
-               (size_t)out_prepared_set->store.diagnoses.len * SIZE(*out_prepared_set->store.diagnoses.ptr));
-        out_prepared_set->store.diagnoses.len *= 2;
-
-        std::sort(diagnoses.begin(), diagnoses.end());
-
-        Size j = 0;
-        for (Size i = 1; i < diagnoses.len; i++) {
-            if (diagnoses[i] != diagnoses[j]) {
-                diagnoses[++j] = diagnoses[i];
-            }
-        }
-
-        out_prepared_set->prep.diagnoses = diagnoses.Take(0, j + 1);
-    } else {
-        out_prepared_set->prep.diagnoses = out_prepared_set->store.diagnoses;
-    }
+    // We don't deduplicate diagnoses anymore (we used to)
+    out_prepared_set->prep.diagnoses = out_prepared_set->store.diagnoses;
 
     return valid;
 }
@@ -1211,21 +1192,18 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
         } break;
 
         case 18: {
-            Size matches = 0, special_matches = 0;
-            // See test 10 for why that's needed
-            const mco_DiagnosisInfo *prev_diag_info = nullptr;
+            // This test is rare, we can afford a few allocations
+            HashSet<DiagnosisCode> handled_codes;
+            Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
                 if (TestDiagnosis(ctx.stay->sex, *diag_info,
                                   ghm_node.u.test.params[0], ghm_node.u.test.params[1]) &&
-                        diag_info != prev_diag_info) {
-                    matches++;
-                    if (diag_info == ctx.main_diag_info || diag_info == ctx.linked_diag_info) {
-                        special_matches++;
-                    }
-                    if (matches >= 2 && matches > special_matches)
+                        handled_codes.Append(diag_info->diag).second) {
+                    special_matches += (diag_info == ctx.main_diag_info ||
+                                        diag_info == ctx.linked_diag_info);
+                    if (handled_codes.table.count >= 2 && handled_codes.table.count > special_matches)
                         return 1;
                 }
-                prev_diag_info = diag_info;
             }
             return 0;
         } break;
@@ -2133,10 +2111,8 @@ Size mco_RunClassifier(const mco_TableSet &table_set,
 
                     if (!result.ghm.IsError()) {
                         // Some tests in RunGhmTree() need this to avoid counting duplicates,
-                        // it's done for the global prep in AppendValidDiagnoses() and
-                        // AppendValidProcedures(), but not for individual mono_preps for
-                        // performance reason.
-                        std::sort(mono_prep.diagnoses.begin(), mono_prep.diagnoses.end());
+                        // it's done for the global prep in AppendValidProcedures(),
+                        // but not for individual mono_preps for performance reason.
                         std::sort(mono_prep.procedures.begin(), mono_prep.procedures.end());
 
                         int mono_flags = flags | (int)mco_ClassifyFlag::IgnoreConfirmation;
