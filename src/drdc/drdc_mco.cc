@@ -44,39 +44,30 @@ static void PrintSummary(const mco_Pricing &summary)
 
 static void ExportResults(Span<const mco_Result> results, Span<const mco_Result> mono_results,
                           Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
-                          bool verbose)
+                          int verbosity)
 {
-    const auto ExportResult = [&](int depth, const mco_Result &result,
-                                  const mco_Pricing &pricing) {
-        FmtArg padding = FmtArg("").Pad(-2 * depth);
-
-        PrintLn("  %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
-                padding, result.stays[0].bill_id, result.duration,
-                result.stays[result.stays.len - 1].exit.date, result.ghm, result.main_error, result.ghs);
-
-        if (verbose) {
-            PrintLn("    %1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
-                    padding, FmtDouble((double)pricing.price_cents / 100.0, 2),
-                    pricing.exb_exh, FmtDouble(pricing.ghs_coefficient, 4));
-            if (pricing.price_cents != pricing.ghs_cents) {
-                PrintLn("      %1GHS: %2 €",
-                        padding, FmtDouble((double)pricing.ghs_cents / 100.0, 2));
-            }
-            if (pricing.total_cents > pricing.price_cents) {
-                PrintLn("    %1Supplements: %2 €", padding,
-                        FmtDouble((double)(pricing.total_cents - pricing.price_cents) / 100.0, 2));
-                for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
-                    if (pricing.supplement_cents.values[j]) {
-                        PrintLn("      %1%2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
-                                FmtDouble((double)pricing.supplement_cents.values[j] / 100.0, 2),
-                                result.supplement_days.values[j]);
-                    }
+    const auto export_verbose_info = [&](const char *padding,
+                                         const mco_Result &result, const mco_Pricing &pricing) {
+        PrintLn("%1GHS-EXB+EXH: %2 € [%3, coefficient = %4]",
+                padding, FmtDouble((double)pricing.price_cents / 100.0, 2),
+                pricing.exb_exh, FmtDouble(pricing.ghs_coefficient, 4));
+        if (pricing.price_cents != pricing.ghs_cents) {
+            PrintLn("%1  GHS: %2 €",
+                    padding, FmtDouble((double)pricing.ghs_cents / 100.0, 2));
+        }
+        if (pricing.total_cents > pricing.price_cents) {
+            PrintLn("%1Supplements: %2 €", padding,
+                    FmtDouble((double)(pricing.total_cents - pricing.price_cents) / 100.0, 2));
+            for (Size j = 0; j < ARRAY_SIZE(mco_SupplementTypeNames); j++) {
+                if (pricing.supplement_cents.values[j]) {
+                    PrintLn("%1  %2: %3 € [%4]", padding, mco_SupplementTypeNames[j],
+                            FmtDouble((double)pricing.supplement_cents.values[j] / 100.0, 2),
+                            result.supplement_days.values[j]);
                 }
             }
-            PrintLn("    %1Total: %2 €",
-                    padding, FmtDouble((double)pricing.total_cents / 100.0, 2));
-            PrintLn();
         }
+        PrintLn("%1Total: %2 €",
+                padding, FmtDouble((double)pricing.total_cents / 100.0, 2));
     };
 
     Size j = 0;
@@ -84,15 +75,30 @@ static void ExportResults(Span<const mco_Result> results, Span<const mco_Result>
         const mco_Result &result = results[i];
         const mco_Pricing &pricing = pricings[i];
 
-        ExportResult(0, result, pricing);
+        PrintLn("  %1 [%2 -- %3] = GHM %4 [%5] / GHS %6",
+                result.stays[0].bill_id, result.duration,
+                result.stays[result.stays.len - 1].exit.date,
+                result.ghm, result.main_error, result.ghs);
+        if (verbosity) {
+            export_verbose_info("    ", result, pricing);
+        }
 
         if (mono_results.len && result.stays.len > 1) {
-            for (Size k = j; k < j + result.stays.len; k++) {
-                const mco_Result &mono_result = mono_results[k];
-                const mco_Pricing &mono_pricing = mono_pricings[k];
+            if (verbosity) {
+                PrintLn("    Individual results:");
+            }
+            for (Size k = 0; k < result.stays.len; k++) {
+                const mco_Result &mono_result = mono_results[j + k];
+                const mco_Pricing &mono_pricing = mono_pricings[j + k];
                 DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
-                ExportResult(1, mono_result, mono_pricing);
+                PrintLn("    %1%2 [%3 -- %4] = GHM %5 [%6] / GHS %7",
+                        verbosity ? "  " : "", FmtArg(k).Pad0(-2),
+                        mono_result.duration, mono_result.stays[0].exit.date,
+                        mono_result.ghm, mono_result.main_error, mono_result.ghs);
+                if (verbosity >= 2) {
+                    export_verbose_info("        ", mono_result, mono_pricing);
+                }
             }
             j += result.stays.len;
         } else {
@@ -509,7 +515,7 @@ Test options:)");
     LogInfo("Export");
     if (verbosity - !!test_flags >= 1) {
         PrintLn("Results:");
-        ExportResults(results, mono_results, pricings, mono_pricings, verbosity - !!test_flags >= 2);
+        ExportResults(results, mono_results, pricings, mono_pricings, verbosity - !!test_flags - 1);
     }
     PrintLn("Summary:");
     PrintSummary(summary);
