@@ -533,188 +533,183 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
         return CreateErrorPage(403, out_response);
     }
 
-    // Execute query
-    HeapArray<mco_Result> results;
-    HeapArray<mco_Result> mono_results;
-    {
-        McoResultProvider provider;
-        provider.SetDateRange(period[0], period[1]);
-        provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
-        provider.SetGhmRoot(ghm_root);
+    // Prepare query
+    McoResultProvider provider;
+    provider.SetDateRange(period[0], period[1]);
+    provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
+    provider.SetGhmRoot(ghm_root);
 
-        // FIXME: Slow and memory intensive for bad reason: we can't error out inside
-        // BuildJson() and it will crash on stay mutation anyway.
-        bool success = provider.Run([&](Span<const mco_Result> results2,
-                                        Span<const mco_Result> mono_results2) {
-            results.Append(results2);
-            mono_results.Append(mono_results2);
-        });
-        if (!success)
-            return CreateErrorPage(500, out_response);
-    }
-
-    // Compute prices
+    // Reuse for performance
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
-    mco_Price(results, apply_coefficent, &pricings);
-    mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
     // Export data
     JsonPageBuilder json(conn->compression_type);
 
     json.StartArray();
-    for (Size i = 0, j = 0; i < results.len; i++) {
-        char buf[32];
+    bool success = provider.Run([&](Span<const mco_Result> results,
+                                    Span<const mco_Result> mono_results) {
+        // Compute prices
+        pricings.RemoveFrom(0);
+        mono_pricings.RemoveFrom(0);
+        mco_Price(results, apply_coefficent, &pricings);
+        mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
-        const mco_Result &result = results[i];
-        const mco_Pricing &pricing = pricings[i];
-        Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-        Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-        j += result.stays.len;
+        for (Size i = 0, j = 0; i < results.len; i++) {
+            char buf[32];
 
-        const mco_GhmRootInfo *ghm_root_info = nullptr;
-        const mco_DiagnosisInfo *main_diag_info = nullptr;
-        const mco_DiagnosisInfo *linked_diag_info = nullptr;
-        if (LIKELY(result.index)) {
-            ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
-            main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
-            linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
-        }
+            const mco_Result &result = results[i];
+            const mco_Pricing &pricing = pricings[i];
+            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+            j += result.stays.len;
 
-        json.StartObject();
-
-        json.Key("admin_id"); json.Int(result.stays[0].admin_id);
-        json.Key("bill_id"); json.Int(result.stays[0].bill_id);
-        if (LIKELY(result.index)) {
-            json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
-        }
-        if (result.duration >= 0) {
-            json.Key("duration"); json.Int(result.duration);
-        }
-        json.Key("sex"); json.Int(result.stays[0].sex);
-        if (result.age >= 0) {
-            json.Key("age"); json.Int(result.age);
-        }
-        json.Key("main_stay"); json.Int(result.main_stay_idx);
-        json.Key("ghm"); json.String(result.ghm.ToString(buf).ptr);
-        json.Key("main_error"); json.Int(result.main_error);
-        json.Key("ghs"); json.Int(result.ghs.number);
-        json.Key("ghs_duration"); json.Int(result.ghs_duration);
-        json.Key("exb_exh"); json.Int(pricing.exb_exh);
-        json.Key("price_cents"); json.Int((int)pricing.price_cents);
-        json.Key("total_cents"); json.Int((int)pricing.total_cents);
-
-        json.Key("stays"); json.StartArray();
-        for (Size k = 0; k < result.stays.len; k++) {
-            const mco_Stay &stay = result.stays[k];
-            const mco_Result &mono_result = sub_mono_results[k];
-            const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+            const mco_GhmRootInfo *ghm_root_info = nullptr;
+            const mco_DiagnosisInfo *main_diag_info = nullptr;
+            const mco_DiagnosisInfo *linked_diag_info = nullptr;
+            if (LIKELY(result.index)) {
+                ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
+                main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
+                linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
+            }
 
             json.StartObject();
 
-            if (mono_result.duration >= 0) {
-                json.Key("duration"); json.Int(mono_result.duration);
+            json.Key("admin_id"); json.Int(result.stays[0].admin_id);
+            json.Key("bill_id"); json.Int(result.stays[0].bill_id);
+            if (LIKELY(result.index)) {
+                json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
             }
-            json.Key("unit"); json.Int(stay.unit.number);
-            if (conn->user->mco_allowed_units.Find(stay.unit)) {
-                json.Key("sex"); json.Int(stay.sex);
-                json.Key("age"); json.Int(mono_result.age);
-                json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);
-                json.Key("entry_date"); json.String(Fmt(buf, "%1", stay.entry.date).ptr);
-                json.Key("entry_mode"); json.String(&stay.entry.mode, 1);
-                if (stay.entry.origin) {
-                    json.Key("entry_origin"); json.String(&stay.entry.origin, 1);
-                }
-                json.Key("exit_date"); json.String(Fmt(buf, "%1", stay.exit.date).ptr);
-                json.Key("exit_mode"); json.String(&stay.exit.mode, 1);
-                if (stay.exit.destination) {
-                    json.Key("exit_destination"); json.String(&stay.exit.destination, 1);
-                }
-                if (stay.bed_authorization) {
-                    json.Key("bed_authorization"); json.Int(stay.bed_authorization);
-                }
-                if (stay.session_count) {
-                    json.Key("session_count"); json.Int(stay.session_count);
-                }
-                if (stay.igs2) {
-                    json.Key("igs2"); json.Int(stay.igs2);
-                }
-                if (stay.last_menstrual_period.value) {
-                    json.Key("last_menstrual_period"); json.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
-                }
-                if (stay.gestational_age) {
-                    json.Key("gestational_age"); json.Int(stay.gestational_age);
-                }
-                if (stay.newborn_weight) {
-                    json.Key("newborn_weight"); json.Int(stay.newborn_weight);
-                }
-                if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
-                    json.Key("confirm"); json.Bool(true);
-                }
-                if (stay.dip_count) {
-                    json.Key("dip_count"); json.Int(stay.dip_count);
-                }
-                if (stay.flags & (int)mco_Stay::Flag::Ucd) {
-                    json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
-                }
+            if (result.duration >= 0) {
+                json.Key("duration"); json.Int(result.duration);
+            }
+            json.Key("sex"); json.Int(result.stays[0].sex);
+            if (result.age >= 0) {
+                json.Key("age"); json.Int(result.age);
+            }
+            json.Key("main_stay"); json.Int(result.main_stay_idx);
+            json.Key("ghm"); json.String(result.ghm.ToString(buf).ptr);
+            json.Key("main_error"); json.Int(result.main_error);
+            json.Key("ghs"); json.Int(result.ghs.number);
+            json.Key("ghs_duration"); json.Int(result.ghs_duration);
+            json.Key("exb_exh"); json.Int(pricing.exb_exh);
+            json.Key("price_cents"); json.Int((int)pricing.price_cents);
+            json.Key("total_cents"); json.Int((int)pricing.total_cents);
 
-                if (LIKELY(stay.main_diagnosis.IsValid())) {
-                    json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
+            json.Key("stays"); json.StartArray();
+            for (Size k = 0; k < result.stays.len; k++) {
+                const mco_Stay &stay = result.stays[k];
+                const mco_Result &mono_result = sub_mono_results[k];
+                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+
+                json.StartObject();
+
+                if (mono_result.duration >= 0) {
+                    json.Key("duration"); json.Int(mono_result.duration);
                 }
-                if (stay.linked_diagnosis.IsValid()) {
-                    json.Key("linked_diagnosis"); json.String(stay.linked_diagnosis.str);
-                }
+                json.Key("unit"); json.Int(stay.unit.number);
+                if (conn->user->mco_allowed_units.Find(stay.unit)) {
+                    json.Key("sex"); json.Int(stay.sex);
+                    json.Key("age"); json.Int(mono_result.age);
+                    json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);
+                    json.Key("entry_date"); json.String(Fmt(buf, "%1", stay.entry.date).ptr);
+                    json.Key("entry_mode"); json.String(&stay.entry.mode, 1);
+                    if (stay.entry.origin) {
+                        json.Key("entry_origin"); json.String(&stay.entry.origin, 1);
+                    }
+                    json.Key("exit_date"); json.String(Fmt(buf, "%1", stay.exit.date).ptr);
+                    json.Key("exit_mode"); json.String(&stay.exit.mode, 1);
+                    if (stay.exit.destination) {
+                        json.Key("exit_destination"); json.String(&stay.exit.destination, 1);
+                    }
+                    if (stay.bed_authorization) {
+                        json.Key("bed_authorization"); json.Int(stay.bed_authorization);
+                    }
+                    if (stay.session_count) {
+                        json.Key("session_count"); json.Int(stay.session_count);
+                    }
+                    if (stay.igs2) {
+                        json.Key("igs2"); json.Int(stay.igs2);
+                    }
+                    if (stay.last_menstrual_period.value) {
+                        json.Key("last_menstrual_period"); json.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
+                    }
+                    if (stay.gestational_age) {
+                        json.Key("gestational_age"); json.Int(stay.gestational_age);
+                    }
+                    if (stay.newborn_weight) {
+                        json.Key("newborn_weight"); json.Int(stay.newborn_weight);
+                    }
+                    if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
+                        json.Key("confirm"); json.Bool(true);
+                    }
+                    if (stay.dip_count) {
+                        json.Key("dip_count"); json.Int(stay.dip_count);
+                    }
+                    if (stay.flags & (int)mco_Stay::Flag::Ucd) {
+                        json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
+                    }
 
-                json.Key("other_diagnoses"); json.StartArray();
-                for (DiagnosisCode diag: stay.other_diagnoses) {
-                    const mco_DiagnosisInfo *diag_info =
-                        LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
+                    if (LIKELY(stay.main_diagnosis.IsValid())) {
+                        json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
+                    }
+                    if (stay.linked_diagnosis.IsValid()) {
+                        json.Key("linked_diagnosis"); json.String(stay.linked_diagnosis.str);
+                    }
 
-                    json.StartObject();
-                    json.Key("diag"); json.String(diag.str);
-                    if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
-                        json.Key("severity"); json.Int(diag_info->Attributes(stay.sex).severity);
+                    json.Key("other_diagnoses"); json.StartArray();
+                    for (DiagnosisCode diag: stay.other_diagnoses) {
+                        const mco_DiagnosisInfo *diag_info =
+                            LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
 
-                        if (mco_TestExclusion(*result.index, stay.sex, result.age,
-                                              *diag_info, *ghm_root_info, *main_diag_info,
-                                              linked_diag_info)) {
-                            json.Key("exclude"); json.Bool(true);
+                        json.StartObject();
+                        json.Key("diag"); json.String(diag.str);
+                        if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
+                            json.Key("severity"); json.Int(diag_info->Attributes(stay.sex).severity);
+
+                            if (mco_TestExclusion(*result.index, stay.sex, result.age,
+                                                  *diag_info, *ghm_root_info, *main_diag_info,
+                                                  linked_diag_info)) {
+                                json.Key("exclude"); json.Bool(true);
+                            }
                         }
+                        json.EndObject();
                     }
-                    json.EndObject();
-                }
-                json.EndArray();
+                    json.EndArray();
 
-                json.Key("procedures"); json.StartArray();
-                for (const mco_ProcedureRealisation &proc: stay.procedures) {
-                    json.StartObject();
-                    json.Key("proc"); json.String(proc.proc.str);
-                    if (proc.phase) {
-                        json.Key("phase"); json.Int(proc.phase);
+                    json.Key("procedures"); json.StartArray();
+                    for (const mco_ProcedureRealisation &proc: stay.procedures) {
+                        json.StartObject();
+                        json.Key("proc"); json.String(proc.proc.str);
+                        if (proc.phase) {
+                            json.Key("phase"); json.Int(proc.phase);
+                        }
+                        json.Key("activity"); json.Int(proc.activity);
+                        if (proc.extension) {
+                            json.Key("extension"); json.Int(proc.extension);
+                        }
+                        json.String("date"); json.String(Fmt(buf, "%1", proc.date).ptr);
+                        json.String("count"); json.Int(proc.count);
+                        if (proc.doc) {
+                            json.String("doc"); json.String(&proc.doc, 1);
+                        }
+                        json.EndObject();
                     }
-                    json.Key("activity"); json.Int(proc.activity);
-                    if (proc.extension) {
-                        json.Key("extension"); json.Int(proc.extension);
-                    }
-                    json.String("date"); json.String(Fmt(buf, "%1", proc.date).ptr);
-                    json.String("count"); json.Int(proc.count);
-                    if (proc.doc) {
-                        json.String("doc"); json.String(&proc.doc, 1);
-                    }
-                    json.EndObject();
+                    json.EndArray();
                 }
-                json.EndArray();
+
+                json.Key("price_cents"); json.Int64(mono_pricing.price_cents);
+                json.Key("total_cents"); json.Int64(mono_pricing.total_cents);
+
+                json.EndObject();
             }
-
-            json.Key("price_cents"); json.Int64(mono_pricing.price_cents);
-            json.Key("total_cents"); json.Int64(mono_pricing.total_cents);
+            json.EndArray();
 
             json.EndObject();
         }
-        json.EndArray();
-
-        json.EndObject();
-    }
+    });
+    if (!success)
+        return CreateErrorPage(500, out_response);
     json.EndArray();
 
     return json.Finish(out_response);
