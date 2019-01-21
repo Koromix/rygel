@@ -5,6 +5,7 @@
 #pragma once
 
 #include "thop.hh"
+#include "response.hh"
 
 int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response);
 int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response);

@@ -18,6 +18,7 @@
 #include "mco.hh"
 #include "mco_casemix.hh"
 #include "mco_info.hh"
+#include "response.hh"
 #include "user.hh"
 #include "../../packer/asset.hh"
 
@@ -180,70 +181,9 @@ static bool InitUsers(const char *profile_directory)
     return true;
 }
 
-void AddContentEncodingHeader(MHD_Response *response, CompressionType compression_type)
-{
-    switch (compression_type) {
-        case CompressionType::None: {} break;
-        case CompressionType::Zlib:
-            { MHD_add_response_header(response, "Content-Encoding", "deflate"); } break;
-        case CompressionType::Gzip:
-            { MHD_add_response_header(response, "Content-Encoding", "gzip"); } break;
-    }
-}
-
-void AddCookieHeader(MHD_Response *response, const char *name, const char *value, bool http_only)
-{
-    char cookie_buf[512];
-    if (value) {
-        Fmt(cookie_buf, "%1=%2; Path=%3; SameSite=Lax;%4",
-            name, value, thop_config.base_url, http_only ? " HttpOnly;" : "");
-    } else {
-        Fmt(cookie_buf, "%1=; Path=%2; Max-Age=0;", name, thop_config.base_url);
-    }
-
-    MHD_add_response_header(response, "Set-Cookie", cookie_buf);
-}
-
 static void ReleaseCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
-}
-
-int CreateErrorPage(int code, Response *out_response)
-{
-    Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2", code,
-                          MHD_get_reason_phrase_for((unsigned int)code));
-
-    MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
-                                                           ReleaseCallback);
-    out_response->response.reset(response);
-
-    MHD_add_response_header(response, "Content-Type", "text/plain");
-
-    return code;
-}
-
-int BuildJson(std::function<bool(JsonWriter &)> func,
-              CompressionType compression_type, Response *out_response)
-{
-    HeapArray<uint8_t> buf;
-    {
-        StreamWriter st(&buf, nullptr, compression_type);
-        JsonWriter writer(&st);
-
-        if (!func(writer))
-            return CreateErrorPage(500, out_response);
-    }
-
-    MHD_Response *response = MHD_create_response_from_heap((size_t)buf.len, buf.ptr,
-                                                           ReleaseCallback);
-    buf.Leak();
-    out_response->response.reset(response);
-
-    AddContentEncodingHeader(response, compression_type);
-    MHD_add_response_header(response, "Content-Type", "application/json");
-
-    return 200;
 }
 
 static int ProduceStaticAsset(const Route &route, CompressionType compression_type,

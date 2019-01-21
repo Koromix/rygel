@@ -414,84 +414,84 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_r
     if (conn->user) {
         out_response->flags |= (int)Response::Flag::DisableCache;
     }
-    return BuildJson([&](JsonWriter &writer) {
+
+    JsonPageBuilder json(conn->compression_type);
+    char buf[32];
+
+    json.StartObject();
+
+    json.Key("indexes"); json.StartArray();
+    for (const mco_TableIndex &index: mco_table_set.indexes) {
+        if (!index.valid)
+            continue;
+
         char buf[32];
 
-        writer.StartObject();
-
-        writer.Key("indexes"); writer.StartArray();
-        for (const mco_TableIndex &index: mco_table_set.indexes) {
-            if (!index.valid)
-                continue;
-
-            char buf[32];
-
-            writer.StartObject();
-            writer.Key("begin_date"); writer.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
-            writer.Key("end_date"); writer.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
-            if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_tables"); writer.Bool(true);
-            }
-            if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
-                writer.Key("changed_prices"); writer.Bool(true);
-            }
-            writer.EndObject();
+        json.StartObject();
+        json.Key("begin_date"); json.String(Fmt(buf, "%1", index.limit_dates[0]).ptr);
+        json.Key("end_date"); json.String(Fmt(buf, "%1", index.limit_dates[1]).ptr);
+        if (index.changed_tables & ~MaskEnum(mco_TableType::PriceTablePublic)) {
+            json.Key("changed_tables"); json.Bool(true);
         }
-        writer.EndArray();
+        if (index.changed_tables & MaskEnum(mco_TableType::PriceTablePublic)) {
+            json.Key("changed_prices"); json.Bool(true);
+        }
+        json.EndObject();
+    }
+    json.EndArray();
 
-        if (conn->user) {
-            writer.Key("start_date"); writer.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
-            writer.Key("end_date"); writer.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
+    if (conn->user) {
+        json.Key("start_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
+        json.Key("end_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
-            // Algorithms
-            {
-                const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
+        // Algorithms
+        {
+            const OptionDesc &default_desc = mco_DispenseModeOptions[(int)thop_config.mco_dispense_mode];
 
-                writer.Key("algorithms"); writer.StartArray();
-                for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
-                    if (conn->user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
-                        const OptionDesc &desc = mco_DispenseModeOptions[i];
+            json.Key("algorithms"); json.StartArray();
+            for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
+                if (conn->user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
+                    const OptionDesc &desc = mco_DispenseModeOptions[i];
 
-                        writer.StartObject();
-                        writer.Key("name"); writer.String(desc.name);
-                        writer.Key("help"); writer.String(desc.help);
-                        writer.EndObject();
-                    }
-                }
-                writer.EndArray();
-
-                writer.Key("default_algorithm"); writer.String(default_desc.name);
-            }
-
-            writer.Key("permissions"); writer.StartArray();
-            for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
-                if (conn->user->permissions & (1 << i)) {
-                    writer.String(UserPermissionNames[i]);
+                    json.StartObject();
+                    json.Key("name"); json.String(desc.name);
+                    json.Key("help"); json.String(desc.help);
+                    json.EndObject();
                 }
             }
-            writer.EndArray();
+            json.EndArray();
 
-            writer.Key("structures"); writer.StartArray();
-            for (const Structure &structure: thop_structure_set.structures) {
-                writer.StartObject();
-                writer.Key("name"); writer.String(structure.name);
-                writer.Key("entities"); writer.StartArray();
-                for (const StructureEntity &ent: structure.entities) {
-                    if (conn->user->mco_allowed_units.Find(ent.unit)) {
-                        writer.StartObject();
-                        writer.Key("unit"); writer.Int(ent.unit.number);
-                        writer.Key("path"); writer.String(ent.path);
-                        writer.EndObject();
-                    }
-                }
-                writer.EndArray();
-                writer.EndObject();
-            }
-            writer.EndArray();
+            json.Key("default_algorithm"); json.String(default_desc.name);
         }
 
-        writer.EndObject();
+        json.Key("permissions"); json.StartArray();
+        for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
+            if (conn->user->permissions & (1 << i)) {
+                json.String(UserPermissionNames[i]);
+            }
+        }
+        json.EndArray();
 
-        return true;
-    }, conn->compression_type, out_response);
+        json.Key("structures"); json.StartArray();
+        for (const Structure &structure: thop_structure_set.structures) {
+            json.StartObject();
+            json.Key("name"); json.String(structure.name);
+            json.Key("entities"); json.StartArray();
+            for (const StructureEntity &ent: structure.entities) {
+                if (conn->user->mco_allowed_units.Find(ent.unit)) {
+                    json.StartObject();
+                    json.Key("unit"); json.Int(ent.unit.number);
+                    json.Key("path"); json.String(ent.path);
+                    json.EndObject();
+                }
+            }
+            json.EndArray();
+            json.EndObject();
+        }
+        json.EndArray();
+    }
+
+    json.EndObject();
+
+    return json.Finish(out_response);
 }

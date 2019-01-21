@@ -365,6 +365,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
 {
     if (!conn->user)
         return CreateErrorPage(403, out_response);
+    out_response->flags |= (int)Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};
@@ -443,73 +444,72 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
     }
 
     // Export data
-    out_response->flags |= (int)Response::Flag::DisableCache;
-    return BuildJson([&](JsonWriter &writer) {
-        char buf[32];
+    JsonPageBuilder json(conn->compression_type);
+    char buf[32];
 
-        writer.StartObject();
+    json.StartObject();
 
-        writer.Key("ghs"); writer.StartArray();
-        for (const GhmGhsInfo &ghm_ghs_info: ghm_ghs) {
-            writer.StartObject();
-            writer.Key("ghm"); writer.String(Fmt(buf, "%1", ghm_ghs_info.key.ghm).ptr);
-            writer.Key("ghs"); writer.Int(ghm_ghs_info.key.ghs.number);
-            writer.Key("conditions"); writer.Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
-            writer.Key("durations"); writer.Uint(ghm_ghs_info.durations);
+    json.Key("ghs"); json.StartArray();
+    for (const GhmGhsInfo &ghm_ghs_info: ghm_ghs) {
+        json.StartObject();
+        json.Key("ghm"); json.String(Fmt(buf, "%1", ghm_ghs_info.key.ghm).ptr);
+        json.Key("ghs"); json.Int(ghm_ghs_info.key.ghs.number);
+        json.Key("conditions"); json.Bool(ghm_ghs_info.ghm_to_ghs_info->conditions_count);
+        json.Key("durations"); json.Uint(ghm_ghs_info.durations);
 
-            if (ghm_ghs_info.exh_treshold) {
-                writer.Key("exh_treshold"); writer.Int(ghm_ghs_info.exh_treshold);
-            }
-            if (ghm_ghs_info.exb_treshold) {
-                writer.Key("exb_treshold"); writer.Int(ghm_ghs_info.exb_treshold);
-            }
-            writer.EndObject();
+        if (ghm_ghs_info.exh_treshold) {
+            json.Key("exh_treshold"); json.Int(ghm_ghs_info.exh_treshold);
         }
-        writer.EndArray();
-
-        writer.Key("rows"); writer.StartArray();
-        for (const Aggregate &agg: aggregate_set.aggregates) {
-            writer.StartObject();
-            writer.Key("ghm"); writer.String(Fmt(buf, "%1", agg.key.ghm).ptr);
-            writer.Key("ghs"); writer.Int(agg.key.ghs.number);
-            if (flags & (int)AggregationFlag::KeyOnDuration) {
-                writer.Key("duration"); writer.Int(agg.key.duration);
-            }
-            if (flags & (int)AggregationFlag::KeyOnUnits) {
-                writer.Key("unit"); writer.StartArray();
-                for (UnitCode unit: agg.key.units) {
-                    writer.Int(unit.number);
-                }
-                writer.EndArray();
-            }
-            writer.Key("count"); writer.Int(agg.count);
-            writer.Key("deaths"); writer.Int64(agg.deaths);
-            writer.Key("mono_count_total"); writer.Int(agg.mono_count);
-            writer.Key("price_cents_total"); writer.Int64(agg.price_cents);
-            writer.Key("mono_count"); writer.StartArray();
-            for (const Aggregate::Part &part: agg.parts) {
-                writer.Int(part.mono_count);
-            }
-            writer.EndArray();
-            writer.Key("price_cents"); writer.StartArray();
-            for (const Aggregate::Part &part: agg.parts) {
-                writer.Int64(part.price_cents);
-            }
-            writer.EndArray();
-            writer.EndObject();
+        if (ghm_ghs_info.exb_treshold) {
+            json.Key("exb_treshold"); json.Int(ghm_ghs_info.exb_treshold);
         }
-        writer.EndArray();
+        json.EndObject();
+    }
+    json.EndArray();
 
-        writer.EndObject();
+    json.Key("rows"); json.StartArray();
+    for (const Aggregate &agg: aggregate_set.aggregates) {
+        json.StartObject();
+        json.Key("ghm"); json.String(Fmt(buf, "%1", agg.key.ghm).ptr);
+        json.Key("ghs"); json.Int(agg.key.ghs.number);
+        if (flags & (int)AggregationFlag::KeyOnDuration) {
+            json.Key("duration"); json.Int(agg.key.duration);
+        }
+        if (flags & (int)AggregationFlag::KeyOnUnits) {
+            json.Key("unit"); json.StartArray();
+            for (UnitCode unit: agg.key.units) {
+                json.Int(unit.number);
+            }
+            json.EndArray();
+        }
+        json.Key("count"); json.Int(agg.count);
+        json.Key("deaths"); json.Int64(agg.deaths);
+        json.Key("mono_count_total"); json.Int(agg.mono_count);
+        json.Key("price_cents_total"); json.Int64(agg.price_cents);
+        json.Key("mono_count"); json.StartArray();
+        for (const Aggregate::Part &part: agg.parts) {
+            json.Int(part.mono_count);
+        }
+        json.EndArray();
+        json.Key("price_cents"); json.StartArray();
+        for (const Aggregate::Part &part: agg.parts) {
+            json.Int64(part.price_cents);
+        }
+        json.EndArray();
+        json.EndObject();
+    }
+    json.EndArray();
 
-        return true;
-    }, conn->compression_type, out_response);
+    json.EndObject();
+
+    return json.Finish(out_response);
 }
 
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
 {
     if (!conn->user || !(conn->user->permissions & (int)UserPermission::FullResults))
         return CreateErrorPage(403, out_response);
+    out_response->flags |= (int)Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};
@@ -560,163 +560,162 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
 
     // Export data
-    out_response->flags |= (int)Response::Flag::DisableCache;
-    return BuildJson([&](JsonWriter &writer) {
-        writer.StartArray();
-        for (Size i = 0, j = 0; i < results.len; i++) {
-            char buf[32];
+    JsonPageBuilder json(conn->compression_type);
 
-            const mco_Result &result = results[i];
-            const mco_Pricing &pricing = pricings[i];
-            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-            j += result.stays.len;
+    json.StartArray();
+    for (Size i = 0, j = 0; i < results.len; i++) {
+        char buf[32];
 
-            const mco_GhmRootInfo *ghm_root_info = nullptr;
-            const mco_DiagnosisInfo *main_diag_info = nullptr;
-            const mco_DiagnosisInfo *linked_diag_info = nullptr;
-            if (LIKELY(result.index)) {
-                ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
-                main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
-                linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
-            }
+        const mco_Result &result = results[i];
+        const mco_Pricing &pricing = pricings[i];
+        Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+        Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+        j += result.stays.len;
 
-            writer.StartObject();
-
-            writer.Key("admin_id"); writer.Int(result.stays[0].admin_id);
-            writer.Key("bill_id"); writer.Int(result.stays[0].bill_id);
-            if (LIKELY(result.index)) {
-                writer.Key("index_date"); writer.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
-            }
-            if (result.duration >= 0) {
-                writer.Key("duration"); writer.Int(result.duration);
-            }
-            writer.Key("sex"); writer.Int(result.stays[0].sex);
-            if (result.age >= 0) {
-                writer.Key("age"); writer.Int(result.age);
-            }
-            writer.Key("main_stay"); writer.Int(result.main_stay_idx);
-            writer.Key("ghm"); writer.String(result.ghm.ToString(buf).ptr);
-            writer.Key("main_error"); writer.Int(result.main_error);
-            writer.Key("ghs"); writer.Int(result.ghs.number);
-            writer.Key("ghs_duration"); writer.Int(result.ghs_duration);
-            writer.Key("exb_exh"); writer.Int(pricing.exb_exh);
-            writer.Key("price_cents"); writer.Int((int)pricing.price_cents);
-            writer.Key("total_cents"); writer.Int((int)pricing.total_cents);
-
-            writer.Key("stays"); writer.StartArray();
-            for (Size k = 0; k < result.stays.len; k++) {
-                const mco_Stay &stay = result.stays[k];
-                const mco_Result &mono_result = sub_mono_results[k];
-                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
-
-                writer.StartObject();
-
-                if (mono_result.duration >= 0) {
-                    writer.Key("duration"); writer.Int(mono_result.duration);
-                }
-                writer.Key("unit"); writer.Int(stay.unit.number);
-                if (conn->user->mco_allowed_units.Find(stay.unit)) {
-                    writer.Key("sex"); writer.Int(stay.sex);
-                    writer.Key("age"); writer.Int(mono_result.age);
-                    writer.Key("birthdate"); writer.String(Fmt(buf, "%1", stay.birthdate).ptr);
-                    writer.Key("entry_date"); writer.String(Fmt(buf, "%1", stay.entry.date).ptr);
-                    writer.Key("entry_mode"); writer.String(&stay.entry.mode, 1);
-                    if (stay.entry.origin) {
-                        writer.Key("entry_origin"); writer.String(&stay.entry.origin, 1);
-                    }
-                    writer.Key("exit_date"); writer.String(Fmt(buf, "%1", stay.exit.date).ptr);
-                    writer.Key("exit_mode"); writer.String(&stay.exit.mode, 1);
-                    if (stay.exit.destination) {
-                        writer.Key("exit_destination"); writer.String(&stay.exit.destination, 1);
-                    }
-                    if (stay.bed_authorization) {
-                        writer.Key("bed_authorization"); writer.Int(stay.bed_authorization);
-                    }
-                    if (stay.session_count) {
-                        writer.Key("session_count"); writer.Int(stay.session_count);
-                    }
-                    if (stay.igs2) {
-                        writer.Key("igs2"); writer.Int(stay.igs2);
-                    }
-                    if (stay.last_menstrual_period.value) {
-                        writer.Key("last_menstrual_period"); writer.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
-                    }
-                    if (stay.gestational_age) {
-                        writer.Key("gestational_age"); writer.Int(stay.gestational_age);
-                    }
-                    if (stay.newborn_weight) {
-                        writer.Key("newborn_weight"); writer.Int(stay.newborn_weight);
-                    }
-                    if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
-                        writer.Key("confirm"); writer.Bool(true);
-                    }
-                    if (stay.dip_count) {
-                        writer.Key("dip_count"); writer.Int(stay.dip_count);
-                    }
-                    if (stay.flags & (int)mco_Stay::Flag::Ucd) {
-                        writer.Key("ucd"); writer.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
-                    }
-
-                    if (LIKELY(stay.main_diagnosis.IsValid())) {
-                        writer.Key("main_diagnosis"); writer.String(stay.main_diagnosis.str);
-                    }
-                    if (stay.linked_diagnosis.IsValid()) {
-                        writer.Key("linked_diagnosis"); writer.String(stay.linked_diagnosis.str);
-                    }
-
-                    writer.Key("other_diagnoses"); writer.StartArray();
-                    for (DiagnosisCode diag: stay.other_diagnoses) {
-                        const mco_DiagnosisInfo *diag_info =
-                            LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
-
-                        writer.StartObject();
-                        writer.Key("diag"); writer.String(diag.str);
-                        if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
-                            writer.Key("severity"); writer.Int(diag_info->Attributes(stay.sex).severity);
-
-                            if (mco_TestExclusion(*result.index, stay.sex, result.age,
-                                                  *diag_info, *ghm_root_info, *main_diag_info,
-                                                  linked_diag_info)) {
-                                writer.Key("exclude"); writer.Bool(true);
-                            }
-                        }
-                        writer.EndObject();
-                    }
-                    writer.EndArray();
-
-                    writer.Key("procedures"); writer.StartArray();
-                    for (const mco_ProcedureRealisation &proc: stay.procedures) {
-                        writer.StartObject();
-                        writer.Key("proc"); writer.String(proc.proc.str);
-                        if (proc.phase) {
-                            writer.Key("phase"); writer.Int(proc.phase);
-                        }
-                        writer.Key("activity"); writer.Int(proc.activity);
-                        if (proc.extension) {
-                            writer.Key("extension"); writer.Int(proc.extension);
-                        }
-                        writer.String("date"); writer.String(Fmt(buf, "%1", proc.date).ptr);
-                        writer.String("count"); writer.Int(proc.count);
-                        if (proc.doc) {
-                            writer.String("doc"); writer.String(&proc.doc, 1);
-                        }
-                        writer.EndObject();
-                    }
-                    writer.EndArray();
-                }
-
-                writer.Key("price_cents"); writer.Int64(mono_pricing.price_cents);
-                writer.Key("total_cents"); writer.Int64(mono_pricing.total_cents);
-
-                writer.EndObject();
-            }
-            writer.EndArray();
-
-            writer.EndObject();
+        const mco_GhmRootInfo *ghm_root_info = nullptr;
+        const mco_DiagnosisInfo *main_diag_info = nullptr;
+        const mco_DiagnosisInfo *linked_diag_info = nullptr;
+        if (LIKELY(result.index)) {
+            ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
+            main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
+            linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
         }
-        writer.EndArray();
 
-        return true;
-    }, conn->compression_type, out_response);
+        json.StartObject();
+
+        json.Key("admin_id"); json.Int(result.stays[0].admin_id);
+        json.Key("bill_id"); json.Int(result.stays[0].bill_id);
+        if (LIKELY(result.index)) {
+            json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
+        }
+        if (result.duration >= 0) {
+            json.Key("duration"); json.Int(result.duration);
+        }
+        json.Key("sex"); json.Int(result.stays[0].sex);
+        if (result.age >= 0) {
+            json.Key("age"); json.Int(result.age);
+        }
+        json.Key("main_stay"); json.Int(result.main_stay_idx);
+        json.Key("ghm"); json.String(result.ghm.ToString(buf).ptr);
+        json.Key("main_error"); json.Int(result.main_error);
+        json.Key("ghs"); json.Int(result.ghs.number);
+        json.Key("ghs_duration"); json.Int(result.ghs_duration);
+        json.Key("exb_exh"); json.Int(pricing.exb_exh);
+        json.Key("price_cents"); json.Int((int)pricing.price_cents);
+        json.Key("total_cents"); json.Int((int)pricing.total_cents);
+
+        json.Key("stays"); json.StartArray();
+        for (Size k = 0; k < result.stays.len; k++) {
+            const mco_Stay &stay = result.stays[k];
+            const mco_Result &mono_result = sub_mono_results[k];
+            const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+
+            json.StartObject();
+
+            if (mono_result.duration >= 0) {
+                json.Key("duration"); json.Int(mono_result.duration);
+            }
+            json.Key("unit"); json.Int(stay.unit.number);
+            if (conn->user->mco_allowed_units.Find(stay.unit)) {
+                json.Key("sex"); json.Int(stay.sex);
+                json.Key("age"); json.Int(mono_result.age);
+                json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);
+                json.Key("entry_date"); json.String(Fmt(buf, "%1", stay.entry.date).ptr);
+                json.Key("entry_mode"); json.String(&stay.entry.mode, 1);
+                if (stay.entry.origin) {
+                    json.Key("entry_origin"); json.String(&stay.entry.origin, 1);
+                }
+                json.Key("exit_date"); json.String(Fmt(buf, "%1", stay.exit.date).ptr);
+                json.Key("exit_mode"); json.String(&stay.exit.mode, 1);
+                if (stay.exit.destination) {
+                    json.Key("exit_destination"); json.String(&stay.exit.destination, 1);
+                }
+                if (stay.bed_authorization) {
+                    json.Key("bed_authorization"); json.Int(stay.bed_authorization);
+                }
+                if (stay.session_count) {
+                    json.Key("session_count"); json.Int(stay.session_count);
+                }
+                if (stay.igs2) {
+                    json.Key("igs2"); json.Int(stay.igs2);
+                }
+                if (stay.last_menstrual_period.value) {
+                    json.Key("last_menstrual_period"); json.String(Fmt(buf, "%1", stay.last_menstrual_period).ptr);
+                }
+                if (stay.gestational_age) {
+                    json.Key("gestational_age"); json.Int(stay.gestational_age);
+                }
+                if (stay.newborn_weight) {
+                    json.Key("newborn_weight"); json.Int(stay.newborn_weight);
+                }
+                if (stay.flags & (int)mco_Stay::Flag::Confirmed) {
+                    json.Key("confirm"); json.Bool(true);
+                }
+                if (stay.dip_count) {
+                    json.Key("dip_count"); json.Int(stay.dip_count);
+                }
+                if (stay.flags & (int)mco_Stay::Flag::Ucd) {
+                    json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
+                }
+
+                if (LIKELY(stay.main_diagnosis.IsValid())) {
+                    json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
+                }
+                if (stay.linked_diagnosis.IsValid()) {
+                    json.Key("linked_diagnosis"); json.String(stay.linked_diagnosis.str);
+                }
+
+                json.Key("other_diagnoses"); json.StartArray();
+                for (DiagnosisCode diag: stay.other_diagnoses) {
+                    const mco_DiagnosisInfo *diag_info =
+                        LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
+
+                    json.StartObject();
+                    json.Key("diag"); json.String(diag.str);
+                    if (!result.ghm.IsError() && ghm_root_info && main_diag_info && diag_info) {
+                        json.Key("severity"); json.Int(diag_info->Attributes(stay.sex).severity);
+
+                        if (mco_TestExclusion(*result.index, stay.sex, result.age,
+                                              *diag_info, *ghm_root_info, *main_diag_info,
+                                              linked_diag_info)) {
+                            json.Key("exclude"); json.Bool(true);
+                        }
+                    }
+                    json.EndObject();
+                }
+                json.EndArray();
+
+                json.Key("procedures"); json.StartArray();
+                for (const mco_ProcedureRealisation &proc: stay.procedures) {
+                    json.StartObject();
+                    json.Key("proc"); json.String(proc.proc.str);
+                    if (proc.phase) {
+                        json.Key("phase"); json.Int(proc.phase);
+                    }
+                    json.Key("activity"); json.Int(proc.activity);
+                    if (proc.extension) {
+                        json.Key("extension"); json.Int(proc.extension);
+                    }
+                    json.String("date"); json.String(Fmt(buf, "%1", proc.date).ptr);
+                    json.String("count"); json.Int(proc.count);
+                    if (proc.doc) {
+                        json.String("doc"); json.String(&proc.doc, 1);
+                    }
+                    json.EndObject();
+                }
+                json.EndArray();
+            }
+
+            json.Key("price_cents"); json.Int64(mono_pricing.price_cents);
+            json.Key("total_cents"); json.Int64(mono_pricing.total_cents);
+
+            json.EndObject();
+        }
+        json.EndArray();
+
+        json.EndObject();
+    }
+    json.EndArray();
+
+    return json.Finish(out_response);
 }
