@@ -175,108 +175,11 @@ public:
     AggregateSetBuilder(const User *user, unsigned int flags)
         : user(user), flags(flags) {}
 
-    void Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots = nullptr)
-    {
-        std::sort(set.aggregates.begin(), set.aggregates.end(),
-                  [](const Aggregate &agg1, const Aggregate &agg2) {
-            return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
-                            agg1.key.ghs.number - agg2.key.ghs.number) < 0;
-        });
-
-        SwapMemory(out_set, &set, SIZE(set));
-        if (out_ghm_roots) {
-            std::swap(ghm_roots, *out_ghm_roots);
-        }
-    }
-
     void Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
                  Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
-                 int multiplier = 1)
-    {
-        for (Size i = 0, j = 0; i < results.len; i++) {
-            agg_parts_map.RemoveAll();
+                 int multiplier = 1);
 
-            const mco_Result &result = results[i];
-            const mco_Pricing &pricing = pricings[i];
-            Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
-            Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
-            j += result.stays.len;
-
-            bool match = false;
-            HeapArray<UnitCode> agg_units(&units_alloc);
-            for (Size k = 0; k < sub_mono_results.len; k++) {
-                const mco_Result &mono_result = sub_mono_results[k];
-                const mco_Pricing &mono_pricing = sub_mono_pricings[k];
-                UnitCode unit = mono_result.stays[0].unit;
-                DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
-
-                if (user->mco_allowed_units.Find(unit)) {
-                    std::pair<Aggregate::Part *, bool> ret =
-                        agg_parts_map.AppendDefault(mono_result.stays[0].unit);
-
-                    ret.first->mono_count += multiplier;
-                    ret.first->price_cents += multiplier * mono_pricing.price_cents;
-
-                    if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
-                        agg_units.Append(unit);
-                    }
-
-                    match = true;
-                }
-            }
-
-            if (match) {
-                std::sort(agg_units.begin(), agg_units.end());
-
-                HeapArray<Aggregate::Part> agg_parts(&parts_alloc);
-                for (UnitCode unit: agg_units) {
-                    Aggregate::Part *part = agg_parts_map.Find(unit);
-                    if (part) {
-                        agg_parts.Append(*part);
-                    }
-                }
-
-                Aggregate::Key key = {};
-                key.ghm = result.ghm;
-                key.ghs = result.ghs;
-                if (flags & (int)AggregationFlag::KeyOnDuration) {
-                    key.duration = result.duration;
-                }
-                if (flags & (int)AggregationFlag::KeyOnUnits) {
-                    key.units = agg_units.TrimAndLeak();
-                }
-
-                Aggregate *agg;
-                {
-                    std::pair<Size *, bool> ret = aggregates_map.Append(key, set.aggregates.len);
-                    if (ret.second) {
-                        agg = set.aggregates.AppendDefault();
-                        agg->key = key;
-                    } else {
-                        agg = &set.aggregates[*ret.first];
-                    }
-                }
-
-                agg->count += multiplier;
-                agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
-                agg->mono_count += multiplier * (int32_t)result.stays.len;
-                agg->price_cents += multiplier * pricing.price_cents;
-                if (agg->parts.ptr) {
-                    DebugAssert(agg->parts.len == agg_parts.len);
-                    for (Size k = 0; k < agg->parts.len; k++) {
-                        agg->parts[k].mono_count += agg_parts[k].mono_count;
-                        agg->parts[k].price_cents += agg_parts[k].price_cents;
-                    }
-                } else {
-                    agg->parts = agg_parts.TrimAndLeak();
-                }
-
-                if (ghm_roots_set.Append(result.ghm.Root()).second) {
-                    ghm_roots.Append(result.ghm.Root());
-                }
-            }
-        }
-    }
+    void Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots = nullptr);
 };
 
 struct GhmGhsInfo {
@@ -306,6 +209,109 @@ struct GhmGhsInfo {
     int16_t exb_treshold;
     uint32_t durations;
 };
+
+void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
+                                  Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
+                                  int multiplier)
+{
+    for (Size i = 0, j = 0; i < results.len; i++) {
+        agg_parts_map.RemoveAll();
+
+        const mco_Result &result = results[i];
+        const mco_Pricing &pricing = pricings[i];
+        Span<const mco_Result> sub_mono_results = mono_results.Take(j, result.stays.len);
+        Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, result.stays.len);
+        j += result.stays.len;
+
+        bool match = false;
+        HeapArray<UnitCode> agg_units(&units_alloc);
+        for (Size k = 0; k < sub_mono_results.len; k++) {
+            const mco_Result &mono_result = sub_mono_results[k];
+            const mco_Pricing &mono_pricing = sub_mono_pricings[k];
+            UnitCode unit = mono_result.stays[0].unit;
+            DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+
+            if (user->mco_allowed_units.Find(unit)) {
+                std::pair<Aggregate::Part *, bool> ret =
+                    agg_parts_map.AppendDefault(mono_result.stays[0].unit);
+
+                ret.first->mono_count += multiplier;
+                ret.first->price_cents += multiplier * mono_pricing.price_cents;
+
+                if ((flags & (int)AggregationFlag::KeyOnUnits) && ret.second) {
+                    agg_units.Append(unit);
+                }
+
+                match = true;
+            }
+        }
+
+        if (match) {
+            std::sort(agg_units.begin(), agg_units.end());
+
+            HeapArray<Aggregate::Part> agg_parts(&parts_alloc);
+            for (UnitCode unit: agg_units) {
+                Aggregate::Part *part = agg_parts_map.Find(unit);
+                if (part) {
+                    agg_parts.Append(*part);
+                }
+            }
+
+            Aggregate::Key key = {};
+            key.ghm = result.ghm;
+            key.ghs = result.ghs;
+            if (flags & (int)AggregationFlag::KeyOnDuration) {
+                key.duration = result.duration;
+            }
+            if (flags & (int)AggregationFlag::KeyOnUnits) {
+                key.units = agg_units.TrimAndLeak();
+            }
+
+            Aggregate *agg;
+            {
+                std::pair<Size *, bool> ret = aggregates_map.Append(key, set.aggregates.len);
+                if (ret.second) {
+                    agg = set.aggregates.AppendDefault();
+                    agg->key = key;
+                } else {
+                    agg = &set.aggregates[*ret.first];
+                }
+            }
+
+            agg->count += multiplier;
+            agg->deaths += multiplier * (result.stays[result.stays.len - 1].exit.mode == '9');
+            agg->mono_count += multiplier * (int32_t)result.stays.len;
+            agg->price_cents += multiplier * pricing.price_cents;
+            if (agg->parts.ptr) {
+                DebugAssert(agg->parts.len == agg_parts.len);
+                for (Size k = 0; k < agg->parts.len; k++) {
+                    agg->parts[k].mono_count += agg_parts[k].mono_count;
+                    agg->parts[k].price_cents += agg_parts[k].price_cents;
+                }
+            } else {
+                agg->parts = agg_parts.TrimAndLeak();
+            }
+
+            if (ghm_roots_set.Append(result.ghm.Root()).second) {
+                ghm_roots.Append(result.ghm.Root());
+            }
+        }
+    }
+}
+
+void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCode> *out_ghm_roots)
+{
+    std::sort(set.aggregates.begin(), set.aggregates.end(),
+              [](const Aggregate &agg1, const Aggregate &agg2) {
+        return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
+                        agg1.key.ghs.number - agg2.key.ghs.number) < 0;
+    });
+
+    SwapMemory(out_set, &set, SIZE(set));
+    if (out_ghm_roots) {
+        std::swap(ghm_roots, *out_ghm_roots);
+    }
+}
 
 static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_date, Date max_date,
                              HeapArray<GhmGhsInfo> *out_ghm_ghs)
