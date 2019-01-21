@@ -5,6 +5,7 @@
 #pragma once
 
 #include "thop.hh"
+#include "response.hh"
 
 int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_response);
 int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response);

@@ -83,55 +83,55 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *o
         }
     }
 
-    return BuildJson([&](JsonWriter &writer) {
-        char buf[512];
+    JsonPageBuilder json(conn->compression_type);
+    char buf[512];
 
-        const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
-                                              int sex) {
-            if (diag_info.Attributes(sex).cmd) {
-                writer.Key("cmd");
-                writer.String(Fmt(buf, "D-%1",
-                                  FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2)).ptr);
-            }
-            if (diag_info.Attributes(sex).cmd && diag_info.Attributes(sex).jump) {
-                writer.Key("main_list");
-                writer.String(Fmt(buf, "D-%1%2",
-                                  FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2),
-                                  FmtArg(diag_info.Attributes(sex).jump).Pad0(-2)).ptr);
-            }
-            if (diag_info.Attributes(sex).severity) {
-                writer.Key("severity"); writer.Int(diag_info.Attributes(sex).severity);
-            }
-        };
-
-        writer.StartArray();
-        for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
-            if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
-                if (spec.Match(diag_info.Attributes(1).raw)) {
-                    writer.StartObject();
-                    writer.Key("diag"); writer.String(diag_info.diag.str);
-                    writer.Key("sex"); writer.String("Homme");
-                    WriteSexSpecificInfo(diag_info, 1);
-                    writer.EndObject();
-                }
-
-                if (spec.Match(diag_info.Attributes(2).raw)) {
-                    writer.StartObject();
-                    writer.Key("diag"); writer.String(diag_info.diag.str);
-                    writer.Key("sex"); writer.String("Femme");
-                    WriteSexSpecificInfo(diag_info, 2);
-                    writer.EndObject();
-                }
-            } else if (spec.Match(diag_info.Attributes(1).raw)) {
-                writer.StartObject();
-                writer.Key("diag"); writer.String(diag_info.diag.str);
-                WriteSexSpecificInfo(diag_info, 1);
-                writer.EndObject();
-            }
+    const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
+                                          int sex) {
+        if (diag_info.Attributes(sex).cmd) {
+            json.Key("cmd");
+            json.String(Fmt(buf, "D-%1",
+                              FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2)).ptr);
         }
-        writer.EndArray();
-        return true;
-    }, conn->compression_type, out_response);
+        if (diag_info.Attributes(sex).cmd && diag_info.Attributes(sex).jump) {
+            json.Key("main_list");
+            json.String(Fmt(buf, "D-%1%2",
+                              FmtArg(diag_info.Attributes(sex).cmd).Pad0(-2),
+                              FmtArg(diag_info.Attributes(sex).jump).Pad0(-2)).ptr);
+        }
+        if (diag_info.Attributes(sex).severity) {
+            json.Key("severity"); json.Int(diag_info.Attributes(sex).severity);
+        }
+    };
+
+    json.StartArray();
+    for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
+        if (diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference) {
+            if (spec.Match(diag_info.Attributes(1).raw)) {
+                json.StartObject();
+                json.Key("diag"); json.String(diag_info.diag.str);
+                json.Key("sex"); json.String("Homme");
+                WriteSexSpecificInfo(diag_info, 1);
+                json.EndObject();
+            }
+
+            if (spec.Match(diag_info.Attributes(2).raw)) {
+                json.StartObject();
+                json.Key("diag"); json.String(diag_info.diag.str);
+                json.Key("sex"); json.String("Femme");
+                WriteSexSpecificInfo(diag_info, 2);
+                json.EndObject();
+            }
+        } else if (spec.Match(diag_info.Attributes(1).raw)) {
+            json.StartObject();
+            json.Key("diag"); json.String(diag_info.diag.str);
+            WriteSexSpecificInfo(diag_info, 1);
+            json.EndObject();
+        }
+    }
+    json.EndArray();
+
+    return json.Finish(out_response);
 }
 
 int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response)
@@ -152,27 +152,27 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
         }
     }
 
-    return BuildJson([&](JsonWriter &writer) {
-        char buf[512];
+    JsonPageBuilder json(conn->compression_type);
+    char buf[512];
 
-        writer.StartArray();
-        for (const mco_ProcedureInfo &proc_info: index->procedures) {
-            if (spec.Match(proc_info.bytes)) {
-                writer.StartObject();
-                writer.Key("proc"); writer.String(proc_info.proc.str);
-                writer.Key("begin_date"); writer.String(Fmt(buf, "%1", proc_info.limit_dates[0]).ptr);
-                writer.Key("end_date"); writer.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
-                writer.Key("phase"); writer.Int(proc_info.phase);
-                writer.Key("activities"); writer.Int(proc_info.ActivitiesToDec());
-                if (proc_info.extensions > 1) {
-                    writer.Key("extensions"); writer.Int(proc_info.ExtensionsToDec());
-                }
-                writer.EndObject();
+    json.StartArray();
+    for (const mco_ProcedureInfo &proc_info: index->procedures) {
+        if (spec.Match(proc_info.bytes)) {
+            json.StartObject();
+            json.Key("proc"); json.String(proc_info.proc.str);
+            json.Key("begin_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[0]).ptr);
+            json.Key("end_date"); json.String(Fmt(buf, "%1", proc_info.limit_dates[1]).ptr);
+            json.Key("phase"); json.Int(proc_info.phase);
+            json.Key("activities"); json.Int(proc_info.ActivitiesToDec());
+            if (proc_info.extensions > 1) {
+                json.Key("extensions"); json.Int(proc_info.ExtensionsToDec());
             }
+            json.EndObject();
         }
-        writer.EndArray();
-        return true;
-    }, conn->compression_type, out_response);
+    }
+    json.EndArray();
+
+    return json.Finish(out_response);
 }
 
 int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response)
@@ -185,103 +185,103 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
 
-    return BuildJson([&](JsonWriter &writer) {
-        char buf[512];
+    JsonPageBuilder json(conn->compression_type);
+    char buf[512];
 
-        writer.StartArray();
-        for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
-            Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
-            for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                mco_GhsCode ghs = ghm_to_ghs_info.Ghs(sector);
+    json.StartArray();
+    for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
+        Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
+        for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
+            mco_GhsCode ghs = ghm_to_ghs_info.Ghs(sector);
 
-                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, sector);
-                const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
+            const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs, sector);
+            const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
 
-                uint32_t combined_durations = 0;
-                if (constraint) {
-                    combined_durations = constraint->durations &
-                                         ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
-                }
-
-                writer.StartObject();
-
-                writer.Key("ghm"); writer.String(ghm_to_ghs_info.ghm.ToString(buf).ptr);
-                writer.Key("ghm_root"); writer.String(ghm_to_ghs_info.ghm.Root().ToString(buf).ptr);
-                if (ghm_root_info.young_severity_limit) {
-                    writer.Key("young_age_treshold"); writer.Int(ghm_root_info.young_age_treshold);
-                    writer.Key("young_severity_limit"); writer.Int(ghm_root_info.young_severity_limit);
-                }
-                if (ghm_root_info.old_severity_limit) {
-                    writer.Key("old_age_treshold"); writer.Int(ghm_root_info.old_age_treshold);
-                    writer.Key("old_severity_limit"); writer.Int(ghm_root_info.old_severity_limit);
-                }
-                writer.Key("durations"); writer.Uint(combined_durations);
-
-                writer.Key("ghs"); writer.Int(ghs.number);
-                if ((combined_durations & 1) && constraint &&
-                        (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
-                    writer.Key("warn_cmd28"); writer.Bool(true);
-                }
-                if (ghm_root_info.confirm_duration_treshold) {
-                    writer.Key("confirm_treshold"); writer.Int(ghm_root_info.confirm_duration_treshold);
-                }
-                if (ghm_to_ghs_info.unit_authorization) {
-                    writer.Key("unit_authorization"); writer.Int(ghm_to_ghs_info.unit_authorization);
-                }
-                if (ghm_to_ghs_info.bed_authorization) {
-                    writer.Key("bed_authorization"); writer.Int(ghm_to_ghs_info.bed_authorization);
-                }
-                if (ghm_to_ghs_info.minimal_duration) {
-                    writer.Key("minimum_duration"); writer.Int(ghm_to_ghs_info.minimal_duration);
-                }
-                if (ghm_to_ghs_info.minimal_age) {
-                    writer.Key("minimum_age"); writer.Int(ghm_to_ghs_info.minimal_age);
-                }
-                if (ghm_to_ghs_info.main_diagnosis_mask.value) {
-                    writer.Key("main_diagnosis");
-                    writer.String(Fmt(buf, "D$%1.%2",
-                                      ghm_to_ghs_info.main_diagnosis_mask.offset,
-                                      ghm_to_ghs_info.main_diagnosis_mask.value).ptr);
-                }
-                if (ghm_to_ghs_info.diagnosis_mask.value) {
-                    writer.Key("diagnoses");
-                    writer.String(Fmt(buf, "D$%1.%2",
-                                      ghm_to_ghs_info.diagnosis_mask.offset,
-                                      ghm_to_ghs_info.diagnosis_mask.value).ptr);
-                }
-                if (ghm_to_ghs_info.procedure_masks.len) {
-                    writer.Key("procedures"); writer.StartArray();
-                    for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
-                        writer.String(Fmt(buf, "A$%1.%2", mask.offset, mask.value).ptr);
-                    }
-                    writer.EndArray();
-                }
-
-                if (ghs_price_info) {
-                    if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::Minoration) {
-                        writer.Key("warn_ucd"); writer.Bool(true);
-                    }
-                    writer.Key("ghs_cents"); writer.Int(ghs_price_info->ghs_cents);
-                    writer.Key("ghs_coefficient"); writer.Double(index->GhsCoefficient(sector));
-                    if (ghs_price_info->exh_treshold) {
-                        writer.Key("exh_treshold"); writer.Int(ghs_price_info->exh_treshold);
-                        writer.Key("exh_cents"); writer.Int(ghs_price_info->exh_cents);
-                    }
-                    if (ghs_price_info->exb_treshold) {
-                        writer.Key("exb_treshold"); writer.Int(ghs_price_info->exb_treshold);
-                        writer.Key("exb_cents"); writer.Int(ghs_price_info->exb_cents);
-                        if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
-                            writer.Key("exb_once"); writer.Bool(true);
-                        }
-                    }
-                }
-
-                writer.EndObject();
+            uint32_t combined_durations = 0;
+            if (constraint) {
+                combined_durations = constraint->durations &
+                                     ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
             }
+
+            json.StartObject();
+
+            json.Key("ghm"); json.String(ghm_to_ghs_info.ghm.ToString(buf).ptr);
+            json.Key("ghm_root"); json.String(ghm_to_ghs_info.ghm.Root().ToString(buf).ptr);
+            if (ghm_root_info.young_severity_limit) {
+                json.Key("young_age_treshold"); json.Int(ghm_root_info.young_age_treshold);
+                json.Key("young_severity_limit"); json.Int(ghm_root_info.young_severity_limit);
+            }
+            if (ghm_root_info.old_severity_limit) {
+                json.Key("old_age_treshold"); json.Int(ghm_root_info.old_age_treshold);
+                json.Key("old_severity_limit"); json.Int(ghm_root_info.old_severity_limit);
+            }
+            json.Key("durations"); json.Uint(combined_durations);
+
+            json.Key("ghs"); json.Int(ghs.number);
+            if ((combined_durations & 1) && constraint &&
+                    (constraint->warnings & (int)mco_GhmConstraint::Warning::PreferCmd28)) {
+                json.Key("warn_cmd28"); json.Bool(true);
+            }
+            if (ghm_root_info.confirm_duration_treshold) {
+                json.Key("confirm_treshold"); json.Int(ghm_root_info.confirm_duration_treshold);
+            }
+            if (ghm_to_ghs_info.unit_authorization) {
+                json.Key("unit_authorization"); json.Int(ghm_to_ghs_info.unit_authorization);
+            }
+            if (ghm_to_ghs_info.bed_authorization) {
+                json.Key("bed_authorization"); json.Int(ghm_to_ghs_info.bed_authorization);
+            }
+            if (ghm_to_ghs_info.minimal_duration) {
+                json.Key("minimum_duration"); json.Int(ghm_to_ghs_info.minimal_duration);
+            }
+            if (ghm_to_ghs_info.minimal_age) {
+                json.Key("minimum_age"); json.Int(ghm_to_ghs_info.minimal_age);
+            }
+            if (ghm_to_ghs_info.main_diagnosis_mask.value) {
+                json.Key("main_diagnosis");
+                json.String(Fmt(buf, "D$%1.%2",
+                                  ghm_to_ghs_info.main_diagnosis_mask.offset,
+                                  ghm_to_ghs_info.main_diagnosis_mask.value).ptr);
+            }
+            if (ghm_to_ghs_info.diagnosis_mask.value) {
+                json.Key("diagnoses");
+                json.String(Fmt(buf, "D$%1.%2",
+                                  ghm_to_ghs_info.diagnosis_mask.offset,
+                                  ghm_to_ghs_info.diagnosis_mask.value).ptr);
+            }
+            if (ghm_to_ghs_info.procedure_masks.len) {
+                json.Key("procedures"); json.StartArray();
+                for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
+                    json.String(Fmt(buf, "A$%1.%2", mask.offset, mask.value).ptr);
+                }
+                json.EndArray();
+            }
+
+            if (ghs_price_info) {
+                if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::Minoration) {
+                    json.Key("warn_ucd"); json.Bool(true);
+                }
+                json.Key("ghs_cents"); json.Int(ghs_price_info->ghs_cents);
+                json.Key("ghs_coefficient"); json.Double(index->GhsCoefficient(sector));
+                if (ghs_price_info->exh_treshold) {
+                    json.Key("exh_treshold"); json.Int(ghs_price_info->exh_treshold);
+                    json.Key("exh_cents"); json.Int(ghs_price_info->exh_cents);
+                }
+                if (ghs_price_info->exb_treshold) {
+                    json.Key("exb_treshold"); json.Int(ghs_price_info->exb_treshold);
+                    json.Key("exb_cents"); json.Int(ghs_price_info->exb_cents);
+                    if (ghs_price_info->flags & (int)mco_GhsPriceInfo::Flag::ExbOnce) {
+                        json.Key("exb_once"); json.Bool(true);
+                    }
+                }
+            }
+
+            json.EndObject();
         }
-        writer.EndArray();
-        return true;
-    }, conn->compression_type, out_response);
+    }
+    json.EndArray();
+
+    return json.Finish(out_response);
 }
 
 struct ReadableGhmDecisionNode {
@@ -629,26 +629,27 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_re
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
         return CreateErrorPage(500, out_response);
 
-    return BuildJson([&](JsonWriter &writer) {
-        writer.StartArray();
-        for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
-            writer.StartObject();
-            if (readable_node.header) {
-                writer.Key("header"); writer.String(readable_node.header);
-            }
-            writer.Key("text"); writer.String(readable_node.text);
-            if (readable_node.reverse) {
-                writer.Key("reverse"); writer.String(readable_node.reverse);
-            }
-            if (readable_node.children_idx) {
-                writer.Key("key"); writer.String(readable_node.key);
-                writer.Key("test"); writer.Int(readable_node.function);
-                writer.Key("children_idx"); writer.Int64(readable_node.children_idx);
-                writer.Key("children_count"); writer.Int64(readable_node.children_count);
-            }
-            writer.EndObject();
+    JsonPageBuilder json(conn->compression_type);
+
+    json.StartArray();
+    for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
+        json.StartObject();
+        if (readable_node.header) {
+            json.Key("header"); json.String(readable_node.header);
         }
-        writer.EndArray();
-        return true;
-    }, conn->compression_type, out_response);
+        json.Key("text"); json.String(readable_node.text);
+        if (readable_node.reverse) {
+            json.Key("reverse"); json.String(readable_node.reverse);
+        }
+        if (readable_node.children_idx) {
+            json.Key("key"); json.String(readable_node.key);
+            json.Key("test"); json.Int(readable_node.function);
+            json.Key("children_idx"); json.Int64(readable_node.children_idx);
+            json.Key("children_count"); json.Int64(readable_node.children_count);
+        }
+        json.EndObject();
+    }
+    json.EndArray();
+
+    return json.Finish(out_response);
 }

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "thop.hh"
+#include "response.hh"
 
 struct StructureEntity;
 

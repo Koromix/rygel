@@ -5,6 +5,7 @@
 #pragma once
 
 #include "thop.hh"
+#include "response.hh"
 
 extern mco_TableSet mco_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;

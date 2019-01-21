@@ -49,6 +49,8 @@ set(THOP_SRC ../libcc/json.hh
              server/mco_casemix.hh
              server/mco_info.cc
              server/mco_info.hh
+             server/response.cc
+             server/response.hh
              server/structure.cc
              server/structure.hh
              server/thop.cc
