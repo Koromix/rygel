@@ -406,9 +406,9 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
         return CreateErrorPage(403, out_response);
     }
 
+    // Prepare query
     McoResultProvider provider;
     int flags;
-    provider.SetDateRange(period[0], period[1]);
     provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
     if (ghm_root.IsValid()) {
         provider.SetGhmRoot(ghm_root);
@@ -417,6 +417,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
         flags = (int)AggregationFlag::KeyOnUnits;
     }
 
+    // Aggregate
     AggregateSet aggregate_set;
     HeapArray<mco_GhmRootCode> ghm_roots;
     {
@@ -426,16 +427,24 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
         HeapArray<mco_Pricing> pricings;
         HeapArray<mco_Pricing> mono_pricings;
 
-        bool success = provider.Run([&](Span<const mco_Result> results,
-                                        Span<const mco_Result> mono_results) {
-            pricings.RemoveFrom(0);
-            mono_pricings.RemoveFrom(0);
-            mco_Price(results, apply_coefficient, &pricings);
-            mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+        const auto aggregate_period = [&](Date min_date, Date max_date, int multiplier) {
+            provider.SetDateRange(min_date, max_date);
 
-            aggregate_set_builder.Process(results, mono_results, pricings, mono_pricings);
-        });
-        if (!success)
+            return provider.Run([&](Span<const mco_Result> results,
+                                    Span<const mco_Result> mono_results) {
+                pricings.RemoveFrom(0);
+                mono_pricings.RemoveFrom(0);
+                mco_Price(results, apply_coefficient, &pricings);
+                mco_Dispense(pricings, mono_results, dispense_mode, &mono_pricings);
+
+                aggregate_set_builder.Process(results, mono_results,
+                                              pricings, mono_pricings, multiplier);
+            });
+        };
+
+        if (!aggregate_period(period[0], period[1], 1))
+            return CreateErrorPage(500, out_response);
+        if (diff[0].value && !aggregate_period(diff[0], diff[1], -1))
             return CreateErrorPage(500, out_response);
 
         aggregate_set_builder.Finish(&aggregate_set, ghm_root.IsValid() ? &ghm_roots : nullptr);
