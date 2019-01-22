@@ -405,6 +405,10 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
         LogError("User is not allowed to use this dispensation mode");
         return CreateErrorPage(403, out_response);
     }
+    if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
+        LogError("User is not allowed to use filters");
+        return CreateErrorPage(403, out_response);
+    }
 
     // Prepare query
     McoResultProvider provider;
@@ -545,6 +549,10 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     // Check permissions
     if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
+        return CreateErrorPage(403, out_response);
+    }
+    if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
+        LogError("User is not allowed to use filters");
         return CreateErrorPage(403, out_response);
     }
 

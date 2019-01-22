@@ -97,8 +97,10 @@ let mco_casemix = {};
         if (!route.algorithm)
             route.algorithm = settings.default_algorithm;
         let prev_period = (route.mode !== 'none') ? route.prev_period : [null, null];
-        updateCasemixParams(route.period[0], route.period[1], route.filter, route.algorithm,
-                            prev_period[0], prev_period[1], route.apply_coefficient, route.refresh);
+        updateCasemixParams(route.period[0], route.period[1],
+                            settings.permissions.has('UseFilter') ? route.filter : null,
+                            route.algorithm, prev_period[0], prev_period[1],
+                            route.apply_coefficient, route.refresh);
         switch (route.view) {
             case 'ghm_roots':
             case 'units': {
@@ -137,8 +139,9 @@ let mco_casemix = {};
             errors.add('Algorithme inconnu');
 
         // Refresh settings
-        queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient, #opt_filter')
+        queryAll('#opt_units, #opt_periods, #opt_algorithm, #opt_update, #opt_apply_coefficient')
             .removeClass('hide');
+        query('#opt_filter').toggleClass('hide', !settings.permissions.has('UseFilter'));
         query('#opt_mode').toggleClass('hide', !['units', 'ghm_roots', 'durations'].includes(route.view));
         query('#opt_ghm_roots').toggleClass('hide', !['units', 'ghm_roots'].includes(route.view));
         query('#opt_ghm_root').toggleClass('hide', !['durations', 'results'].includes(route.view));
