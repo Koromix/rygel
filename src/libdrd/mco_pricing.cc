@@ -215,7 +215,7 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono
 
                 coefficients.RemoveFrom(0);
                 double coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
-                                                                 dispense_mode, &coefficients);
+                                                                dispense_mode, &coefficients);
 
                 if (UNLIKELY(!coefficients_total)) {
                     coefficients.RemoveFrom(0);
@@ -255,13 +255,10 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono
                 }
 
                 // Attribute missing cents to last stay (rounding errors)
-                /*{
-                    mco_Pricing *last_mono_pricing = &(*out_mono_pricings)[out_mono_pricings->len - 1];
-
-                    last_mono_pricing->ghs_cents += pricing.ghs_cents - total_ghs_cents;
-                    last_mono_pricing->price_cents += pricing.price_cents - total_price_cents;
-                    last_mono_pricing->total_cents += pricing.price_cents - total_price_cents;
-                }*/
+                mco_Pricing *last_mono_pricing = &out_mono_pricings->ptr[j + coefficients.len - 1];
+                last_mono_pricing->ghs_cents += pricing.ghs_cents - total_ghs_cents;
+                last_mono_pricing->price_cents += pricing.price_cents - total_price_cents;
+                last_mono_pricing->total_cents += pricing.price_cents - total_price_cents;
 
                 i++;
                 j += pricing.stays_count;
