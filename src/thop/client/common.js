@@ -6,32 +6,46 @@
 // Text
 // ------------------------------------------------------------------------
 
-function numberText(n)
+function numberText(n, show_plus)
 {
-    return n.toLocaleString('fr-FR');
+    if (show_plus === undefined)
+        show_plus = false;
+
+    return (show_plus && n > 0 ? '+' : '') +
+           n.toLocaleString('fr-FR');
 }
 
-function percentText(fraction)
+function percentText(fraction, show_plus)
 {
+    if (show_plus === undefined)
+        show_plus = false;
+
     const parameters = {
         style: 'percent',
         minimumFractionDigits: 1,
         maximumFractionDigits: 1
     };
-    return fraction.toLocaleString('fr-FR', parameters);
+
+    return (show_plus && fraction > 0 ? '+' : '') +
+           fraction.toLocaleString('fr-FR', parameters);
 }
 
-function priceText(price_cents, format_cents)
+function priceText(price_cents, format_cents, show_plus)
 {
     if (format_cents === undefined)
         format_cents = true;
+    if (show_plus === undefined)
+        show_plus = false;
 
     if (price_cents !== undefined) {
         const parameters = {
             minimumFractionDigits: format_cents ? 2 : 0,
-            maximumFractionDigits: format_cents ? 2 : 0
+            maximumFractionDigits: format_cents ? 2 : 0,
+
         };
-        return (price_cents / 100.0).toLocaleString('fr-FR', parameters);
+
+        return (show_plus && price_cents > 0 ? '+' : '') +
+               (price_cents / 100.0).toLocaleString('fr-FR', parameters);
     } else {
         return '';
     }

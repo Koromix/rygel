@@ -829,19 +829,19 @@ let mco_casemix = {};
             }
         }
 
-        dtab.addCell('td', stat.count, numberText(stat.count));
+        dtab.addCell('td', stat.count, numberText(stat.count, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.count / total.count);
-        dtab.addCell('td', stat.mono_count, numberText(stat.mono_count));
+        dtab.addCell('td', stat.mono_count, numberText(stat.mono_count, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.mono_count / total.mono_count);
-        dtab.addCell('td', stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false));
+        dtab.addCell('td', stat.price_cents_total / 100.0, priceText(stat.price_cents_total, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents_total / total.price_cents_total);
-        dtab.addCell('td', stat.price_cents / 100.0, priceText(stat.price_cents, false));
+        dtab.addCell('td', stat.price_cents / 100.0, priceText(stat.price_cents, false, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.price_cents / total.price_cents);
-        dtab.addCell('td', stat.deaths, numberText(stat.deaths));
+        dtab.addCell('td', stat.deaths, numberText(stat.deaths, !!mix_params.diff));
         if (!mix_params.diff)
             addPercentCell(stat.deaths / stat.count);
     }
@@ -950,7 +950,7 @@ let mco_casemix = {};
                 {
                     let missing_cents = duration_stat.price_cents_total;
                     for (const unit_stat of unit_stats) {
-                        tooltip += '\n– ' + unit_stat.unit + ' : ' + priceText(unit_stat.price_cents);
+                        tooltip += '\n– ' + unit_stat.unit + ' : ' + priceText(unit_stat.price_cents, true, !!mix_params.diff);
                         if (!mix_params.diff)
                             tooltip += ' (' + percentText(unit_stat.price_cents / duration_stat.price_cents_total) + ')';
                         missing_cents -= unit_stat.price_cents;
@@ -998,10 +998,10 @@ let mco_casemix = {};
                         tr.appendContent(
                             html('td', {class: ['count', 'total'].concat(diffToClasses(col_stat.count)),
                                         title: tooltip},
-                                 '' + col_stat.count),
+                                 '' + numberText(col_stat.count, !!mix_params.diff)),
                             html('td', {class: ['price', 'total'].concat(diffToClasses(col_stat.price_cents_total)),
                                         title: tooltip},
-                                 priceText(col_stat.price_cents_total, false))
+                                 priceText(col_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else {
                         tr.appendContent(
@@ -1052,10 +1052,10 @@ let mco_casemix = {};
                         tr.appendContent(
                             html('td', {class: ['count', cls].concat(diffToClasses(duration_stat.count)),
                                         title: tooltip},
-                                 '' + duration_stat.count),
+                                 '' + numberText(duration_stat.count, !!mix_params.diff)),
                             html('td', {class: ['price', cls].concat(diffToClasses(duration_stat.price_cents_total)),
                                         title: tooltip},
-                                 priceText(duration_stat.price_cents_total, false))
+                                 priceText(duration_stat.price_cents_total, false, !!mix_params.diff))
                         );
                     } else if (mco_pricing.testDuration(col, duration)) {
                         cls += ' empty';
