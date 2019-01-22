@@ -11,10 +11,12 @@ struct StructureEntity;
 
 enum class UserPermission {
     FullResults = 1 << 0,
-    MutateFilter = 1 << 1
+    UseFilter = 1 << 1,
+    MutateFilter = 1 << 2
 };
 static const char *const UserPermissionNames[] = {
     "FullResults",
+    "UseFilter",
     "MutateFilter"
 };
 
