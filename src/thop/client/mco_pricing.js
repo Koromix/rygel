@@ -272,7 +272,8 @@ let mco_pricing = {};
 
                     let td;
                     if (info) {
-                        td = html('td', {class: info.mode}, priceText(info.price));
+                        td = html('td', {class: info.mode},
+                                  priceText(info.price, true, diff_index >= 0));
 
                         let title = '';
                         if (!duration && col.warn_cmd28) {
