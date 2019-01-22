@@ -183,20 +183,18 @@ static double ComputeCoefficients(const mco_Pricing &pricing, Span<const mco_Pri
     return total;
 }
 
-void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_results,
+void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
                   mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_mono_pricings)
 {
-    DebugAssert(mono_results.len >= pricings.len);
+    DebugAssert(mono_pricings.len >= pricings.len);
 
     static const int task_size = 2048;
 
-    // First, calculate naive mono-stay prices, which we will use as coefficients (for
-    // some modes at least) below.
-    Size mono_pricings_start_len = out_mono_pricings->len;
-    mco_Price(mono_results, false, out_mono_pricings);
+    // Cannot append (parallel algorithm)
+    out_mono_pricings->Grow(mono_pricings.len);
 
     Async async;
-    Size i = 0, j = mono_pricings_start_len;
+    Size i = 0, j = 0;
     while (i < pricings.len) {
         Size task_offset = i;
         Size task_mono_offset = j;
@@ -211,10 +209,9 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
 
             Size end = std::min(pricings.len, task_offset + task_size);
             Size j = task_mono_offset;
-            for (Size i = task_offset; i < end; i++) {
+            for (Size i = task_offset; i < end;) {
                 const mco_Pricing &pricing = pricings[i];
-                Span<mco_Pricing> sub_mono_pricings = out_mono_pricings->Take(j, pricing.stays_count);
-                j += pricing.stays_count;
+                Span<const mco_Pricing> sub_mono_pricings = mono_pricings.Take(j, pricing.stays_count);
 
                 coefficients.RemoveFrom(0);
                 double coefficients_total = ComputeCoefficients(pricing, sub_mono_pricings,
@@ -226,44 +223,69 @@ void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_
                                                              mco_DispenseMode::J, &coefficients);
                 }
 
-                mco_Pricing *mono_pricing = nullptr;
                 int64_t total_ghs_cents = 0;
                 int64_t total_price_cents = 0;
                 for (Size k = 0; k < coefficients.len; k++) {
-                    mono_pricing = &sub_mono_pricings[k];
+                    mco_Pricing mono_pricing = sub_mono_pricings[k];
                     double fraction = coefficients[k] / coefficients_total;
 
                     // DIP rules are special
                     if (pricing.supplement_cents.st.dip) {
-                        double dip_fraction = (double)(mono_pricing->duration + 1) /
+                        double dip_fraction = (double)(mono_pricing.duration + 1) /
                                                       (pricing.duration + coefficients.len);
                         int64_t mono_dip_cents = (int64_t)round(pricing.supplement_cents.st.dip * dip_fraction);
-                        mono_pricing->total_cents += mono_dip_cents - mono_pricing->supplement_cents.st.dip;
-                        mono_pricing->supplement_cents.st.dip = mono_dip_cents;
+                        mono_pricing.total_cents += mono_dip_cents - mono_pricing.supplement_cents.st.dip;
+                        mono_pricing.supplement_cents.st.dip = mono_dip_cents;
                     }
 
                     {
                         int64_t ghs_cents = (int64_t)round(pricing.ghs_cents * fraction);
                         int64_t price_cents = (int64_t)round(pricing.price_cents * fraction);
-                        int64_t supplement_cents = mono_pricing->total_cents - mono_pricing->price_cents;
+                        int64_t supplement_cents = mono_pricing.total_cents - mono_pricing.price_cents;
 
-                        mono_pricing->ghs_cents = ghs_cents;
-                        mono_pricing->price_cents = price_cents;
-                        mono_pricing->total_cents = price_cents + supplement_cents;
+                        mono_pricing.ghs_cents = ghs_cents;
+                        mono_pricing.price_cents = price_cents;
+                        mono_pricing.total_cents = price_cents + supplement_cents;
                     }
 
-                    total_ghs_cents += mono_pricing->ghs_cents;
-                    total_price_cents += mono_pricing->price_cents;
+                    total_ghs_cents += mono_pricing.ghs_cents;
+                    total_price_cents += mono_pricing.price_cents;
+
+                    out_mono_pricings->ptr[j + k] = mono_pricing;
                 }
 
                 // Attribute missing cents to last stay (rounding errors)
-                mono_pricing->ghs_cents += pricing.ghs_cents - total_ghs_cents;
-                mono_pricing->price_cents += pricing.price_cents - total_price_cents;
-                mono_pricing->total_cents += pricing.price_cents - total_price_cents;
+                /*{
+                    mco_Pricing *last_mono_pricing = &(*out_mono_pricings)[out_mono_pricings->len - 1];
+
+                    last_mono_pricing->ghs_cents += pricing.ghs_cents - total_ghs_cents;
+                    last_mono_pricing->price_cents += pricing.price_cents - total_price_cents;
+                    last_mono_pricing->total_cents += pricing.price_cents - total_price_cents;
+                }*/
+
+                i++;
+                j += pricing.stays_count;
             }
 
             return true;
         });
     }
     async.Sync();
+
+    out_mono_pricings->len += mono_pricings.len;
+}
+
+void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_results,
+                  mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_mono_pricings)
+{
+    // First, calculate naive mono-stay prices, which we will use as coefficients (for
+    // some modes at least) below.
+    Size mono_pricings_start_len = out_mono_pricings->len;
+    mco_Price(mono_results, false, out_mono_pricings);
+
+    Span<const mco_Pricing> mono_pricings =
+        out_mono_pricings->Take(mono_pricings_start_len, out_mono_pricings->len - mono_pricings_start_len);
+
+    out_mono_pricings->len = mono_pricings_start_len;
+    mco_Dispense(pricings, mono_pricings, dispense_mode, out_mono_pricings);
 }

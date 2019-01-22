@@ -107,5 +107,7 @@ static inline void mco_Summarize(Span<const mco_Pricing> pricings, mco_Pricing *
     out_summary->ghs_coefficient = NAN;
 }
 
+void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Pricing> mono_pricings,
+                  mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_pricings);
 void mco_Dispense(Span<const mco_Pricing> pricings, Span<const mco_Result> mono_results,
                   mco_DispenseMode dispense_mode, HeapArray<mco_Pricing> *out_pricings);
