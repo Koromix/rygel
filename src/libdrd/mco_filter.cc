@@ -954,9 +954,9 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
 }
 
 Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mono_results[],
-                               HeapArray<const mco_Result *> *out_results,
-                               HeapArray<const mco_Result *> *out_mono_results,
-                               mco_StaySet *out_stay_set)
+                             HeapArray<const mco_Result *> *out_results,
+                             HeapArray<const mco_Result *> *out_mono_results,
+                             mco_StaySet *out_stay_set)
 {
     thread_alloc = &vm_alloc;
 
@@ -1039,9 +1039,9 @@ bool mco_FilterRunner::Init(const char *filter)
 
 // TODO: Parallelize filtering, see old mco_Filter() API
 bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Result> mono_results,
-                         HeapArray<const mco_Result *> *out_results,
-                         HeapArray<const mco_Result *> *out_mono_results,
-                         mco_StaySet *out_stay_set)
+                               HeapArray<const mco_Result *> *out_results,
+                               HeapArray<const mco_Result *> *out_mono_results,
+                               mco_StaySet *out_stay_set)
 {
     DEFER_NC(out_guard, results_len = out_results->len,
                         stays_len = out_stay_set ? out_stay_set->stays.len : 0) {
