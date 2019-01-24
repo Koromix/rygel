@@ -749,12 +749,12 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
 
     ELSE_IF_METHOD("other_diagnoses", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
-        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = obj->list->values[obj->idx];
+        const ListProxy<mco_Stay> &obj = *(ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = obj.list->values[obj.idx];
 
         // TODO: Use ForeignList instead? (same for procedures)
-        if (runner->other_diagnoses_vars[obj->idx]) {
-            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[obj->idx]);
+        if (runner->other_diagnoses_vars[obj.idx]) {
+            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[obj.idx]);
         } else {
             wrenEnsureSlots(vm, 2);
             wrenSetSlotNewList(vm, 0);
@@ -763,16 +763,16 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
                 wrenInsertInList(vm, 0, -1, 1);
             }
 
-            runner->other_diagnoses_vars[obj->idx] = wrenGetSlotHandle(vm, 0);
+            runner->other_diagnoses_vars[obj.idx] = wrenGetSlotHandle(vm, 0);
         }
     })
     ELSE_IF_METHOD("procedures", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
-        ListProxy<mco_Stay> *obj = (ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = obj->list->values[obj->idx];
+        const ListProxy<mco_Stay> &obj = *(ListProxy<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        const mco_Stay &stay = obj.list->values[obj.idx];
 
-        if (runner->procedures_vars[obj->idx]) {
-            wrenSetSlotHandle(vm, 0, runner->procedures_vars[obj->idx]);
+        if (runner->procedures_vars[obj.idx]) {
+            wrenSetSlotHandle(vm, 0, runner->procedures_vars[obj.idx]);
         } else {
             wrenEnsureSlots(vm, 2);
             wrenSetSlotNewList(vm, 0);
@@ -781,7 +781,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
                 wrenInsertInList(vm, 0, -1, 1);
             }
 
-            runner->procedures_vars[obj->idx] = wrenGetSlotHandle(vm, 0);
+            runner->procedures_vars[obj.idx] = wrenGetSlotHandle(vm, 0);
         }
     })
 
