@@ -486,15 +486,12 @@ Test options:)");
                      &results, dispense_mode >= 0 ? &mono_results : nullptr);
 
         if (filter_buf.len) {
-            mco_FilterRunner filter;
-
             switch_perf_counter(&filter_time);
+
             HeapArray<const mco_Result *> filter_results;
             HeapArray<const mco_Result *> filter_mono_results;
-            if (!filter.Init(filter_buf.ptr))
-                return false;
-            if (!filter.Process(results, mono_results, &filter_results,
-                                dispense_mode >= 0 ? &filter_mono_results : nullptr, &filter_stay_set))
+            if (!mco_Filter(filter_buf.ptr, results, mono_results, &filter_results,
+                            dispense_mode >= 0 ? &filter_mono_results : nullptr, &filter_stay_set))
                 return false;
 
             for (Size k = 0; k < filter_results.len; k++) {
