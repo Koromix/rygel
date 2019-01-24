@@ -1029,10 +1029,21 @@ mco_FilterRunner::~mco_FilterRunner()
 
 bool mco_FilterRunner::Init(const char *filter)
 {
-    // Wren expressions must not start or end with newlines
+    // Newlines are significant in Wren
+    Span<const char> filter2 = TrimStr((Span<const char>)filter);
+
+    // NOTE: We hack around the fact that Wren expressions cannot contain multiple
+    // statements by turn filter into a function body when there are newlines. It's
+    // not very elegant, but it does the work. An alternative would be to compile
+    // filter as a script, and then to remove the popping bytecode at the end
+    // to make sure the last expression value is available.
+
     filter_buf.Clear();
-    filter_buf.Append(TrimStr((Span<const char>)filter));
-    filter_buf.Append(0);
+    if (memchr(filter2.ptr, '\n', filter2.len)) {
+        Fmt(&filter_buf, "MCO.filter {\n%1\n}", filter2);
+    } else {
+        Fmt(&filter_buf, "%1", filter2);
+    }
 
     return ResetRunner();
 }
