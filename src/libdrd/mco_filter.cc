@@ -1055,8 +1055,12 @@ bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Re
                                mco_StaySet *out_stay_set)
 {
     DEFER_NC(out_guard, results_len = out_results->len,
+                        mono_results_len = out_mono_results ? out_mono_results->len : 0,
                         stays_len = out_stay_set ? out_stay_set->stays.len : 0) {
         out_results->RemoveFrom(results_len);
+        if (out_mono_results) {
+            out_mono_results->RemoveFrom(mono_results_len);
+        }
         if (out_stay_set) {
             out_stay_set->stays.RemoveFrom(stays_len);
         }
