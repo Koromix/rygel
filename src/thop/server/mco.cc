@@ -217,9 +217,16 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
                      [](const mco_Result *result1, const mco_Result *result2) {
         return result1->ghm.Root() < result2->ghm.Root();
     });
-    for (Size i = 0; i < results_by_ghm_root_ptrs.len; i++) {
-        mco_results_by_ghm_root.Append(results_by_ghm_root_ptrs[i]->ghm.Root(),
-                                       MakeSpan(&results_by_ghm_root_ptrs[i], 0)).first->len++;
+    for (Size i = 0; i < results_by_ghm_root_ptrs.len;) {
+        Span<const mco_Result *> ptrs = MakeSpan(&results_by_ghm_root_ptrs[i], 1);
+        const mco_GhmRootCode ghm_root = ptrs[0]->ghm.Root();
+
+        while (++i < results_by_ghm_root_ptrs.len &&
+               results_by_ghm_root_ptrs[i]->ghm.Root() == ghm_root) {
+            ptrs.len++;
+        }
+
+        mco_results_by_ghm_root.Append(ghm_root, ptrs);
     }
 
     return true;
