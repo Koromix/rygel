@@ -828,7 +828,7 @@ let mco_casemix = {};
             if (!isNaN(value)) {
                 dtab.addCell('td', value, percentText(value));
             } else {
-                dtab.addCell('td', null, null);
+                dtab.addCell('td', null, '-');
             }
         }
 
