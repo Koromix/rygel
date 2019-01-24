@@ -15,7 +15,7 @@ function numberText(n, show_plus)
            n.toLocaleString('fr-FR');
 }
 
-function percentText(fraction, show_plus)
+function percentText(value, show_plus)
 {
     if (show_plus === undefined)
         show_plus = false;
@@ -26,8 +26,12 @@ function percentText(fraction, show_plus)
         maximumFractionDigits: 1
     };
 
-    return (show_plus && fraction > 0 ? '+' : '') +
-           fraction.toLocaleString('fr-FR', parameters);
+    if (!isNaN(value)) {
+        return (show_plus && fraction > 0 ? '+' : '') +
+               value.toLocaleString('fr-FR', parameters);
+    } else {
+        return '-';
+    }
 }
 
 function priceText(price_cents, format_cents, show_plus)
