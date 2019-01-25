@@ -419,7 +419,7 @@ public:
             int8_t cmd;
             int8_t jump;
         } cmd_jump;
-    } u;
+    } u = {};
 
     mco_ListSpecifier(Table table = Table::Invalid) : table(table) {}
 
