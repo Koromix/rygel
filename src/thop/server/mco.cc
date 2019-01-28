@@ -305,6 +305,7 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
             MakeSpan(mco_results_to_mono.FindValue(split_results.begin(), nullptr),
                      mco_results_to_mono.FindValue(split_results.end(), nullptr));
 
+        // Run filter
         index.RemoveFrom(0);
         mono_index.RemoveFrom(0);
         changed_stay_set.stays.RemoveFrom(0);
