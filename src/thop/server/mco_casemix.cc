@@ -38,7 +38,7 @@ static int GetQueryDateRange(MHD_Connection *conn, const char *key, Response *ou
 
 invalid:
     LogError("Invalid date range '%1'", str);
-    return false;
+    return CreateErrorPage(422, out_response);
 }
 
 static int GetQueryDispenseMode(MHD_Connection *conn, const char *key, Response *out_response,
