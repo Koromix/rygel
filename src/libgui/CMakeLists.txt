@@ -4,21 +4,22 @@
 
 # The platform layer is only available for Win32, for now
 
-set(GUI_SRC ../libcc/opengl.cc
-            ../libcc/opengl.hh
-            ../libcc/opengl_func.inc
-
-            libgui.cc
-            libgui.hh)
+set(LIBGUI_SRC
+    ../libcc/opengl.cc
+    ../libcc/opengl.hh
+    ../libcc/opengl_func.inc
+    libgui.cc
+    libgui.hh
+)
 if (WIN32)
-    list(APPEND GUI_SRC runner_win32.cc)
+    list(APPEND LIBGUI_SRC runner_win32.cc)
 elseif(EMSCRIPTEN)
-    list(APPEND GUI_SRC runner_emsdk.cc)
+    list(APPEND LIBGUI_SRC runner_emsdk.cc)
 else()
     return()
 endif()
 
-add_library(gui ${GUI_SRC})
+add_library(gui ${LIBGUI_SRC})
 set_target_properties(gui PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(gui PUBLIC miniz)
 if(WIN32)

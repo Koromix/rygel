@@ -7,14 +7,17 @@ if(NOT TARGET heimdall)
 endif()
 
 find_package(R)
-if(R_FOUND)
-    set(HEIMDALLR_SRC ../libcc/Rcc.cc
-                      ../libcc/Rcc.hh
-
-                      heimdallR.cc
-                      heimdallR.R)
-
-    R_add_package(heimdallR DESCRIPTION NAMESPACE RCPP_EXPORT RCPP_INCLUDE
-                  ${HEIMDALLR_SRC})
-    target_link_libraries(heimdallR PRIVATE heimdall miniz)
+if(NOT R_FOUND)
+    return()
 endif()
+
+set(HEIMDALLR_SRC
+    ../libcc/Rcc.cc
+    ../libcc/Rcc.hh
+    heimdallR.cc
+    heimdallR.R
+)
+
+R_add_package(heimdallR DESCRIPTION NAMESPACE RCPP_EXPORT RCPP_INCLUDE
+              ${HEIMDALLR_SRC})
+target_link_libraries(heimdallR PRIVATE heimdall miniz)

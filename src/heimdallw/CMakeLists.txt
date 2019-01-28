@@ -10,6 +10,9 @@ if(EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX .html)
 endif()
 
-set(HEIMDALLW_SRC heimdallw.cc)
+set(HEIMDALLW_SRC
+    heimdallw.cc
+)
+
 add_executable(heimdallw ${HEIMDALLW_SRC})
 target_link_libraries(heimdallw PRIVATE heimdall)
