@@ -240,7 +240,7 @@ static Span<const mco_Result> GetResultsRange(Date min_date, Date max_date)
         return result.stays[result.stays.len - 1].exit.date < date;
     });
     const mco_Result *end =
-        std::upper_bound(start, (const mco_Result *)mco_results.end(), max_date,
+        std::upper_bound(start, (const mco_Result *)mco_results.end(), max_date - 1,
                          [](Date date, const mco_Result &result) {
         return date < result.stays[result.stays.len - 1].exit.date;
     });
@@ -257,7 +257,7 @@ static Span<const mco_Result *> GetIndexRange(Span<const mco_Result *> index,
         return result->stays[result->stays.len - 1].exit.date < date;
     });
     const mco_Result **end =
-        std::upper_bound(start, index.end(), max_date,
+        std::upper_bound(start, index.end(), max_date - 1,
                          [](Date date, const mco_Result *result) {
         return date < result->stays[result->stays.len - 1].exit.date;
     });
