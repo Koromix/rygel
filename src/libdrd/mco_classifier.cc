@@ -1656,7 +1656,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 {
     const mco_Stay &stay = *prep.stay;
 
-    if (ghm_to_ghs_info.minimal_age && prep.age < ghm_to_ghs_info.minimal_age)
+    if (ghm_to_ghs_info.minimum_age && prep.age < ghm_to_ghs_info.minimum_age)
         return false;
 
     int duration;
@@ -1684,7 +1684,7 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
         if (!test)
             return false;
     }
-    if (ghm_to_ghs_info.minimal_duration && duration < ghm_to_ghs_info.minimal_duration)
+    if (ghm_to_ghs_info.minimum_duration && duration < ghm_to_ghs_info.minimum_duration)
         return false;
 
     if (ghm_to_ghs_info.main_diagnosis_mask.value) {

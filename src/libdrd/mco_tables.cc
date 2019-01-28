@@ -931,8 +931,8 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
 
             case 6: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
-                FAIL_PARSE_IF(table.filename, current_ghs.minimal_duration);
-                current_ghs.minimal_duration = (int8_t)(raw_ghs_node.params[1] + 1);
+                FAIL_PARSE_IF(table.filename, current_ghs.minimum_duration);
+                current_ghs.minimum_duration = (int8_t)(raw_ghs_node.params[1] + 1);
                 current_ghs.conditions_count++;
             } break;
 
@@ -946,8 +946,8 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
 
             case 8: {
                 FAIL_PARSE_IF(table.filename, raw_ghs_node.params[0]);
-                FAIL_PARSE_IF(table.filename, current_ghs.minimal_age);
-                current_ghs.minimal_age = (int8_t)raw_ghs_node.params[1];
+                FAIL_PARSE_IF(table.filename, current_ghs.minimum_age);
+                current_ghs.minimum_age = (int8_t)raw_ghs_node.params[1];
                 current_ghs.conditions_count++;
             } break;
 

@@ -788,7 +788,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
         Rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
         Rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
         Rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
-        Rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimal_duration");
+        Rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimum_duration");
         Rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
         Rcc_Vector<const char *> main_diagnosis = df_builder.Add<const char *>("main_diagnosis");
         Rcc_Vector<const char *> diagnoses = df_builder.Add<const char *>("diagnoses");
@@ -835,8 +835,8 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
                 confirm_treshold[i] = ghm_root_info.confirm_duration_treshold ? ghm_root_info.confirm_duration_treshold : NA_INTEGER;
                 unit_authorization[i] = ghm_to_ghs_info.unit_authorization ? ghm_to_ghs_info.unit_authorization : NA_INTEGER;
                 bed_authorization[i] = ghm_to_ghs_info.bed_authorization ? ghm_to_ghs_info.bed_authorization : NA_INTEGER;
-                minimum_duration[i] = ghm_to_ghs_info.minimal_duration ? ghm_to_ghs_info.minimal_duration : NA_INTEGER;
-                minimum_age[i] = ghm_to_ghs_info.minimal_age ? ghm_to_ghs_info.minimal_age : NA_INTEGER;
+                minimum_duration[i] = ghm_to_ghs_info.minimum_duration ? ghm_to_ghs_info.minimum_duration : NA_INTEGER;
+                minimum_age[i] = ghm_to_ghs_info.minimum_age ? ghm_to_ghs_info.minimum_age : NA_INTEGER;
                 if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                     main_diagnosis.Set(i, Fmt(buf, "D$%1.%2",
                                               ghm_to_ghs_info.main_diagnosis_mask.offset,
@@ -895,7 +895,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
                     mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
                     if (constraint) {
                         uint32_t combined_durations = constraint->durations &
-                                                      ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                                                      ~((1u << ghm_to_ghs_info.minimum_duration) - 1);
 
                         durations[i] = combined_durations;
                         warn_cmd28[i] = (combined_durations & 1) &&

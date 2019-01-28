@@ -167,11 +167,11 @@ void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs, StreamWriter *out_s
         if (ghm_to_ghs_info.bed_authorization) {
             PrintLn(out_st, "          Requires bed authorization %1", ghm_to_ghs_info.bed_authorization);
         }
-        if (ghm_to_ghs_info.minimal_duration) {
-            PrintLn(out_st, "          Requires duration >= %1 days", ghm_to_ghs_info.minimal_duration);
+        if (ghm_to_ghs_info.minimum_duration) {
+            PrintLn(out_st, "          Requires duration >= %1 days", ghm_to_ghs_info.minimum_duration);
         }
-        if (ghm_to_ghs_info.minimal_age) {
-            PrintLn(out_st, "          Requires age >= %1 years", ghm_to_ghs_info.minimal_age);
+        if (ghm_to_ghs_info.minimum_age) {
+            PrintLn(out_st, "          Requires age >= %1 years", ghm_to_ghs_info.minimum_age);
         }
         if (ghm_to_ghs_info.main_diagnosis_mask.value) {
             PrintLn(out_st, "          Main Diagnosis List D$%1.%2",
