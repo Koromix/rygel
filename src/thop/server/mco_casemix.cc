@@ -348,7 +348,7 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
 
                     if (constraint) {
                         agg_ghm_ghs->durations |= constraint->durations &
-                                                  ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                                                  ~((1u << ghm_to_ghs_info.minimum_duration) - 1);
                     }
 
                     if (ghs_price_info) {

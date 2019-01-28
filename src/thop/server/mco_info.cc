@@ -200,7 +200,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
             uint32_t combined_durations = 0;
             if (constraint) {
                 combined_durations = constraint->durations &
-                                     ~((1u << ghm_to_ghs_info.minimal_duration) - 1);
+                                     ~((1u << ghm_to_ghs_info.minimum_duration) - 1);
             }
 
             json.StartObject();
@@ -231,11 +231,11 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
             if (ghm_to_ghs_info.bed_authorization) {
                 json.Key("bed_authorization"); json.Int(ghm_to_ghs_info.bed_authorization);
             }
-            if (ghm_to_ghs_info.minimal_duration) {
-                json.Key("minimum_duration"); json.Int(ghm_to_ghs_info.minimal_duration);
+            if (ghm_to_ghs_info.minimum_duration) {
+                json.Key("minimum_duration"); json.Int(ghm_to_ghs_info.minimum_duration);
             }
-            if (ghm_to_ghs_info.minimal_age) {
-                json.Key("minimum_age"); json.Int(ghm_to_ghs_info.minimal_age);
+            if (ghm_to_ghs_info.minimum_age) {
+                json.Key("minimum_age"); json.Int(ghm_to_ghs_info.minimum_age);
             }
             if (ghm_to_ghs_info.main_diagnosis_mask.value) {
                 json.Key("main_diagnosis");
