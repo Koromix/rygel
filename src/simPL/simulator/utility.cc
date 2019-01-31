@@ -19,6 +19,9 @@
 
 double UtilityCompute(const Human &human)
 {
+    if (human.death_happened)
+        return 0.0;
+
     double utility = 1.0;
     int count = 0;
 
