@@ -1163,7 +1163,8 @@ let mco_casemix = {};
                                  '' + result.bill_id)
                         ),
                         html('td', (['♂ ', '♀ '][result.sex - 1] || '') + ageText(result.age)),
-                        html('td', result.duration !== undefined ? durationText(result.duration) : null),
+                        html('td', (result.duration !== undefined ? durationText(result.duration) : '') +
+                                   (result.stays[result.stays.length - 1].exit_mode == '9' ? ' (✝)' : '')),
                         html('td', {title: codeWithDesc(ghm_roots_map, result.ghm_root) + '\n\n' +
                                            'GHM : ' + result.ghm + '\n' +
                                            'Erreur : ' + codeWithDesc(errors_map, result.main_error) + '\n' +
@@ -1193,7 +1194,8 @@ let mco_casemix = {};
                     html('tr', {class: 'rt_stay'},
                         html('td', 'RUM ' + (j + 1) + (j == result.main_stay ? ' *' : '')),
                         html('th', {title: unitPath(stay.unit)}, '' + (stay.unit || '')),
-                        html('td', stay.duration !== undefined ? durationText(stay.duration) : null),
+                        html('td', (stay.duration !== undefined ? durationText(stay.duration) : '') +
+                                   (stay.exit_mode == '9' ? ' (✝)' : '')),
                         html('td'),
                         html('td', {style: 'text-align: right;'},
                              stay.total_cents ? (priceText(stay.price_cents) + '€') : ''),
