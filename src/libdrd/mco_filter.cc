@@ -965,8 +965,9 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 
     Size stays_count = 0;
     for (const mco_Result &result: results) {
+        wrenEnsureSlots(vm, 1);
+
         while (stay_vars.len < result.stays.len) {
-            wrenEnsureSlots(vm, 1);
             wrenSetSlotHandle(vm, 0, stay_class);
             wrenSetSlotNewForeign(vm, 0, 0, SIZE(ReadArrayProxy<mco_Stay>));
 
@@ -989,7 +990,6 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
         result_obj->result = &result;
         result_obj->pricing = {};
 
-        wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
         if (wrenCall(vm, expression_call) != WREN_RESULT_SUCCESS)
             return -1;
