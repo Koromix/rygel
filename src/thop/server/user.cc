@@ -32,6 +32,26 @@ struct Session {
 static std::shared_mutex sessions_mutex;
 static HashTable<const char *, Session> sessions;
 
+static Span<const char> SplitListValue(Span<const char> str,
+                                       Span<const char> *out_remain, bool *out_enable)
+{
+    Span<const char> part = TrimStr(SplitStrAny(str, " ,", out_remain));
+
+    if (out_enable) {
+        if (part.len && part[0] == '+') {
+            part = part.Take(1, part.len - 1);
+            *out_enable = true;
+        } else if (part.len && part[0] == '-') {
+            part = part.Take(1, part.len - 1);
+            *out_enable = false;
+        } else {
+            *out_enable = true;
+        }
+    }
+
+    return part;
+}
+
 bool UserSetBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, len = set.users.len) { set.users.RemoveFrom(len); };
@@ -96,31 +116,20 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     }
                 } else if (prop.key == "Permissions") {
                     while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-                        if (part.len) {
-                            bool enable;
-                            if (part[0] == '+') {
-                                enable = true;
-                                part = part.Take(1, part.len - 1);
-                            } else if (part[0] == '-') {
-                                enable = false;
-                                part = part.Take(1, part.len - 1);
-                            } else {
-                                enable = true;
-                            }
+                        bool enable;
+                        Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
-                            if (part == "All") {
-                                user.permissions = enable ? UINT_MAX : 0;
+                        if (part == "All") {
+                            user.permissions = enable ? UINT_MAX : 0;
+                        } else {
+                            const char *const *name = FindIf(UserPermissionNames,
+                                                             [&](const char *str) { return TestStr(str, part); });
+                            if (name) {
+                                user.permissions =
+                                    ApplyMask(user.permissions, 1u << (name - UserPermissionNames), enable);
                             } else {
-                                const char *const *name = FindIf(UserPermissionNames,
-                                                                 [&](const char *str) { return TestStr(str, part); });
-                                if (name) {
-                                    user.permissions =
-                                        ApplyMask(user.permissions, 1u << (name - UserPermissionNames), enable);
-                                } else {
-                                    LogError("Unknown permission '%1'", part);
-                                    valid = false;
-                                }
+                                LogError("Unknown permission '%1'", part);
+                                valid = false;
                             }
                         }
                     }
@@ -139,31 +148,20 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
                     deny.Append(DuplicateString(prop.value, &set.str_alloc).ptr);
                 } else if (prop.key == "McoDispenseModes") {
                     while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-                        if (part.len) {
-                            bool enable;
-                            if (part[0] == '+') {
-                                enable = true;
-                                part = part.Take(1, part.len - 1);
-                            } else if (part[0] == '-') {
-                                enable = false;
-                                part = part.Take(1, part.len - 1);
-                            } else {
-                                enable = true;
-                            }
+                        bool enable;
+                        Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
-                            if (part == "All") {
-                                user.mco_dispense_modes = enable ? UINT_MAX : 0;
+                        if (part == "All") {
+                            user.mco_dispense_modes = enable ? UINT_MAX : 0;
+                        } else {
+                            const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
+                                                            [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
+                            if (desc) {
+                                user.mco_dispense_modes =
+                                    ApplyMask(user.mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
                             } else {
-                                const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
-                                                                [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
-                                if (desc) {
-                                    user.mco_dispense_modes =
-                                        ApplyMask(user.mco_dispense_modes, 1u << (desc - mco_DispenseModeOptions), enable);
-                                } else {
-                                    LogError("Unknown dispensation mode '%1'", part);
-                                    valid = false;
-                                }
+                                LogError("Unknown dispensation mode '%1'", part);
+                                valid = false;
                             }
                         }
                     }
