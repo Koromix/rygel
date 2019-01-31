@@ -267,17 +267,14 @@ Available compression types:)", CompressionTypeNames[0]);
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
-                Size i = 0;
-                for (; i < ARRAY_SIZE(CompressionTypeNames); i++) {
-                    if (TestStrI(CompressionTypeNames[i], opt.current_value))
-                        break;
-                }
-                if (i >= ARRAY_SIZE(CompressionTypeNames)) {
+                const char *const *name = FindIf(CompressionTypeNames,
+                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
+                if (!name) {
                     LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
                 }
 
-                compression_type = (CompressionType)i;
+                compression_type = (CompressionType)(name - CompressionTypeNames);
             } else if (opt.Test("-M", "--merge_file", OptionType::Value)) {
                 merge_file = opt.current_value;
             } else if (opt.Test("--source_map")) {

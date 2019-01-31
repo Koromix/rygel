@@ -60,7 +60,7 @@ set(THOP_SRC
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_custom_command(OUTPUT assets.cc
                        COMMAND $<TARGET_FILE:packer>
-                       ARGS -Mclient/packer.ini --source_map -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
+                       ARGS -Mclient/packer.ini --source_map -e -cGzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
                        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                        DEPENDS packer client/packer.ini ${THOP_RESOURCES})
     add_library(thop_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
@@ -68,7 +68,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
     add_custom_command(OUTPUT assets.cc
                        COMMAND $<TARGET_FILE:packer>
-                       ARGS -Mclient/packer.ini -e -cgzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
+                       ARGS -Mclient/packer.ini -e -cGzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
                        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                        DEPENDS packer client/packer.ini ${THOP_RESOURCES})
     list(APPEND THOP_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")

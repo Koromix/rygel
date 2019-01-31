@@ -25,7 +25,7 @@ set(LIBHEIMDALL_SRC
 
 add_custom_command(OUTPUT assets.cc
                    COMMAND $<TARGET_FILE:packer>
-                   ARGS -cnone -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${LIBHEIMDALL_RESOURCES}
+                   ARGS -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${LIBHEIMDALL_RESOURCES}
                    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                    DEPENDS packer ${LIBHEIMDALL_RESOURCES})
 list(APPEND LIBHEIMDALL_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
