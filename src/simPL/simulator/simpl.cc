@@ -3,16 +3,17 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "simpl.hh"
 #include "human.hh"
 #include "random.hh"
+#include "simpl.hh"
+#include "utility.hh"
 
-static void DumpHumanInfo(Size iteration, const Human &human)
+static void DumpIterationInfo(Size iteration, const Human &human, double utility, double cost)
 {
-    PrintLn("%1;%2;%3;%4;%5;%6;%7;%8;%9",
+    PrintLn("%1;%2;%3;%4;%5;%6;%7;%8;%9;%10;%11",
             iteration, human.id, human.age, (int)human.sex, (int)human.smoking_status,
             human.bmi, human.systolic_pressure, human.total_cholesterol,
-            (int)human.death_happened);
+            (int)human.death_happened, utility, cost);
 }
 
 int main(int argc, char **argv)
@@ -68,15 +69,21 @@ Options:
     }
 
     // CSV header
-    PrintLn("iteration;id;age;sex;smoker;bmi;sbp;tc;dead");
+    PrintLn("iteration;id;age;sex;smoker;bmi;sbp;tc;dead;utility;cost");
 
     // Run simulation
     for (Size i = 0; i < max_iterations && humans.len; i++) {
         for (Size j = 0; j < humans.len; j++) {
             humans[j] = SimulateOneYear(humans[j]);
-            DumpHumanInfo(i, humans[j]);
 
-            if (humans[j].death_happened) {
+            const Human &human = humans[j];
+
+            double utility = UtilityCompute(human);
+            double cost = 0.0;
+
+            DumpIterationInfo(i, human, utility, cost);
+
+            if (human.death_happened) {
                 humans.ptr[j--] = humans.ptr[--humans.len];
             }
         }
