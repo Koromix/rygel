@@ -5,31 +5,30 @@
 #include "../../libcc/libcc.hh"
 #include "random.hh"
 
-#include <random>
+Random rand_human;
+Random rand_therapy;
 
-static std::mt19937 random_generator(0);
-
-void InitRandom(int seed)
+void Random::Init(int seed)
 {
     random_generator.seed(seed);
 }
 
-bool RandomBool(double probability)
+bool Random::Bool(double probability)
 {
     return std::uniform_real_distribution(0.0, 1.0)(random_generator) >= probability;
 }
 
-int RandomIntUniform(int min, int max)
+int Random::IntUniform(int min, int max)
 {
     return std::uniform_int_distribution(min, max)(random_generator);
 }
 
-double RandomDoubleUniform(double min, double max)
+double Random::DoubleUniform(double min, double max)
 {
     return std::uniform_real_distribution(min, max)(random_generator);
 }
 
-double RandomDoubleNormal(double mean, double sd)
+double Random::DoubleNormal(double mean, double sd)
 {
      return std::normal_distribution(mean, sd)(random_generator);
 }

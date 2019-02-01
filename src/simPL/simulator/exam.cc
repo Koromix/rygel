@@ -36,20 +36,20 @@ ExamResult ExaminePhysicalActivity(const Human &)
 // from post-coaching and post-PL information.
 void RunLongevityCheckUp(Human *human)
 {
-    if (human->smoking_status && !RandomBool(0.05)) {
+    if (human->smoking_status && !rand_therapy.Bool(0.05)) {
         human->smoking_status = false;
         human->smoking_cessation_age = human->age;
     }
 
-    if (human->BMI() >= 30.0 && !RandomBool(0.2)) {
+    if (human->BMI() >= 30.0 && !rand_therapy.Bool(0.2)) {
         human->bmi_therapy += 10.0;
     }
 
-    if (human->SystolicPressure() >= 140.0 && !RandomBool(0.2)) {
+    if (human->SystolicPressure() >= 140.0 && !rand_therapy.Bool(0.2)) {
         human->systolic_pressure_therapy += 10.0;
     }
 
-    if (human->TotalCholesterol() >= 2.0 && !RandomBool(0.2)) {
+    if (human->TotalCholesterol() >= 2.0 && !rand_therapy.Bool(0.2)) {
         human->total_cholesterol_therapy += 1.0;
     }
 }

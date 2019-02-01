@@ -18,12 +18,12 @@ Human CreateHuman(int id)
     human.id = id;
 
     // Socio-demographic
-    human.sex = RandomBool(0.5) ? Sex::Male : Sex::Female;
+    human.sex = rand_human.Bool(0.5) ? Sex::Male : Sex::Female;
     human.age = 44;
-    human.sociocultural_level = RandomIntUniform(1, 4);
+    human.sociocultural_level = rand_human.IntUniform(1, 4);
 
     // CV risk factors
-    human.smoking_status = !RandomBool(SmokingGetPrevalence(human.age, human.sex));
+    human.smoking_status = !rand_human.Bool(SmokingGetPrevalence(human.age, human.sex));
     human.smoking_cessation_age = 0;
     human.bmi_base = BmiGetFirst(human.age, human.sex);
     human.systolic_pressure_base = SystolicPressureGetFirst(human.age, human.sex);
@@ -35,7 +35,7 @@ Human CreateHuman(int id)
     human.total_cholesterol_therapy = 0.0;
 
     // PL checkup
-    human.checkup_age = RandomIntUniform(45, 75);
+    human.checkup_age = rand_human.IntUniform(45, 75);
 
     // Death
     human.death_happened = false;
@@ -58,7 +58,7 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
     next.sociocultural_level = prev.sociocultural_level;
 
     // CV risk factors
-    if (prev.smoking_status && !RandomBool(SmokingGetCessationProbability(prev.age, prev.sex))) {
+    if (prev.smoking_status && !rand_human.Bool(SmokingGetCessationProbability(prev.age, prev.sex))) {
         next.smoking_status = false;
         next.smoking_cessation_age = next.age;
     } else {
@@ -87,7 +87,7 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
         double death_probability = ScoreComputeProbability(next) +
                                    GetDeathProbability(next.age, next.sex, death_flags);
 
-        next.death_happened = !RandomBool(death_probability);
+        next.death_happened = !rand_human.Bool(death_probability);
     }
 
     return next;
