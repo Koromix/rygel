@@ -1,7 +1,11 @@
 library(data.table)
 
-data <- fread('results.csv')
-deads <- data[data$dead == 1,]
+data1 <- fread(cmd = 'simpl -H 20000 -S 2708 -f EnablePL')
+data2 <- fread(cmd = 'simpl -H 20000 -S 2708')
 
-hist(deads$age[deads$sex == 0 & deads$age < 200], main = 'Hommes')
-hist(deads$age[deads$sex == 1 & deads$age < 200], main = 'Femmes')
+deads1 <- data1[data1$dead == 1,]
+
+hist(deads1$age[deads1$sex == 0 & deads1$age < 200], main = 'Hommes')
+hist(deads1$age[deads1$sex == 1 & deads1$age < 200], main = 'Femmes')
+
+print(sum(data1$utility) - sum(data2$utility))

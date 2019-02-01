@@ -11,6 +11,7 @@ add_executable(simPL
     simulator/death.hh
     simulator/exam.cc
     simulator/exam.hh
+    simulator/flags.hh
     simulator/human.cc
     simulator/human.hh
     simulator/random.cc

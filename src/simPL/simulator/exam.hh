@@ -19,5 +19,7 @@ ExamResult ExamineSleep(const Human &human);
 ExamResult ExamineNutrition(const Human &human);
 ExamResult ExaminePhysicalActivity(const Human &human);
 
+void RunLongevityCheckUp(Human *human);
+
 void RunCoachingCognitiveSession(Human *human);
 void RunCoachingLifestyleSession(Human *human);
