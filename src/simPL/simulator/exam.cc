@@ -52,6 +52,8 @@ void RunLongevityCheckUp(Human *human)
     if (human->TotalCholesterol() >= 2.0 && !rand_therapy.Bool(0.2)) {
         human->total_cholesterol_therapy += 1.0;
     }
+
+    human->cost += 1500.0;
 }
 
 void RunCoachingCognitiveSession(Human *)
