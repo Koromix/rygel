@@ -80,10 +80,13 @@ double SystolicPressureGetFirst(int age, Sex sex)
     return rand_human.DoubleNormal(base, 15.0);
 }
 
-double SystolicPressureGetEvolution(int age, Sex sex)
+double SystolicPressureGetNext(double value, int age, Sex sex)
 {
-    return (GetBaseSystolicPressure(age + 10, sex) -
-            GetBaseSystolicPressure(age, sex)) / 10.0;
+    double ref = GetBaseSystolicPressure(age, sex);
+    double delta = (GetBaseSystolicPressure(age + 10, sex) - ref) / 10.0;
+    double rand = rand_human.DoubleNormal((value - ref) / ref / 10.0, 0.1);
+
+    return value + delta + rand;
 }
 
 // FIXME: Use per-sex values for base BMI
@@ -104,10 +107,15 @@ double BmiGetFirst(int age, Sex sex)
     return rand_human.DoubleNormal(base, 4.0);
 }
 
-double BmiGetEvolution(int age, Sex sex)
+double BmiGetNext(double value, int age, Sex sex)
 {
-    return (GetBaseBmi(age + 10, sex) -
-            GetBaseBmi(age, sex)) / 10.0;
+    double ref = GetBaseBmi(age, sex);
+    double delta = (GetBaseBmi(age + 10, sex) - ref) / 10.0;
+    double rand = rand_human.DoubleNormal((value - ref) / ref / 10.0, 0.05);
+
+    // LogInfo("%1 %2 %3", value, ref, rand);
+
+    return value + delta + rand;
 }
 
 static double GetBaseCholesterol(int age, Sex sex)
@@ -143,10 +151,13 @@ double CholesterolGetFirst(int age, Sex sex)
     return rand_human.DoubleNormal(base, 0.6);
 }
 
-double CholesterolGetEvolution(int age, Sex sex)
+double CholesterolGetNext(double value, int age, Sex sex)
 {
-    return (GetBaseCholesterol(age + 10, sex) -
-            GetBaseCholesterol(age, sex)) / 10.0;
+    double ref = GetBaseCholesterol(age, sex);
+    double delta = (GetBaseCholesterol(age + 10, sex) - ref) / 10.0;
+    double rand = rand_human.DoubleNormal((value - ref) / ref / 10.0, 0.01);
+
+    return value + delta + rand;
 }
 
 static double ComputeScore10(const Human &human)

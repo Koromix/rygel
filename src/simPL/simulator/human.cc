@@ -60,9 +60,9 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
         next.smoking_status = prev.smoking_status;
         next.smoking_cessation_age = 0;
     }
-    next.bmi_base = prev.bmi_base + BmiGetEvolution(prev.age, prev.sex);
-    next.systolic_pressure_base = prev.systolic_pressure_base + SystolicPressureGetEvolution(prev.age, prev.sex);
-    next.total_cholesterol_base = prev.total_cholesterol_base + CholesterolGetEvolution(prev.age, prev.sex);
+    next.bmi_base = BmiGetNext(prev.bmi_base, prev.age, prev.sex);
+    next.systolic_pressure_base = SystolicPressureGetNext(prev.systolic_pressure_base, prev.age, prev.sex);
+    next.total_cholesterol_base = CholesterolGetNext(prev.total_cholesterol_base, prev.age, prev.sex);
 
     // Drugs
     next.bmi_therapy = prev.bmi_therapy;
