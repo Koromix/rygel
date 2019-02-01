@@ -159,16 +159,16 @@ static double ComputeScore10(const Human &human)
     else age_cat = 0;
 
     int8_t sbp_cat;
-    if (human.systolic_pressure >= 170) sbp_cat = 3;
-    else if (human.systolic_pressure >= 150) sbp_cat = 2;
-    else if (human.systolic_pressure >= 130) sbp_cat = 1;
+    if (human.SystolicPressure() >= 170) sbp_cat = 3;
+    else if (human.SystolicPressure() >= 150) sbp_cat = 2;
+    else if (human.SystolicPressure() >= 130) sbp_cat = 1;
     else sbp_cat = 0;
 
     int8_t cholesterol_cat;
-    if (human.total_cholesterol >= 7.5) cholesterol_cat = 4;
-    else if (human.total_cholesterol >= 6.5) cholesterol_cat = 3;
-    else if (human.total_cholesterol >= 5.5) cholesterol_cat = 2;
-    else if (human.total_cholesterol >= 4.5) cholesterol_cat = 1;
+    if (human.TotalCholesterol() >= 7.5) cholesterol_cat = 4;
+    else if (human.TotalCholesterol() >= 6.5) cholesterol_cat = 3;
+    else if (human.TotalCholesterol() >= 5.5) cholesterol_cat = 2;
+    else if (human.TotalCholesterol() >= 4.5) cholesterol_cat = 1;
     else cholesterol_cat = 0;
 
     //LogInfo("%1 / %2 / %3 ==> 0x%4", human.age, human.systolic_pressure, human.total_cholesterol,

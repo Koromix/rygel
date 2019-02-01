@@ -36,8 +36,8 @@ double UtilityCompute(const Human &human)
     if (human.peripheral_artery_disease.diseased && human.peripheral_artery_disease.year == 0) { utility -= 0.0627; count++; }
     else if (human.peripheral_artery_disease.diseased) { utility -= 0.1171; count++; }*/
 
-    if (human.stroke_happened && human.stroke_age == human.age) { utility -= 0.2; count ++; }
-    else if (human.stroke_happened) { utility -= 0.1; count ++; }
+    // if (human.stroke_happened && human.stroke_age == human.age) { utility -= 0.2; count ++; }
+    // else if (human.stroke_happened) { utility -= 0.1; count ++; }
 
     if (count >= 2) utility -= 0.0528;
     if (count >= 3) utility -= 0.0415;

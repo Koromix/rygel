@@ -27,13 +27,27 @@ struct Human {
     // CV risk factors
     bool smoking_status;
     int smoking_cessation_age;
-    double bmi;
-    double systolic_pressure;
-    double total_cholesterol;
+    double bmi_base;
+    double systolic_pressure_base;
+    double total_cholesterol_base;
+
+    // Drugs
+    double bmi_therapy;
+    double systolic_pressure_therapy;
+    double total_cholesterol_therapy;
+
+    // Computed effects
+    double BMI() const { return bmi_base + bmi_therapy; }
+    double SystolicPressure() const { return systolic_pressure_base - 10 * (BMI() >= 30) -
+                                             systolic_pressure_therapy; }
+    double TotalCholesterol() const { return total_cholesterol_base - total_cholesterol_therapy; }
+
+    // PL checkup
+    int checkup_age;
 
     // CV diseases
-    bool stroke_happened;
-    int stroke_age;
+    // bool stroke_happened;
+    // int stroke_age;
 
     // Death
     bool death_happened;
@@ -65,4 +79,4 @@ struct Human {
 };
 
 Human CreateHuman(int id);
-Human SimulateOneYear(const Human &prev);
+Human SimulateOneYear(const Human &prev, uint64_t flags);

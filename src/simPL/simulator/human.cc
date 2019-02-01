@@ -6,6 +6,8 @@
 #include "human.hh"
 #include "cardiovascular.hh"
 #include "death.hh"
+#include "exam.hh"
+#include "flags.hh"
 #include "random.hh"
 
 Human CreateHuman(int id)
@@ -17,19 +19,23 @@ Human CreateHuman(int id)
 
     // Socio-demographic
     human.sex = RandomBool(0.5) ? Sex::Male : Sex::Female;
-    human.age = 45;
+    human.age = 44;
     human.sociocultural_level = RandomIntUniform(1, 4);
 
     // CV risk factors
     human.smoking_status = !RandomBool(SmokingGetPrevalence(human.age, human.sex));
     human.smoking_cessation_age = 0;
-    human.bmi = BmiGetFirst(human.age, human.sex);
-    human.systolic_pressure = SystolicPressureGetFirst(human.age, human.sex);
-    human.total_cholesterol = CholesterolGetFirst(human.age, human.sex);
+    human.bmi_base = BmiGetFirst(human.age, human.sex);
+    human.systolic_pressure_base = SystolicPressureGetFirst(human.age, human.sex);
+    human.total_cholesterol_base = CholesterolGetFirst(human.age, human.sex);
 
-    // Diseases
-    human.stroke_happened = false;
-    human.stroke_age = 0;
+    // Drugs
+    human.bmi_therapy = 0.0;
+    human.systolic_pressure_therapy = 0.0;
+    human.total_cholesterol_therapy = 0.0;
+
+    // PL checkup
+    human.checkup_age = RandomIntUniform(45, 75);
 
     // Death
     human.death_happened = false;
@@ -37,7 +43,7 @@ Human CreateHuman(int id)
     return human;
 }
 
-Human SimulateOneYear(const Human &prev)
+Human SimulateOneYear(const Human &prev, uint64_t flags)
 {
     DebugAssert(!prev.death_happened);
 
@@ -59,13 +65,20 @@ Human SimulateOneYear(const Human &prev)
         next.smoking_status = prev.smoking_status;
         next.smoking_cessation_age = 0;
     }
-    next.bmi = prev.bmi + BmiGetEvolution(prev.age, prev.sex);
-    next.systolic_pressure = prev.systolic_pressure + SystolicPressureGetEvolution(prev.age, prev.sex);
-    next.total_cholesterol = prev.total_cholesterol + CholesterolGetEvolution(prev.age, prev.sex);
+    next.bmi_base = prev.bmi_base + BmiGetEvolution(prev.age, prev.sex);
+    next.systolic_pressure_base = prev.systolic_pressure_base + SystolicPressureGetEvolution(prev.age, prev.sex);
+    next.total_cholesterol_base = prev.total_cholesterol_base + CholesterolGetEvolution(prev.age, prev.sex);
 
-    // Diseases
-    next.stroke_happened = prev.stroke_happened;
-    next.stroke_age = prev.stroke_age;
+    // Drugs
+    next.bmi_therapy = prev.bmi_therapy;
+    next.systolic_pressure_therapy = prev.systolic_pressure_therapy;
+    next.total_cholesterol_therapy = prev.total_cholesterol_therapy;
+
+    // PL checkup
+    next.checkup_age = prev.checkup_age;
+    if ((flags & (uint64_t)SimulationFlag::EnablePL) && next.checkup_age == next.age) {
+        RunLongevityCheckUp(&next);
+    }
 
     // Death
     {
