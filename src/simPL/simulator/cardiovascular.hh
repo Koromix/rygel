@@ -11,12 +11,12 @@ double SmokingGetPrevalence(int age, Sex sex);
 double SmokingGetCessationProbability(int age, Sex sex);
 
 double SystolicPressureGetFirst(int age, Sex sex);
-double SystolicPressureGetEvolution(int age, Sex sex);
+double SystolicPressureGetNext(double value, int age, Sex sex);
 
 double BmiGetFirst(int age, Sex sex);
-double BmiGetEvolution(int age, Sex sex);
+double BmiGetNext(double value, int age, Sex sex);
 
 double CholesterolGetFirst(int age, Sex sex);
-double CholesterolGetEvolution(int age, Sex sex);
+double CholesterolGetNext(double value, int age, Sex sex);
 
 double ScoreComputeProbability(const Human &human);
