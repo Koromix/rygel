@@ -7,4 +7,5 @@
 #include "../../libcc/libcc.hh"
 #include "human.hh"
 
-double UtilityCompute(const Human &human);
+double UtilityComputeUtility(const Human &human);
+double UtilityComputeCost(const Human &human);

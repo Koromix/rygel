@@ -85,8 +85,9 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
         next.death_happened = !rand_human.Bool(death_probability);
     }
 
-    // Utility
-    next.utility = UtilityCompute(next);
+    // Evaluation
+    next.utility = UtilityComputeUtility(next);
+    next.cost += UtilityComputeCost(next);
 
     return next;
 }

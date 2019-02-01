@@ -17,7 +17,7 @@
 // Age  (per year) -0.003 (0.0002)
 // Least deprived four quintile groups (assume equate to low income, middle income and poor income)    0.04 (0.006)
 
-double UtilityCompute(const Human &human)
+double UtilityComputeUtility(const Human &human)
 {
     if (human.death_happened)
         return 0.0;
@@ -45,4 +45,15 @@ double UtilityCompute(const Human &human)
 
     utility = std::max(utility, 0.0);
     return utility;
+}
+
+double UtilityComputeCost(const Human &human)
+{
+    double cost = 0.0;
+
+    cost += human.bmi_therapy ? 10.0 : 0.0;
+    cost += human.systolic_pressure_therapy ? 10.0 : 0.0;
+    cost += human.total_cholesterol_therapy ? 10.0 : 0.0;
+
+    return cost;
 }
