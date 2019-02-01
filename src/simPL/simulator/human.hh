@@ -52,6 +52,10 @@ struct Human {
     // Death
     bool death_happened;
 
+    // Utility and cost
+    double utility;
+    double cost;
+
     // Behavior (others)
     // double alcohol_consumption;
     // int drugs_count;

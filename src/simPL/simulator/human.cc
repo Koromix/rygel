@@ -9,10 +9,11 @@
 #include "exam.hh"
 #include "flags.hh"
 #include "random.hh"
+#include "utility.hh"
 
 Human CreateHuman(int id)
 {
-    Human human;
+    Human human = {};
 
     // Identifier
     human.id = id;
@@ -24,15 +25,9 @@ Human CreateHuman(int id)
 
     // CV risk factors
     human.smoking_status = !rand_human.Bool(SmokingGetPrevalence(human.age, human.sex));
-    human.smoking_cessation_age = 0;
     human.bmi_base = BmiGetFirst(human.age, human.sex);
     human.systolic_pressure_base = SystolicPressureGetFirst(human.age, human.sex);
     human.total_cholesterol_base = CholesterolGetFirst(human.age, human.sex);
-
-    // Drugs
-    human.bmi_therapy = 0.0;
-    human.systolic_pressure_therapy = 0.0;
-    human.total_cholesterol_therapy = 0.0;
 
     // PL checkup
     human.checkup_age = rand_human.IntUniform(45, 75);
@@ -47,7 +42,7 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
 {
     DebugAssert(!prev.death_happened);
 
-    Human next;
+    Human next = {};
 
     // Identifier
     next.id = prev.id;
@@ -89,6 +84,9 @@ Human SimulateOneYear(const Human &prev, uint64_t flags)
 
         next.death_happened = !rand_human.Bool(death_probability);
     }
+
+    // Utility
+    next.utility = UtilityCompute(next);
 
     return next;
 }

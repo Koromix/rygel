@@ -7,14 +7,13 @@
 #include "human.hh"
 #include "random.hh"
 #include "simpl.hh"
-#include "utility.hh"
 
-static void DumpIterationInfo(Size iteration, const Human &human, double utility, double cost)
+static void DumpIterationInfo(Size iteration, const Human &human)
 {
     PrintLn("%1;%2;%3;%4;%5;%6;%7;%8;%9;%10;%11",
             iteration, human.id, human.age, (int)human.sex, (int)human.smoking_status,
             human.BMI(), human.SystolicPressure(), human.TotalCholesterol(),
-            (int)human.death_happened, utility, cost);
+            (int)human.death_happened, human.utility, human.cost);
 }
 
 int main(int argc, char **argv)
@@ -102,14 +101,9 @@ Flags:)",
         for (Size j = 0; j < humans.len; j++) {
             humans[j] = SimulateOneYear(humans[j], flags);
 
-            const Human &human = humans[j];
+            DumpIterationInfo(i, humans[j]);
 
-            double utility = UtilityCompute(human);
-            double cost = 0.0;
-
-            DumpIterationInfo(i, human, utility, cost);
-
-            if (human.death_happened) {
+            if (humans[j].death_happened) {
                 humans.ptr[j--] = humans.ptr[--humans.len];
             }
         }
