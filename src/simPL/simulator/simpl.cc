@@ -83,7 +83,9 @@ Flags:)",
         }
     }
 
-    InitRandom(random_seed);
+    // Init pseudo-random generators
+    rand_human.Init(random_seed);
+    rand_therapy.Init(random_seed);
 
     // Init population
     HeapArray<Human> humans;

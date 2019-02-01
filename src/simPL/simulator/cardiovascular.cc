@@ -77,7 +77,7 @@ static double GetBaseSystolicPressure(int age, Sex sex)
 double SystolicPressureGetFirst(int age, Sex sex)
 {
     double base = GetBaseSystolicPressure(age, sex);
-    return RandomDoubleNormal(base, 15.0);
+    return rand_human.DoubleNormal(base, 15.0);
 }
 
 double SystolicPressureGetEvolution(int age, Sex sex)
@@ -101,7 +101,7 @@ static double GetBaseBmi(int age, Sex)
 double BmiGetFirst(int age, Sex sex)
 {
     double base = GetBaseBmi(age, sex);
-    return RandomDoubleNormal(base, 4.0);
+    return rand_human.DoubleNormal(base, 4.0);
 }
 
 double BmiGetEvolution(int age, Sex sex)
@@ -140,7 +140,7 @@ static double GetBaseCholesterol(int age, Sex sex)
 double CholesterolGetFirst(int age, Sex sex)
 {
     double base = GetBaseCholesterol(age, sex);
-    return RandomDoubleNormal(base, 0.6);
+    return rand_human.DoubleNormal(base, 0.6);
 }
 
 double CholesterolGetEvolution(int age, Sex sex)

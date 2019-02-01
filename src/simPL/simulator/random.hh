@@ -6,9 +6,19 @@
 
 #include "../../libcc/libcc.hh"
 
-void InitRandom(int seed);
+#include <random>
 
-bool RandomBool(double probability);
-int RandomIntUniform(int min, int max);
-double RandomDoubleUniform(double min, double max);
-double RandomDoubleNormal(double mean, double sd);
+class Random {
+    std::mt19937 random_generator;
+
+public:
+    void Init(int seed);
+
+    bool Bool(double probability);
+    int IntUniform(int min, int max);
+    double DoubleUniform(double min, double max);
+    double DoubleNormal(double mean, double sd);
+};
+
+extern Random rand_human;
+extern Random rand_therapy;
