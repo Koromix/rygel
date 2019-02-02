@@ -1023,8 +1023,9 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 
 mco_FilterRunner::~mco_FilterRunner()
 {
-    if (wren)
+    if (wren) {
         delete wren;
+    }
 }
 
 bool mco_FilterRunner::Init(const char *filter)
@@ -1090,8 +1091,10 @@ bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Re
 
 bool mco_FilterRunner::ResetRunner()
 {
-    if (wren)
+    if (wren) {
         delete wren;
+    }
+
     wren = new mco_WrenRunner;
     wren_count = 16384;
 
