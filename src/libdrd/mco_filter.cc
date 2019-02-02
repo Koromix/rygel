@@ -39,6 +39,20 @@ foreign class StayArray is Sequence {
     foreign iteratorValue(it)
 }
 
+foreign class DiagnosisArray is Sequence {
+    foreign count
+    foreign [index]
+    foreign iterate(it)
+    foreign iteratorValue(it)
+}
+
+foreign class ProcedureArray is Sequence {
+    foreign count
+    foreign [index]
+    foreign iterate(it)
+    foreign iteratorValue(it)
+}
+
 foreign class McoStay {
     foreign admin_id
     foreign bill_id
@@ -123,8 +137,10 @@ var result = MCO.result
 template <typename T>
 struct ProxyArray {
     WrenHandle *var;
-    Span<WrenHandle *> vars;
     Span<const T> values;
+
+    // TODO: Move out of here, it is used only for the stays array
+    HeapArray<WrenHandle *> vars;
     HeapArray<T> copies;
 };
 
@@ -149,12 +165,16 @@ public:
 
     WrenHandle *date_class;
     WrenHandle *stay_class;
+    WrenHandle *diagnosis_array_class;
+    WrenHandle *procedure_array_class;
     ProxyArray<mco_Stay> *stays_arr;
     ResultObject *result_obj;
     WrenHandle *mco_class;
     WrenHandle *mco_build;
-    HeapArray<WrenHandle *> other_diagnoses_vars;
-    HeapArray<WrenHandle *> procedures_vars;
+
+    // We don't bother shrinking those
+    HeapArray<ProxyArray<DiagnosisCode> *> other_diagnosis_arrays;
+    HeapArray<ProxyArray<mco_ProcedureRealisation> *> procedure_arrays;
 
     WrenHandle *expression_var = nullptr;
     WrenHandle *expression_call;
@@ -165,6 +185,9 @@ public:
                  HeapArray<const mco_Result *> *out_results,
                  HeapArray<const mco_Result *> *out_mono_results,
                  mco_StaySet *out_stay_set);
+
+private:
+    void InitProxyArrays(Size count);
 };
 
 static THREAD_LOCAL Allocator *thread_alloc;
@@ -454,9 +477,8 @@ static WrenForeignMethodFn BindProxyArrayMethod(const char *signature, void (*fu
 
     ELSE_IF_METHOD("count", [](WrenVM *vm) {
         const ProxyArray<char> &arr = *(const ProxyArray<char> *)wrenGetSlotForeign(vm, 0);
-        wrenSetSlotDouble(vm, 0, (double)arr.vars.len);
+        wrenSetSlotDouble(vm, 0, (double)arr.values.len);
     })
-    ELSE_IF_METHOD("[_]", func)
     ELSE_IF_METHOD("iterate(_)", [](WrenVM *vm) {
         const ProxyArray<char> &arr = *(const ProxyArray<char> *)wrenGetSlotForeign(vm, 0);
 
@@ -471,12 +493,13 @@ static WrenForeignMethodFn BindProxyArrayMethod(const char *signature, void (*fu
             } break;
         }
 
-        if (++idx < arr.vars.len) {
+        if (++idx < arr.values.len) {
             wrenSetSlotDouble(vm, 0, (double)idx);
         } else {
             wrenSetSlotBool(vm, 0, false);
         }
     })
+    ELSE_IF_METHOD("[_]", func)
     ELSE_IF_METHOD("iteratorValue(_)", func)
 
     return nullptr;
@@ -487,11 +510,41 @@ static WrenForeignMethodFn BindStayArrayMethod(const char *signature)
     if (false) {}
 
     return BindProxyArrayMethod(signature, [](WrenVM *vm) {
-        const ProxyArray<mco_Stay> &arr = *(const ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        Size idx = GetSlotIndexSafe(vm, 1, arr.vars.len);
+        ProxyArray<mco_Stay> *arr = (ProxyArray<mco_Stay> *)wrenGetSlotForeign(vm, 0);
+        Size idx = GetSlotIndexSafe(vm, 1, arr->values.len);
 
         if (LIKELY(idx >= 0)) {
-            wrenSetSlotHandle(vm, 0, arr.vars[idx]);;
+            wrenSetSlotHandle(vm, 0, arr->vars[idx]);
+        }
+    });
+}
+
+static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
+{
+    if (false) {}
+
+    return BindProxyArrayMethod(signature, [](WrenVM *vm) {
+        const ProxyArray<DiagnosisCode> &arr =
+            *(const ProxyArray<DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
+        Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
+
+        if (LIKELY(idx >= 0)) {
+            wrenSetSlotString(vm, 0, arr.values[idx].str);
+        }
+    });
+}
+
+static WrenForeignMethodFn BindProcedureArrayMethod(const char *signature)
+{
+    if (false) {}
+
+    return BindProxyArrayMethod(signature, [](WrenVM *vm) {
+        const ProxyArray<mco_ProcedureRealisation> &arr =
+            *(const ProxyArray<mco_ProcedureRealisation> *)wrenGetSlotForeign(vm, 0);
+        Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
+
+        if (LIKELY(idx >= 0)) {
+            wrenSetSlotString(vm, 0, arr.values[idx].proc.str);
         }
     });
 }
@@ -758,39 +811,14 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
     ELSE_IF_METHOD("other_diagnoses", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
         const ProxyArrayObject<mco_Stay> &obj = *(ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = obj.array->values[obj.idx];
 
-        // TODO: Use ReadArray instead? (same for procedures)
-        if (runner->other_diagnoses_vars[obj.idx]) {
-            wrenSetSlotHandle(vm, 0, runner->other_diagnoses_vars[obj.idx]);
-        } else {
-            wrenEnsureSlots(vm, 2);
-            wrenSetSlotNewList(vm, 0);
-            for (DiagnosisCode diag: stay.other_diagnoses) {
-                wrenSetSlotString(vm, 1, diag.str);
-                wrenInsertInList(vm, 0, -1, 1);
-            }
-
-            runner->other_diagnoses_vars[obj.idx] = wrenGetSlotHandle(vm, 0);
-        }
+        wrenSetSlotHandle(vm, 0, runner->other_diagnosis_arrays[obj.idx]->var);
     })
     ELSE_IF_METHOD("procedures", [](WrenVM *vm) {
         mco_WrenRunner *runner = (mco_WrenRunner *)wrenGetUserData(vm);
         const ProxyArrayObject<mco_Stay> &obj = *(ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-        const mco_Stay &stay = obj.array->values[obj.idx];
 
-        if (runner->procedures_vars[obj.idx]) {
-            wrenSetSlotHandle(vm, 0, runner->procedures_vars[obj.idx]);
-        } else {
-            wrenEnsureSlots(vm, 2);
-            wrenSetSlotNewList(vm, 0);
-            for (const mco_ProcedureRealisation &proc: stay.procedures) {
-                wrenSetSlotString(vm, 1, proc.proc.str);
-                wrenInsertInList(vm, 0, -1, 1);
-            }
-
-            runner->procedures_vars[obj.idx] = wrenGetSlotHandle(vm, 0);
-        }
+        wrenSetSlotHandle(vm, 0, runner->procedure_arrays[obj.idx]->var);
     })
 
     return nullptr;
@@ -875,6 +903,10 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
         return BindDateMethod(signature);
     } else if (!is_static && TestStr(class_name, "StayArray")) {
         return BindStayArrayMethod(signature);
+    } else if (!is_static && TestStr(class_name, "DiagnosisArray")) {
+        return BindDiagnosisArrayMethod(signature);
+    } else if (!is_static && TestStr(class_name, "ProcedureArray")) {
+        return BindProcedureArrayMethod(signature);
     } else if (!is_static && TestStr(class_name, "McoStay")) {
         return BindMcoStayMethod(signature);
     } else if (!is_static && TestStr(class_name, "McoResult")) {
@@ -936,6 +968,10 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
     date_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoStay", 0);
     stay_class = wrenGetSlotHandle(vm, 0);
+    wrenGetVariable(vm, "mco", "DiagnosisArray", 0);
+    diagnosis_array_class = wrenGetSlotHandle(vm, 0);
+    wrenGetVariable(vm, "mco", "ProcedureArray", 0);
+    procedure_array_class = wrenGetSlotHandle(vm, 0);
     wrenGetVariable(vm, "mco", "McoResult", 0);
     wrenSetSlotNewForeign(vm, 0, 0, SIZE(ResultObject));
     result_obj = (ResultObject *)wrenGetSlotForeign(vm, 0);
@@ -968,36 +1004,23 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
 {
     thread_alloc = &vm_alloc;
 
-    // Reuse for performance
-    HeapArray<WrenHandle *> stay_vars;
-
     Size stays_count = 0;
     for (const mco_Result &result: results) {
-        wrenEnsureSlots(vm, 1);
+        InitProxyArrays(result.stays.len - other_diagnosis_arrays.len);
 
-        while (stay_vars.len < result.stays.len) {
-            wrenSetSlotHandle(vm, 0, stay_class);
-            wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArrayObject<mco_Stay>));
-
-            WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
-            ProxyArrayObject<mco_Stay> *stay_obj = (ProxyArrayObject<mco_Stay> *)wrenGetSlotForeign(vm, 0);
-            stay_obj->array = stays_arr;
-            stay_obj->idx = stay_vars.len;
-
-            stay_vars.Append(stay_var);
-        }
-
-        other_diagnoses_vars.RemoveFrom(0);
-        other_diagnoses_vars.AppendDefault(result.stays.len);
-        procedures_vars.RemoveFrom(0);
-        procedures_vars.AppendDefault(result.stays.len);
-
-        stays_arr->vars = stay_vars.Take(0, result.stays.len);
         stays_arr->values = result.stays;
         stays_arr->copies.RemoveFrom(0);
         result_obj->result = &result;
         result_obj->pricing = {};
 
+        for (Size i = 0; i < result.stays.len; i++) {
+            const mco_Stay &stay = result.stays[i];
+
+            other_diagnosis_arrays[i]->values = stay.other_diagnoses;
+            procedure_arrays[i]->values = stay.procedures;
+        }
+
+        wrenEnsureSlots(vm, 1);
         wrenSetSlotHandle(vm, 0, expression_var);
         if (wrenCall(vm, expression_call) != WREN_RESULT_SUCCESS)
             return -1;
@@ -1027,6 +1050,42 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
     }
 
     return stays_count;
+}
+
+void mco_WrenRunner::InitProxyArrays(Size count)
+{
+    wrenEnsureSlots(vm, 1);
+
+    for (Size i = 0; i < count; i++) {
+        wrenSetSlotHandle(vm, 0, stay_class);
+        {
+            ProxyArrayObject<mco_Stay> *stay_obj =
+                (ProxyArrayObject<mco_Stay> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArrayObject<mco_Stay>));
+            WrenHandle *stay_var = wrenGetSlotHandle(vm, 0);
+
+            stay_obj->array = stays_arr;
+            stay_obj->idx = stays_arr->vars.len;
+            stays_arr->vars.Append(stay_var);
+        }
+
+        wrenSetSlotHandle(vm, 0, diagnosis_array_class);
+        {
+            ProxyArray<DiagnosisCode> *arr =
+                (ProxyArray<DiagnosisCode> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<DiagnosisCode>));
+
+            arr->var = wrenGetSlotHandle(vm, 0);
+            other_diagnosis_arrays.Append(arr);
+        }
+
+        wrenSetSlotHandle(vm, 0, procedure_array_class);
+        {
+            ProxyArray<mco_ProcedureRealisation> *arr =
+                (ProxyArray<mco_ProcedureRealisation> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<mco_ProcedureRealisation>));
+
+            arr->var = wrenGetSlotHandle(vm, 0);
+            procedure_arrays.Append(arr);
+        }
+    }
 }
 
 mco_FilterRunner::~mco_FilterRunner()
