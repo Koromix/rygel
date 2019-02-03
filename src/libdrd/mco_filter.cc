@@ -40,15 +40,11 @@ foreign class StayArray is Sequence {
 }
 
 foreign class DiagnosisArray is Sequence {
-    foreign count
-    foreign [index]
     foreign iterate(it)
     foreign iteratorValue(it)
 }
 
 foreign class ProcedureArray is Sequence {
-    foreign count
-    foreign [index]
     foreign iterate(it)
     foreign iteratorValue(it)
 }
