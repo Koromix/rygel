@@ -233,7 +233,7 @@ void* wrenReallocate(WrenVM* vm, void* memory, size_t oldSize, size_t newSize)
     {
       size_t maxHeapSize = vm->config.maxHeapSize;
       vm->config.maxHeapSize = 0;
-      vm->fiber->error = wrenStringFormat(vm, "Out of memory");
+      vm->fiber->error = wrenStringFormat(vm, "Script has exhausted its memory budget");
       vm->config.maxHeapSize = maxHeapSize;
     }
 
@@ -852,17 +852,17 @@ static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)
       }                                                           \
       while (false)
 
-#define CHECK_OPS_COUNT()                                                   \
-      do                                                                    \
-      {                                                                     \
-        if (ops_count && !--ops_count)                                      \
-        {                                                                   \
-          vm->fiber->error = wrenStringFormat(vm, "Out of execution time"); \
-          STORE_FRAME();                                                    \
-          runtimeError(vm);                                                 \
-          return WREN_RESULT_RUNTIME_ERROR;                                 \
-        }                                                                   \
-      }                                                                     \
+#define CHECK_OPS_COUNT()                                                                 \
+      do                                                                                  \
+      {                                                                                   \
+        if (ops_count && !--ops_count)                                                    \
+        {                                                                                 \
+          vm->fiber->error = wrenStringFormat(vm, "Script has exhausted its CPU budget"); \
+          STORE_FRAME();                                                                  \
+          runtimeError(vm);                                                               \
+          return WREN_RESULT_RUNTIME_ERROR;                                               \
+        }                                                                                 \
+      }                                                                                   \
       while (false)
 
   #if WREN_DEBUG_TRACE_INSTRUCTIONS
