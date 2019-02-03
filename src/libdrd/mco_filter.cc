@@ -951,7 +951,7 @@ bool mco_WrenRunner::Init(const char *expression, Size max_results)
 
         // Limit execution time and space, and disable GC
         config.maxRunOps = 200000;
-        config.maxHeapSize = Kibibytes(max_results) / 2;
+        config.maxHeapSize = Kibibytes(max_results) * 2;
         config.initialHeapSize = 0;
 
         // We don't need to free this because all allocations go through the
