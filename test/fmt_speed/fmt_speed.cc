@@ -52,6 +52,29 @@ int main(int, char **)
     }
 
     {
+        Checkpoint start = StartBenchmark("snprintf");
+        for (unsigned int i = 0; i < ITERATIONS; i++) {
+            char buf[1024];
+            snprintf(buf, SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
+                    1234, 42, -313, "str", (void*)1000, 'X');
+        }
+        EndBenchmark(start, ITERATIONS);
+    }
+
+#ifndef _WIN32
+    {
+        Checkpoint start = StartBenchmark("asprintf");
+        for (unsigned int i = 0; i < ITERATIONS; i++) {
+            char *ret = nullptr;
+            asprintf(&ret, "%d:%d:%d:%s:%p:%c:%%\n",
+                     1234, 42, -313, "str", (void*)1000, 'X');
+            free(ret);
+        }
+        EndBenchmark(start, ITERATIONS);
+    }
+#endif
+
+    {
         Checkpoint start = StartBenchmark("stbsp_snprintf");
         for (unsigned int i = 0; i < ITERATIONS; i++) {
             char buf[1024];
