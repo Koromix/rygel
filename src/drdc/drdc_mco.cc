@@ -543,8 +543,8 @@ Test options:)");
 
         PrintLn();
         PrintLn("Performance (with %1 runs):", torture);
-        PrintLn("  Results: %1/sec", perf);
-        PrintLn("  Stays: %1/sec", mono_perf);
+        PrintLn("  Results: %1/sec (%2 μs/result)", perf, 1000000.0 / perf);
+        PrintLn("  Stays: %1/secc (%2 μs/stay)", mono_perf, 1000000.0 / mono_perf);
         PrintLn();
         PrintLn("  Time: %1 sec/run",
                 FmtDouble((double)((classify_time + pricing_time) / torture) / 1000.0, 3));
