@@ -206,13 +206,14 @@ function buildUrl(url, query_values)
     for (const k in query_values) {
         let value = query_values[k];
         if (value !== null && value !== undefined) {
-            let arg = escape(k) + '=' + escape(value);
+            let arg = encodeURIComponent(k) + '=' + encodeURIComponent(value);
             query_fragments.push(arg);
         }
     }
     if (query_fragments.length)
         url += '?' + query_fragments.sort().join('&');
 
+    url = encodeURI(url);
     return url;
 }
 
