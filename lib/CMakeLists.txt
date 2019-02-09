@@ -174,6 +174,9 @@ if(NOT EMSCRIPTEN)
     target_link_libraries(sodium PRIVATE Threads::Threads)
 endif()
 
+set(SQLITE_SRC sqlite/sqlite3.c)
+add_library(sqlite STATIC ${SQLITE_SRC})
+
 set(WREN_SRC wren/src/vm/wren_compiler.c
              wren/src/vm/wren_core.c
              wren/src/vm/wren_debug.c
