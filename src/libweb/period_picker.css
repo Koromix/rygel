@@ -30,6 +30,7 @@
     background: #ed6d0a;
     border: 1px solid #ed6d0a;
     border-radius: 2px;
+    cursor: move;
     cursor: grab;
 }
 

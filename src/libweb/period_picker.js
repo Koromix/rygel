@@ -91,7 +91,21 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 
     function handleHandleDown(e)
     {
-        this.setPointerCapture(e.pointerId);
+        if (Element.prototype.setPointerCapture) {
+            this.setPointerCapture(e.pointerId);
+        } else {
+            let self = this;
+            function forwardMove(e)
+            {
+                return handleHandleMove.call(self, e);
+            }
+
+            document.body.addEventListener('mousemove', forwardMove);
+            document.body.addEventListener('mouseup', function() {
+                document.body.removeEventListener('mousemove', forwardMove);
+                handlePointerUp.call(self, e);
+            }, {once: true});
+        }
         grab_capture = true;
     }
 
@@ -102,7 +116,7 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
             let input = handle.lastChild;
 
             let new_date = positionToDate(e.clientX - main.offsetLeft);
-            new_date = clampHandleDate(handle, new_date, handle);
+            new_date = clampHandleDate(handle, new_date);
             input.valueAsDate = new_date;
 
             syncHandle(handle);
@@ -137,7 +151,21 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 
     function handleBarDown(e)
     {
-        this.setPointerCapture(e.pointerId);
+        if (Element.prototype.setPointerCapture) {
+            this.setPointerCapture(e.pointerId);
+        } else {
+            let self = this;
+            function forwardMove(e)
+            {
+                return handleBarMove.call(self, e);
+            }
+
+            document.body.addEventListener('mousemove', forwardMove);
+            document.body.addEventListener('mouseup', function() {
+                document.body.removeEventListener('mousemove', forwardMove);
+                handlePointerUp.call(self, e);
+            }, {once: true});
+        }
         grab_capture = true;
 
         let start_date = handles[0].lastChild.valueAsDate;
@@ -193,6 +221,21 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
     this.getValues = function() { return [handles[0].lastChild.value, handles[1].lastChild.value]; }
     this.getWidget = function() { return widget; }
 
+    function mouseEvents(down, move)
+    {
+        if (Element.prototype.setPointerCapture) {
+            return {
+                pointerdown: down,
+                pointermove: move,
+                pointerup: handlePointerUp
+            };
+        } else {
+            return {
+                mousedown: down
+            };
+        }
+    }
+
     widget.addClass('ppik');
     widget.replaceContent(
         // This dummy button catches click events that happen when a label encloses the widget
@@ -200,17 +243,14 @@ function PeriodPicker(widget, min_date, max_date, start_date, end_date)
 
         html('div', {class: 'ppik_main'},
             html('div', {class: 'ppik_line'}),
-            html('div', {class: 'ppik_bar', pointerdown: handleBarDown,
-                         pointermove: handleBarMove, pointerup: handlePointerUp}),
+            html('div', Object.assign({class: 'ppik_bar'}, mouseEvents(handleBarDown, handleBarMove))),
             html('div', {class: 'ppik_handle'},
-                html('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                             pointerup: handlePointerUp}),
+                html('div', mouseEvents(handleHandleDown, handleHandleMove)),
                 html('input', {type: 'date', style: 'bottom: 4px;',
                                change: handleDateChange, focusout: handleDateFocusOut})
             ),
             html('div', {class: 'ppik_handle'},
-                html('div', {pointerdown: handleHandleDown, pointermove: handleHandleMove,
-                             pointerup: handlePointerUp}),
+                html('div', mouseEvents(handleHandleDown, handleHandleMove)),
                 html('input', {type: 'date', style: 'top: 18px;',
                                change: handleDateChange, focusout: handleDateFocusOut})
             )
