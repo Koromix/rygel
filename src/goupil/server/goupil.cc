@@ -2,6 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifndef _WIN32
+    #include <dlfcn.h>
+    #include <signal.h>
+    #include <sys/types.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+#endif
+
 #include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../libcc/libcc.hh"
 #include "../../libdrd/libdrd.hh"
