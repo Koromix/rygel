@@ -4,8 +4,7 @@
 
 #pragma once
 
-#include "util.hh"
-
+#include "../libcc/libcc.hh"
 PUSH_NO_WARNINGS()
 #include "../../lib/rapidjson/writer.h"
 #include "../../lib/rapidjson/error/en.h"

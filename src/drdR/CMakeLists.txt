@@ -8,12 +8,11 @@ if(NOT R_FOUND)
 endif()
 
 set(DRDR_SRC
-    ../libcc/Rcc.cc
-    ../libcc/Rcc.hh
+    ../wrappers/Rcc.cc
+    ../wrappers/Rcc.hh
     drdR_mco.cc
     drdR_mco.R
 )
 
-R_add_package(drdR DESCRIPTION NAMESPACE RCPP_INCLUDE
-              ${DRDR_SRC})
-target_link_libraries(drdR PRIVATE drd miniz)
+R_add_package(drdR DESCRIPTION NAMESPACE RCPP_INCLUDE ${DRDR_SRC})
+target_link_libraries(drdR PRIVATE cc drd miniz)

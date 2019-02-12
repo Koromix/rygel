@@ -12,12 +12,12 @@ if(NOT R_FOUND)
 endif()
 
 set(HEIMDALLR_SRC
-    ../libcc/Rcc.cc
-    ../libcc/Rcc.hh
+    ../wrappers/Rcc.cc
+    ../wrappers/Rcc.hh
     heimdallR.cc
     heimdallR.R
 )
 
 R_add_package(heimdallR DESCRIPTION NAMESPACE RCPP_EXPORT RCPP_INCLUDE
               ${HEIMDALLR_SRC})
-target_link_libraries(heimdallR PRIVATE heimdall miniz)
+target_link_libraries(heimdallR PRIVATE cc heimdall miniz)

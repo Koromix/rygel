@@ -42,7 +42,7 @@
     #include "../../lib/miniz/miniz.h"
 #endif
 
-#include "util.hh"
+#include "libcc.hh"
 
 // ------------------------------------------------------------------------
 // Assert

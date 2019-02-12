@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "util.hh"
+#include <stdint.h>
 
 #ifdef __EMSCRIPTEN__
     #include <GLES3/gl3.h>

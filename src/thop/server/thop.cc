@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
-
 #ifndef _WIN32
     #include <dlfcn.h>
     #include <signal.h>
@@ -12,6 +10,7 @@
     #include <unistd.h>
 #endif
 
+#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
 #include "thop.hh"
 #include "config.hh"
 #include "structure.hh"

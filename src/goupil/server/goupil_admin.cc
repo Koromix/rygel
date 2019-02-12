@@ -8,7 +8,7 @@
 
 #endif
 
-#include "../../libcc/util.hh"
+#include "../../libcc/libcc.hh"
 #include "config.hh"
 
 static Config goupil_config;

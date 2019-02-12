@@ -5,7 +5,7 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
-#include "../libcc/util.hh"
+#include "../libcc/libcc.hh"
 #include "../libcc/opengl.hh"
 #include "../libheimdall/core.hh"
 #include "libgui.hh"

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "util.hh"
+#include "../libcc/libcc.hh"
 
 #include <Rcpp.h>
 

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../libcc/util.hh"
+#include "../../libcc/libcc.hh"
 
 struct Config {
     enum class IPVersion {

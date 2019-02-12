@@ -2,8 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../libcc/json.hh"
-
+#include "../libcc/libcc.hh"
+#include "../wrappers/json.hh"
 #include "output.hh"
 
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
