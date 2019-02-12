@@ -74,7 +74,7 @@ ahc_echo (void *cls,
 
   if (-1 != req->timerfd)
   {
-    // send response (echo request url)
+    /* send response (echo request url) */
     response = MHD_create_response_from_buffer (strlen (url),
                                                 (void *) url,
                                                 MHD_RESPMEM_MUST_COPY);
@@ -86,7 +86,7 @@ ahc_echo (void *cls,
     MHD_destroy_response (response);
     return ret;
   }
-  // create timer and suspend connection
+  /* create timer and suspend connection */
   req->timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
   if (-1 == req->timerfd)
     {
@@ -183,24 +183,24 @@ main (int argc,
     {
       if (events_list[0].data.ptr)
       {
-        // A timer has timed out
+        /*  A timer has timed out */
         req = events_list[0].data.ptr;
-        // read from the fd so the system knows we heard the notice
+        /* read from the fd so the system knows we heard the notice */
         if (-1 == read(req->timerfd, &timer_expirations, sizeof(timer_expirations)))
         {
           return 1;
         }
-        // Now resume the connection
+        /*  Now resume the connection */
         MHD_resume_connection(req->connection);
       }
     }
     else if (0 == current_event_count)
     {
-      // no events: continue
+      /* no events: continue */
     }
     else
     {
-      // error
+      /* error */
       return 1;
     }
     if (! MHD_run(d))

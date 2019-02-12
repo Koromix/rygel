@@ -35,6 +35,8 @@
 #include "mhd_sockets.h" /* only macros used */
 
 
+#define EXPECTED_URI_PATH "/hello_world?a=%26&b=c"
+
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN 1
@@ -64,6 +66,7 @@ struct CBC
   size_t size;
 };
 
+
 static size_t
 copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
 {
@@ -75,6 +78,24 @@ copyBuffer (void *ptr, size_t size, size_t nmemb, void *ctx)
   cbc->pos += size * nmemb;
   return size * nmemb;
 }
+
+
+static void *
+log_cb (void *cls,
+        const char *uri,
+        struct MHD_Connection *con)
+{
+  if (0 != strcmp (uri,
+                   EXPECTED_URI_PATH))
+    {
+      fprintf (stderr,
+               "Wrong URI: `%s'\n",
+               uri);
+      abort ();
+    }
+  return NULL;
+}
+
 
 static int
 ahc_echo (void *cls,
@@ -89,7 +110,10 @@ ahc_echo (void *cls,
   const char *me = cls;
   struct MHD_Response *response;
   int ret;
-  (void)version;(void)upload_data;(void)upload_data_size;       /* Unused. Silent compiler warning. */
+  const char *v;
+  (void) version;
+  (void) upload_data;
+  (void) upload_data_size;       /* Unused. Silence compiler warning. */
 
   if (0 != strcasecmp (me, method))
     return MHD_NO;              /* unexpected method */
@@ -99,10 +123,26 @@ ahc_echo (void *cls,
       return MHD_YES;
     }
   *unused = NULL;
+  v = MHD_lookup_connection_value (connection,
+                                   MHD_GET_ARGUMENT_KIND,
+                                   "a");
+  if ( (NULL == v) ||
+       (0 != strcmp ("&",
+                     v)) )
+    abort ();
+  v = MHD_lookup_connection_value (connection,
+                                   MHD_GET_ARGUMENT_KIND,
+                                   "b");
+  if ( (NULL == v) ||
+       (0 != strcmp ("c",
+                     v)) )
+    abort ();
   response = MHD_create_response_from_buffer (strlen (url),
 					      (void *) url,
 					      MHD_RESPMEM_MUST_COPY);
-  ret = MHD_queue_response (connection, MHD_HTTP_OK, response);
+  ret = MHD_queue_response (connection,
+                            MHD_HTTP_OK,
+                            response);
   MHD_destroy_response (response);
   if (ret == MHD_NO)
     abort ();
@@ -131,7 +171,10 @@ testInternalGet (int poll_flag)
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
-                        global_port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        global_port, NULL, NULL,
+                        &ahc_echo, "GET",
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 1;
   if (0 == global_port)
@@ -143,7 +186,7 @@ testInternalGet (int poll_flag)
       global_port = (int)dinfo->port;
     }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1" EXPECTED_URI_PATH);
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
@@ -198,7 +241,10 @@ testMultithreadedGet (int poll_flag)
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
-                        global_port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        global_port, NULL, NULL,
+                        &ahc_echo, "GET",
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == global_port)
@@ -210,7 +256,7 @@ testMultithreadedGet (int poll_flag)
       global_port = (int)dinfo->port;
     }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1" EXPECTED_URI_PATH);
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
@@ -265,8 +311,11 @@ testMultithreadedPoolGet (int poll_flag)
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
-                        global_port, NULL, NULL, &ahc_echo, "GET",
-                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT, MHD_OPTION_END);
+                        global_port, NULL, NULL,
+                        &ahc_echo, "GET",
+                        MHD_OPTION_THREAD_POOL_SIZE, CPU_COUNT,
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 16;
   if (0 == global_port)
@@ -278,7 +327,7 @@ testMultithreadedPoolGet (int poll_flag)
       global_port = (int)dinfo->port;
     }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1" EXPECTED_URI_PATH);
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
@@ -348,7 +397,10 @@ testExternalGet ()
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_ERROR_LOG,
-                        global_port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                        global_port, NULL, NULL,
+                        &ahc_echo, "GET",
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 256;
   if (0 == global_port)
@@ -360,7 +412,7 @@ testExternalGet ()
       global_port = (int)dinfo->port;
     }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1" EXPECTED_URI_PATH);
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);
@@ -494,6 +546,7 @@ testUnknownPortGet (int poll_flag)
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
                         0, NULL, NULL, &ahc_echo, "GET",
                         MHD_OPTION_SOCK_ADDR, &addr,
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
                         MHD_OPTION_END);
   if (MHD_NO == MHD_is_feature_supported (MHD_FEATURE_AUTODETECT_BIND_PORT))
     {
@@ -517,8 +570,11 @@ testUnknownPortGet (int poll_flag)
       port = (int)dinfo->port;
     }
 
-  snprintf(buf, sizeof(buf), "http://127.0.0.1:%d/hello_world",
-           port);
+  snprintf(buf,
+           sizeof(buf),
+           "http://127.0.0.1:%d%s",
+           port,
+           EXPECTED_URI_PATH);
 
   c = curl_easy_init ();
   curl_easy_setopt (c, CURLOPT_URL, buf);
@@ -570,7 +626,10 @@ testStopRace (int poll_flag)
       }
 
     d = MHD_start_daemon (MHD_USE_THREAD_PER_CONNECTION | MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG | poll_flag,
-                         global_port, NULL, NULL, &ahc_echo, "GET", MHD_OPTION_END);
+                         global_port, NULL, NULL,
+                          &ahc_echo, "GET",
+                          MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                          MHD_OPTION_END);
     if (d == NULL)
        return 16;
     if (0 == global_port)
@@ -686,7 +745,10 @@ testEmptyGet (int poll_flag)
   cbc.size = 2048;
   cbc.pos = 0;
   d = MHD_start_daemon (MHD_USE_INTERNAL_POLLING_THREAD | MHD_USE_ERROR_LOG  | poll_flag,
-                        global_port, NULL, NULL, &ahc_empty, NULL, MHD_OPTION_END);
+                        global_port, NULL, NULL,
+                        &ahc_empty, NULL,
+                        MHD_OPTION_URI_LOG_CALLBACK, &log_cb, NULL,
+                        MHD_OPTION_END);
   if (d == NULL)
     return 4194304;
   if (0 == global_port)
@@ -698,7 +760,7 @@ testEmptyGet (int poll_flag)
       global_port = (int)dinfo->port;
     }
   c = curl_easy_init ();
-  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1/hello_world");
+  curl_easy_setopt (c, CURLOPT_URL, "http://127.0.0.1" EXPECTED_URI_PATH);
   curl_easy_setopt (c, CURLOPT_PORT, (long)global_port);
   curl_easy_setopt (c, CURLOPT_WRITEFUNCTION, &copyBuffer);
   curl_easy_setopt (c, CURLOPT_WRITEDATA, &cbc);

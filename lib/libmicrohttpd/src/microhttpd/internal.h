@@ -209,8 +209,8 @@ enum MHD_ConnectionEventLoopInfo
 #define MHD_TEST_ALLOW_SUSPEND_RESUME 8192
 
 /**
- * Maximum length of a nonce in digest authentication.  32(MD5 Hex) +
- * 8(Timestamp Hex) + 1(NULL); hence 41 should suffice, but Opera
+ * Maximum length of a nonce in digest authentication.  64(SHA-256 Hex) +
+ * 8(Timestamp Hex) + 1(NULL); hence 73 should suffice, but Opera
  * (already) takes more (see Mantis #1633), so we've increased the
  * value to support something longer...
  */
@@ -601,6 +601,7 @@ enum MHD_ConnKeepAlive
   MHD_CONN_USE_KEEPALIVE = 1
 };
 
+
 /**
  * State kept for each HTTP request.
  */
@@ -861,6 +862,18 @@ struct MHD_Connection
    * true if #socket_fd is non-blocking, false otherwise.
    */
   bool sk_nonblck;
+
+  /**
+   * Indicate whether connection socket has TCP_NODELAY turned on / Nagle’s algorithm turned off.
+   * TCP_NODELAY should not be turned on when TCP_CORK/TCP_NOPUSH is turned off.
+   */
+  bool sk_tcp_nodelay_on;
+
+  /**
+   * Indicate whether connection socket has TCP_CORK/TCP_NOPUSH turned on.
+   * TCP_CORK/TCP_NOPUSH should not be turned on when TCP_NODELAY is turned off.
+   */
+  bool sk_tcp_cork_nopush_on;
 
   /**
    * Has this socket been closed for reading (i.e.  other side closed

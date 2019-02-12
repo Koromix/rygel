@@ -22,15 +22,15 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU Libmicrohttpd],[0.9.62],[libmicrohttpd@gnu.org])
+AC_INIT([GNU Libmicrohttpd],[0.9.63],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([silent-rules] [subdir-objects])
 AC_CONFIG_HEADERS([MHD_config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
-LIB_VERSION_CURRENT=61
+LIB_VERSION_CURRENT=62
 LIB_VERSION_REVISION=0
-LIB_VERSION_AGE=49
+LIB_VERSION_AGE=50
 AC_SUBST(LIB_VERSION_CURRENT)
 AC_SUBST(LIB_VERSION_REVISION)
 AC_SUBST(LIB_VERSION_AGE)
@@ -661,6 +661,7 @@ AX_CHECK_LINK_FLAG([-fno-strict-aliasing],
   [AX_APPEND_COMPILE_FLAGS([-fno-strict-aliasing])])
 
 AC_C_BIGENDIAN
+AC_C_VARARRAYS
 
 AC_CHECK_PROG([HAVE_CURL_BINARY],[curl],[yes],[no])
 AM_CONDITIONAL([HAVE_CURL_BINARY],[test "x$HAVE_CURL_BINARY" = "xyes"])
@@ -695,6 +696,9 @@ AS_IF([test "$enable_poll" != "no"],
 		[AC_INCLUDES_DEFAULT]),
              [AC_MSG_CHECKING([for WSAPoll()])
               AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#if defined(_WIN32) && ! defined(__CYGWIN__) && ! defined(_WIN32_WINNT)
+#define _WIN32_WINNT 0x0501
+#endif
 #include <winsock2.h>
               ]],[[
 WSAPOLLFD fda[2];
@@ -739,7 +743,7 @@ fd = epoll_create1(EPOLL_CLOEXEC);]])],
     AC_DEFINE([[HAVE_EPOLL_CREATE1]], [[1]], [Define if you have epoll_create1 function.])]))
 
 # Check for headers that are ALWAYS required
-AC_CHECK_HEADERS([fcntl.h math.h errno.h limits.h stdio.h locale.h sys/stat.h sys/types.h], [], [AC_MSG_ERROR([Compiling libmicrohttpd requires standard UNIX headers files])], [AC_INCLUDES_DEFAULT])
+AC_CHECK_HEADERS_ONCE([fcntl.h math.h errno.h limits.h stdio.h locale.h sys/stat.h sys/types.h], [], [AC_MSG_ERROR([Compiling libmicrohttpd requires standard UNIX headers files])], [AC_INCLUDES_DEFAULT])
 
 # Check for optional headers
 AC_CHECK_HEADERS([sys/types.h sys/time.h sys/msg.h time.h sys/mman.h sys/ioctl.h \
@@ -761,6 +765,9 @@ AM_CONDITIONAL([MHD_HAVE_TSEARCH], [[test "x$ac_cv_header_search_h" = xyes && te
 
 AC_CHECK_HEADERS([dlfcn.h],[have_tlsplugin=yes],[have_tlsplugin=no], [AC_INCLUDES_DEFAULT])
 AM_CONDITIONAL([MHD_HAVE_TLS_PLUGIN], [[test "x$have_tlsplugin" = xyes]])
+
+AC_CHECK_HEADERS([zlib.h],[have_zlib=yes],[have_zlib=no], [AC_INCLUDES_DEFAULT])
+AM_CONDITIONAL([HAVE_ZLIB], [[test "x$have_zlib" = xyes]])
 
 # Check for generic functions
 AC_CHECK_FUNCS([rand random])

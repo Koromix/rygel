@@ -55,6 +55,9 @@
    `mach_port_deallocate' functions. */
 #undef HAVE_CLOCK_GET_TIME
 
+/* Define to 1 if C supports variable-length arrays. */
+#undef HAVE_C_VARARRAYS
+
 /* Define to 1 if you have Darwin-style sendfile(2). */
 #undef HAVE_DARWIN_SENDFILE
 
@@ -349,6 +352,9 @@
 
 /* Define to 1 if you have the <ws2tcpip.h> header file. */
 #undef HAVE_WS2TCPIP_H
+
+/* Define to 1 if you have the <zlib.h> header file. */
+#undef HAVE_ZLIB_H
 
 /* Define to 1 if libmicrohttpd is compiled with HTTPS support. */
 #undef HTTPS_SUPPORT

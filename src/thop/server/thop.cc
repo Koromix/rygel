@@ -202,7 +202,8 @@ static int ProduceStaticAsset(const Route &route, CompressionType compression_ty
                 return CreateErrorPage(500, out_response);
         }
 
-        response = MHD_create_response_from_heap((size_t)buf.len, (void *)buf.ptr, ReleaseCallback);
+        response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
+                                                                      ReleaseCallback);
         buf.Leak();
     } else {
         response = MHD_create_response_from_buffer((size_t)route.u.st.asset.data.len,

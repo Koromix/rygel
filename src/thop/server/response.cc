@@ -40,7 +40,8 @@ int CreateErrorPage(int code, Response *out_response)
     Span<char> page = Fmt((Allocator *)nullptr, "Error %1: %2", code,
                           MHD_get_reason_phrase_for((unsigned int)code));
 
-    MHD_Response *response = MHD_create_response_from_heap((size_t)page.len, page.ptr,
+    MHD_Response *response =
+        MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
                                                            ReleaseCallback);
     out_response->response.reset(response);
 
@@ -56,7 +57,8 @@ int JsonPageBuilder::Finish(Response *out_response)
     Flush();
     Assert(st.Close());
 
-    MHD_Response *response = MHD_create_response_from_heap((size_t)buf.len, buf.ptr,
+    MHD_Response *response =
+        MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
                                                            ReleaseCallback);
     buf.Leak();
     out_response->response.reset(response);

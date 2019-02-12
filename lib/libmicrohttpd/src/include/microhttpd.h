@@ -126,7 +126,7 @@ typedef intptr_t ssize_t;
  * Current version of the library.
  * 0x01093001 = 1.9.30-1.
  */
-#define MHD_VERSION 0x00096200
+#define MHD_VERSION 0x00096300
 
 /**
  * MHD-internal return code for "YES".
@@ -2779,22 +2779,6 @@ _MHD_EXTERN struct MHD_Response *
 MHD_create_response_from_buffer_with_free_callback (size_t size,
 						    void *buffer,
 						    MHD_ContentReaderFreeCallback crfc);
-
-
-/**
- * Create a response object.  The response object can be extended with
- * header information and then be used any number of times.
- *
- * @param size size of the data portion of the response
- * @param buffer size bytes containing the response's data portion
- * @param crfc callback to call to free @a buffer resources
- * @return NULL on error (i.e. invalid arguments, out of memory)
- * @ingroup response
- */
-_MHD_EXTERN struct MHD_Response *
-MHD_create_response_from_heap (size_t size,
-			       void *buffer,
-                   MHD_ContentReaderFreeCallback crfc);
 
 
 /**
