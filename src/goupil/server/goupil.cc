@@ -25,7 +25,6 @@ int main(int argc, char **argv)
 
 Options:
     -C, --config_file <file>     Set configuration file
-                                 (default: <executable_dir>%/profile%/goupil.ini)
     -P, --profile_dir <dir>      Set profile directory
 
         --port <port>            Change web server port
@@ -46,16 +45,6 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::OptionalValue)) {
                 config_filename = opt.current_value;
-            }
-        }
-
-        if (!config_filename) {
-            const char *app_directory = GetApplicationDirectory();
-            if (app_directory) {
-                const char *test_filename = Fmt(&goupil_config.str_alloc, "%1%/profile/goupil.ini", app_directory).ptr;
-                if (TestPath(test_filename, FileType::File)) {
-                    config_filename = test_filename;
-                }
             }
         }
     }
