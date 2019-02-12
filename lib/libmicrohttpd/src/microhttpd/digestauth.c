@@ -52,6 +52,39 @@
 #define NONCE_STD_LEN(digest_size) \
   ((digest_size) * 2 + TIMESTAMP_BIN_SIZE * 2)
 
+
+/**
+ * Maximum size of any digest hash supported by MHD.
+ * (SHA-256 > MD5).
+ */
+#define MAX_DIGEST SHA256_DIGEST_SIZE
+
+/**
+ * Macro to avoid using VLAs if the compiler does not support them.
+ */
+#if __STDC_NO_VLA__
+/**
+ * Return #MAX_DIGEST.
+ *
+ * @param n length of the digest to be used for a VLA
+ */
+#define VLA_ARRAY_LEN_DIGEST(n) (MAX_DIGEST)
+
+#else
+/**
+ * Return @a n.
+ *
+ * @param n length of the digest to be used for a VLA
+ */
+#define VLA_ARRAY_LEN_DIGEST(n) (n)
+#endif
+
+/**
+ * Check that @a n is below #MAX_NONCE
+ */
+#define VLA_CHECK_LEN_DIGEST(n) do { if ((n) > MAX_DIGEST) mhd_panic(mhd_panic_cls, __FILE__, __LINE__, "VLA too big"); } while (0)
+
+
 /**
  * Beginning string for any valid Digest authentication header.
  */
@@ -185,8 +218,9 @@ digest_calc_ha1_from_digest (const char *alg,
        (MHD_str_equal_caseless_(alg,
                                 "sha-256-sess")) )
     {
-      uint8_t dig[1024];
+      uint8_t dig[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
 
+      VLA_CHECK_LEN_DIGEST(da->digest_size);
       da->init (da->ctx);
       da->update (da->ctx,
                   digest,
@@ -206,7 +240,7 @@ digest_calc_ha1_from_digest (const char *alg,
       da->digest (da->ctx,
                   dig);
       cvthex (dig,
-              da->digest_size,
+              sizeof (dig),
               da->sessionkey);
     }
   else
@@ -241,8 +275,9 @@ digest_calc_ha1_from_user (const char *alg,
 			   const char *cnonce,
                            struct DigestAlgorithm *da)
 {
-  unsigned char ha1[1024];
+  unsigned char ha1[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
 
+  VLA_CHECK_LEN_DIGEST(da->digest_size);
   da->init (da->ctx);
   da->update (da->ctx,
              (const unsigned char *) username,
@@ -296,10 +331,11 @@ digest_calc_response (const char *ha1,
 		      const char *hentity,
 		      struct DigestAlgorithm *da)
 {
-  unsigned char ha2[1024];
-  unsigned char resphash[1024];
+  unsigned char ha2[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
+  unsigned char resphash[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
   (void)hentity; /* Unused. Silence compiler warning. */
 
+  VLA_CHECK_LEN_DIGEST(da->digest_size);
   da->init (da->ctx);
   da->update (da->ctx,
               (const unsigned char *) method,
@@ -371,7 +407,7 @@ digest_calc_response (const char *ha1,
   da->digest (da->ctx,
               resphash);
   cvthex (resphash,
-          da->digest_size,
+          sizeof(resphash),
           da->sessionkey);
 }
 
@@ -638,9 +674,10 @@ calculate_nonce (uint32_t nonce_time,
 		 char *nonce)
 {
   unsigned char timestamp[TIMESTAMP_BIN_SIZE];
-  unsigned char tmpnonce[1024];
+  unsigned char tmpnonce[VLA_ARRAY_LEN_DIGEST(da->digest_size)];
   char timestamphex[TIMESTAMP_BIN_SIZE * 2 + 1];
 
+  VLA_CHECK_LEN_DIGEST(da->digest_size);
   da->init (da->ctx);
   timestamp[0] = (unsigned char)((nonce_time & 0xff000000) >> 0x18);
   timestamp[1] = (unsigned char)((nonce_time & 0x00ff0000) >> 0x10);
@@ -677,7 +714,7 @@ calculate_nonce (uint32_t nonce_time,
   da->digest (da->ctx,
               tmpnonce);
   cvthex (tmpnonce,
-          da->digest_size,
+          sizeof (tmpnonce),
           nonce);
   cvthex (timestamp,
           sizeof (timestamp),
@@ -815,17 +852,19 @@ digest_auth_check_all (struct MHD_Connection *connection,
   const char *header;
   char nonce[MAX_NONCE_LENGTH];
   char cnonce[MAX_NONCE_LENGTH];
-  char ha1[1024];
+  char ha1[VLA_ARRAY_LEN_DIGEST(da->digest_size) * 2 + 1];
   char qop[15]; /* auth,auth-int */
   char nc[20];
   char response[MAX_AUTH_RESPONSE_LENGTH];
   const char *hentity = NULL; /* "auth-int" is not supported */
-  char noncehashexp[1024];
+  char noncehashexp[NONCE_STD_LEN(VLA_ARRAY_LEN_DIGEST(da->digest_size)) + 1];
   uint32_t nonce_time;
   uint32_t t;
   size_t left; /* number of characters left in 'header' for 'uri' */
   uint64_t nci;
+  char *qmark;
 
+  VLA_CHECK_LEN_DIGEST(da->digest_size);
   header = MHD_lookup_connection_value (connection,
 					MHD_HEADER_KIND,
 					MHD_HTTP_HEADER_AUTHORIZATION);
@@ -1023,7 +1062,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
       }
     memcpy (ha1,
             da->sessionkey,
-            da->digest_size * 2 + 1);
+            sizeof (ha1));
     /* This will initialize da->sessionkey (respexp) */
     digest_calc_response (ha1,
 			  nonce,
@@ -1034,15 +1073,17 @@ digest_auth_check_all (struct MHD_Connection *connection,
 			  uri,
 			  hentity,
 			  da);
-
+    qmark = strchr (uri,
+                    '?');
+    if (NULL != qmark)
+      *qmark = '\0';
 
     /* Need to unescape URI before comparing with connection->url */
     daemon->unescape_callback (daemon->unescape_callback_cls,
                                connection,
                                uri);
-    if (0 != strncmp (uri,
-		      connection->url,
-		      strlen (connection->url)))
+    if (0 != strcmp (uri,
+                     connection->url))
     {
 #ifdef HAVE_MESSAGES
       MHD_DLOG (daemon,
@@ -1053,8 +1094,7 @@ digest_auth_check_all (struct MHD_Connection *connection,
     }
 
     {
-      const char *args = strchr (uri,
-                                 '?');
+      const char *args = qmark;
 
       if (NULL == args)
 	args = "";
@@ -1294,7 +1334,9 @@ MHD_queue_auth_fail_response2 (struct MHD_Connection *connection,
   SETUP_DA (algo, da);
 
   {
-    char nonce[1024];
+    char nonce[NONCE_STD_LEN(VLA_ARRAY_LEN_DIGEST (da.digest_size)) + 1];
+
+    VLA_CHECK_LEN_DIGEST(da.digest_size);
     /* Generating the server nonce */
     calculate_nonce ((uint32_t) MHD_monotonic_sec_counter(),
                      connection->method,

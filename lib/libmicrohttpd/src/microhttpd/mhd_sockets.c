@@ -462,6 +462,41 @@ MHD_socket_noninheritable_ (MHD_socket sock)
 
 
 /**
+ * Change socket buffering mode to default.
+ *
+ * @param sock socket to manipulate
+ * @return non-zero if succeeded, zero otherwise
+ */
+int
+MHD_socket_buffering_reset_ (MHD_socket sock)
+{
+  int res = !0;
+#if defined(TCP_NODELAY) || defined(MHD_TCP_CORK_NOPUSH)
+  const MHD_SCKT_OPT_BOOL_ off_val = 0;
+#if defined(MHD_TCP_CORK_NOPUSH)
+  /* Disable extra buffering */
+  res = (0 == setsockopt (sock,
+                          IPPROTO_TCP,
+                          MHD_TCP_CORK_NOPUSH,
+                          (const void *) &off_val,
+                          sizeof (off_val))) && res;
+#endif /* MHD_TCP_CORK_NOPUSH */
+#if defined(TCP_NODELAY)
+  /* Enable Nagle's algorithm for normal buffering */
+  res = (0 == setsockopt (sock,
+                          IPPROTO_TCP,
+                          TCP_NODELAY,
+                          (const void *) &off_val,
+                          sizeof (off_val))) && res;
+#endif /* TCP_NODELAY */
+#else  /* !TCP_NODELAY && !MHD_TCP_CORK_NOPUSH */
+  (void) sock;
+#endif /* !TCP_NODELAY && !MHD_TCP_CORK_NOPUSH */
+  return res;
+}
+
+
+/**
  * Create a listen socket, with noninheritable flag if possible.
  *
  * @param pf protocol family to use

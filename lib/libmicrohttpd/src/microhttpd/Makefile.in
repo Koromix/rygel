@@ -359,6 +359,7 @@ am_test_upgrade_OBJECTS = test_upgrade-test_upgrade.$(OBJEXT)
 test_upgrade_OBJECTS = $(am_test_upgrade_OBJECTS)
 test_upgrade_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 test_upgrade_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_upgrade_CFLAGS) \
@@ -367,6 +368,7 @@ am_test_upgrade_tls_OBJECTS = test_upgrade_tls-test_upgrade.$(OBJEXT)
 test_upgrade_tls_OBJECTS = $(am_test_upgrade_tls_OBJECTS)
 test_upgrade_tls_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 test_upgrade_tls_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
@@ -922,6 +924,7 @@ test_upgrade_LDFLAGS = \
 
 test_upgrade_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
 test_upgrade_tls_SOURCES = \
@@ -938,6 +941,7 @@ test_upgrade_tls_LDFLAGS = \
 
 test_upgrade_tls_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
 test_postprocessor_SOURCES = \

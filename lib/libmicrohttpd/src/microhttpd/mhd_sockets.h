@@ -194,6 +194,19 @@
 #endif
 
 
+#if defined(TCP_CORK)
+/**
+ * Value of TCP_CORK or TCP_NOPUSH
+ */
+#define MHD_TCP_CORK_NOPUSH TCP_CORK
+#elif defined(TCP_NOPUSH)
+/**
+ * Value of TCP_CORK or TCP_NOPUSH
+ */
+#define MHD_TCP_CORK_NOPUSH TCP_NOPUSH
+#endif /* TCP_NOPUSH */
+
+
 /**
  * MHD_SCKT_OPT_BOOL_ is type for bool parameters for setsockopt()/getsockopt()
  */
@@ -734,6 +747,16 @@ MHD_socket_nonblocking_ (MHD_socket sock);
  */
 int
 MHD_socket_noninheritable_ (MHD_socket sock);
+
+
+/**
+ * Change socket buffering mode to default.
+ *
+ * @param sock socket to manipulate
+ * @return non-zero if succeeded, zero otherwise
+ */
+int
+MHD_socket_buffering_reset_ (MHD_socket sock);
 
 
 #if defined(SOL_SOCKET) && defined(SO_NOSIGPIPE)

@@ -10,6 +10,7 @@
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
+	#define HAVE_C_VARARRAYS 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
     #define HAVE_DECL_SOCK_NONBLOCK 0
@@ -115,6 +116,7 @@
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
     #define HAVE_ARPA_INET_H 1
+	#define HAVE_C_VARARRAYS 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
     #define HAVE_CLOCK_GET_TIME 1
@@ -201,6 +203,7 @@
     #define EPOLL_SUPPORT 1
     #define HAVE_ACCEPT4 1
     #define HAVE_ARPA_INET_H 1
+	#define HAVE_C_VARARRAYS 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
     #define HAVE_DECL_SOCK_NONBLOCK 1

@@ -224,6 +224,7 @@ test_upgrade_LDFLAGS = \
   $(MHD_TLS_LIB_LDFLAGS)
 test_upgrade_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
 test_upgrade_tls_SOURCES = \
@@ -236,6 +237,7 @@ test_upgrade_tls_LDFLAGS = \
   $(MHD_TLS_LIB_LDFLAGS)
 test_upgrade_tls_LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
+  $(MHD_TLS_LIB_LDFLAGS) $(MHD_TLS_LIBDEPS) \
   $(PTHREAD_LIBS)
 
 test_postprocessor_SOURCES = \
