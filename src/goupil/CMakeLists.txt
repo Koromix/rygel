@@ -22,7 +22,9 @@ target_link_libraries(goupil PUBLIC microhttpd sqlite)
 set(GOUPIL_ADMIN_SRC
     ../libcc/util.cc
     ../libcc/util.hh
-    admin/goupil_admin.cc
+    server/config.cc
+    server/config.hh
+    server/goupil_admin.cc
 )
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
