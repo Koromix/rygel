@@ -176,6 +176,7 @@ endif()
 
 set(SQLITE_SRC sqlite/sqlite3.c)
 add_library(sqlite STATIC ${SQLITE_SRC})
+target_compile_definitions(sqlite PRIVATE -DSQLITE_THREADSAFE=1)
 
 set(WREN_SRC wren/src/vm/wren_compiler.c
              wren/src/vm/wren_core.c
