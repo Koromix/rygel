@@ -26,6 +26,7 @@ int main(int argc, char **argv)
 Options:
     -C, --config_file <file>     Set configuration file
                                  (default: <executable_dir>%/profile%/goupil.ini)
+    -P, --profile_dir <dir>      Set profile directory
 
         --port <port>            Change web server port
                                  (default: %1))
@@ -70,6 +71,8 @@ Options:
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
+            } else if (opt.Test("-P", "--profile_dir", OptionType::Value)) {
+                goupil_config.profile_directory = opt.current_value;
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &goupil_config.port))
                     return 1;
