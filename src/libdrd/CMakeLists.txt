@@ -3,8 +3,6 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 set(LIBDRD_SRC
-    ../libcc/util.cc
-    ../libcc/util.hh
     common.hh
     mco_authorization.cc
     mco_authorization.hh
@@ -27,9 +25,6 @@ set(LIBDRD_SRC
 
 add_library(drd ${LIBDRD_SRC})
 set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(drd PUBLIC miniz wren)
-if(NOT EMSCRIPTEN)
-    target_link_libraries(drd PUBLIC Threads::Threads)
-endif()
+target_link_libraries(drd PUBLIC cc wren)
 add_amalgamated_file(drd "${CMAKE_BINARY_DIR}/libdrd.cc" libdrd.cc)
 add_amalgamated_file(drd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)

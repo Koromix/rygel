@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
+#include "../../libcc/libcc.hh"
 #include "../../libdrd/libdrd.hh"
-
 #include "config.hh"
 
 static Config goupil_config;

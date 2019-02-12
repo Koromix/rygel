@@ -105,6 +105,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 endif()
 
 # Libraries and utilities
+add_project(src/libcc EXCLUDE_FROM_ALL)
 add_project(src/libdrd EXCLUDE_FROM_ALL)
 add_project(src/libgui EXCLUDE_FROM_ALL)
 add_project(src/libheimdall EXCLUDE_FROM_ALL)

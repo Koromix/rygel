@@ -5,31 +5,19 @@
 # The platform layer is only available for Win32, for now
 
 set(GOUPIL_SRC
-    ../libcc/util.cc
-    ../libcc/util.hh
     server/config.cc
     server/config.hh
     server/goupil.cc
 )
 
 add_executable(goupil ${GOUPIL_SRC})
-target_link_libraries(goupil PUBLIC miniz)
-if(NOT EMSCRIPTEN)
-    target_link_libraries(goupil PUBLIC Threads::Threads)
-endif()
-target_link_libraries(goupil PUBLIC microhttpd sqlite)
+target_link_libraries(goupil PRIVATE cc microhttpd sqlite)
 
 set(GOUPIL_ADMIN_SRC
-    ../libcc/util.cc
-    ../libcc/util.hh
     server/config.cc
     server/config.hh
     server/goupil_admin.cc
 )
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
-target_link_libraries(goupil_admin PUBLIC miniz)
-if(NOT EMSCRIPTEN)
-    target_link_libraries(goupil_admin PUBLIC Threads::Threads)
-endif()
-target_link_libraries(goupil_admin PUBLIC sqlite)
+target_link_libraries(goupil_admin PRIVATE cc sqlite)

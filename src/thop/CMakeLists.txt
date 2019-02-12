@@ -38,7 +38,7 @@ set(THOP_RESOURCES
     client/images/favicon.png
 )
 set(THOP_SRC
-    ../libcc/json.hh
+    ../wrappers/json.hh
     server/config.cc
     server/config.hh
     server/mco.cc
@@ -79,4 +79,4 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
     target_link_libraries(thop PRIVATE dl)
 endif()
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(thop PUBLIC drd microhttpd sodium)
+target_link_libraries(thop PRIVATE cc drd microhttpd sodium)

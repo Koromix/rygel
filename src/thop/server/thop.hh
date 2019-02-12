@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "../../libcc/libcc.hh"
 #include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
-
 #include "../../libdrd/libdrd.hh"
-#include "../../libcc/json.hh"
+#include "../../wrappers/json.hh"
 
 struct Config;
 struct StructureSet;

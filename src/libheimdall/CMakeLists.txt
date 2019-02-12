@@ -10,11 +10,9 @@ set(LIBHEIMDALL_RESOURCES
     ../../lib/imgui/misc/fonts/Roboto-Medium.ttf
 )
 set(LIBHEIMDALL_SRC
-    ../libcc/util.cc
-    ../libcc/util.hh
-    ../libcc/opengl.cc
-    ../libcc/opengl.hh
-    ../libcc/opengl_func.inc
+    ../wrappers/opengl.cc
+    ../wrappers/opengl.hh
+    ../wrappers/opengl_func.inc
     animation.hh
     core.cc
     core.hh
@@ -32,6 +30,6 @@ list(APPEND LIBHEIMDALL_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
 
 add_library(heimdall ${LIBHEIMDALL_SRC})
 set_target_properties(heimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(heimdall PUBLIC miniz imgui gui)
+target_link_libraries(heimdall PUBLIC cc imgui gui)
 add_amalgamated_file(heimdall "${CMAKE_BINARY_DIR}/libheimdall.cc" libheimdall.cc)
 add_amalgamated_file(heimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall.hh)

@@ -2,15 +2,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "packer.hh"
-#include "output.hh"
-
 #ifdef _WIN32
     // Avoid windows.h
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #else
     #include <fnmatch.h>
 #endif
+
+#include "packer.hh"
+#include "output.hh"
 
 struct MergeRule {
     const char *name;
@@ -34,7 +34,7 @@ struct PackedAssetInfo {
     const char *source_map;
 };
 
-// For simplicity, I've replicated the required data structures from libcc/util.hh
+// For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.
 static const char *const OutputPrefix =
 R"(// This Source Code Form is subject to the terms of the Mozilla Public

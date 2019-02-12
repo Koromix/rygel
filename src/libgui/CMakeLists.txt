@@ -5,9 +5,9 @@
 # The platform layer is only available for Win32, for now
 
 set(LIBGUI_SRC
-    ../libcc/opengl.cc
-    ../libcc/opengl.hh
-    ../libcc/opengl_func.inc
+    ../wrappers/opengl.cc
+    ../wrappers/opengl.hh
+    ../wrappers/opengl_func.inc
     libgui.cc
     libgui.hh
 )
@@ -21,12 +21,9 @@ endif()
 
 add_library(gui ${LIBGUI_SRC})
 set_target_properties(gui PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(gui PUBLIC miniz)
+target_link_libraries(gui PUBLIC cc)
 if(WIN32)
     target_link_libraries(gui PUBLIC gdi32 opengl32 imm32)
-endif()
-if(NOT EMSCRIPTEN)
-    target_link_libraries(gui PUBLIC Threads::Threads)
 endif()
 add_amalgamated_file(gui "${CMAKE_BINARY_DIR}/libgui.cc" libgui.cc)
 add_amalgamated_file(gui "${CMAKE_BINARY_DIR}/libgui.hh" libgui.hh)

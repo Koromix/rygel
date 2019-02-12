@@ -3,9 +3,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 add_executable(packer
-    ../libcc/util.cc
-    ../libcc/util.hh
-    ../libcc/json.hh
+    ../wrappers/json.hh
     asset.hh
     packer.cc
     packer.hh
@@ -13,10 +11,7 @@ add_executable(packer
     output.hh
 )
 
-target_link_libraries(packer PUBLIC miniz)
-if(NOT EMSCRIPTEN)
-    target_link_libraries(packer PUBLIC Threads::Threads)
-endif()
+target_link_libraries(packer PRIVATE cc)
 if(WIN32)
-    target_link_libraries(packer PUBLIC shlwapi)
+    target_link_libraries(packer PRIVATE shlwapi)
 endif()

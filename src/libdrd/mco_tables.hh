@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../libcc/util.hh"
+#include "../libcc/libcc.hh"
 #include "mco_common.hh"
 
 enum class mco_TableType: uint32_t {

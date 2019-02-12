@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "../libcc/libcc.hh"
 #include "common.hh"
 #include "mco_tables.hh"
 

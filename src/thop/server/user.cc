@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
-
 #include <shared_mutex>
 #ifdef _WIN32
     #include <ws2tcpip.h>
@@ -11,6 +9,7 @@
     #include <arpa/inet.h>
 #endif
 
+#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
 #include "thop.hh"
 #include "structure.hh"
 #include "user.hh"
