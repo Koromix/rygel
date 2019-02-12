@@ -33,12 +33,27 @@ static bool HandleCommonOption(OptionParser &opt)
     return true;
 }
 
-static bool RunInit(Span<const char *> arguments)
+static bool MakeDirectory(const char *dir)
+{
+#ifdef _WIN32
+    int ret = _mkdir(dir);
+#else
+    int ret = mkdir(dir, 0755);
+#endif
+    if (ret < 0) {
+        LogError("Cannot create directory '%1': %2", dir, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+static bool RunCreate(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil_admin init [options] profile_directory)");
+        PrintLn(fp, R"(Usage: goupil_admin create [options] profile_directory)");
     };
 
     const char *directory = nullptr;
@@ -62,7 +77,16 @@ static bool RunInit(Span<const char *> arguments)
         return false;
     }
 
-    return true;
+    bool valid = true;
+
+    // Create basic structure
+    valid &= MakeDirectory(directory);
+    if (valid) {
+        valid &= MakeDirectory(Fmt(&temp_alloc, "%1%/pages", directory).ptr);
+        valid &= MakeDirectory(Fmt(&temp_alloc, "%1%/templates", directory).ptr);
+    }
+
+    return valid;
 }
 
 int main(int argc, char **argv)
@@ -73,7 +97,7 @@ int main(int argc, char **argv)
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Commands:
-    init                         Init goupil profile)");
+    create                       Create new profile)");
     };
 
     if (argc < 2) {
@@ -120,7 +144,7 @@ Commands:
             } \
         } while (false)
 
-    HANDLE_COMMAND(init, RunInit);
+    HANDLE_COMMAND(create, RunCreate);
 
 #undef HANDLE_COMMAND
 
