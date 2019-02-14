@@ -199,6 +199,23 @@ let neuropsy = (function() {
         return tresholds[key];
     }
 
+    function testInfC5(value, treshold)
+    {
+        return (value !== null) ? (value <= treshold) : false;
+    }
+    function testInfC50(value, treshold)
+    {
+        return (value !== null) ? (value < treshold) : false;
+    }
+    function testSupC5(value, treshold)
+    {
+        return (value !== null) ? (value >= treshold) : false;
+    }
+    function testSupC50(value, treshold)
+    {
+        return (value !== null) ? (value > treshold) : false;
+    }
+
     this.screenEfficiency = function(data) {
         if (data.rdv_age === null || data.npsy_nsc === null || data.npsy_moca === null)
             return null;
@@ -207,9 +224,9 @@ let neuropsy = (function() {
         if (!tresholds)
             return null;
 
-        if (data.npsy_moca <= tresholds.moca_c5) {
+        if (testInfC5(data.npsy_moca, tresholds.moca_c5)) {
             return ScreeningResult.Bad;
-        } else if (data.npsy_moca < tresholds.moca_c50) {
+        } else if (testInfC50(data.npsy_moca, tresholds.moca_c50)) {
             return ScreeningResult.Fragile;
         } else {
             return ScreeningResult.Good;
@@ -225,9 +242,9 @@ let neuropsy = (function() {
         if (!tresholds)
             return null;
 
-        if (data.npsy_rl <= tresholds.rl_c5 || data.npsy_rt <= tresholds.rt_c5) {
+        if (testInfC5(data.npsy_rl, tresholds.rl_c5) || testInfC5(data.npsy_rt, tresholds.rt_c5)) {
             return ScreeningResult.Bad;
-        } else if (data.npsy_rl < tresholds.rl_c50 || data.npsy_rt < tresholds.rt_c50) {
+        } else if (testInfC50(data.npsy_rl, tresholds.rl_c50) || testInfC50(data.npsy_rt, tresholds.rt_c50)) {
             return ScreeningResult.Fragile;
         } else {
             return ScreeningResult.Good;
@@ -235,21 +252,25 @@ let neuropsy = (function() {
     };
 
     this.screenExecution = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null || data.npsy_tmtb === null ||
-                data.npsy_interf === null || data.npsy_slc === null ||
-                data.npsy_animx === null || data.npsy_p === null)
+        if (data.rdv_age === null || data.npsy_nsc === null ||
+                ((data.npsy_tmtb === null) + (data.npsy_interf === null) + (data.npsy_slc === null) +
+                 (data.npsy_animx === null) + (data.npsy_p === null)) > 2)
             return null;
 
         let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
         if (!tresholds)
             return null;
 
-        let c5_fails = (data.npsy_tmtb <= tresholds.tmtb_c5) + (data.npsy_interf <= tresholds.interf_c5) +
-                       (data.npsy_slc <= tresholds.slc_c5) + (data.npsy_animx <= tresholds.animx_c5) +
-                       (data.npsy_p <= tresholds.p_c5);
-        let c50_fails = (data.npsy_tmtb < tresholds.tmtb_c50) + (data.npsy_interf < tresholds.interf_c50) +
-                        (data.npsy_slc < tresholds.slc_c50) + (data.npsy_animx < tresholds.animx_c50) +
-                        (data.npsy_p < tresholds.p_c50);
+        let c5_fails = testSupC5(data.npsy_tmtb, tresholds.tmtb_c5) +
+                       testSupC5(data.npsy_interf, tresholds.interf_c5) +
+                       testInfC5(data.npsy_slc, tresholds.slc_c5) +
+                       testInfC5(data.npsy_animx, tresholds.animx_c5) +
+                       testInfC5(data.npsy_p, tresholds.p_c5);
+        let c50_fails = testSupC50(data.npsy_tmtb, tresholds.tmtb_c50) +
+                        testSupC50(data.npsy_interf, tresholds.interf_c50) +
+                        testInfC50(data.npsy_slc, tresholds.slc_c50) +
+                        testInfC50(data.npsy_animx, tresholds.animx_c50) +
+                        testInfC50(data.npsy_p, tresholds.p_c50);
 
         if (c5_fails) {
             return ScreeningResult.Bad;
@@ -261,19 +282,23 @@ let neuropsy = (function() {
     };
 
     this.screenAttention = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null || data.npsy_code === null ||
-                data.npsy_tmta === null || data.npsy_lecture === null ||
-                data.npsy_deno === null)
+        if (data.rdv_age === null || data.npsy_nsc === null ||
+                ((data.npsy_code === null) + (data.npsy_tmta === null) + (data.npsy_lecture === null) +
+                 (data.npsy_deno === null)) > 2)
             return null;
 
         let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
         if (!tresholds)
             return null;
 
-        let c5_fails = (data.npsy_code <= tresholds.code_c5) + (data.npsy_tmta <= tresholds.tmta_c5) +
-                       (data.npsy_lecture <= tresholds.lecture_c5) + (data.npsy_deno <= tresholds.deno_c5);
-        let c50_fails = (data.npsy_code < tresholds.code_c50) + (data.npsy_tmta < tresholds.tmta_c50) +
-                        (data.npsy_lecture < tresholds.lecture_c50) + (data.npsy_deno < tresholds.deno_c50);
+        let c5_fails = testInfC5(data.npsy_code, tresholds.code_c5) +
+                       testSupC5(data.npsy_tmta, tresholds.tmta_c5) +
+                       testSupC5(data.npsy_lecture, tresholds.lecture_c5) +
+                       testSupC5(data.npsy_deno, tresholds.deno_c5);
+        let c50_fails = testInfC50(data.npsy_code, tresholds.code_c50) +
+                        testSupC50(data.npsy_tmta, tresholds.tmta_c50) +
+                        testSupC50(data.npsy_lecture, tresholds.lecture_c50) +
+                        testSupC50(data.npsy_deno, tresholds.deno_c50);
 
         if (c5_fails) {
             return ScreeningResult.Bad;
