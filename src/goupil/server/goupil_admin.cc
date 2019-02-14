@@ -11,6 +11,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "config.hh"
+#include "sqlite.hh"
 
 static Config goupil_config;
 
@@ -77,16 +78,57 @@ static bool RunCreate(Span<const char *> arguments)
         return false;
     }
 
-    bool valid = true;
+    // Create profile directory
+    if (!MakeDirectory(directory))
+        return false;
 
-    // Create basic structure
-    valid &= MakeDirectory(directory);
-    if (valid) {
-        valid &= MakeDirectory(Fmt(&temp_alloc, "%1%/pages", directory).ptr);
-        valid &= MakeDirectory(Fmt(&temp_alloc, "%1%/templates", directory).ptr);
+    // Profile layout
+    HeapArray<const char *> directories;
+    HeapArray<const char *> files;
+    const char *database_filename;
+    directories.Append(Fmt(&temp_alloc, "%1%/pages", directory).ptr);
+    directories.Append(Fmt(&temp_alloc, "%1%/templates", directory).ptr);
+    database_filename = *files.Append(Fmt(&temp_alloc, "%1%/database.db", directory).ptr);
+
+    // Drop profile directory if anything fails
+    DEFER_N(out_guard) {
+        for (const char *dir: directories) {
+            rmdir(dir);
+        }
+        for (const char *filename: files) {
+            unlink(filename);
+        }
+
+        if (rmdir(directory) < 0) {
+            LogError("Failed to remove directory '%1': %2", directory, strerror(errno));
+        }
+    };
+
+    // Create directory layout
+    {
+        bool valid = true;
+
+        for (const char *dir: directories) {
+            valid &= MakeDirectory(dir);
+        }
+
+        if (!valid)
+            return false;
     }
 
-    return valid;
+    // Create database
+    {
+        sqlite3 *db = OpenDatabase(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+        if (!db)
+            return false;
+        DEFER { sqlite3_close(db); };
+
+        if (!InitDatabase(db))
+            return false;
+    }
+
+    out_guard.disable();
+    return true;
 }
 
 int main(int argc, char **argv)
