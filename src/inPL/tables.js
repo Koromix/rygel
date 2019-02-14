@@ -5,47 +5,154 @@
 let tables = (function() {
     let self = this;
 
-    this.refreshSummary = function() {
+    // Supra-categories are hard-coded in createScreeningHeader()
+    const ScreeningHandlers = [
+        {title: 'Efficience cognitive', abbrev: 'EFF', func: neuropsy.screenEfficiency},
+        {title: 'Mémoire', abbrev: 'MEM', func: neuropsy.screenMemory},
+        {title: 'Exécution', abbrev: 'EXE', func: neuropsy.screenExecution},
+        {title: 'Attention et vitesse de traitement', abbrev: 'ATT', func: neuropsy.screenAttention},
+        {title: 'Cognition', abbrev: 'COG', func: neuropsy.screenCognition},
+        {title: 'Dépression / anxiété', abbrev: 'DA', func: neuropsy.screenDepressionAnxiety},
+        {title: 'Sommeil', abbrev: 'SOM', func: neuropsy.screenSleep},
+        {title: 'Neuropsychologie', abbrev: 'NP', func: neuropsy.screenAll},
+        {title: 'Diversité', abbrev: 'DIV', func: nutrition.screenDiversity},
+        {title: 'Protéines', abbrev: 'PRO', func: nutrition.screenProteinIntake},
+        {title: 'Calcium', abbrev: 'CAL', func: nutrition.screenCalciumIntake},
+        {title: 'Comportement', abbrev: 'CMP', func: nutrition.screenBehavior},
+        {title: 'Nutrition', abbrev: 'NUT', func: nutrition.screenAll},
+        {title: 'Mobilité', abbrev: 'MOB', func: ems.screenMobility},
+        {title: 'Force', abbrev: 'FOR', func: ems.screenStrength},
+        {title: 'Risque de fracture', abbrev: 'RF', func: ems.screenFractureRisk},
+        {title: 'EMS', abbrev: 'EMS', func: ems.screenAll}
+    ];
 
+    function createScreeningHeader()
+    {
+        return html('thead',
+            html('tr',
+                html('th', {rowspan: 2}),
+                html('th', {colspan: 8}, 'Neuropsychologie'),
+                html('th', {colspan: 5}, 'Nutrition'),
+                html('th', {colspan: 4}, 'EMS')
+            ),
+            html('tr',
+                ScreeningHandlers.map(handler => html('th', {title: handler.title}, handler.abbrev))
+            )
+        );
+    }
+
+    this.refreshSummary = function() {
+        let file = document.querySelector('#inpl_option_file').files[0];
+        let sex = document.querySelector('#inpl_option_sex').value;
+        let rows = document.querySelector('#inpl_option_rows').value;
+
+        let summary = document.querySelector('#inpl_summary');
+
+        if (file) {
+            let filter_func;
+            switch (sex) {
+                case 'all': { filter_func = row => true; } break;
+                case 'male': { filter_func = row => row.cs_sexe == 'M'; } break;
+                case 'female': { filter_func = row => row.cs_sexe == 'F'; } break;
+            }
+
+            let row_names;
+            let row_func;
+            switch (rows) {
+                case 'age': {
+                    row_names = ['0-44 ans', '45-54 ans', '55-64 ans',
+                                 '65-74 ans', '75-84 ans', '85+ ans'];
+                    row_func = row => {
+                        if (row.rdv_age < 45) return 0;
+                        else if (row.rdv_age < 55) return 1;
+                        else if (row.rdv_age < 65) return 2;
+                        else if (row.rdv_age < 75) return 3;
+                        else if (row.rdv_age < 85) return 4;
+                        else return 5;
+                    };
+                } break;
+
+                case 'sex': {
+                    row_names = ['Hommes', 'Femmes'];
+                    row_func = row => {
+                        switch (row.cs_sexe) {
+                            case 'M': return 0;
+                            case 'F': return 1;
+                            default: return null;
+                        }
+                    };
+                } break;
+            }
+            row_names.push('Total');
+
+            let stats = [];
+            for (let i = 0; i < row_names.length; i++) {
+                stats.push(new Array(ScreeningHandlers.length).fill(undefined).map(x => {
+                    return [0, 0, 0, 0];
+                }));
+            }
+
+            bridge.readFromFile(file, {
+                step: row => {
+                    if (filter_func(row)) {
+                        let row_idx = row_func(row);
+                        if (row_idx === null)
+                            return;
+
+                        for (let i = 0; i < ScreeningHandlers.length; i++) {
+                            let result = ScreeningHandlers[i].func(row) || 0;
+                            stats[row_idx][i][result]++;
+                            stats[row_names.length - 1][i][result]++;
+                        }
+                    }
+                },
+                complete: () => {
+                    summary.replaceContent(
+                        createScreeningHeader(),
+                        html('tbody')
+                    );
+                    let thead = summary.querySelector('thead');
+                    let tbody = summary.querySelector('tbody');
+
+                    // We need 4 columns for each test
+                    thead.querySelectorAll('th').forEach(th => {
+                        th.setAttribute('colspan', 4 * (parseInt(th.getAttribute('colspan')) || 1));
+                    });
+
+                    for (let i = 0; i < row_names.length; i++) {
+                        let tr = html('tr',
+                            html('th', {colspan: 4}, row_names[i])
+                        );
+
+                        for (let j = 0; j < ScreeningHandlers.length; j++) {
+                            tr.appendContent(
+                                html('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
+                                html('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
+                                html('td', {class: 'inpl_result_1'}, '' + stats[i][j][1]),
+                                html('td', {class: 'inpl_result_0'}, '' + stats[i][j][0])
+                            );
+                        }
+
+                        tbody.appendContent(tr);
+                    }
+                }
+            });
+        } else {
+            summary.innerHTML = '';
+        }
     }
 
     this.refreshList = function() {
-        let file = document.querySelector('#inpl_file').files[0];
-        let dashboard = document.querySelector('#inpl_dashboard');
+        let file = document.querySelector('#inpl_option_file').files[0];
+
+        let list = document.querySelector('#inpl_list');
 
         if (file) {
-            dashboard.replaceContent(
-                html('thead',
-                    html('tr',
-                        html('th', {rowspan: 2}, 'PLID'),
-                        html('th', {colspan: 8}, 'Neuropsychologie'),
-                        html('th', {colspan: 5}, 'Nutrition'),
-                        html('th', {colspan: 4}, 'EMS')
-                    ),
-                    html('tr',
-                        html('th', {title: 'Efficience'}, 'EFF'),
-                        html('th', {title: 'Mémoire'}, 'MEM'),
-                        html('th', {title: 'Exécution'}, 'EXE'),
-                        html('th', {title: 'Attention'}, 'ATT'),
-                        html('th', {title: 'Cognition'}, 'COG'),
-                        html('th', {title: 'Dépression / Anxiété'}, 'DA'),
-                        html('th', {title: 'Sommeil'}, 'SOM'),
-                        html('th', {title: 'Neuropsychologie'}, 'NP'),
-                        html('th', {title: 'Diversité'}, 'DIV'),
-                        html('th', {title: 'Protéines'}, 'PRO'),
-                        html('th', {title: 'Calcium'}, 'CAL'),
-                        html('th', {title: 'Comportement'}, 'CMP'),
-                        html('th', {title: 'Nutrition'}, 'NUT'),
-                        html('th', {title: 'Mobilité'}, 'MOB'),
-                        html('th', {title: 'Force'}, 'FOR'),
-                        html('th', {title: 'Risque de fracture'}, 'RF'),
-                        html('th', {title: 'EMS'}, 'EMS')
-                    )
-                ),
+            list.replaceContent(
+                createScreeningHeader(),
                 html('tbody')
             );
-
-            let tbody = dashboard.querySelector('tbody');
+            let tbody = list.querySelector('tbody');
 
             function resultCell(result)
             {
@@ -57,32 +164,18 @@ let tables = (function() {
                 }
             }
 
-            bridge.readFromFile(file, row => {
-                let tr = html('tr',
-                    html('th', '' + row.plid),
-                    resultCell(neuropsy.screenEfficiency(row)),
-                    resultCell(neuropsy.screenMemory(row)),
-                    resultCell(neuropsy.screenExecution(row)),
-                    resultCell(neuropsy.screenAttention(row)),
-                    resultCell(neuropsy.screenCognition(row)),
-                    resultCell(neuropsy.screenDepressionAnxiety(row)),
-                    resultCell(neuropsy.screenSleep(row)),
-                    resultCell(neuropsy.screenAll(row)),
-                    resultCell(nutrition.screenDiversity(row)),
-                    resultCell(nutrition.screenProteinIntake(row)),
-                    resultCell(nutrition.screenCalciumIntake(row)),
-                    resultCell(nutrition.screenBehavior(row)),
-                    resultCell(nutrition.screenAll(row)),
-                    resultCell(ems.screenMobility(row)),
-                    resultCell(ems.screenStrength(row)),
-                    resultCell(ems.screenFractureRisk(row)),
-                    resultCell(ems.screenAll(row))
-                );
+            bridge.readFromFile(file, {
+                step: row => {
+                    let tr = html('tr',
+                        html('th', '' + row.plid),
+                        ScreeningHandlers.map(handler => resultCell(handler.func(row)))
+                    );
 
-                tbody.appendContent(tr);
+                    tbody.appendContent(tr);
+                }
             });
         } else {
-            dashboard.innerHTML = '';
+            list.innerHTML = '';
         }
     }
 

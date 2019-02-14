@@ -26,31 +26,36 @@ body {
 .inpl_tabbar button.active { background-color: #ccc; }
 .inpl_tabpage { padding: 1em; }
 
-#inpl_file {
+#inpl_option_file {
     float: right;
     padding: 6px 4px 0 0;
 }
+.inpl_options {
+    text-align: center;
+    padding: 0 0 1em 0;
+}
+.inpl_options label { padding: 0 0.5em 0 0.5em; }
 
-#inpl_dashboard {
-    width: 90%;
+.inpl_table {
+    width: 95%;
     table-layout: fixed;
     border-collapse: collapse;
     margin: 0 auto;
     background: #eee;
 }
-
-#inpl_dashboard th, #inpl_dashboard td {
-    padding: 2px 8px 2px 8px;
+.inpl_table th, .inpl_table td {
+    padding: 2px 0;
     border: 1px solid #ddd;
 }
-
-#inpl_dashboard th:first-child { width: 100px; }
-
-#inpl_dashboard tbody th {
+.inpl_table th { padding: 2px 4px 2px 4px; }
+.inpl_table td { padding: 2px 0; }
+.inpl_table th:first-child { width: 70px; }
+.inpl_table tbody th {
     font-weight: normal;
     font-style: italic;
+    text-align: right;
 } 
-#inpl_dashboard tbody td {
+.inpl_table tbody td {
     color: white;
     text-align: center;
 }

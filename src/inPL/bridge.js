@@ -110,16 +110,17 @@ let bridge = (function() {
 
     // FIXME: Returns before the end, async/away/promises/whatever
     // is a fucking pile of trash
-    this.readFromFile = function(file, func) {
+    this.readFromFile = function(file, functions) {
         Papa.parse(file, {
             header: true,
             chunk: ret => {
                 for (let row of ret.data) {
                     row = translateRow(row);
                     if (row.plid)
-                        func(row);
+                        functions.step(row);
                 }
-            }
+            },
+            complete: functions.complete
         });
     };
 
