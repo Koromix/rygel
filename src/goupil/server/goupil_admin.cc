@@ -150,7 +150,7 @@ Commands:
     const char *cmd = argv[1];
     Span<const char *> arguments((const char **)argv + 2, argc - 2);
 
-    // Handle 'drdc help [command]' and 'drdc --help [command]' invocations
+    // Handle 'goupil_admin help [command]' and 'goupil_admin --help [command]' invocations
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
             cmd = arguments[0];
