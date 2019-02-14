@@ -164,6 +164,8 @@ let tables = (function() {
                     rows.push(row);
                 },
                 complete: () => {
+                    rows.sort((row1, row2) => row1.plid - row2.plid);
+
                     list.replaceContent(
                         createScreeningHeader(),
                         html('tbody')
