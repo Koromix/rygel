@@ -6,23 +6,23 @@ let tables = (function() {
     let self = this;
 
     const ScreeningHandlers = [
-        {group: 'Neuropsychologie', title: 'Efficience cognitive', abbrev: 'EFF', func: neuropsy.screenEfficiency},
-        {group: 'Neuropsychologie', title: 'Mémoire', abbrev: 'MEM', func: neuropsy.screenMemory},
-        {group: 'Neuropsychologie', title: 'Exécution', abbrev: 'EXE', func: neuropsy.screenExecution},
-        {group: 'Neuropsychologie', title: 'Attention et vitesse de traitement', abbrev: 'ATT', func: neuropsy.screenAttention},
-        {group: 'Neuropsychologie', title: 'Cognition', abbrev: 'COG', func: neuropsy.screenCognition},
-        {group: 'Neuropsychologie', title: 'Dépression / anxiété', abbrev: 'DA', func: neuropsy.screenDepressionAnxiety},
-        {group: 'Neuropsychologie', title: 'Sommeil', abbrev: 'SOM', func: neuropsy.screenSleep},
-        {group: 'Neuropsychologie', title: 'Neuropsychologie', abbrev: 'NP', func: neuropsy.screenAll},
-        {group: 'Nutrition', title: 'Diversité', abbrev: 'DIV', func: nutrition.screenDiversity},
-        {group: 'Nutrition', title: 'Protéines', abbrev: 'PRO', func: nutrition.screenProteinIntake},
-        {group: 'Nutrition', title: 'Calcium', abbrev: 'CAL', func: nutrition.screenCalciumIntake},
-        {group: 'Nutrition', title: 'Comportement', abbrev: 'CMP', func: nutrition.screenBehavior},
-        {group: 'Nutrition', title: 'Nutrition', abbrev: 'NUT', func: nutrition.screenAll},
-        {group: 'EMS', title: 'Mobilité', abbrev: 'MOB', func: ems.screenMobility},
-        {group: 'EMS', title: 'Force', abbrev: 'FOR', func: ems.screenStrength},
-        {group: 'EMS', title: 'Risque de fracture', abbrev: 'RF', func: ems.screenFractureRisk},
-        {group: 'EMS', title: 'EMS', abbrev: 'EMS', func: ems.screenAll}
+        {group: 'Neuropsychologie', abbrev: 'EFF', title: 'Efficience cognitive', func: neuropsy.screenEfficiency},
+        {group: 'Neuropsychologie', abbrev: 'MEM', title: 'Mémoire', func: neuropsy.screenMemory},
+        {group: 'Neuropsychologie', abbrev: 'EXE', title: 'Exécution', func: neuropsy.screenExecution},
+        {group: 'Neuropsychologie', abbrev: 'ATT', title: 'Attention et vitesse de traitement', func: neuropsy.screenAttention},
+        {group: 'Neuropsychologie', abbrev: 'COG', title: 'Cognition', func: neuropsy.screenCognition},
+        {group: 'Neuropsychologie', abbrev: 'DA', title: 'Dépression / anxiété', func: neuropsy.screenDepressionAnxiety},
+        {group: 'Neuropsychologie', abbrev: 'SOM', title: 'Sommeil', func: neuropsy.screenSleep},
+        {group: 'Neuropsychologie', abbrev: 'NP', title: 'Neuropsychologie', func: neuropsy.screenAll},
+        {group: 'Nutrition', abbrev: 'DIV', title: 'Diversité', func: nutrition.screenDiversity},
+        {group: 'Nutrition', abbrev: 'PRO', title: 'Protéines', func: nutrition.screenProteinIntake},
+        {group: 'Nutrition', abbrev: 'CAL', title: 'Calcium', func: nutrition.screenCalciumIntake},
+        {group: 'Nutrition', abbrev: 'CMP', title: 'Comportement', func: nutrition.screenBehavior},
+        {group: 'Nutrition', abbrev: 'NUT', title: 'Nutrition', func: nutrition.screenAll},
+        {group: 'EMS', abbrev: 'MOB', title: 'Mobilité', func: ems.screenMobility},
+        {group: 'EMS', abbrev: 'FOR', title: 'Force', func: ems.screenStrength},
+        {group: 'EMS', abbrev: 'RF', title: 'Risque de fracture', func: ems.screenFractureRisk},
+        {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: ems.screenAll}
     ];
 
     function createScreeningHeader(handlers)
