@@ -15,6 +15,7 @@ let bridge = (function() {
         return isNaN(value) ? null : value;
     }
 
+    // FIXME: Fix handling of dictionaries (broken detection of 'autre' values)
     function translateRow(row)
     {
         let row2 = {
