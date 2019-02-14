@@ -5,38 +5,52 @@
 let tables = (function() {
     let self = this;
 
-    // Supra-categories are hard-coded in createScreeningHeader()
     const ScreeningHandlers = [
-        {title: 'Efficience cognitive', abbrev: 'EFF', func: neuropsy.screenEfficiency},
-        {title: 'Mémoire', abbrev: 'MEM', func: neuropsy.screenMemory},
-        {title: 'Exécution', abbrev: 'EXE', func: neuropsy.screenExecution},
-        {title: 'Attention et vitesse de traitement', abbrev: 'ATT', func: neuropsy.screenAttention},
-        {title: 'Cognition', abbrev: 'COG', func: neuropsy.screenCognition},
-        {title: 'Dépression / anxiété', abbrev: 'DA', func: neuropsy.screenDepressionAnxiety},
-        {title: 'Sommeil', abbrev: 'SOM', func: neuropsy.screenSleep},
-        {title: 'Neuropsychologie', abbrev: 'NP', func: neuropsy.screenAll},
-        {title: 'Diversité', abbrev: 'DIV', func: nutrition.screenDiversity},
-        {title: 'Protéines', abbrev: 'PRO', func: nutrition.screenProteinIntake},
-        {title: 'Calcium', abbrev: 'CAL', func: nutrition.screenCalciumIntake},
-        {title: 'Comportement', abbrev: 'CMP', func: nutrition.screenBehavior},
-        {title: 'Nutrition', abbrev: 'NUT', func: nutrition.screenAll},
-        {title: 'Mobilité', abbrev: 'MOB', func: ems.screenMobility},
-        {title: 'Force', abbrev: 'FOR', func: ems.screenStrength},
-        {title: 'Risque de fracture', abbrev: 'RF', func: ems.screenFractureRisk},
-        {title: 'EMS', abbrev: 'EMS', func: ems.screenAll}
+        {group: 'Neuropsychologie', title: 'Efficience cognitive', abbrev: 'EFF', func: neuropsy.screenEfficiency},
+        {group: 'Neuropsychologie', title: 'Mémoire', abbrev: 'MEM', func: neuropsy.screenMemory},
+        {group: 'Neuropsychologie', title: 'Exécution', abbrev: 'EXE', func: neuropsy.screenExecution},
+        {group: 'Neuropsychologie', title: 'Attention et vitesse de traitement', abbrev: 'ATT', func: neuropsy.screenAttention},
+        {group: 'Neuropsychologie', title: 'Cognition', abbrev: 'COG', func: neuropsy.screenCognition},
+        {group: 'Neuropsychologie', title: 'Dépression / anxiété', abbrev: 'DA', func: neuropsy.screenDepressionAnxiety},
+        {group: 'Neuropsychologie', title: 'Sommeil', abbrev: 'SOM', func: neuropsy.screenSleep},
+        {group: 'Neuropsychologie', title: 'Neuropsychologie', abbrev: 'NP', func: neuropsy.screenAll},
+        {group: 'Nutrition', title: 'Diversité', abbrev: 'DIV', func: nutrition.screenDiversity},
+        {group: 'Nutrition', title: 'Protéines', abbrev: 'PRO', func: nutrition.screenProteinIntake},
+        {group: 'Nutrition', title: 'Calcium', abbrev: 'CAL', func: nutrition.screenCalciumIntake},
+        {group: 'Nutrition', title: 'Comportement', abbrev: 'CMP', func: nutrition.screenBehavior},
+        {group: 'Nutrition', title: 'Nutrition', abbrev: 'NUT', func: nutrition.screenAll},
+        {group: 'EMS', title: 'Mobilité', abbrev: 'MOB', func: ems.screenMobility},
+        {group: 'EMS', title: 'Force', abbrev: 'FOR', func: ems.screenStrength},
+        {group: 'EMS', title: 'Risque de fracture', abbrev: 'RF', func: ems.screenFractureRisk},
+        {group: 'EMS', title: 'EMS', abbrev: 'EMS', func: ems.screenAll}
     ];
 
-    function createScreeningHeader()
+    function createScreeningHeader(handlers)
     {
+        let groups = [];
+        {
+            let prev_group = null;
+            for (let handler of handlers) {
+                if (handler.group !== prev_group) {
+                    groups.push({
+                        title: handler.group,
+                        colspan: 1
+                    });
+
+                    prev_group = handler.group;
+                } else {
+                    groups[groups.length - 1].colspan++;
+                }
+            }
+        }
+
         return html('thead',
             html('tr',
                 html('th', {rowspan: 2}),
-                html('th', {colspan: 8}, 'Neuropsychologie'),
-                html('th', {colspan: 5}, 'Nutrition'),
-                html('th', {colspan: 4}, 'EMS')
+                groups.map(group => html('th', {colspan: group.colspan}, group.title))
             ),
             html('tr',
-                ScreeningHandlers.map(handler => html('th', {title: handler.title}, handler.abbrev))
+                handlers.map(handler => html('th', {title: handler.title}, handler.abbrev))
             )
         );
     }
@@ -45,10 +59,13 @@ let tables = (function() {
         let file = document.querySelector('#inpl_option_file').files[0];
         let sex = document.querySelector('#inpl_option_sex').value;
         let rows = document.querySelector('#inpl_option_rows').value;
+        let columns = ['COG', 'DA', 'SOM', 'NUT', 'EMS'];
 
         let summary = document.querySelector('#inpl_summary');
 
         if (file) {
+            let handlers = ScreeningHandlers.filter(handler => columns.includes(handler.abbrev));
+
             let filter_func;
             switch (sex) {
                 case 'all': { filter_func = row => true; } break;
@@ -87,7 +104,7 @@ let tables = (function() {
 
             let stats = [];
             for (let i = 0; i < row_names.length; i++) {
-                stats.push(new Array(ScreeningHandlers.length).fill(undefined).map(x => {
+                stats.push(new Array(handlers.length).fill(undefined).map(x => {
                     return [0, 0, 0, 0];
                 }));
             }
@@ -99,8 +116,8 @@ let tables = (function() {
                         if (row_idx === null)
                             return;
 
-                        for (let i = 0; i < ScreeningHandlers.length; i++) {
-                            let result = ScreeningHandlers[i].func(row) || 0;
+                        for (let i = 0; i < handlers.length; i++) {
+                            let result = handlers[i].func(row) || 0;
                             stats[row_idx][i][result]++;
                             stats[row_names.length - 1][i][result]++;
                         }
@@ -108,7 +125,7 @@ let tables = (function() {
                 },
                 complete: () => {
                     summary.replaceContent(
-                        createScreeningHeader(),
+                        createScreeningHeader(handlers),
                         html('tbody')
                     );
                     let thead = summary.querySelector('thead');
@@ -124,7 +141,7 @@ let tables = (function() {
                             html('th', {colspan: 4}, row_names[i])
                         );
 
-                        for (let j = 0; j < ScreeningHandlers.length; j++) {
+                        for (let j = 0; j < handlers.length; j++) {
                             tr.appendContent(
                                 html('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
                                 html('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
@@ -167,7 +184,7 @@ let tables = (function() {
                     rows.sort((row1, row2) => row1.plid - row2.plid);
 
                     list.replaceContent(
-                        createScreeningHeader(),
+                        createScreeningHeader(ScreeningHandlers),
                         html('tbody')
                     );
                     let tbody = list.querySelector('tbody');
