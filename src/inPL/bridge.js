@@ -87,7 +87,7 @@ let bridge = (function() {
             ems_gug: parseFloatOrNull(row['ems.test_getup']),
 
             // FIXME: Temporary until biology is available
-            bio_albuminemie: parseFloatOrNull(row['diet.albuminemie'])
+            bio_albuminemie: 40
         };
 
         for (let i = 1; i <= 10; i++) {
