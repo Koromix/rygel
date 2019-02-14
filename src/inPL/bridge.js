@@ -17,7 +17,7 @@ let bridge = (function() {
 
     function translateRow(row)
     {
-        return {
+        let row2 = {
             plid: parseInt(row['rdv.plid']),
 
             cs_sexe: row['consultant.sexe'] || null,
@@ -42,7 +42,13 @@ let bridge = (function() {
             aq_had12: parseIntOrNull(row['aq1.had12']),
             aq_had13: parseIntOrNull(row['aq1.had13']),
             aq_had14: parseIntOrNull(row['aq1.had14']),
-            aq_som1: parseIntOrNull(row['aq1.som1']),
+            aq_som1: (function() {
+                if (row['aq1.som1'] !== null && row['aq1.som1'] !== undefined) {
+                    return row['aq1.som1'].split('|').map(x => parseInt(x));
+                } else {
+                    return null;
+                }
+            })(),
 
             npsy_nsc: parseIntOrNull(row['neuropsy.nsc']),
             npsy_plainte_som: parseIntOrNull(row['neuropsy.plainte_som']),
@@ -82,6 +88,24 @@ let bridge = (function() {
             // FIXME: Temporary until biology is available
             bio_albuminemie: parseFloatOrNull(row['diet.albuminemie'])
         };
+
+        for (let i = 1; i <= 10; i++) {
+            row2[`ems_act${i}`] = parseIntOrNull(row[`ems.act${i}`]);
+            switch (parseIntOrNull(row[`ems.act${i}_temps`])) {
+                case 0: { row2[`ems_act${i}_freq`] = 15; } break;
+                case 1: { row2[`ems_act${i}_freq`] = 30; } break;
+                case 2: { row2[`ems_act${i}_freq`] = 45; } break;
+                case 3: { row2[`ems_act${i}_freq`] = 60; } break;
+                case 4: { row2[`ems_act${i}_freq`] = 90; } break;
+                case 5: { row2[`ems_act${i}_freq`] = 120; } break;
+                case 6: { row2[`ems_act${i}_freq`] = 180; } break;
+                case null: { row2[`ems_act${i}_freq`] = null; } break;
+            }
+            row2[`ems_act${i}_duree`] = parseIntOrNull(row[`ems.act${i}_temps`]);
+            row2[`ems_act${i}_intensite`] = parseIntOrNull(row[`ems.act${i}_intensite`]);
+        }
+
+        return row2;
     }
 
     // FIXME: Returns before the end, async/away/promises/whatever

@@ -329,5 +329,10 @@ let neuropsy = (function() {
         }
     };
 
+    this.screenAll = function(data) {
+        return Math.min(self.screenCognition(data), self.screenDepressionAnxiety(data),
+                        self.screenSleep(data)) || null;
+    }
+
     return this;
 }).call({});

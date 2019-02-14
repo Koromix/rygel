@@ -113,7 +113,7 @@ let nutrition = (function() {
         }
     };
 
-    this.screenNutrition = function(data) {
+    this.screenAll = function(data) {
         return Math.min(self.screenDiversity(data), self.screenProteinIntake(data),
                         self.screenCalciumIntake(data), self.screenBehavior(data)) || null;
     };

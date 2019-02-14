@@ -14,10 +14,13 @@ let ems = (function() {
                         data.ems_assis_2h_continu;
 
         let activity_score = 0;
-        for (let i = 1; data['ems_act' + i] !== null; i++) {
-            let intensity = data['ems_act' + i + '_intensite'];
-            let duration = data['ems_act' + i + '_duree'];
-            let frequency = data['ems_act' + i + '_freq'];
+        for (let i = 1; i <= 10; i++) {
+            if (!data['ems_act' + i])
+                continue;
+
+            let intensity = data[`ems_act${i}_intensite`];
+            let duration = data[`ems_act${i}_duree`];
+            let frequency = data[`ems_act${i}_freq`];
 
             if (intensity == 3 && duration >= 20) {
                 if (frequency >= 3) {
@@ -99,7 +102,7 @@ let ems = (function() {
         }
     };
 
-    this.screenPhysical = function(data) {
+    this.screenAll = function(data) {
         return Math.min(self.screenMobility(data), self.screenStrength(data),
                         self.screenFractureRisk(data)) || null;
     };
