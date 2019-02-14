@@ -148,12 +148,6 @@ let tables = (function() {
         let list = document.querySelector('#inpl_list');
 
         if (file) {
-            list.replaceContent(
-                createScreeningHeader(),
-                html('tbody')
-            );
-            let tbody = list.querySelector('tbody');
-
             function resultCell(result)
             {
                 switch (result) {
@@ -164,14 +158,26 @@ let tables = (function() {
                 }
             }
 
+            let rows = [];
             bridge.readFromFile(file, {
                 step: row => {
-                    let tr = html('tr',
-                        html('th', '' + row.plid),
-                        ScreeningHandlers.map(handler => resultCell(handler.func(row)))
+                    rows.push(row);
+                },
+                complete: () => {
+                    list.replaceContent(
+                        createScreeningHeader(),
+                        html('tbody')
                     );
+                    let tbody = list.querySelector('tbody');
 
-                    tbody.appendContent(tr);
+                    for (let row of rows) {
+                        let tr = html('tr',
+                            html('th', '' + row.plid),
+                            ScreeningHandlers.map(handler => resultCell(handler.func(row)))
+                        );
+
+                        tbody.appendContent(tr);
+                    }
                 }
             });
         } else {
