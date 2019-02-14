@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Tableaux PL</title>
+        <meta charset="UTF-8"/>
+
+        <script type="text/javascript" src="common.js"></script>
+        <script type="text/javascript" src="bridge.js"></script>
+        <script type="text/javascript" src="ems.js"></script>
+        <script type="text/javascript" src="neuropsy.js"></script>
+        <script type="text/javascript" src="nutrition.js"></script>
+        <script type="text/javascript" src="../../lib/papaparse/papaparse.min.js"></script>
+
+        <script type="text/javascript">
+            function refreshPage()
+            {
+                let file = document.querySelector('#inpl_file').files[0];
+                let dashboard = document.querySelector('#inpl_dashboard');
+
+                dashboard.innerHTML = '';
+
+                if (file) {
+                    bridge.readFromFile(file, row => {
+                        console.log(ScreeningResultText(neuropsy.screenEfficiency(row)));
+                        console.log(ScreeningResultText(neuropsy.screenMemory(row)));
+                        console.log(ScreeningResultText(neuropsy.screenExecution(row)));
+                        console.log(ScreeningResultText(neuropsy.screenAttention(row)));
+                    });
+                }
+            }
+
+            window.addEventListener('load', refreshPage);
+        </script>
+    </head>
+    <body>
+        <input id="inpl_file" type="file" onchange="refreshPage();"/>
+        <div id="inpl_tabbar">
+            <table id="inpl_dashboard"></table>
+        </div>
+    </body>
+</html>
