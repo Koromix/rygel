@@ -118,6 +118,3 @@ add_project(src/thop)
 add_project(src/heimdallR)
 add_project(src/heimdallw)
 add_project(src/goupil)
-
-# Misc tools
-add_project(tools)

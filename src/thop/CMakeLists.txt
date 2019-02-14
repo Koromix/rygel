@@ -80,3 +80,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
 endif()
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(thop PRIVATE cc drd microhttpd sodium)
+
+add_executable(thop_hash_password server/thop_hash_password.c)
+target_link_libraries(thop_hash_password PRIVATE sodium)
