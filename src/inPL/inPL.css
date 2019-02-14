@@ -1,0 +1,61 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body {
+    font-family: Geneva, sans-serif;
+    font-size: 13px;
+}
+
+.inpl_tabpage:not(.active) { display: none; }
+.inpl_tabbar {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+}
+.inpl_tabbar * {}
+.inpl_tabbar button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 10px 12px;
+}
+.inpl_tabbar button:hover { background-color: #ddd; }
+.inpl_tabbar button.active { background-color: #ccc; }
+.inpl_tabpage { padding: 1em; }
+
+#inpl_file {
+    float: right;
+    padding: 6px 4px 0 0;
+}
+
+#inpl_dashboard {
+    width: 90%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    margin: 0 auto;
+    background: #eee;
+}
+
+#inpl_dashboard th, #inpl_dashboard td {
+    padding: 2px 8px 2px 8px;
+    border: 1px solid #ddd;
+}
+
+#inpl_dashboard th:first-child { width: 100px; }
+
+#inpl_dashboard tbody th {
+    font-weight: normal;
+    font-style: italic;
+} 
+#inpl_dashboard tbody td {
+    color: white;
+    text-align: center;
+}
+
+.inpl_result_1 { background: #ff0000; }
+.inpl_result_2 { background: #ffc000; }
+.inpl_result_3 { background: #70ad47; }
+.inpl_result_0 { background: #aaa; }

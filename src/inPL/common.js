@@ -7,14 +7,3 @@ const ScreeningResult = Object.freeze({
     Fragile: 2,
     Good: 3
 });
-
-function ScreeningResultText(result)
-{
-    switch (result) {
-        case 1: return 'Pathologique';
-        case 2: return 'Fragile';
-        case 3: return 'Robuste';
-        case null: return 'Indéfini';
-        default: return null;
-    }
-}
