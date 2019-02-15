@@ -15,7 +15,7 @@ let ems = (function() {
 
         let activity_score = 0;
         for (let i = 1; i <= 10; i++) {
-            if (!data['ems_act' + i])
+            if (data[`ems_act${i}`] === null)
                 continue;
 
             let intensity = data[`ems_act${i}_intensite`];
