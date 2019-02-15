@@ -11,7 +11,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "config.hh"
-#include "sqlite.hh"
+#include "data.hh"
 
 static Config goupil_config;
 
@@ -118,11 +118,10 @@ static bool RunCreate(Span<const char *> arguments)
 
     // Create database
     {
-        sqlite3 *db = OpenDatabase(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
-        if (!db)
-            return false;
-        DEFER { sqlite3_close(db); };
+        SQLiteConnection db;
 
+        if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+            return false;
         if (!InitDatabase(db))
             return false;
     }

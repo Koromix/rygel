@@ -17,8 +17,8 @@ set(GOUPIL_ADMIN_SRC
     server/config.cc
     server/config.hh
     server/goupil_admin.cc
-    server/sqlite.cc
-    server/sqlite.hh
+    server/data_sqlite.cc
+    server/data.hh
 )
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
