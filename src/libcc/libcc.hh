@@ -2352,13 +2352,13 @@ public:
     StreamReader() { Close(); }
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
-        { Open(buf, filename, compression_type); }
+        : StreamReader() { Open(buf, filename, compression_type); }
     StreamReader(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        { Open(fp, filename, compression_type); }
+        : StreamReader() { Open(fp, filename, compression_type); }
     StreamReader(const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        { Open(filename, compression_type); }
+        : StreamReader() { Open(filename, compression_type); }
     ~StreamReader() { Close(); }
 
     StreamReader(const StreamReader &other) = delete;
@@ -2463,13 +2463,13 @@ public:
     StreamWriter() { Close(); }
     StreamWriter(HeapArray<uint8_t> *mem, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
-        { Open(mem, filename, compression_type); }
+        : StreamWriter() { Open(mem, filename, compression_type); }
     StreamWriter(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        { Open(fp, filename, compression_type); }
+        : StreamWriter() { Open(fp, filename, compression_type); }
     StreamWriter(const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        { Open(filename, compression_type); }
+        : StreamWriter() { Open(filename, compression_type); }
     ~StreamWriter() { Close(); }
 
     StreamWriter(const StreamWriter &other) = delete;
