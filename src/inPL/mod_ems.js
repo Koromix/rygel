@@ -6,8 +6,8 @@ let ems = (function() {
     let self = this;
 
     this.screenMobility = function(data) {
-        // TODO: Check for missing activity info
-        if (data.ems_temps_assis_jour === null || data.ems_assis_2h_continu === null)
+        if (data.ems_pratique_activites === null || data.ems_temps_assis_jour === null ||
+                data.ems_assis_2h_continu === null)
             return null;
 
         let sedentary = data.ems_temps_assis_jour >= 7 * 60 ||

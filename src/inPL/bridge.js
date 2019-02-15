@@ -75,6 +75,7 @@ let bridge = (function() {
             diet_comportement1: parseIntOrNull(row['diet.tendances_adaptees']),
             diet_comportement2: parseIntOrNull(row['diet.tendances_inadaptees']),
 
+            ems_pratique_activites: parseIntOrNull(row['ems.pratique_activites']),
             ems_temps_assis_jour: (function() {
                 return parseIntOrNull(row['ems.temps_assis_jour_h']) * 60 +
                        parseIntOrNull(row['ems.temps_assis_jour_min']);
