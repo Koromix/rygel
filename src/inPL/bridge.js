@@ -116,7 +116,7 @@ let bridge = (function() {
             chunk: ret => {
                 for (let row of ret.data) {
                     row = translateRow(row);
-                    if (row.plid)
+                    if (row.plid && row.cs_sexe)
                         functions.step(row);
                 }
             },
