@@ -17,8 +17,8 @@
 #include "mco.hh"
 #include "mco_casemix.hh"
 #include "mco_info.hh"
-#include "response.hh"
 #include "user.hh"
+#include "../../wrappers/http.hh"
 #include "../../packer/asset.hh"
 
 struct CatalogSet {
@@ -47,7 +47,7 @@ struct Route {
             const char *mime_type;
         } st;
 
-        int (*func)(const ConnectionInfo *conn, const char *url, Response *out_response);
+        int (*func)(const ConnectionInfo *conn, const char *url, http_Response *out_response);
     } u;
 
     Route() = default;
@@ -59,7 +59,7 @@ struct Route {
         u.st.mime_type = mime_type;
     }
     Route(const char *url, const char *method, Matching matching,
-          int (*func)(const ConnectionInfo *conn, const char *url, Response *out_response))
+          int (*func)(const ConnectionInfo *conn, const char *url, http_Response *out_response))
         : url(url), method(method), matching(matching), type(Type::Function)
     {
         u.func = func;
@@ -85,32 +85,6 @@ extern const Span<const PackerAsset> packer_assets;
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 static char etag[64];
-
-static const char *GetMimeType(Span<const char> path)
-{
-    Span<const char> extension = GetPathExtension(path);
-
-    if (extension == ".css") {
-        return "text/css";
-    } else if (extension == ".html") {
-        return "text/html";
-    } else if (extension == ".ico") {
-        return "image/vnd.microsoft.icon";
-    } else if (extension == ".js") {
-        return "application/javascript";
-    } else if (extension == ".json") {
-        return "application/json";
-    } else if (extension == ".png") {
-        return "image/png";
-    } else if (extension == ".svg") {
-        return "image/svg+xml";
-    } else if (extension == ".map") {
-        return "application/json";
-    } else {
-        LogError("Unknown MIME type for path '%1'", path);
-        return "application/octet-stream";
-    }
-}
 
 static bool InitCatalogSet(Span<const char *const> table_directories)
 {
@@ -177,87 +151,6 @@ static bool InitUsers(const char *profile_directory)
     return true;
 }
 
-static void ReleaseCallback(void *ptr)
-{
-    Allocator::Release(nullptr, ptr, -1);
-}
-
-static int ProduceStaticAsset(const Route &route, CompressionType compression_type,
-                              Response *out_response)
-{
-    DebugAssert(route.type == Route::Type::Static);
-
-    MHD_Response *response;
-    if (compression_type != route.u.st.asset.compression_type) {
-        HeapArray<uint8_t> buf;
-        {
-            StreamReader reader(route.u.st.asset.data, nullptr, route.u.st.asset.compression_type);
-            StreamWriter writer(&buf, nullptr, compression_type);
-            if (!SpliceStream(&reader, Megabytes(8), &writer))
-                return CreateErrorPage(500, out_response);
-            if (!writer.Close())
-                return CreateErrorPage(500, out_response);
-        }
-
-        response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
-                                                                      ReleaseCallback);
-        buf.Leak();
-    } else {
-        response = MHD_create_response_from_buffer((size_t)route.u.st.asset.data.len,
-                                                   (void *)route.u.st.asset.data.ptr,
-                                                   MHD_RESPMEM_PERSISTENT);
-    }
-    out_response->response.reset(response);
-
-    AddContentEncodingHeader(response, compression_type);
-    if (route.u.st.mime_type) {
-        MHD_add_response_header(response, "Content-Type", route.u.st.mime_type);
-    }
-    if (route.u.st.asset.source_map) {
-        MHD_add_response_header(response, "SourceMap", route.u.st.asset.source_map);
-    }
-
-    return 200;
-}
-
-// Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
-// caller is free to choose a preferred encoding among acceptable ones.
-static uint32_t ParseAcceptableEncodings(Span<const char> encodings)
-{
-    encodings = TrimStr(encodings);
-
-    uint32_t acceptable_encodings;
-    if (encodings.len) {
-        uint32_t low_priority = 1 << (int)CompressionType::None;
-        uint32_t high_priority = 0;
-        while (encodings.len) {
-            Span<const char> quality;
-            Span<const char> encoding = TrimStr(SplitStr(encodings, ',', &encodings));
-            encoding = TrimStr(SplitStr(encoding, ';', &quality));
-            quality = TrimStr(quality);
-
-            if (encoding == "identity") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
-                low_priority = ApplyMask(high_priority, 1u << (int)CompressionType::None, quality != "q=0");
-            } else if (encoding == "gzip") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Gzip, quality != "q=0");
-            } else if (encoding == "deflate") {
-                high_priority = ApplyMask(high_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
-                low_priority = ApplyMask(low_priority, 1u << (int)CompressionType::Zlib, quality != "q=0");
-            } else if (encoding == "*") {
-                low_priority = ApplyMask(low_priority, UINT32_MAX, quality != "q=0");
-            }
-        }
-
-        acceptable_encodings = high_priority | low_priority;
-    } else {
-        acceptable_encodings = UINT32_MAX;
-    }
-
-    return acceptable_encodings;
-}
-
 static bool PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
 {
     StreamWriter writer(out_buf, nullptr, st.compression.type);
@@ -305,7 +198,7 @@ static void InitRoutes()
     Assert(packer_assets.len > 0);
     for (const PackerAsset &asset: packer_assets) {
         const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        const char *mime_type = GetMimeType(asset.name);
+        const char *mime_type = http_GetMimeType(GetPathExtension(asset.name));
 
         routes.Set({url, "GET", Route::Matching::Exact, asset, mime_type});
     }
@@ -323,7 +216,7 @@ static void InitRoutes()
     // Catalogs
     for (const PackerAsset &desc: catalog_set.catalogs) {
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
-        routes.Set({url, "GET", Route::Matching::Exact, desc, GetMimeType(url)});
+        routes.Set({url, "GET", Route::Matching::Exact, desc, http_GetMimeType(GetPathExtension(url))});
     }
 
     // Root
@@ -456,14 +349,14 @@ static bool UpdateStaticAssets()
 }
 #endif
 
-static int QueueResponse(ConnectionInfo *conn, int code, const Response &response)
+static int QueueResponse(ConnectionInfo *conn, int code, http_Response *response)
 {
-    MHD_add_response_header(response, "Referrer-Policy", "no-referrer");
+    MHD_add_response_header(*response, "Referrer-Policy", "no-referrer");
     if (conn->user_mismatch) {
         DeleteSessionCookies(response);
     }
 
-    return MHD_queue_response(conn->conn, (unsigned int)code, response);
+    return MHD_queue_response(conn->conn, (unsigned int)code, *response);
 }
 
 static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, const char *method,
@@ -474,7 +367,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     UpdateStaticAssets();
 #endif
 
-    Response response = {};
+    http_Response response = {};
 
     // Gather connection info
     ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
@@ -491,10 +384,10 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
             if (!url[0] && thop_config.base_url[i] == '/' && !thop_config.base_url[i + 1]) {
                 response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
                 MHD_add_response_header(response, "Location", thop_config.base_url);
-                return QueueResponse(conn, 303, response);
+                return QueueResponse(conn, 303, &response);
             } else {
-                CreateErrorPage(404, &response);
-                return QueueResponse(conn, 404, response);
+                http_ProduceErrorPage(404, &response);
+                return QueueResponse(conn, 404, &response);
             }
         }
     }
@@ -516,15 +409,15 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
                 return MHD_YES;
             }, conn);
             if (!conn->pp) {
-                CreateErrorPage(422, &response);
-                return QueueResponse(conn, 422, response);
+                http_ProduceErrorPage(422, &response);
+                return QueueResponse(conn, 422, &response);
             }
 
             return MHD_YES;
         } else if (*upload_data_size) {
             if (MHD_post_process(conn->pp, upload_data, *upload_data_size) != MHD_YES) {
-                CreateErrorPage(422, &response);
-                return QueueResponse(conn, 422, response);
+                http_ProduceErrorPage(422, &response);
+                return QueueResponse(conn, 422, &response);
             }
 
             *upload_data_size = 0;
@@ -535,15 +428,16 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     // Negociate content encoding
     {
         uint32_t acceptable_encodings =
-            ParseAcceptableEncodings(MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "Accept-Encoding"));
+            http_ParseAcceptableEncodings(MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND,
+                                                                      "Accept-Encoding"));
 
         if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
             conn->compression_type = CompressionType::Gzip;
         } else if (acceptable_encodings) {
             conn->compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
         } else {
-            CreateErrorPage(406, &response);
-            return QueueResponse(conn, 406, response);
+            http_ProduceErrorPage(406, &response);
+            return QueueResponse(conn, 406, &response);
         }
     }
 
@@ -567,8 +461,8 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
             }
 
             if (!route) {
-                CreateErrorPage(404, &response);
-                return QueueResponse(conn, 404, response);
+                http_ProduceErrorPage(404, &response);
+                return QueueResponse(conn, 404, &response);
             }
         }
 
@@ -580,7 +474,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            return QueueResponse(conn, 304, response);
+            return QueueResponse(conn, 304, &response);
         }
     }
 
@@ -588,7 +482,11 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     int code = 0;
     switch (route->type) {
         case Route::Type::Static: {
-            code = ProduceStaticAsset(*route, conn->compression_type, &response);
+            code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
+                                           route->u.st.mime_type, conn->compression_type, &response);
+            if (code == 200 && route->u.st.asset.source_map) {
+                MHD_add_response_header(response, "SourceMap", route->u.st.asset.source_map);
+            }
         } break;
 
         case Route::Type::Function: {
@@ -600,13 +498,13 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
     // Add caching information
     if (try_cache) {
 #ifndef NDEBUG
-        response.flags |= (int)Response::Flag::DisableCache;
+        response.flags |= (int)http_Response::Flag::DisableCache;
 #endif
 
-        if (!(response.flags & (int)Response::Flag::DisableCache)) {
+        if (!(response.flags & (int)http_Response::Flag::DisableCache)) {
             MHD_add_response_header(response, "Cache-Control", "max-age=3600");
 
-            if (etag[0] && !(response.flags & (int)Response::Flag::DisableETag)) {
+            if (etag[0] && !(response.flags & (int)http_Response::Flag::DisableETag)) {
                 MHD_add_response_header(response, "ETag", etag);
             }
         } else {
@@ -614,7 +512,7 @@ static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, 
         }
     }
 
-    return QueueResponse(conn, code, response);
+    return QueueResponse(conn, code, &response);
 }
 
 static void ReleaseConnectionData(void *, struct MHD_Connection *,

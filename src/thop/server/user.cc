@@ -11,6 +11,7 @@
 
 #include "../../../lib/libsodium/src/libsodium/include/sodium.h"
 #include "thop.hh"
+#include "config.hh"
 #include "structure.hh"
 #include "user.hh"
 
@@ -368,30 +369,30 @@ const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch)
     return session ? session->user : nullptr;
 }
 
-void DeleteSessionCookies(MHD_Response *response)
+void DeleteSessionCookies(http_Response *response)
 {
-    AddCookieHeader(response, "session_key", nullptr);
-    AddCookieHeader(response, "url_key", nullptr);
-    AddCookieHeader(response, "username", nullptr);
+    response->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
+    response->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
+    response->AddCookieHeader(thop_config.base_url, "username", nullptr);
 }
 
-int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_response)
+int HandleConnect(const ConnectionInfo *conn, const char *, http_Response *out_response)
 {
     char address[65];
     if (!GetClientAddress(conn->conn, address))
-        return CreateErrorPage(500, out_response);
+        return http_ProduceErrorPage(500, out_response);
 
     const char *username = conn->post.FindValue("username", nullptr).ptr;
     const char *password = conn->post.FindValue("password", nullptr).ptr;
     const char *user_agent = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "User-Agent");
     if (!username || !password || !user_agent)
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
 
     // Find and validate user
     const User *user = thop_user_set.FindUser(username);
     if (!user || !user->password_hash ||
             crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0)
-        return CreateErrorPage(403, out_response);
+        return http_ProduceErrorPage(403, out_response);
 
     // Create session key
     char session_key[129];
@@ -426,7 +427,7 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
             std::pair<Session *, bool> ret = sessions.AppendDefault(session_key);
             if (!ret.second) {
                 LogError("Generated duplicate session key");
-                return CreateErrorPage(500, out_response);
+                return http_ProduceErrorPage(500, out_response);
             }
             session = ret.first;
         }
@@ -444,14 +445,14 @@ int HandleConnect(const ConnectionInfo *conn, const char *, Response *out_respon
     out_response->response.reset(response);
 
     // Set session cookies
-    AddCookieHeader(response, "session_key", session_key, true);
-    AddCookieHeader(response, "url_key", url_key, false);
-    AddCookieHeader(response, "username", user->name, false);
+    out_response->AddCookieHeader(thop_config.base_url, "session_key", session_key, true);
+    out_response->AddCookieHeader(thop_config.base_url, "url_key", url_key, false);
+    out_response->AddCookieHeader(thop_config.base_url, "username", user->name, false);
 
     return 200;
 }
 
-int HandleDisconnect(const ConnectionInfo *conn, const char *, Response *out_response)
+int HandleDisconnect(const ConnectionInfo *conn, const char *, http_Response *out_response)
 {
     // Drop session
     {
@@ -463,7 +464,7 @@ int HandleDisconnect(const ConnectionInfo *conn, const char *, Response *out_res
     out_response->response.reset(response);
 
     // Delete session cookies
-    DeleteSessionCookies(response);
+    DeleteSessionCookies(out_response);
 
     return 200;
 }

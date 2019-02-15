@@ -5,7 +5,7 @@
 #pragma once
 
 #include "thop.hh"
-#include "response.hh"
+#include "../../wrappers/http.hh"
 
 extern mco_TableSet mco_table_set;
 extern HeapArray<HashTable<mco_GhmCode, mco_GhmConstraint>> mco_constraints_set;
@@ -53,4 +53,4 @@ private:
     bool RunDirect(std::function<void(Span<const mco_Result>, Span<const mco_Result>)> func);
 };
 
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoSettings(const ConnectionInfo *conn, const char *url, http_Response *out_response);

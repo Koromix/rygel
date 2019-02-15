@@ -38,6 +38,8 @@ set(THOP_RESOURCES
     client/images/favicon.png
 )
 set(THOP_SRC
+    ../wrappers/http.cc
+    ../wrappers/http.hh
     ../wrappers/json.hh
     server/config.cc
     server/config.hh
@@ -47,8 +49,6 @@ set(THOP_SRC
     server/mco_casemix.hh
     server/mco_info.cc
     server/mco_info.hh
-    server/response.cc
-    server/response.hh
     server/structure.cc
     server/structure.hh
     server/thop.cc

@@ -7,13 +7,13 @@
 #include "mco.hh"
 #include "user.hh"
 
-static int GetQueryDateRange(MHD_Connection *conn, const char *key, Response *out_response,
+static int GetQueryDateRange(MHD_Connection *conn, const char *key, http_Response *out_response,
                              Date *out_start_date, Date *out_end_date)
 {
     const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     Date start_date;
@@ -38,36 +38,36 @@ static int GetQueryDateRange(MHD_Connection *conn, const char *key, Response *ou
 
 invalid:
     LogError("Invalid date range '%1'", str);
-    return CreateErrorPage(422, out_response);
+    return http_ProduceErrorPage(422, out_response);
 }
 
-static int GetQueryDispenseMode(MHD_Connection *conn, const char *key, Response *out_response,
-                                mco_DispenseMode *out_dispense_mode)
+static int GetQueryDispenseMode(MHD_Connection *conn, const char *key,
+                                http_Response *out_response, mco_DispenseMode *out_dispense_mode)
 {
     const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                     [&](const OptionDesc &desc) { return TestStr(desc.name, str); });
     if (!desc) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     *out_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
     return 0;
 }
 
-static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key, Response *out_response,
-                                    bool *out_apply_coefficient)
+static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key,
+                                    http_Response *out_response, bool *out_apply_coefficient)
 {
     const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     bool apply_coefficient;
@@ -77,25 +77,25 @@ static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key, Respo
         apply_coefficient = false;
     } else {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     *out_apply_coefficient = apply_coefficient;
     return 0;
 }
 
-static int GetQueryGhmRoot(MHD_Connection *conn, const char *key, Response *out_response,
-                           mco_GhmRootCode *out_ghm_root)
+static int GetQueryGhmRoot(MHD_Connection *conn, const char *key,
+                           http_Response *out_response, mco_GhmRootCode *out_ghm_root)
 {
     const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
     if (!str) {
         LogError("Missing 'ghm_root' argument");
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
 
     mco_GhmRootCode ghm_root = mco_GhmRootCode::FromString(str);
     if (!ghm_root.IsValid())
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
 
     *out_ghm_root = ghm_root;
     return 0;
@@ -367,11 +367,11 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
     }
 }
 
-int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response *out_response)
 {
     if (!conn->user)
-        return CreateErrorPage(403, out_response);
-    out_response->flags |= (int)Response::Flag::DisableCache;
+        return http_ProduceErrorPage(403, out_response);
+    out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};
@@ -399,15 +399,15 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
     // Check errors and permissions
     if (diff[0].value && period[0] < diff[1] && period[1] > diff[0]) {
         LogError("Parameters 'period' and 'diff' must not overlap");
-        return CreateErrorPage(422, out_response);
+        return http_ProduceErrorPage(422, out_response);
     }
     if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        return CreateErrorPage(403, out_response);
+        return http_ProduceErrorPage(403, out_response);
     }
     if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
-        return CreateErrorPage(403, out_response);
+        return http_ProduceErrorPage(403, out_response);
     }
 
     // Prepare query
@@ -447,9 +447,9 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
         };
 
         if (!aggregate_period(period[0], period[1], 1))
-            return CreateErrorPage(500, out_response);
+            return http_ProduceErrorPage(500, out_response);
         if (diff[0].value && !aggregate_period(diff[0], diff[1], -1))
-            return CreateErrorPage(500, out_response);
+            return http_ProduceErrorPage(500, out_response);
 
         aggregate_set_builder.Finish(&aggregate_set, ghm_root.IsValid() ? &ghm_roots : nullptr);
     }
@@ -463,7 +463,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
     }
 
     // Export data
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
     char buf[32];
 
     json.StartObject();
@@ -524,11 +524,11 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, Response *out_
     return json.Finish(out_response);
 }
 
-int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *out_response)
 {
     if (!conn->user || !(conn->user->permissions & (int)UserPermission::FullResults))
-        return CreateErrorPage(403, out_response);
-    out_response->flags |= (int)Response::Flag::DisableCache;
+        return http_ProduceErrorPage(403, out_response);
+    out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
     Date period[2] = {};
@@ -549,11 +549,11 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     // Check permissions
     if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        return CreateErrorPage(403, out_response);
+        return http_ProduceErrorPage(403, out_response);
     }
     if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
-        return CreateErrorPage(403, out_response);
+        return http_ProduceErrorPage(403, out_response);
     }
 
     // Prepare query
@@ -567,7 +567,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
     HeapArray<mco_Pricing> mono_pricings;
 
     // Export data
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
 
     json.StartArray();
     bool success = provider.Run([&](Span<const mco_Result> results,
@@ -732,7 +732,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, Response *out_re
         }
     });
     if (!success)
-        return CreateErrorPage(500, out_response);
+        return http_ProduceErrorPage(500, out_response);
     json.EndArray();
 
     return json.Finish(out_response);
