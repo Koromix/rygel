@@ -2392,12 +2392,8 @@
 // Custom helpers
 // ------------------------------------------------------------------------
 
-// Platform-specific
-void *ogl_GetProcAddress(const char *name);
-void ogl_SwapBuffers();
-
 // Generic
-bool ogl_InitFunctions();
+bool ogl_InitFunctions(void *(*get_proc_address)(const char *name));
 GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fragment_src);
 
 // ------------------------------------------------------------------------

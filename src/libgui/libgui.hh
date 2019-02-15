@@ -6,7 +6,7 @@
 
 #include "../libcc/libcc.hh"
 
-struct RunIO {
+struct gui_Interface {
     enum class Key {
         Control,
         Alt,
@@ -64,7 +64,10 @@ struct RunIO {
     } input;
 };
 
-extern THREAD_LOCAL RunIO *g_io;
+extern THREAD_LOCAL gui_Interface *gui_api;
 
-bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
-               bool *run_flag = nullptr, std::mutex *lock = nullptr);
+void *gui_GetProcAddress(const char *name);
+void gui_SwapBuffers();
+
+bool gui_RunApplication(const char *application_name, std::function<bool()> step_func,
+                        bool *run_flag = nullptr, std::mutex *lock = nullptr);

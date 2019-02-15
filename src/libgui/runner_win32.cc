@@ -36,8 +36,13 @@ struct Win32Window {
     HGLRC hgl;
 };
 
-static THREAD_LOCAL Win32Window *g_window;
-THREAD_LOCAL RunIO *g_io;
+static THREAD_LOCAL Win32Window *main_window;
+THREAD_LOCAL gui_Interface *gui_api;
+
+void gui_SwapBuffers()
+{
+    SwapBuffers(main_window->hdc);
+}
 
 static const char *GetWin32ErrorMessage(DWORD err)
 {
@@ -67,14 +72,14 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 {
     switch (msg) {
         case WM_SIZE: {
-            g_io->display.width = (int)(lparam & 0xFFFF);
-            g_io->display.height = (int)(lparam >> 16);
+            gui_api->display.width = (int)(lparam & 0xFFFF);
+            gui_api->display.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: { g_io->input.mouseover = false; } // fallthrough
+        case WM_MOUSELEAVE: { gui_api->input.mouseover = false; } // fallthrough
         case WM_KILLFOCUS: {
-            g_io->input.keys.Clear();
-            g_io->input.buttons = 0;
+            gui_api->input.keys.Clear();
+            gui_api->input.buttons = 0;
         } break;
 
         case WM_SYSKEYDOWN:
@@ -82,32 +87,32 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_KEYDOWN:
         case WM_KEYUP: {
 #define HANDLE_KEY(VkCode, Code) \
-                case (VkCode): { g_io->input.keys.Set((Size)(Code), state); } break
+                case (VkCode): { gui_api->input.keys.Set((Size)(Code), state); } break
 
             bool state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
             switch (wparam) {
-                HANDLE_KEY(VK_CONTROL, RunIO::Key::Control);
-                HANDLE_KEY(VK_MENU, RunIO::Key::Alt);
-                HANDLE_KEY(VK_SHIFT, RunIO::Key::Shift);
-                HANDLE_KEY(VK_TAB, RunIO::Key::Tab);
-                HANDLE_KEY(VK_DELETE, RunIO::Key::Delete);
-                HANDLE_KEY(VK_BACK, RunIO::Key::Backspace);
-                HANDLE_KEY(VK_RETURN, RunIO::Key::Enter);
-                HANDLE_KEY(VK_ESCAPE, RunIO::Key::Escape);
-                HANDLE_KEY(VK_HOME, RunIO::Key::Home);
-                HANDLE_KEY(VK_END, RunIO::Key::End);
-                HANDLE_KEY(VK_PRIOR, RunIO::Key::PageUp);
-                HANDLE_KEY(VK_NEXT, RunIO::Key::PageDown);
-                HANDLE_KEY(VK_LEFT, RunIO::Key::Left);
-                HANDLE_KEY(VK_RIGHT, RunIO::Key::Right);
-                HANDLE_KEY(VK_UP, RunIO::Key::Up);
-                HANDLE_KEY(VK_DOWN, RunIO::Key::Down);
-                HANDLE_KEY('A', RunIO::Key::A);
-                HANDLE_KEY('C', RunIO::Key::C);
-                HANDLE_KEY('V', RunIO::Key::V);
-                HANDLE_KEY('X', RunIO::Key::X);
-                HANDLE_KEY('Y', RunIO::Key::Y);
-                HANDLE_KEY('Z', RunIO::Key::Z);
+                HANDLE_KEY(VK_CONTROL, gui_Interface::Key::Control);
+                HANDLE_KEY(VK_MENU, gui_Interface::Key::Alt);
+                HANDLE_KEY(VK_SHIFT, gui_Interface::Key::Shift);
+                HANDLE_KEY(VK_TAB, gui_Interface::Key::Tab);
+                HANDLE_KEY(VK_DELETE, gui_Interface::Key::Delete);
+                HANDLE_KEY(VK_BACK, gui_Interface::Key::Backspace);
+                HANDLE_KEY(VK_RETURN, gui_Interface::Key::Enter);
+                HANDLE_KEY(VK_ESCAPE, gui_Interface::Key::Escape);
+                HANDLE_KEY(VK_HOME, gui_Interface::Key::Home);
+                HANDLE_KEY(VK_END, gui_Interface::Key::End);
+                HANDLE_KEY(VK_PRIOR, gui_Interface::Key::PageUp);
+                HANDLE_KEY(VK_NEXT, gui_Interface::Key::PageDown);
+                HANDLE_KEY(VK_LEFT, gui_Interface::Key::Left);
+                HANDLE_KEY(VK_RIGHT, gui_Interface::Key::Right);
+                HANDLE_KEY(VK_UP, gui_Interface::Key::Up);
+                HANDLE_KEY(VK_DOWN, gui_Interface::Key::Down);
+                HANDLE_KEY('A', gui_Interface::Key::A);
+                HANDLE_KEY('C', gui_Interface::Key::C);
+                HANDLE_KEY('V', gui_Interface::Key::V);
+                HANDLE_KEY('X', gui_Interface::Key::X);
+                HANDLE_KEY('Y', gui_Interface::Key::Y);
+                HANDLE_KEY('Z', gui_Interface::Key::Z);
             }
 
 #undef HANDLE_KEY
@@ -116,56 +121,56 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             uint16_t c = (uint16_t)wparam;
 
             // TODO: Deal with supplementary planes
-            if (c < 0x80 && LIKELY(g_io->input.text.Available() >= 1)) {
-                g_io->input.text.Append((char)c);
-            } else if (c < 0x800 && LIKELY(g_io->input.text.Available() >= 2)) {
-                g_io->input.text.Append((char)(0xC0 | (c >> 6)));
-                g_io->input.text.Append((char)(0x80 | (c & 0x3F)));
-            } else if (LIKELY(g_io->input.text.Available() >= 3)) {
-                g_io->input.text.Append((char)(0xE0 | (c >> 12)));
-                g_io->input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
-                g_io->input.text.Append((char)(0x80 | (c & 0x3F)));
+            if (c < 0x80 && LIKELY(gui_api->input.text.Available() >= 1)) {
+                gui_api->input.text.Append((char)c);
+            } else if (c < 0x800 && LIKELY(gui_api->input.text.Available() >= 2)) {
+                gui_api->input.text.Append((char)(0xC0 | (c >> 6)));
+                gui_api->input.text.Append((char)(0x80 | (c & 0x3F)));
+            } else if (LIKELY(gui_api->input.text.Available() >= 3)) {
+                gui_api->input.text.Append((char)(0xE0 | (c >> 12)));
+                gui_api->input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
+                gui_api->input.text.Append((char)(0x80 | (c & 0x3F)));
             } else {
                 LogError("Dropping text events (buffer full)");
             }
         } break;
 
         case WM_MOUSEMOVE: {
-            g_io->input.x = (int16_t)(lparam & 0xFFFF);
-            g_io->input.y = (int16_t)(lparam >> 16);
+            gui_api->input.x = (int16_t)(lparam & 0xFFFF);
+            gui_api->input.y = (int16_t)(lparam >> 16);
 
-            if (!g_io->input.mouseover) {
+            if (!gui_api->input.mouseover) {
                 TRACKMOUSEEVENT tme = { SIZE(tme) };
-                tme.hwndTrack = g_window->hwnd;
+                tme.hwndTrack = main_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
 
-                g_io->input.mouseover = true;
+                gui_api->input.mouseover = true;
             }
         } break;
-        case WM_LBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Left); } break;
-        case WM_LBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Left); } break;
-        case WM_MBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Middle); } break;
-        case WM_MBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Middle); } break;
-        case WM_RBUTTONDOWN: { g_io->input.buttons |= MaskEnum(RunIO::Button::Right); } break;
-        case WM_RBUTTONUP: { g_io->input.buttons &= ~MaskEnum(RunIO::Button::Right); } break;
+        case WM_LBUTTONDOWN: { gui_api->input.buttons |= MaskEnum(gui_Interface::Button::Left); } break;
+        case WM_LBUTTONUP: { gui_api->input.buttons &= ~MaskEnum(gui_Interface::Button::Left); } break;
+        case WM_MBUTTONDOWN: { gui_api->input.buttons |= MaskEnum(gui_Interface::Button::Middle); } break;
+        case WM_MBUTTONUP: { gui_api->input.buttons &= ~MaskEnum(gui_Interface::Button::Middle); } break;
+        case WM_RBUTTONDOWN: { gui_api->input.buttons |= MaskEnum(gui_Interface::Button::Right); } break;
+        case WM_RBUTTONUP: { gui_api->input.buttons &= ~MaskEnum(gui_Interface::Button::Right); } break;
         case WM_XBUTTONDOWN: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
-            g_io->input.buttons |= (unsigned int)(1 << button);
+            gui_api->input.buttons |= (unsigned int)(1 << button);
         } break;
         case WM_XBUTTONUP: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
-            g_io->input.buttons &= ~(unsigned int)(1 << button);
+            gui_api->input.buttons &= ~(unsigned int)(1 << button);
         } break;
         case WM_MOUSEWHEEL: {
-            g_io->input.wheel_y += (int16_t)(wparam >> 16) / WHEEL_DELTA;
+            gui_api->input.wheel_y += (int16_t)(wparam >> 16) / WHEEL_DELTA;
         } break;
         case WM_MOUSEHWHEEL: {
-            g_io->input.wheel_x += (int16_t)(wparam >> 16) / WHEEL_DELTA;
+            gui_api->input.wheel_x += (int16_t)(wparam >> 16) / WHEEL_DELTA;
         } break;
 
         case WM_CLOSE: {
-            g_io->main.run = false;
+            gui_api->main.run = false;
             return 0;
         } break;
     }
@@ -282,7 +287,7 @@ static bool InitWGL(const char *application_name)
 
     HGLRC dummy_ctx = wglCreateContext(dummy_dc);
     if (!dummy_ctx) {
-        LogError("Failed to create OpenGL context for dummy window: %1", GetWin32ErrorMessage());
+        LogError("Failed to create OpenGL context for wglGetProcAddressdummy window: %1", GetWin32ErrorMessage());
         return false;
     }
     DEFER { wglDeleteContext(dummy_ctx); };
@@ -295,7 +300,7 @@ static bool InitWGL(const char *application_name)
 
 #define IMPORT_WGL_FUNCTION(Name) \
         do { \
-            Name = (decltype(Name))ogl_GetProcAddress(#Name); \
+            Name = (decltype(Name))wglGetProcAddress(#Name); \
             if (!Name) { \
                 LogError("Required WGL function '%1' is not available",  #Name); \
                 return false; \
@@ -309,11 +314,6 @@ static bool InitWGL(const char *application_name)
 #undef IMPORT_WGL_FUNCTION
 
     return true;
-}
-
-void *ogl_GetProcAddress(const char *name)
-{
-    return (void *)wglGetProcAddress(name);
 }
 
 static HGLRC CreateGLContext(const char *application_name, HDC dc)
@@ -409,23 +409,18 @@ static bool SetGLContext(HDC dc, HGLRC gl)
     return true;
 }
 
-void ogl_SwapBuffers()
+bool gui_RunApplication(const char *application_name, std::function<bool()> step_func,
+                        bool *run_flag, std::mutex *lock)
 {
-    SwapBuffers(g_window->hdc);
-}
-
-bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
-               bool *run_flag, std::mutex *lock)
-{
-    DEFER_C(prev_window = g_window, prev_io = g_io) {
-        g_window = prev_window;
-        g_io = prev_io;
+    DEFER_C(prev_window = main_window, prev_api = gui_api) {
+        main_window = prev_window;
+        gui_api = prev_api;
     };
 
     Win32Window window = {};
-    RunIO io = {};
-    g_window = &window;
-    g_io = &io;
+    gui_Interface io = {};
+    main_window = &window;
+    gui_api = &io;
 
     window.hwnd = CreateMainWindow(application_name);
     if (!window.hwnd)
@@ -438,7 +433,7 @@ bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
     DEFER { DeleteGLContext(window.hgl); };
     if (!SetGLContext(window.hdc, window.hgl))
         return false;
-    if (!ogl_InitFunctions())
+    if (!ogl_InitFunctions([](const char *name) { return (void *)wglGetProcAddress(name); }))
         return false;
 
     io.main.run = true;

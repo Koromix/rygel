@@ -243,7 +243,7 @@ void R_HeimdallRun(SEXP inst_xp)
         inst->run = true;
         inst->run_thread = std::thread([=]() {
             InterfaceState render_state = {};
-            RunGuiApp(HEIMDALL_NAME, [&]() {
+            gui_RunApplication(HEIMDALL_NAME, [&]() {
                 return Step(render_state, inst->concept_sets, inst->entity_set);
             }, &inst->run, &inst->lock);
             inst->run = false;
@@ -262,7 +262,7 @@ void R_HeimdallRunSync(SEXP inst_xp)
         Rcpp::stop("Async run in progress");
 
     InterfaceState render_state = {};
-    RunGuiApp(HEIMDALL_NAME, [&]() {
+    gui_RunApplication(HEIMDALL_NAME, [&]() {
         return Step(render_state, inst->concept_sets, inst->entity_set);
     });
 }
