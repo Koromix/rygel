@@ -13,14 +13,20 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         mco_dispense_mode = config.mco_dispense_mode,
                         mco_stay_directories_len = config.mco_stay_directories.len,
                         mco_stay_filenames_len = config.mco_stay_filenames.len,
-                        port = config.port) {
+                        ip_stack = config.ip_stack,
+                        port = config.port,
+                        threads = config.threads,
+                        base_url = config.base_url) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
         config.mco_authorization_filename = mco_authorization_filename;
         config.mco_dispense_mode = mco_dispense_mode;
         config.mco_stay_directories.RemoveFrom(mco_stay_directories_len);
         config.mco_stay_filenames.RemoveFrom(mco_stay_filenames_len);
+        config.ip_stack = ip_stack;
         config.port = port;
+        config.threads = threads;
+        config.base_url = base_url;
     };
 
     Span<const char> root_dir;
