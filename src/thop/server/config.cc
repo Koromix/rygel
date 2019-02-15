@@ -68,15 +68,15 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "IPVersion") {
+                    if (prop.key == "IPStack") {
                         if (prop.value == "Dual") {
-                            config.ip_version = Config::IPVersion::Dual;
+                            config.ip_stack = IPStack::Dual;
                         } else if (prop.value == "IPv4") {
-                            config.ip_version = Config::IPVersion::IPv4;
+                            config.ip_stack = IPStack::IPv4;
                         } else if (prop.value == "IPv6") {
-                            config.ip_version = Config::IPVersion::IPv6;
+                            config.ip_stack = IPStack::IPv6;
                         } else {
-                            LogError("Unknown IP version '%1'", prop.value);
+                            LogError("Unknown IP stack '%1'", prop.value);
                         }
                     } else if (prop.key == "Port") {
                         valid &= ParseDec(prop.value, &config.port);

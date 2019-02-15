@@ -5,6 +5,8 @@
 # The platform layer is only available for Win32, for now
 
 set(GOUPIL_SRC
+    ../wrappers/http.cc
+    ../wrappers/http.hh
     server/config.cc
     server/config.hh
     server/goupil.cc

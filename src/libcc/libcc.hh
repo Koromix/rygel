@@ -3141,6 +3141,17 @@ FILE *OpenFile(const char *path, OpenFileMode mode);
 
 void WaitForConsoleInterruption();
 
+enum class IPStack {
+    Dual,
+    IPv4,
+    IPv6
+};
+static const char *const IPStackNames[] = {
+    "Dual",
+    "IPv4",
+    "IPv6"
+};
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------

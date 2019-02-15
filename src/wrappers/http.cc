@@ -5,9 +5,55 @@
 #include "../libcc/libcc.hh"
 #include "http.hh"
 
-static void ReleaseCallback(void *ptr)
+static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
+}
+
+static void RequestCompletedCallback(void *cls, MHD_Connection *, void **con_cls,
+                                     MHD_RequestTerminationCode toe)
+{
+    const http_Daemon &daemon = *(const http_Daemon *)cls;
+
+    if (daemon.release_func) {
+        daemon.release_func(con_cls, toe);
+    }
+}
+
+bool http_Daemon::Start(IPStack stack, int port, int threads, MHD_AccessHandlerCallback func)
+{
+    Assert(!daemon);
+
+    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
+    LocalArray<MHD_OptionItem, 16> mhd_options;
+    switch (stack) {
+        case IPStack::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
+        case IPStack::IPv4: {} break;
+        case IPStack::IPv6: { flags |= MHD_USE_IPv6; } break;
+    }
+    if (!threads) {
+        flags |= MHD_USE_THREAD_PER_CONNECTION;
+    } else if (threads > 1) {
+        mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, threads});
+    }
+    mhd_options.Append({MHD_OPTION_END, 0, nullptr});
+#ifndef NDEBUG
+    flags |= MHD_USE_DEBUG;
+#endif
+
+    daemon = MHD_start_daemon(flags, (int16_t)port, nullptr, nullptr, func, nullptr,
+                              MHD_OPTION_NOTIFY_COMPLETED, RequestCompletedCallback, this,
+                              MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
+
+    return daemon;
+}
+
+void http_Daemon::Stop()
+{
+    if (daemon) {
+        MHD_stop_daemon(daemon);
+    }
+    daemon = nullptr;
 }
 
 void http_Response::AddEncodingHeader(CompressionType compression_type)
@@ -106,7 +152,7 @@ int http_ProduceErrorPage(int code, http_Response *out_response)
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)page.len, page.ptr,
-                                                           ReleaseCallback);
+                                                           ReleaseDataCallback);
     out_response->response.reset(response);
 
     MHD_add_response_header(response, "Content-Type", "text/plain");
@@ -131,7 +177,7 @@ int http_ProduceStaticAsset(Span<const uint8_t> data, CompressionType in_compres
         }
 
         response = MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, (void *)buf.ptr,
-                                                                      ReleaseCallback);
+                                                                      ReleaseDataCallback);
         buf.Leak();
     } else {
         response = MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr,
@@ -156,7 +202,7 @@ int http_JsonPageBuilder::Finish(http_Response *out_response)
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
-                                                           ReleaseCallback);
+                                                           ReleaseDataCallback);
     buf.Leak();
     out_response->response.reset(response);
 

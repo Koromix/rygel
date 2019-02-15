@@ -10,10 +10,10 @@
     #include <unistd.h>
 #endif
 
-#include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../libcc/libcc.hh"
 #include "../../libdrd/libdrd.hh"
 #include "config.hh"
+#include "../../wrappers/http.hh"
 
 static Config goupil_config;
 
@@ -108,34 +108,13 @@ Options:
             return 1;
     }
 
-    MHD_Daemon *daemon;
-    {
-        int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
-        LocalArray<MHD_OptionItem, 16> mhd_options;
-        switch (goupil_config.ip_version) {
-            case Config::IPVersion::Dual: { flags |= MHD_USE_DUAL_STACK; } break;
-            case Config::IPVersion::IPv4: {} break;
-            case Config::IPVersion::IPv6: { flags |= MHD_USE_IPv6; } break;
-        }
-        if (!goupil_config.threads) {
-            flags |= MHD_USE_THREAD_PER_CONNECTION;
-        } else if (goupil_config.threads > 1) {
-            mhd_options.Append({MHD_OPTION_THREAD_POOL_SIZE, goupil_config.threads});
-        }
-        mhd_options.Append({MHD_OPTION_END, 0, nullptr});
-#ifndef NDEBUG
-        flags |= MHD_USE_DEBUG;
-#endif
+    http_Daemon daemon;
+    if (!daemon.Start(goupil_config.ip_stack, goupil_config.port, goupil_config.threads,
+                      HandleHttpConnection))
+        return 1;
+    LogInfo("Listening on port %1 (%2 stack)",
+            goupil_config.port, IPStackNames[(int)goupil_config.ip_stack]);
 
-        daemon = MHD_start_daemon(flags, (int16_t)goupil_config.port, nullptr, nullptr,
-                                  HandleHttpConnection, nullptr,
-                                  MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
-        if (!daemon)
-            return 1;
-    }
-    DEFER { MHD_stop_daemon(daemon); };
-
-    LogInfo("Listening on port %1", MHD_get_daemon_info(daemon, MHD_DAEMON_INFO_BIND_PORT)->port);
     WaitForConsoleInterruption();
 
     LogInfo("Exit");

@@ -7,12 +7,6 @@
 #include "thop.hh"
 
 struct Config {
-    enum class IPVersion {
-        Dual,
-        IPv4,
-        IPv6
-    };
-
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
 
@@ -21,7 +15,7 @@ struct Config {
     HeapArray<const char *> mco_stay_directories;
     HeapArray<const char *> mco_stay_filenames;
 
-    IPVersion ip_version = IPVersion::Dual;
+    IPStack ip_stack = IPStack::Dual;
     int port = 8888;
     int threads = 4;
     const char *base_url = "/";
