@@ -1782,7 +1782,7 @@ StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
-    Close();
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
@@ -1803,15 +1803,14 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    Close();
-    if (!fp)
-        return false;
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
+    DebugAssert(fp);
     DebugAssert(filename);
     this->filename = filename;
 
@@ -1826,7 +1825,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
-    Close();
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
@@ -2274,7 +2273,7 @@ struct MinizDeflateContext {
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type)
 {
-    Close();
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
@@ -2295,15 +2294,14 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
 bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    Close();
-    if (!fp)
-        return false;
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
+    DebugAssert(fp);
     DebugAssert(filename);
     this->filename = filename;
 
@@ -2319,7 +2317,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamWriter::Open(const char *filename, CompressionType compression_type)
 {
-    Close();
+    Assert(!this->filename);
 
     DEFER_N(error_guard) {
         ReleaseResources();
