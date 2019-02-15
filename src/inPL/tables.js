@@ -52,19 +52,18 @@ let tables = (function() {
         return handlers.map(handler => html('th', {title: handler.title}, handler.abbrev));
     }
 
-    this.refreshSummary = function() {
-        let file = document.querySelector('#inpl_option_file').files[0];
-        let sex = document.querySelector('#inpl_option_sex').value;
-        let rows = document.querySelector('#inpl_option_rows').value;
+    this.refreshSummary = function(rows) {
+        let sex_filter = document.querySelector('#inpl_option_sex').value;
+        let rows_type = document.querySelector('#inpl_option_rows').value;
         let columns = ['COG', 'DA', 'SOM', 'NUT', 'EMS'];
 
         let summary = document.querySelector('#inpl_summary');
 
-        if (file) {
+        if (rows.length) {
             let handlers = ScreeningHandlers.filter(handler => columns.includes(handler.abbrev));
 
             let filter_func;
-            switch (sex) {
+            switch (sex_filter) {
                 case 'all': { filter_func = row => true; } break;
                 case 'male': { filter_func = row => row.cs_sexe == 'M'; } break;
                 case 'female': { filter_func = row => row.cs_sexe == 'F'; } break;
@@ -72,7 +71,7 @@ let tables = (function() {
 
             let row_names;
             let row_func;
-            switch (rows) {
+            switch (rows_type) {
                 case 'age': {
                     row_names = ['0-44 ans', '45-54 ans', '55-64 ans',
                                  '65-74 ans', '75-84 ans', '85+ ans'];
@@ -106,70 +105,65 @@ let tables = (function() {
                 }));
             }
 
-            bridge.readFileAsync(file, {
-                step: row => {
-                    if (filter_func(row)) {
-                        let row_idx = row_func(row);
-                        if (row_idx === null)
-                            return;
+            for (let row of rows) {
+                if (filter_func(row)) {
+                    let row_idx = row_func(row);
+                    if (row_idx === null)
+                        return;
 
-                        for (let i = 0; i < handlers.length; i++) {
-                            let result = handlers[i].func(row) || 0;
-                            stats[row_idx][i][result]++;
-                            stats[row_names.length - 1][i][result]++;
-                        }
-                    }
-                },
-                complete: () => {
-                    summary.replaceContent(
-                        html('thead',
-                            html('tr',
-                                html('th', {rowspan: 2}),
-                                createCategoryHeaders(handlers)
-                            ),
-                            html('tr',
-                                createScreeningHeaders(handlers)
-                            )
-                        ),
-                        html('tbody')
-                    );
-                    let thead = summary.querySelector('thead');
-                    let tbody = summary.querySelector('tbody');
-
-                    // We need 4 columns for each test
-                    thead.querySelectorAll('th').forEach(th => {
-                        th.setAttribute('colspan', 4 * (parseInt(th.getAttribute('colspan')) || 1));
-                    });
-
-                    for (let i = 0; i < row_names.length; i++) {
-                        let tr = html('tr',
-                            html('th', {colspan: 4}, row_names[i])
-                        );
-
-                        for (let j = 0; j < handlers.length; j++) {
-                            tr.appendContent(
-                                html('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
-                                html('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
-                                html('td', {class: 'inpl_result_1'}, '' + stats[i][j][1]),
-                                html('td', {class: 'inpl_result_0'}, '' + stats[i][j][0])
-                            );
-                        }
-
-                        tbody.appendContent(tr);
+                    for (let i = 0; i < handlers.length; i++) {
+                        let result = handlers[i].func(row) || 0;
+                        stats[row_idx][i][result]++;
+                        stats[row_names.length - 1][i][result]++;
                     }
                 }
+            }
+
+            summary.replaceContent(
+                html('thead',
+                    html('tr',
+                        html('th', {rowspan: 2}),
+                        createCategoryHeaders(handlers)
+                    ),
+                    html('tr',
+                        createScreeningHeaders(handlers)
+                    )
+                ),
+                html('tbody')
+            );
+            let thead = summary.querySelector('thead');
+            let tbody = summary.querySelector('tbody');
+
+            // We need 4 columns for each test
+            thead.querySelectorAll('th').forEach(th => {
+                th.setAttribute('colspan', 4 * (parseInt(th.getAttribute('colspan')) || 1));
             });
+
+            for (let i = 0; i < row_names.length; i++) {
+                let tr = html('tr',
+                    html('th', {colspan: 4}, row_names[i])
+                );
+
+                for (let j = 0; j < handlers.length; j++) {
+                    tr.appendContent(
+                        html('td', {class: 'inpl_result_3'}, '' + stats[i][j][3]),
+                        html('td', {class: 'inpl_result_2'}, '' + stats[i][j][2]),
+                        html('td', {class: 'inpl_result_1'}, '' + stats[i][j][1]),
+                        html('td', {class: 'inpl_result_0'}, '' + stats[i][j][0])
+                    );
+                }
+
+                tbody.appendContent(tr);
+            }
         } else {
             summary.innerHTML = '';
         }
     }
 
-    this.refreshList = function() {
-        let file = document.querySelector('#inpl_option_file').files[0];
-
+    this.refreshList = function(rows) {
         let list = document.querySelector('#inpl_list');
 
-        if (file) {
+        if (rows.length) {
             function resultCell(result)
             {
                 switch (result) {
@@ -180,50 +174,40 @@ let tables = (function() {
                 }
             }
 
-            let rows = [];
-            bridge.readFileAsync(file, {
-                step: row => {
-                    rows.push(row);
-                },
-                complete: () => {
-                    rows.sort((row1, row2) => row1.plid - row2.plid);
+            list.replaceContent(
+                html('thead',
+                    html('tr',
+                        html('th', {rowspan: 2}),
+                        html('th', {rowspan: 2}, 'Sexe'),
+                        html('th', {rowspan: 2}, 'Âge'),
+                        createCategoryHeaders(ScreeningHandlers)
+                    ),
+                    html('tr',
+                        createScreeningHeaders(ScreeningHandlers)
+                    )
+                ),
+                html('tbody')
+            );
+            let tbody = list.querySelector('tbody');
 
-                    list.replaceContent(
-                        html('thead',
-                            html('tr',
-                                html('th', {rowspan: 2}),
-                                html('th', {rowspan: 2}, 'Sexe'),
-                                html('th', {rowspan: 2}, 'Âge'),
-                                createCategoryHeaders(ScreeningHandlers)
-                            ),
-                            html('tr',
-                                createScreeningHeaders(ScreeningHandlers)
-                            )
-                        ),
-                        html('tbody')
-                    );
-                    let tbody = list.querySelector('tbody');
+            for (let row of rows) {
+                let tr = html('tr',
+                    html('th', '' + row.plid),
+                    html('td', '' + (row.cs_sexe || '?')),
+                    html('td', '' + (row.rdv_age || '?')),
+                    ScreeningHandlers.map(handler => resultCell(handler.func(row)))
+                );
 
-                    for (let row of rows) {
-                        let tr = html('tr',
-                            html('th', '' + row.plid),
-                            html('td', '' + (row.cs_sexe || '?')),
-                            html('td', '' + (row.rdv_age || '?')),
-                            ScreeningHandlers.map(handler => resultCell(handler.func(row)))
-                        );
-
-                        tbody.appendContent(tr);
-                    }
-                }
-            });
+                tbody.appendContent(tr);
+            }
         } else {
             list.innerHTML = '';
         }
     }
 
-    this.refreshAll = function() {
-        self.refreshSummary();
-        self.refreshList();
+    this.refreshAll = function(rows) {
+        self.refreshSummary(rows);
+        self.refreshList(rows);
     };
 
     return this;

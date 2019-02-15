@@ -25,11 +25,11 @@ body {
 .inpl_tabbar button:hover { background-color: #ddd; }
 .inpl_tabbar button.active { background-color: #ccc; }
 .inpl_tabpage { padding: 1em; }
-
-#inpl_option_file {
+#inpl_file {
     float: right;
     padding: 6px 4px 0 0;
 }
+
 .inpl_options {
     text-align: center;
     padding: 0 0 1em 0;

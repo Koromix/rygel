@@ -17,6 +17,8 @@
         <script type="text/javascript" src="tables.js"></script>
 
         <script type="text/javascript">
+            let rows = [];
+
             function openTab(tabbar, container, idx)
             {
                 let tabs = tabbar.querySelectorAll('button');
@@ -28,8 +30,28 @@
                 pages[idx].addClass('active');
             }
 
+            function importAndRefresh()
+            {
+                let file = document.querySelector('#inpl_file').files[0];
+
+                rows.length = 0;
+                if (file) {
+                    bridge.readFileAsync(file, {
+                        step: row => {
+                            rows.push(row);
+                        },
+                        complete: () => {
+                            rows.sort((row1, row2) => row1.plid - row2.plid);
+                            tables.refreshAll(rows);
+                        }
+                    });
+                } else {
+                    tables.refreshAll(rows);
+                }
+            }
+
             window.addEventListener('load', function() {
-                tables.refreshAll();
+                importAndRefresh();
                 openTab(document.querySelector('#inpl_menu'), document.body, 0);
             });
         </script>
@@ -41,20 +63,20 @@
             <button onclick="openTab(this.parentNode, document.body, 1);">Consultants</button>
             <button onclick="openTab(this.parentNode, document.body, 2);">Résumés</button>
 
-            <input id="inpl_option_file" type="file" accept=".csv" onchange="tables.refreshAll();" />
+            <input id="inpl_file" type="file" accept=".csv" onchange="importAndRefresh();" />
         </div>
 
         <div class="inpl_tabpage">
             <div class="inpl_options">
                 <label>Sexe :
-                    <select id="inpl_option_sex" onchange="tables.refreshSummary();">
+                    <select id="inpl_option_sex" onchange="tables.refreshSummary(rows);">
                         <option value="all">Tout</option>
                         <option value="male">Hommes</option>
                         <option value="female">Femmes</option>
                     </select>
                 </label>
                 <label>Lignes :
-                    <select id="inpl_option_rows" onchange="tables.refreshSummary();">
+                    <select id="inpl_option_rows" onchange="tables.refreshSummary(rows);">
                         <option value="age">Âge (classes)</option>
                         <option value="sex">Sexe</option>
                     </select>
