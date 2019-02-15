@@ -35,17 +35,17 @@ extern bool rcc_log_missing_messages;
         } \
     }); \
     DEFER { \
-        Rcc_DumpWarnings(); \
+        rcc_DumpWarnings(); \
         PopLogHandler(); \
     };
 
-void Rcc_DumpWarnings();
-void Rcc_StopWithLastError() __attribute__((noreturn));
+void rcc_DumpWarnings();
+void rcc_StopWithLastError() __attribute__((noreturn));
 
-void *Rcc_GetPointerSafe(SEXP xp);
+void *rcc_GetPointerSafe(SEXP xp);
 
 template <typename T, typename U>
-U Rcc_GetOptional(T &vec, Size idx, U default_value)
+U rcc_GetOptional(T &vec, Size idx, U default_value)
 {
     if (UNLIKELY(idx >= vec.Len()))
         return default_value;
@@ -55,22 +55,22 @@ U Rcc_GetOptional(T &vec, Size idx, U default_value)
     return value;
 }
 
-class Rcc_AutoSexp {
+class rcc_AutoSexp {
     SEXP xp = nullptr;
 
 public:
-    Rcc_AutoSexp() = default;
-    Rcc_AutoSexp(SEXP xp) : xp(PROTECT(xp)) {}
+    rcc_AutoSexp() = default;
+    rcc_AutoSexp(SEXP xp) : xp(PROTECT(xp)) {}
 
-    ~Rcc_AutoSexp()
+    ~rcc_AutoSexp()
     {
         if (xp) {
             UNPROTECT_PTR(xp);
         }
     }
 
-    Rcc_AutoSexp(const Rcc_AutoSexp &other) : xp(other.xp ? PROTECT(other.xp) : nullptr) {}
-    Rcc_AutoSexp &operator=(const Rcc_AutoSexp &other)
+    rcc_AutoSexp(const rcc_AutoSexp &other) : xp(other.xp ? PROTECT(other.xp) : nullptr) {}
+    rcc_AutoSexp &operator=(const rcc_AutoSexp &other)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -81,7 +81,7 @@ public:
 
     operator bool() const { return xp; }
     operator SEXP() const { return xp; }
-    Rcc_AutoSexp &operator=(SEXP new_xp)
+    rcc_AutoSexp &operator=(SEXP new_xp)
     {
         if (xp) {
             UNPROTECT_PTR(xp);
@@ -92,16 +92,16 @@ public:
 };
 
 template <typename T>
-class Rcc_Vector {};
+class rcc_Vector {};
 
 template <>
-class Rcc_Vector<double> {
-    Rcc_AutoSexp xp;
+class rcc_Vector<double> {
+    rcc_AutoSexp xp;
     Span<double> span = {};
 
 public:
-    Rcc_Vector() = default;
-    Rcc_Vector(SEXP xp)
+    rcc_Vector() = default;
+    rcc_Vector(SEXP xp)
         : xp(xp)
     {
         if (TYPEOF(xp) == REALSXP) {
@@ -112,7 +112,7 @@ public:
             Rcpp::stop("Expected numeric vector");
         }
     }
-    Rcc_Vector(Size len)
+    rcc_Vector(Size len)
     {
         xp = Rf_allocVector(REALSXP, len);
         span = MakeSpan(REAL(xp), Rf_xlength(xp));
@@ -136,13 +136,13 @@ public:
 };
 
 template <>
-class Rcc_Vector<int> {
-    Rcc_AutoSexp xp;
+class rcc_Vector<int> {
+    rcc_AutoSexp xp;
     Span<int> span = {};
 
 public:
-    Rcc_Vector() = default;
-    Rcc_Vector(SEXP xp)
+    rcc_Vector() = default;
+    rcc_Vector(SEXP xp)
         : xp(xp)
     {
         if (TYPEOF(xp) == INTSXP) {
@@ -153,7 +153,7 @@ public:
             Rcpp::stop("Expected integer vector");
         }
     }
-    Rcc_Vector(Size len)
+    rcc_Vector(Size len)
     {
         xp = Rf_allocVector(INTSXP, len);
         span = MakeSpan(INTEGER(xp), Rf_xlength(xp));
@@ -177,8 +177,8 @@ public:
 };
 
 template <>
-class Rcc_Vector<bool> {
-    Rcc_AutoSexp xp;
+class rcc_Vector<bool> {
+    rcc_AutoSexp xp;
     Span<int> span = {};
 
 public:
@@ -199,8 +199,8 @@ public:
         bool operator!=(const Iterator &other) const { return ptr != other.ptr; }
     };
 
-    Rcc_Vector() = default;
-    Rcc_Vector(SEXP xp)
+    rcc_Vector() = default;
+    rcc_Vector(SEXP xp)
         : xp(xp)
     {
         if (TYPEOF(xp) == LGLSXP) {
@@ -211,7 +211,7 @@ public:
             Rcpp::stop("Expected logical vector");
         }
     }
-    Rcc_Vector(Size len)
+    rcc_Vector(Size len)
     {
         xp = Rf_allocVector(LGLSXP, len);
         span = MakeSpan(LOGICAL(xp), Rf_xlength(xp));
@@ -233,8 +233,8 @@ public:
 };
 
 template <>
-class Rcc_Vector<const char *> {
-    Rcc_AutoSexp xp;
+class rcc_Vector<const char *> {
+    rcc_AutoSexp xp;
     Span<SEXP> span = {};
 
 public:
@@ -255,8 +255,8 @@ public:
         bool operator!=(const Iterator &other) const { return xp != other.xp; }
     };
 
-    Rcc_Vector() = default;
-    Rcc_Vector(SEXP xp)
+    rcc_Vector() = default;
+    rcc_Vector(SEXP xp)
         : xp(xp)
     {
         if (TYPEOF(xp) == STRSXP) {
@@ -267,7 +267,7 @@ public:
             Rcpp::stop("Expected character vector");
         }
     }
-    Rcc_Vector(Size len) : Rcc_Vector(Rf_allocVector(STRSXP, len)) {}
+    rcc_Vector(Size len) : rcc_Vector(Rf_allocVector(STRSXP, len)) {}
 
     operator SEXP() const { return xp; }
 
@@ -300,13 +300,13 @@ public:
 };
 
 template <>
-class Rcc_Vector<Date> {
+class rcc_Vector<Date> {
     enum class Type {
         Character,
         Date
     };
 
-    Rcc_AutoSexp xp;
+    rcc_AutoSexp xp;
     Type type = Type::Date;
     union {
         Span<SEXP> chr;
@@ -314,15 +314,15 @@ class Rcc_Vector<Date> {
     } u;
 
 public:
-    Rcc_Vector() : type(Type::Date) { u.chr = {}; }
-    Rcc_Vector(SEXP xp);
-    Rcc_Vector(Size len)
+    rcc_Vector() : type(Type::Date) { u.chr = {}; }
+    rcc_Vector(SEXP xp);
+    rcc_Vector(Size len)
     {
         xp = Rf_allocVector(REALSXP, len);
         type = Type::Date;
         u.num = MakeSpan(REAL(xp), len);
 
-        Rcc_AutoSexp cls = Rf_mkString("Date");
+        rcc_AutoSexp cls = Rf_mkString("Date");
         Rf_setAttrib(xp, R_ClassSymbol, cls);
     }
 
@@ -339,13 +339,13 @@ public:
 };
 
 template <typename T>
-class Rcc_NumericVector {
+class rcc_NumericVector {
     enum class Type {
         Int,
         Double
     };
 
-    Rcc_AutoSexp xp;
+    rcc_AutoSexp xp;
     Type type;
     union {
         Span<int> i;
@@ -353,8 +353,8 @@ class Rcc_NumericVector {
     } u;
 
 public:
-    Rcc_NumericVector() : type(Type::Int) { u.i = {}; }
-    Rcc_NumericVector(SEXP xp)
+    rcc_NumericVector() : type(Type::Int) { u.i = {}; }
+    rcc_NumericVector(SEXP xp)
         : xp(xp)
     {
         if (Rf_isInteger(xp)) {
@@ -372,7 +372,7 @@ public:
 
     Size Len() const { return u.i.len; }
 
-    static bool IsNA(T value) { return Rcc_Vector<T>::IsNA(value); }
+    static bool IsNA(T value) { return rcc_Vector<T>::IsNA(value); }
 
     T operator[](Size idx) const
     {
@@ -384,7 +384,7 @@ public:
     }
 };
 
-class Rcc_ListBuilder {
+class rcc_ListBuilder {
     struct Variable {
         const char *name;
         SEXP vec;
@@ -394,10 +394,10 @@ class Rcc_ListBuilder {
     BlockAllocator str_alloc;
 
 public:
-    Rcc_ListBuilder() = default;
+    rcc_ListBuilder() = default;
 
-    Rcc_ListBuilder(const Rcc_ListBuilder &) = delete;
-    Rcc_ListBuilder &operator=(const Rcc_ListBuilder &) = delete;
+    rcc_ListBuilder(const rcc_ListBuilder &) = delete;
+    rcc_ListBuilder &operator=(const rcc_ListBuilder &) = delete;
 
     SEXP Add(const char *name, SEXP vec)
     {
@@ -409,17 +409,17 @@ public:
     template <typename T>
     SEXP Set(const char *name, T value)
     {
-        Rcc_Vector<T> vec(1);
+        rcc_Vector<T> vec(1);
         vec.Set(0, value);
         return Add(name, vec);
     }
 
     SEXP BuildList()
     {
-        Rcc_AutoSexp list = Rf_allocVector(VECSXP, variables.len);
+        rcc_AutoSexp list = Rf_allocVector(VECSXP, variables.len);
 
         {
-            Rcc_AutoSexp names = Rf_allocVector(STRSXP, variables.len);
+            rcc_AutoSexp names = Rf_allocVector(STRSXP, variables.len);
             for (Size i = 0; i < variables.len; i++) {
                 SET_STRING_ELT(names, i, Rf_mkChar(variables[i].name));
                 SET_VECTOR_ELT(list, i, variables[i].vec);
@@ -444,17 +444,17 @@ public:
             nrow = 0;
         }
 
-        Rcc_AutoSexp df = BuildList();
+        rcc_AutoSexp df = BuildList();
 
         // Class
         {
-            Rcc_AutoSexp cls = Rf_mkString("data.frame");
+            rcc_AutoSexp cls = Rf_mkString("data.frame");
             Rf_setAttrib(df, R_ClassSymbol, cls);
         }
 
         // Compact row names
         {
-            Rcc_AutoSexp row_names = Rf_allocVector(INTSXP, 2);
+            rcc_AutoSexp row_names = Rf_allocVector(INTSXP, 2);
             INTEGER(row_names)[0] = NA_INTEGER;
             INTEGER(row_names)[1] = (int)nrow;
             Rf_setAttrib(df, R_RowNamesSymbol, row_names);
@@ -464,18 +464,18 @@ public:
     }
 };
 
-class Rcc_DataFrameBuilder {
-    Rcc_ListBuilder list_builder;
+class rcc_DataFrameBuilder {
+    rcc_ListBuilder list_builder;
     Size len;
 
 public:
-    Rcc_DataFrameBuilder(Size len) : len(len) {}
+    rcc_DataFrameBuilder(Size len) : len(len) {}
 
-    Rcc_DataFrameBuilder(const Rcc_DataFrameBuilder &) = delete;
-    Rcc_DataFrameBuilder &operator=(const Rcc_DataFrameBuilder &) = delete;
+    rcc_DataFrameBuilder(const rcc_DataFrameBuilder &) = delete;
+    rcc_DataFrameBuilder &operator=(const rcc_DataFrameBuilder &) = delete;
 
     template <typename T>
-    Rcc_Vector<T> Add(const char *name) { return list_builder.Add(name, Rcc_Vector<T>(len)); }
+    rcc_Vector<T> Add(const char *name) { return list_builder.Add(name, rcc_Vector<T>(len)); }
 
     SEXP Build() { return list_builder.BuildDataFrame(); }
 };

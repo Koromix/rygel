@@ -32,13 +32,13 @@ void AddCookieHeader(MHD_Response *response, const char *name, const char *value
 
 int CreateErrorPage(int code, Response *out_response);
 
-class JsonPageBuilder: public JsonWriter {
+class JsonPageBuilder: public json_Writer {
     HeapArray<uint8_t> buf;
     StreamWriter st;
 
 public:
     JsonPageBuilder(CompressionType compression_type) :
-        JsonWriter(&st), st(&buf, nullptr, compression_type) {}
+        json_Writer(&st), st(&buf, nullptr, compression_type) {}
 
     int Finish(Response *out_response);
 };

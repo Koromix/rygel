@@ -9,7 +9,7 @@ std::mutex rcc_log_mutex;
 BlockQueue<const char *> rcc_log_messages;
 bool rcc_log_missing_messages = false;
 
-void Rcc_DumpWarnings()
+void rcc_DumpWarnings()
 {
     for (const char *msg: rcc_log_messages) {
         Rcpp::warning(msg);
@@ -22,19 +22,19 @@ void Rcc_DumpWarnings()
     }
 }
 
-void Rcc_StopWithLastError()
+void rcc_StopWithLastError()
 {
     if (rcc_log_messages.len) {
         std::string error_msg = rcc_log_messages[rcc_log_messages.len - 1];
         rcc_log_messages.RemoveLast();
-        Rcc_DumpWarnings();
+        rcc_DumpWarnings();
         Rcpp::stop(error_msg);
     } else {
         Rcpp::stop("Unknown error");
     }
 }
 
-void *Rcc_GetPointerSafe(SEXP xp)
+void *rcc_GetPointerSafe(SEXP xp)
 {
     if (TYPEOF(xp) != EXTPTRSXP)
         Rcpp::stop("Argument is not an object instance");
@@ -46,7 +46,7 @@ void *Rcc_GetPointerSafe(SEXP xp)
     return ptr;
 }
 
-Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
+rcc_Vector<Date>::rcc_Vector(SEXP xp)
     : xp(xp)
 {
     if (Rf_isString(xp)) {
@@ -63,7 +63,7 @@ Rcc_Vector<Date>::Rcc_Vector(SEXP xp)
     }
 }
 
-const Date Rcc_Vector<Date>::operator[](Size idx) const
+const Date rcc_Vector<Date>::operator[](Size idx) const
 {
     Date date = {}; // NA
 
@@ -86,17 +86,17 @@ const Date Rcc_Vector<Date>::operator[](Size idx) const
     return date;
 }
 
-Date Rcc_Vector<Date>::Value() const
+Date rcc_Vector<Date>::Value() const
 {
     if (UNLIKELY(Len() != 1)) {
         LogError("Date or date-like vector must have one value (no more, no less)");
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     }
 
     return (*this)[0];
 }
 
-void Rcc_Vector<Date>::Set(Size idx, Date date)
+void rcc_Vector<Date>::Set(Size idx, Date date)
 {
     switch (type) {
         case Type::Character: {

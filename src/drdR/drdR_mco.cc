@@ -27,9 +27,9 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
-    Rcc_Vector<const char *> table_dirs(table_dirs_xp);
-    Rcc_Vector<const char *> table_filenames(table_filenames_xp);
-    Rcc_Vector<const char *> authorization_filename(authorization_filename_xp);
+    rcc_Vector<const char *> table_dirs(table_dirs_xp);
+    rcc_Vector<const char *> table_filenames(table_filenames_xp);
+    rcc_Vector<const char *> authorization_filename(authorization_filename_xp);
     if (authorization_filename.Len() > 1)
         Rcpp::stop("Cannot load more than one authorization file");
 
@@ -52,11 +52,11 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     LogInfo("Load tables");
     if (!mco_LoadTableSet(table_dirs2, table_filenames2, &classifier->table_set) ||
             !classifier->table_set.indexes.len)
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
     LogInfo("Load authorizations");
     if (!mco_LoadAuthorizationSet(nullptr, authorization_filename2, &classifier->authorization_set))
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
     SEXP classifier_xp = R_MakeExternalPtr(classifier, R_NilValue, R_NilValue);
     R_RegisterCFinalizerEx(classifier_xp, [](SEXP classifier_xp) {
@@ -73,55 +73,55 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
 struct StaysProxy {
     Size nrow;
 
-    Rcc_NumericVector<int> id;
+    rcc_NumericVector<int> id;
 
-    Rcc_NumericVector<int> admin_id;
-    Rcc_NumericVector<int> bill_id;
-    Rcc_Vector<Date> birthdate;
-    Rcc_NumericVector<int> sex;
-    Rcc_Vector<Date> entry_date;
-    Rcc_NumericVector<int> entry_mode;
-    Rcc_Vector<const char *> entry_origin;
-    Rcc_Vector<Date> exit_date;
-    Rcc_NumericVector<int> exit_mode;
-    Rcc_NumericVector<int> exit_destination;
-    Rcc_NumericVector<int> unit;
-    Rcc_NumericVector<int> bed_authorization;
-    Rcc_NumericVector<int> session_count;
-    Rcc_NumericVector<int> igs2;
-    Rcc_NumericVector<int> gestational_age;
-    Rcc_NumericVector<int> newborn_weight;
-    Rcc_Vector<Date> last_menstrual_period;
+    rcc_NumericVector<int> admin_id;
+    rcc_NumericVector<int> bill_id;
+    rcc_Vector<Date> birthdate;
+    rcc_NumericVector<int> sex;
+    rcc_Vector<Date> entry_date;
+    rcc_NumericVector<int> entry_mode;
+    rcc_Vector<const char *> entry_origin;
+    rcc_Vector<Date> exit_date;
+    rcc_NumericVector<int> exit_mode;
+    rcc_NumericVector<int> exit_destination;
+    rcc_NumericVector<int> unit;
+    rcc_NumericVector<int> bed_authorization;
+    rcc_NumericVector<int> session_count;
+    rcc_NumericVector<int> igs2;
+    rcc_NumericVector<int> gestational_age;
+    rcc_NumericVector<int> newborn_weight;
+    rcc_Vector<Date> last_menstrual_period;
 
-    Rcc_Vector<const char *> main_diagnosis;
-    Rcc_Vector<const char *> linked_diagnosis;
+    rcc_Vector<const char *> main_diagnosis;
+    rcc_Vector<const char *> linked_diagnosis;
 
-    Rcc_NumericVector<int> confirm;
-    Rcc_NumericVector<int> ucd;
-    Rcc_NumericVector<int> dip_count;
+    rcc_NumericVector<int> confirm;
+    rcc_NumericVector<int> ucd;
+    rcc_NumericVector<int> dip_count;
 };
 
 struct DiagnosesProxy {
     Size nrow;
 
-    Rcc_NumericVector<int> id;
+    rcc_NumericVector<int> id;
 
-    Rcc_Vector<const char *> diag;
-    Rcc_Vector<const char *> type;
+    rcc_Vector<const char *> diag;
+    rcc_Vector<const char *> type;
 };
 
 struct ProceduresProxy {
     Size nrow;
 
-    Rcc_NumericVector<int> id;
+    rcc_NumericVector<int> id;
 
-    Rcc_Vector<const char *> proc;
-    Rcc_NumericVector<int> extension;
-    Rcc_NumericVector<int> phase;
-    Rcc_NumericVector<int> activity;
-    Rcc_NumericVector<int> count;
-    Rcc_Vector<Date> date;
-    Rcc_Vector<const char *> doc;
+    rcc_Vector<const char *> proc;
+    rcc_NumericVector<int> extension;
+    rcc_NumericVector<int> phase;
+    rcc_NumericVector<int> activity;
+    rcc_NumericVector<int> count;
+    rcc_Vector<Date> date;
+    rcc_Vector<const char *> doc;
 };
 
 static bool RunClassifier(const ClassifierInstance &classifier,
@@ -148,7 +148,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                           (k < procedures_end && procedures.id[k] < stays.id[i - 1]))))
             return false;
 
-        stay.admin_id = Rcc_GetOptional(stays.admin_id, i, 0);
+        stay.admin_id = rcc_GetOptional(stays.admin_id, i, 0);
         stay.bill_id = stays.bill_id[i];
         stay.birthdate = stays.birthdate[i];
         if (UNLIKELY(stay.birthdate.value && !stay.birthdate.IsValid())) {
@@ -178,12 +178,12 @@ static bool RunClassifier(const ClassifierInstance &classifier,
             stay.errors |= (int)mco_Stay::Error::MalformedExitDate;
         }
         stay.exit.mode = (char)('0' + stays.exit_mode[i]);
-        stay.exit.destination = (char)('0' + Rcc_GetOptional(stays.exit_destination, i, -'0'));
+        stay.exit.destination = (char)('0' + rcc_GetOptional(stays.exit_destination, i, -'0'));
 
-        stay.unit.number = (int16_t)Rcc_GetOptional(stays.unit, i, 0);
-        stay.bed_authorization = (int8_t)Rcc_GetOptional(stays.bed_authorization, i, 0);
-        stay.session_count = (int16_t)Rcc_GetOptional(stays.session_count, i, 0);
-        stay.igs2 = (int16_t)Rcc_GetOptional(stays.igs2, i, 0);
+        stay.unit.number = (int16_t)rcc_GetOptional(stays.unit, i, 0);
+        stay.bed_authorization = (int8_t)rcc_GetOptional(stays.bed_authorization, i, 0);
+        stay.session_count = (int16_t)rcc_GetOptional(stays.session_count, i, 0);
+        stay.igs2 = (int16_t)rcc_GetOptional(stays.igs2, i, 0);
         stay.gestational_age = (int16_t)stays.gestational_age[i];
         stay.newborn_weight = (int16_t)stays.newborn_weight[i];
         stay.last_menstrual_period = stays.last_menstrual_period[i];
@@ -296,9 +296,9 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                     stay.errors |= (int)mco_Stay::Error::MalformedProcedureExtension;
                 }
             }
-            proc.phase = (int8_t)Rcc_GetOptional(procedures.phase, k, 0);
+            proc.phase = (int8_t)rcc_GetOptional(procedures.phase, k, 0);
             proc.activity = (int8_t)procedures.activity[k];
-            proc.count = (int16_t)Rcc_GetOptional(procedures.count, k, 0);
+            proc.count = (int16_t)rcc_GetOptional(procedures.count, k, 0);
             proc.date = procedures.date[k];
             if (procedures.doc.Len()) {
                 const char *doc_str = procedures.doc[k].ptr;
@@ -352,27 +352,27 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
         results_count += results.len;
     }
 
-    Rcc_DataFrameBuilder df_builder(results_count);
-    Rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
-    Rcc_Vector<int> unit;
+    rcc_DataFrameBuilder df_builder(results_count);
+    rcc_Vector<int> bill_id = df_builder.Add<int>("bill_id");
+    rcc_Vector<int> unit;
     if (export_units) {
         unit = df_builder.Add<int>("unit");
     }
-    Rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
-    Rcc_Vector<int> stays = df_builder.Add<int>("stays");
-    Rcc_Vector<int> duration = df_builder.Add<int>("duration");
-    Rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
-    Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
-    Rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
-    Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
-    Rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
-    Rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
-    Rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
-    Rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
-    Rcc_Vector<int> ghs_duration = df_builder.Add<int>("ghs_duration");
-    Rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
-    Rcc_Vector<double> supplement_cents[ARRAY_SIZE(mco_SupplementTypeNames)];
-    Rcc_Vector<int> supplement_count[ARRAY_SIZE(mco_SupplementTypeNames)];
+    rcc_Vector<Date> exit_date = df_builder.Add<Date>("exit_date");
+    rcc_Vector<int> stays = df_builder.Add<int>("stays");
+    rcc_Vector<int> duration = df_builder.Add<int>("duration");
+    rcc_Vector<int> main_stay = df_builder.Add<int>("main_stay");
+    rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
+    rcc_Vector<int> main_error = df_builder.Add<int>("main_error");
+    rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+    rcc_Vector<double> total_cents = df_builder.Add<double>("total_cents");
+    rcc_Vector<double> price_cents = df_builder.Add<double>("price_cents");
+    rcc_Vector<double> ghs_cents = df_builder.Add<double>("ghs_cents");
+    rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
+    rcc_Vector<int> ghs_duration = df_builder.Add<int>("ghs_duration");
+    rcc_Vector<int> exb_exh = df_builder.Add<int>("exb_exh");
+    rcc_Vector<double> supplement_cents[ARRAY_SIZE(mco_SupplementTypeNames)];
+    rcc_Vector<int> supplement_count[ARRAY_SIZE(mco_SupplementTypeNames)];
     if (export_supplement_cents) {
         for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
             char name_buf[32];
@@ -449,7 +449,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     static const int task_size = 2048;
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
     Rcpp::DataFrame stays_df(stays_xp);
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
@@ -475,7 +475,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                         [&](const OptionDesc &desc) { return TestStr(desc.name, dispense_mode_str); });
         if (!desc) {
             LogError("Unknown dispensation mode '%1'", dispense_mode_str);
-            Rcc_StopWithLastError();
+            rcc_StopWithLastError();
         }
         dispense_mode = (int)(desc - mco_DispenseModeOptions);
     }
@@ -650,9 +650,9 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     mco_Pricing summary = {};
     mco_Summarize(summaries, &summary);
 
-    Rcc_AutoSexp summary_df;
+    rcc_AutoSexp summary_df;
     {
-        Rcc_ListBuilder df_builder;
+        rcc_ListBuilder df_builder;
         df_builder.Set("results", (int)summary.results_count);
         df_builder.Set("stays", (int)summary.stays_count);
         df_builder.Set("failures", (int)summary.failures_count);
@@ -676,21 +676,21 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         summary_df = df_builder.BuildDataFrame();
     }
 
-    Rcc_AutoSexp results_df;
+    rcc_AutoSexp results_df;
     if (details) {
         results_df = ExportResultsDataFrame(result_sets, pricing_sets, false,
                                             export_supplement_cents, export_supplement_counts);
     }
 
-    Rcc_AutoSexp mono_results_df;
+    rcc_AutoSexp mono_results_df;
     if (dispense_mode >= 0) {
         mono_results_df = ExportResultsDataFrame(mono_result_sets, mono_pricing_sets, true,
                                                  export_supplement_cents, export_supplement_counts);
     }
 
-    Rcc_AutoSexp ret_list;
+    rcc_AutoSexp ret_list;
     {
-        Rcc_ListBuilder ret_builder;
+        rcc_ListBuilder ret_builder;
         ret_builder.Add("summary", summary_df);
         if (results_df) {
             ret_builder.Add("results", results_df);
@@ -712,20 +712,20 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Rcc_AutoSexp indexes_df;
+    rcc_AutoSexp indexes_df;
     {
         Size valid_indexes_count = 0;
         for (const mco_TableIndex &index: classifier->table_set.indexes) {
             valid_indexes_count += index.valid;
         }
 
-        Rcc_DataFrameBuilder df_builder(valid_indexes_count);
-        Rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
-        Rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
-        Rcc_Vector<bool> changed_tables = df_builder.Add<bool>("changed_tables");
-        Rcc_Vector<bool> changed_prices = df_builder.Add<bool>("changed_prices");
+        rcc_DataFrameBuilder df_builder(valid_indexes_count);
+        rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
+        rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        rcc_Vector<bool> changed_tables = df_builder.Add<bool>("changed_tables");
+        rcc_Vector<bool> changed_prices = df_builder.Add<bool>("changed_prices");
 
         Size i = 0;
         for (const mco_TableIndex &index: classifier->table_set.indexes) {
@@ -753,24 +753,24 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = Rcc_Vector<Date>(date_xp).Value();
+    Date date = rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     bool map = Rcpp::as<bool>(map_xp);
 
     const mco_TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     }
 
     HashTable<mco_GhmCode, mco_GhmConstraint> constraints;
     if (map && !mco_ComputeGhmConstraints(*index, &constraints))
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
-    Rcc_AutoSexp ghm_ghs_df;
+    rcc_AutoSexp ghm_ghs_df;
     {
         Size row_count = 0;
         for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
@@ -778,30 +778,30 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
             row_count += compatible_ghs.len;
         }
 
-        Rcc_DataFrameBuilder df_builder(row_count);
-        Rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
-        Rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
-        Rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
-        Rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
-        Rcc_Vector<int> old_age_treshold = df_builder.Add<int>("old_age_treshold");
-        Rcc_Vector<int> old_severity_limit = df_builder.Add<int>("old_severity_limit");
-        Rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
-        Rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
-        Rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
-        Rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimum_duration");
-        Rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
-        Rcc_Vector<const char *> main_diagnosis = df_builder.Add<const char *>("main_diagnosis");
-        Rcc_Vector<const char *> diagnoses = df_builder.Add<const char *>("diagnoses");
-        Rcc_Vector<const char *> procedures = df_builder.Add<const char *>("procedures");
-        Rcc_Vector<int> ghs_cents = df_builder.Add<int>("ghs_cents");
-        Rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
-        Rcc_Vector<int> exh_treshold = df_builder.Add<int>("exb_treshold");
-        Rcc_Vector<int> exh_cents = df_builder.Add<int>("exh_cents");
-        Rcc_Vector<int> exb_treshold = df_builder.Add<int>("exb_treshold");
-        Rcc_Vector<int> exb_cents = df_builder.Add<int>("exb_cents");
-        Rcc_Vector<int> exb_once = df_builder.Add<int>("exb_once");
-        Rcc_Vector<int> durations;
-        Rcc_Vector<int> warn_cmd28;
+        rcc_DataFrameBuilder df_builder(row_count);
+        rcc_Vector<const char *> ghm = df_builder.Add<const char *>("ghm");
+        rcc_Vector<int> ghs = df_builder.Add<int>("ghs");
+        rcc_Vector<int> young_age_treshold = df_builder.Add<int>("young_age_treshold");
+        rcc_Vector<int> young_severity_limit = df_builder.Add<int>("young_severity_limit");
+        rcc_Vector<int> old_age_treshold = df_builder.Add<int>("old_age_treshold");
+        rcc_Vector<int> old_severity_limit = df_builder.Add<int>("old_severity_limit");
+        rcc_Vector<int> confirm_treshold = df_builder.Add<int>("confirm_treshold");
+        rcc_Vector<int> unit_authorization = df_builder.Add<int>("unit_authorization");
+        rcc_Vector<int> bed_authorization = df_builder.Add<int>("bed_authorization");
+        rcc_Vector<int> minimum_duration = df_builder.Add<int>("minimum_duration");
+        rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
+        rcc_Vector<const char *> main_diagnosis = df_builder.Add<const char *>("main_diagnosis");
+        rcc_Vector<const char *> diagnoses = df_builder.Add<const char *>("diagnoses");
+        rcc_Vector<const char *> procedures = df_builder.Add<const char *>("procedures");
+        rcc_Vector<int> ghs_cents = df_builder.Add<int>("ghs_cents");
+        rcc_Vector<double> ghs_coefficient = df_builder.Add<double>("ghs_coefficient");
+        rcc_Vector<int> exh_treshold = df_builder.Add<int>("exb_treshold");
+        rcc_Vector<int> exh_cents = df_builder.Add<int>("exh_cents");
+        rcc_Vector<int> exb_treshold = df_builder.Add<int>("exb_treshold");
+        rcc_Vector<int> exb_cents = df_builder.Add<int>("exb_cents");
+        rcc_Vector<int> exb_once = df_builder.Add<int>("exb_once");
+        rcc_Vector<int> durations;
+        rcc_Vector<int> warn_cmd28;
         if (map) {
             durations = df_builder.Add<int>("durations");
             warn_cmd28 = df_builder.Add<int>("warn_cmd28");
@@ -924,31 +924,31 @@ RcppExport SEXP drdR_mco_Diagnoses(SEXP classifier_xp, SEXP date_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = Rcc_Vector<Date>(date_xp).Value();
+    Date date = rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
     const mco_TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     }
 
-    Rcc_AutoSexp diagnoses_df;
+    rcc_AutoSexp diagnoses_df;
     {
         Size row_count = index->diagnoses.len;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
             row_count += !!(diag_info.flags & (int)mco_DiagnosisInfo::Flag::SexDifference);
         }
 
-        Rcc_DataFrameBuilder df_builder(row_count);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
-        Rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
-        Rcc_Vector<int> cmd = df_builder.Add<int>("cmd");
-        Rcc_Vector<int> jump = df_builder.Add<int>("jump");
-        Rcc_Vector<int> severity = df_builder.Add<int>("severity");
+        rcc_DataFrameBuilder df_builder(row_count);
+        rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<int> sex_spec = df_builder.Add<int>("sex");
+        rcc_Vector<int> cmd = df_builder.Add<int>("cmd");
+        rcc_Vector<int> jump = df_builder.Add<int>("jump");
+        rcc_Vector<int> severity = df_builder.Add<int>("severity");
 
         Size i = 0;
         const auto ExportDiagInfo = [&](int8_t sex, const mco_DiagnosisInfo &diag_info) {
@@ -981,19 +981,19 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = Rcc_Vector<Date>(date_xp).Value();
+    Date date = rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
     const mco_TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     }
 
-    Rcc_AutoSexp ghm_roots_df;
+    rcc_AutoSexp ghm_roots_df;
     {
         struct ExclusionInfo {
             DiagnosisCode diag;
@@ -1015,9 +1015,9 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
             }
         }
 
-        Rcc_DataFrameBuilder df_builder(ghm_exclusions.len);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
-        Rcc_Vector<const char *> ghm_root = df_builder.Add<const char *>("ghm_root");
+        rcc_DataFrameBuilder df_builder(ghm_exclusions.len);
+        rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<const char *> ghm_root = df_builder.Add<const char *>("ghm_root");
 
         for (Size i = 0; i < ghm_exclusions.len; i++) {
             char buf[64];
@@ -1031,7 +1031,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         ghm_roots_df = df_builder.Build();
     }
 
-    Rcc_AutoSexp diagnoses_df;
+    rcc_AutoSexp diagnoses_df;
     {
         struct ExclusionInfo {
             DiagnosisCode diag;
@@ -1047,9 +1047,9 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
             }
         }
 
-        Rcc_DataFrameBuilder df_builder(exclusions.len);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
-        Rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_or_linked_diagnosis");
+        rcc_DataFrameBuilder df_builder(exclusions.len);
+        rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<const char *> main_diag = df_builder.Add<const char *>("main_or_linked_diagnosis");
 
         for (Size i = 0; i < exclusions.len; i++) {
             const ExclusionInfo &excl = exclusions[i];
@@ -1061,7 +1061,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         diagnoses_df = df_builder.Build();
     }
 
-    Rcc_AutoSexp conditions_df;
+    rcc_AutoSexp conditions_df;
     {
         Size age_exclusions_count = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
@@ -1076,10 +1076,10 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
             age_exclusions_count += test;
         }
 
-        Rcc_DataFrameBuilder df_builder(age_exclusions_count);
-        Rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
-        Rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
-        Rcc_Vector<int> maximum_age = df_builder.Add<int>("maximum_age");
+        rcc_DataFrameBuilder df_builder(age_exclusions_count);
+        rcc_Vector<const char *> diag = df_builder.Add<const char *>("diagnosis");
+        rcc_Vector<int> minimum_age = df_builder.Add<int>("minimum_age");
+        rcc_Vector<int> maximum_age = df_builder.Add<int>("maximum_age");
 
         Size i = 0;
         for (const mco_DiagnosisInfo &diag_info: index->diagnoses) {
@@ -1097,9 +1097,9 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
         conditions_df = df_builder.Build();
     }
 
-    Rcc_AutoSexp ret_list;
+    rcc_AutoSexp ret_list;
     {
-        Rcc_ListBuilder ret_builder;
+        rcc_ListBuilder ret_builder;
         ret_builder.Add("ghm_roots", ghm_roots_df);
         ret_builder.Add("diagnoses", diagnoses_df);
         ret_builder.Add("conditions", conditions_df);
@@ -1117,27 +1117,27 @@ RcppExport SEXP drdR_mco_Procedures(SEXP classifier_xp, SEXP date_xp)
     RCC_SETUP_LOG_HANDLER();
 
     const ClassifierInstance *classifier =
-        (const ClassifierInstance *)Rcc_GetPointerSafe(classifier_xp);
+        (const ClassifierInstance *)rcc_GetPointerSafe(classifier_xp);
 
-    Date date = Rcc_Vector<Date>(date_xp).Value();
+    Date date = rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
 
     const mco_TableIndex *index = classifier->table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        Rcc_StopWithLastError();
+        rcc_StopWithLastError();
     }
 
-    Rcc_AutoSexp procedures_df;
+    rcc_AutoSexp procedures_df;
     {
-        Rcc_DataFrameBuilder df_builder(index->procedures.len);
-        Rcc_Vector<const char *> proc = df_builder.Add<const char *>("procedure");
-        Rcc_Vector<int> phase = df_builder.Add<int>("phase");
-        Rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
-        Rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
-        Rcc_Vector<int> activities = df_builder.Add<int>("activities");
-        Rcc_Vector<int> extensions = df_builder.Add<int>("extensions");
+        rcc_DataFrameBuilder df_builder(index->procedures.len);
+        rcc_Vector<const char *> proc = df_builder.Add<const char *>("procedure");
+        rcc_Vector<int> phase = df_builder.Add<int>("phase");
+        rcc_Vector<Date> start_date = df_builder.Add<Date>("start_date");
+        rcc_Vector<Date> end_date = df_builder.Add<Date>("end_date");
+        rcc_Vector<int> activities = df_builder.Add<int>("activities");
+        rcc_Vector<int> extensions = df_builder.Add<int>("extensions");
 
         for (Size i = 0; i < index->procedures.len; i++) {
             const mco_ProcedureInfo &proc_info = index->procedures[i];
@@ -1163,7 +1163,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
 
-    Rcc_Vector<const char *> filenames(filenames_xp);
+    rcc_Vector<const char *> filenames(filenames_xp);
 
     mco_StaySet stay_set;
     {
@@ -1174,10 +1174,10 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             valid &= stay_set_builder.LoadFiles(filename);
         }
         if (!valid)
-            Rcc_StopWithLastError();
+            rcc_StopWithLastError();
 
         if (!stay_set_builder.Finish(&stay_set))
-            Rcc_StopWithLastError();
+            rcc_StopWithLastError();
     }
 
     if (stay_set.stays.len >= INT_MAX)
@@ -1194,44 +1194,44 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
     SEXP diagnoses_df;
     SEXP procedures_df;
     {
-        Rcc_DataFrameBuilder stays_builder(stay_set.stays.len);
-        Rcc_Vector<int> stays_id = stays_builder.Add<int>("id");
-        Rcc_Vector<int> stays_admin_id = stays_builder.Add<int>("admin_id");
-        Rcc_Vector<int> stays_bill_id = stays_builder.Add<int>("bill_id");
-        Rcc_Vector<int> stays_sex = stays_builder.Add<int>("sex");
-        Rcc_Vector<Date> stays_birthdate = stays_builder.Add<Date>("birthdate");
-        Rcc_Vector<Date> stays_entry_date = stays_builder.Add<Date>("entry_date");
-        Rcc_Vector<int> stays_entry_mode = stays_builder.Add<int>("entry_mode");
-        Rcc_Vector<const char *> stays_entry_origin = stays_builder.Add<const char *>("entry_origin");
-        Rcc_Vector<Date> stays_exit_date = stays_builder.Add<Date>("exit_date");
-        Rcc_Vector<int> stays_exit_mode = stays_builder.Add<int>("exit_mode");
-        Rcc_Vector<int> stays_exit_destination = stays_builder.Add<int>("exit_destination");
-        Rcc_Vector<int> stays_unit = stays_builder.Add<int>("unit");
-        Rcc_Vector<int> stays_bed_authorization = stays_builder.Add<int>("bed_authorization");
-        Rcc_Vector<int> stays_session_count = stays_builder.Add<int>("session_count");
-        Rcc_Vector<int> stays_igs2 = stays_builder.Add<int>("igs2");
-        Rcc_Vector<Date> stays_last_menstrual_period = stays_builder.Add<Date>("last_menstrual_period");
-        Rcc_Vector<int> stays_gestational_age = stays_builder.Add<int>("gestational_age");
-        Rcc_Vector<int> stays_newborn_weight = stays_builder.Add<int>("newborn_weight");
-        Rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
-        Rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
-        Rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
-        Rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
-        Rcc_Vector<int> stays_dip_count = stays_builder.Add<int>("dip_count");
+        rcc_DataFrameBuilder stays_builder(stay_set.stays.len);
+        rcc_Vector<int> stays_id = stays_builder.Add<int>("id");
+        rcc_Vector<int> stays_admin_id = stays_builder.Add<int>("admin_id");
+        rcc_Vector<int> stays_bill_id = stays_builder.Add<int>("bill_id");
+        rcc_Vector<int> stays_sex = stays_builder.Add<int>("sex");
+        rcc_Vector<Date> stays_birthdate = stays_builder.Add<Date>("birthdate");
+        rcc_Vector<Date> stays_entry_date = stays_builder.Add<Date>("entry_date");
+        rcc_Vector<int> stays_entry_mode = stays_builder.Add<int>("entry_mode");
+        rcc_Vector<const char *> stays_entry_origin = stays_builder.Add<const char *>("entry_origin");
+        rcc_Vector<Date> stays_exit_date = stays_builder.Add<Date>("exit_date");
+        rcc_Vector<int> stays_exit_mode = stays_builder.Add<int>("exit_mode");
+        rcc_Vector<int> stays_exit_destination = stays_builder.Add<int>("exit_destination");
+        rcc_Vector<int> stays_unit = stays_builder.Add<int>("unit");
+        rcc_Vector<int> stays_bed_authorization = stays_builder.Add<int>("bed_authorization");
+        rcc_Vector<int> stays_session_count = stays_builder.Add<int>("session_count");
+        rcc_Vector<int> stays_igs2 = stays_builder.Add<int>("igs2");
+        rcc_Vector<Date> stays_last_menstrual_period = stays_builder.Add<Date>("last_menstrual_period");
+        rcc_Vector<int> stays_gestational_age = stays_builder.Add<int>("gestational_age");
+        rcc_Vector<int> stays_newborn_weight = stays_builder.Add<int>("newborn_weight");
+        rcc_Vector<const char *> stays_main_diagnosis = stays_builder.Add<const char *>("main_diagnosis");
+        rcc_Vector<const char *> stays_linked_diagnosis = stays_builder.Add<const char *>("linked_diagnosis");
+        rcc_Vector<int> stays_confirm = stays_builder.Add<int>("confirm");
+        rcc_Vector<int> stays_ucd = stays_builder.Add<int>("ucd");
+        rcc_Vector<int> stays_dip_count = stays_builder.Add<int>("dip_count");
 
-        Rcc_DataFrameBuilder diagnoses_builder(diagnoses_count);
-        Rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
-        Rcc_Vector<const char *> diagnoses_diag = diagnoses_builder.Add<const char *>("diag");
+        rcc_DataFrameBuilder diagnoses_builder(diagnoses_count);
+        rcc_Vector<int> diagnoses_id = diagnoses_builder.Add<int>("id");
+        rcc_Vector<const char *> diagnoses_diag = diagnoses_builder.Add<const char *>("diag");
 
-        Rcc_DataFrameBuilder procedures_builder(procedures_count);
-        Rcc_Vector<int> procedures_id = procedures_builder.Add<int>("id");
-        Rcc_Vector<const char *> procedures_proc = procedures_builder.Add<const char *>("code");
-        Rcc_Vector<int> procedures_extension = procedures_builder.Add<int>("extension");
-        Rcc_Vector<int> procedures_phase = procedures_builder.Add<int>("phase");
-        Rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
-        Rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
-        Rcc_Vector<Date> procedures_date = procedures_builder.Add<Date>("date");
-        Rcc_Vector<const char *> procedures_doc = procedures_builder.Add<const char *>("doc");
+        rcc_DataFrameBuilder procedures_builder(procedures_count);
+        rcc_Vector<int> procedures_id = procedures_builder.Add<int>("id");
+        rcc_Vector<const char *> procedures_proc = procedures_builder.Add<const char *>("code");
+        rcc_Vector<int> procedures_extension = procedures_builder.Add<int>("extension");
+        rcc_Vector<int> procedures_phase = procedures_builder.Add<int>("phase");
+        rcc_Vector<int> procedures_activity = procedures_builder.Add<int>("activity");
+        rcc_Vector<int> procedures_count = procedures_builder.Add<int>("count");
+        rcc_Vector<Date> procedures_date = procedures_builder.Add<Date>("date");
+        rcc_Vector<const char *> procedures_doc = procedures_builder.Add<const char *>("doc");
 
         Size j = 0, k = 0;
         for (Size i = 0; i < stay_set.stays.len; i++) {
@@ -1303,7 +1303,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 
     SEXP list;
     {
-        Rcc_ListBuilder list_builder;
+        rcc_ListBuilder list_builder;
         list_builder.Add("stays", stays_df);
         list_builder.Add("diagnoses", diagnoses_df);
         list_builder.Add("procedures", procedures_df);
@@ -1317,7 +1317,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
 
 RcppExport SEXP drdR_mco_SupplementTypes()
 {
-    Rcc_Vector<const char *> types(ARRAY_SIZE(mco_SupplementTypeNames));
+    rcc_Vector<const char *> types(ARRAY_SIZE(mco_SupplementTypeNames));
     for (Size i = 0; i < ARRAY_SIZE(mco_SupplementTypeNames); i++) {
         types.Set(i, mco_SupplementTypeNames[i]);
     }
@@ -1327,9 +1327,9 @@ RcppExport SEXP drdR_mco_SupplementTypes()
 
 RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
 {
-    Rcc_Vector<const char *> diagnoses(diagnoses_xp);
+    rcc_Vector<const char *> diagnoses(diagnoses_xp);
 
-    Rcc_Vector<const char *> diagnoses2(diagnoses.Len());
+    rcc_Vector<const char *> diagnoses2(diagnoses.Len());
     for (Size i = 0; i < diagnoses.Len(); i++) {
         Span<const char> str = diagnoses[i];
         if (!diagnoses.IsNA(str)) {
@@ -1349,9 +1349,9 @@ RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
 
 RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 {
-    Rcc_Vector<const char *> procedures(procedures_xp);
+    rcc_Vector<const char *> procedures(procedures_xp);
 
-    Rcc_Vector<const char *> procedures2(procedures.Len());
+    rcc_Vector<const char *> procedures2(procedures.Len());
     for (Size i = 0; i < procedures.Len(); i++) {
         Span<const char> str = procedures[i];
         if (!procedures.IsNA(str)) {

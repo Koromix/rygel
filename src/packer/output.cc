@@ -72,7 +72,7 @@ static int CountNewLines(Span<const char> buf)
 
 static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *out_writer)
 {
-    JsonWriter writer(out_writer);
+    json_Writer writer(out_writer);
 
     writer.StartObject();
 

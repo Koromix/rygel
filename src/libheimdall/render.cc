@@ -79,7 +79,7 @@ static bool InitImGui()
     io->IniFilename = nullptr;
 
     {
-        GLuint new_shader = BuildGLShader("imgui", imgui_vertex_src, imgui_fragment_src);
+        GLuint new_shader = ogl_BuildShader("imgui", imgui_vertex_src, imgui_fragment_src);
         if (new_shader) {
             if (shader_program) {
                 glDeleteProgram(shader_program);

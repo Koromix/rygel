@@ -5,7 +5,7 @@
 #include "../libcc/libcc.hh"
 #include "opengl.hh"
 
-bool InitGLFunctions()
+bool ogl_InitFunctions()
 {
     int gl_version;
     {
@@ -19,7 +19,7 @@ bool InitGLFunctions()
         }
     }
 
-#ifndef GL_NO_COMPAT
+#ifndef OGL_NO_COMPAT
     bool gl_compat;
     if (gl_version >= 32) {
         GLint profile;
@@ -30,10 +30,10 @@ bool InitGLFunctions()
     }
 #endif
 
-#define GL_FUNCTION(Cond, Type, Name, ...) \
+#define OGL_FUNCTION(Cond, Type, Name, ...) \
         do { \
             if (Cond) { \
-                Name = (decltype(Name))GetGLProcAddress(#Name); \
+                Name = (decltype(Name))ogl_GetProcAddress(#Name); \
                 if (!Name) { \
                     LogError("Required OpenGL function '%1' is not available",  #Name); \
                     return false; \
@@ -66,7 +66,7 @@ static void LogShaderError(GLuint id, void (GL_API *msg_func)(GLuint, GLsizei, G
     LogError("Failed to build %1 '%2':\n%3", type, name, buf);
 }
 
-GLuint BuildGLShader(const char *name, const char *vertex_src, const char *fragment_src)
+GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fragment_src)
 {
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     DEFER { glDeleteShader(vertex_shader); };
@@ -116,7 +116,7 @@ GLuint BuildGLShader(const char *name, const char *vertex_src, const char *fragm
 }
 
 #ifndef __EMSCRIPTEN__
-    #define GL_FUNCTION(Cond, ...) \
-        FORCE_EXPAND(GL_FUNCTION_PTR(__VA_ARGS__))
+    #define OGL_FUNCTION(Cond, ...) \
+        FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
     #include "opengl_func.inc"
 #endif

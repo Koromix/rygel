@@ -12,7 +12,7 @@
 
 THREAD_LOCAL RunIO *g_io;
 
-void SwapGLBuffers()
+void ogl_SwapGLBuffers()
 {
     // The browser does this automatically, we don't have control over it
 }
@@ -39,7 +39,7 @@ bool RunGuiApp(std::function<bool()> step_func, bool *run_flag, std::mutex *lock
     }
 
     emscripten_webgl_make_context_current(webgl);
-    if (!InitGLFunctions())
+    if (!ogl_InitGLFunctions())
         return false;
 
     {

@@ -12,12 +12,12 @@
 #include "../wrappers/opengl.hh"
 #include "libgui.hh"
 
-static GL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
-                       const int *attribList);
-static GL_FUNCTION_PTR(BOOL, wglChoosePixelFormatARB, HDC hdc, const int *piAttribIList,
-                       const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats,
-                       UINT *nNumFormats);
-static GL_FUNCTION_PTR(BOOL, wglSwapIntervalEXT, int interval);
+static OGL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
+                        const int *attribList);
+static OGL_FUNCTION_PTR(BOOL, wglChoosePixelFormatARB, HDC hdc, const int *piAttribIList,
+                        const FLOAT *pfAttribFList, UINT nMaxFormats, int *piFormats,
+                        UINT *nNumFormats);
+static OGL_FUNCTION_PTR(BOOL, wglSwapIntervalEXT, int interval);
 
 #define WGL_DRAW_TO_WINDOW_ARB                    0x2001
 #define WGL_ACCELERATION_ARB                      0x2003
@@ -295,7 +295,7 @@ static bool InitWGL(const char *application_name)
 
 #define IMPORT_WGL_FUNCTION(Name) \
         do { \
-            Name = (decltype(Name))GetGLProcAddress(#Name); \
+            Name = (decltype(Name))ogl_GetProcAddress(#Name); \
             if (!Name) { \
                 LogError("Required WGL function '%1' is not available",  #Name); \
                 return false; \
@@ -311,7 +311,7 @@ static bool InitWGL(const char *application_name)
     return true;
 }
 
-void *GetGLProcAddress(const char *name)
+void *ogl_GetProcAddress(const char *name)
 {
     return (void *)wglGetProcAddress(name);
 }
@@ -409,7 +409,7 @@ static bool SetGLContext(HDC dc, HGLRC gl)
     return true;
 }
 
-void SwapGLBuffers()
+void ogl_SwapBuffers()
 {
     SwapBuffers(g_window->hdc);
 }
@@ -438,7 +438,7 @@ bool RunGuiApp(const char *application_name, std::function<bool()> step_func,
     DEFER { DeleteGLContext(window.hgl); };
     if (!SetGLContext(window.hdc, window.hgl))
         return false;
-    if (!InitGLFunctions())
+    if (!ogl_InitFunctions())
         return false;
 
     io.main.run = true;
