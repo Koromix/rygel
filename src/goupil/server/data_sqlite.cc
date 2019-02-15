@@ -4,32 +4,41 @@
 
 #include "../../../lib/sqlite/sqlite3.h"
 #include "../../libcc/libcc.hh"
-#include "sqlite.hh"
+#include "data.hh"
 
 #define SCHEMA_VERSION 1
 
-sqlite3 *OpenDatabase(const char *filename, unsigned int flags)
+bool SQLiteConnection::Open(const char *filename, unsigned int flags)
 {
     const char *const sql = R"(
         PRAGMA foreign_keys = ON;
     )";
 
-    sqlite3 *db = nullptr;
-    DEFER_N(out_guard) { sqlite3_close(db); };
+    Assert(!db);
+    DEFER_N(out_guard) { Close(); };
 
     if (sqlite3_open_v2(filename, &db, flags, nullptr) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, sqlite3_errmsg(db));
-        return nullptr;
+        return false;
     }
 
     char *error = nullptr;
     if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
         LogError("SQLite failed to open '%1': %2", filename, error);
-        return nullptr;
+        return false;
     }
 
     out_guard.disable();
-    return db;
+    return true;
+}
+
+bool SQLiteConnection::Close()
+{
+    if (sqlite3_close(db) != SQLITE_OK)
+        return false;
+    db = nullptr;
+
+    return true;
 }
 
 bool InitDatabase(sqlite3 *db)
