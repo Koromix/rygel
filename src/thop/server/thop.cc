@@ -35,9 +35,6 @@ struct Route {
         Exact,
         Walk
     };
-    enum class Flag {
-        NoCache = 1 << 0
-    };
 
     Span<const char> url;
     const char *method;
