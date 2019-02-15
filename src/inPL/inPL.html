@@ -32,7 +32,9 @@
 
             function importAndRefresh()
             {
-                let file = document.querySelector('#inpl_file').files[0];
+                let file = document.querySelector('#inpl_menu_file').files[0];
+
+                let stat = document.querySelector('#inpl_menu_stat');
 
                 rows.length = 0;
                 if (file) {
@@ -42,11 +44,14 @@
                         },
                         complete: () => {
                             rows.sort((row1, row2) => row1.plid - row2.plid);
+
+                            stat.replaceContent(`(${rows.length} rendez-vous chargés)`);
                             tables.refreshAll(rows);
                         }
                     });
                 } else {
                     tables.refreshAll(rows);
+                    stat.innerHTML = '';
                 }
             }
 
@@ -63,7 +68,8 @@
             <button onclick="openTab(this.parentNode, document.body, 1);">Consultants</button>
             <button onclick="openTab(this.parentNode, document.body, 2);">Résumés</button>
 
-            <input id="inpl_file" type="file" accept=".csv" onchange="importAndRefresh();" />
+            <input id="inpl_menu_file" type="file" accept=".csv" onchange="importAndRefresh();" />
+            <span id="inpl_menu_stat"></span>
         </div>
 
         <div class="inpl_tabpage">

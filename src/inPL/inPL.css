@@ -20,12 +20,18 @@ body {
     border: none;
     outline: none;
     cursor: pointer;
-    padding: 10px 12px;
+    padding: 9px 13px;
 }
 .inpl_tabbar button:hover { background-color: #ddd; }
 .inpl_tabbar button.active { background-color: #ccc; }
 .inpl_tabpage { padding: 1em; }
-#inpl_file {
+
+#inpl_menu_stat {
+    padding: 9px 12px 0 0;
+    float: right;
+    color: #666;
+}
+#inpl_menu_file {
     float: right;
     padding: 6px 4px 0 0;
 }
