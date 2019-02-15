@@ -109,9 +109,7 @@ let bridge = (function() {
         return row2;
     }
 
-    // FIXME: Returns before the end, async/away/promises/whatever
-    // is a fucking pile of trash
-    this.readFromFile = function(file, functions) {
+    this.readFileAsync = function(file, functions) {
         Papa.parse(file, {
             header: true,
             chunk: ret => {

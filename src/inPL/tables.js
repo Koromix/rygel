@@ -109,7 +109,7 @@ let tables = (function() {
                 }));
             }
 
-            bridge.readFromFile(file, {
+            bridge.readFileAsync(file, {
                 step: row => {
                     if (filter_func(row)) {
                         let row_idx = row_func(row);
@@ -176,7 +176,7 @@ let tables = (function() {
             }
 
             let rows = [];
-            bridge.readFromFile(file, {
+            bridge.readFileAsync(file, {
                 step: row => {
                     rows.push(row);
                 },
