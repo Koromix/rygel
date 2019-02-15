@@ -3139,6 +3139,8 @@ enum class OpenFileMode {
 
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
+void WaitForConsoleInterruption();
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------

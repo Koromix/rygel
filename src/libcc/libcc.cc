@@ -16,6 +16,7 @@
     #include <dirent.h>
     #include <fcntl.h>
     #include <fnmatch.h>
+    #include <signal.h>
     #include <sys/stat.h>
     #include <sys/types.h>
     #include <unistd.h>
@@ -1541,6 +1542,30 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
         LogError("Cannot open '%1': %2", path, strerror(errno));
     }
     return fp;
+}
+
+void WaitForConsoleInterruption()
+{
+#ifdef _WIN32
+    static HANDLE event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
+    Assert(event);
+
+    SetConsoleCtrlHandler([](DWORD) {
+        SetEvent(event);
+        return (BOOL)TRUE;
+    }, TRUE);
+
+    WaitForSingleObject(event, INFINITE);
+#else
+    static volatile bool run = true;
+
+    signal(SIGINT, [](int) { run = false; });
+    signal(SIGTERM, [](int) { run = false; });
+
+    while (run) {
+        pause();
+    }
+#endif
 }
 
 // ------------------------------------------------------------------------
