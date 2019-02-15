@@ -417,13 +417,13 @@ bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Spa
     return true;
 }
 
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *, Response *out_response)
+int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *out_response)
 {
     if (conn->user) {
-        out_response->flags |= (int)Response::Flag::DisableCache;
+        out_response->flags |= (int)http_Response::Flag::DisableCache;
     }
 
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
     char buf[32];
 
     json.StartObject();

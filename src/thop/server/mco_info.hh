@@ -5,10 +5,10 @@
 #pragma once
 
 #include "thop.hh"
-#include "response.hh"
+#include "../../wrappers/http.hh"
 
-int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response);
-int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response);
-int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, http_Response *out_response);
 
-int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_response);
+int ProduceMcoTree(const ConnectionInfo *conn, const char *url, http_Response *out_response);

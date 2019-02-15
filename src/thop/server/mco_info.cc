@@ -7,7 +7,7 @@
 #include "mco.hh"
 
 static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
-                               Response *out_response, const mco_TableIndex **out_index,
+                               http_Response *out_response, const mco_TableIndex **out_index,
                                Sector *out_sector = nullptr)
 {
     Date date = {};
@@ -19,7 +19,7 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
             LogError("Missing 'date' parameter");
         }
         if (!date.value)
-            return CreateErrorPage(422, out_response);
+            return http_ProduceErrorPage(422, out_response);
     }
 
     Sector sector = Sector::Public;
@@ -27,21 +27,21 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
         const char *sector_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
-            return CreateErrorPage(422, out_response);
+            return http_ProduceErrorPage(422, out_response);
         } else if (TestStr(sector_str, "public")) {
             sector = Sector::Public;
         } else if (TestStr(sector_str, "private")) {
             sector = Sector::Private;
         } else {
             LogError("Invalid 'sector' parameter");
-            return CreateErrorPage(422, out_response);
+            return http_ProduceErrorPage(422, out_response);
         }
     }
 
     const mco_TableIndex *index = mco_table_set.FindIndex(date);
     if (!index) {
         LogError("No table index available on '%1'", date);
-        return CreateErrorPage(404, out_response);
+        return http_ProduceErrorPage(404, out_response);
     }
 
     // Redirect to the canonical URL for this version, to improve client-side caching
@@ -65,7 +65,7 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
     return 0;
 }
 
-int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *out_response)
+int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
@@ -78,12 +78,12 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *o
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
                 LogError("Invalid diagnosis list specifier '%1'", spec_str);
-                return CreateErrorPage(422, out_response);
+                return http_ProduceErrorPage(422, out_response);
             }
         }
     }
 
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
     char buf[512];
 
     const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
@@ -134,7 +134,7 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, Response *o
     return json.Finish(out_response);
 }
 
-int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *out_response)
+int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
@@ -147,12 +147,12 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
                 LogError("Invalid procedure list specifier '%1'", spec_str);
-                return CreateErrorPage(422, out_response);
+                return http_ProduceErrorPage(422, out_response);
             }
         }
     }
 
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
     char buf[512];
 
     json.StartArray();
@@ -175,7 +175,7 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, Response *
     return json.Finish(out_response);
 }
 
-int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_response)
+int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, http_Response *out_response)
 {
     const mco_TableIndex *index;
     Sector sector;
@@ -185,7 +185,7 @@ int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, Response *out_
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
 
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
     char buf[512];
 
     json.StartArray();
@@ -617,7 +617,7 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_response)
+int ProduceMcoTree(const ConnectionInfo *conn, const char *url, http_Response *out_response)
 {
     const mco_TableIndex *index;
     if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
@@ -627,9 +627,9 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, Response *out_re
     BlockAllocator readable_nodes_alloc;
     HeapArray<ReadableGhmDecisionNode> readable_nodes;
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
-        return CreateErrorPage(500, out_response);
+        return http_ProduceErrorPage(500, out_response);
 
-    JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(conn->compression_type);
 
     json.StartArray();
     for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
