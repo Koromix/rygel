@@ -55,12 +55,21 @@ body {
     font-style: italic;
     text-align: right;
 } 
-.inpl_table tbody td {
-    color: white;
-    text-align: center;
-}
+.inpl_table tbody td { text-align: center; }
 
-.inpl_result_1 { background: #ff0000; }
-.inpl_result_2 { background: #ffc000; }
-.inpl_result_3 { background: #70ad47; }
-.inpl_result_0 { background: #aaa; }
+.inpl_result_1 {
+    background: #ff0000;
+    color: white;
+}
+.inpl_result_2 {
+    background: #ffc000;
+    color: white;
+}
+.inpl_result_3 {
+    background: #70ad47;
+    color: white;
+}
+.inpl_result_0 {
+    background: #aaa;
+    color: white;
+}

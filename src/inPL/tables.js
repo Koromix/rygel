@@ -25,7 +25,7 @@ let tables = (function() {
         {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: ems.screenAll}
     ];
 
-    function createScreeningHeader(handlers)
+    function createCategoryHeaders(handlers)
     {
         let groups = [];
         {
@@ -44,15 +44,12 @@ let tables = (function() {
             }
         }
 
-        return html('thead',
-            html('tr',
-                html('th', {rowspan: 2}),
-                groups.map(group => html('th', {colspan: group.colspan}, group.title))
-            ),
-            html('tr',
-                handlers.map(handler => html('th', {title: handler.title}, handler.abbrev))
-            )
-        );
+        return groups.map(group => html('th', {colspan: group.colspan}, group.title));
+    }
+
+    function createScreeningHeaders(handlers)
+    {
+        return handlers.map(handler => html('th', {title: handler.title}, handler.abbrev));
     }
 
     this.refreshSummary = function() {
@@ -125,7 +122,15 @@ let tables = (function() {
                 },
                 complete: () => {
                     summary.replaceContent(
-                        createScreeningHeader(handlers),
+                        html('thead',
+                            html('tr',
+                                html('th', {rowspan: 2}),
+                                createCategoryHeaders(handlers)
+                            ),
+                            html('tr',
+                                createScreeningHeaders(handlers)
+                            )
+                        ),
                         html('tbody')
                     );
                     let thead = summary.querySelector('thead');
@@ -184,7 +189,17 @@ let tables = (function() {
                     rows.sort((row1, row2) => row1.plid - row2.plid);
 
                     list.replaceContent(
-                        createScreeningHeader(ScreeningHandlers),
+                        html('thead',
+                            html('tr',
+                                html('th', {rowspan: 2}),
+                                html('th', {rowspan: 2}, 'Sexe'),
+                                html('th', {rowspan: 2}, 'Âge'),
+                                createCategoryHeaders(ScreeningHandlers)
+                            ),
+                            html('tr',
+                                createScreeningHeaders(ScreeningHandlers)
+                            )
+                        ),
                         html('tbody')
                     );
                     let tbody = list.querySelector('tbody');
@@ -192,6 +207,8 @@ let tables = (function() {
                     for (let row of rows) {
                         let tr = html('tr',
                             html('th', '' + row.plid),
+                            html('td', '' + (row.cs_sexe || '?')),
+                            html('td', '' + (row.rdv_age || '?')),
                             ScreeningHandlers.map(handler => resultCell(handler.func(row)))
                         );
 
