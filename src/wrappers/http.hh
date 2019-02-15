@@ -8,6 +8,18 @@
 #include "../libcc/libcc.hh"
 #include "json.hh"
 
+class http_Daemon {
+    MHD_Daemon *daemon = nullptr;
+
+public:
+    ~http_Daemon() { Stop(); }
+
+    std::function<void(void **con_cls, MHD_RequestTerminationCode code)> release_func;
+
+    bool Start(IPStack stack, int port, int threads, MHD_AccessHandlerCallback func);
+    void Stop();
+};
+
 struct http_Response {
     enum class Flag {
         DisableCache = 1 << 0,

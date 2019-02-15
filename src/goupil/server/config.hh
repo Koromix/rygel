@@ -7,15 +7,9 @@
 #include "../../libcc/libcc.hh"
 
 struct Config {
-    enum class IPVersion {
-        Dual,
-        IPv4,
-        IPv6
-    };
-
     const char *profile_directory = nullptr;
 
-    IPVersion ip_version = IPVersion::Dual;
+    IPStack ip_stack = IPStack::Dual;
     int port = 8888;
     int threads = 4;
     const char *base_url = "/";

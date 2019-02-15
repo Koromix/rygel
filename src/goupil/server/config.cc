@@ -8,12 +8,12 @@
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, profile_directory =  config.profile_directory,
-                        ip_version = config.ip_version,
+                        ip_stack = config.ip_stack,
                         port = config.port,
                         threads = config.threads,
                         base_url = config.base_url) {
         config.profile_directory = profile_directory;
-        config.ip_version = ip_version;
+        config.ip_stack = ip_stack;
         config.port = port;
         config.threads = threads;
         config.base_url = base_url;
@@ -41,13 +41,13 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
-                    if (prop.key == "IPVersion") {
+                    if (prop.key == "IPStack") {
                         if (prop.value == "Dual") {
-                            config.ip_version = Config::IPVersion::Dual;
+                            config.ip_stack = IPStack::Dual;
                         } else if (prop.value == "IPv4") {
-                            config.ip_version = Config::IPVersion::IPv4;
+                            config.ip_stack = IPStack::IPv4;
                         } else if (prop.value == "IPv6") {
-                            config.ip_version = Config::IPVersion::IPv6;
+                            config.ip_stack = IPStack::IPv6;
                         } else {
                             LogError("Unknown IP version '%1'", prop.value);
                         }
