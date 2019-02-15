@@ -10,7 +10,7 @@ int main(void)
     HeapArray<ConceptSet> concept_sets;
     EntitySet entity_set = {};
 
-    return !RunGuiApp(HEIMDALL_NAME, [&]() {
+    return !gui_RunApplication(HEIMDALL_NAME, [&]() {
         return Step(render_state, concept_sets, entity_set);
     });
 }

@@ -5,7 +5,7 @@
 #include "../libcc/libcc.hh"
 #include "opengl.hh"
 
-bool ogl_InitFunctions()
+bool ogl_InitFunctions(void *(*get_proc_address)(const char *name))
 {
     int gl_version;
     {
@@ -33,7 +33,7 @@ bool ogl_InitFunctions()
 #define OGL_FUNCTION(Cond, Type, Name, ...) \
         do { \
             if (Cond) { \
-                Name = (decltype(Name))ogl_GetProcAddress(#Name); \
+                Name = (decltype(Name))get_proc_address(#Name); \
                 if (!Name) { \
                     LogError("Required OpenGL function '%1' is not available",  #Name); \
                     return false; \
