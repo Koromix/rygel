@@ -1373,7 +1373,7 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
     // are off by one frame. We need to take over ImGui layout completely, because we
     // do know the window size!
     if (valid_frame) {
-        SwapGLBuffers();
+        ogl_SwapBuffers();
     }
 
     if (!g_io->main.run) {

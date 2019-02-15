@@ -10,14 +10,14 @@ PUSH_NO_WARNINGS()
 #include "../../lib/rapidjson/error/en.h"
 POP_NO_WARNINGS()
 
-class JsonStreamWriter {
+class json_StreamWriter {
     StreamWriter *st;
     LocalArray<uint8_t, 4096> buf;
 
 public:
     typedef char Ch;
 
-    JsonStreamWriter(StreamWriter *st) : st(st) {}
+    json_StreamWriter(StreamWriter *st) : st(st) {}
 
     void Put(char c)
     {
@@ -35,11 +35,11 @@ public:
     }
 };
 
-class JsonWriter : public rapidjson::Writer<JsonStreamWriter> {
-    JsonStreamWriter writer;
+class json_Writer : public rapidjson::Writer<json_StreamWriter> {
+    json_StreamWriter writer;
 
 public:
-    JsonWriter(StreamWriter *st) : rapidjson::Writer<JsonStreamWriter>(writer), writer(st) {}
+    json_Writer(StreamWriter *st) : rapidjson::Writer<json_StreamWriter>(writer), writer(st) {}
 
     void Flush() { writer.Flush(); }
 };

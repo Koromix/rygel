@@ -10,11 +10,11 @@
     #include <GLES3/gl3.h>
 
     #define GL_API GL_APICALL
-    #define GL_FUNCTION_PTR(Ret, Name, ...) \
+    #define OGL_FUNCTION_PTR(Ret, Name, ...) \
         Ret (GL_API *Name)(__VA_ARGS__)
 
-    #ifndef GL_NO_COMPAT
-        #define GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
+        #define OGL_NO_COMPAT
     #endif
 #else
     #ifdef _WIN32
@@ -22,7 +22,7 @@
     #else
         #define GL_API
     #endif
-    #define GL_FUNCTION_PTR(Ret, Name, ...) \
+    #define OGL_FUNCTION_PTR(Ret, Name, ...) \
         Ret (GL_API *Name)(__VA_ARGS__)
 
     // ------------------------------------------------------------------------
@@ -72,7 +72,7 @@
     #define GL_TRIANGLES 0x0004
     #define GL_TRIANGLE_STRIP 0x0005
     #define GL_TRIANGLE_FAN 0x0006
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_QUADS 0x0007
     #endif
     #define GL_NEVER 0x0200
@@ -154,7 +154,7 @@
     #define GL_LINE_SMOOTH_HINT 0x0C52
     #define GL_POLYGON_SMOOTH_HINT 0x0C53
     #define GL_UNPACK_SWAP_BYTES 0x0CF0
-    #ifndef GL_NO_COMPAT // Deprecated in 4.3
+    #ifndef OGL_NO_COMPAT // Deprecated in 4.3
         #define GL_UNPACK_LSB_FIRST 0x0CF1
     #endif
     #define GL_UNPACK_ROW_LENGTH 0x0CF2
@@ -162,7 +162,7 @@
     #define GL_UNPACK_SKIP_PIXELS 0x0CF4
     #define GL_UNPACK_ALIGNMENT 0x0CF5
     #define GL_PACK_SWAP_BYTES 0x0D00
-    #ifndef GL_NO_COMPAT // Deprecated in 4.3
+    #ifndef OGL_NO_COMPAT // Deprecated in 4.3
         #define GL_PACK_LSB_FIRST 0x0D01
     #endif
     #define GL_PACK_ROW_LENGTH 0x0D02
@@ -187,7 +187,7 @@
     #define GL_INT 0x1404
     #define GL_UNSIGNED_INT 0x1405
     #define GL_FLOAT 0x1406
-    #ifndef GL_NO_COMPAT // Deprecated in 4.3
+    #ifndef OGL_NO_COMPAT // Deprecated in 4.3
         #define GL_STACK_OVERFLOW 0x0503
         #define GL_STACK_UNDERFLOW 0x0504
     #endif
@@ -241,7 +241,7 @@
     #define GL_TEXTURE_WRAP_S 0x2802
     #define GL_TEXTURE_WRAP_T 0x2803
     #define GL_REPEAT 0x2901
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_CURRENT_BIT 0x00000001
         #define GL_POINT_BIT 0x00000002
         #define GL_LINE_BIT 0x00000004
@@ -527,7 +527,7 @@
     #define GL_RGB10_A2 0x8059
     #define GL_RGBA12 0x805A
     #define GL_RGBA16 0x805B
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_CLIENT_PIXEL_STORE_BIT 0x00000001
         #define GL_CLIENT_VERTEX_ARRAY_BIT 0x00000002
         #define GL_CLIENT_ALL_ATTRIB_BITS 0xFFFFFFFF
@@ -642,7 +642,7 @@
     #define GL_SMOOTH_LINE_WIDTH_RANGE 0x0B22
     #define GL_SMOOTH_LINE_WIDTH_GRANULARITY 0x0B23
     #define GL_ALIASED_LINE_WIDTH_RANGE 0x846E
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_RESCALE_NORMAL 0x803A
         #define GL_LIGHT_MODEL_COLOR_CONTROL 0x81F8
         #define GL_SINGLE_COLOR 0x81F9
@@ -708,12 +708,12 @@
     #define GL_TEXTURE_COMPRESSION_HINT 0x84EF
     #define GL_TEXTURE_COMPRESSED_IMAGE_SIZE 0x86A0
     #define GL_TEXTURE_COMPRESSED 0x86A1
-    #ifndef GL_NO_COMPAT // 4.2
+    #ifndef OGL_NO_COMPAT // 4.2
         #define GL_NUM_COMPRESSED_TEXTURE_FORMATS 0x86A2
         #define GL_COMPRESSED_TEXTURE_FORMATS 0x86A3
     #endif
     #define GL_CLAMP_TO_BORDER 0x812D
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_CLIENT_ACTIVE_TEXTURE 0x84E1
         #define GL_MAX_TEXTURE_UNITS 0x84E2
         #define GL_TRANSPOSE_MODELVIEW_MATRIX 0x84E3
@@ -771,7 +771,7 @@
     #define GL_TEXTURE_DEPTH_SIZE 0x884A
     #define GL_TEXTURE_COMPARE_MODE 0x884C
     #define GL_TEXTURE_COMPARE_FUNC 0x884D
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_POINT_SIZE_MIN 0x8126
         #define GL_POINT_SIZE_MAX 0x8127
         #define GL_POINT_DISTANCE_ATTENUATION 0x8129
@@ -837,7 +837,7 @@
     #define GL_SAMPLES_PASSED 0x8914
     #define GL_SRC1_ALPHA 0x8589
     #define GL_VERTEX_ARRAY_BUFFER_BINDING 0x8896
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_NORMAL_ARRAY_BUFFER_BINDING 0x8897
         #define GL_COLOR_ARRAY_BUFFER_BINDING 0x8898
         #define GL_INDEX_ARRAY_BUFFER_BINDING 0x8899
@@ -943,7 +943,7 @@
     #define GL_STENCIL_BACK_REF 0x8CA3
     #define GL_STENCIL_BACK_VALUE_MASK 0x8CA4
     #define GL_STENCIL_BACK_WRITEMASK 0x8CA5
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_VERTEX_PROGRAM_TWO_SIDE 0x8643
         #define GL_POINT_SPRITE 0x8861
         #define GL_COORD_REPLACE 0x8862
@@ -968,7 +968,7 @@
     #define GL_SRGB8_ALPHA8 0x8C43
     #define GL_COMPRESSED_SRGB 0x8C48
     #define GL_COMPRESSED_SRGB_ALPHA 0x8C49
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_CURRENT_RASTER_SECONDARY_COLOR 0x845F
         #define GL_SLUMINANCE_ALPHA 0x8C44
         #define GL_SLUMINANCE8_ALPHA8 0x8C45
@@ -1176,7 +1176,7 @@
     #define GL_RENDERBUFFER_STENCIL_SIZE 0x8D55
     #define GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE 0x8D56
     #define GL_MAX_SAMPLES 0x8D57
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_INDEX 0x8222
         #define GL_TEXTURE_LUMINANCE_TYPE 0x8C14
         #define GL_TEXTURE_INTENSITY_TYPE 0x8C15
@@ -1216,7 +1216,7 @@
     #define GL_RG32I 0x823B
     #define GL_RG32UI 0x823C
     #define GL_VERTEX_ARRAY_BINDING 0x85B5
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
         #define GL_CLAMP_VERTEX_COLOR 0x891A
         #define GL_CLAMP_FRAGMENT_COLOR 0x891B
         #define GL_ALPHA_INTEGER 0x8D97
@@ -1947,7 +1947,7 @@
 
     // OpenGL 1.0
 
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glAccum(GLenum op, GLfloat value);
     extern "C" void GL_API glAlphaFunc(GLenum func, GLfloat ref);
     extern "C" void GL_API glBegin(GLenum mode);
@@ -1955,21 +1955,21 @@
                                       GLfloat xmove, GLfloat ymove, const GLubyte *bitmap);
     #endif
     extern "C" void GL_API glBlendFunc(GLenum sfactor, GLenum dfactor);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glCallList(GLuint list);
     extern "C" void GL_API glCallLists(GLsizei n, GLenum type, const void *lists);
     #endif
     extern "C" void GL_API glClear(GLbitfield mask);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glClearAccum(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
     #endif
     extern "C" void GL_API glClearColor(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
     extern "C" void GL_API glClearDepth(GLdouble depth);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glClearIndex(GLfloat c);
     #endif
     extern "C" void GL_API glClearStencil(GLint s);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glClipPlane(GLenum plane, const GLdouble *equation);
     extern "C" void GL_API glColor3b(GLbyte red, GLbyte green, GLbyte blue);
     extern "C" void GL_API glColor3bv(const GLbyte *v);
@@ -2006,12 +2006,12 @@
     #endif
     extern "C" void GL_API glColorMask(GLboolean red, GLboolean green, GLboolean blue,
                                        GLboolean alpha);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glColorMaterial(GLenum face, GLenum mode);
     extern "C" void GL_API glCopyPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum type);
     #endif
     extern "C" void GL_API glCullFace(GLenum mode);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glDeleteLists(GLuint list, GLsizei range);
     #endif
     extern "C" void GL_API glDepthFunc(GLenum func);
@@ -2019,14 +2019,14 @@
     extern "C" void GL_API glDepthRange(GLdouble near, GLdouble far);
     extern "C" void GL_API glDisable(GLenum cap);
     extern "C" void GL_API glDrawBuffer(GLenum buf);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glDrawPixels(GLsizei width, GLsizei height, GLenum format, GLenum type,
                                         const void *pixels);
     extern "C" void GL_API glEdgeFlag(GLboolean flag);
     extern "C" void GL_API glEdgeFlagv(const GLboolean *flag);
     #endif
     extern "C" void GL_API glEnable(GLenum cap);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glEnd(void);
     extern "C" void GL_API glEndList(void);
     extern "C" void GL_API glEvalCoord1d(GLdouble u);
@@ -2045,27 +2045,27 @@
     #endif
     extern "C" void GL_API glFinish();
     extern "C" void GL_API glFlush();
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glFogf(GLenum pname, GLfloat param);
     extern "C" void GL_API glFogfv(GLenum pname, const GLfloat *params);
     extern "C" void GL_API glFogi(GLenum pname, GLint param);
     extern "C" void GL_API glFogiv(GLenum pname, const GLint *params);
     #endif
     extern "C" void GL_API glFrontFace(GLenum mode);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glFrustum(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top,
                                      GLdouble zNear, GLdouble zFar);
     extern "C" GLuint GL_API glGenLists(GLsizei range);
     #endif
     extern "C" void GL_API glGetBooleanv(GLenum pname, GLboolean *data);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glGetClipPlane(GLenum plane, GLdouble *equation);
     #endif
     extern "C" void GL_API glGetDoublev(GLenum pname, GLdouble *data);
     extern "C" GLenum GL_API glGetError();
     extern "C" void GL_API glGetFloatv(GLenum pname, GLfloat *data);
     extern "C" void GL_API glGetIntegerv(GLenum pname, GLint *data);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glGetLightfv(GLenum light, GLenum pname, GLfloat *params);
     extern "C" void GL_API glGetLightiv(GLenum light, GLenum pname, GLint *params);
     extern "C" void GL_API glGetMapdv(GLenum target, GLenum query, GLdouble *v);
@@ -2079,7 +2079,7 @@
     extern "C" void GL_API glGetPolygonStipple(GLubyte *mask);
     #endif
     extern "C" const GLubyte * GL_API glGetString(GLenum name);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glGetTexEnvfv(GLenum target, GLenum pname, GLfloat *params);
     extern "C" void GL_API glGetTexEnviv(GLenum target, GLenum pname, GLint *params);
     extern "C" void GL_API glGetTexGendv(GLenum coord, GLenum pname, GLdouble *params);
@@ -2095,7 +2095,7 @@
     extern "C" void GL_API glGetTexParameterfv(GLenum target, GLenum pname, GLfloat *params);
     extern "C" void GL_API glGetTexParameteriv(GLenum target, GLenum pname, GLint *params);
     extern "C" void GL_API glHint(GLenum target, GLenum mode);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glIndexMask(GLuint mask);
     extern "C" void GL_API glIndexd(GLdouble c);
     extern "C" void GL_API glIndexdv(const GLdouble *c);
@@ -2108,7 +2108,7 @@
     extern "C" void GL_API glInitNames(void);
     #endif
     extern "C" GLboolean GL_API glIsEnabled(GLenum cap);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" GLboolean GL_API glIsList(GLuint list);
     extern "C" void GL_API glLightModelf(GLenum pname, GLfloat param);
     extern "C" void GL_API glLightModelfv(GLenum pname, const GLfloat *params);
@@ -2121,7 +2121,7 @@
     extern "C" void GL_API glLineStipple(GLint factor, GLushort pattern);
     #endif
     extern "C" void GL_API glLineWidth(GLfloat width);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glListBase(GLuint base);
     extern "C" void GL_API glLoadIdentity(void);
     extern "C" void GL_API glLoadMatrixd(const GLdouble *m);
@@ -2129,7 +2129,7 @@
     extern "C" void GL_API glLoadName(GLuint name);
     #endif
     extern "C" void GL_API glLogicOp(GLenum opcode);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glMap1d(GLenum target, GLdouble u1, GLdouble u2, GLint stride, GLint order,
                                    const GLdouble *points);
     extern "C" void GL_API glMap1f(GLenum target, GLfloat u1, GLfloat u2, GLint stride, GLint order,
@@ -2173,14 +2173,14 @@
     #endif
     extern "C" void GL_API glPixelStoref(GLenum pname, GLfloat param);
     extern "C" void GL_API glPixelStorei(GLenum pname, GLint param);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glPixelTransferf(GLenum pname, GLfloat param);
     extern "C" void GL_API glPixelTransferi(GLenum pname, GLint param);
     extern "C" void GL_API glPixelZoom(GLfloat xfactor, GLfloat yfactor);
     #endif
     extern "C" void GL_API glPointSize(GLfloat size);
     extern "C" void GL_API glPolygonMode(GLenum face, GLenum mode);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glPolygonStipple(const GLubyte *mask);
     extern "C" void GL_API glPopAttrib(void);
     extern "C" void GL_API glPopMatrix(void);
@@ -2216,7 +2216,7 @@
     extern "C" void GL_API glReadBuffer(GLenum src);
     extern "C" void GL_API glReadPixels(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format,
                                         GLenum type, void *pixels);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glRectd(GLdouble x1, GLdouble y1, GLdouble x2, GLdouble y2);
     extern "C" void GL_API glRectdv(const GLdouble *v1, const GLdouble *v2);
     extern "C" void GL_API glRectf(GLfloat x1, GLfloat y1, GLfloat x2, GLfloat y2);
@@ -2232,14 +2232,14 @@
     extern "C" void GL_API glScalef(GLfloat x, GLfloat y, GLfloat z);
     #endif
     extern "C" void GL_API glScissor(GLint x, GLint y, GLsizei width, GLsizei height);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glSelectBuffer(GLsizei size, GLuint *buffer);
     extern "C" void GL_API glShadeModel(GLenum mode);
     #endif
     extern "C" void GL_API glStencilFunc(GLenum func, GLint ref, GLuint mask);
     extern "C" void GL_API glStencilMask(GLuint mask);
     extern "C" void GL_API glStencilOp(GLenum fail, GLenum zfail, GLenum zpass);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glTexCoord1d(GLdouble s);
     extern "C" void GL_API glTexCoord1dv(const GLdouble *v);
     extern "C" void GL_API glTexCoord1f(GLfloat s);
@@ -2293,7 +2293,7 @@
     extern "C" void GL_API glTexParameterfv(GLenum target, GLenum pname, const GLfloat *params);
     extern "C" void GL_API glTexParameteri(GLenum target, GLenum pname, GLint param);
     extern "C" void GL_API glTexParameteriv(GLenum target, GLenum pname, const GLint *params);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glTranslated(GLdouble x, GLdouble y, GLdouble z);
     extern "C" void GL_API glTranslatef(GLfloat x, GLfloat y, GLfloat z);
     extern "C" void GL_API glVertex2d(GLdouble x, GLdouble y);
@@ -2325,13 +2325,13 @@
 
     // OpenGL 1.1
 
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" GLboolean GL_API glAreTexturesResident(GLsizei n, const GLuint *textures,
                                                       GLboolean *residences);
     extern "C" void GL_API glArrayElement(GLint i);
     #endif
     extern "C" void GL_API glBindTexture(GLenum target, GLuint texture);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glColorPointer(GLint size, GLenum type, GLsizei stride,
                                           const void *pointer);
     #endif
@@ -2346,30 +2346,30 @@
                                                GLint yoffset, GLint x, GLint y, GLsizei width,
                                                GLsizei height);
     extern "C" void GL_API glDeleteTextures(GLsizei n, const GLuint *textures);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glDisableClientState(GLenum array);
     #endif
     extern "C" void GL_API glDrawArrays(GLenum mode, GLint first, GLsizei count);
     extern "C" void GL_API glDrawElements(GLenum mode, GLsizei count, GLenum type,
                                           const void *indices);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glEdgeFlagPointer(GLsizei stride, const void *pointer);
     extern "C" void GL_API glEnableClientState(GLenum array);
     #endif
     extern "C" void GL_API glGenTextures(GLsizei n, GLuint *textures);
     extern "C" void GL_API glGetPointerv(GLenum pname, void **params); // Undeprecated in 4.3
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glIndexPointer(GLenum type, GLsizei stride, const void *pointer);
     extern "C" void GL_API glIndexub(GLubyte c);
     extern "C" void GL_API glIndexubv(const GLubyte *c);
     extern "C" void GL_API glInterleavedArrays(GLenum format, GLsizei stride, const void *pointer);
     #endif
     extern "C" GLboolean GL_API glIsTexture(GLuint texture);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glNormalPointer(GLenum type, GLsizei stride, const void *pointer);
     #endif
     extern "C" void GL_API glPolygonOffset(GLfloat factor, GLfloat units);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glPopClientAttrib(void);
     extern "C" void GL_API glPrioritizeTextures(GLsizei n, const GLuint *textures,
                                                 const GLfloat *priorities);
@@ -2382,7 +2382,7 @@
     extern "C" void GL_API glTexSubImage2D(GLenum target, GLint level, GLint xoffset, GLint yoffset,
                                            GLsizei width, GLsizei height, GLenum format, GLenum type,
                                            const void *pixels);
-    #ifndef GL_NO_COMPAT
+    #ifndef OGL_NO_COMPAT
     extern "C" void GL_API glVertexPointer(GLint size, GLenum type, GLsizei stride,
                                            const void *pointer);
     #endif
@@ -2393,17 +2393,17 @@
 // ------------------------------------------------------------------------
 
 // Platform-specific
-void *GetGLProcAddress(const char *name);
-void SwapGLBuffers();
+void *ogl_GetProcAddress(const char *name);
+void ogl_SwapBuffers();
 
 // Generic
-bool InitGLFunctions();
-GLuint BuildGLShader(const char *name, const char *vertex_src, const char *fragment_src);
+bool ogl_InitFunctions();
+GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fragment_src);
 
 // ------------------------------------------------------------------------
 // Function pointers
 // ------------------------------------------------------------------------
 
-#define GL_FUNCTION(Cond, ...) \
-    extern FORCE_EXPAND(GL_FUNCTION_PTR(__VA_ARGS__))
+#define OGL_FUNCTION(Cond, ...) \
+    extern FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
 #include "opengl_func.inc"
