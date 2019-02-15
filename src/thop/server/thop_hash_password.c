@@ -17,7 +17,7 @@
     #include <unistd.h>
 #endif
 
-bool get_password_safe(char *out_buf, int out_buf_size)
+static bool get_password_safe(char *out_buf, int out_buf_size)
 {
 #ifdef _WIN32
     int len = 0;
