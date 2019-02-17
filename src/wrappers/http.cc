@@ -10,20 +10,148 @@ static void ReleaseDataCallback(void *ptr)
     Allocator::Release(nullptr, ptr, -1);
 }
 
-static void RequestCompletedCallback(void *cls, MHD_Connection *, void **con_cls,
-                                     MHD_RequestTerminationCode toe)
+static int NegociateContentEncoding(MHD_Connection *conn, CompressionType *out_compression_type,
+                                    http_Response *out_response)
 {
-    const http_Daemon &daemon = *(const http_Daemon *)cls;
+    const char *accept_str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "Accept-Encoding");
+    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
-    if (daemon.release_func) {
-        daemon.release_func(con_cls, toe);
+    if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
+        *out_compression_type = CompressionType::Gzip;
+        return 0;
+    } else if (acceptable_encodings) {
+        *out_compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
+        return 0;
+    } else {
+        return http_ProduceErrorPage(406, out_response);
     }
 }
 
-bool http_Daemon::Start(IPStack stack, int port, int threads, MHD_AccessHandlerCallback func)
+int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
+                               const char *, const char *upload_data, size_t *upload_data_size,
+                               void **con_cls)
+{
+    http_Daemon *daemon = (http_Daemon *)cls;
+    http_Request *request = *(http_Request **)con_cls;
+
+    http_Response response = {};
+
+    // Init request data
+    if (!request) {
+        request = new http_Request();
+        *con_cls = request;
+
+        request->conn = conn;
+        request->method = method;
+
+        // Trim URL prefix (base_url setting)
+        for (Size i = 0; daemon->base_url[i]; i++, url++) {
+            if (url[0] != daemon->base_url[i]) {
+                if (!url[0] && daemon->base_url[i] == '/' && !daemon->base_url[i + 1]) {
+                    MHD_Response *response =
+                        MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+                    MHD_add_response_header(response, "Location", daemon->base_url);
+                    return 303;
+                } else {
+                    return http_ProduceErrorPage(404, &response);
+                }
+            }
+        }
+        request->url = --url;
+
+        if (int code = NegociateContentEncoding(conn, &request->compression_type, &response); code)
+            return MHD_queue_response(conn, (unsigned int)code, response.response.get());
+    }
+
+    // Process POST data if any
+    if (TestStr(method, "POST")) {
+        if (!request->pp) {
+            request->pp = MHD_create_post_processor(conn, Kibibytes(32),
+                                                    [](void *cls, enum MHD_ValueKind, const char *key,
+                                                       const char *, const char *, const char *,
+                                                       const char *data, uint64_t, size_t) {
+                http_Request *request = (http_Request *)cls;
+
+                key = DuplicateString(key, &request->temp_alloc).ptr;
+                data = DuplicateString(data, &request->temp_alloc).ptr;
+                request->post.Append(key, data);
+
+                return MHD_YES;
+            }, request);
+            if (!request->pp) {
+                http_ProduceErrorPage(422, &response);
+                return MHD_queue_response(conn, 422, response.response.get());
+            }
+
+            return MHD_YES;
+        } else if (*upload_data_size) {
+            if (MHD_post_process(request->pp, upload_data, *upload_data_size) != MHD_YES) {
+                http_ProduceErrorPage(422, &response);
+                return MHD_queue_response(conn, 422, response.response.get());
+            }
+
+            *upload_data_size = 0;
+            return MHD_YES;
+        }
+    }
+
+    // Only cache GET requests by default
+    if (!TestStr(request->method, "GET")) {
+        response.flags |= (int)http_Response::Flag::DisableCache;
+    }
+
+    // Run real handler
+    int code = daemon->handle_func(*request, &response);
+    return MHD_queue_response(conn, (unsigned int)code, response.response.get());
+}
+
+void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
+                                   MHD_RequestTerminationCode toe)
+{
+    const http_Daemon &daemon = *(const http_Daemon *)cls;
+    http_Request *request = (http_Request *)*con_cls;
+
+    if (request) {
+        if (daemon.release_func) {
+            daemon.release_func(*request, toe);
+        }
+
+        if (request->pp) {
+            MHD_destroy_post_processor(request->pp);
+        }
+        delete request;
+    }
+}
+
+bool http_Daemon::Start(IPStack stack, int port, int threads, const char *base_url)
 {
     Assert(!daemon);
 
+    DebugAssert(handle_func);
+    DebugAssert(base_url);
+
+    // Validate configuration
+    {
+        bool valid = true;
+
+        if (port < 1 || port > UINT16_MAX) {
+            LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
+            valid = false;
+        }
+        if (threads < 0 || threads > 128) {
+            LogError("HTTP threads %1 is invalid (range: 0 - 128)", threads);
+            valid = false;
+        }
+        if (base_url[0] != '/' || base_url[strlen(base_url) - 1] != '/') {
+            LogError("Base URL '%1' does not start and end with '/'", base_url);
+            valid = false;
+        }
+
+        if (!valid)
+            return false;
+    }
+
+    // MHD options
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_USE_ERROR_LOG;
     LocalArray<MHD_OptionItem, 16> mhd_options;
     switch (stack) {
@@ -41,9 +169,11 @@ bool http_Daemon::Start(IPStack stack, int port, int threads, MHD_AccessHandlerC
     flags |= MHD_USE_DEBUG;
 #endif
 
-    daemon = MHD_start_daemon(flags, (int16_t)port, nullptr, nullptr, func, nullptr,
-                              MHD_OPTION_NOTIFY_COMPLETED, RequestCompletedCallback, this,
+    daemon = MHD_start_daemon(flags, (int16_t)port, nullptr, nullptr,
+                              &http_Daemon::HandleRequest, this,
+                              MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
                               MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
+    this->base_url = base_url;
 
     return daemon;
 }
@@ -81,6 +211,19 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
     }
 
     MHD_add_response_header(response.get(), "Set-Cookie", cookie_buf);
+}
+
+void http_Response::AddCachingHeaders(const char *etag)
+{
+    if (!(flags & (int)http_Response::Flag::DisableCacheControl)) {
+        MHD_add_response_header(response.get(), "Cache-Control", "max-age=3600");
+    } else {
+        MHD_add_response_header(response.get(), "Cache-Control", "no-store");
+    }
+
+    if (etag && !(flags & (int)http_Response::Flag::DisableETag)) {
+        MHD_add_response_header(response.get(), "ETag", etag);
+    }
 }
 
 const char *http_GetMimeType(Span<const char> extension)

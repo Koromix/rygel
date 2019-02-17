@@ -4,11 +4,12 @@
 
 #pragma once
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
+#include "user.hh"
 #include "../../wrappers/http.hh"
 
-int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Response *out_response);
-int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Response *out_response);
-int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+int ProduceMcoDiagnoses(const http_Request &request, const User *user, http_Response *out_response);
+int ProduceMcoProcedures(const http_Request &request, const User *user, http_Response *out_response);
+int ProduceMcoGhmGhs(const http_Request &request, const User *user, http_Response *out_response);
 
-int ProduceMcoTree(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+int ProduceMcoTree(const http_Request &request, const User *user, http_Response *out_response);

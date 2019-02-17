@@ -4,8 +4,9 @@
 
 #pragma once
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
+#include "user.hh"
 #include "../../wrappers/http.hh"
 
-int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response *out_response);
-int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *out_response);
+int ProduceMcoAggregate(const http_Request &request, const User *user, http_Response *out_response);
+int ProduceMcoResults(const http_Request &request, const User *user, http_Response *out_response);

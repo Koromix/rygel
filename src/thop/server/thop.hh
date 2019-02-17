@@ -5,27 +5,11 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "../../../lib/libmicrohttpd/src/include/microhttpd.h"
 #include "../../libdrd/libdrd.hh"
-#include "../../wrappers/json.hh"
 
 struct Config;
 struct StructureSet;
 struct UserSet;
-struct User;
-
-struct ConnectionInfo {
-    MHD_Connection *conn;
-
-    const User *user;
-    bool user_mismatch;
-    HashMap<const char *, Span<const char>> post;
-    CompressionType compression_type;
-
-    MHD_PostProcessor *pp = nullptr;
-
-    BlockAllocator temp_alloc;
-};
 
 extern Config thop_config;
 extern bool thop_has_casemix;

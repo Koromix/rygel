@@ -2,10 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
 #include "mco.hh"
 #include "config.hh"
 #include "structure.hh"
+#include "thop.hh"
 #include "user.hh"
 
 mco_TableSet mco_table_set;
@@ -417,13 +418,13 @@ bool McoResultProvider::RunDirect(std::function<void(Span<const mco_Result>, Spa
     return true;
 }
 
-int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *out_response)
+int ProduceMcoSettings(const http_Request &request, const User *user, http_Response *out_response)
 {
-    if (conn->user) {
+    if (user) {
         out_response->flags |= (int)http_Response::Flag::DisableCache;
     }
 
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
     char buf[32];
 
     json.StartObject();
@@ -448,7 +449,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *
     }
     json.EndArray();
 
-    if (conn->user) {
+    if (user) {
         json.Key("start_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[0]).ptr);
         json.Key("end_date"); json.String(Fmt(buf, "%1", mco_stay_set_dates[1]).ptr);
 
@@ -458,7 +459,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *
 
             json.Key("algorithms"); json.StartArray();
             for (Size i = 0; i < ARRAY_SIZE(mco_DispenseModeOptions); i++) {
-                if (conn->user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
+                if (user->CheckMcoDispenseMode((mco_DispenseMode)i)) {
                     const OptionDesc &desc = mco_DispenseModeOptions[i];
 
                     json.StartObject();
@@ -474,7 +475,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *
 
         json.Key("permissions"); json.StartArray();
         for (Size i = 0; i < ARRAY_SIZE(UserPermissionNames); i++) {
-            if (conn->user->permissions & (1 << i)) {
+            if (user->permissions & (1 << i)) {
                 json.String(UserPermissionNames[i]);
             }
         }
@@ -486,7 +487,7 @@ int ProduceMcoSettings(const ConnectionInfo *conn, const char *, http_Response *
             json.Key("name"); json.String(structure.name);
             json.Key("entities"); json.StartArray();
             for (const StructureEntity &ent: structure.entities) {
-                if (conn->user->mco_allowed_units.Find(ent.unit)) {
+                if (user->mco_allowed_units.Find(ent.unit)) {
                     json.StartObject();
                     json.Key("unit"); json.Int(ent.unit.number);
                     json.Key("path"); json.String(ent.path);

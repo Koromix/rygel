@@ -4,7 +4,8 @@
 
 #pragma once
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
+#include "../../libdrd/libdrd.hh"
 
 struct Config {
     HeapArray<const char *> table_directories;

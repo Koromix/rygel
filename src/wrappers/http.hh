@@ -8,22 +8,11 @@
 #include "../libcc/libcc.hh"
 #include "json.hh"
 
-class http_Daemon {
-    MHD_Daemon *daemon = nullptr;
-
-public:
-    ~http_Daemon() { Stop(); }
-
-    std::function<void(void **con_cls, MHD_RequestTerminationCode code)> release_func;
-
-    bool Start(IPStack stack, int port, int threads, MHD_AccessHandlerCallback func);
-    void Stop();
-};
-
 struct http_Response {
     enum class Flag {
-        DisableCache = 1 << 0,
-        DisableETag = 1 << 1
+        DisableCacheControl = 1 << 0,
+        DisableETag = 1 << 1,
+        DisableCache = (int)DisableCacheControl | (int)DisableETag
     };
 
     struct ResponseDeleter {
@@ -42,17 +31,40 @@ struct http_Response {
     void AddEncodingHeader(CompressionType compression_type);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
+    void AddCachingHeaders(const char *etag = nullptr);
 };
 
-struct http_Connection {
+struct http_Request {
     MHD_Connection *conn;
 
-    HashMap<const char *, Span<const char>> post;
+    const char *method;
+    const char *url;
     CompressionType compression_type;
+    HashMap<const char *, Span<const char>> post;
 
-    MHD_PostProcessor *pp = nullptr;
-
+    MHD_PostProcessor *pp;
     BlockAllocator temp_alloc;
+};
+
+class http_Daemon {
+    MHD_Daemon *daemon = nullptr;
+    const char *base_url;
+
+public:
+    ~http_Daemon() { Stop(); }
+
+    std::function<int(const http_Request &request, http_Response *out_response)> handle_func;
+    std::function<void(const http_Request &request, MHD_RequestTerminationCode code)> release_func;
+
+    bool Start(IPStack stack, int port, int threads, const char *base_url);
+    void Stop();
+
+private:
+    static int HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
+                             const char *, const char *upload_data, size_t *upload_data_size,
+                             void **con_cls);
+    static void RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
+                                 MHD_RequestTerminationCode toe);
 };
 
 const char *http_GetMimeType(Span<const char> extension);

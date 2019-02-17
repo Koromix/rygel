@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
 #include "mco_casemix.hh"
 #include "mco.hh"
 #include "user.hh"
@@ -367,9 +367,9 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
     }
 }
 
-int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response *out_response)
+int ProduceMcoAggregate(const http_Request &request, const User *user, http_Response *out_response)
 {
-    if (!conn->user)
+    if (!user)
         return http_ProduceErrorPage(403, out_response);
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 
@@ -380,19 +380,19 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficient = false;
     mco_GhmRootCode ghm_root = {};
-    if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
+    if (int code = GetQueryDateRange(request.conn, "period", out_response, &period[0], &period[1]); code)
         return code;
-    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "diff")) {
-        if (int code = GetQueryDateRange(conn->conn, "diff", out_response, &diff[0], &diff[1]); code)
+    if (MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "diff")) {
+        if (int code = GetQueryDateRange(request.conn, "diff", out_response, &diff[0], &diff[1]); code)
             return code;
     }
-    filter = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "filter");
-    if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
+    filter = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "filter");
+    if (int code = GetQueryDispenseMode(request.conn, "dispense_mode", out_response, &dispense_mode); code)
         return code;
-    if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficient); code)
+    if (int code = GetQueryApplyCoefficient(request.conn, "apply_coefficient", out_response, &apply_coefficient); code)
         return code;
-    if (MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
-        if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+    if (MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
+        if (int code = GetQueryGhmRoot(request.conn, "ghm_root", out_response, &ghm_root); code)
             return code;
     }
 
@@ -401,11 +401,11 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
         LogError("Parameters 'period' and 'diff' must not overlap");
         return http_ProduceErrorPage(422, out_response);
     }
-    if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
+    if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return http_ProduceErrorPage(403, out_response);
     }
-    if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
+    if (filter && !(user->permissions & (int)UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
         return http_ProduceErrorPage(403, out_response);
     }
@@ -413,7 +413,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
     // Prepare query
     McoResultProvider provider;
     int flags;
-    provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
+    provider.SetFilter(filter, user->permissions & (int)UserPermission::MutateFilter);
     if (ghm_root.IsValid()) {
         provider.SetGhmRoot(ghm_root);
         flags = (int)AggregationFlag::KeyOnUnits | (int)AggregationFlag::KeyOnDuration;
@@ -425,7 +425,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
     AggregateSet aggregate_set;
     HeapArray<mco_GhmRootCode> ghm_roots;
     {
-        AggregateSetBuilder aggregate_set_builder(conn->user, flags);
+        AggregateSetBuilder aggregate_set_builder(user, flags);
 
         // Reuse for performance
         HeapArray<mco_Pricing> pricings;
@@ -463,7 +463,7 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
     }
 
     // Export data
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
     char buf[32];
 
     json.StartObject();
@@ -524,9 +524,9 @@ int ProduceMcoAggregate(const ConnectionInfo *conn, const char *, http_Response 
     return json.Finish(out_response);
 }
 
-int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *out_response)
+int ProduceMcoResults(const http_Request &request, const User *user, http_Response *out_response)
 {
-    if (!conn->user || !(conn->user->permissions & (int)UserPermission::FullResults))
+    if (!user || !(user->permissions & (int)UserPermission::FullResults))
         return http_ProduceErrorPage(403, out_response);
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 
@@ -536,22 +536,22 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *o
     const char *filter;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
-    if (int code = GetQueryDateRange(conn->conn, "period", out_response, &period[0], &period[1]); code)
+    if (int code = GetQueryDateRange(request.conn, "period", out_response, &period[0], &period[1]); code)
         return code;
-    if (int code = GetQueryGhmRoot(conn->conn, "ghm_root", out_response, &ghm_root); code)
+    if (int code = GetQueryGhmRoot(request.conn, "ghm_root", out_response, &ghm_root); code)
         return code;
-    filter = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "filter");
-    if (int code = GetQueryDispenseMode(conn->conn, "dispense_mode", out_response, &dispense_mode); code)
+    filter = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "filter");
+    if (int code = GetQueryDispenseMode(request.conn, "dispense_mode", out_response, &dispense_mode); code)
         return code;
-    if (int code = GetQueryApplyCoefficient(conn->conn, "apply_coefficient", out_response, &apply_coefficent); code)
+    if (int code = GetQueryApplyCoefficient(request.conn, "apply_coefficient", out_response, &apply_coefficent); code)
         return code;
 
     // Check permissions
-    if (!conn->user->CheckMcoDispenseMode(dispense_mode)) {
+    if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
         return http_ProduceErrorPage(403, out_response);
     }
-    if (filter && !(conn->user->permissions & (int)UserPermission::UseFilter)) {
+    if (filter && !(user->permissions & (int)UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
         return http_ProduceErrorPage(403, out_response);
     }
@@ -559,7 +559,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *o
     // Prepare query
     McoResultProvider provider;
     provider.SetDateRange(period[0], period[1]);
-    provider.SetFilter(filter, conn->user->permissions & (int)UserPermission::MutateFilter);
+    provider.SetFilter(filter, user->permissions & (int)UserPermission::MutateFilter);
     provider.SetGhmRoot(ghm_root);
 
     // Reuse for performance
@@ -567,7 +567,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *o
     HeapArray<mco_Pricing> mono_pricings;
 
     // Export data
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
     bool success = provider.Run([&](Span<const mco_Result> results,
@@ -631,7 +631,7 @@ int ProduceMcoResults(const ConnectionInfo *conn, const char *, http_Response *o
                     json.Key("duration"); json.Int(mono_result.duration);
                 }
                 json.Key("unit"); json.Int(stay.unit.number);
-                if (conn->user->mco_allowed_units.Find(stay.unit)) {
+                if (user->mco_allowed_units.Find(stay.unit)) {
                     json.Key("sex"); json.Int(stay.sex);
                     json.Key("age"); json.Int(mono_result.age);
                     json.Key("birthdate"); json.String(Fmt(buf, "%1", stay.birthdate).ptr);

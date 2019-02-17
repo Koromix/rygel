@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "../../libcc/libcc.hh"
 #include "../../libdrd/libdrd.hh"
 
 struct StructureEntity {

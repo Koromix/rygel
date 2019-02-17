@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
+#include "structure.hh"
+#include "../../libdrd/libdrd.hh"
 #include "../../wrappers/http.hh"
 
 struct StructureEntity;
@@ -74,5 +76,5 @@ bool LoadUserSet(Span<const char *const> filenames, const StructureSet &structur
 const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch = nullptr);
 void DeleteSessionCookies(http_Response *response);
 
-int HandleConnect(const ConnectionInfo *conn, const char *url, http_Response *out_response);
-int HandleDisconnect(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+int HandleConnect(const http_Request &request, const User *user, http_Response *out_response);
+int HandleDisconnect(const http_Request &request, const User *user, http_Response *out_response);
