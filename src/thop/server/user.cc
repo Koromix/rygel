@@ -10,9 +10,10 @@
 #endif
 
 #include "../../../lib/libsodium/src/libsodium/include/sodium.h"
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "structure.hh"
+#include "thop.hh"
 #include "user.hh"
 
 static const int64_t PruneDelay = 20 * 60 * 1000;
@@ -376,15 +377,15 @@ void DeleteSessionCookies(http_Response *response)
     response->AddCookieHeader(thop_config.base_url, "username", nullptr);
 }
 
-int HandleConnect(const ConnectionInfo *conn, const char *, http_Response *out_response)
+int HandleConnect(const http_Request &request, const User *, http_Response *out_response)
 {
     char address[65];
-    if (!GetClientAddress(conn->conn, address))
+    if (!GetClientAddress(request.conn, address))
         return http_ProduceErrorPage(500, out_response);
 
-    const char *username = conn->post.FindValue("username", nullptr).ptr;
-    const char *password = conn->post.FindValue("password", nullptr).ptr;
-    const char *user_agent = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "User-Agent");
+    const char *username = request.post.FindValue("username", nullptr).ptr;
+    const char *password = request.post.FindValue("password", nullptr).ptr;
+    const char *user_agent = MHD_lookup_connection_value(request.conn, MHD_HEADER_KIND, "User-Agent");
     if (!username || !password || !user_agent)
         return http_ProduceErrorPage(422, out_response);
 
@@ -419,7 +420,7 @@ int HandleConnect(const ConnectionInfo *conn, const char *, http_Response *out_r
         std::unique_lock<std::shared_mutex> lock(sessions_mutex);
 
         // Drop current session (if any)
-        sessions.Remove(FindSession(conn->conn));
+        sessions.Remove(FindSession(request.conn));
 
         // std::atomic objects are not copyable so we can't use Append()
         Session *session;
@@ -452,12 +453,12 @@ int HandleConnect(const ConnectionInfo *conn, const char *, http_Response *out_r
     return 200;
 }
 
-int HandleDisconnect(const ConnectionInfo *conn, const char *, http_Response *out_response)
+int HandleDisconnect(const http_Request &request, const User *, http_Response *out_response)
 {
     // Drop session
     {
         std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-        sessions.Remove(FindSession(conn->conn));
+        sessions.Remove(FindSession(request.conn));
     }
 
     MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);

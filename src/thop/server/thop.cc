@@ -11,6 +11,7 @@
 #endif
 
 #include "../../../lib/libsodium/src/libsodium/include/sodium.h"
+#include "../../libcc/libcc.hh"
 #include "thop.hh"
 #include "config.hh"
 #include "structure.hh"
@@ -27,17 +28,17 @@ struct CatalogSet {
 };
 
 struct Route {
-    enum class Type {
-        Static,
-        Function
-    };
     enum class Matching {
         Exact,
         Walk
     };
+    enum class Type {
+        Asset,
+        Function
+    };
 
-    Span<const char> url;
     const char *method;
+    Span<const char> url;
     Matching matching;
 
     Type type;
@@ -47,23 +48,8 @@ struct Route {
             const char *mime_type;
         } st;
 
-        int (*func)(const ConnectionInfo *conn, const char *url, http_Response *out_response);
+        int (*func)(const http_Request &request, const User *user, http_Response *out_response);
     } u;
-
-    Route() = default;
-    Route(const char *url, const char *method, Matching matching,
-          const PackerAsset &asset, const char *mime_type)
-        : url(url), method(method), matching(matching), type(Type::Static)
-    {
-        u.st.asset = asset;
-        u.st.mime_type = mime_type;
-    }
-    Route(const char *url, const char *method, Matching matching,
-          int (*func)(const ConnectionInfo *conn, const char *url, http_Response *out_response))
-        : url(url), method(method), matching(matching), type(Type::Function)
-    {
-        u.func = func;
-    }
 
     HASH_TABLE_HANDLER(Route, url);
 };
@@ -194,60 +180,82 @@ static void InitRoutes()
     routes.Clear();
     routes_alloc.ReleaseAll();
 
-    // Static assets
-    Assert(packer_assets.len > 0);
-    for (const PackerAsset &asset: packer_assets) {
-        const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
-        const char *mime_type = http_GetMimeType(GetPathExtension(asset.name));
+    const auto add_asset_route = [&](const char *method, const char *url,
+                                     Route::Matching matching, const PackerAsset &asset) {
+        Route route = {};
 
-        routes.Set({url, "GET", Route::Matching::Exact, asset, mime_type});
+        route.method = method;
+        route.url = url;
+        route.matching = matching;
+        route.type = Route::Type::Asset;
+        route.u.st.asset = asset;
+        route.u.st.mime_type = http_GetMimeType(GetPathExtension(asset.name));
+
+        routes.Append(route);
+    };
+    const auto add_function_route = [&](const char *method, const char *url,
+                                   int (*func)(const http_Request &request, const User *user,
+                                               http_Response *out_response)) {
+        Route route = {};
+
+        route.method = method;
+        route.url = url;
+        route.matching = Route::Matching::Exact;
+        route.type = Route::Type::Function;
+        route.u.func = func;
+
+        routes.Append(route);
+    };
+
+    // Static assets and catalogs
+    PackerAsset html = {};
+    DebugAssert(packer_assets.len > 0);
+    for (const PackerAsset &asset: packer_assets) {
+        if (TestStr(asset.name, "thop.html")) {
+            html = asset;
+        } else if (TestStr(asset.name, "favicon.png")) {
+            add_asset_route("GET", "/favicon.png", Route::Matching::Exact, asset);
+        } else {
+            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+            add_asset_route("GET", url, Route::Matching::Exact, asset);
+        }
     }
+    for (const PackerAsset &desc: catalog_set.catalogs) {
+        const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
+        add_asset_route("GET", url, Route::Matching::Exact, desc);
+    }
+    DebugAssert(html.name);
 
     // Patch HTML
-    Route html = *routes.Find("/static/thop.html");
     {
-        StreamReader st(html.u.st.asset.data, nullptr, html.u.st.asset.compression_type);
+        StreamReader st(html.data, nullptr, html.compression_type);
         HeapArray<uint8_t> buf(&routes_alloc);
         Assert(PatchTextFile(st, &buf));
 
-        html.u.st.asset.data = buf.Leak();
-    }
-
-    // Catalogs
-    for (const PackerAsset &desc: catalog_set.catalogs) {
-        const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
-        routes.Set({url, "GET", Route::Matching::Exact, desc, http_GetMimeType(GetPathExtension(url))});
+        html.data = buf.Leak();
     }
 
     // Root
-    routes.Set({"/", "GET", Route::Matching::Exact, html.u.st.asset, html.u.st.mime_type});
+    add_asset_route("GET", "/", Route::Matching::Exact, html);
+    add_asset_route("GET", "/login", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_casemix", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_list", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_pricing", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_results", Route::Matching::Walk, html);
+    add_asset_route("GET", "/mco_tree", Route::Matching::Walk, html);
 
-    // User
-    routes.Set({"/login", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/connect.json", "POST", Route::Matching::Exact, HandleConnect});
-    routes.Set({"/api/disconnect.json", "POST", Route::Matching::Exact, HandleDisconnect});
+    // User API
+    add_function_route("POST", "/api/connect.json", HandleConnect);
+    add_function_route("POST", "/api/disconnect.json", HandleDisconnect);
 
-    // MCO
-    routes.Set({"/mco_casemix", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/mco_list", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/mco_pricing", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/mco_results", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/mco_tree", "GET", Route::Matching::Walk, html.u.st.asset, html.u.st.mime_type});
-    routes.Set({"/api/mco_aggregate.json", "GET", Route::Matching::Exact, ProduceMcoAggregate});
-    routes.Set({"/api/mco_results.json", "GET", Route::Matching::Exact, ProduceMcoResults});
-    routes.Set({"/api/mco_settings.json", "GET", Route::Matching::Exact, ProduceMcoSettings});
-    routes.Set({"/api/mco_diagnoses.json", "GET", Route::Matching::Exact, ProduceMcoDiagnoses});
-    routes.Set({"/api/mco_procedures.json", "GET", Route::Matching::Exact, ProduceMcoProcedures});
-    routes.Set({"/api/mco_ghm_ghs.json", "GET", Route::Matching::Exact, ProduceMcoGhmGhs});
-    routes.Set({"/api/mco_tree.json", "GET", Route::Matching::Exact, ProduceMcoTree});
-
-    // Special cases
-    if (Route *favicon = routes.Find("/static/favicon.png"); favicon) {
-        routes.Set({"/favicon.png", "GET", Route::Matching::Exact,
-                    favicon->u.st.asset, favicon->u.st.mime_type});
-    }
-    routes.Remove("/static/favicon.png");
-    routes.Remove("/static/thop.html");
+    // MCO API
+    add_function_route("GET", "/api/mco_aggregate.json", ProduceMcoAggregate);
+    add_function_route("GET", "/api/mco_results.json", ProduceMcoResults);
+    add_function_route("GET", "/api/mco_settings.json", ProduceMcoSettings);
+    add_function_route("GET", "/api/mco_diagnoses.json", ProduceMcoDiagnoses);
+    add_function_route("GET", "/api/mco_procedures.json", ProduceMcoProcedures);
+    add_function_route("GET", "/api/mco_ghm_ghs.json", ProduceMcoGhmGhs);
+    add_function_route("GET", "/api/mco_tree.json", ProduceMcoTree);
 
     // We can use a global ETag because everything is in the binary
     {
@@ -349,182 +357,77 @@ static bool UpdateStaticAssets()
 }
 #endif
 
-static int QueueResponse(ConnectionInfo *conn, int code, http_Response *response)
-{
-    MHD_add_response_header(*response, "Referrer-Policy", "no-referrer");
-    if (conn->user_mismatch) {
-        DeleteSessionCookies(response);
-    }
-
-    return MHD_queue_response(conn->conn, (unsigned int)code, *response);
-}
-
-static int HandleHttpConnection(void *, MHD_Connection *conn2, const char *url, const char *method,
-                                const char *, const char *upload_data, size_t *upload_data_size,
-                                void **con_cls)
+static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
     UpdateStaticAssets();
 #endif
 
-    http_Response response = {};
+    // Find user information
+    bool user_mismatch = false;
+    const User *user = CheckSessionUser(request.conn, &user_mismatch);
 
-    // Gather connection info
-    ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
-    if (!conn) {
-        conn = new ConnectionInfo;
-        conn->conn = conn2;
-        conn->user = CheckSessionUser(conn2, &conn->user_mismatch);
-        *con_cls = conn;
-    }
-
-    // Handle base URL
-    for (Size i = 0; thop_config.base_url[i]; i++, url++) {
-        if (url[0] != thop_config.base_url[i]) {
-            if (!url[0] && thop_config.base_url[i] == '/' && !thop_config.base_url[i + 1]) {
-                response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-                MHD_add_response_header(response, "Location", thop_config.base_url);
-                return QueueResponse(conn, 303, &response);
-            } else {
-                http_ProduceErrorPage(404, &response);
-                return QueueResponse(conn, 404, &response);
-            }
+    // Send these headers whenever possible
+    DEFER {
+        MHD_add_response_header(*out_response, "Referrer-Policy", "no-referrer");
+        if (user_mismatch) {
+            DeleteSessionCookies(out_response);
         }
-    }
-    url--;
+    };
 
-    // Process POST data if any
-    if (TestStr(method, "POST")) {
-        if (!conn->pp) {
-            conn->pp = MHD_create_post_processor(conn->conn, Kibibytes(32),
-                                                 [](void *cls, enum MHD_ValueKind, const char *key,
-                                                    const char *, const char *, const char *,
-                                                    const char *data, uint64_t, size_t) {
-                ConnectionInfo *conn = (ConnectionInfo *)cls;
-
-                key = DuplicateString(key, &conn->temp_alloc).ptr;
-                data = DuplicateString(data, &conn->temp_alloc).ptr;
-                conn->post.Append(key, data);
-
-                return MHD_YES;
-            }, conn);
-            if (!conn->pp) {
-                http_ProduceErrorPage(422, &response);
-                return QueueResponse(conn, 422, &response);
-            }
-
-            return MHD_YES;
-        } else if (*upload_data_size) {
-            if (MHD_post_process(conn->pp, upload_data, *upload_data_size) != MHD_YES) {
-                http_ProduceErrorPage(422, &response);
-                return QueueResponse(conn, 422, &response);
-            }
-
-            *upload_data_size = 0;
-            return MHD_YES;
-        }
-    }
-
-    // Negociate content encoding
-    {
-        uint32_t acceptable_encodings =
-            http_ParseAcceptableEncodings(MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND,
-                                                                      "Accept-Encoding"));
-
-        if (acceptable_encodings & (1 << (int)CompressionType::Gzip)) {
-            conn->compression_type = CompressionType::Gzip;
-        } else if (acceptable_encodings) {
-            conn->compression_type = (CompressionType)CountTrailingZeros(acceptable_encodings);
-        } else {
-            http_ProduceErrorPage(406, &response);
-            return QueueResponse(conn, 406, &response);
+    // Handle server-side cache validation (ETag)
+    if (!(out_response->flags & (int)http_Response::Flag::DisableETag)) {
+        const char *client_etag = MHD_lookup_connection_value(request.conn, MHD_HEADER_KIND, "If-None-Match");
+        if (client_etag && TestStr(client_etag, etag)) {
+            *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            return 304;
         }
     }
 
     // Find appropriate route
-    Route *route;
-    bool try_cache;
+    const Route *route;
     {
-        Span<const char> url2 = url;
+        Span<const char> url = request.url;
 
-        route = routes.Find(url2);
-        if (!route || !TestStr(route->method, method)) {
-            while (url2.len > 1) {
-                SplitStrReverse(url2, '/', &url2);
+        route = routes.Find(url);
+        if (!route || !TestStr(route->method, request.method)) {
+            while (url.len > 1) {
+                SplitStrReverse(url, '/', &url);
 
-                Route *walk_route = routes.Find(url2);
+                const Route *walk_route = routes.Find(url);
                 if (walk_route && walk_route->matching == Route::Matching::Walk &&
-                        TestStr(walk_route->method, method)) {
+                        TestStr(walk_route->method, request.method)) {
                     route = walk_route;
                     break;
                 }
             }
 
-            if (!route) {
-                http_ProduceErrorPage(404, &response);
-                return QueueResponse(conn, 404, &response);
-            }
-        }
-
-        try_cache = TestStr(method, "GET");
-    }
-
-    // Handle server-side cache validation (ETag)
-    if (try_cache) {
-        const char *client_etag = MHD_lookup_connection_value(conn->conn, MHD_HEADER_KIND, "If-None-Match");
-        if (client_etag && TestStr(client_etag, etag)) {
-            response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
-            return QueueResponse(conn, 304, &response);
+            if (!route)
+                return http_ProduceErrorPage(404, out_response);
         }
     }
 
     // Execute route
     int code = 0;
     switch (route->type) {
-        case Route::Type::Static: {
+        case Route::Type::Asset: {
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
-                                           route->u.st.mime_type, conn->compression_type, &response);
-            if (code == 200 && route->u.st.asset.source_map) {
-                MHD_add_response_header(response, "SourceMap", route->u.st.asset.source_map);
-            }
+                                           route->u.st.mime_type, request.compression_type, out_response);
         } break;
 
         case Route::Type::Function: {
-            code = route->u.func(conn, url, &response);
+            code = route->u.func(request, user, out_response);
         } break;
     }
-    DebugAssert(response.response);
+    DebugAssert(code);
 
-    // Add caching information
-    if (try_cache) {
+    // Send cache information
 #ifndef NDEBUG
-        response.flags |= (int)http_Response::Flag::DisableCache;
+    out_response->flags |= (int)http_Response::Flag::DisableCache;
 #endif
+    out_response->AddCachingHeaders(etag);
 
-        if (!(response.flags & (int)http_Response::Flag::DisableCache)) {
-            MHD_add_response_header(response, "Cache-Control", "max-age=3600");
-
-            if (etag[0] && !(response.flags & (int)http_Response::Flag::DisableETag)) {
-                MHD_add_response_header(response, "ETag", etag);
-            }
-        } else {
-            MHD_add_response_header(response, "Cache-Control", "no-store");
-        }
-    }
-
-    return QueueResponse(conn, code, &response);
-}
-
-static void ReleaseConnectionData(void **con_cls, MHD_RequestTerminationCode)
-{
-    ConnectionInfo *conn = (ConnectionInfo *)*con_cls;
-
-    if (conn) {
-        if (conn->pp) {
-            MHD_destroy_post_processor(conn->pp);
-        }
-        delete conn;
-    }
+    return code;
 }
 
 int main(int argc, char **argv)
@@ -625,19 +528,6 @@ Options:
             LogError("No table directory is specified");
             valid = false;
         }
-        if (thop_config.port < 1 || thop_config.port > UINT16_MAX) {
-            LogError("HTTP port %1 is invalid (range: 1 - %2)", thop_config.port, UINT16_MAX);
-            valid = false;
-        }
-        if (thop_config.threads < 0 || thop_config.threads > 128) {
-            LogError("HTTP threads %1 is invalid (range: 0 - 128)", thop_config.threads);
-            valid = false;
-        }
-        if (thop_config.base_url[0] != '/' ||
-                thop_config.base_url[strlen(thop_config.base_url) - 1] != '/') {
-            LogError("Base URL '%1' does not start and end with '/'", thop_config.base_url);
-            valid = false;
-        }
 
         if (!valid)
             return 1;
@@ -646,7 +536,7 @@ Options:
     // Do we have any site-specific (sensitive) data?
     thop_has_casemix = thop_config.mco_stay_directories.len || thop_config.mco_stay_filenames.len;
 
-    // Init
+    // Init main data
     if (thop_has_casemix) {
         if (!InitMcoProfile(thop_config.profile_directory, thop_config.mco_authorization_filename))
             return 1;
@@ -662,6 +552,7 @@ Options:
             return 1;
     }
 
+    // Init routes
 #ifndef NDEBUG
     if (!UpdateStaticAssets())
         return 1;
@@ -669,10 +560,11 @@ Options:
     InitRoutes();
 #endif
 
+    // Run!
     http_Daemon daemon;
-    daemon.release_func = ReleaseConnectionData;
+    daemon.handle_func = HandleRequest;
     if (!daemon.Start(thop_config.ip_stack, thop_config.port, thop_config.threads,
-                      HandleHttpConnection))
+                      thop_config.base_url))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
             thop_config.port, IPStackNames[(int)thop_config.ip_stack]);

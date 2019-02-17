@@ -17,11 +17,10 @@
 
 static Config goupil_config;
 
-static int HandleHttpConnection(void *, MHD_Connection *conn, const char *url, const char *method,
-                                const char *, const char *, size_t *, void **)
+static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
-    MHD_Response *response = MHD_create_response_from_buffer(5, (void *)"Hello", MHD_RESPMEM_PERSISTENT);
-    return MHD_queue_response(conn, 200, response);
+    *out_response = MHD_create_response_from_buffer(5, (void *)"Hello", MHD_RESPMEM_PERSISTENT);
+    return 200;
 }
 
 int main(int argc, char **argv)
@@ -83,34 +82,16 @@ Options:
     }
 
     // Configuration errors
-    {
-        bool valid = true;
-
-        if (!goupil_config.profile_directory) {
-            LogError("Profile directory is missing");
-            valid = false;
-        }
-        if (goupil_config.port < 1 || goupil_config.port > UINT16_MAX) {
-            LogError("HTTP port %1 is invalid (range: 1 - %2)", goupil_config.port, UINT16_MAX);
-            valid = false;
-        }
-        if (goupil_config.threads < 0 || goupil_config.threads > 128) {
-            LogError("HTTP threads %1 is invalid (range: 0 - 128)", goupil_config.threads);
-            valid = false;
-        }
-        if (goupil_config.base_url[0] != '/' ||
-                goupil_config.base_url[strlen(goupil_config.base_url) - 1] != '/') {
-            LogError("Base URL '%1' does not start and end with '/'", goupil_config.base_url);
-            valid = false;
-        }
-
-        if (!valid)
-            return 1;
+    if (!goupil_config.profile_directory) {
+        LogError("Profile directory is missing");
+        return 1;
     }
 
+    // Run!
     http_Daemon daemon;
+    daemon.handle_func = HandleRequest;
     if (!daemon.Start(goupil_config.ip_stack, goupil_config.port, goupil_config.threads,
-                      HandleHttpConnection))
+                      goupil_config.base_url))
         return 1;
     LogInfo("Listening on port %1 (%2 stack)",
             goupil_config.port, IPStackNames[(int)goupil_config.ip_stack]);

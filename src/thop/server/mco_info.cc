@@ -2,17 +2,16 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "thop.hh"
+#include "../../libcc/libcc.hh"
 #include "mco_info.hh"
 #include "mco.hh"
 
-static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_url,
-                               http_Response *out_response, const mco_TableIndex **out_index,
-                               Sector *out_sector = nullptr)
+static int GetIndexFromRequest(const http_Request &request, http_Response *out_response,
+                               const mco_TableIndex **out_index, Sector *out_sector = nullptr)
 {
     Date date = {};
     {
-        const char *date_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "date");
+        const char *date_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "date");
         if (date_str) {
             date = Date::FromString(date_str);
         } else {
@@ -24,7 +23,7 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
 
     Sector sector = Sector::Public;
     if (out_sector) {
-        const char *sector_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "sector");
+        const char *sector_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
             return http_ProduceErrorPage(422, out_response);
@@ -45,13 +44,13 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
     }
 
     // Redirect to the canonical URL for this version, to improve client-side caching
-    if (redirect_url && date != index->limit_dates[0]) {
+    if (date != index->limit_dates[0]) {
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
         out_response->response.reset(response);
 
         {
             char url_buf[64];
-            Fmt(url_buf, "%1?date=%2", redirect_url, index->limit_dates[0]);
+            Fmt(url_buf, "%1?date=%2", request.url, index->limit_dates[0]);
             MHD_add_response_header(response, "Location", url_buf);
         }
 
@@ -65,15 +64,15 @@ static int GetIndexFromRequest(const ConnectionInfo *conn, const char *redirect_
     return 0;
 }
 
-int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Response *out_response)
+int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+    if (int code = GetIndexFromRequest(request, out_response, &index); code)
         return code;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
-        const char *spec_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
@@ -83,7 +82,7 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Respon
         }
     }
 
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
     char buf[512];
 
     const auto WriteSexSpecificInfo = [&](const mco_DiagnosisInfo &diag_info,
@@ -134,15 +133,15 @@ int ProduceMcoDiagnoses(const ConnectionInfo *conn, const char *url, http_Respon
     return json.Finish(out_response);
 }
 
-int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Response *out_response)
+int ProduceMcoProcedures(const http_Request &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+    if (int code = GetIndexFromRequest(request, out_response, &index); code)
         return code;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
-        const char *spec_str = MHD_lookup_connection_value(conn->conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
@@ -152,7 +151,7 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Respo
         }
     }
 
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
     char buf[512];
 
     json.StartArray();
@@ -175,17 +174,17 @@ int ProduceMcoProcedures(const ConnectionInfo *conn, const char *url, http_Respo
     return json.Finish(out_response);
 }
 
-int ProduceMcoGhmGhs(const ConnectionInfo *conn, const char *url, http_Response *out_response)
+int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
     Sector sector;
-    if (int code = GetIndexFromRequest(conn, url, out_response, &index, &sector); code)
+    if (int code = GetIndexFromRequest(request, out_response, &index, &sector); code)
         return code;
 
     const HashTable<mco_GhmCode, mco_GhmConstraint> &constraints =
         *mco_index_to_constraints[index - mco_table_set.indexes.ptr];
 
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
     char buf[512];
 
     json.StartArray();
@@ -617,10 +616,10 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     return true;
 }
 
-int ProduceMcoTree(const ConnectionInfo *conn, const char *url, http_Response *out_response)
+int ProduceMcoTree(const http_Request &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
-    if (int code = GetIndexFromRequest(conn, url, out_response, &index); code)
+    if (int code = GetIndexFromRequest(request, out_response, &index); code)
         return code;
 
     // TODO: Generate ahead of time
@@ -629,7 +628,7 @@ int ProduceMcoTree(const ConnectionInfo *conn, const char *url, http_Response *o
     if (!BuildReadableGhmTree(index->ghm_nodes, &readable_nodes, &readable_nodes_alloc))
         return http_ProduceErrorPage(500, out_response);
 
-    http_JsonPageBuilder json(conn->compression_type);
+    http_JsonPageBuilder json(request.compression_type);
 
     json.StartArray();
     for (const ReadableGhmDecisionNode &readable_node: readable_nodes) {
