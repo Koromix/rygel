@@ -215,17 +215,25 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
 
 void http_Response::AddCachingHeaders(int max_age, const char *etag)
 {
-    if (!(flags & (int)http_Response::Flag::DisableCacheControl)) {
-        char buf[512];
-        Fmt(buf, "max-age=%1", max_age);
+    DebugAssert(max_age >= 0);
 
-        MHD_add_response_header(response.get(), "Cache-Control", buf);
-    } else {
-        MHD_add_response_header(response.get(), "Cache-Control", "no-store");
+    if (flags & (int)http_Response::Flag::DisableCacheControl) {
+        max_age = 0;
+    }
+    if (flags & (int)http_Response::Flag::DisableETag) {
+        etag = nullptr;
     }
 
-    if (etag && !(flags & (int)http_Response::Flag::DisableETag)) {
-        MHD_add_response_header(response.get(), "ETag", etag);
+    if (max_age || etag) {
+        char buf[512];
+        Fmt(buf, "max-age=%1", max_age);
+        MHD_add_response_header(response.get(), "Cache-Control", buf);
+
+        if (etag) {
+            MHD_add_response_header(response.get(), "ETag", etag);
+        }
+    } else {
+        MHD_add_response_header(response.get(), "Cache-Control", "no-store");
     }
 }
 
