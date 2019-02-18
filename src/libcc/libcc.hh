@@ -473,8 +473,8 @@ T ApplyMask(T value, U mask, bool enable)
     }
 }
 
-template <typename T, typename Func>
-auto FindIf(const T &arr, Func func) -> decltype(&(*std::begin(arr)))
+template <typename T, typename Fun>
+auto FindIf(const T &arr, Fun func) -> decltype(&(*std::begin(arr)))
 {
     for (auto &it: arr) {
         if (func(it))
