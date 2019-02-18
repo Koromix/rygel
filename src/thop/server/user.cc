@@ -317,21 +317,21 @@ static void PruneStaleSessions()
 }
 
 // Call with sessions_mutex locked
-static Session *FindSession(MHD_Connection *conn, bool *out_mismatch = nullptr)
+static Session *FindSession(const http_Request &request, bool *out_mismatch = nullptr)
 {
     uint64_t now = GetMonotonicTime();
 
     char address[65];
-    if (!GetClientAddress(conn, address)) {
+    if (!GetClientAddress(request.conn, address)) {
         if (out_mismatch) {
             *out_mismatch = false;
         }
         return nullptr;
     }
 
-    const char *session_key = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "session_key");
-    const char *username = MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, "username");
-    const char *user_agent = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "User-Agent");
+    const char *session_key = request.GetCookieValue("session_key");
+    const char *username = request.GetCookieValue("username");
+    const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!session_key || !username || !user_agent) {
         if (out_mismatch) {
             *out_mismatch = session_key || username;
@@ -360,21 +360,21 @@ static Session *FindSession(MHD_Connection *conn, bool *out_mismatch = nullptr)
     return session;
 }
 
-const User *CheckSessionUser(MHD_Connection *conn, bool *out_mismatch)
+const User *CheckSessionUser(const http_Request &request, bool *out_mismatch)
 {
     PruneStaleSessions();
 
     std::shared_lock<std::shared_mutex> lock(sessions_mutex);
-    Session *session = FindSession(conn, out_mismatch);
+    Session *session = FindSession(request, out_mismatch);
 
     return session ? session->user : nullptr;
 }
 
-void DeleteSessionCookies(http_Response *response)
+void DeleteSessionCookies(http_Response *out_response)
 {
-    response->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
-    response->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
-    response->AddCookieHeader(thop_config.base_url, "username", nullptr);
+    out_response->AddCookieHeader(thop_config.base_url, "session_key", nullptr);
+    out_response->AddCookieHeader(thop_config.base_url, "url_key", nullptr);
+    out_response->AddCookieHeader(thop_config.base_url, "username", nullptr);
 }
 
 int HandleConnect(const http_Request &request, const User *, http_Response *out_response)
@@ -383,9 +383,9 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
     if (!GetClientAddress(request.conn, address))
         return http_ProduceErrorPage(500, out_response);
 
-    const char *username = request.post.FindValue("username", nullptr).ptr;
-    const char *password = request.post.FindValue("password", nullptr).ptr;
-    const char *user_agent = MHD_lookup_connection_value(request.conn, MHD_HEADER_KIND, "User-Agent");
+    const char *username = request.GetPostValue("username");
+    const char *password = request.GetPostValue("password");
+    const char *user_agent = request.GetHeaderValue("User-Agent");
     if (!username || !password || !user_agent)
         return http_ProduceErrorPage(422, out_response);
 
@@ -420,7 +420,7 @@ int HandleConnect(const http_Request &request, const User *, http_Response *out_
         std::unique_lock<std::shared_mutex> lock(sessions_mutex);
 
         // Drop current session (if any)
-        sessions.Remove(FindSession(request.conn));
+        sessions.Remove(FindSession(request));
 
         // std::atomic objects are not copyable so we can't use Append()
         Session *session;
@@ -458,7 +458,7 @@ int HandleDisconnect(const http_Request &request, const User *, http_Response *o
     // Drop session
     {
         std::unique_lock<std::shared_mutex> lock(sessions_mutex);
-        sessions.Remove(FindSession(request.conn));
+        sessions.Remove(FindSession(request));
     }
 
     MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
