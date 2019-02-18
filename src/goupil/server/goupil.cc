@@ -11,7 +11,6 @@
 #endif
 
 #include "../../libcc/libcc.hh"
-#include "../../libdrd/libdrd.hh"
 #include "config.hh"
 #include "../../wrappers/http.hh"
 
