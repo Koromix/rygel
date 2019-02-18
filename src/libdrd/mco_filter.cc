@@ -169,7 +169,7 @@ public:
     WrenHandle *mco_build;
 
     // We don't bother shrinking those
-    HeapArray<ProxyArray<DiagnosisCode> *> other_diagnosis_arrays;
+    HeapArray<ProxyArray<drd_DiagnosisCode> *> other_diagnosis_arrays;
     HeapArray<ProxyArray<mco_ProcedureRealisation> *> procedure_arrays;
 
     WrenHandle *expression_var = nullptr;
@@ -520,8 +520,8 @@ static WrenForeignMethodFn BindDiagnosisArrayMethod(const char *signature)
     if (false) {}
 
     return BindProxyArrayMethod(signature, [](WrenVM *vm) {
-        const ProxyArray<DiagnosisCode> &arr =
-            *(const ProxyArray<DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
+        const ProxyArray<drd_DiagnosisCode> &arr =
+            *(const ProxyArray<drd_DiagnosisCode> *)wrenGetSlotForeign(vm, 0);
         Size idx = GetSlotIndexSafe(vm, 1, arr.values.len);
 
         if (LIKELY(idx >= 0)) {
@@ -659,7 +659,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         int16_t new_value = GetSlotIntegerSafe<int16_t>(vm, 1);
 
         if (array->values[obj->idx].unit.number != new_value) {
-            GetMutableStay(obj)->unit = UnitCode(new_value);
+            GetMutableStay(obj)->unit = drd_UnitCode(new_value);
         }
     })
     ELSE_IF_GET_NUM("bed_authorization", ProxyArrayObject<mco_Stay>, obj.array->values[obj.idx].bed_authorization)
@@ -745,7 +745,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArray<mco_Stay> *array = obj->array;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
-        DiagnosisCode new_diag = DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
         if (UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
@@ -761,7 +761,7 @@ static WrenForeignMethodFn BindMcoStayMethod(const char *signature)
         ProxyArray<mco_Stay> *array = obj->array;
 
         const char *new_value = GetSlotStringSafe(vm, 1);
-        DiagnosisCode new_diag = DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
+        drd_DiagnosisCode new_diag = drd_DiagnosisCode::FromString(new_value, (int)ParseFlag::End);
         if (UNLIKELY(!new_diag.IsValid())) {
             TriggerError(vm, "Invalid diagnosis code");
             return;
@@ -1066,8 +1066,8 @@ void mco_WrenRunner::InitProxyArrays(Size count)
 
         wrenSetSlotHandle(vm, 0, diagnosis_array_class);
         {
-            ProxyArray<DiagnosisCode> *arr =
-                (ProxyArray<DiagnosisCode> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<DiagnosisCode>));
+            ProxyArray<drd_DiagnosisCode> *arr =
+                (ProxyArray<drd_DiagnosisCode> *)wrenSetSlotNewForeign(vm, 0, 0, SIZE(ProxyArray<drd_DiagnosisCode>));
 
             arr->var = wrenGetSlotHandle(vm, 0);
             other_diagnosis_arrays.Append(arr);

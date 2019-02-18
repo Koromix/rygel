@@ -6,25 +6,25 @@
 
 #include "../libcc/libcc.hh"
 
-enum class Sector: int8_t {
+enum class drd_Sector: int8_t {
     Public,
     Private
 };
-static const char *const SectorNames[] = {
+static const char *const drd_SectorNames[] = {
     "Public",
     "Private"
 };
 
-union DiagnosisCode {
+union drd_DiagnosisCode {
     int64_t value;
     char str[7];
 
-    DiagnosisCode() = default;
+    drd_DiagnosisCode() = default;
 
-    static DiagnosisCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                                    Span<const char> *out_remaining = nullptr)
+    static drd_DiagnosisCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                        Span<const char> *out_remaining = nullptr)
     {
-        DiagnosisCode code = {};
+        drd_DiagnosisCode code = {};
         Size end = 0;
         {
             Size copy_len = std::min(SIZE(code.str) - 1, str.len);
@@ -64,13 +64,13 @@ union DiagnosisCode {
 
     bool IsValid() const { return value; }
 
-    bool operator==(DiagnosisCode other) const { return value == other.value; }
-    bool operator!=(DiagnosisCode other) const { return value != other.value; }
+    bool operator==(drd_DiagnosisCode other) const { return value == other.value; }
+    bool operator!=(drd_DiagnosisCode other) const { return value != other.value; }
 
-    bool operator<(DiagnosisCode other) const { return CmpStr(str, other.str) < 0; }
-    bool operator<=(DiagnosisCode other) const { return CmpStr(str, other.str) <= 0; }
-    bool operator>(DiagnosisCode other) const { return CmpStr(str, other.str) > 0; }
-    bool operator>=(DiagnosisCode other) const { return CmpStr(str, other.str) >= 0; }
+    bool operator<(drd_DiagnosisCode other) const { return CmpStr(str, other.str) < 0; }
+    bool operator<=(drd_DiagnosisCode other) const { return CmpStr(str, other.str) <= 0; }
+    bool operator>(drd_DiagnosisCode other) const { return CmpStr(str, other.str) > 0; }
+    bool operator>=(drd_DiagnosisCode other) const { return CmpStr(str, other.str) >= 0; }
 
     bool Matches(const char *other_str) const
     {
@@ -80,23 +80,23 @@ union DiagnosisCode {
         }
         return !other_str[i];
     }
-    bool Matches(DiagnosisCode other) const { return Matches(other.str); }
+    bool Matches(drd_DiagnosisCode other) const { return Matches(other.str); }
 
     operator FmtArg() const { return FmtArg(str); }
 
     uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
-union ProcedureCode {
+union drd_ProcedureCode {
     int64_t value;
     char str[8];
 
-    ProcedureCode() = default;
+    drd_ProcedureCode() = default;
 
-    static ProcedureCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                                    Span<const char> *out_remaining = nullptr)
+    static drd_ProcedureCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                        Span<const char> *out_remaining = nullptr)
     {
-        ProcedureCode code = {};
+        drd_ProcedureCode code = {};
         {
             Size copy_len = std::min(SIZE(str) - 1, str.len);
             for (Size i = 0; i < copy_len; i++) {
@@ -125,29 +125,29 @@ union ProcedureCode {
 
     bool IsValid() const { return value; }
 
-    bool operator==(ProcedureCode other) const { return value == other.value; }
-    bool operator!=(ProcedureCode other) const { return value != other.value; }
+    bool operator==(drd_ProcedureCode other) const { return value == other.value; }
+    bool operator!=(drd_ProcedureCode other) const { return value != other.value; }
 
-    bool operator<(ProcedureCode other) const { return CmpStr(str, other.str) < 0; }
-    bool operator<=(ProcedureCode other) const { return CmpStr(str, other.str) <= 0; }
-    bool operator>(ProcedureCode other) const { return CmpStr(str, other.str) > 0; }
-    bool operator>=(ProcedureCode other) const { return CmpStr(str, other.str) >= 0; }
+    bool operator<(drd_ProcedureCode other) const { return CmpStr(str, other.str) < 0; }
+    bool operator<=(drd_ProcedureCode other) const { return CmpStr(str, other.str) <= 0; }
+    bool operator>(drd_ProcedureCode other) const { return CmpStr(str, other.str) > 0; }
+    bool operator>=(drd_ProcedureCode other) const { return CmpStr(str, other.str) >= 0; }
 
     operator FmtArg() const { return FmtArg(str); }
 
     uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
-struct UnitCode {
+struct drd_UnitCode {
     int16_t number;
 
-    UnitCode() = default;
-    explicit UnitCode(int16_t code) : number(code) {}
+    drd_UnitCode() = default;
+    explicit drd_UnitCode(int16_t code) : number(code) {}
 
-    static UnitCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
-                                  Span<const char> *out_remaining = nullptr)
+    static drd_UnitCode FromString(Span<const char> str, int flags = DEFAULT_PARSE_FLAGS,
+                                   Span<const char> *out_remaining = nullptr)
     {
-        UnitCode code = {};
+        drd_UnitCode code = {};
 
         if (!ParseDec(str, &code.number, flags & ~(int)ParseFlag::Log, out_remaining) ||
                 ((flags & (int)ParseFlag::Validate) && !code.IsValid())) {
@@ -162,13 +162,13 @@ struct UnitCode {
 
     bool IsValid() const { return number > 0 && number <= 9999; }
 
-    bool operator==(UnitCode other) const { return number == other.number; }
-    bool operator!=(UnitCode other) const { return number != other.number; }
+    bool operator==(drd_UnitCode other) const { return number == other.number; }
+    bool operator!=(drd_UnitCode other) const { return number != other.number; }
 
-    bool operator<(UnitCode other) const { return number < other.number; }
-    bool operator<=(UnitCode other) const { return number <= other.number; }
-    bool operator>(UnitCode other) const { return number > other.number; }
-    bool operator>=(UnitCode other) const { return number >= other.number; }
+    bool operator<(drd_UnitCode other) const { return number < other.number; }
+    bool operator<=(drd_UnitCode other) const { return number <= other.number; }
+    bool operator>(drd_UnitCode other) const { return number > other.number; }
+    bool operator>=(drd_UnitCode other) const { return number >= other.number; }
 
     operator FmtArg() const { return FmtArg(number); }
 

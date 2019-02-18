@@ -159,7 +159,7 @@ void mco_DumpGhmToGhsTable(Span<const mco_GhmToGhsInfo> ghs, StreamWriter *out_s
             previous_ghm = ghm_to_ghs_info.ghm;
         }
         PrintLn(out_st, "        GHS %1 (public) / GHS %2 (private)",
-                ghm_to_ghs_info.Ghs(Sector::Public), ghm_to_ghs_info.Ghs(Sector::Private));
+                ghm_to_ghs_info.Ghs(drd_Sector::Public), ghm_to_ghs_info.Ghs(drd_Sector::Private));
 
         if (ghm_to_ghs_info.unit_authorization) {
             PrintLn(out_st, "          Requires unit authorization %1", ghm_to_ghs_info.unit_authorization);

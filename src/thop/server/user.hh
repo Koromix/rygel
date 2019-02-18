@@ -28,7 +28,7 @@ struct User {
 
     unsigned int permissions;
     unsigned int mco_dispense_modes;
-    HashSet<UnitCode> mco_allowed_units;
+    HashSet<drd_UnitCode> mco_allowed_units;
 
     bool CheckPermission(UserPermission permission) const { return permissions & (int)permission; }
     bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const

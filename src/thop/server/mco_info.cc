@@ -7,7 +7,7 @@
 #include "mco.hh"
 
 static int GetIndexFromRequest(const http_Request &request, http_Response *out_response,
-                               const mco_TableIndex **out_index, Sector *out_sector = nullptr)
+                               const mco_TableIndex **out_index, drd_Sector *out_sector = nullptr)
 {
     Date date = {};
     {
@@ -21,16 +21,16 @@ static int GetIndexFromRequest(const http_Request &request, http_Response *out_r
             return http_ProduceErrorPage(422, out_response);
     }
 
-    Sector sector = Sector::Public;
+    drd_Sector sector = drd_Sector::Public;
     if (out_sector) {
         const char *sector_str = request.GetQueryValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
             return http_ProduceErrorPage(422, out_response);
         } else if (TestStr(sector_str, "public")) {
-            sector = Sector::Public;
+            sector = drd_Sector::Public;
         } else if (TestStr(sector_str, "private")) {
-            sector = Sector::Private;
+            sector = drd_Sector::Private;
         } else {
             LogError("Invalid 'sector' parameter");
             return http_ProduceErrorPage(422, out_response);
@@ -177,7 +177,7 @@ int ProduceMcoProcedures(const http_Request &request, const User *, http_Respons
 int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *out_response)
 {
     const mco_TableIndex *index;
-    Sector sector;
+    drd_Sector sector;
     if (int code = GetIndexFromRequest(request, out_response, &index, &sector); code)
         return code;
 

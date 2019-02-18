@@ -6,17 +6,17 @@
 #include "mco_tables.hh"
 
 struct ProcedureExtensionInfo {
-    ProcedureCode proc;
+    drd_ProcedureCode proc;
     int8_t phase;
     int8_t extension;
 };
 
 struct ProcedureAdditionInfo {
-    ProcedureCode proc1;
+    drd_ProcedureCode proc1;
     int8_t phase1;
     int8_t activity1;
 
-    ProcedureCode proc2;
+    drd_ProcedureCode proc2;
     int8_t phase2;
     int8_t activity2;
 };
@@ -36,9 +36,9 @@ Date mco_ConvertDate1980(uint16_t days)
     return Date::FromJulianDays(base_days + days);
 }
 
-static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
+static drd_DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
 {
-    DiagnosisCode code = {};
+    drd_DiagnosisCode code = {};
 
     snprintf(code.str, SIZE(code.str), "%c%02d", code123 / 100 + 65, code123 % 100);
 
@@ -54,9 +54,9 @@ static DiagnosisCode ConvertDiagnosisCode(int16_t code123, uint16_t code456)
     return code;
 }
 
-static ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint16_t seq)
+static drd_ProcedureCode ConvertProcedureCode(int16_t root_idx, char char4, uint16_t seq)
 {
-    ProcedureCode proc = {};
+    drd_ProcedureCode proc = {};
 
     for (int i = 0; i < 3; i++) {
         proc.str[2 - i] = (char)((root_idx % 26) + 65);
@@ -589,7 +589,7 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
             FAIL_PARSE_IF(table.filename,
                           raw_proc1.proc2_idx > table.sections[2].values_count - raw_proc1.count);
 
-            ProcedureCode proc1 = ConvertProcedureCode(root_idx, raw_proc1.char4,
+            drd_ProcedureCode proc1 = ConvertProcedureCode(root_idx, raw_proc1.char4,
                                                        (uint16_t)(raw_proc1.seq_phase_activity / 100));
             int8_t phase1 = (int8_t)(raw_proc1.seq_phase_activity / 10 % 10);
             int8_t activity1 = (int8_t)(raw_proc1.seq_phase_activity % 10);
@@ -1844,17 +1844,17 @@ Span<const T> FindSpan(Span<const T> arr, const HashTable<U, const T *, Handler>
     return ret;
 }
 
-const mco_DiagnosisInfo *mco_TableIndex::FindDiagnosis(DiagnosisCode diag) const
+const mco_DiagnosisInfo *mco_TableIndex::FindDiagnosis(drd_DiagnosisCode diag) const
 {
     return diagnoses_map->FindValue(diag, nullptr);
 }
 
-Span<const mco_ProcedureInfo> mco_TableIndex::FindProcedure(ProcedureCode proc) const
+Span<const mco_ProcedureInfo> mco_TableIndex::FindProcedure(drd_ProcedureCode proc) const
 {
     return FindSpan(procedures, procedures_map, proc);
 }
 
-const mco_ProcedureInfo *mco_TableIndex::FindProcedure(ProcedureCode proc, int8_t phase, Date date) const
+const mco_ProcedureInfo *mco_TableIndex::FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const
 {
     const mco_ProcedureInfo *proc_info = procedures_map->FindValue(proc, nullptr);
     if (!proc_info)
@@ -1896,17 +1896,17 @@ const mco_AuthorizationInfo *mco_TableIndex::FindAuthorization(mco_Authorization
     return authorizations_map->FindValue(key.value, nullptr);
 }
 
-double mco_TableIndex::GhsCoefficient(Sector sector) const
+double mco_TableIndex::GhsCoefficient(drd_Sector sector) const
 {
     return ghs_coefficient[(int)sector];
 }
 
-const mco_GhsPriceInfo *mco_TableIndex::FindGhsPrice(mco_GhsCode ghs, Sector sector) const
+const mco_GhsPriceInfo *mco_TableIndex::FindGhsPrice(mco_GhsCode ghs, drd_Sector sector) const
 {
     return ghs_prices_map[(int)sector]->FindValue(ghs, nullptr);
 }
 
-const mco_SupplementCounters<int32_t> &mco_TableIndex::SupplementPrices(Sector sector) const
+const mco_SupplementCounters<int32_t> &mco_TableIndex::SupplementPrices(drd_Sector sector) const
 {
     return supplement_prices[(int)sector];
 }

@@ -27,11 +27,11 @@ bool StructureSetBuilder::LoadIni(StreamReader &st)
             // TODO: Check validity, or maybe the INI parser checks are enough?
             structure.name = DuplicateString(prop.section, &set.str_alloc).ptr;
 
-            HashSet<UnitCode> units_set;
+            HashSet<drd_UnitCode> units_set;
             do {
                 StructureEntity ent = {};
 
-                ent.unit = UnitCode::FromString(prop.key);
+                ent.unit = drd_UnitCode::FromString(prop.key);
                 valid &= ent.unit.IsValid();
 
                 ent.path = DuplicateString(prop.value, &set.str_alloc).ptr;

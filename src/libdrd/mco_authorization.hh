@@ -8,7 +8,7 @@
 #include "mco_common.hh"
 
 struct mco_Authorization {
-    UnitCode unit;
+    drd_UnitCode unit;
     int8_t type;
     Date dates[2];
 
@@ -17,14 +17,14 @@ struct mco_Authorization {
 
 struct mco_AuthorizationSet {
     HeapArray<mco_Authorization> authorizations;
-    HashTable<UnitCode, const mco_Authorization *> authorizations_map;
+    HashTable<drd_UnitCode, const mco_Authorization *> authorizations_map;
     HeapArray<mco_Authorization> facility_authorizations;
 
-    Span<const mco_Authorization> FindUnit(UnitCode unit) const;
-    const mco_Authorization *FindUnit(UnitCode unit, Date date) const;
+    Span<const mco_Authorization> FindUnit(drd_UnitCode unit) const;
+    const mco_Authorization *FindUnit(drd_UnitCode unit, Date date) const;
 
-    int8_t GetAuthorizationType(UnitCode unit, Date date) const;
-    bool TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const;
+    int8_t GetAuthorizationType(drd_UnitCode unit, Date date) const;
+    bool TestAuthorization(drd_UnitCode unit, Date date, int8_t auth_type) const;
 };
 
 class mco_AuthorizationSetBuilder {

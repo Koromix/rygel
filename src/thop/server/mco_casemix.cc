@@ -106,7 +106,7 @@ struct Aggregate {
         mco_GhmCode ghm;
         mco_GhsCode ghs;
         int16_t duration;
-        Span<UnitCode> units;
+        Span<drd_UnitCode> units;
 
         bool operator==(const Key &other) const
         {
@@ -122,8 +122,8 @@ struct Aggregate {
             uint64_t hash = HashTraits<mco_GhmCode>::Hash(ghm) ^
                             HashTraits<mco_GhsCode>::Hash(ghs) ^
                             HashTraits<int16_t>::Hash(duration);
-            for (UnitCode unit: units) {
-                hash ^= HashTraits<UnitCode>::Hash(unit);
+            for (drd_UnitCode unit: units) {
+                hash ^= HashTraits<drd_UnitCode>::Hash(unit);
             }
 
             return hash;
@@ -169,7 +169,7 @@ class AggregateSetBuilder {
     IndirectBlockAllocator parts_alloc {&set.array_alloc, Kibibytes(16)};
 
     // Reuse for performance
-    HashMap<UnitCode, Aggregate::Part> agg_parts_map;
+    HashMap<drd_UnitCode, Aggregate::Part> agg_parts_map;
 
 public:
     AggregateSetBuilder(const User *user, unsigned int flags)
@@ -224,11 +224,11 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
         j += result.stays.len;
 
         bool match = false;
-        HeapArray<UnitCode> agg_units(&units_alloc);
+        HeapArray<drd_UnitCode> agg_units(&units_alloc);
         for (Size k = 0; k < sub_mono_results.len; k++) {
             const mco_Result &mono_result = sub_mono_results[k];
             const mco_Pricing &mono_pricing = sub_mono_pricings[k];
-            UnitCode unit = mono_result.stays[0].unit;
+            drd_UnitCode unit = mono_result.stays[0].unit;
             DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
             if (user->mco_allowed_units.Find(unit)) {
@@ -250,7 +250,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             std::sort(agg_units.begin(), agg_units.end());
 
             HeapArray<Aggregate::Part> agg_parts(&parts_alloc);
-            for (UnitCode unit: agg_units) {
+            for (drd_UnitCode unit: agg_units) {
                 Aggregate::Part *part = agg_parts_map.Find(unit);
                 if (part) {
                     agg_parts.Append(*part);
@@ -327,14 +327,14 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
                 Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm_root);
 
                 for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                    const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(Sector::Public), Sector::Public);
+                    const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(drd_Sector::Public), drd_Sector::Public);
                     const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
 
                     GhmGhsInfo *agg_ghm_ghs;
                     {
                         GhmGhsInfo::Key key;
                         key.ghm = ghm_to_ghs_info.ghm;
-                        key.ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+                        key.ghs = ghm_to_ghs_info.Ghs(drd_Sector::Public);
 
                         std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, out_ghm_ghs->len);
                         if (ret.second) {
@@ -498,7 +498,7 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
         }
         if (flags & (int)AggregationFlag::KeyOnUnits) {
             json.Key("unit"); json.StartArray();
-            for (UnitCode unit: agg.key.units) {
+            for (drd_UnitCode unit: agg.key.units) {
                 json.Int(unit.number);
             }
             json.EndArray();
@@ -685,7 +685,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                     }
 
                     json.Key("other_diagnoses"); json.StartArray();
-                    for (DiagnosisCode diag: stay.other_diagnoses) {
+                    for (drd_DiagnosisCode diag: stay.other_diagnoses) {
                         const mco_DiagnosisInfo *diag_info =
                             LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
 

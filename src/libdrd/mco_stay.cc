@@ -23,7 +23,7 @@ struct PackHeader {
 // This should warn us in most cases when we break dspak files (it's basically a memcpy format)
 StaticAssert(SIZE(PackHeader::signature) == SIZE(PACK_SIGNATURE));
 StaticAssert(SIZE(mco_Stay) == 112);
-StaticAssert(SIZE(DiagnosisCode) == 8);
+StaticAssert(SIZE(drd_DiagnosisCode) == 8);
 StaticAssert(SIZE(mco_ProcedureRealisation) == 24);
 
 bool mco_StaySet::SavePack(StreamWriter &st) const
@@ -98,7 +98,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
         LogError("Testing is not supported by '.dmpak' files");
     }
 
-    HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
+    HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
 
     PackHeader bh;
@@ -335,7 +335,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     offset += 3;
     if (LIKELY(line[offset] != ' ')) {
         stay.main_diagnosis =
-            DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
+            drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
         if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
         }
@@ -343,7 +343,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     offset += 8;
     if (line[offset] != ' ') {
         stay.linked_diagnosis =
-            DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
+            drd_DiagnosisCode::FromString(line.Take(offset, 8), (int)ParseFlag::End);
         if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
             stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
         }
@@ -359,7 +359,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
     }
     offset += 33; // Skip a bunch of fields
 
-    HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
+    HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> procedures(&procedures_alloc);
     if (LIKELY(das_count >= 0 && dad_count >=0 && procedures_count >= 0)) {
         if (UNLIKELY(line.len < offset + 8 * das_count + 8 * dad_count +
@@ -369,8 +369,8 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
         }
 
         for (int i = 0; i < das_count; i++) {
-            DiagnosisCode diag =
-                DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
+            drd_DiagnosisCode diag =
+                drd_DiagnosisCode::FromString(ReadFragment(8), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -383,7 +383,7 @@ bool mco_StaySetBuilder::ParseRssLine(Span<const char> line, HashTable<int32_t, 
             mco_ProcedureRealisation proc = {};
 
             ParsePmsiDate(ReadFragment(8), &proc.date);
-            proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
             if (version >= 17) {
                 if (line[offset] != ' ') {
                     if (UNLIKELY(line[offset] != '-' ||
@@ -601,7 +601,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         offset += 14; // Skip many fields
         if (LIKELY(line[offset] != ' ')) {
             stay.main_diagnosis =
-                DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
+                drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
             if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
             }
@@ -609,7 +609,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
         offset += 6;
         if (line[offset] != ' ') {
             stay.linked_diagnosis =
-                DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
+                drd_DiagnosisCode::FromString(line.Take(offset, 6), (int)ParseFlag::End);
             if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                 stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
             }
@@ -699,10 +699,10 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
     for (Size i = set.stays.len - test.cluster_len; i < set.stays.len; i++) {
         mco_Stay &stay = set.stays[i];
 
-        HeapArray<DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
+        HeapArray<drd_DiagnosisCode> other_diagnoses(&other_diagnoses_alloc);
         for (Size j = 0; j < stay.other_diagnoses.len; j++) {
-            DiagnosisCode diag =
-                DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
+            drd_DiagnosisCode diag =
+                drd_DiagnosisCode::FromString(ReadFragment(6), (int)ParseFlag::End);
             if (LIKELY(diag.IsValid())) {
                 other_diagnoses.Append(diag);
             } else {
@@ -726,7 +726,7 @@ bool mco_StaySetBuilder::ParseRsaLine(Span<const char> line, HashTable<int32_t, 
                     proc.date = rsa.entry.date + proc_delay;
                 }
             }
-            proc.proc = ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::FromString(ReadFragment(7), (int)ParseFlag::End);
             if (version >= 222) {
                 if (line[offset] != ' ') {
                     ParsePmsiInt(line.Take(offset, 2), &proc.extension) ||
