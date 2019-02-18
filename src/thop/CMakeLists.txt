@@ -57,29 +57,22 @@ set(THOP_SRC
     server/user.hh
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_custom_command(OUTPUT assets.cc
-                       COMMAND $<TARGET_FILE:packer>
-                       ARGS -Mclient/packer.ini --source_map -e -cGzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                       DEPENDS packer client/packer.ini ${THOP_RESOURCES})
-    add_library(thop_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
-    set_target_properties(thop_assets PROPERTIES PREFIX "")
-else()
-    add_custom_command(OUTPUT assets.cc
-                       COMMAND $<TARGET_FILE:packer>
-                       ARGS -Mclient/packer.ini -e -cGzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
-                       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                       DEPENDS packer client/packer.ini ${THOP_RESOURCES})
+add_custom_command(
+    OUTPUT assets.cc
+    COMMAND $<TARGET_FILE:packer>
+    ARGS -Mclient/packer.ini $<$<CONFIG:Debug>:--source_map> -e -cGzip -d1 -O"${CMAKE_CURRENT_BINARY_DIR}/assets.cc" ${THOP_RESOURCES}
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    DEPENDS packer client/packer.ini ${THOP_RESOURCES}
+)
+add_library(thop_assets MODULE "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
+set_target_properties(thop_assets PROPERTIES PREFIX "")
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     list(APPEND THOP_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
 endif()
 
 add_executable(thop ${THOP_SRC} ${THOP_RESOURCES})
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND UNIX)
-    target_link_libraries(thop PRIVATE dl)
-endif()
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(thop PRIVATE libcc libdrd microhttpd sodium)
+target_link_libraries(thop PRIVATE libcc libdrd microhttpd sodium libasset)
 
 add_executable(thop_hash_password server/thop_hash_password.c)
 target_link_libraries(thop_hash_password PRIVATE sodium)

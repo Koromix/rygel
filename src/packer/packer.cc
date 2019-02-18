@@ -73,7 +73,7 @@ enum class CompressionType {
     Gzip
 };
 
-struct PackerAsset {
+struct asset_Asset {
     const char *name;
     CompressionType compression_type;
     Span<const uint8_t> data;
@@ -390,7 +390,7 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
     PrintLn(&st,
 R"(};
 
-static PackerAsset assets[] = {)");
+static asset_Asset assets[] = {)");
 
     // Write asset table
     for (Size i = 0, cumulative_len = 0; i < packed_assets.len; i++) {
@@ -410,8 +410,8 @@ static PackerAsset assets[] = {)");
     PrintLn(&st,
 R"(};
 
-%1extern const Span<const PackerAsset> %2;
-const Span<const PackerAsset> %2 = assets;)", export_span ? "EXPORT " : "", span_name);
+%1extern const Span<const asset_Asset> %2;
+const Span<const asset_Asset> %2 = assets;)", export_span ? "EXPORT " : "", span_name);
 
     return !st.Close();
 }

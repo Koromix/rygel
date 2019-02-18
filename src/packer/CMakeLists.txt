@@ -4,7 +4,6 @@
 
 add_executable(packer
     ../wrappers/json.hh
-    asset.hh
     packer.cc
     packer.hh
     output.cc
@@ -14,4 +13,12 @@ add_executable(packer
 target_link_libraries(packer PRIVATE libcc)
 if(WIN32)
     target_link_libraries(packer PRIVATE shlwapi)
+endif()
+
+add_library(libasset STATIC
+    libasset.cc
+    libasset.hh
+)
+if(UNIX)
+    target_link_libraries(libpacker PUBLIC dl)
 endif()
