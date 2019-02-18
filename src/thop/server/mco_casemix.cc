@@ -369,8 +369,10 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
 
 int ProduceMcoAggregate(const http_Request &request, const User *user, http_Response *out_response)
 {
-    if (!user)
+    if (!user) {
+        LogError("Not allowed to query MCO aggregations");
         return http_ProduceErrorPage(403, out_response);
+    }
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
@@ -405,7 +407,7 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
         LogError("User is not allowed to use this dispensation mode");
         return http_ProduceErrorPage(403, out_response);
     }
-    if (filter && !(user->permissions & (int)UserPermission::UseFilter)) {
+    if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
         return http_ProduceErrorPage(403, out_response);
     }
@@ -413,7 +415,7 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
     // Prepare query
     McoResultProvider provider;
     int flags;
-    provider.SetFilter(filter, user->permissions & (int)UserPermission::MutateFilter);
+    provider.SetFilter(filter, user->CheckPermission(UserPermission::MutateFilter));
     if (ghm_root.IsValid()) {
         provider.SetGhmRoot(ghm_root);
         flags = (int)AggregationFlag::KeyOnUnits | (int)AggregationFlag::KeyOnDuration;
@@ -526,8 +528,10 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
 
 int ProduceMcoResults(const http_Request &request, const User *user, http_Response *out_response)
 {
-    if (!user || !(user->permissions & (int)UserPermission::FullResults))
+    if (!user || !user->CheckPermission(UserPermission::FullResults)) {
+        LogError("Not allowed to query MCO results");
         return http_ProduceErrorPage(403, out_response);
+    }
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 
     // Get query parameters
@@ -551,7 +555,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
         LogError("User is not allowed to use this dispensation mode");
         return http_ProduceErrorPage(403, out_response);
     }
-    if (filter && !(user->permissions & (int)UserPermission::UseFilter)) {
+    if (filter && !user->CheckPermission(UserPermission::UseFilter)) {
         LogError("User is not allowed to use filters");
         return http_ProduceErrorPage(403, out_response);
     }
@@ -559,7 +563,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
     // Prepare query
     McoResultProvider provider;
     provider.SetDateRange(period[0], period[1]);
-    provider.SetFilter(filter, user->permissions & (int)UserPermission::MutateFilter);
+    provider.SetFilter(filter, user->CheckPermission(UserPermission::MutateFilter));
     provider.SetGhmRoot(ghm_root);
 
     // Reuse for performance

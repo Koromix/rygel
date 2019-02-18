@@ -27,12 +27,12 @@ struct User {
     const char *password_hash;
 
     unsigned int permissions;
-
     unsigned int mco_dispense_modes;
     HashSet<UnitCode> mco_allowed_units;
 
+    bool CheckPermission(UserPermission permission) const { return permissions & (int)permission; }
     bool CheckMcoDispenseMode(mco_DispenseMode dispense_mode) const
-        { return (mco_dispense_modes & (1 << (int)dispense_mode)); }
+        { return mco_dispense_modes & (1 << (int)dispense_mode); }
 
     HASH_TABLE_HANDLER(User, name);
 };
