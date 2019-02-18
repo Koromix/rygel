@@ -23,8 +23,8 @@ set(LIBDRD_SRC
     mco_tables.hh
 )
 
-add_library(drd ${LIBDRD_SRC})
-set_target_properties(drd PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(drd PUBLIC cc wren)
-add_amalgamated_file(drd "${CMAKE_BINARY_DIR}/libdrd.cc" libdrd.cc)
-add_amalgamated_file(drd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)
+add_library(libdrd ${LIBDRD_SRC})
+set_target_properties(libdrd PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(libdrd PUBLIC libcc wren)
+add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.cc" libdrd.cc)
+add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd.hh)

@@ -11,7 +11,7 @@ add_executable(packer
     output.hh
 )
 
-target_link_libraries(packer PRIVATE cc)
+target_link_libraries(packer PRIVATE libcc)
 if(WIN32)
     target_link_libraries(packer PRIVATE shlwapi)
 endif()

@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-if(NOT TARGET heimdall)
+if(NOT TARGET libheimdall)
     return()
 endif()
 
@@ -15,4 +15,4 @@ set(HEIMDALLW_SRC
 )
 
 add_executable(heimdallw ${HEIMDALLW_SRC})
-target_link_libraries(heimdallw PRIVATE heimdall)
+target_link_libraries(heimdallw PRIVATE libcc libheimdall)
