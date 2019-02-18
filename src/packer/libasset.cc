@@ -15,17 +15,11 @@
 #include "../libcc/libcc.hh"
 #include "libasset.hh"
 
-asset_LoadStatus asset_AssetSet::LoadFromLibrary(const char *directory, const char *lib_name,
-                                                 const char *var_name)
+asset_LoadStatus asset_AssetSet::LoadFromLibrary(const char *filename, const char *var_name)
 {
-    BlockAllocator temp_alloc;
-
-    const char *filename = nullptr;
     const Span<const asset_Asset> *lib_assets = nullptr;
 
 #ifdef _WIN32
-    filename = Fmt(&temp_alloc, "%1%/%2.dll", directory, lib_name).ptr;
-
     // Check library time
     {
         StaticAssert(SIZE(FILETIME) == SIZE(last_time));
@@ -55,8 +49,6 @@ asset_LoadStatus asset_AssetSet::LoadFromLibrary(const char *directory, const ch
 
     lib_assets = (const Span<const asset_Asset> *)GetProcAddress(h, var_name);
 #else
-    filename = Fmt(&temp_alloc, "%1%/%2.so", directory, lib_name).ptr;
-
     // Check library time
     {
         struct stat sb;

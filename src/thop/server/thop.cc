@@ -54,6 +54,7 @@ UserSet thop_user_set;
 
 static Span<const asset_Asset> assets;
 #ifndef NDEBUG
+static const char *assets_filename;
 static asset_AssetSet asset_set;
 #else
 extern const Span<const asset_Asset> packer_assets;
@@ -260,7 +261,7 @@ static void InitRoutes()
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(GetApplicationDirectory(), "thop_assets") == asset_LoadStatus::Loaded) {
+    if (asset_set.LoadFromLibrary(assets_filename) == asset_LoadStatus::Loaded) {
         LogInfo("Reloaded assets from library");
         assets = asset_set.assets;
 
@@ -459,7 +460,9 @@ Options:
 
     // Init routes
 #ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(GetApplicationDirectory(), "thop_assets") == asset_LoadStatus::Error)
+    assets_filename = Fmt(&temp_alloc, "%1%/thop_assets%2",
+                          GetApplicationDirectory(), SHARED_LIBRARY_EXTENSION).ptr;
+    if (asset_set.LoadFromLibrary(assets_filename) == asset_LoadStatus::Error)
         return 1;
     assets = asset_set.assets;
 #else

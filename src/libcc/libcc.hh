@@ -3095,8 +3095,10 @@ overflow:
 
 #ifdef _WIN32
     #define PATH_SEPARATORS "\\/"
+    #define SHARED_LIBRARY_EXTENSION ".dll"
 #else
     #define PATH_SEPARATORS "/"
+    #define SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
 CompressionType GetPathCompression(Span<const char> filename);
