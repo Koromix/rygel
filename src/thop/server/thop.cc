@@ -425,7 +425,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 #ifndef NDEBUG
     out_response->flags |= (int)http_Response::Flag::DisableCache;
 #endif
-    out_response->AddCachingHeaders(etag);
+    out_response->AddCachingHeaders(thop_config.max_age, etag);
 
     return code;
 }

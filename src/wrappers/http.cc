@@ -213,10 +213,13 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
     MHD_add_response_header(response.get(), "Set-Cookie", cookie_buf);
 }
 
-void http_Response::AddCachingHeaders(const char *etag)
+void http_Response::AddCachingHeaders(int max_age, const char *etag)
 {
     if (!(flags & (int)http_Response::Flag::DisableCacheControl)) {
-        MHD_add_response_header(response.get(), "Cache-Control", "max-age=3600");
+        char buf[512];
+        Fmt(buf, "max-age=%1", max_age);
+
+        MHD_add_response_header(response.get(), "Cache-Control", buf);
     } else {
         MHD_add_response_header(response.get(), "Cache-Control", "no-store");
     }

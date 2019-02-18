@@ -31,7 +31,7 @@ struct http_Response {
     void AddEncodingHeader(CompressionType compression_type);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
-    void AddCachingHeaders(const char *etag = nullptr);
+    void AddCachingHeaders(int max_age, const char *etag = nullptr);
 };
 
 struct http_Request {

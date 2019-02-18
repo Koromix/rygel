@@ -16,7 +16,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         ip_stack = config.ip_stack,
                         port = config.port,
                         threads = config.threads,
-                        base_url = config.base_url) {
+                        base_url = config.base_url,
+                        max_age = config.max_age) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
         config.mco_authorization_filename = mco_authorization_filename;
@@ -27,6 +28,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         config.port = port;
         config.threads = threads;
         config.base_url = base_url;
+        config.max_age = max_age;
     };
 
     Span<const char> root_dir;
@@ -96,6 +98,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         }
                     } else if (prop.key == "BaseUrl") {
                         config.base_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "MaxAge") {
+                        valid &= ParseDec(prop.value, &config.max_age);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
