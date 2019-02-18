@@ -3,12 +3,12 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "../packer/asset.hh"
+#include "../packer/libasset.hh"
 #include "../wrappers/opengl.hh"
 #include "../libgui/libgui.hh"
 #include "render.hh"
 
-extern const Span<const PackerAsset> packer_assets;
+extern const Span<const asset_Asset> packer_assets;
 #define IMGUI_FONT "Roboto-Medium.ttf"
 
 static GLuint shader_program = 0;
@@ -114,8 +114,8 @@ static bool InitImGui()
                           (GLvoid *)OFFSET_OF(ImDrawVert, col));
 
     if (!font_texture) {
-        const PackerAsset *font_data = FindIf(packer_assets,
-                                              [](const PackerAsset &asset) { return TestStr(asset.name, IMGUI_FONT); });
+        const asset_Asset *font_data = FindIf(packer_assets,
+                                              [](const asset_Asset &asset) { return TestStr(asset.name, IMGUI_FONT); });
         if (font_data) {
             ImFontConfig font_config;
             font_config.FontDataOwnedByAtlas = false;

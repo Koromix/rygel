@@ -2,14 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifndef _WIN32
-    #include <dlfcn.h>
-    #include <signal.h>
-    #include <sys/types.h>
-    #include <sys/stat.h>
-    #include <unistd.h>
-#endif
-
 #include "../../../lib/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
 #include "thop.hh"
@@ -20,10 +12,10 @@
 #include "mco_info.hh"
 #include "user.hh"
 #include "../../wrappers/http.hh"
-#include "../../packer/asset.hh"
+#include "../../packer/libasset.hh"
 
 struct CatalogSet {
-    HeapArray<PackerAsset> catalogs;
+    HeapArray<asset_Asset> catalogs;
     LinkedAllocator alloc;
 };
 
@@ -44,7 +36,7 @@ struct Route {
     Type type;
     union {
         struct {
-            PackerAsset asset;
+            asset_Asset asset;
             const char *mime_type;
         } st;
 
@@ -60,13 +52,13 @@ bool thop_has_casemix;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 
-static CatalogSet catalog_set;
+static Span<const asset_Asset> assets;
 #ifndef NDEBUG
-static HeapArray<PackerAsset> packer_assets;
-static LinkedAllocator packer_alloc;
+static asset_AssetSet asset_set;
 #else
-extern const Span<const PackerAsset> packer_assets;
+extern const Span<const asset_Asset> packer_assets;
 #endif
+static CatalogSet catalog_set;
 
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
@@ -94,7 +86,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     }
 
     for (const char *filename: filenames) {
-        PackerAsset catalog = {};
+        asset_Asset catalog = {};
 
         const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
         Assert(name[0]);
@@ -181,7 +173,7 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     const auto add_asset_route = [&](const char *method, const char *url,
-                                     Route::Matching matching, const PackerAsset &asset) {
+                                     Route::Matching matching, const asset_Asset &asset) {
         Route route = {};
 
         route.method = method;
@@ -208,9 +200,9 @@ static void InitRoutes()
     };
 
     // Static assets and catalogs
-    PackerAsset html = {};
-    DebugAssert(packer_assets.len > 0);
-    for (const PackerAsset &asset: packer_assets) {
+    asset_Asset html = {};
+    DebugAssert(assets.len > 0);
+    for (const asset_Asset &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
         } else if (TestStr(asset.name, "favicon.png")) {
@@ -220,7 +212,7 @@ static void InitRoutes()
             add_asset_route("GET", url, Route::Matching::Exact, asset);
         }
     }
-    for (const PackerAsset &desc: catalog_set.catalogs) {
+    for (const asset_Asset &desc: catalog_set.catalogs) {
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
@@ -265,102 +257,15 @@ static void InitRoutes()
     }
 }
 
-#ifndef NDEBUG
-static bool UpdateStaticAssets()
-{
-    BlockAllocator temp_alloc;
-
-    const char *filename = nullptr;
-    const Span<const PackerAsset> *lib_assets = nullptr;
-#ifdef _WIN32
-    Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/thop_assets.dll", GetApplicationDirectory()).ptr;
-    {
-        static FILETIME last_time;
-
-        WIN32_FILE_ATTRIBUTE_DATA attr;
-        if (!GetFileAttributesEx(filename, GetFileExInfoStandard, &attr)) {
-            LogError("Cannot stat file '%1'", filename);
-            return false;
-        }
-
-        if (attr.ftLastWriteTime.dwHighDateTime == last_time.dwHighDateTime &&
-                attr.ftLastWriteTime.dwLowDateTime == last_time.dwLowDateTime)
-            return true;
-        last_time = attr.ftLastWriteTime;
-    }
-
-    HMODULE h = LoadLibrary(filename);
-    if (!h) {
-        LogError("Cannot load library '%1'", filename);
-        return false;
-    }
-    DEFER { FreeLibrary(h); };
-
-    lib_assets = (const Span<const PackerAsset> *)GetProcAddress(h, "packer_assets");
-#else
-    Assert(GetApplicationDirectory());
-    filename = Fmt(&temp_alloc, "%1%/thop_assets.so", GetApplicationDirectory()).ptr;
-    {
-        static struct timespec last_time;
-
-        struct stat sb;
-        if (stat(filename, &sb) < 0) {
-            LogError("Cannot stat file '%1'", filename);
-            return false;
-        }
-
-#ifdef __APPLE__
-        if (sb.st_mtimespec.tv_sec == last_time.tv_sec &&
-                sb.st_mtimespec.tv_nsec == last_time.tv_nsec)
-            return true;
-        last_time = sb.st_mtimespec;
-#else
-        if (sb.st_mtim.tv_sec == last_time.tv_sec &&
-                sb.st_mtim.tv_nsec == last_time.tv_nsec)
-            return true;
-        last_time = sb.st_mtim;
-#endif
-    }
-
-    void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
-    if (!h) {
-        LogError("Cannot load library '%1': %2", filename, dlerror());
-        return false;
-    }
-    DEFER { dlclose(h); };
-
-    lib_assets = (const Span<const PackerAsset> *)dlsym(h, "packer_assets");
-#endif
-    if (!lib_assets) {
-        LogError("Cannot find symbol 'packer_assets' in library '%1'", filename);
-        return false;
-    }
-
-    packer_assets.Clear();
-    packer_alloc.ReleaseAll();
-    for (const PackerAsset &asset: *lib_assets) {
-        PackerAsset asset_copy;
-        asset_copy.name = DuplicateString(asset.name, &packer_alloc).ptr;
-        uint8_t *data_ptr = (uint8_t *)Allocator::Allocate(&packer_alloc, asset.data.len);
-        memcpy(data_ptr, asset.data.ptr, (size_t)asset.data.len);
-        asset_copy.data = {data_ptr, asset.data.len};
-        asset_copy.compression_type = asset.compression_type;
-        asset_copy.source_map = DuplicateString(asset.source_map, &packer_alloc).ptr;
-        packer_assets.Append(asset_copy);
-    }
-
-    InitRoutes();
-
-    LogInfo("Loaded assets from '%1'", SplitStrReverseAny(filename, PATH_SEPARATORS));
-    return true;
-}
-#endif
-
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
-    UpdateStaticAssets();
+    if (asset_set.LoadFromLibrary(GetApplicationDirectory(), "thop_assets") == asset_LoadStatus::Loaded) {
+        LogInfo("Reloaded assets from library");
+        assets = asset_set.assets;
+
+        InitRoutes();
+    }
 #endif
 
     // Find user information
@@ -554,11 +459,13 @@ Options:
 
     // Init routes
 #ifndef NDEBUG
-    if (!UpdateStaticAssets())
+    if (asset_set.LoadFromLibrary(GetApplicationDirectory(), "thop_assets") == asset_LoadStatus::Error)
         return 1;
+    assets = asset_set.assets;
 #else
-    InitRoutes();
+    assets = packer_assets;
 #endif
+    InitRoutes();
 
     // Run!
     http_Daemon daemon;
