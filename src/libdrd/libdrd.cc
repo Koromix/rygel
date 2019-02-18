@@ -8,5 +8,7 @@
 #include "mco_classifier.cc"
 #include "mco_mapper.cc"
 #include "mco_pricing.cc"
-#include "mco_filter.cc"
+#ifndef LIBDRD_NO_WREN
+    #include "mco_filter.cc"
+#endif
 #include "mco_dump.cc"
