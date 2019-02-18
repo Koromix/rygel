@@ -177,6 +177,10 @@ endif()
 set(SQLITE_SRC sqlite/sqlite3.c)
 add_library(sqlite STATIC ${SQLITE_SRC})
 target_compile_definitions(sqlite PRIVATE -DSQLITE_THREADSAFE=1)
+target_link_libraries(sqlite PUBLIC Threads::Threads)
+if(NOT WIN32)
+    target_link_libraries(sqlite PUBLIC dl)
+endif()
 
 set(WREN_SRC wren/src/vm/wren_compiler.c
              wren/src/vm/wren_core.c
