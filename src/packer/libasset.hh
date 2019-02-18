@@ -35,6 +35,5 @@ struct asset_AssetSet {
     struct timespec last_time = {};
 #endif
 
-    asset_LoadStatus LoadFromLibrary(const char *directory, const char *lib_name,
-                                     const char *var_name = "packer_assets");
+    asset_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "packer_assets");
 };
