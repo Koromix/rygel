@@ -8,7 +8,7 @@
 #include "mco_common.hh"
 
 struct mco_ProcedureRealisation {
-    ProcedureCode proc;
+    drd_ProcedureCode proc;
     int8_t phase;
     int8_t activity;
     int16_t count;
@@ -70,7 +70,7 @@ struct mco_Stay {
         char mode;
         char destination;
     } exit;
-    UnitCode unit;
+    drd_UnitCode unit;
     int8_t bed_authorization;
     int16_t session_count;
     int16_t igs2;
@@ -79,13 +79,13 @@ struct mco_Stay {
     int16_t newborn_weight;
     int16_t dip_count;
 
-    DiagnosisCode main_diagnosis;
-    DiagnosisCode linked_diagnosis;
+    drd_DiagnosisCode main_diagnosis;
+    drd_DiagnosisCode linked_diagnosis;
 
     // It's 2017, so let's assume 64-bit LE platforms are the majority. Use padding and
     // struct hacking (see StaySetBuilder::LoadPack and StaySet::SavePack) to support dspak
     // files on 32-bit platforms.
-    Span<DiagnosisCode> other_diagnoses;
+    Span<drd_DiagnosisCode> other_diagnoses;
     Span<mco_ProcedureRealisation> procedures;
 #ifndef ARCH_64
     char _pad1[32 - 2 * SIZE(Size) - 2 * SIZE(void *)];
@@ -148,7 +148,7 @@ struct mco_StaySet {
 class mco_StaySetBuilder {
     mco_StaySet set;
 
-    IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(DiagnosisCode)};
+    IndirectBlockAllocator other_diagnoses_alloc {&set.array_alloc, 2048 * SIZE(drd_DiagnosisCode)};
     IndirectBlockAllocator procedures_alloc {&set.array_alloc, 2048 * SIZE(mco_ProcedureRealisation)};
 
     struct FichCompData {

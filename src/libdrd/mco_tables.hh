@@ -88,7 +88,7 @@ struct mco_DiagnosisInfo {
         SexDifference = 1
     };
 
-    DiagnosisCode diag;
+    drd_DiagnosisCode diag;
 
     uint16_t flags;
     struct Attributes {
@@ -120,7 +120,7 @@ struct mco_ExclusionInfo {
 };
 
 struct mco_ProcedureInfo {
-    ProcedureCode proc;
+    drd_ProcedureCode proc;
     int8_t phase;
     uint8_t activities;
 
@@ -153,7 +153,7 @@ struct mco_ProcedureInfo {
 };
 
 struct mco_ProcedureLink {
-    ProcedureCode proc;
+    drd_ProcedureCode proc;
     int8_t phase;
     int8_t activity;
 
@@ -209,9 +209,9 @@ struct mco_GhmToGhsInfo {
 
     int8_t conditions_count;
 
-    mco_GhsCode Ghs(Sector sector) const
+    mco_GhsCode Ghs(drd_Sector sector) const
     {
-        StaticAssert((int)Sector::Public == 0);
+        StaticAssert((int)drd_Sector::Public == 0);
         return ghs[(int)sector];
     }
 
@@ -261,8 +261,8 @@ struct mco_AuthorizationInfo {
 };
 
 struct mco_SrcPair {
-    DiagnosisCode diag;
-    ProcedureCode proc;
+    drd_DiagnosisCode diag;
+    drd_ProcedureCode proc;
 
     HASH_TABLE_HANDLER(mco_SrcPair, diag);
 };
@@ -293,29 +293,29 @@ struct mco_TableIndex {
     Span<const mco_GhsPriceInfo> ghs_prices[2];
     mco_SupplementCounters<int32_t> supplement_prices[2];
 
-    const HashTable<DiagnosisCode, const mco_DiagnosisInfo *> *diagnoses_map;
-    const HashTable<ProcedureCode, const mco_ProcedureInfo *> *procedures_map;
+    const HashTable<drd_DiagnosisCode, const mco_DiagnosisInfo *> *diagnoses_map;
+    const HashTable<drd_ProcedureCode, const mco_ProcedureInfo *> *procedures_map;
     const HashTable<mco_GhmRootCode, const mco_GhmRootInfo *> *ghm_roots_map;
 
     const HashTable<mco_GhmCode, const mco_GhmToGhsInfo *> *ghm_to_ghs_map;
     const HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *, mco_GhmToGhsInfo::GhmRootHandler> *ghm_root_to_ghs_map;
     const HashTable<int16_t, const mco_AuthorizationInfo *> *authorizations_map;
-    const HashTable<DiagnosisCode, const mco_SrcPair *> *src_pairs_map[2];
+    const HashTable<drd_DiagnosisCode, const mco_SrcPair *> *src_pairs_map[2];
 
     const HashTable<mco_GhsCode, const mco_GhsPriceInfo *> *ghs_prices_map[2];
 
-    const mco_DiagnosisInfo *FindDiagnosis(DiagnosisCode diag) const;
-    Span<const mco_ProcedureInfo> FindProcedure(ProcedureCode proc) const;
-    const mco_ProcedureInfo *FindProcedure(ProcedureCode proc, int8_t phase, Date date) const;
+    const mco_DiagnosisInfo *FindDiagnosis(drd_DiagnosisCode diag) const;
+    Span<const mco_ProcedureInfo> FindProcedure(drd_ProcedureCode proc) const;
+    const mco_ProcedureInfo *FindProcedure(drd_ProcedureCode proc, int8_t phase, Date date) const;
     const mco_GhmRootInfo *FindGhmRoot(mco_GhmRootCode ghm_root) const;
 
     Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmCode ghm) const;
     Span<const mco_GhmToGhsInfo> FindCompatibleGhs(mco_GhmRootCode ghm_root) const;
     const mco_AuthorizationInfo *FindAuthorization(mco_AuthorizationScope scope, int8_t type) const;
 
-    double GhsCoefficient(Sector sector) const;
-    const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, Sector sector) const;
-    const mco_SupplementCounters<int32_t> &SupplementPrices(Sector sector) const;
+    double GhsCoefficient(drd_Sector sector) const;
+    const mco_GhsPriceInfo *FindGhsPrice(mco_GhsCode ghs, drd_Sector sector) const;
+    const mco_SupplementCounters<int32_t> &SupplementPrices(drd_Sector sector) const;
 };
 
 class mco_TableSet {
@@ -340,14 +340,14 @@ public:
     } store;
 
     struct {
-        BlockQueue<HashTable<DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
-        BlockQueue<HashTable<ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
+        BlockQueue<HashTable<drd_DiagnosisCode, const mco_DiagnosisInfo *>, 16> diagnoses;
+        BlockQueue<HashTable<drd_ProcedureCode, const mco_ProcedureInfo *>, 16> procedures;
         BlockQueue<HashTable<mco_GhmRootCode, const mco_GhmRootInfo *>, 16> ghm_roots;
         BlockQueue<HashTable<mco_GhmCode, const mco_GhmToGhsInfo *>, 16> ghm_to_ghs;
         BlockQueue<HashTable<mco_GhmRootCode, const mco_GhmToGhsInfo *,
                                mco_GhmToGhsInfo::GhmRootHandler>, 16> ghm_root_to_ghs;
         BlockQueue<HashTable<int16_t, const mco_AuthorizationInfo *>, 16> authorizations;
-        BlockQueue<HashTable<DiagnosisCode, const mco_SrcPair *>, 16> src_pairs;
+        BlockQueue<HashTable<drd_DiagnosisCode, const mco_SrcPair *>, 16> src_pairs;
 
         BlockQueue<HashTable<mco_GhsCode, const mco_GhsPriceInfo *>, 16> ghs_prices[2];
     } maps;

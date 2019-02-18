@@ -133,7 +133,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
 
-    HeapArray<DiagnosisCode> other_diagnoses2(&out_stay_set->array_alloc);
+    HeapArray<drd_DiagnosisCode> other_diagnoses2(&out_stay_set->array_alloc);
     HeapArray<mco_ProcedureRealisation> procedures2(&out_stay_set->array_alloc);
     other_diagnoses2.Reserve((stays_end - stays_offset) * 2 + diagnoses_end - diagnoses_offset);
     procedures2.Reserve(procedures_end - procedures_offset);
@@ -204,8 +204,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
-                DiagnosisCode diag =
-                    DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
+                drd_DiagnosisCode diag =
+                    drd_DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 const char *type_str = diagnoses.type[j].ptr;
 
                 if (LIKELY(type_str[0] && !type_str[1])) {
@@ -246,14 +246,14 @@ static bool RunClassifier(const ClassifierInstance &classifier,
         } else {
             if (LIKELY(stays.main_diagnosis[i] != CHAR(NA_STRING))) {
                 stay.main_diagnosis =
-                    DiagnosisCode::FromString(stays.main_diagnosis[i], (int)ParseFlag::End);
+                    drd_DiagnosisCode::FromString(stays.main_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.main_diagnosis.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedMainDiagnosis;
                 }
             }
             if (stays.linked_diagnosis[i] != CHAR(NA_STRING)) {
                 stay.linked_diagnosis =
-                    DiagnosisCode::FromString(stays.linked_diagnosis[i], (int)ParseFlag::End);
+                    drd_DiagnosisCode::FromString(stays.linked_diagnosis[i], (int)ParseFlag::End);
                 if (UNLIKELY(!stay.linked_diagnosis.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedLinkedDiagnosis;
                 }
@@ -266,8 +266,8 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                 if (UNLIKELY(diagnoses.diag[j] == CHAR(NA_STRING)))
                     continue;
 
-                DiagnosisCode diag =
-                    DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
+                drd_DiagnosisCode diag =
+                    drd_DiagnosisCode::FromString(diagnoses.diag[j], (int)ParseFlag::End);
                 if (UNLIKELY(!diag.IsValid())) {
                     stay.errors |= (int)mco_Stay::Error::MalformedOtherDiagnosis;
                 }
@@ -287,7 +287,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
 
             mco_ProcedureRealisation proc = {};
 
-            proc.proc = ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
+            proc.proc = drd_ProcedureCode::FromString(procedures.proc[k], (int)ParseFlag::End);
             if (procedures.extension.Len() && procedures.extension[k] != NA_INTEGER) {
                 int extension = procedures.extension[k];
                 if (LIKELY(extension >= 0 && extension < 100)) {
@@ -811,8 +811,8 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
         for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
             Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                mco_GhsCode ghs_code = ghm_to_ghs_info.Ghs(Sector::Public);
-                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_code, Sector::Public);
+                mco_GhsCode ghs_code = ghm_to_ghs_info.Ghs(drd_Sector::Public);
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_code, drd_Sector::Public);
 
                 char buf[256];
 
@@ -864,7 +864,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
 
                 if (ghs_price_info) {
                     ghs_cents[i] = ghs_price_info->ghs_cents;
-                    ghs_coefficient[i] = index->GhsCoefficient(Sector::Public);
+                    ghs_coefficient[i] = index->GhsCoefficient(drd_Sector::Public);
                     if (ghs_price_info->exh_treshold) {
                         exh_treshold[i] = ghs_price_info->exb_treshold;
                         exh_cents[i] = ghs_price_info->exh_cents;
@@ -996,7 +996,7 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     rcc_AutoSexp ghm_roots_df;
     {
         struct ExclusionInfo {
-            DiagnosisCode diag;
+            drd_DiagnosisCode diag;
             mco_GhmRootCode ghm_root;
         };
         HeapArray<ExclusionInfo> ghm_exclusions;
@@ -1034,8 +1034,8 @@ RcppExport SEXP drdR_mco_Exclusions(SEXP classifier_xp, SEXP date_xp)
     rcc_AutoSexp diagnoses_df;
     {
         struct ExclusionInfo {
-            DiagnosisCode diag;
-            DiagnosisCode main_diag;
+            drd_DiagnosisCode diag;
+            drd_DiagnosisCode main_diag;
         };
         HeapArray<ExclusionInfo> exclusions;
 
@@ -1273,7 +1273,7 @@ RcppExport SEXP drdR_mco_LoadStays(SEXP filenames_xp)
             stays_ucd[i] = !!(stay.flags & (int)mco_Stay::Flag::Ucd);
             stays_dip_count[i] = stay.dip_count;
 
-            for (DiagnosisCode diag: stay.other_diagnoses) {
+            for (drd_DiagnosisCode diag: stay.other_diagnoses) {
                 diagnoses_id[j] = (int)(i + 1);
                 diagnoses_diag.Set(j, diag.str);
                 j++;
@@ -1333,7 +1333,7 @@ RcppExport SEXP drdR_mco_CleanDiagnoses(SEXP diagnoses_xp)
     for (Size i = 0; i < diagnoses.Len(); i++) {
         Span<const char> str = diagnoses[i];
         if (!diagnoses.IsNA(str)) {
-            DiagnosisCode diag = DiagnosisCode::FromString(diagnoses[i]);
+            drd_DiagnosisCode diag = drd_DiagnosisCode::FromString(diagnoses[i]);
             if (LIKELY(diag.IsValid())) {
                 diagnoses2.Set(i, diag.str);
             } else {
@@ -1355,7 +1355,7 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
     for (Size i = 0; i < procedures.Len(); i++) {
         Span<const char> str = procedures[i];
         if (!procedures.IsNA(str)) {
-            ProcedureCode proc = ProcedureCode::FromString(procedures[i]);
+            drd_ProcedureCode proc = drd_ProcedureCode::FromString(procedures[i]);
             if (LIKELY(proc.IsValid())) {
                 procedures2.Set(i, proc.str);
             } else {

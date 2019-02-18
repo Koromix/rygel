@@ -6,7 +6,7 @@
 #include "mco_authorization.hh"
 #include "mco_tables.hh"
 
-Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) const
+Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(drd_UnitCode unit) const
 {
     Span<const mco_Authorization> auths;
     auths.ptr = authorizations_map.FindValue(unit, nullptr);
@@ -25,7 +25,7 @@ Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(UnitCode unit) cons
     return auths;
 }
 
-const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date) const
+const mco_Authorization *mco_AuthorizationSet::FindUnit(drd_UnitCode unit, Date date) const
 {
     const mco_Authorization *auth = authorizations_map.FindValue(unit, nullptr);
     if (!auth)
@@ -39,7 +39,7 @@ const mco_Authorization *mco_AuthorizationSet::FindUnit(UnitCode unit, Date date
     return nullptr;
 }
 
-int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) const
+int8_t mco_AuthorizationSet::GetAuthorizationType(drd_UnitCode unit, Date date) const
 {
     if (unit.number >= 10000) {
         return (int8_t)(unit.number % 100);
@@ -55,7 +55,7 @@ int8_t mco_AuthorizationSet::GetAuthorizationType(UnitCode unit, Date date) cons
     }
 }
 
-bool mco_AuthorizationSet::TestAuthorization(UnitCode unit, Date date, int8_t auth_type) const
+bool mco_AuthorizationSet::TestAuthorization(drd_UnitCode unit, Date date, int8_t auth_type) const
 {
     if (GetAuthorizationType(unit, date) == auth_type)
         return true;
@@ -98,7 +98,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
                 auth.unit.number = INT16_MAX;
                 authorizations = &set.facility_authorizations;
             } else {
-                auth.unit = UnitCode::FromString(line.Take(0, 4));
+                auth.unit = drd_UnitCode::FromString(line.Take(0, 4));
                 valid &= auth.unit.IsValid();
                 authorizations = &set.authorizations;
             }
@@ -151,7 +151,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
                 auth.unit.number = INT16_MAX;
                 authorizations = &set.facility_authorizations;
             } else {
-                auth.unit = UnitCode::FromString(prop.section);
+                auth.unit = drd_UnitCode::FromString(prop.section);
                 valid &= auth.unit.IsValid();
                 authorizations = &set.authorizations;
             }

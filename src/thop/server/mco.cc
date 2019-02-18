@@ -126,7 +126,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
 
     // Check units
     {
-        HashSet<UnitCode> known_units;
+        HashSet<drd_UnitCode> known_units;
         for (const Structure &structure: thop_structure_set.structures) {
             for (const StructureEntity &ent: structure.entities) {
                 known_units.Append(ent.unit);

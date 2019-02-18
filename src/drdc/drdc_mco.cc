@@ -863,8 +863,8 @@ bool RunMcoShow(Span<const char *> arguments)
     for (const char *name: names) {
         // Diagnosis?
         {
-            DiagnosisCode diag =
-                DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            drd_DiagnosisCode diag =
+                drd_DiagnosisCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (diag.IsValid()) {
                 const mco_DiagnosisInfo *diag_info = index->FindDiagnosis(diag);
                 if (diag_info) {
@@ -876,8 +876,8 @@ bool RunMcoShow(Span<const char *> arguments)
 
         // Procedure?
         {
-            ProcedureCode proc =
-                ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+            drd_ProcedureCode proc =
+                drd_ProcedureCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (proc.IsValid()) {
                 Span<const mco_ProcedureInfo> proc_info = index->FindProcedure(proc);
                 if (proc_info.len) {
@@ -909,12 +909,12 @@ bool RunMcoShow(Span<const char *> arguments)
         {
             mco_GhsCode ghs = mco_GhsCode::FromString(name, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (ghs.IsValid()) {
-                const mco_GhsPriceInfo *pub_price_info = index->FindGhsPrice(ghs, Sector::Public);
-                const mco_GhsPriceInfo *priv_price_info = index->FindGhsPrice(ghs, Sector::Private);
+                const mco_GhsPriceInfo *pub_price_info = index->FindGhsPrice(ghs, drd_Sector::Public);
+                const mco_GhsPriceInfo *priv_price_info = index->FindGhsPrice(ghs, drd_Sector::Private);
                 if (pub_price_info || priv_price_info) {
                     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs) {
-                        if (ghm_to_ghs_info.Ghs(Sector::Public) == ghs ||
-                                ghm_to_ghs_info.Ghs(Sector::Private) == ghs) {
+                        if (ghm_to_ghs_info.Ghs(drd_Sector::Public) == ghs ||
+                                ghm_to_ghs_info.Ghs(drd_Sector::Private) == ghs) {
                             mco_DumpGhmToGhsTable(ghm_to_ghs_info, &stdout_st);
                         }
                     }

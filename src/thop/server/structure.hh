@@ -9,7 +9,7 @@
 
 struct StructureEntity {
     const char *path;
-    UnitCode unit;
+    drd_UnitCode unit;
 };
 
 struct Structure {
@@ -27,7 +27,7 @@ class StructureSetBuilder {
     StructureSet set;
 
     HashSet<const char *> structures_set;
-    HashMap<UnitCode, Size> unit_reference_counts;
+    HashMap<drd_UnitCode, Size> unit_reference_counts;
 
 public:
     bool LoadIni(StreamReader &st);

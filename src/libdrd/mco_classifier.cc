@@ -280,7 +280,7 @@ static bool AppendValidDiagnoses(mco_PreparedSet *out_prepared_set, mco_ErrorSet
         const mco_Stay &mono_stay = *mono_prep.stay;
 
         mono_prep.diagnoses.ptr = out_prepared_set->store.diagnoses.end();
-        for (DiagnosisCode diag: mono_stay.other_diagnoses) {
+        for (drd_DiagnosisCode diag: mono_stay.other_diagnoses) {
             if (diag.Matches("Z37")) {
                 out_prep->markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
                 mono_prep.markers |= (int)mco_PreparedStay::Marker::ChildbirthDiagnosis;
@@ -1193,7 +1193,7 @@ static int ExecuteGhmTest(RunGhmTreeContext &ctx, const mco_GhmDecisionNode &ghm
 
         case 18: {
             // This test is rare, we can afford a few allocations
-            HashSet<DiagnosisCode> handled_codes;
+            HashSet<drd_DiagnosisCode> handled_codes;
             Size special_matches = 0;
             for (const mco_DiagnosisInfo *diag_info: ctx.prep->diagnoses) {
                 if (TestDiagnosis(ctx.stay->sex, *diag_info,
@@ -1443,8 +1443,8 @@ static bool CheckGhmErrors(const mco_PreparedStay &prep, Span<const mco_Prepared
     if (UNLIKELY(stay.exit.date >= Date(2016, 3, 1) && ghm.Root() == mco_GhmRootCode(14, 'Z', 8))) {
         bool type_present = std::any_of(prep.procedures.begin(), prep.procedures.end(),
                                         [](const mco_ProcedureInfo *proc_info) {
-            static ProcedureCode proc1 = ProcedureCode::FromString("JNJD002");
-            static ProcedureCode proc2 = ProcedureCode::FromString("JNJP001");
+            static drd_ProcedureCode proc1 = drd_ProcedureCode::FromString("JNJD002");
+            static drd_ProcedureCode proc2 = drd_ProcedureCode::FromString("JNJP001");
 
             return proc_info->proc == proc1 || proc_info->proc == proc2;
         });
@@ -1751,7 +1751,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
 
         for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
             if (TestGhs(prep, mono_preps, authorization_set, ghm_to_ghs_info)) {
-                ghs = ghm_to_ghs_info.Ghs(Sector::Public);
+                ghs = ghm_to_ghs_info.Ghs(drd_Sector::Public);
                 break;
             }
         }
@@ -1793,7 +1793,7 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
     if (prep.age >= 18 && mono_prep.stay->igs2 - igs2_src_adjust >= 15)
         return true;
 
-    HeapArray<ProcedureCode> src_procedures;
+    HeapArray<drd_ProcedureCode> src_procedures;
 
     if (mono_prep.stay->igs2 - igs2_src_adjust >= 7 || prep.age < 18) {
         for (const mco_DiagnosisInfo *diag_info: mono_prep.diagnoses) {
@@ -1824,7 +1824,7 @@ static bool TestSupplementSrc(const mco_TableIndex &index, const mco_PreparedSta
         }
     }
     for (const mco_ProcedureInfo *proc_info: mono_prep.procedures) {
-        for (ProcedureCode diag_proc: src_procedures) {
+        for (drd_ProcedureCode diag_proc: src_procedures) {
             if (diag_proc == proc_info->proc)
                 return true;
         }
