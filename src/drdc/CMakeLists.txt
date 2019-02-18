@@ -10,4 +10,4 @@ set(DRDC_SRC
 )
 
 add_executable(drdc ${DRDC_SRC})
-target_link_libraries(drdc PRIVATE cc drd)
+target_link_libraries(drdc PRIVATE libcc libdrd)

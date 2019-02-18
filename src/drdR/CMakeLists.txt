@@ -15,4 +15,4 @@ set(DRDR_SRC
 )
 
 R_add_package(drdR DESCRIPTION NAMESPACE RCPP_INCLUDE ${DRDR_SRC})
-target_link_libraries(drdR PRIVATE cc drd miniz)
+target_link_libraries(drdR PRIVATE libcc libdrd miniz)

@@ -13,7 +13,7 @@ set(GOUPIL_SRC
 )
 
 add_executable(goupil ${GOUPIL_SRC})
-target_link_libraries(goupil PRIVATE cc microhttpd sqlite)
+target_link_libraries(goupil PRIVATE libcc microhttpd sqlite)
 
 set(GOUPIL_ADMIN_SRC
     server/config.cc
@@ -24,4 +24,4 @@ set(GOUPIL_ADMIN_SRC
 )
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
-target_link_libraries(goupil_admin PRIVATE cc sqlite)
+target_link_libraries(goupil_admin PRIVATE libcc sqlite)

@@ -7,9 +7,9 @@ set(LIBCC_SRC
     ../libcc/libcc.hh
 )
 
-add_library(cc ${LIBCC_SRC})
-set_target_properties(cc PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(cc PUBLIC miniz)
+add_library(libcc ${LIBCC_SRC})
+set_target_properties(libcc PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(libcc PUBLIC miniz)
 if(NOT EMSCRIPTEN)
-    target_link_libraries(cc PUBLIC Threads::Threads)
+    target_link_libraries(libcc PUBLIC Threads::Threads)
 endif()
