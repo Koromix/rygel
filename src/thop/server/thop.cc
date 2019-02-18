@@ -365,7 +365,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 
     // Find user information
     bool user_mismatch = false;
-    const User *user = CheckSessionUser(request.conn, &user_mismatch);
+    const User *user = CheckSessionUser(request, &user_mismatch);
 
     // Send these headers whenever possible
     DEFER {
@@ -377,7 +377,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 
     // Handle server-side cache validation (ETag)
     if (!(out_response->flags & (int)http_Response::Flag::DisableETag)) {
-        const char *client_etag = MHD_lookup_connection_value(request.conn, MHD_HEADER_KIND, "If-None-Match");
+        const char *client_etag = request.GetHeaderValue("If-None-Match");
         if (client_etag && TestStr(client_etag, etag)) {
             *out_response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             return 304;

@@ -7,10 +7,10 @@
 #include "mco.hh"
 #include "user.hh"
 
-static int GetQueryDateRange(MHD_Connection *conn, const char *key, http_Response *out_response,
-                             Date *out_start_date, Date *out_end_date)
+static int GetQueryDateRange(const http_Request &request, const char *key,
+                             http_Response *out_response, Date *out_start_date, Date *out_end_date)
 {
-    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         return http_ProduceErrorPage(422, out_response);
@@ -41,10 +41,10 @@ invalid:
     return http_ProduceErrorPage(422, out_response);
 }
 
-static int GetQueryDispenseMode(MHD_Connection *conn, const char *key,
+static int GetQueryDispenseMode(const http_Request &request, const char *key,
                                 http_Response *out_response, mco_DispenseMode *out_dispense_mode)
 {
-    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         return http_ProduceErrorPage(422, out_response);
@@ -61,10 +61,10 @@ static int GetQueryDispenseMode(MHD_Connection *conn, const char *key,
     return 0;
 }
 
-static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key,
+static int GetQueryApplyCoefficient(const http_Request &request, const char *key,
                                     http_Response *out_response, bool *out_apply_coefficient)
 {
-    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         return http_ProduceErrorPage(422, out_response);
@@ -84,10 +84,10 @@ static int GetQueryApplyCoefficient(MHD_Connection *conn, const char *key,
     return 0;
 }
 
-static int GetQueryGhmRoot(MHD_Connection *conn, const char *key,
+static int GetQueryGhmRoot(const http_Request &request, const char *key,
                            http_Response *out_response, mco_GhmRootCode *out_ghm_root)
 {
-    const char *str = MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing 'ghm_root' argument");
         return http_ProduceErrorPage(422, out_response);
@@ -380,19 +380,19 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficient = false;
     mco_GhmRootCode ghm_root = {};
-    if (int code = GetQueryDateRange(request.conn, "period", out_response, &period[0], &period[1]); code)
+    if (int code = GetQueryDateRange(request, "period", out_response, &period[0], &period[1]); code)
         return code;
-    if (MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "diff")) {
-        if (int code = GetQueryDateRange(request.conn, "diff", out_response, &diff[0], &diff[1]); code)
+    if (request.GetQueryValue("diff")) {
+        if (int code = GetQueryDateRange(request, "diff", out_response, &diff[0], &diff[1]); code)
             return code;
     }
-    filter = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "filter");
-    if (int code = GetQueryDispenseMode(request.conn, "dispense_mode", out_response, &dispense_mode); code)
+    filter = request.GetQueryValue("filter");
+    if (int code = GetQueryDispenseMode(request, "dispense_mode", out_response, &dispense_mode); code)
         return code;
-    if (int code = GetQueryApplyCoefficient(request.conn, "apply_coefficient", out_response, &apply_coefficient); code)
+    if (int code = GetQueryApplyCoefficient(request, "apply_coefficient", out_response, &apply_coefficient); code)
         return code;
-    if (MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "ghm_root")) {
-        if (int code = GetQueryGhmRoot(request.conn, "ghm_root", out_response, &ghm_root); code)
+    if (request.GetQueryValue("ghm_root")) {
+        if (int code = GetQueryGhmRoot(request, "ghm_root", out_response, &ghm_root); code)
             return code;
     }
 
@@ -536,14 +536,14 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
     const char *filter;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
-    if (int code = GetQueryDateRange(request.conn, "period", out_response, &period[0], &period[1]); code)
+    if (int code = GetQueryDateRange(request, "period", out_response, &period[0], &period[1]); code)
         return code;
-    if (int code = GetQueryGhmRoot(request.conn, "ghm_root", out_response, &ghm_root); code)
+    if (int code = GetQueryGhmRoot(request, "ghm_root", out_response, &ghm_root); code)
         return code;
-    filter = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "filter");
-    if (int code = GetQueryDispenseMode(request.conn, "dispense_mode", out_response, &dispense_mode); code)
+    filter = request.GetQueryValue("filter");
+    if (int code = GetQueryDispenseMode(request, "dispense_mode", out_response, &dispense_mode); code)
         return code;
-    if (int code = GetQueryApplyCoefficient(request.conn, "apply_coefficient", out_response, &apply_coefficent); code)
+    if (int code = GetQueryApplyCoefficient(request, "apply_coefficient", out_response, &apply_coefficent); code)
         return code;
 
     // Check permissions

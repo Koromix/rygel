@@ -44,6 +44,15 @@ struct http_Request {
 
     MHD_PostProcessor *pp;
     BlockAllocator temp_alloc;
+
+    const char *GetHeaderValue(const char *key) const
+        { return MHD_lookup_connection_value(conn, MHD_HEADER_KIND, key); }
+    const char *GetQueryValue(const char *key) const
+        { return MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key); }
+    const char *GetCookieValue(const char *key) const
+        { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
+    const char *GetPostValue(const char *key) const
+        { return post.FindValue(key, {}).ptr; }
 };
 
 class http_Daemon {

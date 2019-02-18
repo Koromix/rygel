@@ -11,7 +11,7 @@ static int GetIndexFromRequest(const http_Request &request, http_Response *out_r
 {
     Date date = {};
     {
-        const char *date_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "date");
+        const char *date_str = request.GetQueryValue("date");
         if (date_str) {
             date = Date::FromString(date_str);
         } else {
@@ -23,7 +23,7 @@ static int GetIndexFromRequest(const http_Request &request, http_Response *out_r
 
     Sector sector = Sector::Public;
     if (out_sector) {
-        const char *sector_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "sector");
+        const char *sector_str = request.GetQueryValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
             return http_ProduceErrorPage(422, out_response);
@@ -72,7 +72,7 @@ int ProduceMcoDiagnoses(const http_Request &request, const User *, http_Response
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
-        const char *spec_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = request.GetQueryValue("spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
@@ -141,7 +141,7 @@ int ProduceMcoProcedures(const http_Request &request, const User *, http_Respons
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
-        const char *spec_str = MHD_lookup_connection_value(request.conn, MHD_GET_ARGUMENT_KIND, "spec");
+        const char *spec_str = request.GetQueryValue("spec");
         if (spec_str) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
