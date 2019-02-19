@@ -1207,17 +1207,14 @@ let mco_casemix = {};
                 if (stay.sex) {
                     let tr = html('tr', {class: 'rt_details'},
                         html('td', {colspan: 6},
-                            html('div',
-                                html('div', html('table')),
-                                html('div', html('table')),
-                                html('div', html('table'))
-                            )
+                            html('table'),
+                            html('table'),
+                            html('table')
                         )
                     );
-                    let div = tr.query('div');
-                    let table0 = div.childNodes[0].firstChild;
-                    let table1 = div.childNodes[1].firstChild;
-                    let table2 = div.childNodes[2].firstChild;
+                    let table0 = tr.firstChild.childNodes[0];
+                    let table1 = tr.firstChild.childNodes[1];
+                    let table2 = tr.firstChild.childNodes[2];
 
                     // Main info
                     table0.appendContent(
