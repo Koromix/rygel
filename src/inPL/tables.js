@@ -160,7 +160,7 @@ let tables = (function() {
         }
     }
 
-    this.refreshList = function(rows) {
+    this.refreshList = function(rows, click_func) {
         let list = document.querySelector('#inpl_list');
 
         if (rows.length) {
@@ -192,7 +192,9 @@ let tables = (function() {
 
             for (let row of rows) {
                 let tr = html('tr',
-                    html('th', '' + row.plid),
+                    html('th',
+                        html('a', {href: '#', click: e => click_func(row.plid)}, '' + row.plid)
+                    ),
                     html('td', '' + (row.cs_sexe || '?')),
                     html('td', '' + (row.rdv_age || '?')),
                     ScreeningHandlers.map(handler => resultCell(handler.func(row)))

@@ -5,6 +5,14 @@
 body {
     font-family: Geneva, sans-serif;
     font-size: 13px;
+    max-width: 1200px;
+    margin: 1em auto;
+}
+
+a {
+    color: #000;
+    font-style: normal;
+    text-decoration: underline dotted;
 }
 
 .inpl_tabpage:not(.active) { display: none; }
@@ -60,6 +68,7 @@ body {
     font-style: italic;
     text-align: right;
 } 
+.inpl_table tbody th a { font-style: italic; }
 .inpl_table tbody td { text-align: center; }
 
 .inpl_result_1 {
@@ -78,3 +87,34 @@ body {
     background: #aaa;
     color: white;
 }
+
+#inpl_report h1 {
+    font-size: 1em;
+    font-weight: normal;
+    font-style: italic;
+    color: #888;
+    border-bottom: 1px dotted #ccc;
+}
+
+@media screen and (min-width: 801px) {
+    /* Hack I stole from Bootstrap */
+    #inpl_report div:after {
+        display: table;
+        content: " ";
+        clear: both;
+    }
+    #inpl_report table {
+        float: left;
+        min-height: 1px;
+        width: 33.32%;
+    }
+}
+@media screen and (max-width: 801px) {
+    #inpl_report table { width: 100% }
+}
+#inpl_report table { table-layout: fixed; }
+#inpl_report th {
+    text-align: left;
+    font-weight: normal;
+}
+#inpl_report td { font-style: italic; }
