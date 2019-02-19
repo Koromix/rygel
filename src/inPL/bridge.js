@@ -39,7 +39,10 @@ let bridge = (function() {
         let row2 = {
             plid: parseInt(row['rdv.plid']),
 
+            cs_nom: row['consultant.nom'] || null,
+            cs_prenom: row['consultant.prenom'] || null,
             cs_sexe: row['consultant.sexe'] || null,
+            cs_date_naissance: row['consultant.date_naissance'] || null,
 
             // FIXME: Wrong but acceptable for now
             rdv_age: translateInt(row['consultant.age']),

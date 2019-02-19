@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Tableaux PL</title>
+        <title>Tableau de bord PL</title>
         <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
         <link rel="stylesheet" href="inPL.css"/>
 
         <script type="text/javascript" src="../../lib/papaparse/papaparse.min.js"></script>
+        <script type="text/javascript" src="../../lib/docxtemplater/jszip.min.js"></script>
+        <script type="text/javascript" src="../../lib/docxtemplater/docxtemplater.min.js"></script>
         <script type="text/javascript" src="../libweb/compat.js"></script>
         <script type="text/javascript" src="../libweb/util.js"></script>
         <script type="text/javascript" src="common.js"></script>
@@ -14,6 +17,7 @@
         <script type="text/javascript" src="mod_neuropsy.js"></script>
         <script type="text/javascript" src="mod_nutrition.js"></script>
         <script type="text/javascript" src="bridge.js"></script>
+        <script type="text/javascript" src="report.js"></script>
         <script type="text/javascript" src="tables.js"></script>
 
         <script type="text/javascript">
@@ -46,12 +50,22 @@
                             rows.sort((row1, row2) => row1.plid - row2.plid);
 
                             stat.replaceContent(`(${rows.length} rendez-vous chargés)`);
-                            tables.refreshAll(rows);
+
+                            tables.refreshList(rows, (plid) => {
+                                query('#inpl_option_plid').value = plid;
+                                report.refreshReport(rows);
+                                openTab(query('#inpl_menu'), document.body, 2);
+                            });
+                            tables.refreshSummary(rows);
+                            report.refreshReport(rows);
                         }
                     });
                 } else {
-                    tables.refreshAll(rows);
                     stat.innerHTML = '';
+
+                    tables.refreshList(rows);
+                    tables.refreshSummary(rows);
+                    report.refreshReport(rows);
                 }
             }
 
@@ -64,12 +78,16 @@
 
     <body>
         <div id="inpl_menu" class="inpl_tabbar">
-            <button onclick="openTab(this.parentNode, document.body, 0);">Synthèse</button>
-            <button onclick="openTab(this.parentNode, document.body, 1);">Consultants</button>
-            <button onclick="openTab(this.parentNode, document.body, 2);">Résumés</button>
+            <button onclick="openTab(this.parentNode, document.body, 0);">Résultats</button>
+            <button onclick="openTab(this.parentNode, document.body, 1);">Synthèse</button>
+            <button onclick="openTab(this.parentNode, document.body, 2);">Consultants</button>
 
-            <input id="inpl_menu_file" type="file" accept=".csv" onchange="importAndRefresh();" />
+            <input id="inpl_menu_file" type="file" accept=".csv" onchange="importAndRefresh();"/>
             <span id="inpl_menu_stat"></span>
+        </div>
+
+        <div class="inpl_tabpage">
+            <table id="inpl_list" class="inpl_table"></table>
         </div>
 
         <div class="inpl_tabpage">
@@ -93,16 +111,20 @@
         </div>
 
         <div class="inpl_tabpage">
-            <table id="inpl_list" class="inpl_table"></table>
-        </div>
-
-        <div class="inpl_tabpage">
             <div class="inpl_options">
                 <label>PLID :
                     <input id="inpl_option_plid" type="number"
-                           style="-webkit-appearance: none; -moz-appearance: textfield;"/>
+                           style="-webkit-appearance: none; -moz-appearance: textfield;"
+                           oninput="report.refreshReport(rows);"/>
+                </label>
+                <label>Modèle :
+                    <input id="inpl_option_template" type="file" accept=".docx"/>
                 </label>
             </div>
+
+            <div id="inpl_report"></div>
+
+            <button style="display: block; margin: 0 auto;">Générer un Compte-Rendu</button>
         </div>
     </body>
 </html>
