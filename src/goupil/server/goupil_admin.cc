@@ -50,12 +50,12 @@ static bool MakeDirectory(const char *dir)
     return true;
 }
 
-static bool RunCreate(Span<const char *> arguments)
+static bool RunCreateProfile(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: goupil_admin create [options] profile_directory)");
+        PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory)");
     };
 
     const char *directory = nullptr;
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
         PrintLn(fp, CommonOptions);
         PrintLn(fp, R"(
 Commands:
-    create                       Create new profile)");
+    create_profile               Create new profile)");
     };
 
     if (argc < 2) {
@@ -186,7 +186,7 @@ Commands:
             } \
         } while (false)
 
-    HANDLE_COMMAND(create, RunCreate);
+    HANDLE_COMMAND(create_profile, RunCreateProfile);
 
 #undef HANDLE_COMMAND
 
