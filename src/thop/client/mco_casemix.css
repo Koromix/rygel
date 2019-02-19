@@ -66,10 +66,7 @@
 
 .rt_details { background: #fafafa; }
 .rt_details > td { padding: 0; }
-.rt_details table {
-    width: 100%;
-    table-layout: fixed;
-}
+.rt_details table { table-layout: fixed; }
 .rt_details table th, .rt_details table td { padding: 3px; }
 .rt_details table th {
     text-align: left;
@@ -99,13 +96,14 @@
 
     .rt_stay th, .rt_stay td { font-size: 0.8em; }
 
-    .rt_details > td > div {
+    .rt_detais:after {
         display: table;
-        width: 100%;
-        table-layout: fixed;
+        content: " ";
+        clear: both;
     }
-    .rt_details > td > div > div {
-        display: table-cell;
+    .rt_details table {
+        float: left;
+        width: 33.32%;
     }
 }
 
@@ -122,4 +120,6 @@
     .rt_header td:nth-child(4) { width: 23vw; }
     .rt_header td:nth-child(5) { width: 23vw; }
     .rt_header td:nth-child(6) { width: 23vw; }
+
+    .rt_details table { width: 100%; }
 }
