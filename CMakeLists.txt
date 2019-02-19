@@ -105,16 +105,16 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
 endif()
 
 # Libraries and utilities
-add_project(src/libcc EXCLUDE_FROM_ALL)
-add_project(src/libdrd EXCLUDE_FROM_ALL)
-add_project(src/libgui EXCLUDE_FROM_ALL)
-add_project(src/libheimdall EXCLUDE_FROM_ALL)
 add_project(src/packer EXCLUDE_FROM_ALL)
+add_project(src/libcc EXCLUDE_FROM_ALL)
+add_project(src/libgui EXCLUDE_FROM_ALL)
 
 # Main projects
+add_project(src/libdrd)
 add_project(src/drdc)
 add_project(src/drdR)
 add_project(src/thop)
+add_project(src/libheimdall)
 add_project(src/heimdallR)
 add_project(src/heimdallw)
 add_project(src/goupil)

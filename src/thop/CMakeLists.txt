@@ -6,7 +6,26 @@ if (EMSCRIPTEN)
     return()
 endif()
 
-set(THOP_RESOURCES
+set(THOP_SRC
+    ../wrappers/http.cc
+    ../wrappers/http.hh
+    ../wrappers/json.hh
+    server/config.cc
+    server/config.hh
+    server/mco.cc
+    server/mco.hh
+    server/mco_casemix.cc
+    server/mco_casemix.hh
+    server/mco_info.cc
+    server/mco_info.hh
+    server/structure.cc
+    server/structure.hh
+    server/thop.cc
+    server/thop.hh
+    server/user.cc
+    server/user.hh
+)
+set(THOP_ASSETS
     client/thop.html
     ../libweb/compat.js
     ../libweb/util.js
@@ -37,26 +56,8 @@ set(THOP_RESOURCES
     client/images/thop_logo.svg
     client/images/favicon.png
 )
-set(THOP_SRC
-    ../wrappers/http.cc
-    ../wrappers/http.hh
-    ../wrappers/json.hh
-    server/config.cc
-    server/config.hh
-    server/mco.cc
-    server/mco.hh
-    server/mco_casemix.cc
-    server/mco_casemix.hh
-    server/mco_info.cc
-    server/mco_info.hh
-    server/structure.cc
-    server/structure.hh
-    server/thop.cc
-    server/thop.hh
-    server/user.cc
-    server/user.hh
-)
 
+<<<<<<< HEAD
 add_custom_command(
     OUTPUT assets.cc
     COMMAND $<TARGET_FILE:packer>
@@ -70,9 +71,15 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
     list(APPEND THOP_SRC "${CMAKE_CURRENT_BINARY_DIR}/assets.cc")
 endif()
 
-add_executable(thop ${THOP_SRC} ${THOP_RESOURCES})
+add_executable(thop ${THOP_SRC})
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(thop PRIVATE libcc libdrd microhttpd sodium libasset)
+target_assets(thop
+    MODE ModuleIfDebug
+    MERGE_RULES client/packer.ini
+    OPTIONS -d1 -cGzip $<$<CONFIG:Debug>:--source_map>
+    SOURCES ${THOP_ASSETS}
+)
 
 add_executable(thop_hash_password server/thop_hash_password.c)
 target_link_libraries(thop_hash_password PRIVATE sodium)
