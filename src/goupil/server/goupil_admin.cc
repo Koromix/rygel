@@ -18,8 +18,8 @@ static Config goupil_config;
 
 static const char *const CommonOptions =
 R"(Common options:
-     -C, --config_file <file>     Set configuration file
-     -P, --profile_dir <dir>      Set profile directory)";
+     -C, --config_file <file>    Set configuration file
+     -P, --profile_dir <dir>     Set profile directory)";
 
 static bool HandleCommonOption(OptionParser &opt)
 {
