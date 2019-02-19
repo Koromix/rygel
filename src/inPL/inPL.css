@@ -13,7 +13,6 @@ body {
     border: 1px solid #ccc;
     background-color: #f1f1f1;
 }
-.inpl_tabbar * {}
 .inpl_tabbar button {
     background-color: inherit;
     float: left;
@@ -40,7 +39,7 @@ body {
     text-align: center;
     padding: 0 0 1em 0;
 }
-.inpl_options label { padding: 0 0.5em 0 0.5em; }
+.inpl_options > * { padding: 0 0.5em 0 0.5em; }
 
 .inpl_table {
     width: 95%;
