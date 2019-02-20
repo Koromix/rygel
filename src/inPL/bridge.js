@@ -37,13 +37,13 @@ let bridge = (function() {
     function translateRow(row)
     {
         let row2 = {
-            plid: parseInt(row['rdv.plid']),
 
             cs_nom: row['consultant.nom'] || null,
             cs_prenom: row['consultant.prenom'] || null,
             cs_sexe: row['consultant.sexe'] || null,
             cs_date_naissance: row['consultant.date_naissance'] || null,
 
+            rdv_plid: parseInt(row['rdv.plid']),
             // FIXME: Wrong but acceptable for now
             rdv_age: translateInt(row['consultant.age']),
 
@@ -131,7 +131,7 @@ let bridge = (function() {
             chunk: ret => {
                 for (let row of ret.data) {
                     row = translateRow(row);
-                    if (row.plid && row.cs_sexe)
+                    if (row.rdv_plid && row.cs_sexe)
                         functions.step(row);
                 }
             },

@@ -160,7 +160,7 @@ let tables = (function() {
         }
     }
 
-    this.refreshList = function(rows, click_func) {
+    this.refreshList = function(rows) {
         let list = document.querySelector('#inpl_list');
 
         if (rows.length) {
@@ -193,7 +193,7 @@ let tables = (function() {
             for (let row of rows) {
                 let tr = html('tr',
                     html('th',
-                        html('a', {href: '#', click: e => click_func(row.plid)}, '' + row.plid)
+                        html('a', {href: inpl.url({tab: 2, plid: row.rdv_plid})}, '' + row.rdv_plid)
                     ),
                     html('td', '' + (row.cs_sexe || '?')),
                     html('td', '' + (row.rdv_age || '?')),
