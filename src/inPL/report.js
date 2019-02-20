@@ -38,14 +38,15 @@ let report = (function() {
             html('h1', 'Examen de densitométrie osseuse'),
             html('h1', 'Entretien avec neuro-psychologue'),
             html('h1', 'Entretien avec nutritionniste'),
-            html('h1', 'Entretien avec EMS')
+            html('h1', 'Entretien avec EMS'),
+            row ? html('button', {style: 'display: block; margin: 0 auto;',
+                                  click: (e) => generateDocument(row)}, 'Générer un Compte-Rendu') : null
         );
     };
 
-    this.generateDocument = function(rows) {
+    function generateDocument(row)
+    {
         let file = document.querySelector('#inpl_option_template').files[0];
-        let plid = query('#inpl_option_plid').value;
-        let row = rows.find(row => row.rdv_plid == plid);
 
         if (file && row) {
             let reader = new FileReader();
@@ -79,7 +80,7 @@ let report = (function() {
         } else if (row) {
             alert('You must specify a template document');
         }
-    };
+    }
 
     return this;
 }).call({});
