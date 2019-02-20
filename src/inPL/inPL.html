@@ -40,7 +40,7 @@
                         self.openTab(route_params.tab);
                     }
                     if (new_params.plid !== undefined) {
-                        route_params.plid = parseInt(new_params.plid);
+                        route_params.plid = new_params.plid;
                         query('#inpl_option_plid').value = route_params.plid;
                         refresh_tabs = 0xFFFFFFFF;
                     }
@@ -124,6 +124,8 @@
                     }
                 };
 
+                this.getRows = function() { return rows; }
+
                 function initNavigation()
                 {
                     window.addEventListener('popstate', function(e) {
@@ -189,8 +191,7 @@
         <div class="inpl_tabpage">
             <div class="inpl_options">
                 <label>PLID :
-                    <input id="inpl_option_plid" type="number"
-                           style="-webkit-appearance: none; -moz-appearance: textfield;"
+                    <input id="inpl_option_plid" type="text"
                            oninput="inpl.go({plid: this.value});"/>
                 </label>
                 <label>Modèle :
@@ -200,7 +201,8 @@
 
             <div id="inpl_report"></div>
 
-            <button style="display: block; margin: 0 auto;">Générer un Compte-Rendu</button>
+            <button style="display: block; margin: 0 auto;"
+                    onclick="report.generateDocument(inpl.getRows());">Générer un Compte-Rendu</button>
         </div>
     </body>
 </html>
