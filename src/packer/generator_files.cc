@@ -4,11 +4,56 @@
 
 #include "../libcc/libcc.hh"
 #include "generator.hh"
+#include "output.hh"
 #include "packer.hh"
 
 bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
                    CompressionType compression_type)
 {
-    LogError("Generator 'Files' does not work yet");
-    return false;
+    BlockAllocator temp_alloc;
+
+    if (!TestPath(output_path, FileType::Directory)) {
+        LogError("Directory '%1' does not exist", output_path);
+        return false;
+    }
+
+    const char *compression_ext = nullptr;
+    switch (compression_type) {
+        case CompressionType::None: { compression_ext = ""; } break;
+        case CompressionType::Gzip: { compression_ext = ".gz"; } break;
+        case CompressionType::Zlib: {
+            LogError("This generator cannot use Zlib compression");
+            return false;
+        } break;
+    }
+    DebugAssert(compression_ext);
+
+    for (const AssetInfo &asset: assets) {
+        StreamWriter st;
+
+        Span<char> filename = Fmt(&temp_alloc, "%1%/%2%3.map", output_path, asset.name, compression_ext);
+        filename.ptr[filename.len - 4] = 0;
+
+        if (!st.Open(filename.ptr))
+            return false;
+        if (PackAsset(asset.sources, compression_type,
+                      [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+            return false;
+        if (!st.Close())
+            return false;
+
+        if (asset.source_map_name) {
+            filename.ptr[filename.len - 4] = '.';
+
+            if (!st.Open(filename.ptr))
+                return false;
+            if (PackSourceMap(asset.sources, asset.source_map_type, compression_type,
+                              [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
+                return false;
+            if (!st.Close())
+                return false;
+        }
+    }
+
+    return true;
 }
