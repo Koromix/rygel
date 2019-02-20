@@ -3133,6 +3133,9 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
 
+bool MakeDirectory(const char *dir);
+bool MakeDirectoryRec(Span<const char> directory);
+
 enum class OpenFileMode {
     Read = 1 << 0,
     Write = 1 << 1,

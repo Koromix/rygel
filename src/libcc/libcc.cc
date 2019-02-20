@@ -9,6 +9,7 @@
     #endif
     #include <windows.h>
     #include <io.h>
+    #include <direct.h>
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
@@ -1542,6 +1543,66 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
         LogError("Cannot open '%1': %2", path, strerror(errno));
     }
     return fp;
+}
+
+bool MakeDirectory(const char *dir)
+{
+#ifdef _WIN32
+    if (_mkdir(dir) < 0) {
+#else
+    if (mkdir(dir, 0755) < 0) {
+#endif
+        LogError("Cannot create directory '%1': %2", dir, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+bool MakeDirectoryRec(Span<const char> directory)
+{
+    char buf[4096];
+    if (UNLIKELY(directory.len >= SIZE(buf))) {
+        LogError("Path '%1' is too large", directory);
+        return false;
+    }
+    memcpy(buf, directory.ptr, directory.len);
+    buf[directory.len] = 0;
+
+    Size offset = directory.len;
+    for (; offset > 0; offset--) {
+        if (strchr(PATH_SEPARATORS, buf[offset])) {
+            buf[offset] = 0;
+
+#ifdef _WIN32
+            if (_mkdir(buf) == 0 || errno == EEXIST) {
+#else
+            if (mkdir(buf, 0755) == 0 || errno == EEXIST) {
+#endif
+                break;
+            } else if (errno != ENOENT) {
+                LogError("Cannot create directory '%1': %2", buf, strerror(errno));
+                return false;
+            }
+        }
+    }
+
+    for (; offset < directory.len; offset++) {
+        if (!buf[offset]) {
+            buf[offset] = *PATH_SEPARATORS;
+
+#ifdef _WIN32
+            if (_mkdir(buf) < 0 && errno != EEXIST) {
+#else
+            if (mkdir(buf, 0755) < 0 && errno != EEXIST) {
+#endif
+                LogError("Cannot create directory '%1': %2", buf, strerror(errno));
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 void WaitForConsoleInterruption()
