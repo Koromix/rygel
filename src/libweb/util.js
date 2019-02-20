@@ -356,3 +356,19 @@ function lazyLoad(module, func)
             func();
     });
 }
+
+function saveBlob(blob, filename)
+{
+    let url = URL.createObjectURL(blob);
+    let anchor = html('a', {
+        download: filename,
+        href: url
+    });
+
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+
+    if(URL.revokeObjectURL)
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+}

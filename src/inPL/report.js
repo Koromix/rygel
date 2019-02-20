@@ -13,18 +13,20 @@ let report = (function() {
         );
     }
 
-    function refreshConsultant(data)
-    {
+    this.refreshReport = function(rows) {
+        let plid = query('#inpl_option_plid').value;
+        let row = rows.find(row => row.rdv_plid == plid);
+
         let report = query('#inpl_report');
 
         report.replaceContent(
             html('h1', 'Identité'),
-            data ? html('div',
+            row ? html('div',
                 html('table',
-                    createRow('Nom', data.consultant_nom),
-                    createRow('Prénom', data.consultant_prenom),
-                    createRow('Sexe', {M: 'Homme', F: 'Femme'}[data.consultant_sexe]),
-                    createRow('Date de naissance', data.consultant_date_naissance)
+                    createRow('Nom', row.consultant_nom),
+                    createRow('Prénom', row.consultant_prenom),
+                    createRow('Sexe', {M: 'Homme', F: 'Femme'}[row.consultant_sexe]),
+                    createRow('Date de naissance', row.consultant_date_naissance)
                 )
             ) : null,
             html('h1', 'Biologie médicale'),
@@ -40,11 +42,43 @@ let report = (function() {
         );
     };
 
-    this.refreshReport = function(rows) {
+    this.generateDocument = function(rows) {
+        let file = document.querySelector('#inpl_option_template').files[0];
         let plid = query('#inpl_option_plid').value;
         let row = rows.find(row => row.rdv_plid == plid);
 
-        refreshConsultant(row);
+        if (file && row) {
+            let reader = new FileReader();
+
+            reader.onload = function() {
+                let zip = new JSZip(reader.result);
+                let doc = new Docxtemplater().loadZip(zip);
+
+                try {
+                    doc.setOptions({
+                        parser: function(tag) {
+                            tag = tag.replace(/[’‘]/g, "'");
+                            return { get: (it) => eval(tag) };
+                        }
+                    });
+                    doc.setData(row);
+                    doc.render();
+
+                    let out = doc.getZip().generate({
+                        type: 'blob',
+                        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    });
+
+                    saveBlob(out, `CR_${row.rdv_plid}.docx`);
+                } catch (err) {
+                    alert(err.message);
+                }
+            };
+
+            reader.readAsBinaryString(file);
+        } else if (row) {
+            alert('You must specify a template document');
+        }
     };
 
     return this;
