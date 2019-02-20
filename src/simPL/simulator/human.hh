@@ -45,41 +45,12 @@ struct Human {
     // PL checkup
     int checkup_age;
 
-    // CV diseases
-    // bool stroke_happened;
-    // int stroke_age;
-
     // Death
     bool death_happened;
 
     // Utility and cost
     double utility;
     double cost;
-
-    // Behavior (others)
-    // double alcohol_consumption;
-    // int drugs_count;
-
-    // Cardio-vascular
-    // double mean_systolic_pressure;
-    // double mean_diastolic_pressure;
-
-    // Nutrition
-    // double height;
-    // double weight;
-    // double calcium_daily_consumption;
-    // double d2d3_concentration;
-
-    // Neuropsy
-    // double visual_acuity;
-    // double hearing_level;
-    // double anxiety_level;
-    // double thymia_level;
-
-    // Bone and muscle
-    // double previous_fracture;
-    // double lean_mass;
-    // double bone_density;
 };
 
 Human CreateHuman(int id);

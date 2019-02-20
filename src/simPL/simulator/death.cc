@@ -6,7 +6,7 @@
 #include "human.hh"
 #include "death.hh"
 
-// http://cepidc-data.inserm.fr/cgi-bin/broker.exe
+// Data came from http://cepidc-data.inserm.fr/cgi-bin/broker.exe
 // (2015, taux bruts)
 
 double GetDeathProbability(int age, Sex sex, unsigned int flags)
