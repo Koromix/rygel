@@ -217,16 +217,16 @@ let neuropsy = (function() {
     }
 
     this.screenEfficiency = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null || data.npsy_moca === null)
+        if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_moca === null)
             return null;
 
-        let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
+        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return null;
 
-        if (testInfC5(data.npsy_moca, tresholds.moca_c5)) {
+        if (testInfC5(data.neuropsy_moca, tresholds.moca_c5)) {
             return ScreeningResult.Bad;
-        } else if (testInfC50(data.npsy_moca, tresholds.moca_c50)) {
+        } else if (testInfC50(data.neuropsy_moca, tresholds.moca_c50)) {
             return ScreeningResult.Fragile;
         } else {
             return ScreeningResult.Good;
@@ -234,17 +234,17 @@ let neuropsy = (function() {
     };
 
     this.screenMemory = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null || data.npsy_rl === null ||
-                data.npsy_rt === null)
+        if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_rl === null ||
+                data.neuropsy_rt === null)
             return null;
 
-        let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
+        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return null;
 
-        if (testInfC5(data.npsy_rl, tresholds.rl_c5) || testInfC5(data.npsy_rt, tresholds.rt_c5)) {
+        if (testInfC5(data.neuropsy_rl, tresholds.rl_c5) || testInfC5(data.neuropsy_rt, tresholds.rt_c5)) {
             return ScreeningResult.Bad;
-        } else if (testInfC50(data.npsy_rl, tresholds.rl_c50) || testInfC50(data.npsy_rt, tresholds.rt_c50)) {
+        } else if (testInfC50(data.neuropsy_rl, tresholds.rl_c50) || testInfC50(data.neuropsy_rt, tresholds.rt_c50)) {
             return ScreeningResult.Fragile;
         } else {
             return ScreeningResult.Good;
@@ -252,25 +252,25 @@ let neuropsy = (function() {
     };
 
     this.screenExecution = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null ||
-                ((data.npsy_tmtb === null) + (data.npsy_interf === null) + (data.npsy_slc === null) +
-                 (data.npsy_animx === null) + (data.npsy_p === null)) > 2)
+        if (data.rdv_age === null || data.neuropsy_nsc === null ||
+                ((data.neuropsy_tmtb === null) + (data.neuropsy_interf === null) + (data.neuropsy_slc === null) +
+                 (data.neuropsy_animx === null) + (data.neuropsy_p === null)) > 2)
             return null;
 
-        let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
+        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return null;
 
-        let c5_fails = testSupC5(data.npsy_tmtb, tresholds.tmtb_c5) +
-                       testSupC5(data.npsy_interf, tresholds.interf_c5) +
-                       testInfC5(data.npsy_slc, tresholds.slc_c5) +
-                       testInfC5(data.npsy_animx, tresholds.animx_c5) +
-                       testInfC5(data.npsy_p, tresholds.p_c5);
-        let c50_fails = testSupC50(data.npsy_tmtb, tresholds.tmtb_c50) +
-                        testSupC50(data.npsy_interf, tresholds.interf_c50) +
-                        testInfC50(data.npsy_slc, tresholds.slc_c50) +
-                        testInfC50(data.npsy_animx, tresholds.animx_c50) +
-                        testInfC50(data.npsy_p, tresholds.p_c50);
+        let c5_fails = testSupC5(data.neuropsy_tmtb, tresholds.tmtb_c5) +
+                       testSupC5(data.neuropsy_interf, tresholds.interf_c5) +
+                       testInfC5(data.neuropsy_slc, tresholds.slc_c5) +
+                       testInfC5(data.neuropsy_animx, tresholds.animx_c5) +
+                       testInfC5(data.neuropsy_p, tresholds.p_c5);
+        let c50_fails = testSupC50(data.neuropsy_tmtb, tresholds.tmtb_c50) +
+                        testSupC50(data.neuropsy_interf, tresholds.interf_c50) +
+                        testInfC50(data.neuropsy_slc, tresholds.slc_c50) +
+                        testInfC50(data.neuropsy_animx, tresholds.animx_c50) +
+                        testInfC50(data.neuropsy_p, tresholds.p_c50);
 
         if (c5_fails) {
             return ScreeningResult.Bad;
@@ -282,23 +282,23 @@ let neuropsy = (function() {
     };
 
     this.screenAttention = function(data) {
-        if (data.rdv_age === null || data.npsy_nsc === null ||
-                ((data.npsy_code === null) + (data.npsy_tmta === null) + (data.npsy_lecture === null) +
-                 (data.npsy_deno === null)) > 2)
+        if (data.rdv_age === null || data.neuropsy_nsc === null ||
+                ((data.neuropsy_code === null) + (data.neuropsy_tmta === null) + (data.neuropsy_lecture === null) +
+                 (data.neuropsy_deno === null)) > 2)
             return null;
 
-        let tresholds = getTresholds(data.rdv_age, data.npsy_nsc);
+        let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
             return null;
 
-        let c5_fails = testInfC5(data.npsy_code, tresholds.code_c5) +
-                       testSupC5(data.npsy_tmta, tresholds.tmta_c5) +
-                       testSupC5(data.npsy_lecture, tresholds.lecture_c5) +
-                       testSupC5(data.npsy_deno, tresholds.deno_c5);
-        let c50_fails = testInfC50(data.npsy_code, tresholds.code_c50) +
-                        testSupC50(data.npsy_tmta, tresholds.tmta_c50) +
-                        testSupC50(data.npsy_lecture, tresholds.lecture_c50) +
-                        testSupC50(data.npsy_deno, tresholds.deno_c50);
+        let c5_fails = testInfC5(data.neuropsy_code, tresholds.code_c5) +
+                       testSupC5(data.neuropsy_tmta, tresholds.tmta_c5) +
+                       testSupC5(data.neuropsy_lecture, tresholds.lecture_c5) +
+                       testSupC5(data.neuropsy_deno, tresholds.deno_c5);
+        let c50_fails = testInfC50(data.neuropsy_code, tresholds.code_c50) +
+                        testSupC50(data.neuropsy_tmta, tresholds.tmta_c50) +
+                        testSupC50(data.neuropsy_lecture, tresholds.lecture_c50) +
+                        testSupC50(data.neuropsy_deno, tresholds.deno_c50);
 
         if (c5_fails) {
             return ScreeningResult.Bad;
@@ -315,17 +315,17 @@ let neuropsy = (function() {
     };
 
     this.screenDepressionAnxiety = function(data) {
-        if (data.aq_had1 === null || data.aq_had2 === null || data.aq_had3 === null ||
-                 data.aq_had4 === null || data.aq_had5 === null || data.aq_had6 === null ||
-                 data.aq_had7 === null || data.aq_had8 === null || data.aq_had9 === null ||
-                 data.aq_had10 === null || data.aq_had11 === null || data.aq_had12 === null ||
-                 data.aq_had13 === null || data.aq_had14 === null)
+        if (data.aq1_had1 === null || data.aq1_had2 === null || data.aq1_had3 === null ||
+                 data.aq1_had4 === null || data.aq1_had5 === null || data.aq1_had6 === null ||
+                 data.aq1_had7 === null || data.aq1_had8 === null || data.aq1_had9 === null ||
+                 data.aq1_had10 === null || data.aq1_had11 === null || data.aq1_had12 === null ||
+                 data.aq1_had13 === null || data.aq1_had14 === null)
             return null;
 
-        let a = data.aq_had1 + data.aq_had3 + data.aq_had5 + data.aq_had7 +
-                data.aq_had9 + data.aq_had11 + data.aq_had13;
-        let d = data.aq_had2 + data.aq_had4 + data.aq_had6 + data.aq_had8 +
-                data.aq_had10 + data.aq_had12 + data.aq_had14;
+        let a = data.aq1_had1 + data.aq1_had3 + data.aq1_had5 + data.aq1_had7 +
+                data.aq1_had9 + data.aq1_had11 + data.aq1_had13;
+        let d = data.aq1_had2 + data.aq1_had4 + data.aq1_had6 + data.aq1_had8 +
+                data.aq1_had10 + data.aq1_had12 + data.aq1_had14;
 
         if (a >= 11 || d >= 11) {
             return ScreeningResult.Bad;
@@ -337,13 +337,13 @@ let neuropsy = (function() {
     };
 
     this.screenSleep = function(data) {
-        if (data.aq_som1 === null || data.npsy_plainte_som === null)
+        if (data.aq1_som1 === null || data.neuropsy_plainte_som === null)
             return null;
 
         // FIXME: Which variables? New ones?
         let diseased = false;
-        let complaint = data.aq_som1.some(x => x > 0) ||
-                        data.npsy_plainte_som == 1;
+        let complaint = data.aq1_som1.some(x => x > 0) ||
+                        data.neuropsy_plainte_som == 1;
 
         if (diseased) {
             return ScreeningResult.Bad;

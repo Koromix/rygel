@@ -47,15 +47,15 @@ let ems = (function() {
     };
 
     this.screenStrength = function(data) {
-        if (data.cs_sexe === null || data.ems_handgrip === null || data.rx_dxa === null ||
-                data.ems_vit4m === null)
+        if (data.consultant_sexe === null || data.ems_test_handgrip === null || data.demo_dxa_indice_mm === null ||
+                data.ems_test_vit4m === null)
             return null;
 
-        switch (data.cs_sexe) {
+        switch (data.consultant_sexe) {
             case 'M': {
-                if (data.ems_vit4m <= 0.8) {
+                if (data.ems_test_vit4m <= 0.8) {
                     return ScreeningResult.Bad;
-                } else if (data.ems_handgrip < 27 || data.rx_dxa <= 7.23) {
+                } else if (data.ems_test_handgrip < 27 || data.demo_dxa_indice_mm <= 7.23) {
                     return ScreeningResult.Fragile;
                 } else {
                     return ScreeningResult.Good;
@@ -63,9 +63,9 @@ let ems = (function() {
             } break;
 
             case 'F': {
-                if (data.ems_vit4m <= 0.8) {
+                if (data.ems_test_vit4m <= 0.8) {
                     return ScreeningResult.Bad;
-                } else if (data.ems_handgrip < 16 || data.rx_dxa <= 5.67) {
+                } else if (data.ems_test_handgrip < 16 || data.demo_dxa_indice_mm <= 5.67) {
                     return ScreeningResult.Fragile;
                 } else {
                     return ScreeningResult.Good;
@@ -75,26 +75,26 @@ let ems = (function() {
     };
 
     this.screenFractureRisk = function(data) {
-        if (data.ems_unipod === null || (data.ems_tug === null && data.ems_gug === null) ||
-                data.rx_dmo_rachis === null || data.rx_dmo_col === null)
+        if (data.ems_test_unipod === null || (data.ems_test_timeup === null && data.ems_test_getup === null) ||
+                data.demo_dmo_rachis === null || data.demo_dmo_col === null)
             return null;
 
-        let dmo_min = Math.min(data.rx_dmo_rachis, data.rx_dmo_col);
+        let dmo_min = Math.min(data.demo_dmo_rachis, data.demo_dmo_col);
 
-        if (data.ems_gug !== null) {
+        if (data.ems_test_getup !== null) {
             // New version (2019+)
-            if (data.ems_unipod < 5 || data.ems_gug >= 3 || dmo_min <= -2.5) {
+            if (data.ems_test_unipod < 5 || data.ems_test_getup >= 3 || dmo_min <= -2.5) {
                 return ScreeningResult.Bad;
-            } else if (data.ems_unipod < 30 || data.ems_gug == 2 || dmo_min <= -1.0) {
+            } else if (data.ems_test_unipod < 30 || data.ems_test_getup == 2 || dmo_min <= -1.0) {
                 return ScreeningResult.Fragile;
             } else {
                 return ScreeningResult.Good;
             }
         } else {
             // Old version (2018)
-            if (data.ems_unipod < 5 || data.ems_tug >= 14 || dmo_min <= -2.5) {
+            if (data.ems_test_unipod < 5 || data.ems_test_timeup >= 14 || dmo_min <= -2.5) {
                 return ScreeningResult.Bad;
-            } else if (data.ems_unipod < 30 || dmo_min <= -1.0) {
+            } else if (data.ems_test_unipod < 30 || dmo_min <= -1.0) {
                 return ScreeningResult.Fragile;
             } else {
                 return ScreeningResult.Good;
