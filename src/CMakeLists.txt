@@ -244,7 +244,7 @@ if(NOT EMSCRIPTEN)
     target_assets(thop
         MODE ModuleIfDebug
         MERGE_RULES thop/client/packer.ini
-        OPTIONS -d1 -cGzip $<$<CONFIG:Debug>:--source_map>
+        OPTIONS -cGzip $<$<CONFIG:Debug>:--source_map>
         SOURCES ${THOP_ASSETS}
     )
 
@@ -279,7 +279,6 @@ if(TARGET libgui)
     set_target_properties(libheimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(libheimdall PUBLIC libcc imgui libgui)
     target_assets(libheimdall
-        OPTIONS -d1
         SOURCES ${LIBHEIMDALL_ASSETS}
     )
     add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.cc" libheimdall/libheimdall.cc)
