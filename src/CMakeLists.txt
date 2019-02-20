@@ -349,6 +349,39 @@ add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
 target_link_libraries(goupil_admin PRIVATE libcc sqlite)
 
 # ------------------------------------------------------------------------
+# inPL
+# ------------------------------------------------------------------------
+
+set(INPL_ASSETS
+    inPL/inPL.html
+    ../lib/papaparse/papaparse.min.js
+    ../lib/docxtemplater/jszip.min.js
+    ../lib/docxtemplater/docxtemplater.min.js
+    libweb/compat.js
+    libweb/util.js
+    inPL/common.js
+    inPL/mod_ems.js
+    inPL/mod_neuropsy.js
+    inPL/mod_nutrition.js
+    inPL/bridge.js
+    inPL/report.js
+    inPL/tables.js
+    inPL/inPL.css
+)
+
+add_custom_target(inPL ALL
+    DEPENDS "${CMAKE_BINARY_DIR}/inPL/inPL.html"
+)
+add_custom_command(
+    OUTPUT "${CMAKE_BINARY_DIR}/inPL/inPL.html"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/inPL"
+    COMMAND $<TARGET_FILE:packer> -M inPL/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    COMMAND $<TARGET_FILE:packer> -M inPL/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    DEPENDS packer ${INPL_ASSETS}
+)
+
+# ------------------------------------------------------------------------
 # simPL
 # ------------------------------------------------------------------------
 
