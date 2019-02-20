@@ -17,9 +17,9 @@ if(WIN32)
     target_link_libraries(packer PRIVATE shlwapi)
 endif()
 
-add_library(libasset STATIC
-    libasset.cc
-    libasset.hh
+add_library(libpacker STATIC
+    libpacker.cc
+    libpacker.hh
 )
 if(UNIX)
     target_link_libraries(libpacker PUBLIC dl)
