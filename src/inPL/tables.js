@@ -65,8 +65,8 @@ let tables = (function() {
             let filter_func;
             switch (sex_filter) {
                 case 'all': { filter_func = row => true; } break;
-                case 'male': { filter_func = row => row.cs_sexe == 'M'; } break;
-                case 'female': { filter_func = row => row.cs_sexe == 'F'; } break;
+                case 'male': { filter_func = row => row.consultant_sexe == 'M'; } break;
+                case 'female': { filter_func = row => row.consultant_sexe == 'F'; } break;
             }
 
             let row_names;
@@ -88,7 +88,7 @@ let tables = (function() {
                 case 'sex': {
                     row_names = ['Hommes', 'Femmes'];
                     row_func = row => {
-                        switch (row.cs_sexe) {
+                        switch (row.consultant_sexe) {
                             case 'M': return 0;
                             case 'F': return 1;
                             default: return null;
@@ -195,7 +195,7 @@ let tables = (function() {
                     html('th',
                         html('a', {href: inpl.url({tab: 2, plid: row.rdv_plid})}, '' + row.rdv_plid)
                     ),
-                    html('td', '' + (row.cs_sexe || '?')),
+                    html('td', '' + (row.consultant_sexe || '?')),
                     html('td', '' + (row.rdv_age || '?')),
                     ScreeningHandlers.map(handler => resultCell(handler.func(row)))
                 );

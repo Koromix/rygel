@@ -21,10 +21,10 @@ let report = (function() {
             html('h1', 'Identité'),
             data ? html('div',
                 html('table',
-                    createRow('Nom', data.cs_nom),
-                    createRow('Prénom', data.cs_prenom),
-                    createRow('Sexe', {M: 'Homme', F: 'Femme'}[data.cs_sexe]),
-                    createRow('Date de naissance', data.cs_date_naissance)
+                    createRow('Nom', data.consultant_nom),
+                    createRow('Prénom', data.consultant_prenom),
+                    createRow('Sexe', {M: 'Homme', F: 'Femme'}[data.consultant_sexe]),
+                    createRow('Date de naissance', data.consultant_date_naissance)
                 )
             ) : null,
             html('h1', 'Biologie médicale'),
