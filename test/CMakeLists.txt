@@ -2,6 +2,10 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+# ------------------------------------------------------------------------
+# test_fmt_speed
+# ------------------------------------------------------------------------
+
 add_executable(test_fmt_speed
     fmt_speed/stb_sprintf.c
     fmt_speed/fmt/posix.cc
