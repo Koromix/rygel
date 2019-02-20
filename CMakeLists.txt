@@ -5,8 +5,21 @@
 cmake_minimum_required(VERSION 3.1)
 project(Rygel C CXX)
 
+# ------------------------------------------------------------------------
+# CMake
+# ------------------------------------------------------------------------
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build/cmake" ${CMAKE_MODULE_PATH})
 include("build/cmake/Utility.cmake")
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+
+# ------------------------------------------------------------------------
+# Compiler settings
+# ------------------------------------------------------------------------
+
 find_package(Threads)
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -66,6 +79,10 @@ elseif(MSVC)
     endif()
 endif()
 
+# ------------------------------------------------------------------------
+# Platforms definitions
+# ------------------------------------------------------------------------
+
 add_definitions(-D_FILE_OFFSET_BITS=64)
 if(WIN32)
     add_definitions(-DWINVER=0x0602 -D_WIN32_WINNT=0x0602)
@@ -91,9 +108,9 @@ elseif(EMSCRIPTEN)
     endif()
 endif()
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+# ------------------------------------------------------------------------
+# Targets
+# ------------------------------------------------------------------------
 
 add_subdirectory(lib EXCLUDE_FROM_ALL)
 add_subdirectory(src)
