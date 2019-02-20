@@ -122,16 +122,6 @@ static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *f
     return nullptr;
 }
 
-static const char *GetSimplifiedName(Span<const char> filename, int depth)
-{
-    const char *name = filename.ptr;
-    for (Size j = 0; filename.len && j < depth; j++) {
-        name = SplitStrReverseAny(filename, PATH_SEPARATORS, &filename).ptr;
-    }
-
-    return name;
-}
-
 static void InitSourceMergeData(SourceInfo *src, MergeMode merge_mode, Allocator *alloc)
 {
     switch (merge_mode) {
@@ -172,8 +162,6 @@ Options:
                                  (default: C++)
     -O, --output_file <file>     Redirect output to file or directory
 
-    -d, --depth <depth>          Keep <depth> last components of filename
-                                 (default: keep full path)
     -c, --compress <type>        Compress data, see below for available types
                                  (default: %1)
 
@@ -193,7 +181,6 @@ Available compression types:)");
 
     GeneratorType generator = GeneratorType::CXX;
     const char *output_path = nullptr;
-    int depth = -1;
     CompressionType compression_type = CompressionType::None;
     const char *merge_file = nullptr;
     bool source_maps = false;
@@ -214,13 +201,6 @@ Available compression types:)");
                 }
 
                 generator = (GeneratorType)(name - GeneratorTypeNames);
-            } else if (opt.Test("-d", "--depth", OptionType::Value)) {
-                if (!ParseDec<int>(opt.current_value, &depth))
-                    return 1;
-                if (depth <= 0) {
-                    LogError("Option --depth requires value > 0");
-                    return 1;
-                }
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
@@ -268,7 +248,7 @@ Available compression types:)");
 
             SourceInfo src = {};
             src.filename = filename;
-            src.name = GetSimplifiedName(filename, depth);
+            src.name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
 
             if (rule) {
                 InitSourceMergeData(&src, rule->merge_mode, &temp_alloc);
