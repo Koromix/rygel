@@ -4,30 +4,14 @@
 
 #ifdef _WIN32
     #include <direct.h>
+    #include <io.h>
 #else
-    #include <sys/stat.h>
-    #include <sys/types.h>
     #include <unistd.h>
 #endif
 
 #include "../../libcc/libcc.hh"
 #include "profile.hh"
 #include "../server/data.hh"
-
-static bool MakeDirectory(const char *dir)
-{
-#ifdef _WIN32
-    int ret = _mkdir(dir);
-#else
-    int ret = mkdir(dir, 0755);
-#endif
-    if (ret < 0) {
-        LogError("Cannot create directory '%1': %2", dir, strerror(errno));
-        return false;
-    }
-
-    return true;
-}
 
 bool RunCreateProfile(Span<const char *> arguments)
 {
