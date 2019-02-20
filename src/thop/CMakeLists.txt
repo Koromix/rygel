@@ -73,7 +73,7 @@ endif()
 
 add_executable(thop ${THOP_SRC})
 target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-target_link_libraries(thop PRIVATE libcc libdrd microhttpd sodium libasset)
+target_link_libraries(thop PRIVATE libcc libdrd libpacker microhttpd sodium)
 target_assets(thop
     MODE ModuleIfDebug
     MERGE_RULES client/packer.ini

@@ -12,10 +12,10 @@
 #include "mco_info.hh"
 #include "user.hh"
 #include "../../wrappers/http.hh"
-#include "../../packer/libasset.hh"
+#include "../../packer/libpacker.hh"
 
 struct CatalogSet {
-    HeapArray<asset_Asset> catalogs;
+    HeapArray<pack_Asset> catalogs;
     LinkedAllocator alloc;
 };
 
@@ -36,7 +36,7 @@ struct Route {
     Type type;
     union {
         struct {
-            asset_Asset asset;
+            pack_Asset asset;
             const char *mime_type;
         } st;
 
@@ -52,12 +52,12 @@ bool thop_has_casemix;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 
-static Span<const asset_Asset> assets;
+static Span<const pack_Asset> assets;
 #ifndef NDEBUG
 static const char *assets_filename;
-static asset_AssetSet asset_set;
+static pack_AssetSet asset_set;
 #else
-extern const Span<const asset_Asset> packer_assets;
+extern const Span<const pack_Asset> packer_assets;
 #endif
 static CatalogSet catalog_set;
 
@@ -87,7 +87,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
     }
 
     for (const char *filename: filenames) {
-        asset_Asset catalog = {};
+        pack_Asset catalog = {};
 
         const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
         Assert(name[0]);
@@ -174,7 +174,7 @@ static void InitRoutes()
     routes_alloc.ReleaseAll();
 
     const auto add_asset_route = [&](const char *method, const char *url,
-                                     Route::Matching matching, const asset_Asset &asset) {
+                                     Route::Matching matching, const pack_Asset &asset) {
         Route route = {};
 
         route.method = method;
@@ -201,9 +201,9 @@ static void InitRoutes()
     };
 
     // Static assets and catalogs
-    asset_Asset html = {};
+    pack_Asset html = {};
     DebugAssert(assets.len > 0);
-    for (const asset_Asset &asset: assets) {
+    for (const pack_Asset &asset: assets) {
         if (TestStr(asset.name, "thop.html")) {
             html = asset;
         } else if (TestStr(asset.name, "favicon.png")) {
@@ -213,7 +213,7 @@ static void InitRoutes()
             add_asset_route("GET", url, Route::Matching::Exact, asset);
         }
     }
-    for (const asset_Asset &desc: catalog_set.catalogs) {
+    for (const pack_Asset &desc: catalog_set.catalogs) {
         const char *url = Fmt(&routes_alloc, "/catalogs/%1", desc.name).ptr;
         add_asset_route("GET", url, Route::Matching::Exact, desc);
     }
@@ -261,7 +261,7 @@ static void InitRoutes()
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
 #ifndef NDEBUG
-    if (asset_set.LoadFromLibrary(assets_filename) == asset_LoadStatus::Loaded) {
+    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Loaded) {
         LogInfo("Reloaded assets from library");
         assets = asset_set.assets;
 
@@ -462,7 +462,7 @@ Options:
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/thop_assets%2",
                           GetApplicationDirectory(), SHARED_LIBRARY_EXTENSION).ptr;
-    if (asset_set.LoadFromLibrary(assets_filename) == asset_LoadStatus::Error)
+    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
         return 1;
     assets = asset_set.assets;
 #else

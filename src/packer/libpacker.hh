@@ -11,7 +11,7 @@
 #include "../libcc/libcc.hh"
 
 // Keep in sync with version in packer.cc
-struct asset_Asset {
+struct pack_Asset {
     const char *name;
     CompressionType compression_type;
     Span<const uint8_t> data;
@@ -19,14 +19,14 @@ struct asset_Asset {
     const char *source_map;
 };
 
-enum class asset_LoadStatus {
+enum class pack_LoadStatus {
     Unchanged,
     Loaded,
     Error
 };
 
-struct asset_AssetSet {
-    HeapArray<asset_Asset> assets;
+struct pack_AssetSet {
+    HeapArray<pack_Asset> assets;
     LinkedAllocator alloc;
 
 #ifdef _WIN32
@@ -35,5 +35,5 @@ struct asset_AssetSet {
     struct timespec last_time = {};
 #endif
 
-    asset_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "packer_assets");
+    pack_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "packer_assets");
 };
