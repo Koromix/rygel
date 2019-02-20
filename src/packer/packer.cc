@@ -9,8 +9,9 @@
     #include <fnmatch.h>
 #endif
 
+#include "../libcc/libcc.hh"
+#include "generator.hh"
 #include "packer.hh"
-#include "output.hh"
 
 struct MergeRule {
     const char *name;
@@ -19,67 +20,6 @@ struct MergeRule {
     HeapArray<const char *> include;
     HeapArray<const char *> exclude;
 };
-
-struct AssetInfo {
-    const char *name;
-
-    SourceMapType source_map_type;
-    HeapArray<SourceInfo> sources;
-};
-
-struct PackedAssetInfo {
-    const char *name;
-    Size len;
-
-    const char *source_map;
-};
-
-// For simplicity, I've replicated the required data structures from libcc
-// and packer.hh directly below. Don't forget to keep them in sync.
-static const char *const OutputPrefix =
-R"(// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-#include <initializer_list>
-#include <stdint.h>
-
-#if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-    typedef int64_t Size;
-#elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
-    typedef int32_t Size;
-#endif
-
-#ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
-#else
-    #define EXPORT __attribute__((visibility("default")))
-#endif
-
-template <typename T>
-struct Span {
-    T *ptr;
-    Size len;
-
-    Span() = default;
-    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    template <Size N>
-    constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
-};
-
-enum class CompressionType {
-    None,
-    Zlib,
-    Gzip
-};
-
-struct asset_Asset {
-    const char *name;
-    CompressionType compression_type;
-    Span<const uint8_t> data;
-
-    const char *source_map;
-};)";
 
 static MergeMode FindDefaultMergeMode(const char *filename)
 {
@@ -210,6 +150,15 @@ static void InitSourceMergeData(SourceInfo *src, MergeMode merge_mode, Allocator
     }
 }
 
+enum class GeneratorType {
+    CXX,
+    Files
+};
+static const char *const GeneratorTypeNames[] = {
+    "C++",
+    "Files"
+};
+
 int main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
@@ -219,29 +168,32 @@ int main(int argc, char **argv)
 R"(Usage: packer <filename> ...
 
 Options:
-    -O, --output_file <file>     Redirect output to file
+    -g, --generator <gen>        Set output file generator
+                                 (default: C++)
+    -O, --output_file <file>     Redirect output to file or directory
 
     -d, --depth <depth>          Keep <depth> last components of filename
                                  (default: keep full path)
     -c, --compress <type>        Compress data, see below for available types
                                  (default: %1)
-        --span_name <name>       Change span name exported by output code
-                                 (default: packer_assets)
-    -e, --export                 Export span symbol
 
     -M, --merge_file <file>      Load merge rules from file
         --source_map             Generate source maps when applicable
 
-Available compression types:)", CompressionTypeNames[0]);
+Available generators:)", CompressionTypeNames[0]);
+        for (const char *gen: GeneratorTypeNames) {
+            PrintLn(fp, "    %1", gen);
+        }
+        PrintLn(fp, R"(
+Available compression types:)");
         for (const char *type: CompressionTypeNames) {
             PrintLn(fp, "    %1", type);
         }
     };
 
+    GeneratorType generator = GeneratorType::CXX;
     const char *output_path = nullptr;
     int depth = -1;
-    const char *span_name = "packer_assets";
-    bool export_span = false;
     CompressionType compression_type = CompressionType::None;
     const char *merge_file = nullptr;
     bool source_maps = false;
@@ -253,6 +205,15 @@ Available compression types:)", CompressionTypeNames[0]);
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return 0;
+            } else if (opt.Test("-g", "--generator", OptionType::Value)) {
+                const char *const *name = FindIf(GeneratorTypeNames,
+                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
+                if (!name) {
+                    LogError("Unknown generator type '%1'", opt.current_value);
+                    return 1;
+                }
+
+                generator = (GeneratorType)(name - GeneratorTypeNames);
             } else if (opt.Test("-d", "--depth", OptionType::Value)) {
                 if (!ParseDec<int>(opt.current_value, &depth))
                     return 1;
@@ -260,10 +221,6 @@ Available compression types:)", CompressionTypeNames[0]);
                     LogError("Option --depth requires value > 0");
                     return 1;
                 }
-            } else if (opt.Test("--span_name", OptionType::Value)) {
-                span_name = opt.current_value;
-            } else if (opt.Test("--export", "-e")) {
-                export_span = true;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
@@ -301,20 +258,6 @@ Available compression types:)", CompressionTypeNames[0]);
         }
     }
 
-    StreamWriter st;
-    if (output_path) {
-        st.Open(output_path);
-    } else {
-        st.Open(stdout, "<stdout>");
-    }
-    if (st.error)
-        return 1;
-
-    PrintLn(&st,
-R"(%1
-
-static const uint8_t raw_data[] = {)", OutputPrefix);
-
     // Map source files to assets
     HeapArray<AssetInfo> assets;
     {
@@ -339,6 +282,9 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
                     AssetInfo asset = {};
                     asset.name = rule->name;
                     asset.source_map_type = rule->source_map_type;
+                    if (rule->source_map_type != SourceMapType::None) {
+                        asset.source_map_name = Fmt(&temp_alloc, "%1.map", rule->name).ptr;
+                    }
                     assets.Append(asset)->sources.Append(src);
                 }
             }
@@ -348,70 +294,14 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
 
                 AssetInfo asset = {};
                 asset.name = src.name;
-                asset.source_map_type = SourceMapType::None;
                 assets.Append(asset)->sources.Append(src);
             }
         }
     }
 
-    // Pack assets and source maps
-    HeapArray<PackedAssetInfo> packed_assets;
-    for (const AssetInfo &asset: assets) {
-        PackedAssetInfo packed_asset = {};
-        packed_asset.name = asset.name;
-
-        PrintLn(&st, "    // %1", packed_asset.name);
-        Print(&st, "    ");
-        packed_asset.len = PackAsset(asset.sources, compression_type, &st);
-        if (packed_asset.len < 0)
-            return 1;
-        PrintLn(&st);
-
-        if (asset.source_map_type != SourceMapType::None) {
-            packed_asset.source_map = Fmt(&temp_alloc, "%1.map", packed_asset.name).ptr;
-
-            PackedAssetInfo packed_map = {};
-            packed_map.name = packed_asset.source_map;
-
-            PrintLn(&st, "    // %1", packed_map.name);
-            Print(&st, "    ");
-            packed_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type, &st);
-            if (packed_map.len < 0)
-                return 1;
-            PrintLn(&st);
-
-            packed_assets.Append(packed_asset);
-            packed_assets.Append(packed_map);
-        } else {
-            packed_assets.Append(packed_asset);
-        }
+    switch (generator) {
+        case GeneratorType::CXX: return !GenerateCXX(assets, output_path, compression_type);
+        case GeneratorType::Files: return !GenerateFiles(assets, output_path, compression_type);
     }
-
-    PrintLn(&st,
-R"(};
-
-static asset_Asset assets[] = {)");
-
-    // Write asset table
-    for (Size i = 0, cumulative_len = 0; i < packed_assets.len; i++) {
-        const PackedAssetInfo &packed_asset = packed_assets[i];
-
-        if (packed_asset.source_map) {
-            PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}, \"%5\"},",
-                    packed_asset.name, (int)compression_type, cumulative_len, packed_asset.len,
-                    packed_asset.source_map);
-        } else {
-            PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
-                    packed_asset.name, (int)compression_type, cumulative_len, packed_asset.len);
-        }
-        cumulative_len += packed_asset.len;
-    }
-
-    PrintLn(&st,
-R"(};
-
-%1extern const Span<const asset_Asset> %2;
-const Span<const asset_Asset> %2 = assets;)", export_span ? "EXPORT " : "", span_name);
-
-    return !st.Close();
+    Assert(false);
 }

@@ -6,21 +6,6 @@
 #include "../wrappers/json.hh"
 #include "output.hh"
 
-static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
-{
-    Size i = 0;
-    for (Size end = bytes.len / 8 * 8; i < end; i += 8) {
-        Print(out_st, "0x%1, 0x%2, 0x%3, 0x%4, 0x%5, 0x%6, 0x%7, 0x%8, ",
-              FmtHex(bytes[i + 0]).Pad0(-2), FmtHex(bytes[i + 1]).Pad0(-2),
-              FmtHex(bytes[i + 2]).Pad0(-2), FmtHex(bytes[i + 3]).Pad0(-2),
-              FmtHex(bytes[i + 4]).Pad0(-2), FmtHex(bytes[i + 5]).Pad0(-2),
-              FmtHex(bytes[i + 6]).Pad0(-2), FmtHex(bytes[i + 7]).Pad0(-2));
-    }
-    for (; i < bytes.len; i++) {
-        Print(out_st, "0x%1, ", FmtHex(bytes[i]).Pad0(-2));
-    }
-}
-
 static FmtArg FormatZigzagVLQ64(int value)
 {
     DebugAssert(value != INT_MIN);
@@ -121,8 +106,8 @@ static bool BuildJavaScriptMap3(Span<const SourceInfo> sources, StreamWriter *ou
     return true;
 }
 
-Size PackAsset(Span<const SourceInfo> sources,
-               CompressionType compression_type, StreamWriter *out_st)
+Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
+               std::function<void(Span<const uint8_t> buf)> func)
 {
     Size written_len = 0;
     {
@@ -131,7 +116,7 @@ Size PackAsset(Span<const SourceInfo> sources,
 
         const auto flush_buffer = [&]() {
             written_len += buf.len;
-            PrintAsHexArray(buf, out_st);
+            func(buf);
             buf.RemoveFrom(0);
         };
 
@@ -160,7 +145,7 @@ Size PackAsset(Span<const SourceInfo> sources,
 }
 
 Size PackSourceMap(Span<const SourceInfo> sources, SourceMapType source_map_type,
-                   CompressionType compression_type, StreamWriter *out_st)
+                   CompressionType compression_type, std::function<void(Span<const uint8_t> buf)> func)
 {
     HeapArray<uint8_t> buf;
     StreamWriter writer(&buf, nullptr, compression_type);
@@ -174,7 +159,7 @@ Size PackSourceMap(Span<const SourceInfo> sources, SourceMapType source_map_type
     }
 
     Assert(writer.Close());
-    PrintAsHexArray(buf, out_st);
+    func(buf);
 
     return buf.len;
 }

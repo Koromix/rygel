@@ -24,3 +24,11 @@ struct SourceInfo {
     const char *prefix;
     const char *suffix;
 };
+
+struct AssetInfo {
+    const char *name;
+    HeapArray<SourceInfo> sources;
+
+    SourceMapType source_map_type;
+    const char *source_map_name;
+};

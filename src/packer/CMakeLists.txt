@@ -3,11 +3,13 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 add_executable(packer
-    ../wrappers/json.hh
-    packer.cc
-    packer.hh
+    generator_cxx.cc
+    generator_files.cc
+    generator.hh
     output.cc
     output.hh
+    packer.cc
+    packer.hh
 )
 
 target_link_libraries(packer PRIVATE libcc)
@@ -42,14 +44,11 @@ function(target_assets TARGET)
             set(OPT_MODE "Static")
         endif()
     endif()
-    if(OPT_MODE STREQUAL "Module")
-        set(OPT_OPTIONS "${OPT_OPTIONS} -e")
-    endif()
 
     add_custom_command(
         OUTPUT ${output_src}
         COMMAND $<TARGET_FILE:packer>
-        ARGS ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
+        ARGS -gC++ ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         DEPENDS ${output_dependencies}
     )
