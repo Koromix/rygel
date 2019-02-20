@@ -102,7 +102,7 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
         PrintLn(&st, "    // %1", blob.name);
         Print(&st, "    ");
         blob.len = PackAsset(asset.sources, compression_type,
-                                     [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
         if (blob.len < 0)
             return 1;
         PrintLn(&st);
@@ -116,7 +116,7 @@ static const uint8_t raw_data[] = {)", OutputPrefix);
             PrintLn(&st, "    // %1", blob_map.name);
             Print(&st, "    ");
             blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
-                                           [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+                                         [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
             if (blob_map.len < 0)
                 return 1;
             PrintLn(&st);
