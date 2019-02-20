@@ -112,6 +112,7 @@
     #define HAVE_STDBOOL_H 1
     #define _GNU_SOURCE  1
     #define STDC_HEADERS 1
+    #define __STDC_NO_VLA__ 1
 #elif defined(__APPLE__)
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1

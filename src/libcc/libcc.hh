@@ -400,20 +400,16 @@ public:
     DeferGuard(const DeferGuard &) = delete;
     DeferGuard &operator=(DeferGuard &) = delete;
 
-    void enable() { enabled = true; }
     void disable() { enabled = false; }
 };
 
 // Honestly, I don't understand all the details in there, this comes from Andrei Alexandrescu.
 // https://channel9.msdn.com/Shows/Going+Deep/C-and-Beyond-2012-Andrei-Alexandrescu-Systematic-Error-Handling-in-C
-struct DeferGuardHelper {
-    bool enabled;
-    DeferGuardHelper(bool enable = true) : enabled(enable) {}
-};
+struct DeferGuardHelper {};
 template <typename Fun>
-DeferGuard<Fun> operator+(DeferGuardHelper h, Fun &&f)
+DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 {
-    return DeferGuard<Fun>(std::forward<Fun>(f), h.enabled);
+    return DeferGuard<Fun>(std::forward<Fun>(f));
 }
 
 // Write 'DEFER { code };' to do something at the end of the current scope, you
@@ -423,14 +419,10 @@ DeferGuard<Fun> operator+(DeferGuardHelper h, Fun &&f)
     auto UNIQUE_ID(defer) = DeferGuardHelper() + [&]()
 #define DEFER_N(Name) \
     auto Name = DeferGuardHelper() + [&]()
-#define DEFER_N_DISABLED(Name) \
-    auto Name = DeferGuardHelper(false) + [&]()
 #define DEFER_C(...) \
     auto UNIQUE_ID(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
 #define DEFER_NC(Name, ...) \
     auto Name = DeferGuardHelper() + [&, __VA_ARGS__]()
-#define DEFER_NC_DISABLED(Name, ...) \
-    auto Name = DeferGuardHelper(false) + [&, __VA_ARGS__]()
 
 #define INIT(Name) \
     class UNIQUE_ID(InitHelper) { \

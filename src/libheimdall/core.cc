@@ -86,12 +86,11 @@ static void TextMeasure(const Element &elmt, double align_offset)
 {
     DebugAssert(elmt.type == Element::Type::Measure);
 
-    DEFER_N_DISABLED(style_guard) {
-        ImGui::PopStyleColor();
-    };
+    DEFER_N(style_guard) { ImGui::PopStyleColor(); };
     if (DetectAnomaly(elmt)) {
         ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
-        style_guard.enable();
+    } else {
+        style_guard.disable();
     }
 
     if (!std::isnan(elmt.u.measure.min) && !std::isnan(elmt.u.measure.max)) {
