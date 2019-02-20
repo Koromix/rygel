@@ -96,26 +96,4 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_subdirectory(lib EXCLUDE_FROM_ALL)
-add_subdirectory(test EXCLUDE_FROM_ALL)
-
-if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wconversion -Wno-strict-overflow")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wconversion -Wno-strict-overflow \
--Wno-class-memaccess -Wno-missing-field-initializers -Wno-old-style-cast -Wno-cast-function-type")
-endif()
-
-# Libraries and utilities
-add_project(src/packer EXCLUDE_FROM_ALL)
-add_project(src/libcc EXCLUDE_FROM_ALL)
-add_project(src/libgui EXCLUDE_FROM_ALL)
-
-# Main projects
-add_project(src/libdrd)
-add_project(src/drdc)
-add_project(src/drdR)
-add_project(src/thop)
-add_project(src/libheimdall)
-add_project(src/heimdallR)
-add_project(src/heimdallw)
-add_project(src/goupil)
-add_project(src/simpl)
+add_subdirectory(src)
