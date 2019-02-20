@@ -9,7 +9,7 @@
         <script type="text/javascript" src="inPL.pk.js"></script>
 
         <script type="text/javascript">
-            let inpl = (function() {
+            let inPL = (function() {
                 let self = this;
 
                 let route_params = {
@@ -144,11 +144,11 @@
 
     <body style="display: none;">
         <div id="inpl_menu" class="inpl_tabbar">
-            <button onclick="inpl.go({tab: 0});">Résultats</button>
-            <button onclick="inpl.go({tab: 1});">Synthèse</button>
-            <button onclick="inpl.go({tab: 2});">Consultant</button>
+            <button onclick="inPL.go({tab: 0});">Résultats</button>
+            <button onclick="inPL.go({tab: 1});">Synthèse</button>
+            <button onclick="inPL.go({tab: 2});">Consultant</button>
 
-            <input id="inpl_menu_file" type="file" accept=".csv" onchange="inpl.importAndRefresh();"/>
+            <input id="inpl_menu_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"/>
             <span id="inpl_menu_stat"></span>
         </div>
 
@@ -159,14 +159,14 @@
         <div class="inpl_tabpage">
             <div class="inpl_options">
                 <label>Sexe :
-                    <select id="inpl_option_sex" onchange="inpl.go({sex: this.value});">
+                    <select id="inpl_option_sex" onchange="inPL.go({sex: this.value});">
                         <option value="all">Tout</option>
                         <option value="male">Hommes</option>
                         <option value="female">Femmes</option>
                     </select>
                 </label>
                 <label>Lignes :
-                    <select id="inpl_option_rows" onchange="inpl.go({rows: this.value});">
+                    <select id="inpl_option_rows" onchange="inPL.go({rows: this.value});">
                         <option value="age">Âge (classes)</option>
                         <option value="sex">Sexe</option>
                     </select>
@@ -180,7 +180,7 @@
             <div class="inpl_options">
                 <label>PLID :
                     <input id="inpl_option_plid" type="text"
-                           oninput="inpl.go({plid: this.value});"/>
+                           oninput="inPL.go({plid: this.value});"/>
                 </label>
                 <label>Modèle :
                     <input id="inpl_option_template" type="file" accept=".docx"/>
