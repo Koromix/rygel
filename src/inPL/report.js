@@ -42,7 +42,7 @@ let report = (function() {
 
     this.refreshReport = function(rows) {
         let plid = query('#inpl_option_plid').value;
-        let row = rows.find(row => row.plid == plid);
+        let row = rows.find(row => row.rdv_plid == plid);
 
         refreshConsultant(row);
     };
