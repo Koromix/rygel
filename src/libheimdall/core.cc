@@ -7,7 +7,10 @@
 #include "../libgui/libgui.hh"
 #include "core.hh"
 #include "data.hh"
-#include "render.hh"
+PUSH_NO_WARNINGS()
+#include "../../lib/imgui/imgui.h"
+#include "../../lib/imgui/imgui_internal.h"
+POP_NO_WARNINGS()
 
 // Ideas:
 // - Multiple / Task-oriented concept trees
@@ -24,6 +27,10 @@ enum class VisColor {
     Plot,
     Limit
 };
+
+// At this time, libheimdall only supports one window at a time, and so does
+// libgui so there is no problem here.
+static const gui_Info *gui_info;
 
 static ImU32 GetVisColor(VisColor color, float alpha = 1.0f)
 {
@@ -814,8 +821,8 @@ static bool DrawEntities(ImRect bb, float tree_width, double time_offset,
             }
 
             // Try to stabilize highlighted entity if any
-            if (gui_api->input.mouseover && !state.grab_canvas && !cache_refreshed &&
-                    gui_api->input.y >= bb.Min.y + base_y && gui_api->input.y < bb.Min.y + y &&
+            if (gui_info->input.mouseover && !state.grab_canvas && !cache_refreshed &&
+                    gui_info->input.y >= bb.Min.y + base_y && gui_info->input.y < bb.Min.y + y &&
                     !ImGui::IsPopupOpen("tree_menu")) {
                 state.highlight_idx = i;
                 state.scroll_to_idx = i;
@@ -1052,25 +1059,25 @@ static bool DrawView(InterfaceState &state,
     state.scroll_y = ImGui::GetScrollY() + (state.scroll_y < 0 ? state.scroll_y : 0);
 
     // Handle controls
-    float entities_mouse_x = (state.scroll_x + (float)gui_api->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
+    float entities_mouse_x = (state.scroll_x + (float)gui_info->input.x - win->ClipRect.Min.x - (state.settings.tree_width + 15.0f));
     if (ImGui::IsMouseHoveringWindow()) {
-        if (gui_api->input.buttons & MaskEnum(gui_Interface::Button::Left)) {
+        if (gui_info->input.buttons & MaskEnum(gui_InputButton::Left)) {
             if (state.grab_canvas) {
-                state.scroll_x += state.grab_canvas_x - (float)gui_api->input.x;
-                state.scroll_y += state.grab_canvas_y - (float)gui_api->input.y;
-            } else if (entity_rect.Contains(ImVec2((float)gui_api->input.x, (float)gui_api->input.y))) {
+                state.scroll_x += state.grab_canvas_x - (float)gui_info->input.x;
+                state.scroll_y += state.grab_canvas_y - (float)gui_info->input.y;
+            } else if (entity_rect.Contains(ImVec2((float)gui_info->input.x, (float)gui_info->input.y))) {
                 state.grab_canvas = true;
             }
 
-            state.grab_canvas_x = (float)gui_api->input.x;
-            state.grab_canvas_y = (float)gui_api->input.y;
+            state.grab_canvas_x = (float)gui_info->input.x;
+            state.grab_canvas_y = (float)gui_info->input.y;
         } else {
             state.grab_canvas = false;
         }
 
-        if (gui_api->input.keys.Test((int)gui_Interface::Key::Control) && gui_api->input.wheel_y) {
+        if (gui_info->input.keys.Test((int)gui_InputKey::Control) && gui_info->input.wheel_y) {
             double (*animator)(double relative_time) = nullptr;
-            if (state.time_zoom.animation.Running(gui_api->time.monotonic)) {
+            if (state.time_zoom.animation.Running(gui_info->time.monotonic)) {
                 state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, state.time_zoom, state.time_zoom.end_value);
                 state.time_zoom = state.time_zoom.end_value;
                 animator = TweenOutQuad;
@@ -1080,17 +1087,17 @@ static bool DrawView(InterfaceState &state,
 
             float new_zoom;
             {
-                float multiplier = ((gui_api->input.keys.Test((int)gui_Interface::Key::Shift)) ? 2.0736f : 1.2f);
-                if (gui_api->input.wheel_y > 0) {
-                    new_zoom = state.time_zoom * (float)gui_api->input.wheel_y * multiplier;
+                float multiplier = ((gui_info->input.keys.Test((int)gui_InputKey::Shift)) ? 2.0736f : 1.2f);
+                if (gui_info->input.wheel_y > 0) {
+                    new_zoom = state.time_zoom * (float)gui_info->input.wheel_y * multiplier;
                 } else {
-                    new_zoom = state.time_zoom / -(float)gui_api->input.wheel_y / multiplier;
+                    new_zoom = state.time_zoom / -(float)gui_info->input.wheel_y / multiplier;
                 }
                 new_zoom = ImClamp(new_zoom, 0.00001f, 1000000.0f);
             }
 
-            state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, gui_api->time.monotonic,
-                                                gui_api->time.monotonic + 0.05, animator);
+            state.time_zoom = MakeAnimatedValue(state.time_zoom, new_zoom, gui_info->time.monotonic,
+                                                gui_info->time.monotonic + 0.05, animator);
         }
     }
 
@@ -1098,7 +1105,7 @@ static bool DrawView(InterfaceState &state,
     double time_offset;
     {
         double prev_zoom = state.time_zoom;
-        state.time_zoom.Update(gui_api->time.monotonic);
+        state.time_zoom.Update(gui_info->time.monotonic);
         state.scroll_x += AdjustScrollAfterZoom(entities_mouse_x, prev_zoom, state.time_zoom);
 
         time_offset = state.scroll_x / state.time_zoom;
@@ -1195,10 +1202,10 @@ static void RemoveConceptsFromView(const HashSet<Span<const char>> &concepts, Co
     }
 }
 
-bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set)
+bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
+                  const EntitySet &entity_set)
 {
-    if (!StartRender())
-        return false;
+    gui_info = &window.info;
 
     // Theme
     if (state.settings.light_theme) {
@@ -1367,16 +1374,12 @@ bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const Enti
         ImGui::End();
     }
 
-    Render();
     // FIXME: This is a hack to work around the fact that ImGui::SetScroll() functions
     // are off by one frame. We need to take over ImGui layout completely, because we
     // do know the window size!
+    window.RenderImGui();
     if (valid_frame) {
-        gui_SwapBuffers();
-    }
-
-    if (!gui_api->main.run) {
-        ReleaseRender();
+        window.SwapBuffers();
     }
 
     return true;

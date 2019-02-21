@@ -33,17 +33,18 @@ if(WIN32 OR EMSCRIPTEN)
         wrappers/opengl.cc
         wrappers/opengl.hh
         wrappers/opengl_func.inc
-        libgui/libgui.hh
+        libgui/imgui.cc
+        libgui/window.hh
     )
     if (WIN32)
-        list(APPEND LIBGUI_SRC libgui/runner_win32.cc)
+        list(APPEND LIBGUI_SRC libgui/window_win32.cc)
     elseif(EMSCRIPTEN)
-        list(APPEND LIBGUI_SRC libgui/runner_emsdk.cc)
+        list(APPEND LIBGUI_SRC libgui/window_emsdk.cc)
     endif()
 
     add_library(libgui ${LIBGUI_SRC})
     set_target_properties(libgui PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_link_libraries(libgui PUBLIC libcc)
+    target_link_libraries(libgui PUBLIC libcc imgui)
     if(WIN32)
         target_link_libraries(libgui PUBLIC gdi32 opengl32 imm32)
     endif()
@@ -268,19 +269,11 @@ if(TARGET libgui)
         libheimdall/core.cc
         libheimdall/core.hh
         libheimdall/data.hh
-        libheimdall/render.cc
-        libheimdall/render.hh
-    )
-    set(LIBHEIMDALL_ASSETS
-        ../lib/imgui/misc/fonts/Roboto-Medium.ttf
     )
 
     add_library(libheimdall ${LIBHEIMDALL_SRC})
     set_target_properties(libheimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_link_libraries(libheimdall PUBLIC libcc imgui libgui)
-    target_assets(libheimdall
-        SOURCES ${LIBHEIMDALL_ASSETS}
-    )
+    target_link_libraries(libheimdall PUBLIC libcc libgui)
     add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.cc" libheimdall/libheimdall.cc)
     add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall/libheimdall.hh)
 endif()

@@ -10,7 +10,19 @@ int main(void)
     HeapArray<ConceptSet> concept_sets;
     EntitySet entity_set = {};
 
-    return !gui_RunApplication(HEIMDALL_NAME, [&]() {
-        return Step(render_state, concept_sets, entity_set);
-    });
+    gui_Window window;
+
+    if (!window.Init(HEIMDALL_NAME))
+        return 1;
+    if (!window.InitImGui())
+        return 1;
+
+    for (;;) {
+        if (!window.Prepare())
+            return 0;
+        if (!StepHeimdall(window, render_state, concept_sets, entity_set))
+            return 0;
+    }
+
+    return 0;
 }

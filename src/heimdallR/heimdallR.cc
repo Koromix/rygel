@@ -236,17 +236,31 @@ void R_HeimdallRun(SEXP inst_xp)
     Instance *inst = (Instance *)rcc_GetPointerSafe(inst_xp);
 
     if (!inst->run) {
+        // Previous instance is done (or it is shutting down, just wait for a bit)
         if (inst->run_thread.joinable()) {
             inst->run_thread.join();
         }
 
         inst->run = true;
         inst->run_thread = std::thread([=]() {
+            DEFER { inst->run = false; };
+
+            gui_Window window;
+            if (!window.Init(HEIMDALL_NAME))
+                rcc_StopWithLastError();
+            if (!window.InitImGui())
+                rcc_StopWithLastError();
+
             InterfaceState render_state = {};
-            gui_RunApplication(HEIMDALL_NAME, [&]() {
-                return Step(render_state, inst->concept_sets, inst->entity_set);
-            }, &inst->run, &inst->lock);
-            inst->run = false;
+
+            while (inst->run) {
+                if (!window.Prepare())
+                    break;
+
+                std::lock_guard<std::mutex> locker(inst->lock);
+                if (!StepHeimdall(window, render_state, inst->concept_sets, inst->entity_set))
+                    break;
+            }
         });
     }
 }
@@ -261,10 +275,20 @@ void R_HeimdallRunSync(SEXP inst_xp)
     if (inst->run)
         Rcpp::stop("Async run in progress");
 
+    gui_Window window;
+    if (!window.Init(HEIMDALL_NAME))
+        rcc_StopWithLastError();
+    if (!window.InitImGui())
+        rcc_StopWithLastError();
+
     InterfaceState render_state = {};
-    gui_RunApplication(HEIMDALL_NAME, [&]() {
-        return Step(render_state, inst->concept_sets, inst->entity_set);
-    });
+
+    for (;;) {
+        if (!window.Prepare())
+            break;
+        if (!StepHeimdall(window, render_state, inst->concept_sets, inst->entity_set))
+            break;
+    }
 }
 
 static void StopInstance(Instance *inst)

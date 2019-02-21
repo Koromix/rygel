@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #if defined(_WIN32)
-    #include "runner_win32.cc"
+    #include "window_win32.cc"
 #elif defined(__EMSCRIPTEN__)
-    #include "runner_emsdk.cc"
+    #include "window_emsdk.cc"
 #endif

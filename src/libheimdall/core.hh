@@ -7,6 +7,7 @@
 #include "../libcc/libcc.hh"
 #include "data.hh"
 #include "animation.hh"
+#include "../libgui/libgui.hh"
 
 #define HEIMDALL_NAME "heimdall"
 
@@ -75,4 +76,5 @@ struct InterfaceState {
     HashSet<Span<const char>> align_concepts;
 };
 
-bool Step(InterfaceState &state, HeapArray<ConceptSet> &concept_sets, const EntitySet &entity_set);
+bool StepHeimdall(gui_Window &window, InterfaceState &state, HeapArray<ConceptSet> &concept_sets,
+                  const EntitySet &entity_set);

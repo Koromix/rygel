@@ -3,28 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "../packer/libpacker.hh"
+#include "window.hh"
 #include "../wrappers/opengl.hh"
-#include "../libgui/libgui.hh"
-#include "render.hh"
+PUSH_NO_WARNINGS()
+#include "../../lib/imgui/imgui.h"
+#include "../../lib/imgui/imgui_internal.h"
+POP_NO_WARNINGS()
 
-extern const Span<const pack_Asset> packer_assets;
-#define IMGUI_FONT "Roboto-Medium.ttf"
-
-static GLuint shader_program = 0;
-static GLint attrib_proj_mtx;
-static GLint attrib_texture;
-static GLuint attrib_position;
-static GLuint attrib_uv;
-static GLuint attrib_color;
-
-static GLuint array_buffer = 0;
-static GLuint elements_buffer = 0;
-static GLuint vao = 0;
-
-static GLuint font_texture = 0;
-
-static const char *imgui_vertex_src =
+static const char *const ImGuiVertexCode =
 #ifdef __EMSCRIPTEN__
 R"!(#version 300 es
 
@@ -48,7 +34,8 @@ R"!(uniform mat4 ProjMtx;
         gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
     }
 )!";
-static const char *imgui_fragment_src =
+
+static const char *const ImGuiFragmentCode =
 #ifdef __EMSCRIPTEN__
 R"!(#version 300 es
 
@@ -69,17 +56,32 @@ R"!(uniform sampler2D Texture;
     }
 )!";
 
-static void ReleaseImGui();
-static bool InitImGui()
+static GLuint shader_program = 0;
+static GLint attrib_proj_mtx;
+static GLint attrib_texture;
+static GLuint attrib_position;
+static GLuint attrib_uv;
+static GLuint attrib_color;
+static GLuint array_buffer = 0;
+static GLuint elements_buffer = 0;
+static GLuint vao = 0;
+static GLuint font_texture = 0;
+
+bool gui_Window::imgui_ready = false;
+
+bool gui_Window::InitImGui()
 {
+    Assert(!imgui_ready);
+
     ImGui::CreateContext();
     DEFER_N(imgui_guard) { ReleaseImGui(); };
 
     ImGuiIO *io = &ImGui::GetIO();
     io->IniFilename = nullptr;
 
+    // Build shaders
     {
-        GLuint new_shader = ogl_BuildShader("imgui", imgui_vertex_src, imgui_fragment_src);
+        GLuint new_shader = ogl_BuildShader("imgui", ImGuiVertexCode, ImGuiFragmentCode);
         if (new_shader) {
             if (shader_program) {
                 glDeleteProgram(shader_program);
@@ -114,17 +116,6 @@ static bool InitImGui()
                           (GLvoid *)OFFSET_OF(ImDrawVert, col));
 
     if (!font_texture) {
-        const pack_Asset *font_data = FindIf(packer_assets,
-                                              [](const pack_Asset &asset) { return TestStr(asset.name, IMGUI_FONT); });
-        if (font_data) {
-            ImFontConfig font_config;
-            font_config.FontDataOwnedByAtlas = false;
-
-            DebugAssert(font_data->data.len <= INT_MAX);
-            io->Fonts->AddFontFromMemoryTTF((void *)font_data->data.ptr, (int)font_data->data.len,
-                                            16, &font_config);
-        }
-
         uint8_t *pixels;
         int width, height;
         // TODO: Switch to GetTexDataAsAlpha8() eventually
@@ -139,92 +130,95 @@ static bool InitImGui()
         io->Fonts->TexID = (void *)(intptr_t)font_texture;
     }
 
-    io->KeyMap[ImGuiKey_Tab] = (int)gui_Interface::Key::Tab;
-    io->KeyMap[ImGuiKey_Delete] = (int)gui_Interface::Key::Delete;
-    io->KeyMap[ImGuiKey_Backspace] = (int)gui_Interface::Key::Backspace;
-    io->KeyMap[ImGuiKey_Enter] = (int)gui_Interface::Key::Enter;
-    io->KeyMap[ImGuiKey_Escape] = (int)gui_Interface::Key::Escape;
-    io->KeyMap[ImGuiKey_Home] = (int)gui_Interface::Key::Home;
-    io->KeyMap[ImGuiKey_End] = (int)gui_Interface::Key::End;
-    io->KeyMap[ImGuiKey_PageUp] = (int)gui_Interface::Key::PageUp;
-    io->KeyMap[ImGuiKey_PageDown] = (int)gui_Interface::Key::PageDown;
-    io->KeyMap[ImGuiKey_LeftArrow] = (int)gui_Interface::Key::Left;
-    io->KeyMap[ImGuiKey_RightArrow] = (int)gui_Interface::Key::Right;
-    io->KeyMap[ImGuiKey_UpArrow] = (int)gui_Interface::Key::Up;
-    io->KeyMap[ImGuiKey_DownArrow] = (int)gui_Interface::Key::Down;
-    io->KeyMap[ImGuiKey_A] = (int)gui_Interface::Key::A;
-    io->KeyMap[ImGuiKey_C] = (int)gui_Interface::Key::C;
-    io->KeyMap[ImGuiKey_V] = (int)gui_Interface::Key::V;
-    io->KeyMap[ImGuiKey_X] = (int)gui_Interface::Key::X;
-    io->KeyMap[ImGuiKey_Y] = (int)gui_Interface::Key::Y;
-    io->KeyMap[ImGuiKey_Z] = (int)gui_Interface::Key::Z;
+    io->KeyMap[ImGuiKey_Tab] = (int)gui_InputKey::Tab;
+    io->KeyMap[ImGuiKey_Delete] = (int)gui_InputKey::Delete;
+    io->KeyMap[ImGuiKey_Backspace] = (int)gui_InputKey::Backspace;
+    io->KeyMap[ImGuiKey_Enter] = (int)gui_InputKey::Enter;
+    io->KeyMap[ImGuiKey_Escape] = (int)gui_InputKey::Escape;
+    io->KeyMap[ImGuiKey_Home] = (int)gui_InputKey::Home;
+    io->KeyMap[ImGuiKey_End] = (int)gui_InputKey::End;
+    io->KeyMap[ImGuiKey_PageUp] = (int)gui_InputKey::PageUp;
+    io->KeyMap[ImGuiKey_PageDown] = (int)gui_InputKey::PageDown;
+    io->KeyMap[ImGuiKey_LeftArrow] = (int)gui_InputKey::Left;
+    io->KeyMap[ImGuiKey_RightArrow] = (int)gui_InputKey::Right;
+    io->KeyMap[ImGuiKey_UpArrow] = (int)gui_InputKey::Up;
+    io->KeyMap[ImGuiKey_DownArrow] = (int)gui_InputKey::Down;
+    io->KeyMap[ImGuiKey_A] = (int)gui_InputKey::A;
+    io->KeyMap[ImGuiKey_C] = (int)gui_InputKey::C;
+    io->KeyMap[ImGuiKey_V] = (int)gui_InputKey::V;
+    io->KeyMap[ImGuiKey_X] = (int)gui_InputKey::X;
+    io->KeyMap[ImGuiKey_Y] = (int)gui_InputKey::Y;
+    io->KeyMap[ImGuiKey_Z] = (int)gui_InputKey::Z;
+
+    imgui_local = true;
+    imgui_ready = true;
 
     imgui_guard.disable();
     return true;
 }
 
-static void ReleaseImGui()
+void gui_Window::StartImGuiFrame()
 {
-    ImGui::DestroyContext();
-
-    if (font_texture) {
-        glDeleteTextures(1, &font_texture);
-        font_texture = 0;
-    }
-    if (vao) {
-        glDeleteVertexArrays(1, &vao);
-        vao = 0;
-    }
-    if (elements_buffer) {
-        glDeleteBuffers(1, &elements_buffer);
-        elements_buffer = 0;
-    }
-    if (array_buffer) {
-        glDeleteBuffers(1, &array_buffer);
-        array_buffer = 0;
-    }
-    if(shader_program) {
-        glDeleteProgram(shader_program);
-        shader_program = 0;
-    }
-}
-
-bool StartRender()
-{
-    if (!gui_api->main.iteration_count) {
-        if (!InitImGui())
-            return false;
-    }
-
     ImGuiIO *io = &ImGui::GetIO();
 
-    io->DisplaySize = ImVec2((float)gui_api->display.width, (float)gui_api->display.height);
-    io->DeltaTime = (float)gui_api->time.monotonic_delta;
+    io->DisplaySize = ImVec2((float)info.display.width, (float)info.display.height);
+    io->DeltaTime = (float)info.time.monotonic_delta;
 
     memset(io->KeysDown, 0, SIZE(io->KeysDown));
-    for (Size idx: gui_api->input.keys) {
+    for (Size idx: info.input.keys) {
         io->KeysDown[idx] = true;
     }
-    io->KeyCtrl = gui_api->input.keys.Test((Size)gui_Interface::Key::Control);
-    io->KeyAlt = gui_api->input.keys.Test((Size)gui_Interface::Key::Alt);
-    io->KeyShift = gui_api->input.keys.Test((Size)gui_Interface::Key::Shift);
-    io->AddInputCharactersUTF8(gui_api->input.text.data);
+    io->KeyCtrl = info.input.keys.Test((Size)gui_InputKey::Control);
+    io->KeyAlt = info.input.keys.Test((Size)gui_InputKey::Alt);
+    io->KeyShift = info.input.keys.Test((Size)gui_InputKey::Shift);
+    io->AddInputCharactersUTF8(info.input.text.data);
 
-    io->MousePos = ImVec2((float)gui_api->input.x, (float)gui_api->input.y);
+    io->MousePos = ImVec2((float)info.input.x, (float)info.input.y);
     for (Size i = 0; i < ARRAY_SIZE(io->MouseDown); i++) {
-        io->MouseDown[i] = gui_api->input.buttons & (unsigned int)(1 << i);
+        io->MouseDown[i] = info.input.buttons & (unsigned int)(1 << i);
     }
-    io->MouseWheel = (float)gui_api->input.wheel_y;
+    io->MouseWheel = (float)info.input.wheel_y;
 
     ImGui::NewFrame();
-
-    return true;
 }
 
-void Render()
+void gui_Window::ReleaseImGui()
 {
+    if (imgui_local) {
+        ImGui::DestroyContext();
+
+        if (font_texture) {
+            glDeleteTextures(1, &font_texture);
+            font_texture = 0;
+        }
+        if (vao) {
+            glDeleteVertexArrays(1, &vao);
+            vao = 0;
+        }
+        if (elements_buffer) {
+            glDeleteBuffers(1, &elements_buffer);
+            elements_buffer = 0;
+        }
+        if (array_buffer) {
+            glDeleteBuffers(1, &array_buffer);
+            array_buffer = 0;
+        }
+        if(shader_program) {
+            glDeleteProgram(shader_program);
+            shader_program = 0;
+        }
+    }
+
+    imgui_local = false;
+    imgui_ready = false;
+}
+
+void gui_Window::RenderImGui()
+{
+    DebugAssert(imgui_local);
+
     // Clear screen
-    glViewport(0, 0, gui_api->display.width, gui_api->display.height);
+    glViewport(0, 0, info.display.width, info.display.height);
     glDisable(GL_SCISSOR_TEST);
     glClearColor(0.14f, 0.14f, 0.14f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -278,7 +272,7 @@ void Render()
                     cmd.UserCallback(cmds, &cmd);
                 } else {
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.TextureId);
-                    glScissor((int)cmd.ClipRect.x, gui_api->display.height - (int)cmd.ClipRect.w,
+                    glScissor((int)cmd.ClipRect.x, info.display.height - (int)cmd.ClipRect.w,
                               (int)(cmd.ClipRect.z - cmd.ClipRect.x),
                               (int)(cmd.ClipRect.w - cmd.ClipRect.y));
                     glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
@@ -289,9 +283,4 @@ void Render()
             }
         }
     }
-}
-
-void ReleaseRender()
-{
-    ReleaseImGui();
 }
