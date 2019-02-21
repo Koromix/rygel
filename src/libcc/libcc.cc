@@ -1141,6 +1141,46 @@ static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
     return str_buf;
 }
 
+static FileType FileAttributesToType(uint32_t attr)
+{
+    if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+        return FileType::Directory;
+    } else if (attr & FILE_ATTRIBUTE_DEVICE) {
+        return FileType::Unknown;
+    } else {
+        return FileType::File;
+    }
+}
+
+static int64_t FileTimeToUnixTime(FILETIME ft)
+{
+    int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    return time / 10000000 - 11644473600ll;
+}
+
+bool StatFile(const char *filename, FileInfo *out_info)
+{
+    HANDLE h = CreateFile(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                          nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        LogError("Cannot stat file '%1': %2", filename, Win32ErrorString());
+        return false;
+    }
+    DEFER { CloseHandle(h); };
+
+    BY_HANDLE_FILE_INFORMATION attr;
+    if (!GetFileInformationByHandle(h, &attr)) {
+        LogError("Cannot stat file '%1': %2", filename, Win32ErrorString());
+        return false;
+    }
+
+    out_info->type = FileAttributesToType(attr.dwFileAttributes);
+    out_info->size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
+    out_info->modification_time = FileTimeToUnixTime(attr.ftLastWriteTime);
+
+    return true;
+}
+
 bool TestPath(const char *path, FileType type)
 {
     DWORD attr = GetFileAttributes(path);
@@ -1170,7 +1210,7 @@ bool TestPath(const char *path, FileType type)
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, const FileInfo &)> func)
+                              std::function<bool(const char *, FileType)> func)
 {
     char find_filter[4096];
     if (!filter) {
@@ -1204,15 +1244,9 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             return EnumStatus::Partial;
         }
 
-        FileInfo file_info;
+        FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
 
-        if (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            file_info.type = FileType::Directory;
-        } else {
-            file_info.type = FileType::File;
-        }
-
-        if (!func(find_data.cFileName, file_info))
+        if (!func(find_data.cFileName, file_type))
             return EnumStatus::Partial;
     } while (FindNextFile(handle, &find_data));
 
@@ -1226,6 +1260,36 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 }
 
 #else
+
+bool StatFile(const char *filename, FileInfo *out_info)
+{
+    struct stat sb;
+    if (stat(filename, &sb) < 0) {
+        LogError("Cannot stat '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    if (S_ISDIR(sb.st_mode)) {
+        out_info->type = FileType::Directory;
+    } else if (S_ISREG(sb.st_mode)) {
+        out_info->type = FileType::File;
+    } else {
+        out_info->type = FileType::Unknown;
+    }
+
+    out_info->size = (int64_t)sb.st_size;
+#if defined(__linux__)
+    out_info->modification_time = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                                  (int64_t)sb.st_mtim.tv_nsec / 1000000;
+#elif defined(__APPLE__)
+    out_info->modification_time = (int64_t)sb.st_mtimespec.tv_sec * 1000 +
+                                  (int64_t)sb.st_mtimespec.tv_nsec / 1000000;
+#else
+    out_info->modification_time = (int64_t)sb.st_mtime * 1000;
+#endif
+
+    return true;
+}
 
 bool TestPath(const char *path, FileType type)
 {
@@ -1256,7 +1320,7 @@ bool TestPath(const char *path, FileType type)
 }
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, const FileInfo &)> func)
+                              std::function<bool(const char *, FileType)> func)
 {
     DIR *dirp = opendir(dirname);
     if (!dirp) {
@@ -1278,14 +1342,13 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                 return EnumStatus::Partial;
             }
 
-            FileInfo file_info;
-
+            FileType file_type;
 #ifdef _DIRENT_HAVE_D_TYPE
             if (dent->d_type != DT_UNKNOWN && dent->d_type != DT_LNK) {
                 switch (dent->d_type) {
-                    case DT_DIR: { file_info.type = FileType::Directory; } break;
-                    case DT_REG: { file_info.type = FileType::File; } break;
-                    default: { file_info.type = FileType::Unknown; } break;
+                    case DT_DIR: { file_type = FileType::Directory; } break;
+                    case DT_REG: { file_type = FileType::File; } break;
+                    default: { file_type = FileType::Unknown; } break;
                 }
             } else
 #endif
@@ -1297,15 +1360,15 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     continue;
                 }
                 if (S_ISDIR(sb.st_mode)) {
-                    file_info.type = FileType::Directory;
+                    file_type = FileType::Directory;
                 } else if (S_ISREG(sb.st_mode)) {
-                    file_info.type = FileType::File;
+                    file_type = FileType::File;
                 } else {
-                    file_info.type = FileType::Unknown;
+                    file_type = FileType::Unknown;
                 }
             }
 
-            if (!func(dent->d_name, file_info))
+            if (!func(dent->d_name, file_type))
                 return EnumStatus::Partial;
         }
 
@@ -1328,8 +1391,8 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
     DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumStatus status = EnumerateDirectory(dirname, filter, max_files,
-                                           [&](const char *filename, const FileInfo &info) {
-        if (info.type == FileType::File) {
+                                           [&](const char *filename, FileType file_type) {
+        if (file_type == FileType::File) {
             out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
         }
 
