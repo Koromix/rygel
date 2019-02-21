@@ -20,6 +20,7 @@
     #include <signal.h>
     #include <sys/stat.h>
     #include <sys/types.h>
+    #include <time.h>
     #include <unistd.h>
 #endif
 #ifdef __APPLE__
@@ -1666,6 +1667,27 @@ bool MakeDirectoryRec(Span<const char> directory)
     }
 
     return true;
+}
+
+void WaitForDelay(int64_t delay)
+{
+#ifdef _WIN32
+    Sleep(delay);
+#else
+    struct timespec ts;
+    ts.tv_sec = (int)(delay / 1000);
+    ts.tv_nsec = (int)((delay % 1000) * 1000000);
+
+    int ret;
+    struct timespec rem;
+    while ((ret = nanosleep(&ts, &rem)) < 0 && errno == EINTR) {
+        ts = rem;
+    }
+    if (ret < 0) {
+        LogError("nanosleep() failed: %1", strerror(errno));
+        return;
+    }
+#endif
 }
 
 void WaitForConsoleInterruption()

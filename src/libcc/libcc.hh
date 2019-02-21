@@ -3140,6 +3140,7 @@ enum class OpenFileMode {
 
 FILE *OpenFile(const char *path, OpenFileMode mode);
 
+void WaitForDelay(int64_t delay);
 void WaitForConsoleInterruption();
 
 enum class IPStack {
