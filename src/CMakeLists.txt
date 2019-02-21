@@ -380,30 +380,3 @@ add_custom_command(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS packer ${INPL_ASSETS}
 )
-
-# ------------------------------------------------------------------------
-# simPL
-# ------------------------------------------------------------------------
-
-set(SIMPL_SRC
-    simPL/simulator/bone.cc
-    simPL/simulator/bone.hh
-    simPL/simulator/cardiovascular.cc
-    simPL/simulator/cardiovascular.hh
-    simPL/simulator/death.cc
-    simPL/simulator/death.hh
-    simPL/simulator/exam.cc
-    simPL/simulator/exam.hh
-    simPL/simulator/flags.hh
-    simPL/simulator/human.cc
-    simPL/simulator/human.hh
-    simPL/simulator/random.cc
-    simPL/simulator/random.hh
-    simPL/simulator/simPL.cc
-    simPL/simulator/simPL.hh
-    simPL/simulator/utility.cc
-    simPL/simulator/utility.hh
-)
-
-add_executable(simPL ${SIMPL_SRC})
-target_link_libraries(simPL PRIVATE libcc)
