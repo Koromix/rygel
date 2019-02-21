@@ -7,9 +7,6 @@
     #include <windows.h>
 #else
     #include <dlfcn.h>
-    #include <sys/stat.h>
-    #include <sys/types.h>
-    #include <time.h>
 #endif
 
 #include "../libcc/libcc.hh"
@@ -19,27 +16,18 @@ pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char 
 {
     const Span<const pack_Asset> *lib_assets = nullptr;
 
-#ifdef _WIN32
     // Check library time
     {
-        StaticAssert(SIZE(FILETIME) == SIZE(last_time));
-
-        FILETIME last_time_ft;
-        memcpy(&last_time_ft, &last_time, SIZE(last_time));
-
-        WIN32_FILE_ATTRIBUTE_DATA attr;
-        if (!GetFileAttributesEx(filename, GetFileExInfoStandard, &attr)) {
-            LogError("Cannot stat file '%1'", filename);
+        FileInfo file_info;
+        if (!StatFile(filename, &file_info))
             return pack_LoadStatus::Error;
-        }
 
-        if (attr.ftLastWriteTime.dwHighDateTime == last_time_ft.dwHighDateTime &&
-                attr.ftLastWriteTime.dwLowDateTime == last_time_ft.dwLowDateTime)
+        if (last_time == file_info.modification_time)
             return pack_LoadStatus::Unchanged;
-
-        memcpy(&last_time, &attr.ftLastWriteTime, SIZE(last_time));
+        last_time = file_info.modification_time;
     }
 
+#ifdef _WIN32
     HMODULE h = LoadLibrary(filename);
     if (!h) {
         LogError("Cannot load library '%1'", filename);
@@ -49,27 +37,6 @@ pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char 
 
     lib_assets = (const Span<const pack_Asset> *)GetProcAddress(h, var_name);
 #else
-    // Check library time
-    {
-        struct stat sb;
-        if (stat(filename, &sb) < 0) {
-            LogError("Cannot stat file '%1'", filename);
-            return pack_LoadStatus::Error;
-        }
-
-#ifdef __APPLE__
-        if (sb.st_mtimespec.tv_sec == last_time.tv_sec &&
-                sb.st_mtimespec.tv_nsec == last_time.tv_nsec)
-            return pack_LoadStatus::Unchanged;
-        last_time = sb.st_mtimespec;
-#else
-        if (sb.st_mtim.tv_sec == last_time.tv_sec &&
-                sb.st_mtim.tv_nsec == last_time.tv_nsec)
-            return pack_LoadStatus::Unchanged;
-        last_time = sb.st_mtim;
-#endif
-    }
-
     void *h = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
     if (!h) {
         LogError("Cannot load library '%1': %2", filename, dlerror());

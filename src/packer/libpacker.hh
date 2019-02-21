@@ -29,11 +29,7 @@ struct pack_AssetSet {
     HeapArray<pack_Asset> assets;
     LinkedAllocator alloc;
 
-#ifdef _WIN32
-    uint8_t last_time[8] = {}; // FILETIME
-#else
-    struct timespec last_time = {};
-#endif
+    int64_t last_time = -1;
 
     pack_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "packer_assets");
 };
