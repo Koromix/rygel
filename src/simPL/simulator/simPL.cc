@@ -6,7 +6,7 @@
 #include "flags.hh"
 #include "human.hh"
 #include "random.hh"
-#include "simpl.hh"
+#include "simPL.hh"
 
 static void DumpIterationInfo(Size iteration, const Human &human)
 {

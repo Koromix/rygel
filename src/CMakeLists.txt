@@ -399,8 +399,8 @@ set(SIMPL_SRC
     simPL/simulator/human.hh
     simPL/simulator/random.cc
     simPL/simulator/random.hh
-    simPL/simulator/simpl.cc
-    simPL/simulator/simpl.hh
+    simPL/simulator/simPL.cc
+    simPL/simulator/simPL.hh
     simPL/simulator/utility.cc
     simPL/simulator/utility.hh
 )
