@@ -178,8 +178,8 @@ let tables = (function() {
                 html('thead',
                     html('tr',
                         html('th', {rowspan: 2}),
-                        html('th', {rowspan: 2}, 'Sexe'),
-                        html('th', {rowspan: 2}, 'Âge'),
+                        html('th', {rowspan: 2}),
+                        html('th', {rowspan: 2}),
                         createCategoryHeaders(ScreeningHandlers)
                     ),
                     html('tr',

@@ -8,6 +8,12 @@ body {
     max-width: 1200px;
     margin: 1em auto;
 }
+@media screen and (max-width: 801px) {
+    body {
+        margin: 0;
+        font-size: 11px;
+    }
+}
 
 a {
     color: #000;
@@ -20,6 +26,7 @@ a {
     overflow: hidden;
     border: 1px solid #ccc;
     background-color: #f1f1f1;
+    margin: 0 1em;
 }
 .inpl_tabbar button {
     background-color: inherit;
@@ -32,6 +39,12 @@ a {
 .inpl_tabbar button:hover { background-color: #ddd; }
 .inpl_tabbar button.active { background-color: #ccc; }
 .inpl_tabpage { padding: 1em; }
+@media screen and (max-width: 801px) {
+    .inpl_tabbar {
+        margin: 0;
+        border: 0;
+    }
+}
 
 #inpl_menu_stat {
     padding: 9px 12px 0 0;
@@ -62,7 +75,7 @@ a {
 }
 .inpl_table th { padding: 2px 4px 2px 4px; }
 .inpl_table td { padding: 2px 0; }
-.inpl_table th:first-child { width: 70px; }
+.inpl_table th:first-child { width: 5.5em; }
 .inpl_table tbody th {
     font-weight: normal;
     font-style: italic;
@@ -70,6 +83,13 @@ a {
 } 
 .inpl_table tbody th a { font-style: italic; }
 .inpl_table tbody td { text-align: center; }
+@media screen and (max-width: 801px) {
+    .inpl_table {
+        width: calc(100% + 2em);
+        margin-left: -1em;
+    }
+    .inpl_table th, .inpl_table td { border: 0; }
+}
 
 .inpl_result_1 {
     background: #ff0000;
