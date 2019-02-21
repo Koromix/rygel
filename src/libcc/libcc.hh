@@ -3107,6 +3107,9 @@ enum class FileType {
 
 struct FileInfo {
     FileType type;
+
+    int64_t size;
+    int64_t modification_time;
 };
 
 enum class EnumStatus {
@@ -3115,10 +3118,11 @@ enum class EnumStatus {
     Done
 };
 
+bool StatFile(const char *filename, FileInfo *out_info);
 bool TestPath(const char *path, FileType type = FileType::Unknown);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
-                              std::function<bool(const char *, const FileInfo &)> func);
+                              std::function<bool(const char *, FileType)> func);
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_files,
                              Allocator *str_alloc, HeapArray<const char *> *out_files);
 
