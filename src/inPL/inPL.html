@@ -133,7 +133,10 @@
 
                 window.addEventListener('load', function() {
                     initNavigation();
-                    route(parseUrl(window.location.href).params, false);
+
+                    let params = Object.assign({}, route_params, parseUrl(window.location.href).params);
+                    route(params, false);
+
                     self.importAndRefresh();
                 });
 
