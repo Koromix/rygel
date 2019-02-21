@@ -372,3 +372,37 @@ add_custom_command(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS packer ${INPL_ASSETS}
 )
+
+# ------------------------------------------------------------------------
+# simPL
+# ------------------------------------------------------------------------
+
+if(TARGET libgui)
+    set(SIMPL_SRC
+        simPL/simPL.cc
+        simPL/view.cc
+        simPL/view.hh
+    )
+    set(SIMPL_MODULE_SRC
+        simPL/simulation.cc
+        simPL/simulation.hh
+    )
+
+    add_executable(simPL ${SIMPL_SRC})
+    target_link_libraries(simPL PRIVATE libcc libgui)
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        # The copy is mostly for Windows, where incomplete DLLs can generate
+        # annoying MessageBox errors.
+        add_library(simPL_module MODULE ${SIMPL_MODULE_SRC})
+        target_link_libraries(simPL_module PRIVATE libcc pcg)
+        add_custom_command(
+            TARGET simPL_module POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:simPL_module>
+                                             "$<TARGET_FILE_DIR:simPL_module>/simPL${CMAKE_SHARED_LIBRARY_SUFFIX}"
+        )
+    else()
+        target_sources(simPL PRIVATE ${SIMPL_MODULE_SRC})
+        target_link_libraries(simPL PRIVATE pcg)
+    endif()
+endif()
