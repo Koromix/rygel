@@ -37,6 +37,7 @@ set(LIBMICROHTTPD_SRC
     libmicrohttpd/src/microhttpd/sysfdsetsize.c
     libmicrohttpd/src/microhttpd/tsearch.c
 )
+
 add_library(microhttpd STATIC ${LIBMICROHTTPD_SRC})
 target_include_directories(microhttpd PRIVATE libmicrohttpd libmicrohttpd/src/include)
 if(WIN32)
@@ -53,6 +54,7 @@ endif()
 set(MINIZ_SRC
     miniz/miniz.c
 )
+
 add_library(miniz STATIC ${MINIZ_SRC})
 target_compile_definitions(miniz PRIVATE -DMINIZ_NO_STDIO
                                          -DMINIZ_NO_TIME
@@ -74,6 +76,7 @@ set(IMGUI_SRC
     imgui/imgui_demo.cpp
     imgui/imgui_widgets.cpp
 )
+
 add_library(imgui STATIC ${IMGUI_SRC})
 
 # ------------------------------------------------------------------------
@@ -187,6 +190,7 @@ set(LIBSODIUM_SRC
     libsodium/src/libsodium/crypto_core/ed25519/core_ed25519.c
     libsodium/src/libsodium/crypto_core/ed25519/ref10/ed25519_ref10.c
 )
+
 add_library(sodium STATIC ${LIBSODIUM_SRC})
 target_include_directories(sodium PRIVATE libsodium/src/libsodium/include
                                           libsodium/src/libsodium/include/sodium)
@@ -205,6 +209,7 @@ endif()
 set(SQLITE_SRC
     sqlite/sqlite3.c
 )
+
 add_library(sqlite STATIC ${SQLITE_SRC})
 target_compile_definitions(sqlite PRIVATE -DSQLITE_THREADSAFE=1)
 target_link_libraries(sqlite PUBLIC Threads::Threads)
@@ -227,6 +232,7 @@ set(WREN_SRC
     wren/src/optional/wren_opt_meta.c
     wren/src/optional/wren_opt_random.c
 )
+
 add_library(wren STATIC ${WREN_SRC})
 target_include_directories(wren PRIVATE wren/src/include wren/src/vm wren/src/optional)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
