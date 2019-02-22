@@ -1678,14 +1678,10 @@ void WaitForDelay(int64_t delay)
     ts.tv_sec = (int)(delay / 1000);
     ts.tv_nsec = (int)((delay % 1000) * 1000000);
 
-    int ret;
     struct timespec rem;
-    while ((ret = nanosleep(&ts, &rem)) < 0 && errno == EINTR) {
+    while (nanosleep(&ts, &rem) < 0) {
+        Assert(errno == EINTR);
         ts = rem;
-    }
-    if (ret < 0) {
-        LogError("nanosleep() failed: %1", strerror(errno));
-        return;
     }
 #endif
 }
