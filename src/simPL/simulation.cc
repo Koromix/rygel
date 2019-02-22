@@ -5,32 +5,40 @@
 #include "../libcc/libcc.hh"
 #include "simulation.hh"
 
-static void InitializeHuman(Size idx, Human *out_human)
+static void InitializeHuman(int seed, Size idx, Human *out_human)
 {
-    pcg32_srandom_r(&out_human->rand_evolution, 1, idx);
-    pcg32_srandom_r(&out_human->rand_therapy, 1, idx);
+    pcg32_srandom_r(&out_human->rand_evolution, seed, idx);
+    pcg32_srandom_r(&out_human->rand_therapy, seed, idx);
 
     out_human->age = 45;
 }
 
-void InitializeHumans(Size count, HeapArray<Human> *out_humans)
+Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans)
 {
     for (Size i = 0; i < count; i++) {
         Human *new_human = out_humans->AppendDefault();
-        InitializeHuman(i, new_human);
+        InitializeHuman(seed, i, new_human);
     }
+
+    return count;
 }
 
-static void SimulateYear(const Human &human, Human *out_human)
+static bool SimulateYear(const Human &human, Human *out_human)
 {
     out_human->age = human.age + 1;
+    return true;
 }
 
-void RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans)
+Size RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans)
 {
+    Size alive_count = 0;
+
     // Loop with copying, because we want to support overwriting a human
     for (const Human human: humans) {
         Human *new_human = out_humans->AppendDefault();
-        SimulateYear(human, new_human);
+        alive_count += SimulateYear(human, new_human);
     }
+
+    // Return alive count (everyone for now)
+    return humans.len;
 }

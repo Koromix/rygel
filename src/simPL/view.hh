@@ -5,5 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
+#include "simPL.hh"
 
-
+void RenderControlWindow(HeapArray<Simulation> *simulations);
+bool RenderSimulationWindow(Simulation *simulation);

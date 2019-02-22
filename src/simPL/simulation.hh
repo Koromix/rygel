@@ -14,5 +14,5 @@ struct Human {
     int age;
 };
 
-extern "C" void InitializeHumans(Size count, HeapArray<Human> *out_humans);
-extern "C" void RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans);
+extern "C" Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans);
+extern "C" Size RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans);
