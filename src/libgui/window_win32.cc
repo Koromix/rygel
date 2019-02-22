@@ -204,8 +204,8 @@ static HWND CreateMainWindow(const char *application_name)
     HWND main_wnd;
     {
         RECT rect = {};
-        rect.right = 1280;
-        rect.bottom = 720;
+        rect.right = 1152;
+        rect.bottom = 648;
         AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0);
 
         main_wnd = CreateWindowEx(0, main_cls_name, application_name, WS_OVERLAPPEDWINDOW,
