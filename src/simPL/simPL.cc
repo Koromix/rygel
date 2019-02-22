@@ -11,11 +11,14 @@
 
 #include "../libcc/libcc.hh"
 #include "../libgui/libgui.hh"
+#include "simPL.hh"
 #include "simulation.hh"
 #include "view.hh"
 
-static decltype(InitializeHumans) *InitializeHumans_;
-static decltype(RunSimulationStep) *RunSimulationStep_;
+decltype(InitializeHumans) *InitializeHumans_;
+decltype(RunSimulationStep) *RunSimulationStep_;
+
+BlockAllocator frame_alloc;
 
 #if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
 #ifdef _WIN32
@@ -24,7 +27,7 @@ static HMODULE module_handle;
 static void *module_handle;
 #endif
 
-static bool LoadSimulationLibrary(const char *filename)
+static bool LoadSimulationModule(const char *filename)
 {
     // Check library time and unload if outdated
     if (module_handle) {
@@ -89,7 +92,7 @@ static bool LoadSimulationLibrary(const char *filename)
 }
 #endif
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
 #if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
     char module_filename[4096];
@@ -99,13 +102,9 @@ int main(int argc, char **argv)
         Fmt(module_filename, "%1%2", executable_path, SHARED_LIBRARY_EXTENSION);
     }
 
-    if (!LoadSimulationLibrary(module_filename))
+    // The OS will unload this for us
+    if (!LoadSimulationModule(module_filename))
         return 1;
-#ifdef _WIN32
-    DEFER { FreeLibrary(module_handle); };
-#else
-    DEFER { dlclose(module_handle); };
-#endif
 #else
     InitializeHumans_ = InitializeHumans;
     RunSimulationStep_ = RunSimulationStep;
@@ -117,19 +116,37 @@ int main(int argc, char **argv)
     if (!window.InitImGui())
         return 1;
 
-    HeapArray<Human> humans;
-
-    InitializeHumans_(100, &humans);
+    HeapArray<Simulation> simulations;
 
     while (window.Prepare()) {
-        RunSimulationStep_(humans.PrepareRewrite(), &humans);
+        RenderControlWindow(&simulations);
+
+        for (Size i = 0; i < simulations.len; i++) {
+            Simulation *simulation = &simulations[i];
+
+            if (RenderSimulationWindow(simulation)) {
+                if (simulation->alive_count) {
+                    simulation->alive_count = RunSimulationStep_(simulation->humans.PrepareRewrite(),
+                                                                 &simulation->humans);
+                    simulation->iteration++;
+                }
+            } else {
+                SwapMemory(&simulations[i--], &simulations[simulations.len - 1], SIZE(Simulation));
+                simulations.RemoveLast();
+            }
+        }
 
         window.RenderImGui();
         window.SwapBuffers();
 
+        frame_alloc.ReleaseAll();
+
 #if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
-        while (!LoadSimulationLibrary(module_filename)) {
-            WaitForDelay(1000);
+        for (Size i = 1; !LoadSimulationModule(module_filename); i++) {
+            if (i >= 10) {
+                LogError("Failed to load module too many times");
+                return 1;
+            }
         }
 #endif
     }
