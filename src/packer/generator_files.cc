@@ -7,6 +7,30 @@
 #include "output.hh"
 #include "packer.hh"
 
+static bool PathIsAbsolute(const char *path)
+{
+#ifdef _WIN32
+    if (IsAsciiAlpha(path[0]) && path[1] == ':')
+        return true;
+#endif
+
+    return strchr(PATH_SEPARATORS, path[0]);
+}
+
+static bool PathContainsDotDot(const char *path)
+{
+    const char *ptr = path;
+
+    while ((ptr = strstr(ptr, ".."))) {
+        if ((ptr == path || strchr(PATH_SEPARATORS, ptr[-1])) &&
+                (strchr(PATH_SEPARATORS, ptr[2]) || !ptr[2]))
+            return true;
+        ptr += 2;
+    }
+
+    return false;
+}
+
 bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
                    CompressionType compression_type)
 {
@@ -31,8 +55,22 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
     for (const AssetInfo &asset: assets) {
         StreamWriter st;
 
+        if (UNLIKELY(PathIsAbsolute(asset.name))) {
+            LogError("Asset name '%1' cannot be an absolute path", asset.name);
+            return false;
+        }
+        if (UNLIKELY(PathContainsDotDot(asset.name))) {
+            LogError("Asset name '%1' must not contain '..'", asset.name);
+            return false;
+        }
+
+        Span<const char> directory;
         Span<char> filename = Fmt(&temp_alloc, "%1%/%2%3.map", output_path, asset.name, compression_ext);
+        SplitStrReverseAny((Span<const char>)filename, PATH_SEPARATORS, &directory);
         filename.ptr[filename.len - 4] = 0;
+
+        if (!MakeDirectoryRec(directory))
+            return false;
 
         if (!st.Open(filename.ptr))
             return false;

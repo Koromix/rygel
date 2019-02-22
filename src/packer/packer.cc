@@ -149,6 +149,16 @@ static void InitSourceMergeData(SourceInfo *src, MergeMode merge_mode, Allocator
     }
 }
 
+static const char *StripDirectoryComponents(Span<const char> filename, int strip_count)
+{
+    const char *name = filename.ptr;
+    for (int i = 0; filename.len && i <= strip_count; i++) {
+        name = SplitStrAny(filename, PATH_SEPARATORS, &filename).ptr;
+    }
+
+    return name;
+}
+
 int main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
@@ -162,6 +172,8 @@ Options:
                                  (default: C++)
     -O, --output_file <file>     Redirect output to file or directory
 
+    -s, --strip <count>          Strip first count directory components, or 'All'
+                                 (default: All)
     -c, --compress <type>        Compress data, see below for available types
                                  (default: %1)
 
@@ -181,6 +193,7 @@ Available compression types:)");
 
     GeneratorType generator = GeneratorType::CXX;
     const char *output_path = nullptr;
+    int strip_count = INT_MAX;
     CompressionType compression_type = CompressionType::None;
     const char *merge_file = nullptr;
     bool source_maps = false;
@@ -203,6 +216,12 @@ Available compression types:)");
                 generator = (GeneratorType)(name - GeneratorTypeNames);
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_path = opt.current_value;
+            } else if (opt.Test("-s", "--strip", OptionType::Value)) {
+                if (TestStr(opt.current_value, "All")) {
+                    strip_count = INT_MAX;
+                } else if (!ParseDec(opt.current_value, &strip_count)) {
+                    return 1;
+                }
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
                 const char *const *name = FindIf(CompressionTypeNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
@@ -248,7 +267,7 @@ Available compression types:)");
 
             SourceInfo src = {};
             src.filename = filename;
-            src.name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
+            src.name = StripDirectoryComponents(filename, strip_count);
 
             if (rule) {
                 InitSourceMergeData(&src, rule->merge_mode, &temp_alloc);
