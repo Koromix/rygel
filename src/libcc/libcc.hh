@@ -1175,7 +1175,8 @@ public:
         Trim();
         return Leak();
     }
-    Span<T> GetAndRemoveAll()
+
+    Span<T> PrepareRewrite()
     {
         Span<T> ret = *this;
         len = 0;
