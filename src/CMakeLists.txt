@@ -239,6 +239,10 @@ if(NOT EMSCRIPTEN)
         thop/client/images/favicon.png
     )
 
+    set(THOP_HASH_PASSWORD_SRC
+        thop/server/thop_hash_password.c
+    )
+
     add_executable(thop ${THOP_SRC})
     target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     target_link_libraries(thop PRIVATE libcc libdrd libpacker microhttpd sodium)
@@ -249,9 +253,6 @@ if(NOT EMSCRIPTEN)
         SOURCES ${THOP_ASSETS}
     )
 
-    set(THOP_HASH_PASSWORD_SRC
-        thop/server/thop_hash_password.c
-    )
     add_executable(thop_hash_password ${THOP_HASH_PASSWORD_SRC})
     target_link_libraries(thop_hash_password PRIVATE sodium)
 endif()
@@ -324,6 +325,7 @@ set(GOUPIL_SRC
     goupil/server/config.hh
     goupil/server/goupil.cc
 )
+
 set(GOUPIL_ADMIN_SRC
     goupil/admin/goupil_admin.cc
     goupil/admin/profile.cc
@@ -383,6 +385,7 @@ if(TARGET libgui)
         simPL/view.cc
         simPL/view.hh
     )
+
     set(SIMPL_MODULE_SRC
         simPL/simulation.cc
         simPL/simulation.hh
