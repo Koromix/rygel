@@ -21,6 +21,15 @@ struct MergeRule {
     HeapArray<const char *> exclude;
 };
 
+enum class GeneratorType {
+    CXX,
+    Files
+};
+static const char *const GeneratorTypeNames[] = {
+    "C++",
+    "Files"
+};
+
 static MergeMode FindDefaultMergeMode(const char *filename)
 {
     Span<const char> extension = GetPathExtension(filename);
@@ -139,15 +148,6 @@ static void InitSourceMergeData(SourceInfo *src, MergeMode merge_mode, Allocator
         } break;
     }
 }
-
-enum class GeneratorType {
-    CXX,
-    Files
-};
-static const char *const GeneratorTypeNames[] = {
-    "C++",
-    "Files"
-};
 
 int main(int argc, char **argv)
 {
