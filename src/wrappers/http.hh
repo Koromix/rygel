@@ -43,7 +43,7 @@ struct http_Request {
     HashMap<const char *, Span<const char>> post;
 
     MHD_PostProcessor *pp;
-    BlockAllocator temp_alloc;
+    BlockAllocator alloc;
 
     const char *GetHeaderValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_HEADER_KIND, key); }
