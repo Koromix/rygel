@@ -1609,14 +1609,14 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
     return fp;
 }
 
-bool MakeDirectory(const char *dir)
+bool MakeDirectory(const char *directory)
 {
 #ifdef _WIN32
-    if (_mkdir(dir) < 0) {
+    if (_mkdir(directory) < 0) {
 #else
-    if (mkdir(dir, 0755) < 0) {
+    if (mkdir(directory, 0755) < 0) {
 #endif
-        LogError("Cannot create directory '%1': %2", dir, strerror(errno));
+        LogError("Cannot create directory '%1': %2", directory, strerror(errno));
         return false;
     }
 

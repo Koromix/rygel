@@ -3131,7 +3131,7 @@ const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
 
 bool MakeDirectory(const char *dir);
-bool MakeDirectoryRec(Span<const char> directory);
+bool MakeDirectoryRec(Span<const char> dir);
 
 enum class OpenFileMode {
     Read = 1 << 0,
