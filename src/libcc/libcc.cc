@@ -1913,7 +1913,7 @@ struct MinizInflateContext {
     uint8_t *out_ptr;
     Size out_len;
 
-    // gzip support
+    // Gzip support
     bool header_done;
     uint32_t crc32;
     Size uncompressed_size;
@@ -1933,11 +1933,12 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
     this->filename = filename ? filename : "<memory>";
 
-    if (!InitDecompressor(compression_type))
-        return false;
     source.type = SourceType::Memory;
     source.u.memory.buf = buf;
     source.u.memory.pos = 0;
+
+    if (!InitDecompressor(compression_type))
+        return false;
 
     error_guard.disable();
     return true;
@@ -1956,10 +1957,11 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     DebugAssert(filename);
     this->filename = filename;
 
-    if (!InitDecompressor(compression_type))
-        return false;
     source.type = SourceType::File;
     source.u.fp = fp;
+
+    if (!InitDecompressor(compression_type))
+        return false;
 
     error_guard.disable();
     return true;
@@ -1977,13 +1979,14 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     DebugAssert(filename);
     this->filename = filename;
 
-    if (!InitDecompressor(compression_type))
-        return false;
     source.type = SourceType::File;
     source.u.fp = OpenFile(filename, OpenFileMode::Read);
     if (!source.u.fp)
         return false;
     source.owned = true;
+
+    if (!InitDecompressor(compression_type))
+        return false;
 
     error_guard.disable();
     return true;
@@ -2163,7 +2166,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
 #ifdef MZ_VERSION
     MinizInflateContext *ctx = compression.u.miniz;
 
-    // gzip header is not directly supported by miniz. Currently this
+    // Gzip header is not directly supported by miniz. Currently this
     // will fail if the header is longer than 4096 bytes, which is
     // probably quite rare.
     if (compression.type == CompressionType::Gzip && !ctx->header_done) {
@@ -2174,7 +2177,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
         if (header_len < 0) {
             return -1;
         } else if (header_len < 10 || header[0] != 0x1F || header[1] != 0x8B) {
-            LogError("File '%1' does not look like a gzip stream", filename);
+            LogError("File '%1' does not look like a Gzip stream", filename);
             error = true;
             return -1;
         }
@@ -2276,7 +2279,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                 ctx->out_len += (Size)out_arg;
 
                 if (status == TINFL_STATUS_DONE) {
-                    // gzip footer (CRC and size check)
+                    // Gzip footer (CRC and size check)
                     if (compression.type == CompressionType::Gzip) {
                         uint32_t footer[2];
                         StaticAssert(SIZE(footer) == 8);
@@ -2318,7 +2321,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
     }
 
 truncated_error:
-    LogError("Truncated gzip header in '%1'", filename);
+    LogError("Truncated Gzip header in '%1'", filename);
     error = true;
     return -1;
 #else
@@ -2406,7 +2409,7 @@ void LineReader::PushLogHandler()
 struct MinizDeflateContext {
     tdefl_compressor deflator;
 
-    // gzip support
+    // Gzip support
     uint32_t crc32;
     Size uncompressed_size;
 };
@@ -2424,10 +2427,11 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
     this->filename = filename ? filename : "<memory>";
 
-    if (!InitCompressor(compression_type))
-        return false;
     dest.type = DestinationType::Memory;
     dest.u.mem = mem;
+
+    if (!InitCompressor(compression_type))
+        return false;
 
     open = true;
     error_guard.disable();
@@ -2447,10 +2451,11 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
     DebugAssert(filename);
     this->filename = filename;
 
-    if (!InitCompressor(compression_type))
-        return false;
     dest.type = DestinationType::File;
     dest.u.fp = fp;
+
+    if (!InitCompressor(compression_type))
+        return false;
 
     open = true;
     error_guard.disable();
@@ -2469,13 +2474,14 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
     DebugAssert(filename);
     this->filename = filename;
 
-    if (!InitCompressor(compression_type))
-        return false;
     dest.type = DestinationType::File;
     dest.u.fp = OpenFile(filename, OpenFileMode::Write);
     if (!dest.u.fp)
         return false;
     dest.owned = true;
+
+    if (!InitCompressor(compression_type))
+        return false;
 
     open = true;
     error_guard.disable();
@@ -2555,20 +2561,6 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             if (compression.type == CompressionType::Gzip) {
-                if (!compression.u.miniz->uncompressed_size && buf.len) {
-                    static uint8_t gzip_header[] = {
-                        0x1F, 0x8B, // Fixed bytes
-                        8, // Deflate
-                        0, // FLG
-                        0, 0, 0, 0, // MTIME
-                        0, // XFL
-                        0 // OS
-                    };
-
-                    if (!WriteRaw(gzip_header))
-                        return false;
-                }
-
                 compression.u.miniz->crc32 = (uint32_t)mz_crc32(compression.u.miniz->crc32,
                                                                 buf.ptr, (size_t)buf.len);
                 compression.u.miniz->uncompressed_size += buf.len;
@@ -2604,7 +2596,7 @@ bool StreamWriter::InitCompressor(CompressionType type)
                                                            (int)Allocator::Flag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
-            int flags = (type == CompressionType::Zlib ? TDEFL_WRITE_ZLIB_HEADER : 0) | 32;
+            int flags = 32 | (type == CompressionType::Zlib ? TDEFL_WRITE_ZLIB_HEADER : 0);
 
             tdefl_status status = tdefl_init(&compression.u.miniz->deflator,
                                              [](const void *buf, int len, void *udata) {
@@ -2615,6 +2607,20 @@ bool StreamWriter::InitCompressor(CompressionType type)
                 LogError("Failed to initialize Deflate compression for '%1'", filename);
                 error = true;
                 return false;
+            }
+
+            if (type == CompressionType::Gzip) {
+                static uint8_t gzip_header[] = {
+                    0x1F, 0x8B, // Fixed bytes
+                    8, // Deflate
+                    0, // FLG
+                    0, 0, 0, 0, // MTIME
+                    0, // XFL
+                    0 // OS
+                };
+
+                if (!WriteRaw(gzip_header))
+                    return false;
             }
 #else
             LogError("Deflate compression not available for '%1'", filename);
