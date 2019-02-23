@@ -72,8 +72,8 @@ int http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url,
                                                        const char *data, uint64_t, size_t) {
                 http_Request *request = (http_Request *)cls;
 
-                key = DuplicateString(key, &request->temp_alloc).ptr;
-                data = DuplicateString(data, &request->temp_alloc).ptr;
+                key = DuplicateString(key, &request->alloc).ptr;
+                data = DuplicateString(data, &request->alloc).ptr;
                 request->post.Append(key, data);
 
                 return MHD_YES;
