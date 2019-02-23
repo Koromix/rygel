@@ -36,6 +36,10 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
 {
     BlockAllocator temp_alloc;
 
+    if (!output_path) {
+        LogError("Output directory was not specified");
+        return false;
+    }
     if (!TestPath(output_path, FileType::Directory)) {
         LogError("Directory '%1' does not exist", output_path);
         return false;
