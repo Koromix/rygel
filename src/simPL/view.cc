@@ -19,10 +19,15 @@ void RenderControlWindow(HeapArray<Simulation> *simulations)
     ImGui::InputInt("Seed", &seed);
     if (ImGui::Button("Run!")) {
         Simulation *simulation = simulations->AppendDefault();
+
         Fmt(simulation->name, "Simulation #%1", ++simulations_id);
         simulation->count = count;
         simulation->seed = seed;
-        simulation->alive_count = InitializeHumans_(count, seed, &simulation->humans);
+#ifdef SIMPL_ENABLE_HOT_RELOAD
+        simulation->auto_restart = true;
+#endif
+
+        simulation->Start();
     }
     ImGui::End();
 }
@@ -33,11 +38,11 @@ bool RenderSimulationWindow(Simulation *simulation)
 
     ImGui::Begin(simulation->name, &open);
     if (ImGui::Button("Restart")) {
-        simulation->humans.Clear();
-        simulation->alive_count = InitializeHumans_(simulation->count, simulation->seed,
-                                                    &simulation->humans);
-        simulation->iteration = 0;
+        simulation->Start();
     }
+#ifdef SIMPL_ENABLE_HOT_RELOAD
+    ImGui::SameLine(); ImGui::Checkbox("Auto-restart", &simulation->auto_restart);
+#endif
     ImGui::TextUnformatted(Fmt(&frame_alloc, "Count: %1", simulation->humans.len).ptr);
     ImGui::TextUnformatted(Fmt(&frame_alloc, "Iteration: %1", simulation->iteration).ptr);
     ImGui::TextUnformatted(Fmt(&frame_alloc, "Alive: %1", simulation->alive_count).ptr);

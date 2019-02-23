@@ -20,14 +20,21 @@ decltype(RunSimulationStep) *RunSimulationStep_;
 
 BlockAllocator frame_alloc;
 
-#if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
+#ifdef SIMPL_ENABLE_HOT_RELOAD
+
 #ifdef _WIN32
 static HMODULE module_handle;
 #else
 static void *module_handle;
 #endif
 
-static bool LoadSimulationModule(const char *filename)
+enum class LoadStatus {
+    Loaded,
+    Unchanged,
+    Error
+};
+
+static LoadStatus LoadSimulationModule(const char *filename)
 {
     // Check library time and unload if outdated
     if (module_handle) {
@@ -35,10 +42,10 @@ static bool LoadSimulationModule(const char *filename)
 
         FileInfo file_info;
         if (!StatFile(filename, &file_info))
-            return false;
+            return LoadStatus::Error;
 
         if (last_time == file_info.modification_time)
-            return true;
+            return LoadStatus::Unchanged;
         last_time = file_info.modification_time;
 
 #ifdef _WIN32
@@ -65,7 +72,7 @@ static bool LoadSimulationModule(const char *filename)
         module_handle = LoadLibrary(copy_filename);
         if (!module_handle) {
             LogError("Cannot load library '%1'", filename);
-            return false;
+            return LoadStatus::Error;
         }
     }
 
@@ -76,7 +83,7 @@ static bool LoadSimulationModule(const char *filename)
     module_handle = dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
     if (!module_handle) {
         LogError("Cannot load library '%1': %2", filename, dlerror());
-        return false;
+        return LoadStatus::Error;
     }
 
     const auto find_symbol = [&](const char *symbol_name) {
@@ -88,13 +95,21 @@ static bool LoadSimulationModule(const char *filename)
     RunSimulationStep_ = (decltype(RunSimulationStep_))find_symbol("RunSimulationStep");
     DebugAssert(InitializeHumans_ && RunSimulationStep_);
 
-    return true;
+    return LoadStatus::Loaded;
 }
+
 #endif
+
+void Simulation::Start()
+{
+    humans.Clear();
+    alive_count = InitializeHumans_(count, seed, &humans);
+    iteration = 0;
+}
 
 int main(int, char **)
 {
-#if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
+#ifdef SIMPL_ENABLE_HOT_RELOAD
     char module_filename[4096];
     {
         Span<const char> executable_path = GetApplicationExecutable();
@@ -103,7 +118,7 @@ int main(int, char **)
     }
 
     // The OS will unload this for us
-    if (!LoadSimulationModule(module_filename))
+    if (LoadSimulationModule(module_filename) == LoadStatus::Error)
         return 1;
 #else
     InitializeHumans_ = InitializeHumans;
@@ -141,11 +156,22 @@ int main(int, char **)
 
         frame_alloc.ReleaseAll();
 
-#if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
-        for (Size i = 1; !LoadSimulationModule(module_filename); i++) {
+#ifdef SIMPL_ENABLE_HOT_RELOAD
+        LoadStatus status = LoadStatus::Error;
+        for (Size i = 1; status == LoadStatus::Error; i++) {
+            status = LoadSimulationModule(module_filename);
+
             if (i >= 10) {
                 LogError("Failed to load module too many times");
                 return 1;
+            }
+        }
+
+        if (status == LoadStatus::Loaded) {
+            for (Simulation &simulation: simulations) {
+                if (simulation.auto_restart) {
+                    simulation.Start();
+                }
             }
         }
 #endif

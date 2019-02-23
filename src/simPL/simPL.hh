@@ -7,6 +7,10 @@
 #include "../libcc/libcc.hh"
 #include "simulation.hh"
 
+#if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
+    #define SIMPL_ENABLE_HOT_RELOAD
+#endif
+
 extern BlockAllocator frame_alloc;
 
 extern decltype(InitializeHumans) *InitializeHumans_;
@@ -18,9 +22,15 @@ struct Simulation {
     // Parameters
     int count;
     int seed;
+#ifdef SIMPL_ENABLE_HOT_RELOAD
+    bool auto_restart;
+#endif
 
     // Core data
     HeapArray<Human> humans;
     int iteration;
     Size alive_count;
+
+    // Control methods
+    void Start();
 };
