@@ -12,6 +12,9 @@
 #include "../../libcc/libcc.hh"
 #include "profile.hh"
 #include "../server/data.hh"
+#include "../../packer/libpacker.hh"
+
+extern const Span<const pack_Asset> packer_assets;
 
 bool RunCreateProfile(Span<const char *> arguments)
 {
@@ -21,7 +24,7 @@ bool RunCreateProfile(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory)");
     };
 
-    const char *directory = nullptr;
+    const char *profile_directory = nullptr;
     {
         OptionParser opt(arguments);
 
@@ -34,57 +37,72 @@ bool RunCreateProfile(Span<const char *> arguments)
             }
         }
 
-        directory = opt.ConsumeNonOption();
+        profile_directory = opt.ConsumeNonOption();
     }
 
-    if (!directory) {
+    if (!profile_directory) {
         LogError("Profile directory is missing");
         return false;
     }
 
-    // Create profile directory
-    if (!MakeDirectory(directory))
+    if (!MakeDirectory(profile_directory))
         return false;
 
-    // Profile layout
+    // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
     HeapArray<const char *> files;
-    const char *database_filename;
-    directories.Append(Fmt(&temp_alloc, "%1%/pages", directory).ptr);
-    directories.Append(Fmt(&temp_alloc, "%1%/templates", directory).ptr);
-    database_filename = *files.Append(Fmt(&temp_alloc, "%1%/database.db", directory).ptr);
-
-    // Drop profile directory if anything fails
     DEFER_N(out_guard) {
-        for (const char *dir: directories) {
-            rmdir(dir);
-        }
         for (const char *filename: files) {
             unlink(filename);
         }
-
-        if (rmdir(directory) < 0) {
-            LogError("Failed to remove directory '%1': %2", directory, strerror(errno));
+        for (Size i = directories.len - 1; i >= 0; i--) {
+            rmdir(directories[i]);
+        }
+        if (rmdir(profile_directory) < 0) {
+            LogError("Failed to remove directory '%1': %2", profile_directory, strerror(errno));
         }
     };
 
-    // Create directory layout
+    // Create profile directories
     {
-        bool valid = true;
+        HashSet<Span<const char>> directories_map;
 
-        for (const char *dir: directories) {
-            valid &= MakeDirectory(dir);
+        for (const pack_Asset &asset: packer_assets) {
+            const char *ptr = asset.name;
+            while ((ptr = strchr(ptr, '/'))) {
+                Span<const char> directory = MakeSpan(asset.name, ptr - asset.name);
+
+                if (directories_map.Append(directory).second) {
+                    const char *directory0 = Fmt(&temp_alloc, "%1%/%2", profile_directory,
+                                                 MakeSpan(asset.name, ptr - asset.name)).ptr;
+                    if (!MakeDirectory(directory0))
+                        return false;
+                    directories.Append(directory0);
+                }
+
+                ptr++;
+            }
         }
+    }
 
-        if (!valid)
+    // Extract files
+    for (const pack_Asset &asset: packer_assets) {
+        const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, asset.name).ptr;
+        files.Append(filename);
+
+        StreamReader reader(asset.data, nullptr, asset.compression_type);
+        StreamWriter writer(filename);
+        if (!SpliceStream(&reader, Megabytes(8), &writer))
             return false;
     }
 
     // Create database
     {
-        SQLiteConnection db;
+        const char *filename = Fmt(&temp_alloc, "%1%/database.db", profile_directory).ptr;
+        files.Append(filename);
 
-        if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        SQLiteConnection db;
+        if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
             return false;
         if (!InitDatabase(db))
             return false;

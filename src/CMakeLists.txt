@@ -335,12 +335,21 @@ set(GOUPIL_ADMIN_SRC
     goupil/server/data_sqlite.cc
     goupil/server/data.hh
 )
+# These are the files used by create_profile, only put in files
+# under goupil/admin/profile and avoid '..' ("dotdot") components!
+set(GOUPIL_ADMIN_ASSETS
+    # Nothing yet
+)
 
 add_executable(goupil ${GOUPIL_SRC})
 target_link_libraries(goupil PRIVATE libcc microhttpd sqlite)
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
 target_link_libraries(goupil_admin PRIVATE libcc sqlite)
+target_assets(goupil_admin
+    OPTIONS -cGzip -s3
+    SOURCES ${GOUPIL_ADMIN_ASSETS}
+)
 
 # ------------------------------------------------------------------------
 # inPL
