@@ -16,8 +16,6 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
 
 int main(int argc, char **argv)
 {
-    BlockAllocator temp_alloc;
-
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil [options]
 
