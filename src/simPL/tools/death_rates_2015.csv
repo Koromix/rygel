@@ -1,0 +1,196 @@
+Code CIM;Libellé;Sexe;Total;<1;1-4;5-14;15-24;25-34;35-44;45-54;55-64;65-74;75-84;85-94;95+
+A15-A19  B90;Tuberculose;M;0.7;0.3;0;0;0;0;0.1;0.3;0.4;1;4.1;12.7;8.6
+A15-A19  B90;Tuberculose;F;0.6;0;0;0;0;0.1;0;0.1;0.1;0.4;2.5;9.3;16
+A15-A19  B90;Tuberculose;T;0.7;0.1;0;0;0;0;0.1;0.2;0.2;0.7;3.2;10.4;14.6
+A39;Infection à méningocoques;M;0;0.5;0.1;0;0.1;0;0;0;0.1;0;0;0.2;0
+A39;Infection à méningocoques;F;0;0.5;0;0;0;0;0;0;0;0;0.1;0;1.1
+A39;Infection à méningocoques;T;0;0.5;0;0;0;0;0;0;0;0;0;0.1;0.9
+B20 -B24;SIDA et maladies à VIH;M;0.9;0;0.1;0;0;0.3;0.8;2.4;1.9;1.1;1;0.7;0
+B20 -B24;SIDA et maladies à VIH;F;0.2;0;0;0;0.1;0.3;0.2;0.7;0.3;0.2;0.2;0.1;0
+B20 -B24;SIDA et maladies à VIH;T;0.6;0;0;0;0;0.3;0.5;1.6;1.1;0.6;0.5;0.3;0
+B15 -B19;Hépatites virales;M;1;0;0;0;0;0.1;0.4;1.9;2.1;1.9;3.4;3;4.3
+B15 -B19;Hépatites virales;F;0.8;0;0;0;0;0.1;0.1;0.5;0.7;1.5;3.6;5.6;7.5
+B15 -B19;Hépatites virales;T;0.9;0;0;0;0;0.1;0.3;1.2;1.4;1.7;3.5;4.7;6.9
+A00-B99 nc preced;Autres maladies infectieuses et parasitaires;M;14.1;5.7;0.6;0;0.2;0.3;0.9;2.9;8.6;21;81.1;303;738.4
+A00-B99 nc preced;Autres maladies infectieuses et parasitaires;F;15.5;3.5;0.7;0.1;0.3;0.2;0.7;1.5;4.4;11.7;52.1;217.3;562.4
+A00-B99 nc preced;Autres maladies infectieuses et parasitaires;T;14.9;4.6;0.6;0.1;0.3;0.3;0.8;2.2;6.4;16.1;64.1;244.4;597.4
+C00-C14;Tumeur maligne de la lèvre  de la cavité buccale et du pharynx;M;9.4;0;0;0;0;0.3;1.2;8;26.1;29.6;28.2;36.6;43.2
+C00-C14;Tumeur maligne de la lèvre  de la cavité buccale et du pharynx;F;2.7;0;0;0;0.1;0.2;0.3;2;5.7;6;7.4;14.7;17.1
+C00-C14;Tumeur maligne de la lèvre  de la cavité buccale et du pharynx;T;6;0;0;0;0;0.2;0.8;5;15.5;17;16;21.6;22.3
+C15;Tumeur maligne du oesophage;M;9.5;0;0;0;0;0.1;0.5;5.9;19.9;31.2;42.4;54.6;47.5
+C15;Tumeur maligne du oesophage;F;2.6;0;0;0;0;0.1;0.2;1;3.7;6.7;10.1;15.1;21.4
+C15;Tumeur maligne du oesophage;T;6;0;0;0;0;0.1;0.3;3.4;11.5;18.2;23.5;27.6;26.6
+C16;Tumeur maligne de l'estomac;M;9;0;0;0;0.1;0.6;1.8;4.9;12.1;23.9;53.6;79;69.1
+C16;Tumeur maligne de l'estomac;F;4.6;0;0;0;0;0.4;0.9;2.4;4.3;7.4;18.1;39.6;50.3
+C16;Tumeur maligne de l'estomac;T;6.8;0;0;0;0.1;0.5;1.3;3.6;8.1;15.1;32.8;52.1;54
+C18;Tumeur maligne du côlon;M;21.2;0;0;0;0;0.6;1.7;6.6;21.1;54.4;131;276.5;388.7
+C18;Tumeur maligne du côlon;F;18;0;0;0;0.1;0.3;1.7;4.9;13.4;31.1;71.3;172.4;294
+C18;Tumeur maligne du côlon;T;19.5;0;0;0;0.1;0.5;1.7;5.7;17.1;42;96;205.4;312.8
+C19 -C21;Tumeur maligne du rectum et de l’anus;M;8.6;0;0;0;0;0.2;0.9;2.9;12.2;24.4;47;92.2;120.9
+C19 -C21;Tumeur maligne du rectum et de l’anus;F;6.4;0;0;0;0.1;0.2;0.8;2.5;5.7;11.3;24.4;58.3;79.1
+C19 -C21;Tumeur maligne du rectum et de l’anus;T;7.5;0;0;0;0;0.2;0.9;2.7;8.8;17.4;33.8;69;87.4
+C22;Tumeur maligne du foie et des voies biliaires intrahépatiques;M;19.5;0;0.1;0;0.1;0.4;1.1;8;32.9;67.6;108.2;115.8;99.3
+C22;Tumeur maligne du foie et des voies biliaires intrahépatiques;F;6.9;0;0.1;0;0;0.1;0.6;2.2;6.4;14.7;33.4;46.5;66.3
+C22;Tumeur maligne du foie et des voies biliaires intrahépatiques;T;13;0;0.1;0;0;0.2;0.8;5;19.2;39.5;64.4;68.5;72.8
+C25;Tumeur maligne du pancréas;M;17.4;0;0;0;0.1;0.1;1.1;9.1;26.3;59.1;92.4;123.8;120.9
+C25;Tumeur maligne du pancréas;F;16.1;0;0;0;0;0.1;1.1;4.9;15;38.7;73.7;111.1;106.9
+C25;Tumeur maligne du pancréas;T;16.7;0;0;0;0;0.1;1.1;6.9;20.4;48.3;81.4;115.1;109.7
+C32 -C34;Tumeur maligne du larynx  de la trachée  des bronches et du poumon;M;75.9;0;0.1;0;0.1;0.6;6.9;42.9;161.5;262.8;332.9;377.2;298
+C32 -C34;Tumeur maligne du larynx  de la trachée  des bronches et du poumon;F;27.8;0;0;0;0;0.3;3.7;23.6;59;69.6;84.7;98.9;98.4
+C32 -C34;Tumeur maligne du larynx  de la trachée  des bronches et du poumon;T;51.1;0;0;0;0;0.4;5.3;33.1;108.4;160.3;187.5;187.1;138
+C43;Mélanome malin de la peau;M;3.3;0;0;0;0;0.4;1.4;2.4;4;8.7;16.4;27.5;38.9
+C43;Mélanome malin de la peau;F;2.4;0;0;0;0.1;0.5;1;1.9;2.4;4.5;7.5;16.5;32.1
+C43;Mélanome malin de la peau;T;2.8;0;0;0;0.1;0.4;1.2;2.2;3.2;6.5;11.2;20;33.4
+C50;Tumeur maligne du sein;M;0.5;0;0;0;0;0;0.1;0.1;0.7;1.3;2.8;7.7;8.6
+C50;Tumeur maligne du sein;F;36.9;0;0;0;0.1;2.1;11.4;27;45.6;74.9;128.8;223.5;394.5
+C50;Tumeur maligne du sein;T;19.3;0;0;0;0;1.1;5.8;13.8;24;40.4;76.6;155.1;318
+C53;Tumeur maligne du col de l’utérus;M;0;0;0;0;0;0;0;0;0;0;0;0;0
+C53;Tumeur maligne du col de l’utérus;F;2.2;0;0;0;0;0.5;1.4;3.9;3.4;4.2;5;5.7;5.3
+C53;Tumeur maligne du col de l’utérus;T;1.1;0;0;0;0;0.2;0.7;2;1.8;2.2;3;3.9;4.3
+C54 -C55;Tumeur maligne d’autres parties de l’utérus;M;0;0;0;0;0;0;0;0;0;0;0;0;0
+C54 -C55;Tumeur maligne d’autres parties de l’utérus;F;8.1;0;0;0;0;0.1;0.8;3;8;19.1;36.8;51.1;58.8
+C54 -C55;Tumeur maligne d’autres parties de l’utérus;T;4.2;0;0;0;0;0.1;0.4;1.5;4.1;10.2;21.6;34.9;47.1
+C56;Tumeur maligne de l’ovaire;M;0;0;0;0;0;0;0;0;0;0;0;0;0
+C56;Tumeur maligne de l’ovaire;F;10.4;0;0;0;0.2;0.3;1.4;4.4;13.7;27.6;44.5;49.8;40.6
+C56;Tumeur maligne de l’ovaire;T;5.3;0;0;0;0.1;0.2;0.7;2.2;7.1;14.6;26.1;34;32.6
+C61;Tumeur maligne de la prostate;M;27.8;0;0;0;0;0;0.1;1.4;12.1;50.2;184.7;583.8;1230.7
+C61;Tumeur maligne de la prostate;F;0;0;0;0;0;0;0;0;0;0;0;0;0
+C61;Tumeur maligne de la prostate;T;13.5;0;0;0;0;0;0;0.7;5.8;23.6;76.5;184.9;244.3
+C64;Tumeur maligne du rein;M;7.5;0;0.1;0;0.1;0.3;0.9;4.1;10.4;21;40.6;74.1;108
+C64;Tumeur maligne du rein;F;3.8;0;0.1;0.1;0.1;0.1;0.4;1.5;3;7.4;15.5;32.6;39.6
+C64;Tumeur maligne du rein;T;5.6;0;0.1;0;0.1;0.2;0.6;2.8;6.6;13.8;25.9;45.8;53.1
+C67;Tumeur maligne de la vessie;M;12.8;0;0;0;0;0;0.2;2;11.5;30.9;83;191.9;336.8
+C67;Tumeur maligne de la vessie;F;3.6;0;0.1;0;0;0.1;0.2;0.7;2.4;4.7;14.5;40.4;71.6
+C67;Tumeur maligne de la vessie;T;8.1;0;0;0;0;0.1;0.2;1.3;6.8;17;42.8;88.4;124.3
+C81 -C96;Tumeur maligne des tissus lymphatiques et hématopoïétiques;M;24.3;1.5;0.9;0.6;1.1;1.9;2.6;6.6;20.2;59.9;160.7;307.3;436.2
+C81 -C96;Tumeur maligne des tissus lymphatiques et hématopoïétiques;F;19.1;0.3;0.5;0.6;0.8;1;2.1;4;11;33.5;90.3;171.5;195.7
+C81 -C96;Tumeur maligne des tissus lymphatiques et hématopoïétiques;T;21.6;0.9;0.7;0.6;1;1.4;2.3;5.3;15.5;45.9;119.4;214.5;243.4
+C00-C97 nc preced;Autres tumeurs malignes;M;46.2;0.3;0.9;1.5;2.5;4;7.2;24.7;69.5;126.6;231.6;417.5;712.5
+C00-C97 nc preced;Autres tumeurs malignes;F;32.5;0.3;1.1;1.2;1.4;1.6;4.8;12.9;32.8;59.9;123.2;256.6;481.2
+C00-C97 nc preced;Autres tumeurs malignes;T;39.1;0.3;1;1.4;2;2.8;6;18.8;50.5;91.2;168;307.6;527.1
+C98 -D48;Autres tumeurs;M;11.8;1;0.4;0.5;0.2;0.6;1.1;2.6;8.8;19.7;67.9;227.3;587.3
+C98 -D48;Autres tumeurs;F;11;1.1;0.5;0.4;0.2;0.5;0.6;2;4.5;10.2;38.4;140.3;324
+C98 -D48;Autres tumeurs;T;11.4;1.1;0.5;0.4;0.2;0.5;0.9;2.3;6.6;14.6;50.6;167.9;376.2
+D50 -D89;Maladies du sang et des organes hématopoïétiques;M;2.9;2.1;0.4;0.2;0.3;0.4;0.2;0.8;1.8;4.4;15.1;58.1;190
+D50 -D89;Maladies du sang et des organes hématopoïétiques;F;3.7;0.8;0.5;0.1;0.3;0.1;0.2;0.7;1.1;2.4;10;50;187.1
+D50 -D89;Maladies du sang et des organes hématopoïétiques;T;3.3;1.5;0.5;0.2;0.3;0.3;0.2;0.7;1.4;3.3;12.1;52.6;187.7
+E10 -E14;Diabète sucré;M;18.6;0.3;0;0;0.1;0.4;1.3;4.5;14.9;39.5;114.6;310.3;561.4
+E10 -E14;Diabète sucré;F;17.8;0;0;0.1;0.1;0.3;0.5;1.8;5.9;18.2;70.4;224.7;522.9
+E10 -E14;Diabète sucré;T;18.1;0.1;0;0;0.1;0.3;0.9;3.2;10.2;28.2;88.7;251.8;530.5
+E00-E09  E15-E90;Autres maladies endocriniennes  nutritionelles et métaboliques;M;11.2;5.4;1.1;0.5;0.4;0.7;1.4;3.5;8.5;15.7;51.7;226.5;1079.6
+E00-E09  E15-E90;Autres maladies endocriniennes  nutritionelles et métaboliques;F;17;6.2;0.7;0.3;0.5;0.5;1.2;2.8;5.1;11.9;46.7;222.2;1009.4
+E00-E09  E15-E90;Autres maladies endocriniennes  nutritionelles et métaboliques;T;14.2;5.8;0.9;0.4;0.4;0.6;1.3;3.1;6.7;13.7;48.8;223.5;1023.3
+F10;Abus d’alcool (y compris psychose alcoolique);M;6.4;0;0;0;0.1;0.8;4;11.2;18.1;13.8;9.5;11.5;4.3
+F10;Abus d’alcool (y compris psychose alcoolique);F;1.5;0;0;0;0;0.2;0.6;2.6;3.1;3.8;2.6;2.7;1.1
+F10;Abus d’alcool (y compris psychose alcoolique);T;3.9;0;0;0;0.1;0.5;2.3;6.8;10.3;8.5;5.5;5.5;1.7
+F11-F16  F18-F19;Pharmacodépendance  toxicomanie;M;0.4;0;0;0;0.1;0.7;1.4;0.9;0.2;0;0.1;0.2;0
+F11-F16  F18-F19;Pharmacodépendance  toxicomanie;F;0;0;0;0;0;0.1;0.1;0.1;0;0;0;0.1;0
+F11-F16  F18-F19;Pharmacodépendance  toxicomanie;T;0.2;0;0;0;0.1;0.4;0.7;0.5;0.1;0;0;0.1;0
+F00-F99 nc preced;Autres troubles mentaux et du comportement;M;25.7;0;0.1;0;0.2;0.8;1.9;3.9;8.2;19;139.1;707.2;2120.3
+F00-F99 nc preced;Autres troubles mentaux et du comportement;F;43.5;0;0;0;0.1;0.3;1;2.2;4;13.7;107.7;707.2;2533
+F00-F99 nc preced;Autres troubles mentaux et du comportement;T;34.9;0;0.1;0;0.1;0.5;1.4;3;6.1;16.2;120.7;707.2;2451.1
+G00-G03;Méningites (autres que 03);M;0.2;1;0;0;0;0;0.1;0.1;0.3;0.6;0.9;1.7;0
+G00-G03;Méningites (autres que 03);F;0.2;2.7;0.1;0;0;0;0;0;0.1;0.2;0.6;1.2;2.1
+G00-G03;Méningites (autres que 03);T;0.2;1.8;0.1;0;0;0;0.1;0.1;0.2;0.4;0.7;1.4;1.7
+G04-H95;Autres maladies du système nerveux et des organes du sens;M;46.1;9;1.6;1;2.1;2.6;4.6;10.8;24;62.7;284.8;967.5;1796.4
+G04-H95;Autres maladies du système nerveux et des organes du sens;F;69.2;9.2;1.4;0.3;0.9;1.3;2.8;7;15;46.1;234.5;998.4;2526.6
+G04-H95;Autres maladies du système nerveux et des organes du sens;T;58;9.1;1.5;0.7;1.5;1.9;3.7;8.9;19.3;53.9;255.3;988.6;2381.7
+I20 -I25;Cardiopathies ischémiques;M;63.5;0.3;0;0;0.1;1.1;6.3;23.9;60.4;123.5;352.3;1071.1;2634.2
+I20 -I25;Cardiopathies ischémiques;F;41.1;0;0;0;0;0.1;1.4;4;10.7;28.7;132.2;582.3;1804.9
+I20 -I25;Cardiopathies ischémiques;T;52;0.1;0;0;0.1;0.6;3.8;13.8;34.7;73.2;223.3;737.1;1969.5
+I30-I33  I39-I52;Autres cardiopathies;M;62.9;3.1;0.4;0.3;1;1.7;5.4;13.8;33.8;76;316.4;1518.6;5220.9
+I30-I33  I39-I52;Autres cardiopathies;F;79.1;5.4;0.3;0.2;0.4;0.8;1.6;4.1;10.6;31.3;196.1;1235.1;4840.4
+I30-I33  I39-I52;Autres cardiopathies;T;71.3;4.2;0.4;0.3;0.7;1.2;3.5;8.9;21.8;52.3;245.9;1324.9;4915.9
+I60 -I69;Maladies cérébrovasculaires;M;41.2;2.3;0.2;0.1;0.4;1;3.1;9.4;25.9;62.6;252.6;837.5;1947.6
+I60 -I69;Maladies cérébrovasculaires;F;55.8;0.5;0.1;0;0.2;0.6;2.1;6.5;12.1;34.5;190.8;808.7;2087.1
+I60 -I69;Maladies cérébrovasculaires;T;48.7;1.5;0.2;0.1;0.3;0.8;2.6;8;18.8;47.7;216.4;817.8;2059.4
+I00-I99 nc preced;Autres maladie de l’appareil circulatoire;M;43.2;0;0.2;0.1;0.1;0.6;2.9;9.3;29.6;74.2;236.3;897.8;2431.2
+I00-I99 nc preced;Autres maladie de l’appareil circulatoire;F;54.2;1.1;0.2;0.1;0.4;0.5;1.4;4.9;11.8;34.4;159.8;796.4;2594
+I00-I99 nc preced;Autres maladie de l’appareil circulatoire;T;48.9;0.5;0.2;0.1;0.3;0.6;2.1;7.1;20.4;53;191.5;828.5;2561.7
+J09 -J11;Grippe;M;2.4;0.3;0.1;0.1;0.1;0;0.1;0.4;1.6;3.4;12;52.5;220.2
+J09 -J11;Grippe;F;3.5;0.8;0.1;0.1;0.1;0;0.2;0.4;1.3;1.7;8.6;48.7;210.6
+J09 -J11;Grippe;T;2.9;0.5;0.1;0.1;0.1;0;0.1;0.4;1.5;2.5;10;49.9;212.5
+J12 -J18;Pneumonie;M;19.3;0.3;0.2;0;0.1;0.2;0.6;1.7;6.3;20;99.5;512.2;2077.1
+J12 -J18;Pneumonie;F;21.6;0.5;0.3;0;0;0.2;0.4;0.7;2.7;6.9;50.3;348.1;1359
+J12 -J18;Pneumonie;T;20.5;0.4;0.2;0;0;0.2;0.5;1.2;4.5;13;70.7;400.1;1501.5
+J45 -J46;Asthme;M;0.9;0;0.3;0.1;0;0.2;0.3;0.6;1.2;1.4;3.1;11.9;77.7
+J45 -J46;Asthme;F;1.7;0;0;0.1;0.1;0.1;0.1;0.5;1;1.7;5.6;20.4;57.7
+J45 -J46;Asthme;T;1.3;0;0.1;0.1;0.1;0.2;0.2;0.6;1.1;1.6;4.5;17.7;61.7
+J40-J44  J47;Autres maladies chroniques des voies respiratoires inférieures;M;20.5;0;0;0;0;0;0.5;2.3;13;40.8;130.5;382.3;975.9
+J40-J44  J47;Autres maladies chroniques des voies respiratoires inférieures;F;12.8;0;0;0;0;0;0.2;1.4;5.7;13.7;47.3;159.2;428.8
+J40-J44  J47;Autres maladies chroniques des voies respiratoires inférieures;T;16.5;0;0;0;0;0;0.3;1.8;9.2;26.4;81.8;229.8;537.4
+J00-J99 nc preced;Autres maladies de l’appareil respiratoire;M;24.1;1.3;0.3;0;0.3;0.5;1;3.4;12.4;38;144.2;506.4;1856.9
+J00-J99 nc preced;Autres maladies de l’appareil respiratoire;F;24.2;2.7;0.3;0.1;0.3;0.4;0.5;2;5.5;13.6;77.8;343.5;1205
+J00-J99 nc preced;Autres maladies de l’appareil respiratoire;T;24.2;2;0.3;0.1;0.3;0.4;0.8;2.7;8.8;25.1;105.3;395.1;1334.4
+K25 -K28;Ulcère gastro-duodénal;M;1.4;0;0;0;0;0;0.1;0.4;1.2;2.4;7.1;26.7;82
+K25 -K28;Ulcère gastro-duodénal;F;1.2;0;0;0;0;0;0.1;0.1;0.5;0.9;4.1;17.7;35.3
+K25 -K28;Ulcère gastro-duodénal;T;1.3;0;0;0;0;0;0.1;0.2;0.9;1.6;5.4;20.5;44.6
+K70  K73-K74;Maladie chronique du foie;M;16;0;0;0;0;0.5;4.9;18.4;42.9;47.3;44.5;38;0
+K70  K73-K74;Maladie chronique du foie;F;5.8;0.3;0;0;0;0.3;1.7;6.7;12.2;14.6;16.9;12.8;9.6
+K70  K73-K74;Maladie chronique du foie;T;10.7;0.1;0;0;0;0.4;3.3;12.5;27;29.9;28.3;20.8;7.7
+K00-K93 nc preced;Autres maladies de l’appareil digestif;M;22.7;3.9;0.1;0.1;0.3;0.9;2.4;7.5;19.7;39.3;120.2;427.1;1157.3
+K00-K93 nc preced;Autres maladies de l’appareil digestif;F;26;3.8;0.1;0.1;0.1;0.4;1.1;3.4;9.3;20.8;91.1;350.2;914.2
+K00-K93 nc preced;Autres maladies de l’appareil digestif;T;24.4;3.8;0.1;0.1;0.2;0.6;1.7;5.4;14.3;29.5;103.1;374.5;962.4
+L00-L99;Infections de la peau et du tissu cellulaire sous-cutané;M;1.5;0;0;0;0;0;0.1;0.3;0.8;1.7;7.9;38;133.9
+L00-L99;Infections de la peau et du tissu cellulaire sous-cutané;F;2.6;0;0;0;0;0;0.1;0.2;0.5;1.8;7.3;37.3;149.7
+L00-L99;Infections de la peau et du tissu cellulaire sous-cutané;T;2.1;0;0;0;0;0;0.1;0.2;0.6;1.7;7.5;37.5;146.6
+M050-M06  M15-M19;Arthrite rhumatoïde et ostéoarthrite;M;0.4;0;0;0;0;0;0;0;0.2;0.6;2.8;9.9;21.6
+M050-M06  M15-M19;Arthrite rhumatoïde et ostéoarthrite;F;1.2;0;0;0;0;0;0;0;0.2;1.1;5;15.5;53.5
+M050-M06  M15-M19;Arthrite rhumatoïde et ostéoarthrite;T;0.8;0;0;0;0;0;0;0;0.2;0.9;4.1;13.7;47.1
+M00-M99 nc preced;Autres maladies du système ostéo-articulaire  des muscles et du tissu conjonctif;M;4.7;0;0.1;0;0.1;0.2;0.4;1.3;3;8;27.3;94.1;220.2
+M00-M99 nc preced;Autres maladies du système ostéo-articulaire  des muscles et du tissu conjonctif;F;6.4;0;0.1;0.1;0.1;0.2;0.4;1.4;2.3;5.8;22.7;80.4;216
+M00-M99 nc preced;Autres maladies du système ostéo-articulaire  des muscles et du tissu conjonctif;T;5.6;0;0.1;0.1;0.1;0.2;0.4;1.3;2.7;6.9;24.6;84.7;216.8
+N00-N29;Maladies du rein et de l'uretère;M;11.2;0.8;0;0;0.1;0.3;0.4;1.1;3.9;12.9;64.6;285.7;842.1
+N00-N29;Maladies du rein et de l'uretère;F;11.9;0.5;0.1;0;0;0;0.2;0.8;1.9;7.1;38.9;178.2;503.6
+N00-N29;Maladies du rein et de l'uretère;T;11.6;0.7;0;0;0;0.1;0.3;0.9;2.9;9.8;49.5;212.2;570.8
+N30 -N99;Autres maladies de l'appareil génito-urinaire;M;4.2;0;0;0;0;0.1;0.1;0.3;1.2;3.8;23.2;115.6;380
+N30 -N99;Autres maladies de l'appareil génito-urinaire;F;3.3;0;0.1;0;0;0;0.1;0.2;0.6;1.7;10.8;49;141.1
+N30 -N99;Autres maladies de l'appareil génito-urinaire;T;3.7;0;0;0;0;0;0.1;0.3;0.9;2.7;16;70.1;188.5
+O00-O99;Complic. de grossesse  accouch. et puerpéralité;M;0;0;0;0;0;0;0;0;0;0;0;0;0
+O00-O99;Complic. de grossesse  accouch. et puerpéralité;F;0.1;0;0;0;0.1;0.3;0.4;0;0;0;0;0;0
+O00-O99;Complic. de grossesse  accouch. et puerpéralité;T;0.1;0;0;0;0;0.1;0.2;0;0;0;0;0;0
+P00-P96;Certaines affections dont l’origine se situe dans la période périnatale;M;2.7;212.9;0.1;0;0;0;0;0;0;0;0;0;0
+P00-P96;Certaines affections dont l’origine se situe dans la période périnatale;F;1.9;167.5;0;0;0;0;0;0;0;0;0;0;0
+P00-P96;Certaines affections dont l’origine se situe dans la période périnatale;T;2.3;190.7;0;0;0;0;0;0;0;0;0;0;0
+Q00-Q07;Malformations congénitales du système nerveux;M;0.1;5.2;0.1;0;0.1;0.1;0.1;0.1;0.1;0.1;0.1;0.2;4.3
+Q00-Q07;Malformations congénitales du système nerveux;F;0.2;8.9;0.1;0.1;0.2;0.1;0.1;0.1;0.2;0.1;0.1;0;0
+Q00-Q07;Malformations congénitales du système nerveux;T;0.2;7;0.1;0.1;0.1;0.1;0.1;0.1;0.1;0.1;0.1;0.1;0.9
+Q20 -Q28;Malformations congénitales de l’appareil circulatoire;M;0.9;31.2;0.7;0.2;0.3;0.3;0.4;0.4;0.6;0.6;1.3;1.9;0
+Q20 -Q28;Malformations congénitales de l’appareil circulatoire;F;0.7;22.4;0.8;0.2;0.2;0;0.2;0.3;0.4;0.5;0.8;2.4;3.2
+Q20 -Q28;Malformations congénitales de l’appareil circulatoire;T;0.7;26.9;0.7;0.2;0.3;0.2;0.3;0.3;0.5;0.5;1;2.3;2.6
+Q080-Q19  Q29-Q99;Autres malformations congén. et anom. chromosomiques;M;1.7;40.2;0.9;0.4;0.5;0.5;0.7;1.4;2.8;2;1.9;3.3;13
+Q080-Q19  Q29-Q99;Autres malformations congén. et anom. chromosomiques;F;1.4;31.4;1.3;0.2;0.3;0.5;0.5;1.3;2.2;1.7;1.7;2.5;3.2
+Q080-Q19  Q29-Q99;Autres malformations congén. et anom. chromosomiques;T;1.6;35.9;1.1;0.3;0.4;0.5;0.6;1.3;2.5;1.9;1.8;2.8;5.1
+R95;Syndrome de mort subite du nourrisson;M;0.3;22;0;0;0;0;0;0;0;0;0;0;0
+R95;Syndrome de mort subite du nourrisson;F;0.2;17.6;0;0;0;0;0;0;0;0;0;0;0
+R95;Syndrome de mort subite du nourrisson;T;0.2;19.8;0;0;0;0;0;0;0;0;0;0;0
+R96 -R99;Causes inconnues ou non précisées;M;41.2;14.7;2;0.6;5.4;10.9;18.9;33.4;52.5;76;153.4;480.8;1684.2
+R96 -R99;Causes inconnues ou non précisées;F;35.1;15.4;1.3;0.6;2.6;3.8;6.2;11.6;20.2;34;95.6;394.6;1546.1
+R96 -R99;Causes inconnues ou non précisées;T;38.1;15.1;1.6;0.6;4;7.3;12.5;22.3;35.8;53.7;119.6;421.9;1573.5
+R00-R99 nc preced;Autres symptômes et états morbides mal définis;M;36.4;3.9;0.6;0.3;1;2.6;5.8;14.2;29.8;51;154.8;748.6;3623.1
+R00-R99 nc preced;Autres symptômes et états morbides mal définis;F;52.2;2.2;0.5;0.3;0.3;0.9;2;4.9;9.6;23.6;111.2;719.4;4520.7
+R00-R99 nc preced;Autres symptômes et états morbides mal définis;T;44.5;3;0.5;0.3;0.6;1.7;3.9;9.4;19.3;36.5;129.2;728.7;4342.6
+V01-V99;Accidents de transport;M;7.2;0.3;1.3;0.9;12.2;11;7.1;7;5.8;6.9;11;18.1;13
+V01-V99;Accidents de transport;F;2.3;0.8;0.7;0.7;3.6;2.1;1.4;1.7;1.8;3.2;4.7;6.4;2.1
+V01-V99;Accidents de transport;T;4.7;0.5;1;0.8;8;6.5;4.2;4.3;3.7;4.9;7.3;10.1;4.3
+W00-W19;Chutes accidentelles;M;11.4;0;0.4;0.2;0.5;0.9;1.5;4.2;8.5;15.1;52.7;247.9;833.4
+W00-W19;Chutes accidentelles;F;12.2;0.3;0.2;0.1;0.1;0.2;0.4;1.3;2.6;7.3;35.5;178.7;583.8
+W00-W19;Chutes accidentelles;T;11.8;0.1;0.3;0.1;0.3;0.5;1;2.7;5.5;11;42.6;200.6;633.3
+X40 -X49;Intoxications accidentelles;M;3.6;0;0.1;0;0.9;2.6;3.4;3.8;4.2;3.4;11.9;35;56.1
+X40 -X49;Intoxications accidentelles;F;2.6;0;0;0;0.1;0.5;1;2;2.1;2.7;7.5;26.7;42.8
+X40 -X49;Intoxications accidentelles;T;3.1;0;0.1;0;0.5;1.5;2.2;2.9;3.1;3;9.3;29.4;45.4
+V01-X59 nc preced;Autres accidents;M;23.4;5.2;3;1.1;5.2;6;8.2;14;20.5;32.7;97.3;377.4;1269.6
+V01-X59 nc preced;Autres accidents;F;21;2.4;1.7;0.5;1.2;1.3;1.8;3.3;6.6;15.6;60.9;280.8;959.1
+V01-X59 nc preced;Autres accidents;T;22.2;3.8;2.4;0.8;3.2;3.6;4.9;8.6;13.3;23.6;76;311.4;1020.7
+X60-X84;Suicides;M;22;0;0;0.4;7.4;16.1;26.9;35;30.5;28.4;48.9;84.7;90.7
+X60-X84;Suicides;F;6.3;0;0;0.4;2;3.2;6.7;11.2;9.5;9.7;10.3;11.8;11.8
+X60-X84;Suicides;T;13.9;0;0;0.4;4.7;9.6;16.8;22.9;19.7;18.5;26.3;34.9;27.4
+X85-Y09;Homicides;M;0.6;2.1;0.1;0.1;0.6;1.1;0.7;0.7;0.4;0.3;0.5;0.3;0
+X85-Y09;Homicides;F;0.4;2.2;0.2;0.1;0.3;0.3;0.5;0.3;0.2;0.4;0.7;0.8;0
+X85-Y09;Homicides;T;0.5;2.1;0.2;0.1;0.5;0.7;0.6;0.5;0.3;0.4;0.6;0.7;0
+Y10-Y34;Événements dont l'intention n'est pas déterminée;M;2;0.5;0.2;0.1;1.2;1.8;2.3;2.6;2.6;2.9;4.1;8.2;4.3
+Y10-Y34;Événements dont l'intention n'est pas déterminée;F;0.6;0.3;0.1;0.1;0.3;0.3;0.5;0.7;0.7;0.7;1.4;1.5;1.1
+Y10-Y34;Événements dont l'intention n'est pas déterminée;T;1.3;0.4;0.1;0.1;0.8;1.1;1.4;1.6;1.6;1.7;2.5;3.6;1.7
+V01-Y89 nc preced;Autres causes externes de blessure et d'empoisonnement;M;1.9;0;0.1;0;0.2;0.4;0.3;0.8;1.7;3.9;9.5;28.1;43.2
+V01-Y89 nc preced;Autres causes externes de blessure et d'empoisonnement;F;1.9;0;0;0;0.1;0.1;0.1;0.3;0.6;1.3;7.8;23.7;60.9
+V01-Y89 nc preced;Autres causes externes de blessure et d'empoisonnement;T;1.9;0;0.1;0;0.1;0.2;0.2;0.6;1.1;2.5;8.5;25.1;57.4

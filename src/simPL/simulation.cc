@@ -3,14 +3,19 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
+#include "death.hh"
 #include "simulation.hh"
+#include "../wrappers/pcg.hh"
 
 static void InitializeHuman(int seed, Size idx, Human *out_human)
 {
     pcg32_srandom_r(&out_human->rand_evolution, seed, idx);
     pcg32_srandom_r(&out_human->rand_therapy, seed, idx);
 
+    out_human->alive = true;
+
     out_human->age = 45;
+    out_human->sex = pcg_RandomBool(&out_human->rand_evolution, 0.5) ? Sex::Male : Sex::Female;
 }
 
 Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans)
@@ -25,7 +30,38 @@ Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans)
 
 static bool SimulateYear(const Human &human, Human *out_human)
 {
+    if (!human.alive) {
+        *out_human = human;
+        return false;
+    }
+
+    out_human->rand_evolution = human.rand_evolution;
+    out_human->rand_therapy = human.rand_therapy;
+
     out_human->age = human.age + 1;
+    out_human->sex = human.sex;
+
+    // Death?
+    {
+        double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);
+
+        if (p < GetDeathProbability(human.age, human.sex, UINT_MAX)) {
+            out_human->alive = false;
+
+            // Assign OtherCauses in case the loop fails due to rounding
+            out_human->death_type = DeathType::OtherCauses;
+            for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
+                p -= GetDeathProbability(human.age, human.sex, 1 << i);
+                if (p <= 0.0) {
+                    out_human->death_type = (DeathType)i;
+                    break;
+                }
+            }
+        } else {
+            out_human->alive = true;
+        }
+    }
+
     return true;
 }
 
@@ -40,5 +76,5 @@ Size RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans)
     }
 
     // Return alive count (everyone for now)
-    return humans.len;
+    return alive_count;
 }
