@@ -31,5 +31,5 @@ struct pack_AssetSet {
 
     int64_t last_time = -1;
 
-    pack_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "packer_assets");
+    pack_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "pack_assets");
 };

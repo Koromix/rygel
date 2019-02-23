@@ -14,7 +14,7 @@
 #include "../server/data.hh"
 #include "../../packer/libpacker.hh"
 
-extern const Span<const pack_Asset> packer_assets;
+extern const Span<const pack_Asset> pack_assets;
 
 bool RunCreateProfile(Span<const char *> arguments)
 {
@@ -67,7 +67,7 @@ bool RunCreateProfile(Span<const char *> arguments)
     {
         HashSet<Span<const char>> directories_map;
 
-        for (const pack_Asset &asset: packer_assets) {
+        for (const pack_Asset &asset: pack_assets) {
             const char *ptr = asset.name;
             while ((ptr = strchr(ptr, '/'))) {
                 Span<const char> directory = MakeSpan(asset.name, ptr - asset.name);
@@ -86,7 +86,7 @@ bool RunCreateProfile(Span<const char *> arguments)
     }
 
     // Extract files
-    for (const pack_Asset &asset: packer_assets) {
+    for (const pack_Asset &asset: pack_assets) {
         const char *filename = Fmt(&temp_alloc, "%1%/%2", profile_directory, asset.name).ptr;
         files.Append(filename);
 
