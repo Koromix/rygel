@@ -394,6 +394,9 @@ if(TARGET libgui)
         simPL/view.cc
         simPL/view.hh
     )
+    set(SIMPL_ASSETS
+        ../lib/imgui/misc/fonts/Roboto-Medium.ttf
+    )
 
     set(SIMPL_MODULE_SRC
         simPL/simulation.cc
@@ -402,6 +405,9 @@ if(TARGET libgui)
 
     add_executable(simPL ${SIMPL_SRC})
     target_link_libraries(simPL PRIVATE libcc libgui)
+    target_assets(simPL
+        SOURCES ${SIMPL_ASSETS}
+    )
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         # The copy is mostly for Windows, where incomplete DLLs can generate

@@ -69,11 +69,11 @@ static GLuint font_texture = 0;
 
 bool gui_Window::imgui_ready = false;
 
-bool gui_Window::InitImGui()
+bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
 {
     Assert(!imgui_ready);
 
-    ImGui::CreateContext();
+    ImGui::CreateContext(font_atlas);
     DEFER_N(imgui_guard) { ReleaseImGui(); };
 
     ImGuiIO *io = &ImGui::GetIO();

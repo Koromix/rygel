@@ -14,6 +14,10 @@
 #include "simPL.hh"
 #include "simulation.hh"
 #include "view.hh"
+#include "../packer/libpacker.hh"
+#include "../../lib/imgui/imgui.h"
+
+extern const pack_Asset *const pack_asset_Roboto_Medium_ttf;
 
 decltype(InitializeHumans) *InitializeHumans_;
 decltype(RunSimulationStep) *RunSimulationStep_;
@@ -125,10 +129,22 @@ int main(int, char **)
     RunSimulationStep_ = RunSimulationStep;
 #endif
 
+    ImFontAtlas font_atlas;
+    {
+        const pack_Asset &font = *pack_asset_Roboto_Medium_ttf;
+        DebugAssert(font.data.len <= INT_MAX);
+
+        ImFontConfig font_config;
+        font_config.FontDataOwnedByAtlas = false;
+
+        font_atlas.AddFontFromMemoryTTF((void *)font.data.ptr, (int)font.data.len,
+                                        16, &font_config);
+    }
+
     gui_Window window;
     if (!window.Init("simPL"))
         return 1;
-    if (!window.InitImGui())
+    if (!window.InitImGui(&font_atlas))
         return 1;
 
     HeapArray<Simulation> simulations;
