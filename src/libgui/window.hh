@@ -6,6 +6,8 @@
 
 #include "../libcc/libcc.hh"
 
+struct ImFontAtlas;
+
 enum class gui_InputKey {
     Control,
     Alt,
@@ -78,7 +80,7 @@ public:
     ~gui_Window() { Release(); }
 
     bool Init(const char *application_name);
-    bool InitImGui();
+    bool InitImGui(ImFontAtlas *font_atlas = nullptr);
     void Release();
 
     bool Prepare();
