@@ -242,10 +242,6 @@ Available compression types:)");
         }
 
         opt.ConsumeNonOptions(&filenames);
-        if (!filenames.len) {
-            LogError("No filename specified");
-            return 1;
-        }
     }
 
     HeapArray<MergeRule> merge_rules;

@@ -88,71 +88,76 @@ bool GenerateCXX(Span<const AssetInfo> assets, const char *output_path,
     if (st.error)
         return 1;
 
-    PrintLn(&st,
-R"(%1
+    PrintLn(&st, OutputPrefix);
 
-static const uint8_t raw_data[] = {)", OutputPrefix);
+    // Work around the ridiculousness of C++ not liking empty arrays
+    if (assets.len) {
+        PrintLn(&st, R"(
+static const uint8_t raw_data[] = {)");
 
-    // Pack assets and source maps
-    HeapArray<BlobInfo> blobs;
-    for (const AssetInfo &asset: assets) {
-        BlobInfo blob = {};
-        blob.name = asset.name;
+        // Pack assets and source maps
+        HeapArray<BlobInfo> blobs;
+        for (const AssetInfo &asset: assets) {
+            BlobInfo blob = {};
+            blob.name = asset.name;
 
-        PrintLn(&st, "    // %1", blob.name);
-        Print(&st, "    ");
-        blob.len = PackAsset(asset.sources, compression_type,
-                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
-        if (blob.len < 0)
-            return 1;
-        PrintLn(&st);
-
-        if (asset.source_map_name) {
-            blob.source_map = asset.source_map_name;
-
-            BlobInfo blob_map = {};
-            blob_map.name = blob.source_map;
-
-            PrintLn(&st, "    // %1", blob_map.name);
+            PrintLn(&st, "    // %1", blob.name);
             Print(&st, "    ");
-            blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
-                                         [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
-            if (blob_map.len < 0)
+            blob.len = PackAsset(asset.sources, compression_type,
+                                 [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+            if (blob.len < 0)
                 return 1;
             PrintLn(&st);
 
-            blobs.Append(blob);
-            blobs.Append(blob_map);
-        } else {
-            blobs.Append(blob);
+            if (asset.source_map_name) {
+                blob.source_map = asset.source_map_name;
+
+                BlobInfo blob_map = {};
+                blob_map.name = blob.source_map;
+
+                PrintLn(&st, "    // %1", blob_map.name);
+                Print(&st, "    ");
+                blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
+                                             [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
+                if (blob_map.len < 0)
+                    return 1;
+                PrintLn(&st);
+
+                blobs.Append(blob);
+                blobs.Append(blob_map);
+            } else {
+                blobs.Append(blob);
+            }
         }
-    }
 
-    PrintLn(&st,
-R"(};
+        PrintLn(&st, R"(};
 
-static pack_Asset assets[] = {)");
+static pack_Asset assets[%1] = {)", blobs.len);
 
-    // Write asset table
-    for (Size i = 0, cumulative_len = 0; i < blobs.len; i++) {
-        const BlobInfo &blob = blobs[i];
+        // Write asset table
+        for (Size i = 0, cumulative_len = 0; i < blobs.len; i++) {
+            const BlobInfo &blob = blobs[i];
 
-        if (blob.source_map) {
-            PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}, \"%5\"},",
-                    blob.name, (int)compression_type, cumulative_len, blob.len,
-                    blob.source_map);
-        } else {
-            PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
-                    blob.name, (int)compression_type, cumulative_len, blob.len);
+            if (blob.source_map) {
+                PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}, \"%5\"},",
+                        blob.name, (int)compression_type, cumulative_len, blob.len,
+                        blob.source_map);
+            } else {
+                PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
+                        blob.name, (int)compression_type, cumulative_len, blob.len);
+            }
+            cumulative_len += blob.len;
         }
-        cumulative_len += blob.len;
-    }
 
-    PrintLn(&st,
-R"(};
+        PrintLn(&st, R"(};
 
 EXPORT extern const Span<const pack_Asset> packer_assets;
 const Span<const pack_Asset> packer_assets = assets;)");
+    } else {
+        PrintLn(&st, R"(
+EXPORT extern const Span<const pack_Asset> packer_assets;
+const Span<const pack_Asset> packer_assets = {};)");
+    }
 
     return st.Close();
 }
