@@ -55,11 +55,23 @@ struct pack_Asset {
 };)";
 
 struct BlobInfo {
-    const char *name;
+    const char *str_name;
+    const char *var_name;
     Size len;
 
     const char *source_map;
 };
+
+static const char *CreateVariableName(const char *name, Allocator *alloc)
+{
+    char *var_name = DuplicateString(name, alloc).ptr;
+
+    for (Size i = 0; var_name[i]; i++) {
+        var_name[i] = IsAsciiAlphaOrDigit(var_name[i]) ? var_name[i] : '_';
+    }
+
+    return var_name;
+}
 
 static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 {
@@ -79,6 +91,8 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
 bool GenerateCXX(Span<const AssetInfo> assets, const char *output_path,
                  CompressionType compression_type)
 {
+    BlockAllocator temp_alloc;
+
     StreamWriter st;
     if (output_path) {
         st.Open(output_path);
@@ -99,9 +113,10 @@ static const uint8_t raw_data[] = {)");
         HeapArray<BlobInfo> blobs;
         for (const AssetInfo &asset: assets) {
             BlobInfo blob = {};
-            blob.name = asset.name;
+            blob.str_name = asset.name;
+            blob.var_name = CreateVariableName(asset.name, &temp_alloc);
 
-            PrintLn(&st, "    // %1", blob.name);
+            PrintLn(&st, "    // %1", blob.str_name);
             Print(&st, "    ");
             blob.len = PackAsset(asset.sources, compression_type,
                                  [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
@@ -113,9 +128,10 @@ static const uint8_t raw_data[] = {)");
                 blob.source_map = asset.source_map_name;
 
                 BlobInfo blob_map = {};
-                blob_map.name = blob.source_map;
+                blob_map.str_name = blob.source_map;
+                blob_map.var_name = CreateVariableName(blob.source_map, &temp_alloc);
 
-                PrintLn(&st, "    // %1", blob_map.name);
+                PrintLn(&st, "    // %1", blob_map.str_name);
                 Print(&st, "    ");
                 blob_map.len = PackSourceMap(asset.sources, asset.source_map_type, compression_type,
                                              [&](Span<const uint8_t> buf) { PrintAsHexArray(buf, &st); });
@@ -140,19 +156,27 @@ static pack_Asset assets[%1] = {)", blobs.len);
 
             if (blob.source_map) {
                 PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}, \"%5\"},",
-                        blob.name, (int)compression_type, cumulative_len, blob.len,
+                        blob.str_name, (int)compression_type, cumulative_len, blob.len,
                         blob.source_map);
             } else {
                 PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
-                        blob.name, (int)compression_type, cumulative_len, blob.len);
+                        blob.str_name, (int)compression_type, cumulative_len, blob.len);
             }
             cumulative_len += blob.len;
         }
 
         PrintLn(&st, R"(};
 
-EXPORT extern const Span<const pack_Asset> pack_assets;
-const Span<const pack_Asset> pack_assets = assets;)");
+EXPORT extern const Span<const pack_Asset> pack_assets = assets;
+)");
+
+        for (Size i = 0; i < blobs.len; i++) {
+            const BlobInfo &blob = blobs[i];
+
+            PrintLn(&st,
+R"(EXPORT extern const pack_Asset *const pack_asset_%1;
+const pack_Asset *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
+        }
     } else {
         PrintLn(&st, R"(
 EXPORT extern const Span<const pack_Asset> pack_assets;
