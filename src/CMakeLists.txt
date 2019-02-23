@@ -399,6 +399,9 @@ if(TARGET libgui)
     )
 
     set(SIMPL_MODULE_SRC
+        wrappers/pcg.hh
+        simPL/death.cc
+        simPL/death.hh
         simPL/simulation.cc
         simPL/simulation.hh
     )
