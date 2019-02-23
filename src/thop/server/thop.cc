@@ -57,7 +57,7 @@ static Span<const pack_Asset> assets;
 static const char *assets_filename;
 static pack_AssetSet asset_set;
 #else
-extern const Span<const pack_Asset> packer_assets;
+extern const Span<const pack_Asset> pack_assets;
 #endif
 static CatalogSet catalog_set;
 
@@ -466,7 +466,7 @@ Options:
         return 1;
     assets = asset_set.assets;
 #else
-    assets = packer_assets;
+    assets = pack_assets;
 #endif
     InitRoutes();
 

@@ -151,12 +151,12 @@ static pack_Asset assets[%1] = {)", blobs.len);
 
         PrintLn(&st, R"(};
 
-EXPORT extern const Span<const pack_Asset> packer_assets;
-const Span<const pack_Asset> packer_assets = assets;)");
+EXPORT extern const Span<const pack_Asset> pack_assets;
+const Span<const pack_Asset> pack_assets = assets;)");
     } else {
         PrintLn(&st, R"(
-EXPORT extern const Span<const pack_Asset> packer_assets;
-const Span<const pack_Asset> packer_assets = {};)");
+EXPORT extern const Span<const pack_Asset> pack_assets;
+const Span<const pack_Asset> pack_assets = {};)");
     }
 
     return st.Close();
