@@ -7,5 +7,5 @@
 #include "../libcc/libcc.hh"
 #include "simPL.hh"
 
-void RenderControlWindow(HeapArray<Simulation> *simulations);
-bool RenderSimulationWindow(Simulation *simulation);
+void RenderMainMenu(HeapArray<Simulation> *simulations);
+bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx);

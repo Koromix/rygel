@@ -7,52 +7,72 @@
 #include "view.hh"
 #include "../../lib/imgui/imgui.h"
 
-void RenderControlWindow(HeapArray<Simulation> *simulations)
+static void InitializeSimulation(Simulation *out_simulation)
 {
     static int simulations_id = 0;
 
-    static int count = 20000;
-    static int seed = 0;
-
-    ImGui::Begin("Control");
-
-    ImGui::InputInt("Count", &count);
-    ImGui::InputInt("Seed", &seed);
-    if (ImGui::Button("Run!")) {
-        Simulation *simulation = simulations->AppendDefault();
-
-        Fmt(simulation->name, "Simulation #%1", ++simulations_id);
-        simulation->count = count;
-        simulation->seed = seed;
+    Fmt(out_simulation->name, "Simulation #%1", ++simulations_id);
+    out_simulation->pause = true;
 #ifdef SIMPL_ENABLE_HOT_RELOAD
-        simulation->auto_restart = true;
+    out_simulation->auto_reset = true;
 #endif
-
-        simulation->Start();
-    }
-
-    ImGui::End();
 }
 
-bool RenderSimulationWindow(Simulation *simulation)
+void RenderMainMenu(HeapArray<Simulation> *simulations)
 {
-    bool open = true;
+    ImGui::BeginMainMenuBar();
 
+    if (ImGui::MenuItem("New simulation")) {
+        Simulation *simulation = simulations->AppendDefault();
+        InitializeSimulation(simulation);
+    }
+
+    ImGui::EndMainMenuBar();
+}
+
+bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
+{
+    Simulation *simulation = &(*simulations)[idx];
+
+    bool open = true;
     ImGui::Begin(simulation->name, &open);
 
-    if (ImGui::Button("Restart")) {
-        simulation->Start();
+    ImGui::Columns(3, nullptr, false);
+    ImGui::TextUnformatted(Fmt(&frame_alloc, "Humans: %1", simulation->humans.len).ptr); ImGui::NextColumn();
+    ImGui::TextUnformatted(Fmt(&frame_alloc, "Alive: %1", simulation->alive_count).ptr); ImGui::NextColumn();
+    ImGui::TextUnformatted(Fmt(&frame_alloc, "Iteration: %1", simulation->iteration).ptr); ImGui::NextColumn();
+    ImGui::Columns(1);
+
+    if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::InputInt("Count", &simulation->count);
+        ImGui::InputInt("Seed", &simulation->seed);
+
+        if (ImGui::Button("Start")) {
+            simulation->Reset();
+            simulation->pause = false;
+        }
     }
+
+    if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ImGui::Checkbox("Pause", &simulation->pause);
+        if (ImGui::Button("Reset")) {
+            simulation->Reset();
+        }
 #ifdef SIMPL_ENABLE_HOT_RELOAD
-    ImGui::SameLine(); ImGui::Checkbox("Auto-restart", &simulation->auto_restart);
+        ImGui::SameLine();
+        ImGui::Checkbox("Auto-reset", &simulation->auto_reset);
 #endif
+        if (ImGui::Button("Copy")) {
+            Simulation *copy = simulations->AppendDefault();
+            simulation = &(*simulations)[idx]; // May have been reallocated
 
-    ImGui::TextUnformatted(Fmt(&frame_alloc, "Count: %1", simulation->humans.len).ptr);
-    ImGui::TextUnformatted(Fmt(&frame_alloc, "Iteration: %1", simulation->iteration).ptr);
-    ImGui::TextUnformatted(Fmt(&frame_alloc, "Alive: %1", simulation->alive_count).ptr);
+            InitializeSimulation(copy);
+            copy->count = simulation->count;
+            copy->seed = simulation->seed;
+        }
+    }
 
-    // Death histogram and table
-    if (ImGui::TreeNode("Deaths")) {
+    if (ImGui::CollapsingHeader("Deaths")) {
         // It's actually off by one, because 0 is 'All'
         static int histogram_type = 0;
         ImGui::Combo("Type", &histogram_type, [](void *, int idx, const char **str) {
@@ -106,8 +126,6 @@ bool RenderSimulationWindow(Simulation *simulation)
         }
         ImGui::Columns(1);
         ImGui::Separator();
-
-        ImGui::TreePop();
     }
 
     ImGui::End();
