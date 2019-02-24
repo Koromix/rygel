@@ -35,7 +35,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
     Simulation *simulation = &(*simulations)[idx];
 
     bool open = true;
-    ImGui::Begin(simulation->name, &open);
+    ImGui::Begin(simulation->name, &open, ImVec2(500, 500));
 
     ImGui::Columns(3, nullptr, false);
     ImGui::TextUnformatted(Fmt(&frame_alloc, "Humans: %1", simulation->humans.len).ptr); ImGui::NextColumn();
