@@ -1182,7 +1182,7 @@ bool StatFile(const char *filename, FileInfo *out_info)
     return true;
 }
 
-bool TestPath(const char *path, FileType type)
+bool TestFile(const char *path, FileType type)
 {
     DWORD attr = GetFileAttributes(path);
     if (attr == INVALID_FILE_ATTRIBUTES)
@@ -1292,7 +1292,7 @@ bool StatFile(const char *filename, FileInfo *out_info)
     return true;
 }
 
-bool TestPath(const char *path, FileType type)
+bool TestFile(const char *path, FileType type)
 {
     struct stat sb;
     if (stat(path, &sb) < 0)
