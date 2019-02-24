@@ -20,10 +20,11 @@ struct Simulation {
     char name[32];
 
     // Parameters
-    int count;
+    int count = 20000;
     int seed;
+    bool pause;
 #ifdef SIMPL_ENABLE_HOT_RELOAD
-    bool auto_restart;
+    bool auto_reset;
 #endif
 
     // Core data
@@ -32,5 +33,5 @@ struct Simulation {
     Size alive_count;
 
     // Control methods
-    void Start();
+    void Reset();
 };

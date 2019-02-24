@@ -104,7 +104,7 @@ static LoadStatus LoadSimulationModule(const char *filename)
 
 #endif
 
-void Simulation::Start()
+void Simulation::Reset()
 {
     humans.Clear();
     alive_count = InitializeHumans_(count, seed, &humans);
@@ -150,13 +150,13 @@ int main(int, char **)
     HeapArray<Simulation> simulations;
 
     while (window.Prepare()) {
-        RenderControlWindow(&simulations);
+        RenderMainMenu(&simulations);
 
         for (Size i = 0; i < simulations.len; i++) {
             Simulation *simulation = &simulations[i];
 
-            if (RenderSimulationWindow(simulation)) {
-                if (simulation->alive_count) {
+            if (RenderSimulationWindow(&simulations, i)) {
+                if (simulation->alive_count && !simulation->pause) {
                     simulation->alive_count = RunSimulationStep_(simulation->humans.PrepareRewrite(),
                                                                  &simulation->humans);
                     simulation->iteration++;
@@ -185,8 +185,8 @@ int main(int, char **)
 
         if (status == LoadStatus::Loaded) {
             for (Simulation &simulation: simulations) {
-                if (simulation.auto_restart) {
-                    simulation.Start();
+                if (simulation.auto_reset) {
+                    simulation.Reset();
                 }
             }
         }
