@@ -34,6 +34,10 @@ struct gui_Win32Window {
     HWND hwnd;
     HDC hdc;
     HGLRC hgl;
+
+    // Apply mouse up events next frame, or some clicks will fail (such as touchpads)
+    // because the DOWN and UP events will be detected in the same frame.
+    unsigned int released_buttons;
 };
 
 static THREAD_LOCAL gui_Info *thread_info;
@@ -144,18 +148,18 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             }
         } break;
         case WM_LBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Left); } break;
-        case WM_LBUTTONUP: { thread_info->input.buttons &= ~MaskEnum(gui_InputButton::Left); } break;
+        case WM_LBUTTONUP: { thread_window->released_buttons |= MaskEnum(gui_InputButton::Left); } break;
         case WM_MBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Middle); } break;
-        case WM_MBUTTONUP: { thread_info->input.buttons &= ~MaskEnum(gui_InputButton::Middle); } break;
+        case WM_MBUTTONUP: { thread_window->released_buttons |= MaskEnum(gui_InputButton::Middle); } break;
         case WM_RBUTTONDOWN: { thread_info->input.buttons |= MaskEnum(gui_InputButton::Right); } break;
-        case WM_RBUTTONUP: { thread_info->input.buttons &= ~MaskEnum(gui_InputButton::Right); } break;
+        case WM_RBUTTONUP: { thread_window->released_buttons |= MaskEnum(gui_InputButton::Right); } break;
         case WM_XBUTTONDOWN: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
             thread_info->input.buttons |= (unsigned int)(1 << button);
         } break;
         case WM_XBUTTONUP: {
             uint16_t button = (uint16_t)(2 + (wparam >> 16));
-            thread_info->input.buttons &= ~(unsigned int)(1 << button);
+            thread_window->released_buttons |= (unsigned int)(1 << button);
         } break;
         case WM_MOUSEWHEEL: {
             thread_info->input.wheel_y += (int16_t)(wparam >> 16) / WHEEL_DELTA;
@@ -464,6 +468,8 @@ bool gui_Window::Prepare()
 
     // Reset relative inputs
     priv.input.text.Clear();
+    priv.input.buttons &= ~window->released_buttons;
+    window->released_buttons = 0;
     priv.input.wheel_x = 0;
     priv.input.wheel_y = 0;
 
