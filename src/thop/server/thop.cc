@@ -319,6 +319,9 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
         case Route::Type::Asset: {
             code = http_ProduceStaticAsset(route->u.st.asset.data, route->u.st.asset.compression_type,
                                            route->u.st.mime_type, request.compression_type, out_response);
+            if (route->u.st.asset.source_map) {
+                MHD_add_response_header(*out_response, "SourceMap", route->u.st.asset.source_map);
+            }
         } break;
 
         case Route::Type::Function: {
