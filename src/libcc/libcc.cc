@@ -1586,6 +1586,30 @@ const char *CanonicalizePath(Span<const char> root_dir, const char *path, Alloca
     }
 }
 
+bool PathIsAbsolute(const char *path)
+{
+#ifdef _WIN32
+    if (IsAsciiAlpha(path[0]) && path[1] == ':')
+        return true;
+#endif
+
+    return strchr(PATH_SEPARATORS, path[0]);
+}
+
+bool PathContainsDotDot(const char *path)
+{
+    const char *ptr = path;
+
+    while ((ptr = strstr(ptr, ".."))) {
+        if ((ptr == path || strchr(PATH_SEPARATORS, ptr[-1])) &&
+                (strchr(PATH_SEPARATORS, ptr[2]) || !ptr[2]))
+            return true;
+        ptr += 2;
+    }
+
+    return false;
+}
+
 FILE *OpenFile(const char *path, OpenFileMode mode)
 {
     char mode_str[8] = {};
