@@ -5,17 +5,137 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "../../wrappers/http.hh"
+#include "../../packer/libpacker.hh"
+
+struct Route {
+    const char *method;
+    const char *url;
+
+    pack_Asset asset;
+    const char *mime_type;
+
+    HASH_TABLE_HANDLER(Route, url);
+};
 
 static Config goupil_config;
 
+static Span<const pack_Asset> assets;
+#ifndef NDEBUG
+static const char *assets_filename;
+static pack_AssetSet asset_set;
+#else
+extern const Span<const pack_Asset> pack_assets;
+#endif
+
+static HashTable<const char *, Route> routes;
+static BlockAllocator routes_alloc;
+
+static bool PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
+{
+    StreamWriter writer(out_buf, nullptr, st.compression.type);
+
+    HeapArray<char> buf;
+    if (st.ReadAll(Megabytes(1), &buf) < 0)
+        return false;
+    buf.Append(0);
+
+    Span<const char> html = buf.Take(0, buf.len - 1);
+    do {
+        Span<const char> part = SplitStr(html, '$', &html);
+
+        writer.Write(part);
+
+        if (html.ptr[0] == '{') {
+            Span<const char> var = MakeSpan(html.ptr,
+                                            strspn(html.ptr + 1, "ABCDEFGHIJKLMNOPQRSTUVWXYZ_") + 2);
+
+            if (var == "{GOUPIL_BASE_URL}") {
+                writer.Write(goupil_config.base_url);
+                html = html.Take(var.len, html.len - var.len);
+            } else {
+                writer.Write('$');
+            }
+        } else if (html.len) {
+            writer.Write('$');
+        }
+    } while (html.len);
+
+    return writer.Close();
+}
+
+static void InitRoutes()
+{
+    LogInfo("Init routes");
+
+    routes.Clear();
+    routes_alloc.ReleaseAll();
+
+    const auto add_asset_route = [](const char *method, const char *url,
+                                 const pack_Asset &asset) {
+        Route route = {};
+
+        route.method = method;
+        route.url = url;
+        route.asset = asset;
+        route.mime_type = http_GetMimeType(GetPathExtension(asset.name));
+
+        routes.Append(route);
+    };
+
+    // Static assets
+    pack_Asset html = {};
+    for (const pack_Asset &asset: assets) {
+        if (TestStr(asset.name, "goupil.html")) {
+            html = asset;
+        } else {
+            const char *url = Fmt(&routes_alloc, "/static/%1", asset.name).ptr;
+            add_asset_route("GET", url, asset);
+        }
+    }
+    DebugAssert(html.name);
+
+    // Patch HTML
+    {
+        StreamReader st(html.data, nullptr, html.compression_type);
+        HeapArray<uint8_t> buf(&routes_alloc);
+        Assert(PatchTextFile(st, &buf));
+
+        html.data = buf.Leak();
+    }
+
+    // Root
+    add_asset_route("GET", "/", html);
+}
+
 static int HandleRequest(const http_Request &request, http_Response *out_response)
 {
-    *out_response = MHD_create_response_from_buffer(5, (void *)"Hello", MHD_RESPMEM_PERSISTENT);
-    return 200;
+#ifndef NDEBUG
+    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Loaded) {
+        LogInfo("Reloaded assets from library");
+        assets = asset_set.assets;
+
+        InitRoutes();
+    }
+#endif
+
+    Route *route = routes.Find(request.url);
+    if (!route) {
+        return http_ProduceErrorPage(404, out_response);
+    }
+
+    int code = http_ProduceStaticAsset(route->asset.data, route->asset.compression_type,
+                                       route->mime_type, request.compression_type, out_response);
+    if (route->asset.source_map) {
+        MHD_add_response_header(*out_response, "SourceMap", route->asset.source_map);
+    }
+
+    return code;
 }
 
 int main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil [options]
 
@@ -75,6 +195,18 @@ Options:
         LogError("Profile directory is missing");
         return 1;
     }
+
+    // Init routes
+#ifndef NDEBUG
+    assets_filename = Fmt(&temp_alloc, "%1%/goupil_assets%2",
+                          GetApplicationDirectory(), SHARED_LIBRARY_EXTENSION).ptr;
+    if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
+        return 1;
+    assets = asset_set.assets;
+#else
+    assets = pack_assets;
+#endif
+    InitRoutes();
 
     // Run!
     http_Daemon daemon;

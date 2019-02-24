@@ -325,6 +325,14 @@ set(GOUPIL_SRC
     goupil/server/config.hh
     goupil/server/goupil.cc
 )
+set(GOUPIL_ASSETS
+    goupil/client/goupil.html
+    libweb/compat.js
+    libweb/util.js
+    goupil/client/store.js
+    goupil/client/widgets.js
+    goupil/client/widgets.css
+)
 
 set(GOUPIL_ADMIN_SRC
     goupil/admin/goupil_admin.cc
@@ -342,7 +350,13 @@ set(GOUPIL_ADMIN_ASSETS
 )
 
 add_executable(goupil ${GOUPIL_SRC})
-target_link_libraries(goupil PRIVATE libcc microhttpd sqlite)
+target_link_libraries(goupil PRIVATE libcc libpacker microhttpd sqlite)
+target_assets(goupil
+    MODE ModuleIfDebug
+    MERGE_RULES goupil/client/packer.ini
+    OPTIONS -cGzip $<$<CONFIG:Debug>:--source_map>
+    SOURCES ${GOUPIL_ASSETS}
+)
 
 add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
 target_link_libraries(goupil_admin PRIVATE libcc sqlite)
