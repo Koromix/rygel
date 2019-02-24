@@ -74,6 +74,17 @@ load_ref <- function(filename, encoding = 'UTF-8') {
     return (ref)
 }
 
+output_code <- function(values) {
+    for (i in 1:nrow(values)) {
+        row <- values[i,]
+
+        keys <- colnames(values)[-1]
+        dict <- paste(sapply(keys, function(key) str_interp('${key}: ${row[[key]]}')), collapse = ', ')
+
+        cat(paste0(row$key, ': {', dict, '},\n'))
+    }
+}
+
 opt <- parse_args(
     OptionParser(
         usage = '%prog file',
@@ -84,11 +95,4 @@ opt <- parse_args(
 filename <- opt$args[1]
 
 values <- load_ref(filename)
-for (i in 1:nrow(values)) {
-    row <- values[i,]
-
-    keys <- colnames(values)[-1]
-    dict <- paste(sapply(keys, function(key) str_interp('${key}: ${row[[key]]}')), collapse = ', ')
-
-    cat(paste0(row$key, ': {', dict, '},\n'))
-}
+output_code(values)
