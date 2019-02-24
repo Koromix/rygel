@@ -400,10 +400,12 @@ if(TARGET libgui)
 
     set(SIMPL_MODULE_SRC
         wrappers/pcg.hh
-        simPL/death.cc
-        simPL/death.hh
+        simPL/predict.cc
+        simPL/predict.hh
         simPL/simulation.cc
         simPL/simulation.hh
+        simPL/tables.cc
+        simPL/tables.hh
     )
 
     add_executable(simPL ${SIMPL_SRC})
