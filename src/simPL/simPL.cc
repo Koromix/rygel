@@ -147,6 +147,9 @@ int main(int, char **)
     if (!window.InitImGui(&font_atlas))
         return 1;
 
+    // More readable (for now)
+    ImGui::StyleColorsLight();
+
     HeapArray<Simulation> simulations;
 
     while (window.Prepare()) {
