@@ -74,7 +74,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
         bool success = true;
         for (const char *resource_dir: table_directories) {
             const char *desc_dir = Fmt(&temp_alloc, "%1%/catalogs", resource_dir).ptr;
-            if (TestPath(desc_dir, FileType::Directory)) {
+            if (TestFile(desc_dir, FileType::Directory)) {
                 success &= EnumerateDirectoryFiles(desc_dir, "*.json", 1024, &temp_alloc, &filenames);
             }
         }
@@ -384,7 +384,7 @@ Options:
             const char *app_directory = GetApplicationDirectory();
             if (app_directory) {
                 const char *test_filename = Fmt(&thop_config.str_alloc, "%1%/profile/thop.ini", app_directory).ptr;
-                if (TestPath(test_filename, FileType::File)) {
+                if (TestFile(test_filename, FileType::File)) {
                     config_filename = test_filename;
                 }
             }

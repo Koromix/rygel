@@ -1802,7 +1802,7 @@ bool mco_LoadTableSet(Span<const char *const> table_directories,
         bool success = true;
         for (const char *resource_dir: table_directories) {
             const char *tab_dir = Fmt(&temp_alloc, "%1%/mco_tables", resource_dir).ptr;
-            if (TestPath(tab_dir, FileType::Directory)) {
+            if (TestFile(tab_dir, FileType::Directory)) {
                 success &= enumerate_directory_files(tab_dir);
             }
         }

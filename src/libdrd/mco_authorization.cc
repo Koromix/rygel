@@ -261,7 +261,7 @@ bool mco_LoadAuthorizationSet(const char *profile_directory,
             for (const char *default_name: default_names) {
                 const char *test_filename = Fmt(&temp_alloc, "%1%/%2",
                                                 profile_directory, default_name).ptr;
-                if (TestPath(test_filename, FileType::File)) {
+                if (TestFile(test_filename, FileType::File)) {
                     filename = test_filename;
                     break;
                 }

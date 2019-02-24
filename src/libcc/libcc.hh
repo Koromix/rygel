@@ -3120,7 +3120,7 @@ enum class EnumStatus {
 };
 
 bool StatFile(const char *filename, FileInfo *out_info);
-bool TestPath(const char *path, FileType type = FileType::Unknown);
+bool TestFile(const char *path, FileType type = FileType::Unknown);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, FileType)> func);

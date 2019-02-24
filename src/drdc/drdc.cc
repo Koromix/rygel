@@ -98,7 +98,7 @@ Commands:
             const char *app_directory = GetApplicationDirectory();
             if (app_directory) {
                 const char *test_filename = Fmt(&drdc_config.str_alloc, "%1%/profile/drdc.ini", app_directory).ptr;
-                if (TestPath(test_filename, FileType::File)) {
+                if (TestFile(test_filename, FileType::File)) {
                     config_filename = test_filename;
                 }
             }
