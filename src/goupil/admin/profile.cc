@@ -68,6 +68,9 @@ bool RunCreateProfile(Span<const char *> arguments)
         HashSet<Span<const char>> directories_map;
 
         for (const pack_Asset &asset: pack_assets) {
+            DebugAssert(!PathIsAbsolute(asset.name));
+            DebugAssert(!PathContainsDotDot(asset.name));
+
             const char *ptr = asset.name;
             while ((ptr = strchr(ptr, '/'))) {
                 Span<const char> directory = MakeSpan(asset.name, ptr - asset.name);
