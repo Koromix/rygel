@@ -3094,6 +3094,15 @@ overflow:
     #define SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
+static inline bool IsPathSeparator(char c)
+{
+#ifdef _WIN32
+    return c == '/' || c == '\\';
+#else
+    return c == '/';
+#endif
+}
+
 CompressionType GetPathCompression(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);

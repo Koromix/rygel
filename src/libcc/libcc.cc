@@ -1507,7 +1507,7 @@ const char *GetApplicationDirectory()
     if (!executable_dir[0]) {
         const char *executable_path = GetApplicationExecutable();
         Size dir_len = (Size)strlen(executable_path);
-        while (dir_len && !strchr(PATH_SEPARATORS, executable_path[--dir_len]));
+        while (dir_len && !IsPathSeparator(executable_path[--dir_len]));
         memcpy(executable_dir, executable_path, (size_t)dir_len);
         executable_dir[dir_len] = 0;
     }
@@ -1558,17 +1558,11 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
 
 const char *CanonicalizePath(Span<const char> root_dir, const char *path, Allocator *alloc)
 {
-    bool path_is_absolute = !root_dir.len ||
-                            strchr(PATH_SEPARATORS, path[0]);
-#ifdef _WIN32
-    path_is_absolute |= IsAsciiAlpha(path[0]) && path[1] == ':';
-#endif
-
     Span<char> complete_path;
-    if (path_is_absolute) {
-        complete_path = DuplicateString(path, alloc);
-    } else {
+    if (root_dir.len && !PathIsAbsolute(path)) {
         complete_path = Fmt(alloc, "%1%/%2", root_dir, path);
+    } else {
+        complete_path = DuplicateString(path, alloc);
     }
 
 #ifdef _WIN32
@@ -1593,7 +1587,7 @@ bool PathIsAbsolute(const char *path)
         return true;
 #endif
 
-    return strchr(PATH_SEPARATORS, path[0]);
+    return IsPathSeparator(path[0]);
 }
 
 bool PathContainsDotDot(const char *path)
@@ -1601,8 +1595,7 @@ bool PathContainsDotDot(const char *path)
     const char *ptr = path;
 
     while ((ptr = strstr(ptr, ".."))) {
-        if ((ptr == path || strchr(PATH_SEPARATORS, ptr[-1])) &&
-                (strchr(PATH_SEPARATORS, ptr[2]) || !ptr[2]))
+        if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2]))
             return true;
         ptr += 2;
     }
@@ -1659,7 +1652,7 @@ bool MakeDirectoryRec(Span<const char> directory)
 
     Size offset = directory.len;
     for (; offset > 0; offset--) {
-        if (strchr(PATH_SEPARATORS, buf[offset])) {
+        if (IsPathSeparator(buf[offset])) {
             buf[offset] = 0;
 
 #ifdef _WIN32
