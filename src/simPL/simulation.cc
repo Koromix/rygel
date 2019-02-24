@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "death.hh"
 #include "simulation.hh"
+#include "tables.hh"
 #include "../wrappers/pcg.hh"
 
 static void InitializeHuman(int seed, Size idx, Human *out_human)

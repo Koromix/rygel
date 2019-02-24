@@ -8,4 +8,3 @@
 #include "simulation.hh"
 
 double GetDeathProbability(int age, Sex sex, unsigned int flags);
-double ComputeScoreProbability(const Human &human);
