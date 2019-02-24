@@ -33,3 +33,6 @@ struct pack_AssetSet {
 
     pack_LoadStatus LoadFromLibrary(const char *filename, const char *var_name = "pack_assets");
 };
+
+Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
+                                        std::function<bool(const char *, StreamWriter *)> func);

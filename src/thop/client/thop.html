@@ -9,22 +9,22 @@
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1"/>
 
-        <link rel="icon" href="${THOP_BASE_URL}favicon.png" />
+        <link rel="icon" href="{THOP_BASE_URL}favicon.png" />
         <title>THOP</title>
 
         <script type="text/javascript">
-            const BaseUrl = '${THOP_BASE_URL}';
-            const ShowUser = ${THOP_SHOW_USER};
+            const BaseUrl = '{THOP_BASE_URL}';
+            const ShowUser = {THOP_SHOW_USER};
             const TableLen = 100;
 
             const LazyModules = {
-                chartjs: '${THOP_BASE_URL}static/chart.min.js',
-                xlsx: '${THOP_BASE_URL}static/xlsx.core.min.js'
+                chartjs: '{THOP_BASE_URL}static/chart.min.js',
+                xlsx: '{THOP_BASE_URL}static/xlsx.core.min.js'
             };
         </script>
 
-        <link rel="stylesheet" href="${THOP_BASE_URL}static/thop.pk.css"/>
-        <script type="text/javascript" src="${THOP_BASE_URL}static/thop.pk.js" async></script>
+        <link rel="stylesheet" href="{THOP_BASE_URL}static/thop.pk.css"/>
+        <script type="text/javascript" src="{THOP_BASE_URL}static/thop.pk.js" async></script>
     </head>
 
     <body class="hide">
@@ -33,7 +33,7 @@
             <nav id="side_menu">
                 <div id="side_session_box" class="hide"></div>
 
-                <img id="logo" src="${THOP_BASE_URL}static/thop_logo.svg" height="160" alt="THOP logo"/>
+                <img id="logo" src="{THOP_BASE_URL}static/thop_logo.svg" height="160" alt="THOP logo"/>
                 <ul>
                     <li id="side_session_menu" class="hide"><a class="category"></a></li>
 

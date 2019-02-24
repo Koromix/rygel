@@ -130,42 +130,6 @@ static bool InitUsers(const char *profile_directory)
     return true;
 }
 
-static bool PatchTextFile(StreamReader &st, HeapArray<uint8_t> *out_buf)
-{
-    StreamWriter writer(out_buf, nullptr, st.compression.type);
-
-    HeapArray<char> buf;
-    if (st.ReadAll(Megabytes(1), &buf) < 0)
-        return false;
-    buf.Append(0);
-
-    Span<const char> html = buf.Take(0, buf.len - 1);
-    do {
-        Span<const char> part = SplitStr(html, '$', &html);
-
-        writer.Write(part);
-
-        if (html.ptr[0] == '{') {
-            Span<const char> var = MakeSpan(html.ptr,
-                                            strspn(html.ptr + 1, "ABCDEFGHIJKLMNOPQRSTUVWXYZ_") + 2);
-
-            if (var == "{THOP_BASE_URL}") {
-                writer.Write(thop_config.base_url);
-                html = html.Take(var.len, html.len - var.len);
-            } else if (var == "{THOP_SHOW_USER}") {
-                writer.Write(thop_has_casemix ? "true" : "false");
-                html = html.Take(var.len, html.len - var.len);
-            } else {
-                writer.Write('$');
-            }
-        } else if (html.len) {
-            writer.Write('$');
-        }
-    } while (html.len);
-
-    return writer.Close();
-}
-
 static void InitRoutes()
 {
     LogInfo("Init routes");
@@ -220,13 +184,18 @@ static void InitRoutes()
     DebugAssert(html.name);
 
     // Patch HTML
-    {
-        StreamReader st(html.data, nullptr, html.compression_type);
-        HeapArray<uint8_t> buf(&routes_alloc);
-        Assert(PatchTextFile(st, &buf));
-
-        html.data = buf.Leak();
-    }
+    html.data = pack_PatchVariables(html, &routes_alloc,
+                                    [](const char *key, StreamWriter *writer) {
+        if (TestStr(key, "THOP_BASE_URL")) {
+            writer->Write(thop_config.base_url);
+            return true;
+        } else if (TestStr(key, "THOP_SHOW_USER")) {
+            writer->Write(thop_has_casemix ? "true" : "false");
+            return true;
+        } else {
+            return false;
+        }
+    });
 
     // Root
     add_asset_route("GET", "/", Route::Matching::Exact, html);

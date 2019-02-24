@@ -68,3 +68,53 @@ pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char 
 
     return pack_LoadStatus::Loaded;
 }
+
+// This won't win any beauty or speed contest (especially when writing
+// a compressed stream) but whatever.
+Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
+                                        std::function<bool(const char *, StreamWriter *)> func)
+{
+    HeapArray<uint8_t> buf;
+    buf.allocator = alloc;
+
+    StreamReader reader(asset.data, nullptr, asset.compression_type);
+    StreamWriter writer(&buf, nullptr, asset.compression_type);
+
+    char c;
+    while (reader.Read(1, &c) == 1) {
+        if (c == '{') {
+            char name[33] = {};
+            Size name_len = reader.Read(1, &name[0]);
+            Assert(name_len >= 0);
+
+            bool valid = false;
+            if (IsAsciiAlpha(name[0]) || name[0] == '_') {
+                do {
+                    Assert(reader.Read(1, &name[name_len]) >= 0);
+
+                    if (name[name_len] == '}') {
+                        name[name_len] = 0;
+                        valid = func(name, &writer);
+                        name[name_len++] = '}';
+
+                        break;
+                    } else if (!IsAsciiAlphaOrDigit(name[name_len]) && name[name_len] != '_') {
+                        name_len++;
+                        break;
+                    }
+                } while (++name_len < SIZE(name));
+            }
+
+            if (!valid) {
+                writer.Write('{');
+                writer.Write(name, name_len);
+            }
+        } else {
+            writer.Write(c);
+        }
+    }
+    Assert(!reader.error);
+
+    Assert(writer.Close());
+    return buf.Leak();
+}
