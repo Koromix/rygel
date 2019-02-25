@@ -94,6 +94,7 @@
 
                 this.importAndRefresh = function() {
                     let file = document.querySelector('#inpl_menu_file').files[0];
+                    let encoding = document.querySelector('#inpl_menu_encoding').value;
 
                     let stat = document.querySelector('#inpl_menu_stat');
 
@@ -102,6 +103,7 @@
                     rows.length = 0;
                     if (file) {
                         bridge.readFileAsync(file, {
+                            encoding: encoding,
                             step: row => {
                                 rows.push(row);
                             },
@@ -162,6 +164,10 @@
                 <input id="inpl_menu_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"
                        style="display: none;"/>
                 <button onclick="parentNode.query('#inpl_menu_file').click();">Charger...</button>
+                <select id="inpl_menu_encoding" onchange="inPL.importAndRefresh();">
+                    <option value="iso-8859-1">ISO-8859-1</option>
+                    <option value="UTF-8">UTF-8</option>
+                </select>
             </div>
         </div>
 
