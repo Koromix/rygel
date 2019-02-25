@@ -84,7 +84,7 @@
 
                 this.openTab = function(idx) {
                     let tabs = query('#inpl_menu').querySelectorAll('button');
-                    let pages = document.body.querySelectorAll('.inpl_tabpage');
+                    let pages = document.body.querySelectorAll('.inpl_page');
 
                     tabs.removeClass('active');
                     tabs[idx].addClass('active');
@@ -108,7 +108,7 @@
                             complete: () => {
                                 rows.sort((row1, row2) => row1.rdv_plid - row2.rdv_plid);
 
-                                stat.replaceContent(`(${rows.length} rendez-vous chargés)`);
+                                stat.replaceContent(`(${file.name} contient ${rows.length} rendez-vous)`);
                                 refreshMainView();
                             }
                         });
@@ -152,20 +152,24 @@
     </head>
 
     <body style="display: none;">
-        <div id="inpl_menu" class="inpl_tabbar">
+        <div id="inpl_menu">
             <button onclick="inPL.go({tab: 0});">Résultats</button>
             <button onclick="inPL.go({tab: 1});">Synthèse</button>
             <button onclick="inPL.go({tab: 2});">Consultant</button>
 
-            <input id="inpl_menu_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"/>
-            <span id="inpl_menu_stat"></span>
+            <div style="float: right;">
+                <span id="inpl_menu_stat"></span>
+                <input id="inpl_menu_file" type="file" accept=".csv" onchange="inPL.importAndRefresh();"
+                       style="display: none;"/>
+                <button onclick="parentNode.query('#inpl_menu_file').click();">Charger...</button>
+            </div>
         </div>
 
-        <div class="inpl_tabpage">
+        <div class="inpl_page">
             <table id="inpl_list" class="inpl_table"></table>
         </div>
 
-        <div class="inpl_tabpage">
+        <div class="inpl_page">
             <div class="inpl_options">
                 <label>Sexe :
                     <select id="inpl_option_sex" onchange="inPL.go({sex: this.value});">
@@ -185,7 +189,7 @@
             <table id="inpl_summary" class="inpl_table"></table>
         </div>
 
-        <div class="inpl_tabpage">
+        <div class="inpl_page">
             <div class="inpl_options">
                 <label>PLID :
                     <input id="inpl_option_plid" type="text"
