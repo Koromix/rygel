@@ -836,17 +836,18 @@ let bridge = (function() {
         return row2;
     }
 
-    this.readFileAsync = function(file, functions) {
+    this.readFileAsync = function(file, config) {
         Papa.parse(file, {
             header: true,
+            encoding: config.encoding,
             chunk: ret => {
                 for (let row of ret.data) {
                     row = translateRow(row);
                     if (row.rdv_plid && row.consultant_sexe)
-                        functions.step(row);
+                        config.step(row);
                 }
             },
-            complete: functions.complete
+            complete: config.complete
         });
     };
 
