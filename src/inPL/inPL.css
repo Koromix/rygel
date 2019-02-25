@@ -21,40 +21,34 @@ a {
     text-decoration: underline dotted;
 }
 
-.inpl_tabpage:not(.active) { display: none; }
-.inpl_tabbar {
+.inpl_page:not(.active) { display: none; }
+#inpl_menu {
     overflow: hidden;
     border: 1px solid #ccc;
     background-color: #f1f1f1;
     margin: 0 1em;
 }
-.inpl_tabbar button {
+#inpl_menu > * {
+    display: table-cell;
+    vertical-align: middle;
+}
+#inpl_menu button {
     background-color: inherit;
-    float: left;
     border: none;
     outline: none;
     cursor: pointer;
     padding: 9px 13px;
 }
-.inpl_tabbar button:hover { background-color: #ddd; }
-.inpl_tabbar button.active { background-color: #ccc; }
-.inpl_tabpage { padding: 1em; }
+#inpl_menu button:hover { background-color: #ddd; }
+#inpl_menu button.active { background-color: #ccc; }
+.inpl_page { padding: 1em; }
 @media screen and (max-width: 801px) {
-    .inpl_tabbar {
+    #inpl_menu {
         margin: 0;
         border: 0;
     }
 }
-
-#inpl_menu_stat {
-    padding: 9px 12px 0 0;
-    float: right;
-    color: #666;
-}
-#inpl_menu_file {
-    float: right;
-    padding: 6px 4px 0 0;
-}
+#inpl_menu_stat { color: #666; }
 
 .inpl_options {
     text-align: center;
