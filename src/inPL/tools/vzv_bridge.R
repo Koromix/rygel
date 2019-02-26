@@ -32,12 +32,12 @@ VARSETS <- c(
     'respi'
 )
 
-read_variables <- function(filename, varsets, encoding = 'UTF-8') {
-    VARIABLES_CALCULEES <- tribble(
-        ~varset, ~field_name,
-        'consultant', 'age'
-    )
+VARIABLES_CALCULEES <- tribble(
+    ~varset, ~field_name,
+    'consultant', 'age'
+)
 
+read_variables <- function(filename, select, encoding = 'UTF-8') {
     variables <- fread(filename, encoding = encoding, na.strings = '')
     variables$varset <- na.locf(variables$varset)
     variables <- variables[type == 'V',]
@@ -47,25 +47,44 @@ read_variables <- function(filename, varsets, encoding = 'UTF-8') {
         VARIABLES_CALCULEES,
         fill = TRUE
     )
-    variables <- variables[varset %in% c('rdv', 'consultant', varsets),]
+    variables <- variables[varset %in% c('rdv', 'consultant', select),]
 
     # FIXME: Dataquery and checkbox values don't mix well (queries get very slow)
     # variables <- variables[is.na(field_type) | field_type != 'checkbox',]
-    # FIXME: Date variables make everything go wrong
+    # FIXME: Date variables break the Voozanoo CSV export (needs to be investigated)
     variables <- variables[field_name != 'date_creation',]
 
     return (variables)
 }
 
-output_bridge <- function(varsets, variables) {
-    TYPE_FIXES <- setDT(tribble(
-        ~varset, ~field_name, ~field_type,
-        'consultant', 'sexe', 'text'
-    ))
+read_dictionaries <- function(filename, select, encoding = 'UTF-8') {
+    dictionaries <- fread(filename, encoding = encoding)
+    dictionaries <- dictionaries[dico_name %in% select,]
 
-    variables <- data.table(variables)
-    variables[TYPE_FIXES, field_type := i.field_type, on = c('varset', 'field_name')]
+    return (dictionaries)
+}
 
+output_bridge <- function(variables, dictionaries) {
+    cat('    const DictInfo = {\n')
+    for (name in unique(dictionaries$dico_name)) {
+        dict <- dictionaries[dictionaries$dico_name == name,]
+
+        cat(str_interp('        ${name}: {'))
+        for (i in 1:nrow(dict)) {
+            escaped_code <- gsub('\'', '\\\'', dict[i,]$code, fixed = TRUE)
+            escaped_label <- gsub('\'', '\\\'', dict[i,]$label, fixed = TRUE)
+
+            if (grepl('^[0-9]+$', escaped_code)) {
+                cat(str_interp(' ${escaped_code}: \'${escaped_label}\','))
+            } else {
+                cat(str_interp(' \'${escaped_code}\': \'${escaped_label}\','))
+            }
+        }
+        cat(str_interp(' },\n'))
+    }
+    cat('    };\n\n')
+
+    cat('    const VarInfo = {\n')
     for (i in 1:nrow(variables)) {
         var <- variables[i,]
 
@@ -73,20 +92,21 @@ output_bridge <- function(varsets, variables) {
         js_name <- paste(var$varset, sub('.', '_', var$field_name, fixed = TRUE), sep = '_')
 
         if (var$field_type %in% c('text', 'text_multiline', 'date')) {
-            cat(str_interp('            ${js_name}: row[\'${csv_name}\'] || null,\n'))
+            cat(str_interp('        ${js_name}: { kind: \'text\' },\n'))
         } else if (var$field_type %in% c('radio', 'list')) {
-            cat(str_interp('            ${js_name}: translateSimpleEnum(row[\'${csv_name}\']),\n'))
+            cat(str_interp('        ${js_name}: { kind: \'enum\', dict_name: \'${var$dico}\' },\n'))
         } else if (var$field_type %in% 'checkbox') {
-            cat(str_interp('            ${js_name}: translateMultiEnum(row[\'${csv_name}\']),\n'))
+            cat(str_interp('        ${js_name}: { kind: \'multi\', dict_name: \'${var$dico}\' },\n'))
         } else if (var$field_type %in% 'integer') {
-            cat(str_interp('            ${js_name}: translateInt(row[\'${csv_name}\']),\n'))
+            cat(str_interp('        ${js_name}: { kind: \'integer\' },\n'))
         } else if (var$field_type %in% 'decimal') {
-            cat(str_interp('            ${js_name}: translateFloat(row[\'${csv_name}\']),\n'))
+            cat(str_interp('        ${js_name}: { kind: \'float\' },\n'))
         }
     }
+    cat('    };\n')
 }
 
-output_dataquery <- function(varsets, variables, condition) {
+output_dataquery <- function(variables, varsets, condition) {
     cat('<?xml version="1.0"?>
 <dataquery id="pl_premier_rdv" table_name="{pj}_rdv_data" varset_name="rdv" table_alias="rdv">')
 
@@ -156,21 +176,24 @@ output_dataquery <- function(varsets, variables, condition) {
 
 opt <- parse_args(
     OptionParser(
-        usage = '%prog [options] file',
+        usage = '%prog [options] pages_file dico_file',
         option_list = list(
-            make_option(c("-m", "--mode"), action = "store", default = "bridge",
-                        help = "Output type: bridge (default), dataquery_first_pl")
+            make_option(c('-m', '--mode'), action = "store", default = 'bridge',
+                        help = 'Output type: bridge (default), dataquery_first_pl')
         )
     ),
-    positional_arguments = 1
+    positional_arguments = 2
 )
-filename <- opt$args[1]
+pages_filename <- opt$args[1]
+dictionaries_filename <- opt$args[2]
 
-variables <- read_variables(filename, VARSETS)
+variables <- read_variables(pages_filename, VARSETS)
+dictionaries <- read_dictionaries(dictionaries_filename, na.omit(variables$dico))
+
 if (opt$options$mode == 'bridge') {
-    output_bridge(VARSETS, variables)
+    output_bridge(variables, dictionaries)
 } else if (opt$options$mode == 'dataquery_first_pl') {
-    output_dataquery(VARSETS, variables, condition = 'first_pl')
+    output_dataquery(variables, VARSETS, condition = 'first_pl')
 } else {
-    stop(str_interp('Unknown mode ${opt$mode}'))
+    stop(str_interp('Unknown mode ${opt$options$mode}'))
 }
