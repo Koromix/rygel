@@ -32,6 +32,20 @@ void RenderMainMenu(HeapArray<Simulation> *simulations)
     ImGui::EndMainMenuBar();
 }
 
+static void RenderAgeTableHeaders()
+{
+    ImGui::Columns(7, "Table");
+    ImGui::Separator();
+    ImGui::Text("Cause"); ImGui::NextColumn();
+    ImGui::Text("45-54"); ImGui::NextColumn();
+    ImGui::Text("55-64"); ImGui::NextColumn();
+    ImGui::Text("65-74"); ImGui::NextColumn();
+    ImGui::Text("75-84"); ImGui::NextColumn();
+    ImGui::Text("85-94"); ImGui::NextColumn();
+    ImGui::Text("95+"); ImGui::NextColumn();
+    ImGui::Separator();
+}
+
 bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 {
     Simulation *simulation = &(*simulations)[idx];
@@ -94,16 +108,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
                 }
             }
 
-            ImGui::Columns(7, "Table");
-            ImGui::Separator();
-            ImGui::Text("Cause"); ImGui::NextColumn();
-            ImGui::Text("45-54"); ImGui::NextColumn();
-            ImGui::Text("55-64"); ImGui::NextColumn();
-            ImGui::Text("65-74"); ImGui::NextColumn();
-            ImGui::Text("75-84"); ImGui::NextColumn();
-            ImGui::Text("85-94"); ImGui::NextColumn();
-            ImGui::Text("95+"); ImGui::NextColumn();
-            ImGui::Separator();
+            RenderAgeTableHeaders();
             for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
                 ImGui::TextUnformatted(DeathTypeNames[i]); ImGui::NextColumn();
                 for (Size j = 0; j < 6; j++) {
@@ -134,9 +139,12 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         }
 
         if (ImGui::BeginTabItem("Risk factors")) {
-            float population[3] = {};
-            float smokers[3] = {};
+            float population[6] = {};
+            float smokers[6] = {};
             for (const Human &human: simulation->humans) {
+                if (human.age >= 95) population[5] += 1.0f;
+                if (human.age >= 85) population[4] += 1.0f;
+                if (human.age >= 75) population[3] += 1.0f;
                 if (human.age >= 65) population[2] += 1.0f;
                 if (human.age >= 55) population[1] += 1.0f;
                 if (human.age >= 45) population[0] += 1.0f;
@@ -144,19 +152,16 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
                 if (human.smoking_status || human.smoking_cessation_age) {
                     int age = human.smoking_cessation_age ? human.smoking_cessation_age : human.age;
 
+                    if (age >= 95) smokers[5] += 1.0f;
+                    if (age >= 85) smokers[4] += 1.0f;
+                    if (age >= 75) smokers[3] += 1.0f;
                     if (age >= 65) smokers[2] += 1.0f;
                     if (age >= 55) smokers[1] += 1.0f;
                     if (age >= 45) smokers[0] += 1.0f;
                 }
             }
 
-            ImGui::Columns(4, "Table");
-            ImGui::Separator();
-            ImGui::Text(""); ImGui::NextColumn();
-            ImGui::Text("45-54"); ImGui::NextColumn();
-            ImGui::Text("55-64"); ImGui::NextColumn();
-            ImGui::Text("65-74"); ImGui::NextColumn();
-            ImGui::Separator();
+            RenderAgeTableHeaders();
             ImGui::Text("Smokers"); ImGui::NextColumn();
             for (Size i = 0; i < ARRAY_SIZE(smokers); i++) {
                 if (population[i]) {
