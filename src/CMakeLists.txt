@@ -423,6 +423,7 @@ if(TARGET libgui)
         simPL/simulate.cc
         simPL/simulate.hh
         simPL/tables_cepidc.cc
+        simPL/tables_smoking.cc
         simPL/tables.hh
     )
 
