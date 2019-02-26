@@ -7,10 +7,6 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
-#if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
-    #define SIMPL_ENABLE_HOT_RELOAD
-#endif
-
 extern BlockAllocator frame_alloc;
 
 extern decltype(InitializeHumans) *InitializeHumans_;
