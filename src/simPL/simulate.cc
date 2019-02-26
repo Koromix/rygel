@@ -30,35 +30,26 @@ Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans)
 
 static bool SimulateYear(const Human &human, Human *out_human)
 {
-    if (!human.alive) {
-        *out_human = human;
+    *out_human = human;
+
+    if (!human.alive)
         return false;
-    }
 
-    out_human->rand_evolution = human.rand_evolution;
-    out_human->rand_therapy = human.rand_therapy;
-
-    out_human->age = human.age + 1;
-    out_human->sex = human.sex;
+    out_human->age++;
 
     // Death?
-    {
-        double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);
+    if (double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);
+            p < GetDeathProbability(human.age, human.sex, UINT_MAX)) {
+        out_human->alive = false;
 
-        if (p < GetDeathProbability(human.age, human.sex, UINT_MAX)) {
-            out_human->alive = false;
-
-            // Assign OtherCauses in case the loop fails due to rounding
-            out_human->death_type = DeathType::OtherCauses;
-            for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
-                p -= GetDeathProbability(human.age, human.sex, 1 << i);
-                if (p <= 0.0) {
-                    out_human->death_type = (DeathType)i;
-                    break;
-                }
+        // Assign OtherCauses in case the loop fails due to rounding
+        out_human->death_type = DeathType::OtherCauses;
+        for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
+            p -= GetDeathProbability(human.age, human.sex, 1 << i);
+            if (p <= 0.0) {
+                out_human->death_type = (DeathType)i;
+                break;
             }
-        } else {
-            out_human->alive = true;
         }
     }
 
