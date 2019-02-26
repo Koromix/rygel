@@ -45,14 +45,13 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
         }
 
         Span<const char> directory;
-        Span<char> filename = Fmt(&temp_alloc, "%1%/%2%3.map", output_path, asset.name, compression_ext);
-        SplitStrReverseAny((Span<const char>)filename, PATH_SEPARATORS, &directory);
-        filename.ptr[filename.len - 4] = 0;
+        const char *filename = Fmt(&temp_alloc, "%1%/%2%3", output_path, asset.name, compression_ext).ptr;
+        SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
 
         if (!MakeDirectoryRec(directory))
             return false;
 
-        if (!st.Open(filename.ptr))
+        if (!st.Open(filename))
             return false;
         if (PackAsset(asset.sources, compression_type,
                       [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
@@ -61,9 +60,10 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
             return false;
 
         if (asset.source_map_name) {
-            filename.ptr[filename.len - 4] = '.';
+            const char *map_filename = Fmt(&temp_alloc, "%1%/%2%3", output_path,
+                                           asset.source_map_name, compression_ext).ptr;
 
-            if (!st.Open(filename.ptr))
+            if (!st.Open(map_filename))
                 return false;
             if (PackSourceMap(asset.sources, asset.source_map_type, compression_type,
                               [&](Span<const uint8_t> buf) { st.Write(buf); }) < 0)
