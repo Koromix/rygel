@@ -17,7 +17,7 @@ static void InitializeSimulation(Simulation *out_simulation)
     out_simulation->auto_reset = true;
 #endif
 
-    InitializeConfig_(20000, 0, &out_simulation->config);
+    InitializeConfig_(&out_simulation->config);
 }
 
 void RenderMainMenu(HeapArray<Simulation> *simulations)
@@ -46,8 +46,9 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
     ImGui::Columns(1);
 
     if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputInt("Count", &simulation->config.count);
+        ImGui::InputInt("Count", &simulation->config.count, 10, 1000);
         ImGui::InputInt("Seed", &simulation->config.seed);
+        ImGui::InputDouble("Discount rate", &simulation->config.discount_rate, 0.01, 0.05, "%.2f");
 
         if (ImGui::Button("Start")) {
             simulation->Reset();

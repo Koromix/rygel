@@ -8,10 +8,11 @@
 #include "tables.hh"
 #include "../wrappers/pcg.hh"
 
-void InitializeConfig(int count, int seed, SimulationConfig *out_config)
+void InitializeConfig(SimulationConfig *out_config)
 {
-    out_config->count = count;
-    out_config->seed = seed;
+    out_config->count = 20000;
+    out_config->seed = 0;
+    out_config->discount_rate = 0.04;
 }
 
 static void InitializeHuman(const SimulationConfig &config, Size idx, Human *out_human)
@@ -38,13 +39,13 @@ Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_huma
     return config.count;
 }
 
-static bool SimulateYear(const SimulationConfig &, const Human &human, Human *out_human)
+static bool SimulateYear(const SimulationConfig &config, const Human &human, Human *out_human)
 {
     *out_human = human;
 
+    out_human->iteration++;
     if (!human.alive)
         return false;
-
     out_human->age++;
 
     // Smoking
@@ -85,7 +86,12 @@ static bool SimulateYear(const SimulationConfig &, const Human &human, Human *ou
     }
 
     // Economics
-    out_human->utility += ComputeUtility(human);
+    {
+        double discount_factor = std::pow(1.0 - config.discount_rate, human.iteration);
+
+        out_human->utility += ComputeUtility(human) * discount_factor;
+        out_human->cost += 0.0 * discount_factor;
+    }
 
     return true;
 }

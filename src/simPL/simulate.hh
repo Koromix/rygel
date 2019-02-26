@@ -31,11 +31,13 @@ struct SimulationConfig {
     // User parameters
     int count;
     int seed;
+    double discount_rate;
 };
 
 struct Human {
     pcg32_random_t rand_evolution;
     pcg32_random_t rand_therapy;
+    int iteration;
 
     int age;
     Sex sex;
@@ -68,7 +70,7 @@ struct Human {
     double cost;
 };
 
-extern "C" void InitializeConfig(int count, int seed, SimulationConfig *out_config);
+extern "C" void InitializeConfig(SimulationConfig *out_config);
 
 extern "C" Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_humans);
 extern "C" Size RunSimulationStep(const SimulationConfig &config, Span<const Human> humans,
