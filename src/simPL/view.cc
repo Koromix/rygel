@@ -132,6 +132,47 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("Risk factors")) {
+            float population[3] = {};
+            float smokers[3] = {};
+            for (const Human &human: simulation->humans) {
+                if (human.age >= 65) population[2] += 1.0f;
+                if (human.age >= 55) population[1] += 1.0f;
+                if (human.age >= 45) population[0] += 1.0f;
+
+                if (human.smoking_status || human.smoking_cessation_age) {
+                    int age = human.smoking_cessation_age ? human.smoking_cessation_age : human.age;
+
+                    if (age >= 65) smokers[2] += 1.0f;
+                    if (age >= 55) smokers[1] += 1.0f;
+                    if (age >= 45) smokers[0] += 1.0f;
+                }
+            }
+
+            ImGui::Columns(4, "Table");
+            ImGui::Separator();
+            ImGui::Text(""); ImGui::NextColumn();
+            ImGui::Text("45-54"); ImGui::NextColumn();
+            ImGui::Text("55-64"); ImGui::NextColumn();
+            ImGui::Text("65-74"); ImGui::NextColumn();
+            ImGui::Separator();
+            ImGui::Text("Smokers"); ImGui::NextColumn();
+            for (Size i = 0; i < ARRAY_SIZE(smokers); i++) {
+                if (population[i]) {
+                    float proportion = (smokers[i] / population[i]) * 100.0f;
+                    const char *str = Fmt(&frame_alloc, "%1 (%2%%)",
+                                          smokers[i], FmtDouble(proportion, 1)).ptr;
+                    ImGui::TextUnformatted(str); ImGui::NextColumn();
+                } else {
+                    ImGui::Text("-"); ImGui::NextColumn();
+                }
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 

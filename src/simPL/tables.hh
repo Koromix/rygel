@@ -7,4 +7,7 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+double GetSmokingPrevalence(int age, Sex sex);
+double GetSmokingStopTrialProbability(int age);
+
 double GetDeathProbability(int age, Sex sex, unsigned int flags);
