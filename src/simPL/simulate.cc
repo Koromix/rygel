@@ -7,10 +7,16 @@
 #include "tables.hh"
 #include "../wrappers/pcg.hh"
 
-static void InitializeHuman(int seed, Size idx, Human *out_human)
+void InitializeConfig(int count, int seed, SimulationConfig *out_config)
 {
-    pcg32_srandom_r(&out_human->rand_evolution, seed, idx);
-    pcg32_srandom_r(&out_human->rand_therapy, seed, idx);
+    out_config->count = count;
+    out_config->seed = seed;
+}
+
+static void InitializeHuman(const SimulationConfig &config, Size idx, Human *out_human)
+{
+    pcg32_srandom_r(&out_human->rand_evolution, config.seed, idx);
+    pcg32_srandom_r(&out_human->rand_therapy, config.seed, idx);
 
     out_human->alive = true;
 
@@ -18,17 +24,17 @@ static void InitializeHuman(int seed, Size idx, Human *out_human)
     out_human->sex = pcg_RandomBool(&out_human->rand_evolution, 0.5) ? Sex::Male : Sex::Female;
 }
 
-Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans)
+Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_humans)
 {
-    for (Size i = 0; i < count; i++) {
+    for (Size i = 0; i < config.count; i++) {
         Human *new_human = out_humans->AppendDefault();
-        InitializeHuman(seed, i, new_human);
+        InitializeHuman(config, i, new_human);
     }
 
-    return count;
+    return config.count;
 }
 
-static bool SimulateYear(const Human &human, Human *out_human)
+static bool SimulateYear(const SimulationConfig &, const Human &human, Human *out_human)
 {
     *out_human = human;
 
@@ -56,14 +62,15 @@ static bool SimulateYear(const Human &human, Human *out_human)
     return true;
 }
 
-Size RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans)
+Size RunSimulationStep(const SimulationConfig &config, Span<const Human> humans,
+                       HeapArray<Human> *out_humans)
 {
     Size alive_count = 0;
 
     // Loop with copying, because we want to support overwriting a human
-    for (const Human human: humans) {
+    for (Human human: humans) {
         Human *new_human = out_humans->AppendDefault();
-        alive_count += SimulateYear(human, new_human);
+        alive_count += SimulateYear(config, human, new_human);
     }
 
     // Return alive count (everyone for now)

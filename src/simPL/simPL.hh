@@ -9,19 +9,21 @@
 
 extern BlockAllocator frame_alloc;
 
+extern decltype(InitializeConfig) *InitializeConfig_;
 extern decltype(InitializeHumans) *InitializeHumans_;
 extern decltype(RunSimulationStep) *RunSimulationStep_;
 
 struct Simulation {
     char name[32];
 
-    // Parameters
-    int count = 20000;
-    int seed;
+    // Controls
     bool pause;
 #ifdef SIMPL_ENABLE_HOT_RELOAD
     bool auto_reset;
 #endif
+
+    // Configuration
+    SimulationConfig config;
 
     // Core data
     HeapArray<Human> humans;

@@ -27,6 +27,12 @@ static const char *const DeathTypeNames[] = {
     "OtherCauses"
 };
 
+struct SimulationConfig {
+    // User parameters
+    int count;
+    int seed;
+};
+
 struct Human {
     pcg32_random_t rand_evolution;
     pcg32_random_t rand_therapy;
@@ -58,5 +64,8 @@ struct Human {
     DeathType death_type;
 };
 
-extern "C" Size InitializeHumans(Size count, int seed, HeapArray<Human> *out_humans);
-extern "C" Size RunSimulationStep(Span<const Human> humans, HeapArray<Human> *out_humans);
+extern "C" void InitializeConfig(int count, int seed, SimulationConfig *out_config);
+
+extern "C" Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_humans);
+extern "C" Size RunSimulationStep(const SimulationConfig &config, Span<const Human> humans,
+                                  HeapArray<Human> *out_humans);

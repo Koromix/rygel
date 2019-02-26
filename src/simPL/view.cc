@@ -16,6 +16,8 @@ static void InitializeSimulation(Simulation *out_simulation)
 #ifdef SIMPL_ENABLE_HOT_RELOAD
     out_simulation->auto_reset = true;
 #endif
+
+    InitializeConfig_(20000, 0, &out_simulation->config);
 }
 
 void RenderMainMenu(HeapArray<Simulation> *simulations)
@@ -44,8 +46,8 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
     ImGui::Columns(1);
 
     if (ImGui::CollapsingHeader("Settings", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputInt("Count", &simulation->count);
-        ImGui::InputInt("Seed", &simulation->seed);
+        ImGui::InputInt("Count", &simulation->config.count);
+        ImGui::InputInt("Seed", &simulation->config.seed);
 
         if (ImGui::Button("Start")) {
             simulation->Reset();
@@ -67,8 +69,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             simulation = &(*simulations)[idx]; // May have been reallocated
 
             InitializeSimulation(copy);
-            copy->count = simulation->count;
-            copy->seed = simulation->seed;
+            copy->config = simulation->config;
         }
     }
 
