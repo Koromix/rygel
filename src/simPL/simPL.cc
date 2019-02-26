@@ -19,6 +19,7 @@
 
 extern const pack_Asset *const pack_asset_Roboto_Medium_ttf;
 
+decltype(InitializeConfig) *InitializeConfig_;
 decltype(InitializeHumans) *InitializeHumans_;
 decltype(RunSimulationStep) *RunSimulationStep_;
 
@@ -95,9 +96,10 @@ static LoadStatus LoadSimulationModule(const char *filename)
     };
 #endif
 
+    InitializeConfig_ = (decltype(InitializeConfig_))find_symbol("InitializeConfig");
     InitializeHumans_ = (decltype(InitializeHumans_))find_symbol("InitializeHumans");
     RunSimulationStep_ = (decltype(RunSimulationStep_))find_symbol("RunSimulationStep");
-    DebugAssert(InitializeHumans_ && RunSimulationStep_);
+    DebugAssert(InitializeConfig_ && InitializeHumans_ && RunSimulationStep_);
 
     return LoadStatus::Loaded;
 }
@@ -107,7 +109,7 @@ static LoadStatus LoadSimulationModule(const char *filename)
 void Simulation::Reset()
 {
     humans.Clear();
-    alive_count = InitializeHumans_(count, seed, &humans);
+    alive_count = InitializeHumans_(config, &humans);
     iteration = 0;
 }
 
@@ -125,6 +127,7 @@ int main(int, char **)
     if (LoadSimulationModule(module_filename) == LoadStatus::Error)
         return 1;
 #else
+    InitializeConfig_ = InitializeConfig;
     InitializeHumans_ = InitializeHumans;
     RunSimulationStep_ = RunSimulationStep;
 #endif
@@ -160,8 +163,9 @@ int main(int, char **)
 
             if (RenderSimulationWindow(&simulations, i)) {
                 if (simulation->alive_count && !simulation->pause) {
-                    simulation->alive_count = RunSimulationStep_(simulation->humans.PrepareRewrite(),
-                                                                 &simulation->humans);
+                    simulation->alive_count =
+                        RunSimulationStep_(simulation->config, simulation->humans.PrepareRewrite(),
+                                           &simulation->humans);
                     simulation->iteration++;
                 }
             } else {
@@ -189,6 +193,8 @@ int main(int, char **)
         if (status == LoadStatus::Loaded) {
             for (Simulation &simulation: simulations) {
                 if (simulation.auto_reset) {
+                    InitializeConfig_(simulation.config.count, simulation.config.seed,
+                                      &simulation.config);
                     simulation.Reset();
                 }
             }
