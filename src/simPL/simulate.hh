@@ -42,12 +42,18 @@ struct Human {
     double systolic_pressure_drugs = 0.0;
     double SystolicPressure() const { return 0.0; }
 
-    // Other stubs
+    // Other risk factor stubs
     bool diabetes_status;
     double BMI() const { return 0.0; }
     double TotalCholesterol() const { return 0.0; }
     double HDL() const { return 0.0; }
 
+    // Diseases
+    int cardiac_ischemia_age;
+    int stroke_age;
+    int lung_cancer_age;
+
+    // Death
     bool alive;
     DeathType death_type;
 };
