@@ -193,8 +193,6 @@ int main(int, char **)
         if (status == LoadStatus::Loaded) {
             for (Simulation &simulation: simulations) {
                 if (simulation.auto_reset) {
-                    InitializeConfig_(simulation.config.count, simulation.config.seed,
-                                      &simulation.config);
                     simulation.Reset();
                 }
             }
