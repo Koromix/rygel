@@ -70,8 +70,8 @@ let inPL = (function() {
     }
 
     this.openTab = function(idx) {
-        let tabs = query('#inpl_menu').querySelectorAll('button');
-        let pages = document.body.querySelectorAll('.inpl_page');
+        let tabs = query('#inpl_menu').queryAll('button');
+        let pages = document.body.queryAll('.inpl_page');
 
         tabs.removeClass('active');
         tabs[idx].addClass('active');
@@ -80,10 +80,10 @@ let inPL = (function() {
     }
 
     this.importAndRefresh = function() {
-        let file = document.querySelector('#inpl_menu_file').files[0];
-        let encoding = document.querySelector('#inpl_menu_encoding').value;
+        let file = query('#inpl_menu_file').files[0];
+        let encoding = query('#inpl_menu_encoding').value;
 
-        let stat = document.querySelector('#inpl_menu_stat');
+        let stat = query('#inpl_menu_stat');
         refresh_tabs = 0xFFFFFFFF;
 
         rows.length = 0;

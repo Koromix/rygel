@@ -46,7 +46,7 @@ let report = (function() {
 
     function generateDocument(row)
     {
-        let file = document.querySelector('#inpl_option_template').files[0];
+        let file = query('#inpl_option_template').files[0];
 
         if (file && row) {
             let reader = new FileReader();
