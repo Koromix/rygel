@@ -51,6 +51,22 @@ let report = (function() {
         if (file && row) {
             let reader = new FileReader();
 
+            // Shortcut functions
+            function label(value, var_name)
+            {
+                if (value instanceof Object && !Array.isArray(value))
+                    value = value[var_name];
+
+                if (value !== null) {
+                    let var_info = bridge.getVarInfo(var_name);
+                    let dict = bridge.getDictInfo(var_info.dict_name)
+
+                    return dict[value];
+                } else {
+                    return null;
+                }
+            }
+
             reader.onload = function() {
                 let zip = new JSZip(reader.result);
                 let doc = new Docxtemplater().loadZip(zip);
