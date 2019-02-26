@@ -415,6 +415,8 @@ if(TARGET libgui)
 
     set(SIMPL_MODULE_SRC
         wrappers/pcg.hh
+        simPL/economics.cc
+        simPL/economics.hh
         simPL/predict_cv.cc
         simPL/predict_cv_qrisk3.cc
         simPL/predict.hh
