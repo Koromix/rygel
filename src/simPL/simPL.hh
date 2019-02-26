@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "simulation.hh"
+#include "simulate.hh"
 
 #if !defined(NDEBUG) && !defined(__EMSCRIPTEN__)
     #define SIMPL_ENABLE_HOT_RELOAD

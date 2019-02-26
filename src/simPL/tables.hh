@@ -5,6 +5,6 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "simulation.hh"
+#include "simulate.hh"
 
 double GetDeathProbability(int age, Sex sex, unsigned int flags);

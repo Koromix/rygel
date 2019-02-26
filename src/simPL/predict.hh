@@ -6,4 +6,4 @@
 
 #include "../libcc/libcc.hh"
 
-double ComputeScoreProbability(const Human &human);
+double ComputeHeartScore(const Human &human);

@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "simulation.hh"
+#include "simulate.hh"
 #include "tables.hh"
 
 double GetDeathProbability(int age, Sex sex, unsigned int flags)
