@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "simulation.hh"
+#include "simulate.hh"
 #include "predict.hh"
 
 static double ComputeScore10(const Human &human)
@@ -466,7 +466,7 @@ static double ComputeScore10(const Human &human)
     return NAN;
 }
 
-double ComputeScoreProbability(const Human &human)
+double ComputeHeartScore(const Human &human)
 {
     double score10 = ComputeScore10(human);
     // TODO: Check this is correct!

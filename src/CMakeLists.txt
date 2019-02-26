@@ -415,11 +415,11 @@ if(TARGET libgui)
 
     set(SIMPL_MODULE_SRC
         wrappers/pcg.hh
-        simPL/predict.cc
+        simPL/predict_score.cc
         simPL/predict.hh
-        simPL/simulation.cc
-        simPL/simulation.hh
-        simPL/tables.cc
+        simPL/simulate.cc
+        simPL/simulate.hh
+        simPL/tables_cepidc.cc
         simPL/tables.hh
     )
 
