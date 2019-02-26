@@ -442,6 +442,9 @@ if(TARGET libgui)
             COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:simPL_module>
                                              "$<TARGET_FILE_DIR:simPL_module>/simPL${CMAKE_SHARED_LIBRARY_SUFFIX}"
         )
+
+        target_compile_definitions(simPL PRIVATE SIMPL_ENABLE_HOT_RELOAD)
+        target_compile_definitions(simPL_module PRIVATE SIMPL_ENABLE_HOT_RELOAD)
     else()
         target_sources(simPL PRIVATE ${SIMPL_MODULE_SRC})
         target_link_libraries(simPL PRIVATE pcg)
