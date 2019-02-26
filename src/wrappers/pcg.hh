@@ -27,7 +27,7 @@ public:
 static inline bool pcg_RandomBool(pcg32_random_t *rand, double probability)
 {
     pcg_Generator generator(rand);
-    return std::uniform_real_distribution(0.0, 1.0)(generator) >= probability;
+    return std::uniform_real_distribution(0.0, 1.0)(generator) < probability;
 }
 
 static inline int pcg_RandomUniform(pcg32_random_t *rand, int min, int max)
