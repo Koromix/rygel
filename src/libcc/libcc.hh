@@ -144,6 +144,16 @@ enum class Endianness {
     #error Compiler not supported
 #endif
 
+#if __cplusplus >= 201703L
+    #define FALLTHROUGH [[fallthrough]]
+#elif defined(__clang__)
+    #define FALLTHROUGH [[clang::fallthrough]]
+#elif defined(__GNUC__)
+    #define FALLTHROUGH [[gnu::fallthrough]]
+#else
+    #define FALLTHROUGH
+#endif
+
 extern "C" void NORETURN AssertFail(const char *cond);
 
 #define Assert(Cond) \

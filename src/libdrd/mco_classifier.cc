@@ -733,7 +733,7 @@ static bool CheckAggregateErrors(const mco_PreparedStay &prep,
                 if (UNLIKELY(mono_stay.entry.mode == '6' && mono_stay.entry.origin == 'R')) {
                     valid &= SetError(out_errors, 25);
                 }
-            } // fallthrough
+            } FALLTHROUGH;
             case '7': {
                 switch (mono_stay.entry.origin) {
                     case '1':

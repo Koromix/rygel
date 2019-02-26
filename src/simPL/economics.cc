@@ -31,10 +31,10 @@ double ComputeUtility(const Human &human)
     }
 
     switch (diseases) {
-        default: utility -= 0.0528; // fallthrough
-        case 3: utility -= 0.0415; // fallthrough
-        case 2: utility -= 0.0203; // fallthrough
-        case 1: // fallthrough
+        default: utility -= 0.0528; FALLTHROUGH;
+        case 3: utility -= 0.0415; FALLTHROUGH;
+        case 2: utility -= 0.0203; FALLTHROUGH;
+        case 1:
         case 0: break;
     }
 
