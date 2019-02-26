@@ -34,11 +34,19 @@ struct Human {
     int age;
     Sex sex;
 
+    // Smoking
     bool smoking_status;
     int smoking_cessation_age;
 
+    // Systolic blood pressure
+    double systolic_pressure_drugs = 0.0;
     double SystolicPressure() const { return 0.0; }
+
+    // Other stubs
+    bool diabetes_status;
+    double BMI() const { return 0.0; }
     double TotalCholesterol() const { return 0.0; }
+    double HDL() const { return 0.0; }
 
     bool alive;
     DeathType death_type;

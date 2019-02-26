@@ -6,6 +6,190 @@
 #include "simulate.hh"
 #include "predict.hh"
 
+// Implementation is in predict_cv_qrisk3.cc for license reasons (LGPL3)
+double ComputeQRisk3Male10(int age, bool AF, bool atypicalantipsy, bool corticosteroids,
+                           bool impotence2, bool migraine, bool ra, bool renal, bool semi,
+                           bool sle, bool treatedhyp, bool type1, bool type2, double bmi,
+                           int ethrisk, int fh_cvd, double rati, double sbp, double sbps5,
+                           int smoke_cat, int surv, double town);
+double ComputeQRisk3Female10(int age, bool AF, bool atypicalantipsy, bool corticosteroids,
+                             bool migraine, bool ra, bool renal, bool semi, bool sle,
+                             bool treatedhyp, bool type1, bool type2, double bmi, int ethrisk,
+                             int fh_cvd, double rati, double sbp, double sbps5, int smoke_cat,
+                             int surv, double town);
+
+static double ComputeFramingham10(const Human &human)
+{
+    int points = 0;
+
+    switch (human.sex) {
+        case Sex::Male: {
+            if (human.age < 35) points += 0; // Age >= 30
+            else if (human.age < 40) points += 2;
+            else if (human.age < 45) points += 5;
+            else if (human.age < 50) points += 6;
+            else if (human.age < 55) points += 8;
+            else if (human.age < 60) points += 10;
+            else if (human.age < 65) points += 11;
+            else if (human.age < 70) points += 12;
+            else points += 14;// Age < 75
+        } break;
+
+        case Sex::Female: {
+            if (human.age < 35) points += 0; // Age >= 30
+            else if (human.age < 40) points += 2;
+            else if (human.age < 45) points += 4;
+            else if (human.age < 50) points += 5;
+            else if (human.age < 55) points += 7;
+            else if (human.age < 60) points += 8;
+            else if (human.age < 65) points += 9;
+            else if (human.age < 70) points += 10;
+            else points += 11;// Age < 75
+        } break;
+    }
+
+    if (human.BMI() < 25) points += 0; // BMI >= 15
+    else if (human.BMI() < 30) points += 1;
+    else points += 2; // BMI < 50
+
+    if (human.HDL() >= 60) points += -2; // HDL < 100
+    else if (human.HDL() >= 50) points += -1;
+    else if (human.HDL() >= 45) points += 0;
+    else if (human.HDL() >= 35) points += 1;
+    else points += 2; // HDL >= 10
+
+    switch (human.sex) {
+        case Sex::Male: {
+            if (human.TotalCholesterol() < 160) points += 0; // TotalCholesterol >= 100
+            else if (human.TotalCholesterol() < 200) points += 1;
+            else if (human.TotalCholesterol() < 240) points += 2;
+            else if (human.TotalCholesterol() < 280) points += 3;
+            else points += 4; // TotalCholesterol < 405
+        } break;
+
+        case Sex::Female: {
+            if (human.TotalCholesterol() < 160) points += 0; // TotalCholesterol >= 100
+            else if (human.TotalCholesterol() < 200) points += 1;
+            else if (human.TotalCholesterol() < 240) points += 3;
+            else if (human.TotalCholesterol() < 280) points += 4;
+            else points += 5; // TotalCholesterol < 405
+        } break;
+    }
+
+    switch (human.sex) {
+        case Sex::Male: {
+            if (!human.systolic_pressure_drugs) {
+                if (human.SystolicPressure() < 120) points += -2; // SystolicPressure >= 90
+                else if (human.SystolicPressure() < 130) points += 0;
+                else if (human.SystolicPressure() < 140) points += 1;
+                else if (human.SystolicPressure() < 160) points += 2;
+                else points += 3; // SystolicPressure < 200
+            } else {
+                if (human.SystolicPressure() < 120) points += 0; // SystolicPressure >= 90
+                else if (human.SystolicPressure() < 130) points += 2;
+                else if (human.SystolicPressure() < 140) points += 3;
+                else if (human.SystolicPressure() < 160) points += 4;
+                else points += 5; // SystolicPressure < 200
+            }
+        } break;
+
+        case Sex::Female: {
+            if (!human.systolic_pressure_drugs) {
+                if (human.SystolicPressure() < 120) points += -3; // SystolicPressure >= 90
+                else if (human.SystolicPressure() < 130) points += 0;
+                else if (human.SystolicPressure() < 140) points += 1;
+                else if (human.SystolicPressure() < 150) points += 2;
+                else if (human.SystolicPressure() < 160) points += 4;
+                else points += 5; // SystolicPressure < 200
+            } else {
+                if (human.SystolicPressure() < 120) points += -1; // SystolicPressure >= 90
+                else if (human.SystolicPressure() < 130) points += 2;
+                else if (human.SystolicPressure() < 140) points += 3;
+                else if (human.SystolicPressure() < 150) points += 5;
+                else if (human.SystolicPressure() < 160) points += 6;
+                else points += 7; // SystolicPressure < 200
+            }
+        } break;
+    }
+
+    switch (human.sex) {
+        case Sex::Male: { points += 4 * human.smoking_status; } break;
+        case Sex::Female: { points += 3 * human.smoking_status; } break;
+    }
+
+    switch (human.sex) {
+        case Sex::Male: { points += 3 * human.diabetes_status; } break;
+        case Sex::Female: { points += 4 * human.diabetes_status; } break;
+    }
+
+    switch(human.sex) {
+        case Sex::Male: {
+            switch (points) {
+                case -8: return 0.0;
+                case -7: return 0.0;
+                case -6: return 0.0;
+                case -5: return 0.0;
+                case -4: return 1.1;
+                case -3: return 1.4;
+                case -2: return 1.6;
+                case -1: return 1.9;
+                case 0: return 2.3;
+                case 1: return 2.8;
+                case 2: return 3.3;
+                case 3: return 4;
+                case 4: return 4.7;
+                case 5: return 5.6;
+                case 6: return 6.7;
+                case 7: return 8;
+                case 8: return 9.5;
+                case 9: return 11.2;
+                case 10: return 13.3;
+                case 11: return 15.7;
+                case 12: return 18.;
+                case 13: return 21.7;
+                case 14: return 25.4;
+                case 15: return 29.6;
+                default: return 30.0; // TODO: Use extrapolation for extra values (up to 38)?
+            }
+        } break;
+
+        case Sex::Female: {
+            switch (points) {
+                case -6: return 0.0;
+                case -5: return 0.0;
+                case -4: return 0.0;
+                case -3: return 0.0;
+                case -2: return 0.0;
+                case -1: return 1.0;
+                case 0: return 1.1;
+                case 1: return 1.5;
+                case 2: return 1.8;
+                case 3: return 2.1;
+                case 4: return 2.5;
+                case 5: return 2.9;
+                case 6: return 3.4;
+                case 7: return 3.9;
+                case 8: return 4.6;
+                case 9: return 5.4;
+                case 10: return 6.3;
+                case 11: return 7.4;
+                case 12: return 8.6;
+                case 13: return 10.0;
+                case 14: return 11.6;
+                case 15: return 13.5;
+                case 16: return 15.6;
+                case 17: return 18.1;
+                case 18: return 20.9;
+                case 19: return 24.0;
+                case 20: return 27.5;
+                default: return 30.0; // TODO: Use extrapolation for extra values (up to 38)?
+            }
+        } break;
+    }
+
+    Assert(false);
+}
+
 static double ComputeScore10(const Human &human)
 {
     int8_t age_cat;
@@ -466,11 +650,49 @@ static double ComputeScore10(const Human &human)
     return NAN;
 }
 
-double ComputeHeartScore(const Human &human)
+// FIXME: This is probably a broken way to annualize risk scores
+static double AnnualizePrediction(double score, int years)
+{
+    return 1.0 - pow(1.0 - score, 1.0 / (double)years);
+}
+
+double PredictFraminghamScore(const Human &human)
+{
+    double score10 = ComputeFramingham10(human);
+    return AnnualizePrediction(score10, 10);
+}
+
+double PredictHeartScore(const Human &human)
 {
     double score10 = ComputeScore10(human);
-    // TODO: Check this is correct!
-    double score = 1.0 - pow(1.0 - score10, 0.1);
+    return AnnualizePrediction(score10, 10);
+}
 
-    return score;
+// FIXME: Use population values for unknown variables?
+double PredictQRisk3(const Human &human)
+{
+    int smoke_cat;
+    if (human.smoking_status) smoke_cat = 3;
+    else if (human.smoking_cessation_age) smoke_cat = 1;
+    else smoke_cat = 0;
+
+    double score10 = NAN;
+    switch (human.sex) {
+        case Sex::Male: {
+            score10 = ComputeQRisk3Male10(human.age, false, false, false, false, false, false, false,
+                                          false, false, false, false, human.diabetes_status, human.BMI(),
+                                          0, false, 4.300998687744141, human.SystolicPressure(),
+                                          8.756621360778809, smoke_cat, 0, 0.526304900646210);
+        } break;
+
+        case Sex::Female: {
+            score10 = ComputeQRisk3Female10(human.age, false, false, false, false, false, false,
+                                            false, false, false, false, false /* d2 */, 30.0 /* bmi */,
+                                            0, false, 3.476326465606690, 140.0 /* SBP */,
+                                            9.002537727355957, smoke_cat, 0, 0.392308831214905);
+        } break;
+    }
+    DebugAssert(!std::isnan(score10));
+
+    return AnnualizePrediction(score10, 10);
 }
