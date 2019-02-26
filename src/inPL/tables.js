@@ -53,11 +53,11 @@ let tables = (function() {
     }
 
     this.refreshSummary = function(rows) {
-        let sex_filter = document.querySelector('#inpl_option_sex').value;
-        let rows_type = document.querySelector('#inpl_option_rows').value;
+        let sex_filter = query('#inpl_option_sex').value;
+        let rows_type = query('#inpl_option_rows').value;
         let columns = ['COG', 'DA', 'SOM', 'NUT', 'EMS'];
 
-        let summary = document.querySelector('#inpl_summary');
+        let summary = query('#inpl_summary');
 
         if (rows.length) {
             let handlers = ScreeningHandlers.filter(handler => columns.includes(handler.abbrev));
@@ -131,11 +131,11 @@ let tables = (function() {
                 ),
                 html('tbody')
             );
-            let thead = summary.querySelector('thead');
-            let tbody = summary.querySelector('tbody');
+            let thead = summary.query('thead');
+            let tbody = summary.query('tbody');
 
             // We need 4 columns for each test
-            thead.querySelectorAll('th').forEach(th => {
+            thead.queryAll('th').forEach(th => {
                 th.setAttribute('colspan', 4 * (parseInt(th.getAttribute('colspan')) || 1));
             });
 
@@ -161,7 +161,7 @@ let tables = (function() {
     }
 
     this.refreshList = function(rows) {
-        let list = document.querySelector('#inpl_list');
+        let list = query('#inpl_list');
 
         if (rows.length) {
             function resultCell(result)
@@ -188,7 +188,7 @@ let tables = (function() {
                 ),
                 html('tbody')
             );
-            let tbody = list.querySelector('tbody');
+            let tbody = list.query('tbody');
 
             for (let row of rows) {
                 let tr = html('tr',
