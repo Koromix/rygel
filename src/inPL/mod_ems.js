@@ -19,7 +19,7 @@ let ems = (function() {
                 continue;
 
             let intensity = data[`ems_act${i}_intensite`];
-            let duration = data[`ems_act${i}_duree`];
+            let duration = data[`ems_act${i}_temps`];
             let frequency = data[`ems_act${i}_freq`];
 
             if (intensity == 3 && duration >= 20) {
