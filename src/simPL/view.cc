@@ -173,6 +173,20 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             ImGui::EndTabItem();
         }
 
+        if (ImGui::BeginTabItem("Economics")) {
+            double utility = 0.0;
+            double cost = 0.0;
+            for (const Human &human: simulation->humans) {
+                utility += human.utility;
+                cost += human.cost;
+            }
+
+            ImGui::TextUnformatted(Fmt(&frame_alloc, "QALY: %1", FmtDouble(utility, 1)).ptr);
+            ImGui::TextUnformatted(Fmt(&frame_alloc, "Cost: %1", FmtDouble(cost, 1)).ptr);
+
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 

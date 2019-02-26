@@ -62,6 +62,10 @@ struct Human {
     // Death
     bool alive;
     DeathType death_type;
+
+    // Economics
+    double utility;
+    double cost;
 };
 
 extern "C" void InitializeConfig(int count, int seed, SimulationConfig *out_config);

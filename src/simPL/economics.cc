@@ -16,7 +16,7 @@ double ComputeUtility(const Human &human)
     int diseases = 0;
 
     // For now, I got the data from https://doi.org/10.1371/journal.pmed.1002517
-    // (so it's english data)
+    // (so it's NHS data)
     if (human.cardiac_ischemia_age) {
         utility -= 0.0627;
         diseases++;
