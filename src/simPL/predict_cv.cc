@@ -129,27 +129,27 @@ static double ComputeFramingham10(const Human &human)
                 case -7: return 0.0;
                 case -6: return 0.0;
                 case -5: return 0.0;
-                case -4: return 1.1;
-                case -3: return 1.4;
-                case -2: return 1.6;
-                case -1: return 1.9;
-                case 0: return 2.3;
-                case 1: return 2.8;
-                case 2: return 3.3;
-                case 3: return 4;
-                case 4: return 4.7;
-                case 5: return 5.6;
-                case 6: return 6.7;
-                case 7: return 8;
-                case 8: return 9.5;
-                case 9: return 11.2;
-                case 10: return 13.3;
-                case 11: return 15.7;
-                case 12: return 18.;
-                case 13: return 21.7;
-                case 14: return 25.4;
-                case 15: return 29.6;
-                default: return 30.0; // TODO: Use extrapolation for extra values (up to 38)?
+                case -4: return 0.011;
+                case -3: return 0.014;
+                case -2: return 0.016;
+                case -1: return 0.019;
+                case 0: return 0.023;
+                case 1: return 0.028;
+                case 2: return 0.033;
+                case 3: return 0.04;
+                case 4: return 0.047;
+                case 5: return 0.056;
+                case 6: return 0.067;
+                case 7: return 0.08;
+                case 8: return 0.095;
+                case 9: return 0.112;
+                case 10: return 0.133;
+                case 11: return 0.157;
+                case 12: return 0.18;
+                case 13: return 0.217;
+                case 14: return 0.254;
+                case 15: return 0.296;
+                default: return 0.3; // TODO: Use extrapolation for extra values (up to 38)?
             }
         } break;
 
@@ -160,29 +160,29 @@ static double ComputeFramingham10(const Human &human)
                 case -4: return 0.0;
                 case -3: return 0.0;
                 case -2: return 0.0;
-                case -1: return 1.0;
-                case 0: return 1.1;
-                case 1: return 1.5;
-                case 2: return 1.8;
-                case 3: return 2.1;
-                case 4: return 2.5;
-                case 5: return 2.9;
-                case 6: return 3.4;
-                case 7: return 3.9;
-                case 8: return 4.6;
-                case 9: return 5.4;
-                case 10: return 6.3;
-                case 11: return 7.4;
-                case 12: return 8.6;
-                case 13: return 10.0;
-                case 14: return 11.6;
-                case 15: return 13.5;
-                case 16: return 15.6;
-                case 17: return 18.1;
-                case 18: return 20.9;
-                case 19: return 24.0;
-                case 20: return 27.5;
-                default: return 30.0; // TODO: Use extrapolation for extra values (up to 38)?
+                case -1: return 0.01;
+                case 0: return 0.011;
+                case 1: return 0.015;
+                case 2: return 0.018;
+                case 3: return 0.021;
+                case 4: return 0.025;
+                case 5: return 0.029;
+                case 6: return 0.034;
+                case 7: return 0.039;
+                case 8: return 0.046;
+                case 9: return 0.054;
+                case 10: return 0.063;
+                case 11: return 0.074;
+                case 12: return 0.086;
+                case 13: return 0.1;
+                case 14: return 0.116;
+                case 15: return 0.135;
+                case 16: return 0.156;
+                case 17: return 0.181;
+                case 18: return 0.209;
+                case 19: return 0.24;
+                case 20: return 0.275;
+                default: return 0.3; // TODO: Use extrapolation for extra values (up to 38)?
             }
         } break;
     }
