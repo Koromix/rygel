@@ -35,7 +35,7 @@ enum class PredictCvdMode {
     QRisk3,
     HeartScore
 };
-static const char *const PredictCvModeNames[] = {
+static const char *const PredictCvdModeNames[] = {
     "Disabled",
     "Framingham",
     "QRisk3",
