@@ -19,6 +19,7 @@ local({
 GROUPS <- setDT(tribble(
     ~name, ~codes,
     'CardiacIschemia', 'I20 -I25',
+    'Stroke', 'I60 -I69',
     'LungCancer', 'C32 -C34',
     'OtherCauses', NA
 ))
