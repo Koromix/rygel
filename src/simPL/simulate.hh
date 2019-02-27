@@ -39,7 +39,7 @@ static const char *const PredictCvModeNames[] = {
     "Disabled",
     "Framingham",
     "QRisk3",
-    "HeartScore (*)"
+    "HeartScore"
 };
 
 struct SimulationConfig {
