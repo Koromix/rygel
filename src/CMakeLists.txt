@@ -371,6 +371,7 @@ target_assets(goupil_admin
 
 set(INPL_ASSETS
     inPL/inPL.html
+    inPL/inPL_logo.png
     ../lib/papaparse/papaparse.min.js
     ../lib/docxtemplater/jszip.min.js
     ../lib/docxtemplater/docxtemplater.min.js

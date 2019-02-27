@@ -21,6 +21,29 @@ a {
     text-decoration: underline dotted;
 }
 
+@media screen and (min-width: 800px) {
+    #inpl_logo {
+        height: 100px;
+        float: left;
+    }
+    #inpl_menu {
+        position: relative;
+        top: 50px;
+        left: 20px;
+    }
+}
+@media screen and (max-width: 801px) {
+    #inpl_logo {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        height: 26px;
+        padding: 4px;
+    }
+    #inpl_menu { padding-left: 40px; }
+}
+
 .inpl_page:not(.active) { display: none; }
 #inpl_menu {
     overflow: hidden;
@@ -41,7 +64,10 @@ a {
 }
 #inpl_menu button:hover { background-color: #ddd; }
 #inpl_menu button.active { background-color: #ccc; }
-.inpl_page { padding: 1em; }
+.inpl_page {
+    clear: both;
+    padding: 1em;
+}
 @media screen and (max-width: 801px) {
     #inpl_menu {
         margin: 0;
