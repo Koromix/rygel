@@ -36,6 +36,29 @@ double GetDeathProbability(int age, Sex sex, unsigned int flags)
         }
     }
 
+    if (flags & (1 << (int)DeathType::Stroke)) {
+        switch (sex) {
+            case Sex::Male: {
+                if (age < 45) probability += NAN;
+                else if (age < 55) probability += 9.4 / 100000.0;
+                else if (age < 65) probability += 25.9 / 100000.0;
+                else if (age < 75) probability += 62.6 / 100000.0;
+                else if (age < 85) probability += 252.6 / 100000.0;
+                else if (age < 95) probability += 837.5 / 100000.0;
+                else probability += 1947.6 / 100000.0;
+            } break;
+            case Sex::Female: {
+                if (age < 45) probability += NAN;
+                else if (age < 55) probability += 6.5 / 100000.0;
+                else if (age < 65) probability += 12.1 / 100000.0;
+                else if (age < 75) probability += 34.5 / 100000.0;
+                else if (age < 85) probability += 190.8 / 100000.0;
+                else if (age < 95) probability += 808.7 / 100000.0;
+                else probability += 2087.1 / 100000.0;
+            } break;
+        }
+    }
+
     if (flags & (1 << (int)DeathType::LungCancer)) {
         switch (sex) {
             case Sex::Male: {
@@ -63,21 +86,21 @@ double GetDeathProbability(int age, Sex sex, unsigned int flags)
         switch (sex) {
             case Sex::Male: {
                 if (age < 45) probability += NAN;
-                else if (age < 55) probability += 320.3 / 100000.0;
-                else if (age < 65) probability += 733.6 / 100000.0;
-                else if (age < 75) probability += 1444.9 / 100000.0;
-                else if (age < 85) probability += 4035.5 / 100000.0;
-                else if (age < 95) probability += 13007.0 / 100000.0;
-                else probability += 36131.4 / 100000.0;
+                else if (age < 55) probability += 310.9 / 100000.0;
+                else if (age < 65) probability += 707.7 / 100000.0;
+                else if (age < 75) probability += 1382.3 / 100000.0;
+                else if (age < 85) probability += 3782.9 / 100000.0;
+                else if (age < 95) probability += 12169.5 / 100000.0;
+                else probability += 34183.8 / 100000.0;
             } break;
             case Sex::Female: {
                 if (age < 45) probability += NAN;
-                else if (age < 55) probability += 173.5 / 100000.0;
-                else if (age < 65) probability += 355.7 / 100000.0;
-                else if (age < 75) probability += 764.4 / 100000.0;
-                else if (age < 85) probability += 2545.2 / 100000.0;
-                else if (age < 95) probability += 10035.0 / 100000.0;
-                else probability += 32188.1 / 100000.0;
+                else if (age < 55) probability += 167.0 / 100000.0;
+                else if (age < 65) probability += 343.6 / 100000.0;
+                else if (age < 75) probability += 729.9 / 100000.0;
+                else if (age < 85) probability += 2354.4 / 100000.0;
+                else if (age < 95) probability += 9226.3 / 100000.0;
+                else probability += 30101.0 / 100000.0;
             } break;
         }
     }
