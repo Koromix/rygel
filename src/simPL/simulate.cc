@@ -81,7 +81,7 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
             case PredictCvdMode::QRisk3: { treshold = PredictQRisk3(human); } break;
             // FIXME: HeartScore predicts death risk, fix predicting with
             // average mortality rate
-            case PredictCvdMode::HeartScore: { treshold = PredictHeartScore(human); } break;
+            case PredictCvdMode::HeartScore: { treshold = PredictHeartScore(human) / 0.4; } break;
         }
 
         if (pcg_RandomBool(&out_human->rand_evolution, treshold)) {
