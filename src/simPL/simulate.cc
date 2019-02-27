@@ -4,6 +4,7 @@
 
 #include "../libcc/libcc.hh"
 #include "economics.hh"
+#include "predict.hh"
 #include "simulate.hh"
 #include "tables.hh"
 #include "../wrappers/pcg.hh"
@@ -13,6 +14,8 @@ void InitializeConfig(SimulationConfig *out_config)
     out_config->count = 20000;
     out_config->seed = 0;
     out_config->discount_rate = 0.04;
+
+    out_config->predict_cvd = PredictCvdMode::Disabled;
 }
 
 static void InitializeHuman(const SimulationConfig &config, Size idx, Human *out_human)
@@ -69,18 +72,64 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
         }
     }
 
-    // Death?
-    if (double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);
-            p < GetDeathProbability(human.age, human.sex, UINT_MAX)) {
-        out_human->alive = false;
+    // Cardiac ischemia and stroke
+    if (config.predict_cvd != PredictCvdMode::Disabled) {
+        double treshold;
+        switch (config.predict_cvd) {
+            case PredictCvdMode::Disabled: { DebugAssert(false); } break;
+            case PredictCvdMode::Framingham: { treshold = PredictFraminghamScore(human); } break;
+            case PredictCvdMode::QRisk3: { treshold = PredictQRisk3(human); } break;
+            // FIXME: HeartScore predicts death risk, fix predicting with
+            // average mortality rate
+            case PredictCvdMode::HeartScore: { treshold = PredictHeartScore(human); } break;
+        }
 
-        // Assign OtherCauses in case the loop fails due to rounding
-        out_human->death_type = DeathType::OtherCauses;
-        for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
-            p -= GetDeathProbability(human.age, human.sex, 1 << i);
-            if (p <= 0.0) {
-                out_human->death_type = (DeathType)i;
-                break;
+        if (pcg_RandomBool(&out_human->rand_evolution, treshold)) {
+            if (pcg_RandomBool(&out_human->rand_evolution, 0.5)) {
+                // Acute cardiac ischemia
+                if (!human.cardiac_ischemia_age) {
+                    out_human->cardiac_ischemia_age = human.age;
+                }
+                if (pcg_RandomBool(&out_human->rand_evolution, 0.5)) {
+                    out_human->alive = false;
+                    out_human->death_type = DeathType::CardiacIschemia;
+                }
+            } else {
+                // Stroke
+                if (!human.stroke_age) {
+                    out_human->stroke_age = human.age;
+                }
+                if (pcg_RandomBool(&out_human->rand_evolution, 0.3)) {
+                    out_human->alive = false;
+                    out_human->death_type = DeathType::Stroke;
+                }
+            }
+        }
+    }
+
+    // Other causes of death
+    {
+        unsigned int type_flags = UINT_MAX;
+
+        if (config.predict_cvd != PredictCvdMode::Disabled) {
+            type_flags &= ~((1 << (int)DeathType::CardiacIschemia) |
+                            (1 << (int)DeathType::Stroke));
+        }
+
+        double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);
+        if (p < GetDeathProbability(human.age, human.sex, type_flags)) {
+            out_human->alive = false;
+
+            // Assign OtherCauses in case the loop fails due to rounding
+            out_human->death_type = DeathType::OtherCauses;
+            for (Size i = 0; i < ARRAY_SIZE(DeathTypeNames); i++) {
+                if (type_flags & (1 << i)) {
+                    p -= GetDeathProbability(human.age, human.sex, 1 << i);
+                    if (p <= 0.0) {
+                        out_human->death_type = (DeathType)i;
+                        break;
+                    }
+                }
             }
         }
     }

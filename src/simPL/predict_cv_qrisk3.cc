@@ -288,7 +288,7 @@ double ComputeQRisk3Female10(int age, bool AF, bool atypicalantipsy, bool cortic
     a += age_2 * town * -0.0315934146749623290000000;
 
     // Calculate the score itself
-    double score = 100.0 * (1 - pow(survivor[surv], exp(a)));
+    double score = (1 - pow(survivor[surv], exp(a)));
 
     return score;
 }

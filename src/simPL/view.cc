@@ -64,21 +64,30 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         ImGui::InputInt("Seed", &simulation->config.seed);
         ImGui::InputDouble("Discount rate", &simulation->config.discount_rate, 0.01, 0.05, "%.2f");
 
+        int predict_cvd_mode = (int)simulation->config.predict_cvd;
+        ImGui::Combo("Predict CVD", &predict_cvd_mode, [](void *, int idx, const char **str) {
+            *str = PredictCvModeNames[idx];
+            return true;
+        }, nullptr, ARRAY_SIZE(PredictCvModeNames));
+        simulation->config.predict_cvd = (PredictCvdMode)predict_cvd_mode;
+    }
+
+    if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::Button("Start")) {
             simulation->Reset();
             simulation->pause = false;
         }
-    }
-
-    if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::Checkbox("Pause", &simulation->pause);
+        ImGui::SameLine();
         if (ImGui::Button("Reset")) {
             simulation->Reset();
         }
+
+        ImGui::Checkbox("Pause", &simulation->pause);
 #ifdef SIMPL_ENABLE_HOT_RELOAD
         ImGui::SameLine();
         ImGui::Checkbox("Auto-reset", &simulation->auto_reset);
 #endif
+
         if (ImGui::Button("Copy")) {
             Simulation *copy = simulations->AppendDefault();
             simulation = &(*simulations)[idx]; // May have been reallocated
