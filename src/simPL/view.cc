@@ -66,9 +66,9 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 
         int predict_cvd_mode = (int)simulation->config.predict_cvd;
         ImGui::Combo("Predict CVD", &predict_cvd_mode, [](void *, int idx, const char **str) {
-            *str = PredictCvModeNames[idx];
+            *str = PredictCvdModeNames[idx];
             return true;
-        }, nullptr, ARRAY_SIZE(PredictCvModeNames));
+        }, nullptr, ARRAY_SIZE(PredictCvdModeNames));
         simulation->config.predict_cvd = (PredictCvdMode)predict_cvd_mode;
     }
 
