@@ -90,6 +90,35 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
 
     if (ImGui::CollapsingHeader("Results", ImGuiTreeNodeFlags_DefaultOpen) &&
             ImGui::BeginTabBar("ResultTabs")) {
+        float population[6] = {};
+        float time[6] = {};
+        for (const Human &human: simulation->humans) {
+            if (human.age >= 95) {
+                population[5] += 1.0f;
+                time[5] += human.age - 95;
+            }
+            if (human.age >= 85) {
+                population[4] += 1.0f;
+                time[4] += std::min(human.age, 95) - 85;
+            }
+            if (human.age >= 75) {
+                population[3] += 1.0f;
+                time[3] += std::min(human.age, 85) - 75;
+            }
+            if (human.age >= 65) {
+                population[2] += 1.0f;
+                time[2] += std::min(human.age, 75) - 65;
+            }
+            if (human.age >= 55) {
+                population[1] += 1.0f;
+                time[1] += std::min(human.age, 65) - 55;
+            }
+            if (human.age >= 45) {
+                population[0] += 1.0f;
+                time[0] += std::min(human.age, 55) - 45;
+            }
+        }
+
         if (ImGui::BeginTabItem("Deaths")) {
             float deaths[ARRAY_SIZE(DeathTypeNames) + 1][6] = {};
             for (const Human &human: simulation->humans) {
@@ -139,16 +168,8 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         }
 
         if (ImGui::BeginTabItem("Risk factors")) {
-            float population[6] = {};
             float smokers[6] = {};
             for (const Human &human: simulation->humans) {
-                if (human.age >= 95) population[5] += 1.0f;
-                if (human.age >= 85) population[4] += 1.0f;
-                if (human.age >= 75) population[3] += 1.0f;
-                if (human.age >= 65) population[2] += 1.0f;
-                if (human.age >= 55) population[1] += 1.0f;
-                if (human.age >= 45) population[0] += 1.0f;
-
                 if (human.smoking_status || human.smoking_cessation_age) {
                     int age = human.smoking_cessation_age ? human.smoking_cessation_age : human.age;
 
@@ -171,6 +192,90 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
                     ImGui::TextUnformatted(str); ImGui::NextColumn();
                 } else {
                     ImGui::Text("-"); ImGui::NextColumn();
+                }
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Diseases")) {
+            static const char *DiseaseNames[] = {
+                "CardiacIschemia",
+                "Stroke",
+                "LungCancer"
+            };
+
+#define COMPUTE_DISEASE_AGE_PREVALENCE(DiseaseIdx, VarName) \
+                do { \
+                    if (human.VarName) { \
+                        if (human.age >= 95) prevalences[(DiseaseIdx)][5] += 1.0f; \
+                        if (human.VarName < 95 && human.age >= 85) prevalences[(DiseaseIdx)][4] += 1.0f; \
+                        if (human.VarName < 85 && human.age >= 75) prevalences[(DiseaseIdx)][3] += 1.0f; \
+                        if (human.VarName < 75 && human.age >= 65) prevalences[(DiseaseIdx)][2] += 1.0f; \
+                        if (human.VarName < 65 && human.age >= 55) prevalences[(DiseaseIdx)][1] += 1.0f; \
+                        if (human.VarName < 55) prevalences[(DiseaseIdx)][0] += 1.0f; \
+                    } \
+                } while (false)
+#define COMPUTE_DISEASE_AGE_INCIDENCE(DiseaseIdx, VarName) \
+                do { \
+                    if (human.VarName) { \
+                        if (human.VarName >= 95) incidences[(DiseaseIdx)][5] += 1.0f; \
+                        else if (human.VarName >= 85) incidences[(DiseaseIdx)][4] += 1.0f; \
+                        else if (human.VarName >= 75) incidences[(DiseaseIdx)][3] += 1.0f; \
+                        else if (human.VarName >= 65) incidences[(DiseaseIdx)][2] += 1.0f; \
+                        else if (human.VarName >= 55) incidences[(DiseaseIdx)][1] += 1.0f; \
+                        else incidences[(DiseaseIdx)][0] += 1.0f; \
+                    } \
+                } while (false)
+
+            float prevalences[3][6] = {};
+            float incidences[3][6] = {};
+            for (const Human &human: simulation->humans) {
+                COMPUTE_DISEASE_AGE_PREVALENCE(0, cardiac_ischemia_age);
+                COMPUTE_DISEASE_AGE_PREVALENCE(1, stroke_age);
+                COMPUTE_DISEASE_AGE_PREVALENCE(2, lung_cancer_age);
+
+                COMPUTE_DISEASE_AGE_INCIDENCE(0, cardiac_ischemia_age);
+                COMPUTE_DISEASE_AGE_INCIDENCE(1, stroke_age);
+                COMPUTE_DISEASE_AGE_INCIDENCE(2, lung_cancer_age);
+            }
+
+#undef COMPUTE_DISEASE_AGE_INCIDENCE
+#undef COMPUTE_DISEASE_AGE_PREVALENCE
+
+            ImGui::Text("Prevalence");
+            RenderAgeTableHeaders();
+            for (Size i = 0; i < ARRAY_SIZE(DiseaseNames); i++) {
+                ImGui::TextUnformatted(DiseaseNames[i]); ImGui::NextColumn();
+                for (Size j = 0; j < 6; j++) {
+                    if (population[j]) {
+                        float proportion = (prevalences[i][j] / population[j]) * 100.0f;
+                        const char *str = Fmt(&frame_alloc, "%1 (%2%%)",
+                                              prevalences[i][j], FmtDouble(proportion, 1)).ptr;
+                        ImGui::TextUnformatted(str); ImGui::NextColumn();
+                    } else {
+                        ImGui::Text("-"); ImGui::NextColumn();
+                    }
+                }
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+
+            ImGui::Text("Incidence");
+            RenderAgeTableHeaders();
+            for (Size i = 0; i < ARRAY_SIZE(DiseaseNames); i++) {
+                ImGui::TextUnformatted(DiseaseNames[i]); ImGui::NextColumn();
+                for (Size j = 0; j < 6; j++) {
+                    if (time[j]) {
+                        float proportion = (incidences[i][j] / time[j]) * 100.0f;
+                        const char *str = Fmt(&frame_alloc, "%1 (%2)",
+                                              incidences[i][j], FmtDouble(proportion, 1)).ptr;
+                        ImGui::TextUnformatted(str); ImGui::NextColumn();
+                    } else {
+                        ImGui::Text("-"); ImGui::NextColumn();
+                    }
                 }
             }
             ImGui::Columns(1);
