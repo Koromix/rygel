@@ -155,6 +155,8 @@ static double ComputeFramingham10(const Human &human)
 
         case Sex::Female: {
             switch (points) {
+                case -8: return 0.0;
+                case -7: return 0.0;
                 case -6: return 0.0;
                 case -5: return 0.0;
                 case -4: return 0.0;
