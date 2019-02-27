@@ -206,10 +206,10 @@ static double ComputeScore10(const Human &human)
     else sbp_cat = 0;
 
     int8_t cholesterol_cat;
-    if (human.TotalCholesterol() >= 7.5) cholesterol_cat = 4;
-    else if (human.TotalCholesterol() >= 6.5) cholesterol_cat = 3;
-    else if (human.TotalCholesterol() >= 5.5) cholesterol_cat = 2;
-    else if (human.TotalCholesterol() >= 4.5) cholesterol_cat = 1;
+    if (human.TotalCholesterol() >= 7.5 * 38.6699) cholesterol_cat = 4;
+    else if (human.TotalCholesterol() >= 6.5 * 38.6699) cholesterol_cat = 3;
+    else if (human.TotalCholesterol() >= 5.5 * 38.6699) cholesterol_cat = 2;
+    else if (human.TotalCholesterol() >= 4.5 * 38.6699) cholesterol_cat = 1;
     else cholesterol_cat = 0;
 
     // NOTE: I can't find information about what you're supposed to do

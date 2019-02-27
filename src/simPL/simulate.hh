@@ -18,13 +18,28 @@ static const char *const SexNames[] = {
 
 enum class DeathType {
     CardiacIschemia,
+    Stroke,
     LungCancer,
     OtherCauses
 };
 static const char *const DeathTypeNames[] = {
     "CardiacIschemia",
+    "Stroke",
     "LungCancer",
     "OtherCauses"
+};
+
+enum class PredictCvdMode {
+    Disabled,
+    Framingham,
+    QRisk3,
+    HeartScore
+};
+static const char *const PredictCvModeNames[] = {
+    "Disabled",
+    "Framingham",
+    "QRisk3",
+    "HeartScore (*)"
 };
 
 struct SimulationConfig {
@@ -32,6 +47,9 @@ struct SimulationConfig {
     int count;
     int seed;
     double discount_rate;
+
+    // Modes
+    PredictCvdMode predict_cvd;
 };
 
 struct Human {
@@ -48,13 +66,13 @@ struct Human {
 
     // Systolic blood pressure
     double systolic_pressure_drugs = 0.0;
-    double SystolicPressure() const { return 0.0; }
+    double SystolicPressure() const { return 120.0; }
 
     // Other risk factor stubs
     bool diabetes_status;
-    double BMI() const { return 0.0; }
-    double TotalCholesterol() const { return 0.0; }
-    double HDL() const { return 0.0; }
+    double BMI() const { return 30.0; }
+    double TotalCholesterol() const { return 200.0; }
+    double HDL() const { return 40.0; }
 
     // Diseases
     int cardiac_ischemia_age;
