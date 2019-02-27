@@ -16,6 +16,7 @@ void InitializeConfig(SimulationConfig *out_config)
     out_config->discount_rate = 0.04;
 
     out_config->predict_cvd = PredictCvdMode::Disabled;
+    out_config->predict_lung_cancer = PredictLungCancerMode::Disabled;
 }
 
 static void InitializeHuman(const SimulationConfig &config, Size idx, Human *out_human)
@@ -108,14 +109,16 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
     }
 
     // Lung cancer
-    if (pcg_RandomBool(&out_human->rand_evolution, PredictLungCancer(human))) {
-        if (!human.lung_cancer_age) {
-            out_human->lung_cancer_age = human.age;
+    if (config.predict_lung_cancer != PredictLungCancerMode::Disabled) {
+        if (pcg_RandomBool(&out_human->rand_evolution, PredictLungCancer(human))) {
+            if (!human.lung_cancer_age) {
+                out_human->lung_cancer_age = human.age;
+            }
         }
-    }
-    if (human.lung_cancer_age && human.age - human.lung_cancer_age > 3) {
-        out_human->alive = false;
-        out_human->death_type = DeathType::LungCancer;
+        if (human.lung_cancer_age && human.age - human.lung_cancer_age > 3) {
+            out_human->alive = false;
+            out_human->death_type = DeathType::LungCancer;
+        }
     }
 
     // Other causes of death
@@ -125,6 +128,9 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
         if (config.predict_cvd != PredictCvdMode::Disabled) {
             type_flags &= ~((1 << (int)DeathType::CardiacIschemia) |
                             (1 << (int)DeathType::Stroke));
+        }
+        if (config.predict_lung_cancer != PredictLungCancerMode::Disabled) {
+            type_flags &= ~(1 << (int)DeathType::LungCancer);
         }
 
         double p = pcg_RandomUniform(&out_human->rand_evolution, 0.0, 1.0);

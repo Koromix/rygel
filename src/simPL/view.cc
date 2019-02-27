@@ -70,6 +70,13 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
             return true;
         }, nullptr, ARRAY_SIZE(PredictCvdModeNames));
         simulation->config.predict_cvd = (PredictCvdMode)predict_cvd_mode;
+
+        int predict_lung_cancer_mode = (int)simulation->config.predict_lung_cancer;
+        ImGui::Combo("Predict Lung Cancer", &predict_lung_cancer_mode, [](void *, int idx, const char **str) {
+            *str = PredictLungCancerModeNames[idx];
+            return true;
+        }, nullptr, ARRAY_SIZE(PredictLungCancerModeNames));
+        simulation->config.predict_lung_cancer = (PredictLungCancerMode)predict_lung_cancer_mode;
     }
 
     if (ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) {

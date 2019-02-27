@@ -42,6 +42,15 @@ static const char *const PredictCvdModeNames[] = {
     "HeartScore"
 };
 
+enum class PredictLungCancerMode {
+    Disabled,
+    CARET
+};
+static const char *const PredictLungCancerModeNames[] = {
+    "Disabled",
+    "CARET"
+};
+
 struct SimulationConfig {
     // User parameters
     int count;
@@ -50,6 +59,7 @@ struct SimulationConfig {
 
     // Modes
     PredictCvdMode predict_cvd;
+    PredictLungCancerMode predict_lung_cancer;
 };
 
 struct Human {
