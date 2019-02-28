@@ -1556,10 +1556,10 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     return extension;
 }
 
-const char *CanonicalizePath(Span<const char> root_dir, const char *path, Allocator *alloc)
+const char *CanonicalizePath(Span<const char> root_dir, Span<const char> path, Allocator *alloc)
 {
     Span<char> complete_path;
-    if (root_dir.len && !PathIsAbsolute(path)) {
+    if (root_dir.len && (!path.len || !PathIsAbsolute(path.ptr))) {
         complete_path = Fmt(alloc, "%1%/%2", root_dir, path);
     } else {
         complete_path = DuplicateString(path, alloc);
