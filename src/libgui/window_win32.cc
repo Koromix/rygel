@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifdef _WIN32
+
 #define WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
     #define NOMINMAX
@@ -510,3 +512,5 @@ bool gui_Window::Prepare()
 
     return true;
 }
+
+#endif

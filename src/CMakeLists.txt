@@ -34,13 +34,10 @@ if(WIN32 OR EMSCRIPTEN)
         wrappers/opengl.hh
         wrappers/opengl_func.inc
         libgui/imgui.cc
+        libgui/window_win32.cc
+        libgui/window_emsdk.cc
         libgui/window.hh
     )
-    if (WIN32)
-        list(APPEND LIBGUI_SRC libgui/window_win32.cc)
-    elseif(EMSCRIPTEN)
-        list(APPEND LIBGUI_SRC libgui/window_emsdk.cc)
-    endif()
 
     add_library(libgui ${LIBGUI_SRC})
     set_target_properties(libgui PROPERTIES POSITION_INDEPENDENT_CODE ON)
