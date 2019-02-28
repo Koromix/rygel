@@ -2940,6 +2940,9 @@ const char *OptionParser::Next()
 
 bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
 {
+    DebugAssert(test1 && IsOption(test1));
+    DebugAssert(!test2 || IsOption(test2));
+
     if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
         switch (type) {
             case OptionType::NoValue: {
