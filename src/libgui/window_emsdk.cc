@@ -2,6 +2,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifdef __EMSCRIPTEN__
+
 #include <emscripten.h>
 #include <emscripten/html5.h>
 
@@ -176,3 +178,5 @@ bool gui_RunApplication(std::function<bool()> step_func, bool *run_flag, std::mu
 
     return true;
 }
+
+#endif
