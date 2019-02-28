@@ -29,8 +29,10 @@ static void InitializeHuman(const SimulationConfig &config, Size idx, Human *out
     out_human->age = 45;
     out_human->sex = pcg_RandomBool(&out_human->rand_evolution, 0.5) ? Sex::Male : Sex::Female;
 
-    out_human->smoking_status = pcg_RandomBool(&out_human->rand_evolution,
-                                               GetSmokingPrevalence(out_human->age, out_human->sex));
+    if (pcg_RandomBool(&out_human->rand_evolution,
+                       GetSmokingPrevalence(out_human->age, out_human->sex))) {
+        out_human->smoking_start_age = pcg_RandomUniform(&out_human->rand_evolution, 15, 21);
+    }
 }
 
 Size InitializeHumans(const SimulationConfig &config, HeapArray<Human> *out_humans)
@@ -53,7 +55,7 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
     out_human->age++;
 
     // Smoking
-    if (human.smoking_status &&
+    if (human.SmokingStatus() &&
             pcg_RandomBool(&out_human->rand_evolution,
                            GetSmokingStopTrialProbability(human.age))) {
         double stop_probability = 0.04;
@@ -68,7 +70,6 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
         }
 
         if (pcg_RandomBool(&out_human->rand_evolution, stop_probability)) {
-            out_human->smoking_status = false;
             out_human->smoking_cessation_age = human.age;
         }
     }

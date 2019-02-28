@@ -186,7 +186,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
         if (ImGui::BeginTabItem("Risk factors")) {
             float smokers[6] = {};
             for (const Human &human: simulation->humans) {
-                if (human.smoking_status || human.smoking_cessation_age) {
+                if (human.smoking_start_age) {
                     int age = human.smoking_cessation_age ? human.smoking_cessation_age : human.age;
 
                     if (age >= 95) smokers[5] += 1.0f;

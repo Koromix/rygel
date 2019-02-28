@@ -71,8 +71,9 @@ struct Human {
     Sex sex;
 
     // Smoking
-    bool smoking_status;
+    int smoking_start_age;
     int smoking_cessation_age;
+    bool SmokingStatus() const { return smoking_start_age && !smoking_cessation_age; }
 
     // Systolic blood pressure
     double systolic_pressure_drugs = 0.0;

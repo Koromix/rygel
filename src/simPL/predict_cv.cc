@@ -113,8 +113,8 @@ static double ComputeFramingham10(const Human &human)
     }
 
     switch (human.sex) {
-        case Sex::Male: { points += 4 * human.smoking_status; } break;
-        case Sex::Female: { points += 3 * human.smoking_status; } break;
+        case Sex::Male: { points += 4 * human.SmokingStatus(); } break;
+        case Sex::Female: { points += 3 * human.SmokingStatus(); } break;
     }
 
     switch (human.sex) {
@@ -216,7 +216,7 @@ static double ComputeScore10(const Human &human)
 
     // NOTE: I can't find information about what you're supposed to do
     // with ex-smokers in the HeartScore score.
-    bool smoker = human.smoking_status ||
+    bool smoker = human.SmokingStatus() ||
                   (human.age - human.smoking_cessation_age) < 3;
 
     if (human.sex == Sex::Female && !smoker) {
@@ -674,8 +674,8 @@ double PredictHeartScore(const Human &human)
 double PredictQRisk3(const Human &human)
 {
     int smoke_cat;
-    if (human.smoking_status) smoke_cat = 3;
-    else if (human.smoking_cessation_age) smoke_cat = 1;
+    if (human.smoking_cessation_age) smoke_cat = 1;
+    else if (human.smoking_start_age) smoke_cat = 3;
     else smoke_cat = 0;
 
     double score10 = NAN;
