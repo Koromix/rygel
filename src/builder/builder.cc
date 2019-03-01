@@ -16,6 +16,29 @@ static int64_t GetFileModificationTime(const char *filename)
     return file_info.modification_time;
 }
 
+// Do not use absolute filenames!
+static const char *BuildObjectPath(Span<const char> output_dir, Span<const char> filename,
+                                   Allocator *alloc)
+{
+    char *path = Fmt(alloc, "%1%/%2.o", output_dir, filename).ptr;
+
+    // Replace '..' components with '__'
+    {
+        char *ptr = path + output_dir.len + 1;
+
+        while ((ptr = strstr(ptr, ".."))) {
+            if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
+                ptr[0] = '_';
+                ptr[1] = '_';
+            }
+
+            ptr += 2;
+        }
+    }
+
+    return path;
+}
+
 // TODO: Support Make escaping
 static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
                                   HeapArray<const char *> *out_filenames)
@@ -33,8 +56,8 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
         Span<const char> path = TrimStr(SplitStr(rule, ' ', &rule));
 
         if (path.len && path != "\\") {
-            const char *filename = CanonicalizePath(nullptr, path, alloc);
-            out_filenames->Append(filename);
+            const char *dep_filename = CanonicalizePath(nullptr, path, alloc);
+            out_filenames->Append(dep_filename);
         }
     }
 
@@ -113,27 +136,44 @@ int main(int argc, char **argv)
     HeapArray<BuildCommand> commands;
 
     // Deal with PCH
-    // FIXME: Generate and parse PCH dependencies
-    if (pch_filename && !IsFileUpToDate("stdafx.h", pch_filename)) {
-        BuildCommand cmd = {};
+    if (pch_filename) {
 
-        cmd.dest_filename = "stdafx.h";
-        cmd.src_filename = pch_filename;
+        bool build_pch = false;
+        if (TestFile("pch/stdafx.d", FileType::File)) {
+            HeapArray<const char *> src_filenames;
+            if (!ParseCompilerMakeRule("pch/stdafx.d", &temp_alloc, &src_filenames))
+                return 1;
 
-        cmd.cmd_text = "Build PCH";
-        cmd.func = [&]() {
-            StreamWriter writer("stdafx.h");
-            Print(&writer, "#include \"%1\"", pch_filename);
-            if (!writer.Close())
-                return false;
+            build_pch = !IsFileUpToDate("pch/stdafx.h", src_filenames);
+        } else {
+            build_pch = true;
+        }
 
-            const char *cmd = Fmt(&temp_alloc, "clang++ %1 -x c++-header stdafx.h", cxx_flags).ptr;
-            return ExecuteCommand(cmd);
-        };
+        if (build_pch) {
+            BuildCommand cmd = {};
 
-        cmd.sync_mode = SyncMode::After;
+            cmd.src_filename = pch_filename;
+            cmd.dest_filename = "pch/stdafx.h";
 
-        commands.Append(cmd);
+            cmd.cmd_text = "Build PCH";
+            cmd.func = [&]() {
+                StreamWriter writer("pch/stdafx.h");
+                if (PathIsAbsolute(pch_filename)) {
+                    Print(&writer, "#include \"%1\"", pch_filename);
+                } else {
+                    Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
+                }
+                if (!writer.Close())
+                    return false;
+
+                const char *cmd = Fmt(&temp_alloc, "clang++ %1 -x c++-header pch/stdafx.h -MMD -MF pch/stdafx.d", cxx_flags).ptr;
+                return ExecuteCommand(cmd);
+            };
+
+            cmd.sync_mode = SyncMode::After;
+
+            commands.Append(cmd);
+        }
     }
 
     // Aggregate build commands
@@ -142,6 +182,11 @@ int main(int argc, char **argv)
         HeapArray<const char *> src_filenames;
 
         for (const char *src_directory: src_directories) {
+            if (PathIsAbsolute(src_directory)) {
+                LogError("Cannot use absolute directory '%1'", src_directory);
+                return 1;
+            }
+
             EnumStatus status = EnumerateDirectory(src_directory, nullptr, 32768,
                                                    [&](const char *name, FileType file_type) {
                 if (file_type == FileType::File) {
@@ -151,19 +196,16 @@ int main(int argc, char **argv)
                         BuildCommand cmd = {};
 
                         cmd.src_filename = Fmt(&temp_alloc, "%1%/%2", src_directory, name).ptr;
-                        cmd.dest_filename = Fmt(&temp_alloc, "%1.o", name).ptr;
+                        cmd.dest_filename = BuildObjectPath("objects", cmd.src_filename, &temp_alloc);
 
                         src_filenames.RemoveFrom(0);
                         src_filenames.Append(cmd.src_filename);
 
                         // Parse Make rule dependencies
-                        {
-                            const char *deps_filename = Fmt(&temp_alloc, "%1.o.d", name).ptr;
-
-                            if (TestFile(deps_filename, FileType::File) &&
-                                    !ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-                                return false;
-                        }
+                        const char *deps_filename = Fmt(&temp_alloc, "%1.d", cmd.dest_filename).ptr;
+                        if (TestFile(deps_filename, FileType::File) &&
+                                !ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
+                            return false;
 
                         if (!IsFileUpToDate(cmd.dest_filename, src_filenames)) {
                             if (extension == ".c") {
@@ -171,11 +213,11 @@ int main(int argc, char **argv)
                                                    c_flags, cmd.src_filename, cmd.dest_filename).ptr;
                             } else {
                                 if (pch_filename) {
-                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ -MMD -MF %3.d -include stdafx.h %1 -c %2 -o %3",
-                                                       cxx_flags, cmd.src_filename, cmd.dest_filename).ptr;
+                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ -include pch/stdafx.h %1 -c %2 -MMD -MF %3 -o %4",
+                                                       cxx_flags, cmd.src_filename, deps_filename, cmd.dest_filename).ptr;
                                 } else {
-                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ %1 -MMD -MF %3.d -c %2 -o %3",
-                                                       cxx_flags, cmd.src_filename, cmd.dest_filename).ptr;
+                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ %1 -c %2 -MMD -MF %3 -o %4",
+                                                       cxx_flags, cmd.src_filename, deps_filename, cmd.dest_filename).ptr;
                                 }
                             }
 
@@ -200,16 +242,27 @@ int main(int argc, char **argv)
         async.AddTask([&, cmd]() {
             LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd_text);
 
-            bool success;
-            if (cmd.func) {
-                success = cmd.func();
-            } else {
-                success = ExecuteCommand(cmd.cmd_text);
+            // Create output directory
+            {
+                Span<const char> dest_dir;
+                SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS, &dest_dir);
+
+                if (!MakeDirectoryRec(dest_dir))
+                    return false;
             }
 
-            if (!success) {
-                unlink(cmd.dest_filename);
-                return false;
+            // Run command or function
+            {
+                bool success;
+                if (cmd.func) {
+                    success = cmd.func();
+                } else {
+                    success = ExecuteCommand(cmd.cmd_text);
+                }
+                if (!success) {
+                    unlink(cmd.dest_filename);
+                    return false;
+                }
             }
 
             return true;
