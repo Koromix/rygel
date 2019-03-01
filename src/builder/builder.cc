@@ -335,7 +335,10 @@ int main(int argc, char **argv)
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-t", "--toolchain", OptionType::Value)) {
+            if (opt.Test("-s", "--serial")) {
+                // FIXME: Provide knobs in Async instead of this hack
+                putenv("LIBCC_THREADS=1");
+            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
                 const char *const *name = FindIf(ToolchainNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
                 if (!name) {
