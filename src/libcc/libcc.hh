@@ -3154,7 +3154,7 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
 const char *GetApplicationExecutable(); // Can be NULL
 const char *GetApplicationDirectory(); // Can be NULL
 
-bool MakeDirectory(const char *dir);
+bool MakeDirectory(const char *dir, bool error_if_exists = true);
 bool MakeDirectoryRec(Span<const char> dir);
 
 enum class OpenFileMode {
