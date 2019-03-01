@@ -1159,12 +1159,16 @@ static int64_t FileTimeToUnixTime(FILETIME ft)
     return time / 10000000 - 11644473600ll;
 }
 
-bool StatFile(const char *filename, FileInfo *out_info)
+bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
     HANDLE h = CreateFile(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     if (h == INVALID_HANDLE_VALUE) {
-        LogError("Cannot stat file '%1': %2", filename, Win32ErrorString());
+        DWORD err = GetLastError();
+        if (error_if_missing ||
+                (err != ERROR_FILE_NOT_FOUND && err != ERROR_PATH_NOT_FOUND)) {
+            LogError("Cannot stat file '%1': %2", filename, Win32ErrorString(err));
+        }
         return false;
     }
     DEFER { CloseHandle(h); };
@@ -1262,11 +1266,13 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
 #else
 
-bool StatFile(const char *filename, FileInfo *out_info)
+bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 {
     struct stat sb;
     if (stat(filename, &sb) < 0) {
-        LogError("Cannot stat '%1': %2", filename, strerror(errno));
+        if (error_if_missing || errno != ENOENT) {
+            LogError("Cannot stat '%1': %2", filename, strerror(errno));
+        }
         return false;
     }
 
