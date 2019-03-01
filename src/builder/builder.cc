@@ -90,7 +90,7 @@ static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> sr
 
     for (const char *src_filename: src_filenames) {
         int64_t src_time = GetFileModificationTime(src_filename);
-        if (src_time > dest_time)
+        if (src_time < 0 || src_time > dest_time)
             return false;
     }
 
@@ -358,8 +358,12 @@ int main(int argc, char **argv)
     }
 
     // Run build
-    if (!RunBuildCommands(commands))
-        return 1;
+    if (commands.len) {
+        if (!RunBuildCommands(commands))
+            return 1;
+    } else {
+        LogInfo("Nothing to do!");
+    }
 
     return 0;
 }
