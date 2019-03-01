@@ -334,12 +334,6 @@ int main(int argc, char **argv)
         }
     }
 
-    uint64_t start_time = GetMonotonicTime();
-    DEFER {
-        uint64_t end_time = GetMonotonicTime();
-        LogInfo("Elapsed time: %1 sec", FmtDouble((double)(end_time - start_time) / 1000.0, 2));
-    };
-
     // List of build commands
     HeapArray<BuildCommand> commands;
     BlockAllocator commands_alloc;
@@ -361,6 +355,7 @@ int main(int argc, char **argv)
     if (commands.len) {
         if (!RunBuildCommands(commands))
             return 1;
+        LogInfo("Done!");
     } else {
         LogInfo("Nothing to do!");
     }
