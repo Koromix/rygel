@@ -1632,12 +1632,12 @@ FILE *OpenFile(const char *path, OpenFileMode mode)
     return fp;
 }
 
-bool MakeDirectory(const char *directory)
+bool MakeDirectory(const char *directory, bool error_if_exists)
 {
 #ifdef _WIN32
-    if (_mkdir(directory) < 0) {
+    if (_mkdir(directory) < 0 && (errno != EEXIST || error_if_exists)) {
 #else
-    if (mkdir(directory, 0755) < 0) {
+    if (mkdir(directory, 0755) < 0 && (errno != EEXIST || error_if_exists)) {
 #endif
         LogError("Cannot create directory '%1': %2", directory, strerror(errno));
         return false;
