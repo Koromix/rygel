@@ -10,7 +10,7 @@ static const char *const cxx_flags = "-std=gnu++17 -O0 -Xclang -flto-visibility-
 static int64_t GetFileModificationTime(const char *filename)
 {
     FileInfo file_info;
-    if (!StatFile(filename, &file_info))
+    if (!StatFile(filename, false, &file_info))
         return -1;
 
     return file_info.modification_time;
@@ -43,9 +43,6 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
 
 static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
 {
-    if (!TestFile(dest_filename, FileType::File))
-        return false;
-
     int64_t dest_time = GetFileModificationTime(dest_filename);
 
     for (const char *src_filename: src_filenames) {
