@@ -1656,9 +1656,9 @@ bool MakeDirectoryRec(Span<const char> directory)
     memcpy(buf, directory.ptr, directory.len);
     buf[directory.len] = 0;
 
-    Size offset = directory.len;
+    Size offset = directory.len + 1;
     for (; offset > 0; offset--) {
-        if (IsPathSeparator(buf[offset])) {
+        if (!buf[offset] || IsPathSeparator(buf[offset])) {
             buf[offset] = 0;
 
 #ifdef _WIN32
@@ -1678,11 +1678,7 @@ bool MakeDirectoryRec(Span<const char> directory)
         if (!buf[offset]) {
             buf[offset] = *PATH_SEPARATORS;
 
-#ifdef _WIN32
-            if (_mkdir(buf) < 0 && errno != EEXIST) {
-#else
-            if (mkdir(buf, 0755) < 0 && errno != EEXIST) {
-#endif
+            if (!MakeDirectory(buf, false)) {
                 LogError("Cannot create directory '%1': %2", buf, strerror(errno));
                 return false;
             }
