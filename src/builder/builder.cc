@@ -119,7 +119,7 @@ static const char *CreateCompileCommand(Toolchain toolchain, const char *misc_fl
         case Toolchain::ClangCl_C: {
             Fmt(&buf, "clang %1 %2 -c %3", c_flags, misc_flags ? misc_flags : "", src_filename);
             if (use_pch) {
-                Fmt(&buf, " -include pch/clangcl_c_stdafx.h");
+                Fmt(&buf, " -include pch/stdafx_c.h");
             }
             if (deps_filename) {
                 Fmt(&buf, " -MMD -MF %1", deps_filename);
@@ -132,7 +132,7 @@ static const char *CreateCompileCommand(Toolchain toolchain, const char *misc_fl
         case Toolchain::ClangCl_CXX: {
             Fmt(&buf, "clang++ %1 %2 -c %3", cxx_flags, misc_flags ? misc_flags : "", src_filename);
             if (use_pch) {
-                Fmt(&buf, " -include pch/clangcl_cxx_stdafx.h");
+                Fmt(&buf, " -include pch/stdafx_cxx.h");
             }
             if (deps_filename) {
                 Fmt(&buf, " -MMD -MF %1", deps_filename);
@@ -158,13 +158,13 @@ static bool AppendPCHCommands(Toolchain toolchain, const char *pch_filename,
     switch (toolchain) {
         case Toolchain::ClangCl_C: {
             misc_flags = "-x c-header";
-            dest_filename = "pch/clangcl_c_stdafx.h";
-            deps_filename = "pch/clangcl_c_stdafx.d";
+            dest_filename = "pch/stdafx_c.h";
+            deps_filename = "pch/stdafx_c.d";
         } break;
         case Toolchain::ClangCl_CXX: {
             misc_flags = "-x c++-header";
-            dest_filename = "pch/clangcl_cxx_stdafx.h";
-            deps_filename = "pch/clangcl_cxx_stdafx.d";
+            dest_filename = "pch/stdafx_cxx.h";
+            deps_filename = "pch/stdafx_cxx.d";
         } break;
     }
     DebugAssert(misc_flags && dest_filename && deps_filename);
