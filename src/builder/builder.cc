@@ -169,38 +169,43 @@ static bool AppendPCHCommands(Toolchain toolchain, const char *pch_filename,
     }
     DebugAssert(misc_flags && dest_filename && deps_filename);
 
+    bool build;
     if (TestFile(deps_filename, FileType::File)) {
         HeapArray<const char *> src_filenames;
         if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
             return false;
 
-        if (IsFileUpToDate(dest_filename, src_filenames))
-            return true;
+        build = !IsFileUpToDate(dest_filename, src_filenames);
+    } else {
+        build = true;
     }
 
-    BuildCommand cmd = {};
+    if (build) {
+        BuildCommand cmd = {};
 
-    cmd.src_filename = pch_filename;
-    cmd.dest_filename = dest_filename;
-    cmd.sync_mode = SyncMode::After;
+        cmd.src_filename = pch_filename;
+        cmd.dest_filename = dest_filename;
+        cmd.sync_mode = SyncMode::After;
 
-    cmd.cmd_text = "Build PCH";
-    cmd.func = [=](BlockAllocator *alloc) {
-        StreamWriter writer(dest_filename);
-        if (PathIsAbsolute(pch_filename)) {
-            Print(&writer, "#include \"%1\"", pch_filename);
-        } else {
-            Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
-        }
-        if (!writer.Close())
-            return false;
+        cmd.cmd_text = "Build PCH";
+        cmd.func = [=](BlockAllocator *alloc) {
+            StreamWriter writer(dest_filename);
+            if (PathIsAbsolute(pch_filename)) {
+                Print(&writer, "#include \"%1\"", pch_filename);
+            } else {
+                Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
+            }
+            if (!writer.Close())
+                return false;
 
-        const char *cmd = CreateCompileCommand(toolchain, misc_flags, dest_filename,
-                                               nullptr, deps_filename, false, alloc);
-        return ExecuteCommand(cmd);
-    };
+            const char *cmd = CreateCompileCommand(toolchain, misc_flags, dest_filename,
+                                                   nullptr, deps_filename, false, alloc);
+            return ExecuteCommand(cmd);
+        };
 
-    out_commands->Append(cmd);
+        out_commands->Append(cmd);
+    }
+
     return true;
 }
 
@@ -231,13 +236,20 @@ static bool AppendObjectCommands(const char *src_directory, bool use_c_pch, bool
                 src_filenames.RemoveFrom(0);
                 src_filenames.Append(cmd.src_filename);
 
-                // Parse Make rule dependencies
                 const char *deps_filename = Fmt(&temp_alloc, "%1.d", cmd.dest_filename).ptr;
-                if (TestFile(deps_filename, FileType::File) &&
-                        !ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-                    return false;
 
-                if (!IsFileUpToDate(cmd.dest_filename, src_filenames)) {
+                // Parse Make rule dependencies
+                bool build = false;
+                if (TestFile(deps_filename, FileType::File)) {
+                    if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
+                        return false;
+
+                    build = !IsFileUpToDate(cmd.dest_filename, src_filenames);
+                } else {
+                    build = true;
+                }
+
+                if (build) {
                     if (extension == ".c") {
                         cmd.cmd_text =
                             CreateCompileCommand(Toolchain::ClangCl_C, nullptr, cmd.src_filename,
