@@ -16,16 +16,9 @@ enum class Language {
     CXX
 };
 
-enum class SyncMode {
-    None,
-    Before,
-    After
-};
-
 struct BuildCommand {
     const char *src_filename;
     const char *dest_filename;
-    SyncMode sync_mode;
 
     const char *cmd_text;
     std::function<bool(BlockAllocator *alloc)> func;
@@ -204,7 +197,6 @@ static bool AppendPCHCommands(Toolchain toolchain, Language language, const char
 
         cmd.src_filename = pch_filename;
         cmd.dest_filename = dest_filename;
-        cmd.sync_mode = SyncMode::After;
 
         cmd.cmd_text = "Build PCH";
         cmd.func = [=](BlockAllocator *alloc) {
@@ -297,10 +289,8 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
     Async async;
 
     for (const BuildCommand &cmd: commands) {
-        static std::atomic_int progress_counter = {};
-
-        if (cmd.sync_mode == SyncMode::Before && !async.Sync())
-            return false;
+        static std::atomic_int progress_counter;
+        progress_counter = 0;
 
         async.AddTask([&, cmd]() {
             LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd_text);
@@ -330,9 +320,6 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 
             return true;
         });
-
-        if (cmd.sync_mode == SyncMode::After && !async.Sync())
-            return false;
     }
 
     return async.Sync();
@@ -374,31 +361,43 @@ int main(int argc, char **argv)
         }
     }
 
-    // List of build commands
-    HeapArray<BuildCommand> commands;
-    BlockAllocator commands_alloc;
+    // Build PCH
+    {
+        HeapArray<BuildCommand> commands;
+        BlockAllocator commands_alloc;
 
-    // Deal with PCH
-    if (c_pch_filename && !AppendPCHCommands(toolchain, Language::C, c_pch_filename, &commands))
-        return 1;
-    if (cxx_pch_filename && !AppendPCHCommands(toolchain, Language::CXX, cxx_pch_filename, &commands))
-        return 1;
-
-    // Deal with source / object files
-    for (const char *src_directory: src_directories) {
-        if (!AppendObjectCommands(toolchain, src_directory, c_pch_filename, cxx_pch_filename,
-                                  &commands_alloc, &commands))
+        if (c_pch_filename && !AppendPCHCommands(toolchain, Language::C, c_pch_filename, &commands))
             return 1;
+        if (cxx_pch_filename && !AppendPCHCommands(toolchain, Language::CXX, cxx_pch_filename, &commands))
+            return 1;
+
+        if (commands.len) {
+            LogInfo("Build PCH");
+
+            if (!RunBuildCommands(commands))
+                return 1;
+        }
     }
 
-    // Run build
-    if (commands.len) {
-        if (!RunBuildCommands(commands))
-            return 1;
-        LogInfo("Done!");
-    } else {
-        LogInfo("Nothing to do!");
+    // Build object files
+    {
+        HeapArray<BuildCommand> commands;
+        BlockAllocator commands_alloc;
+
+        for (const char *src_directory: src_directories) {
+            if (!AppendObjectCommands(toolchain, src_directory, c_pch_filename, cxx_pch_filename,
+                                      &commands_alloc, &commands))
+                return 1;
+        }
+
+        if (commands.len) {
+            LogInfo("Build object files");
+
+            if (!RunBuildCommands(commands))
+                return 1;
+        }
     }
 
+    LogInfo("Done!");
     return 0;
 }
