@@ -89,37 +89,21 @@ int main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     HeapArray<const char *> src_directories;
-    const char *output_name = nullptr;
     const char *pch_filename = nullptr;
     {
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-O", "--output", OptionType::Value)) {
-                output_name = opt.current_value;
-            } else if (opt.Test("--pch", OptionType::Value)) {
+            if (opt.Test("--pch", OptionType::Value)) {
                 pch_filename = opt.current_value;
             }
         }
 
         opt.ConsumeNonOptions(&src_directories);
-    }
-
-    // Check option validity
-    {
-        bool valid = true;
-
         if (!src_directories.len) {
             LogError("Source directory is missing");
-            valid = false;
-        }
-        if (!output_name) {
-            LogError("Output filename (--output) must be specified");
-            valid = false;
-        }
-
-        if (!valid)
             return 1;
+        }
     }
 
     uint64_t start_time = GetMonotonicTime();
