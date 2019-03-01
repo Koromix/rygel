@@ -4,6 +4,26 @@
 
 #include "../libcc/libcc.hh"
 
+enum class Toolchain {
+    ClangCl_C,
+    ClangCl_CXX
+};
+
+enum class SyncMode {
+    None,
+    Before,
+    After
+};
+
+struct BuildCommand {
+    const char *src_filename;
+    const char *dest_filename;
+    SyncMode sync_mode;
+
+    const char *cmd_text;
+    std::function<bool(BlockAllocator *alloc)> func;
+};
+
 static const char *const c_flags = "-std=gnu99 -O0 -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -Wno-unknown-warning-option";
 static const char *const cxx_flags = "-std=gnu++17 -O0 -Xclang -flto-visibility-public-std -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -Wno-unknown-warning-option";
 
@@ -88,34 +108,222 @@ static bool ExecuteCommand(const char *cmd)
     return true;
 }
 
-enum class SyncMode {
-    None,
-    Before,
-    After
-};
+static const char *CreateCompileCommand(Toolchain toolchain, const char *misc_flags,
+                                        const char *src_filename, const char *dest_filename,
+                                        const char *deps_filename, bool use_pch, Allocator *alloc)
+{
+    HeapArray<char> buf;
+    buf.allocator = alloc;
 
-struct BuildCommand {
-    const char *src_filename;
-    const char *dest_filename;
+    switch (toolchain) {
+        case Toolchain::ClangCl_C: {
+            Fmt(&buf, "clang %1 %2 -c %3", c_flags, misc_flags ? misc_flags : "", src_filename);
+            if (use_pch) {
+                Fmt(&buf, " -include pch/clangcl_c_stdafx.h");
+            }
+            if (deps_filename) {
+                Fmt(&buf, " -MMD -MF %1", deps_filename);
+            }
+            if (dest_filename) {
+                Fmt(&buf, " -o %1", dest_filename);
+            }
+        } break;
 
-    const char *cmd_text;
-    std::function<bool()> func;
+        case Toolchain::ClangCl_CXX: {
+            Fmt(&buf, "clang++ %1 %2 -c %3", cxx_flags, misc_flags ? misc_flags : "", src_filename);
+            if (use_pch) {
+                Fmt(&buf, " -include pch/clangcl_cxx_stdafx.h");
+            }
+            if (deps_filename) {
+                Fmt(&buf, " -MMD -MF %1", deps_filename);
+            }
+            if (dest_filename) {
+                Fmt(&buf, " -o %1", dest_filename);
+            }
+        } break;
+    }
+    DebugAssert(buf.len);
 
-    SyncMode sync_mode;
-};
+    return buf.Leak().ptr;
+}
 
-int main(int argc, char **argv)
+static bool AppendPCHCommands(Toolchain toolchain, const char *pch_filename,
+                              HeapArray<BuildCommand> *out_commands)
 {
     BlockAllocator temp_alloc;
 
+    const char *misc_flags = nullptr;
+    const char *dest_filename = nullptr;
+    const char *deps_filename = nullptr;
+    switch (toolchain) {
+        case Toolchain::ClangCl_C: {
+            misc_flags = "-x c-header";
+            dest_filename = "pch/clangcl_c_stdafx.h";
+            deps_filename = "pch/clangcl_c_stdafx.d";
+        } break;
+        case Toolchain::ClangCl_CXX: {
+            misc_flags = "-x c++-header";
+            dest_filename = "pch/clangcl_cxx_stdafx.h";
+            deps_filename = "pch/clangcl_cxx_stdafx.d";
+        } break;
+    }
+    DebugAssert(misc_flags && dest_filename && deps_filename);
+
+    if (TestFile(deps_filename, FileType::File)) {
+        HeapArray<const char *> src_filenames;
+        if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
+            return false;
+
+        if (IsFileUpToDate(dest_filename, src_filenames))
+            return true;
+    }
+
+    BuildCommand cmd = {};
+
+    cmd.src_filename = pch_filename;
+    cmd.dest_filename = dest_filename;
+    cmd.sync_mode = SyncMode::After;
+
+    cmd.cmd_text = "Build PCH";
+    cmd.func = [=](BlockAllocator *alloc) {
+        StreamWriter writer(dest_filename);
+        if (PathIsAbsolute(pch_filename)) {
+            Print(&writer, "#include \"%1\"", pch_filename);
+        } else {
+            Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
+        }
+        if (!writer.Close())
+            return false;
+
+        const char *cmd = CreateCompileCommand(toolchain, misc_flags, dest_filename,
+                                               nullptr, deps_filename, false, alloc);
+        return ExecuteCommand(cmd);
+    };
+
+    out_commands->Append(cmd);
+    return true;
+}
+
+static bool AppendObjectCommands(const char *src_directory, bool use_c_pch, bool use_cxx_pch,
+                                 Allocator *alloc, HeapArray<BuildCommand> *out_commands)
+{
+    BlockAllocator temp_alloc;
+
+    if (PathIsAbsolute(src_directory)) {
+        LogError("Cannot use absolute directory '%1'", src_directory);
+        return false;
+    }
+
+    // Reuse for performance
+    HeapArray<const char *> src_filenames;
+
+    EnumStatus status = EnumerateDirectory(src_directory, nullptr, 32768,
+                                           [&](const char *name, FileType file_type) {
+        if (file_type == FileType::File) {
+            Span<const char> extension = GetPathExtension(name);
+
+            if (extension == ".cc" || extension == ".cpp" || extension == ".c") {
+                BuildCommand cmd = {};
+
+                cmd.src_filename = Fmt(alloc, "%1%/%2", src_directory, name).ptr;
+                cmd.dest_filename = BuildObjectPath("objects", cmd.src_filename, alloc);
+
+                src_filenames.RemoveFrom(0);
+                src_filenames.Append(cmd.src_filename);
+
+                // Parse Make rule dependencies
+                const char *deps_filename = Fmt(&temp_alloc, "%1.d", cmd.dest_filename).ptr;
+                if (TestFile(deps_filename, FileType::File) &&
+                        !ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
+                    return false;
+
+                if (!IsFileUpToDate(cmd.dest_filename, src_filenames)) {
+                    if (extension == ".c") {
+                        cmd.cmd_text =
+                            CreateCompileCommand(Toolchain::ClangCl_C, nullptr, cmd.src_filename,
+                                                 cmd.dest_filename, deps_filename,
+                                                 use_c_pch, alloc);
+                    } else {
+                        cmd.cmd_text =
+                            CreateCompileCommand(Toolchain::ClangCl_CXX, nullptr, cmd.src_filename,
+                                                 cmd.dest_filename, deps_filename,
+                                                 use_cxx_pch, alloc);
+                    }
+
+                    out_commands->Append(cmd);
+                }
+            }
+        }
+        return true;
+    });
+
+    return status == EnumStatus::Done;
+}
+
+static bool RunBuildCommands(Span<const BuildCommand> commands)
+{
+    BlockAllocator temp_alloc;
+
+    Async async;
+
+    for (const BuildCommand &cmd: commands) {
+        static std::atomic_int progress_counter = {};
+
+        if (cmd.sync_mode == SyncMode::Before && !async.Sync())
+            return false;
+
+        async.AddTask([&, cmd]() {
+            LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd_text);
+
+            // Create output directory
+            {
+                Span<const char> dest_dir;
+                SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS, &dest_dir);
+
+                if (!MakeDirectoryRec(dest_dir))
+                    return false;
+            }
+
+            // Run command or function
+            {
+                bool success;
+                if (cmd.func) {
+                    success = cmd.func(&temp_alloc);
+                } else {
+                    success = ExecuteCommand(cmd.cmd_text);
+                }
+                if (!success) {
+                    unlink(cmd.dest_filename);
+                    return false;
+                }
+            }
+
+            return true;
+        });
+
+        if (cmd.sync_mode == SyncMode::After && !async.Sync())
+            return false;
+    }
+
+    return async.Sync();
+}
+
+int main(int argc, char **argv)
+{
     HeapArray<const char *> src_directories;
-    const char *pch_filename = nullptr;
+    const char *c_pch_filename = nullptr;
+    const char *cxx_pch_filename = nullptr;
     {
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("--pch", OptionType::Value)) {
-                pch_filename = opt.current_value;
+            if (opt.Test("-c_pch", OptionType::Value)) {
+                c_pch_filename = opt.current_value;
+            } else if (opt.Test("--cxx_pch", OptionType::Value)) {
+                cxx_pch_filename = opt.current_value;
+            } else {
+                LogError("Cannot handle option '%1'", opt.current_option);
+                return 1;
             }
         }
 
@@ -134,144 +342,23 @@ int main(int argc, char **argv)
 
     // List of build commands
     HeapArray<BuildCommand> commands;
+    BlockAllocator commands_alloc;
 
     // Deal with PCH
-    if (pch_filename) {
+    if (c_pch_filename && !AppendPCHCommands(Toolchain::ClangCl_C, c_pch_filename, &commands))
+        return 1;
+    if (cxx_pch_filename && !AppendPCHCommands(Toolchain::ClangCl_CXX, cxx_pch_filename, &commands))
+        return 1;
 
-        bool build_pch = false;
-        if (TestFile("pch/stdafx.d", FileType::File)) {
-            HeapArray<const char *> src_filenames;
-            if (!ParseCompilerMakeRule("pch/stdafx.d", &temp_alloc, &src_filenames))
-                return 1;
-
-            build_pch = !IsFileUpToDate("pch/stdafx.h", src_filenames);
-        } else {
-            build_pch = true;
-        }
-
-        if (build_pch) {
-            BuildCommand cmd = {};
-
-            cmd.src_filename = pch_filename;
-            cmd.dest_filename = "pch/stdafx.h";
-
-            cmd.cmd_text = "Build PCH";
-            cmd.func = [&]() {
-                StreamWriter writer("pch/stdafx.h");
-                if (PathIsAbsolute(pch_filename)) {
-                    Print(&writer, "#include \"%1\"", pch_filename);
-                } else {
-                    Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
-                }
-                if (!writer.Close())
-                    return false;
-
-                const char *cmd = Fmt(&temp_alloc, "clang++ %1 -x c++-header pch/stdafx.h -MMD -MF pch/stdafx.d", cxx_flags).ptr;
-                return ExecuteCommand(cmd);
-            };
-
-            cmd.sync_mode = SyncMode::After;
-
-            commands.Append(cmd);
-        }
-    }
-
-    // Aggregate build commands
-    {
-        // Reuse for performance
-        HeapArray<const char *> src_filenames;
-
-        for (const char *src_directory: src_directories) {
-            if (PathIsAbsolute(src_directory)) {
-                LogError("Cannot use absolute directory '%1'", src_directory);
-                return 1;
-            }
-
-            EnumStatus status = EnumerateDirectory(src_directory, nullptr, 32768,
-                                                   [&](const char *name, FileType file_type) {
-                if (file_type == FileType::File) {
-                    Span<const char> extension = GetPathExtension(name);
-
-                    if (extension == ".cc" || extension == ".cpp" || extension == ".c") {
-                        BuildCommand cmd = {};
-
-                        cmd.src_filename = Fmt(&temp_alloc, "%1%/%2", src_directory, name).ptr;
-                        cmd.dest_filename = BuildObjectPath("objects", cmd.src_filename, &temp_alloc);
-
-                        src_filenames.RemoveFrom(0);
-                        src_filenames.Append(cmd.src_filename);
-
-                        // Parse Make rule dependencies
-                        const char *deps_filename = Fmt(&temp_alloc, "%1.d", cmd.dest_filename).ptr;
-                        if (TestFile(deps_filename, FileType::File) &&
-                                !ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-                            return false;
-
-                        if (!IsFileUpToDate(cmd.dest_filename, src_filenames)) {
-                            if (extension == ".c") {
-                                cmd.cmd_text = Fmt(&temp_alloc, "clang %1 -c %2 -o %3",
-                                                   c_flags, cmd.src_filename, cmd.dest_filename).ptr;
-                            } else {
-                                if (pch_filename) {
-                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ -include pch/stdafx.h %1 -c %2 -MMD -MF %3 -o %4",
-                                                       cxx_flags, cmd.src_filename, deps_filename, cmd.dest_filename).ptr;
-                                } else {
-                                    cmd.cmd_text = Fmt(&temp_alloc, "clang++ %1 -c %2 -MMD -MF %3 -o %4",
-                                                       cxx_flags, cmd.src_filename, deps_filename, cmd.dest_filename).ptr;
-                                }
-                            }
-
-                            commands.Append(cmd);
-                        }
-                    }
-                }
-                return true;
-            });
-            if (status != EnumStatus::Done)
-                return 1;
-        }
-    }
-
-    Async async;
-    for (const BuildCommand &cmd: commands) {
-        static std::atomic_int progress_counter = {};
-
-        if (cmd.sync_mode == SyncMode::Before && !async.Sync())
-            return 1;
-
-        async.AddTask([&, cmd]() {
-            LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd_text);
-
-            // Create output directory
-            {
-                Span<const char> dest_dir;
-                SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS, &dest_dir);
-
-                if (!MakeDirectoryRec(dest_dir))
-                    return false;
-            }
-
-            // Run command or function
-            {
-                bool success;
-                if (cmd.func) {
-                    success = cmd.func();
-                } else {
-                    success = ExecuteCommand(cmd.cmd_text);
-                }
-                if (!success) {
-                    unlink(cmd.dest_filename);
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
-        if (cmd.sync_mode == SyncMode::After && !async.Sync())
+    // Deal with source / object files
+    for (const char *src_directory: src_directories) {
+        if (!AppendObjectCommands(src_directory, c_pch_filename, cxx_pch_filename,
+                                  &commands_alloc, &commands))
             return 1;
     }
-    if (!async.Sync())
+
+    // Run build
+    if (!RunBuildCommands(commands))
         return 1;
 
     return 0;
