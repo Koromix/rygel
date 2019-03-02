@@ -5,10 +5,12 @@
 #include "../libcc/libcc.hh"
 
 enum class Toolchain {
-    Clang
+    Clang,
+    MinGW
 };
 static const char *const ToolchainNames[] = {
-    "Clang"
+    "Clang",
+    "MinGW"
 };
 
 enum class SourceType {
@@ -117,6 +119,25 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
                                                          "-include pch/stdafx_cxx.h %1", flags); } break;
                 case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
                                                          "-x c++-header %1", flags); } break;
+            }
+
+            Fmt(&buf, " -c %1", src_filename);
+            if (deps_filename) {
+                Fmt(&buf, " -MMD -MF %1", deps_filename);
+            }
+            if (dest_filename) {
+                Fmt(&buf, " -o %1", dest_filename);
+            }
+        } break;
+
+        case Toolchain::MinGW: {
+            static const char *flags = "";
+
+            switch (source_type) {
+                case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
+                case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu99 -x c-header %1", flags); } break;
+                case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -include pch/stdafx_cxx.h %1", flags); } break;
+                case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -x c++-header %1", flags); } break;
             }
 
             Fmt(&buf, " -c %1", src_filename);
@@ -340,6 +361,13 @@ int main(int argc, char **argv)
             LogError("Source directory is missing");
             return 1;
         }
+    }
+
+    if (toolchain == Toolchain::MinGW && (c_pch_filename || cxx_pch_filename)) {
+        LogError("PCH does not work correctly with MinGW (ignoring)");
+
+        c_pch_filename = nullptr;
+        cxx_pch_filename = nullptr;
     }
 
     // Build PCH
