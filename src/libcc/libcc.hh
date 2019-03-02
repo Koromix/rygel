@@ -2279,23 +2279,23 @@ union Date {
 // Time
 // ------------------------------------------------------------------------
 
-extern uint64_t g_start_time;
+extern int64_t g_start_time;
 
-uint64_t GetMonotonicTime();
+int64_t GetMonotonicTime();
 
 #if defined(_MSC_VER)
-static inline uint64_t GetClockCounter()
+static inline int64_t GetClockCounter()
 {
-    return __rdtsc();
+    return (int64_t)__rdtsc();
 }
 #elif defined(__i386__) || defined(__x86_64__)
-static inline uint64_t GetClockCounter()
+static inline int64_t GetClockCounter()
 {
     uint32_t counter_low, counter_high;
     __asm__ __volatile__ ("cpuid; rdtsc"
                           : "=a" (counter_low), "=d" (counter_high)
                           : : "%ebx", "%ecx");
-    uint64_t counter = ((uint64_t)counter_high << 32) | counter_low;
+    int64_t counter = ((int64_t)counter_high << 32) | counter_low;
     return counter;
 }
 #endif

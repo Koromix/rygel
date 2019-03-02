@@ -450,10 +450,10 @@ Test options:)");
     }
 
     // Performance counter
-    uint64_t *perf_counter = nullptr;
-    uint64_t perf_start;
-    const auto switch_perf_counter = [&](uint64_t *counter) {
-        uint64_t now = GetMonotonicTime();
+    int64_t *perf_counter = nullptr;
+    int64_t perf_start;
+    const auto switch_perf_counter = [&](int64_t *counter) {
+        int64_t now = GetMonotonicTime();
 
         if (perf_counter) {
             *perf_counter += now - perf_start;
@@ -469,9 +469,9 @@ Test options:)");
     HeapArray<mco_Pricing> pricings;
     HeapArray<mco_Pricing> mono_pricings;
     mco_Pricing summary = {};
-    uint64_t classify_time = 0;
-    uint64_t filter_time = 0;
-    uint64_t pricing_time = 0;
+    int64_t classify_time = 0;
+    int64_t filter_time = 0;
+    int64_t pricing_time = 0;
     for (int j = 0; j < std::max(torture, 1); j++) {
         results.RemoveFrom(0);
         mono_results.RemoveFrom(0);
@@ -537,7 +537,7 @@ Test options:)");
     PrintLn("GHS coefficients have%1 been applied!", apply_coefficient ? "" : " NOT");
 
     if (torture) {
-        uint64_t total_time = classify_time + filter_time + pricing_time;
+        int64_t total_time = classify_time + filter_time + pricing_time;
         int64_t perf = (int64_t)summary.results_count * torture * 1000 / total_time;
         int64_t mono_perf = (int64_t)summary.stays_count * torture * 1000 / total_time;
 

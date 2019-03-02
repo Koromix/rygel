@@ -477,14 +477,14 @@ Date &Date::operator--()
 // Time
 // ------------------------------------------------------------------------
 
-uint64_t g_start_time = GetMonotonicTime();
+int64_t g_start_time = GetMonotonicTime();
 
-uint64_t GetMonotonicTime()
+int64_t GetMonotonicTime()
 {
 #if defined(_WIN32)
-    return GetTickCount64();
+    return (int64_t)GetTickCount64();
 #elif defined(__EMSCRIPTEN__)
-    return (uint64_t)emscripten_get_now();
+    return (int64_t)emscripten_get_now();
 #else
     struct timespec ts;
     if (clock_gettime(CLOCK_MONOTONIC, &ts) < 0) {
@@ -492,7 +492,7 @@ uint64_t GetMonotonicTime()
         return 0;
     }
 
-    return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
+    return (int64_t)ts.tv_sec * 1000 + (int64_t)ts.tv_nsec / 1000000;
 #endif
 }
 

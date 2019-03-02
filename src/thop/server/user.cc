@@ -23,7 +23,7 @@ struct Session {
     char session_key[129];
     char client_addr[65];
     char user_agent[134];
-    std::atomic_uint64_t last_seen;
+    std::atomic_int64_t last_seen;
 
     const User *user;
 
@@ -296,10 +296,10 @@ static bool GetClientAddress(MHD_Connection *conn, Span<char> out_address)
 
 static void PruneStaleSessions()
 {
-    uint64_t now = GetMonotonicTime();
+    int64_t now = GetMonotonicTime();
 
     static std::mutex last_pruning_mutex;
-    static uint64_t last_pruning = 0;
+    static int64_t last_pruning = 0;
     {
         std::lock_guard<std::mutex> lock(last_pruning_mutex);
         if (now - last_pruning < PruneDelay)
@@ -319,7 +319,7 @@ static void PruneStaleSessions()
 // Call with sessions_mutex locked
 static Session *FindSession(const http_Request &request, bool *out_mismatch = nullptr)
 {
-    uint64_t now = GetMonotonicTime();
+    int64_t now = GetMonotonicTime();
 
     char address[65];
     if (!GetClientAddress(request.conn, address)) {
