@@ -30,6 +30,8 @@ endif()
 
 set(BUILDER_SRC
     builder/builder.cc
+    builder/compiler.cc
+    builder/compiler.hh
 )
 
 add_executable(builder ${BUILDER_SRC})
