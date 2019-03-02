@@ -2,15 +2,19 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
+
 #include "../libcc/libcc.hh"
 
 enum class Toolchain {
     Clang,
-    MinGW
+    GCC
 };
 static const char *const ToolchainNames[] = {
     "Clang",
-    "MinGW"
+    "GCC"
 };
 
 enum class SourceType {
@@ -109,8 +113,12 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
 
     switch (toolchain) {
         case Toolchain::Clang: {
+#ifdef _WIN32
             static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                              "-Wno-unknown-warning-option";
+#else
+            static const char *const flags = "";
+#endif
 
             switch (source_type) {
                 case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
@@ -130,7 +138,7 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
             }
         } break;
 
-        case Toolchain::MinGW: {
+        case Toolchain::GCC: {
             static const char *const flags = "";
 
             switch (source_type) {
@@ -364,12 +372,14 @@ int main(int argc, char **argv)
         }
     }
 
-    if (toolchain == Toolchain::MinGW && (c_pch_filename || cxx_pch_filename)) {
+#ifdef _WIN32
+    if (toolchain == Toolchain::GCC && (c_pch_filename || cxx_pch_filename)) {
         LogError("PCH does not work correctly with MinGW (ignoring)");
 
         c_pch_filename = nullptr;
         cxx_pch_filename = nullptr;
     }
+#endif
 
     // Build PCH
     {
