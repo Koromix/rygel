@@ -263,6 +263,26 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 
 int main(int argc, char **argv)
 {
+    static const auto PrintUsage = [](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: builder [options] [target]
+
+Options:
+    -c, --compiler <compiler>    Set compiler
+                                 (default: %1)
+
+        --c_pch <filename>       Precompile C header <filename>
+        --cxx_pch <filename>     Precompile C++ header <filename>
+
+    -j, --jobs <count>           Set maximum number of parallel jobs
+                                 (default: number of cores)
+
+Available compilers:)", Compilers[0]->name);
+        for (const Compiler *compiler: Compilers) {
+            PrintLn(fp, "    %1", compiler->name);
+        }
+    };
+
     const Compiler *compiler = Compilers[0];
     HeapArray<const char *> src_directories;
     const char *c_pch_filename = nullptr;
@@ -271,7 +291,10 @@ int main(int argc, char **argv)
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-c", "--compiler", OptionType::Value)) {
+            if (opt.Test("--help")) {
+                PrintUsage(stdout);
+                return 0;
+            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
                 const Compiler *const *ptr = FindIf(Compilers,
                                                     [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
                 if (!ptr) {
