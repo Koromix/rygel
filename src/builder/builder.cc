@@ -20,8 +20,7 @@ struct BuildCommand {
     const char *src_filename;
     const char *dest_filename;
 
-    const char *cmd_text;
-    std::function<bool(BlockAllocator *alloc)> func;
+    const char *cmd;
 };
 
 static const char *const CFlags = "-std=gnu99 -O0 -DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE -Wno-unknown-warning-option";
@@ -97,17 +96,6 @@ static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> sr
     return true;
 }
 
-static bool ExecuteCommand(const char *cmd)
-{
-    errno = 0;
-    if (system(cmd) || errno) {
-        LogError("Command '%1' failed", cmd);
-        return false;
-    }
-
-    return true;
-}
-
 static const char *CreateCompileCommand(Toolchain toolchain, Language language, const char *misc_flags,
                                         const char *src_filename, const char *dest_filename,
                                         const char *deps_filename, bool use_pch, Allocator *alloc)
@@ -151,8 +139,16 @@ static const char *CreateCompileCommand(Toolchain toolchain, Language language, 
     return buf.Leak().ptr;
 }
 
+static bool EnsureDirectoryExists(const char *filename)
+{
+    Span<const char> directory;
+    SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
+
+    return MakeDirectoryRec(directory);
+}
+
 static bool AppendPCHCommands(Toolchain toolchain, Language language, const char *pch_filename,
-                              HeapArray<BuildCommand> *out_commands)
+                              Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
     BlockAllocator temp_alloc;
 
@@ -198,8 +194,11 @@ static bool AppendPCHCommands(Toolchain toolchain, Language language, const char
         cmd.src_filename = pch_filename;
         cmd.dest_filename = dest_filename;
 
-        cmd.cmd_text = "Build PCH";
-        cmd.func = [=](BlockAllocator *alloc) {
+        if (!EnsureDirectoryExists(dest_filename))
+            return false;
+
+        // Write stdafx.h
+        {
             StreamWriter writer(dest_filename);
             if (PathIsAbsolute(pch_filename)) {
                 Print(&writer, "#include \"%1\"", pch_filename);
@@ -208,11 +207,10 @@ static bool AppendPCHCommands(Toolchain toolchain, Language language, const char
             }
             if (!writer.Close())
                 return false;
+        }
 
-            const char *cmd = CreateCompileCommand(toolchain, language, misc_flags, dest_filename,
-                                                   nullptr, deps_filename, false, alloc);
-            return ExecuteCommand(cmd);
-        };
+        cmd.cmd = CreateCompileCommand(toolchain, language, misc_flags, dest_filename,
+                                       nullptr, deps_filename, false, alloc);
 
         out_commands->Append(cmd);
     }
@@ -262,14 +260,17 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
                 }
 
                 if (build) {
+                    if (!EnsureDirectoryExists(cmd.dest_filename))
+                        return false;
+
                     if (extension == ".c") {
-                        cmd.cmd_text =
-                            CreateCompileCommand(toolchain, Language::C, nullptr, cmd.src_filename,
-                                                 cmd.dest_filename, deps_filename, use_c_pch, alloc);
+                        cmd.cmd = CreateCompileCommand(toolchain, Language::C, nullptr,
+                                                       cmd.src_filename, cmd.dest_filename,
+                                                       deps_filename, use_c_pch, alloc);
                     } else {
-                        cmd.cmd_text =
-                            CreateCompileCommand(toolchain, Language::CXX, nullptr, cmd.src_filename,
-                                                 cmd.dest_filename, deps_filename, use_cxx_pch, alloc);
+                        cmd.cmd = CreateCompileCommand(toolchain, Language::CXX, nullptr,
+                                                       cmd.src_filename, cmd.dest_filename,
+                                                       deps_filename, use_cxx_pch, alloc);
                     }
 
                     out_commands->Append(cmd);
@@ -284,8 +285,6 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
 
 static bool RunBuildCommands(Span<const BuildCommand> commands)
 {
-    BlockAllocator temp_alloc;
-
     Async async;
 
     for (const BuildCommand &cmd: commands) {
@@ -293,29 +292,14 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
         progress_counter = 0;
 
         async.AddTask([&, cmd]() {
-            LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd_text);
+            LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd);
 
-            // Create output directory
-            {
-                Span<const char> dest_dir;
-                SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS, &dest_dir);
-
-                if (!MakeDirectoryRec(dest_dir))
-                    return false;
-            }
-
-            // Run command or function
-            {
-                bool success;
-                if (cmd.func) {
-                    success = cmd.func(&temp_alloc);
-                } else {
-                    success = ExecuteCommand(cmd.cmd_text);
-                }
-                if (!success) {
-                    unlink(cmd.dest_filename);
-                    return false;
-                }
+            // Run command
+            errno = 0;
+            if (system(cmd.cmd) || errno) {
+                LogError("Command '%1' failed", cmd.cmd);
+                unlink(cmd.dest_filename);
+                return false;
             }
 
             return true;
@@ -369,9 +353,11 @@ int main(int argc, char **argv)
         HeapArray<BuildCommand> commands;
         BlockAllocator commands_alloc;
 
-        if (c_pch_filename && !AppendPCHCommands(toolchain, Language::C, c_pch_filename, &commands))
+        if (c_pch_filename && !AppendPCHCommands(toolchain, Language::C, c_pch_filename,
+                                                 &commands_alloc, &commands))
             return 1;
-        if (cxx_pch_filename && !AppendPCHCommands(toolchain, Language::CXX, cxx_pch_filename, &commands))
+        if (cxx_pch_filename && !AppendPCHCommands(toolchain, Language::CXX, cxx_pch_filename,
+                                                   &commands_alloc, &commands))
             return 1;
 
         if (commands.len) {
