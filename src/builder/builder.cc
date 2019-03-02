@@ -223,6 +223,8 @@ static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const
         } else {
             if (!WriteFile("", dest_filename))
                 return false;
+            if (!WriteFile("", deps_filename))
+                return false;
         }
     }
 
