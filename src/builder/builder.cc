@@ -148,6 +148,8 @@ static bool EnsureDirectoryExists(const char *filename)
 static bool AppendPCHCommands(Toolchain toolchain, Language language, const char *pch_filename,
                               Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
+    DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
+
     BlockAllocator temp_alloc;
 
     const char *dest_filename = nullptr;
@@ -211,6 +213,7 @@ static bool AppendPCHCommands(Toolchain toolchain, Language language, const char
         out_commands->Append(cmd);
     }
 
+    out_guard.disable();
     return true;
 }
 
@@ -218,6 +221,8 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
                                  bool use_c_pch, bool use_cxx_pch,
                                  Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
+    DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
+
     BlockAllocator temp_alloc;
 
     if (PathIsAbsolute(src_directory)) {
@@ -275,8 +280,11 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
         }
         return true;
     });
+    if (status != EnumStatus::Done)
+        return false;
 
-    return status == EnumStatus::Done;
+    out_guard.disable();
+    return true;
 }
 
 static bool RunBuildCommands(Span<const BuildCommand> commands)
