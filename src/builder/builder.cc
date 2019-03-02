@@ -109,8 +109,8 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
 
     switch (toolchain) {
         case Toolchain::Clang: {
-            static const char *flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
-                                       "-Wno-unknown-warning-option";
+            static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
+                                             "-Wno-unknown-warning-option";
 
             switch (source_type) {
                 case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
@@ -131,7 +131,7 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
         } break;
 
         case Toolchain::MinGW: {
-            static const char *flags = "";
+            static const char *const flags = "";
 
             switch (source_type) {
                 case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
