@@ -7,22 +7,7 @@
 #endif
 
 #include "../libcc/libcc.hh"
-
-enum class Toolchain {
-    Clang,
-    GCC
-};
-static const char *const ToolchainNames[] = {
-    "Clang",
-    "GCC"
-};
-
-enum class SourceType {
-    C_Source,
-    C_Header,
-    CXX_Source,
-    CXX_Header
-};
+#include "compiler.hh"
 
 struct BuildCommand {
     const char *dest_filename;
@@ -104,64 +89,6 @@ static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> sr
     return true;
 }
 
-static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_type,
-                                        const char *src_filename, const char *dest_filename,
-                                        const char *deps_filename, Allocator *alloc)
-{
-    HeapArray<char> buf;
-    buf.allocator = alloc;
-
-    switch (toolchain) {
-        case Toolchain::Clang: {
-#ifdef _WIN32
-            static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
-                                             "-Wno-unknown-warning-option";
-#else
-            static const char *const flags = "";
-#endif
-
-            switch (source_type) {
-                case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
-                case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
-                case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                         "-include pch/stdafx_cxx.h %1", flags); } break;
-                case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                         "-x c++-header %1", flags); } break;
-            }
-
-            Fmt(&buf, " -c %1", src_filename);
-            if (deps_filename) {
-                Fmt(&buf, " -MMD -MF %1", deps_filename);
-            }
-            if (dest_filename) {
-                Fmt(&buf, " -o %1", dest_filename);
-            }
-        } break;
-
-        case Toolchain::GCC: {
-            static const char *const flags = "";
-
-            switch (source_type) {
-                case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
-                case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu99 -x c-header %1", flags); } break;
-                case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -include pch/stdafx_cxx.h %1", flags); } break;
-                case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -x c++-header %1", flags); } break;
-            }
-
-            Fmt(&buf, " -c %1", src_filename);
-            if (deps_filename) {
-                Fmt(&buf, " -MMD -MF %1", deps_filename);
-            }
-            if (dest_filename) {
-                Fmt(&buf, " -o %1", dest_filename);
-            }
-        } break;
-    }
-    DebugAssert(buf.len);
-
-    return buf.Leak().ptr;
-}
-
 static bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory;
@@ -170,8 +97,9 @@ static bool EnsureDirectoryExists(const char *filename)
     return MakeDirectoryRec(directory);
 }
 
-static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const char *pch_filename,
-                              Allocator *alloc, HeapArray<BuildCommand> *out_commands)
+static bool AppendPCHCommands(const Compiler &compiler, SourceType source_type,
+                              const char *pch_filename, Allocator *alloc,
+                              HeapArray<BuildCommand> *out_commands)
 {
     DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
 
@@ -224,8 +152,8 @@ static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const
             if (!writer.Close())
                 return false;
 
-            cmd.cmd = CreateCompileCommand(toolchain, source_type, dest_filename, nullptr,
-                                           deps_filename, alloc);
+            cmd.cmd = compiler.BuildObjectCommand(source_type, dest_filename, nullptr,
+                                                  deps_filename, alloc);
 
             out_commands->Append(cmd);
         } else {
@@ -240,7 +168,7 @@ static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const
     return true;
 }
 
-static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
+static bool AppendObjectCommands(const Compiler &compiler, const char *src_directory,
                                  Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
     DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
@@ -287,11 +215,11 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
                         return false;
 
                     if (extension == ".c") {
-                        cmd.cmd = CreateCompileCommand(toolchain, SourceType::C_Source, src_filename,
-                                                       cmd.dest_filename, deps_filename, alloc);
+                        cmd.cmd = compiler.BuildObjectCommand(SourceType::C_Source, src_filename,
+                                                              cmd.dest_filename, deps_filename, alloc);
                     } else {
-                        cmd.cmd = CreateCompileCommand(toolchain, SourceType::CXX_Source, src_filename,
-                                                       cmd.dest_filename, deps_filename, alloc);
+                        cmd.cmd = compiler.BuildObjectCommand(SourceType::CXX_Source, src_filename,
+                                                              cmd.dest_filename, deps_filename, alloc);
                     }
 
                     out_commands->Append(cmd);
@@ -335,7 +263,7 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 
 int main(int argc, char **argv)
 {
-    Toolchain toolchain = (Toolchain)0;
+    const Compiler *compiler = Compilers[0];
     HeapArray<const char *> src_directories;
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
@@ -346,15 +274,15 @@ int main(int argc, char **argv)
             if (opt.Test("-s", "--serial")) {
                 // FIXME: Provide knobs in Async instead of this hack
                 putenv("LIBCC_THREADS=1");
-            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
-                const char *const *name = FindIf(ToolchainNames,
-                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
-                if (!name) {
+            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
+                const Compiler *const *ptr = FindIf(Compilers,
+                                                    [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
+                if (!ptr) {
                     LogError("Unknown toolchain '%1'", opt.current_value);
                     return 1;
                 }
 
-                toolchain = (Toolchain)(name - ToolchainNames);
+                compiler = *ptr;
             } else if (opt.Test("--c_pch", OptionType::Value)) {
                 c_pch_filename = opt.current_value;
             } else if (opt.Test("--cxx_pch", OptionType::Value)) {
@@ -373,7 +301,7 @@ int main(int argc, char **argv)
     }
 
 #ifdef _WIN32
-    if (toolchain == Toolchain::GCC && (c_pch_filename || cxx_pch_filename)) {
+    if (compiler == &GnuCompiler && (c_pch_filename || cxx_pch_filename)) {
         LogError("PCH does not work correctly with MinGW (ignoring)");
 
         c_pch_filename = nullptr;
@@ -386,9 +314,9 @@ int main(int argc, char **argv)
         HeapArray<BuildCommand> commands;
         BlockAllocator commands_alloc;
 
-        if (!AppendPCHCommands(toolchain, SourceType::C_Header, c_pch_filename, &commands_alloc, &commands))
+        if (!AppendPCHCommands(*compiler, SourceType::C_Header, c_pch_filename, &commands_alloc, &commands))
             return 1;
-        if (!AppendPCHCommands(toolchain, SourceType::CXX_Header, cxx_pch_filename, &commands_alloc, &commands))
+        if (!AppendPCHCommands(*compiler, SourceType::CXX_Header, cxx_pch_filename, &commands_alloc, &commands))
             return 1;
 
         if (commands.len) {
@@ -405,7 +333,7 @@ int main(int argc, char **argv)
         BlockAllocator commands_alloc;
 
         for (const char *src_directory: src_directories) {
-            if (!AppendObjectCommands(toolchain, src_directory, &commands_alloc, &commands))
+            if (!AppendObjectCommands(*compiler, src_directory, &commands_alloc, &commands))
                 return 1;
         }
 
