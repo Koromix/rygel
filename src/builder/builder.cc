@@ -287,10 +287,10 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 {
     Async async;
 
-    for (const BuildCommand &cmd: commands) {
-        static std::atomic_int progress_counter;
-        progress_counter = 0;
+    static std::atomic_int progress_counter;
+    progress_counter = 0;
 
+    for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
             LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd);
 
