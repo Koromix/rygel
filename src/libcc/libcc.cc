@@ -1740,30 +1740,6 @@ void WaitForConsoleInterruption()
 // Tasks
 // ------------------------------------------------------------------------
 
-int GetIdealThreadCount()
-{
-#ifdef __EMSCRIPTEN__
-    static const int max_threads = 1;
-#else
-    static const int max_threads = []() {
-        const char *env = getenv("LIBCC_THREADS");
-        if (env) {
-            char *end_ptr;
-            long threads = strtol(env, &end_ptr, 10);
-            if (end_ptr > env && !end_ptr[0] && threads > 0) {
-                return (int)threads;
-            } else {
-                LogError("LIBCC_THREADS must be positive number (ignored)");
-            }
-        }
-        return (int)std::thread::hardware_concurrency();
-    }();
-    Assert(max_threads > 0);
-#endif
-
-    return max_threads;
-}
-
 struct Task {
     std::function<bool()> func;
     Async *async;
@@ -1789,6 +1765,40 @@ struct ThreadPool {
 static THREAD_LOCAL ThreadPool *g_thread_pool;
 static THREAD_LOCAL WorkerThread *g_worker_thread;
 static THREAD_LOCAL bool g_task_running = false;
+static int g_max_threads;
+
+void Async::SetThreadCount(int max_threads)
+{
+    DebugAssert(max_threads > 0);
+    DebugAssert(!g_thread_pool);
+
+    g_max_threads = max_threads;
+}
+
+int Async::GetThreadCount()
+{
+    if (!g_max_threads) {
+#ifdef __EMSCRIPTEN__
+        g_max_threads = 1;
+#else
+        const char *env = getenv("LIBCC_THREADS");
+        if (env) {
+            char *end_ptr;
+            long threads = strtol(env, &end_ptr, 10);
+            if (end_ptr > env && !end_ptr[0] && threads > 0) {
+                return (int)threads;
+            } else {
+                LogError("LIBCC_THREADS must be positive number (ignored)");
+            }
+        }
+        return (int)std::thread::hardware_concurrency();
+
+        Assert(g_max_threads > 0);
+#endif
+    }
+
+    return g_max_threads;
+}
 
 Async::Async()
 {
@@ -1797,7 +1807,7 @@ Async::Async()
         // the first time. That's only one leak in most cases, when the main thread is the
         // only non-worker thread using Async, but still. Something to keep in mind.
         g_thread_pool = new ThreadPool;
-        g_thread_pool->workers.AppendDefault(GetIdealThreadCount());
+        g_thread_pool->workers.AppendDefault(GetThreadCount());
         g_worker_thread = &g_thread_pool->workers[0];
     }
 

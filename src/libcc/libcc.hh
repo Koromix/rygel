@@ -3200,13 +3200,14 @@ static const char *const IPStackNames[] = {
 // Tasks
 // ------------------------------------------------------------------------
 
-int GetIdealThreadCount();
-
 class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
 public:
+    static void SetThreadCount(int max_threads);
+    static int GetThreadCount();
+
     Async();
     ~Async();
 
