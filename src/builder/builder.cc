@@ -221,8 +221,7 @@ static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const
 
             out_commands->Append(cmd);
         } else {
-            StreamWriter writer(dest_filename);
-            if (!writer.Close())
+            if (!WriteFile("", dest_filename))
                 return false;
         }
     }
