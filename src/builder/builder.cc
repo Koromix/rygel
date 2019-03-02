@@ -68,7 +68,7 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
 {
     Span<const char> rule;
     HeapArray<char> rule_buf;
-    if (!ReadFile(filename, Megabytes(2), &rule_buf))
+    if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
         return false;
     rule = rule_buf;
 
