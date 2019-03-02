@@ -2497,6 +2497,21 @@ private:
     bool WriteRaw(Span<const uint8_t> buf);
 };
 
+static inline bool WriteFile(Span<const uint8_t> buf, const char *filename,
+                             CompressionType compression_type = CompressionType::None)
+{
+    StreamWriter st(filename, compression_type);
+    st.Write(buf);
+    return st.Close();
+}
+static inline bool WriteFile(Span<const char> buf, const char *filename,
+                             CompressionType compression_type = CompressionType::None)
+{
+    StreamWriter st(filename, compression_type);
+    st.Write(buf);
+    return st.Close();
+}
+
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer);
 
 // For convenience, don't close them
