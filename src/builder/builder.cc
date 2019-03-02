@@ -17,9 +17,7 @@ enum class Language {
 };
 
 struct BuildCommand {
-    const char *src_filename;
     const char *dest_filename;
-
     const char *cmd;
 };
 
@@ -190,8 +188,6 @@ static bool AppendPCHCommands(Toolchain toolchain, Language language, const char
 
     if (build) {
         BuildCommand cmd = {};
-
-        cmd.src_filename = pch_filename;
         cmd.dest_filename = dest_filename;
 
         if (!EnsureDirectoryExists(dest_filename))
@@ -238,15 +234,12 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
             Span<const char> extension = GetPathExtension(name);
 
             if (extension == ".cc" || extension == ".cpp" || extension == ".c") {
-                BuildCommand cmd = {};
-
-                cmd.src_filename = Fmt(alloc, "%1%/%2", src_directory, name).ptr;
-                cmd.dest_filename = BuildObjectPath("objects", cmd.src_filename, alloc);
+                const char *src_filename = Fmt(alloc, "%1%/%2", src_directory, name).ptr;
+                const char *dest_filename = BuildObjectPath("objects", src_filename, alloc);
+                const char *deps_filename = Fmt(&temp_alloc, "%1.d", dest_filename).ptr;
 
                 src_filenames.RemoveFrom(0);
-                src_filenames.Append(cmd.src_filename);
-
-                const char *deps_filename = Fmt(&temp_alloc, "%1.d", cmd.dest_filename).ptr;
+                src_filenames.Append(src_filename);
 
                 // Parse Make rule dependencies
                 bool build = false;
@@ -254,22 +247,25 @@ static bool AppendObjectCommands(Toolchain toolchain, const char *src_directory,
                     if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
                         return false;
 
-                    build = !IsFileUpToDate(cmd.dest_filename, src_filenames);
+                    build = !IsFileUpToDate(dest_filename, src_filenames);
                 } else {
                     build = true;
                 }
 
                 if (build) {
-                    if (!EnsureDirectoryExists(cmd.dest_filename))
+                    BuildCommand cmd = {};
+                    cmd.dest_filename = dest_filename;
+
+                    if (!EnsureDirectoryExists(dest_filename))
                         return false;
 
                     if (extension == ".c") {
                         cmd.cmd = CreateCompileCommand(toolchain, Language::C, nullptr,
-                                                       cmd.src_filename, cmd.dest_filename,
+                                                       src_filename, cmd.dest_filename,
                                                        deps_filename, use_c_pch, alloc);
                     } else {
                         cmd.cmd = CreateCompileCommand(toolchain, Language::CXX, nullptr,
-                                                       cmd.src_filename, cmd.dest_filename,
+                                                       src_filename, cmd.dest_filename,
                                                        deps_filename, use_cxx_pch, alloc);
                     }
 
