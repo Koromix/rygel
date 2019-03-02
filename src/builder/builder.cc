@@ -325,7 +325,7 @@ int main(int argc, char **argv)
                 }
 
                 toolchain = (Toolchain)(name - ToolchainNames);
-            } else if (opt.Test("-c_pch", OptionType::Value)) {
+            } else if (opt.Test("--c_pch", OptionType::Value)) {
                 c_pch_filename = opt.current_value;
             } else if (opt.Test("--cxx_pch", OptionType::Value)) {
                 cxx_pch_filename = opt.current_value;
