@@ -5,10 +5,10 @@
 #include "../libcc/libcc.hh"
 
 enum class Toolchain {
-    ClangCl
+    Clang
 };
 static const char *const ToolchainNames[] = {
-    "ClangCl"
+    "Clang"
 };
 
 enum class SourceType {
@@ -106,7 +106,7 @@ static const char *CreateCompileCommand(Toolchain toolchain, SourceType source_t
     buf.allocator = alloc;
 
     switch (toolchain) {
-        case Toolchain::ClangCl: {
+        case Toolchain::Clang: {
             static const char *flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                        "-Wno-unknown-warning-option";
 
