@@ -1412,6 +1412,13 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
     return true;
 }
 
+const char *GetWorkingDirectory()
+{
+    static THREAD_LOCAL char buf[4096];
+    Assert(getcwd(buf, SIZE(buf)));
+    return buf;
+}
+
 #ifdef __EMSCRIPTEN__
 static bool running_in_node;
 
