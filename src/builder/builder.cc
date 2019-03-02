@@ -190,7 +190,7 @@ static bool AppendPCHCommands(Toolchain toolchain, SourceType source_type, const
             if (PathIsAbsolute(pch_filename)) {
                 Print(&writer, "#include \"%1\"", pch_filename);
             } else {
-                Print(&writer, "#include \"%1%/%2\"", GetApplicationDirectory(), pch_filename);
+                Print(&writer, "#include \"%1%/%2\"", GetWorkingDirectory(), pch_filename);
             }
             if (!writer.Close())
                 return false;
