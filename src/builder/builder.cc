@@ -271,10 +271,7 @@ int main(int argc, char **argv)
         OptionParser opt(argc, argv);
 
         while (opt.Next()) {
-            if (opt.Test("-s", "--serial")) {
-                // FIXME: Provide knobs in Async instead of this hack
-                putenv("LIBCC_THREADS=1");
-            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
+            if (opt.Test("-c", "--compiler", OptionType::Value)) {
                 const Compiler *const *ptr = FindIf(Compilers,
                                                     [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
                 if (!ptr) {
@@ -287,6 +284,16 @@ int main(int argc, char **argv)
                 c_pch_filename = opt.current_value;
             } else if (opt.Test("--cxx_pch", OptionType::Value)) {
                 cxx_pch_filename = opt.current_value;
+            } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
+                int max_threads;
+                if (!ParseDec(opt.current_value, &max_threads))
+                    return 1;
+                if (max_threads < 1) {
+                    LogError("Jobs count cannot be < 1");
+                    return 1;
+                }
+
+                Async::SetThreadCount(max_threads);
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
