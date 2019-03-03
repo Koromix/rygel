@@ -36,7 +36,7 @@ static MergeMode FindDefaultMergeMode(const char *filename)
     }
 }
 
-static bool LoadMergeRules(const char *filename, HeapArray<MergeRule> *out_rules, Allocator *alloc)
+static bool LoadMergeRules(const char *filename, Allocator *alloc, HeapArray<MergeRule> *out_rules)
 {
     DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
 
@@ -234,7 +234,7 @@ Available compression types:)");
     }
 
     HeapArray<MergeRule> merge_rules;
-    if (merge_file && !LoadMergeRules(merge_file, &merge_rules, &temp_alloc))
+    if (merge_file && !LoadMergeRules(merge_file, &temp_alloc, &merge_rules))
         return 1;
     if (!source_maps) {
         for (MergeRule &rule: merge_rules) {
