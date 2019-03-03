@@ -1623,6 +1623,15 @@ bool PathIsAbsolute(const char *path)
 
     return IsPathSeparator(path[0]);
 }
+bool PathIsAbsolute(Span<const char> path)
+{
+#ifdef _WIN32
+    if (path.len >= 2 && IsAsciiAlpha(path[0]) && path[1] == ':')
+        return true;
+#endif
+
+    return path.len && IsPathSeparator(path[0]);
+}
 
 bool PathContainsDotDot(const char *path)
 {
