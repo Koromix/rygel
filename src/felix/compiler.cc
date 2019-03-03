@@ -8,8 +8,8 @@
 Compiler ClangCompiler = {
     "Clang",
 
-    /* BuildObjectCommand */
-    [](const char *src_filename, SourceType source_type, BuildMode build_mode,
+    // BuildObjectCommand
+    [](const char *src_filename, SourceType src_type, BuildMode build_mode,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
@@ -21,7 +21,7 @@ Compiler ClangCompiler = {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        switch (source_type) {
+        switch (src_type) {
             case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
             case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
@@ -45,14 +45,42 @@ Compiler ClangCompiler = {
         }
 
         return (const char *)buf.Leak().ptr;
+    },
+
+    // BuildLinkCommand
+    [](Span<const ObjectInfo> objects, Span<const char *const> libraries,
+       const char *dest_filename, Allocator *alloc) {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        bool is_cxx = std::any_of(objects.begin(), objects.end(),
+                                  [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
+        buf.Append(is_cxx ? "clang++" : "clang");
+
+        for (const ObjectInfo &obj: objects) {
+            switch (obj.src_type) {
+                case SourceType::C_Source:
+                case SourceType::CXX_Source: { Fmt(&buf, " %1", obj.dest_filename); } break;
+
+                case SourceType::C_Header:
+                case SourceType::CXX_Header: { DebugAssert(false); } break;
+            }
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
+        Fmt(&buf, " -o %1", dest_filename);
+
+        return (const char *)buf.Leak().ptr;
     }
 };
 
 Compiler GnuCompiler = {
     "GNU",
 
-    /* BuildObjectCommand */
-    [](const char *src_filename, SourceType source_type, BuildMode build_mode,
+    // BuildObjectCommand
+    [](const char *src_filename, SourceType src_type, BuildMode build_mode,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
@@ -64,7 +92,7 @@ Compiler GnuCompiler = {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        switch (source_type) {
+        switch (src_type) {
             case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
             case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
@@ -93,6 +121,34 @@ Compiler GnuCompiler = {
         if (dest_filename) {
             Fmt(&buf, " -o %1", dest_filename);
         }
+
+        return (const char *)buf.Leak().ptr;
+    },
+
+    // BuildLinkCommand
+    [](Span<const ObjectInfo> objects, Span<const char *const> libraries,
+       const char *dest_filename, Allocator *alloc) {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        bool is_cxx = std::any_of(objects.begin(), objects.end(),
+                                  [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
+        buf.Append(is_cxx ? "g++" : "gcc");
+
+        for (const ObjectInfo &obj: objects) {
+            switch (obj.src_type) {
+                case SourceType::C_Source:
+                case SourceType::CXX_Source: { Fmt(&buf, " %1", obj.dest_filename); } break;
+
+                case SourceType::C_Header:
+                case SourceType::CXX_Header: { DebugAssert(false); } break;
+            }
+        }
+        for (const char *lib: libraries) {
+            Fmt(&buf, " -l%1", lib);
+        }
+
+        Fmt(&buf, " -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
     }
