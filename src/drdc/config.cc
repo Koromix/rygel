@@ -15,8 +15,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         config.mco_authorization_filename = mco_authorization_filename;
     };
 
-    Span<const char> root_dir;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_dir);
+    Span<const char> root_directory;
+    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
@@ -29,9 +29,12 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             if (prop.section == "Resources") {
                 do {
                     if (prop.key == "TableDirectory") {
-                        config.table_directories.Append(CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc));
+                        const char *directory = NormalizePath(prop.value, root_directory,
+                                                              &config.str_alloc).ptr;
+                        config.table_directories.Append(directory);
                     } else if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
+                        config.profile_directory = NormalizePath(prop.value, root_directory,
+                                                                 &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -39,7 +42,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "MCO") {
                 if (prop.key == "AuthorizationFile") {
-                    config.mco_authorization_filename = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
+                    config.mco_authorization_filename = NormalizePath(prop.value, root_directory,
+                                                                      &config.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

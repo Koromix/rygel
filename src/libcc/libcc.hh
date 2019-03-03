@@ -3132,7 +3132,10 @@ CompressionType GetPathCompression(Span<const char> filename);
 Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
 
-const char *CanonicalizePath(Span<const char> root_dir, Span<const char> path, Allocator *alloc);
+Span<const char> NormalizePath(Span<const char> path, Span<const char> root_directory,
+                               Allocator *alloc);
+static inline Span<const char> NormalizePath(Span<const char> path, Allocator *alloc)
+    { return NormalizePath(path, {}, alloc); }
 
 bool PathIsAbsolute(const char *path);
 bool PathIsAbsolute(Span<const char> path);

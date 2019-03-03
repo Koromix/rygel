@@ -1584,34 +1584,54 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     return extension;
 }
 
-const char *CanonicalizePath(Span<const char> root_dir, Span<const char> path, Allocator *alloc)
+Span<const char> NormalizePath(Span<const char> path, Span<const char> root_directory,
+                               Allocator *alloc)
 {
-    Span<char> complete_path;
-    if (root_dir.len && (!path.len || !PathIsAbsolute(path.ptr))) {
-        complete_path = Fmt(alloc, "%1%/%2", root_dir, path);
-    } else {
-        complete_path = DuplicateString(path, alloc);
-    }
+    if (!path.len && !root_directory.len)
+        return {};
 
-#ifdef _WIN32
-    char *real_path = _fullpath(nullptr, complete_path.ptr, 0);
-#else
-    char *real_path = realpath(complete_path.ptr, nullptr);
-#endif
-    if (real_path) {
-        DEFER { free(real_path); };
+    HeapArray<char> buf;
+    buf.allocator = alloc;
 
-        Allocator::Release(alloc, (void *)complete_path.ptr, complete_path.len + 1);
-        return DuplicateString(real_path, alloc).ptr;
-    } else {
-#ifdef _WIN32
-        for (Size i = 0; i < complete_path.len; i++) {
-            complete_path[i] = (complete_path[i] == '/') ? '\\' : complete_path[i];
+    const auto AppendNormalizedPath = [&](Span<const char> path) {
+        Size parts_count = 0;
+
+        if (!buf.len && PathIsAbsolute(path)) {
+            Span<const char> prefix = SplitStrAny(path, PATH_SEPARATORS, &path);
+            buf.Append(prefix);
+            buf.Append(*PATH_SEPARATORS);
         }
-#endif
 
-        return complete_path.ptr;
+        while (path.len) {
+            Span<const char> part = SplitStrAny(path, PATH_SEPARATORS, &path);
+
+            if (part == "..") {
+                if (parts_count) {
+                    while (--buf.len && !IsPathSeparator(buf.ptr[buf.len - 1]));
+                    parts_count--;
+                } else {
+                    buf.Append("..");
+                    buf.Append(*PATH_SEPARATORS);
+                }
+            } else if (part == ".") {
+                // Skip
+            } else if (part.len) {
+                buf.Append(part);
+                buf.Append(*PATH_SEPARATORS);
+                parts_count++;
+            }
+        }
+    };
+
+    if (root_directory.len && (!path.len || !PathIsAbsolute(path))) {
+        AppendNormalizedPath(root_directory);
     }
+    AppendNormalizedPath(path);
+
+    if (buf.len > 1) {
+        buf[buf.len - 1] = 0;
+    }
+    return buf.Leak();
 }
 
 bool PathIsAbsolute(const char *path)
