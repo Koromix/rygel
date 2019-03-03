@@ -13,9 +13,9 @@ Compiler ClangCompiler = {
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
-                                         "-Wno-unknown-warning-option";
+                                         "-Wall -Wno-unknown-warning-option";
 #else
-        static const char *const flags = "";
+        static const char *const flags = "-Wall";
 #endif
 
         HeapArray<char> buf;
@@ -58,7 +58,7 @@ Compiler GnuCompiler = {
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
 #else
-        static const char *const flags = "";
+        static const char *const flags = "-Wall";
 #endif
 
         HeapArray<char> buf;
