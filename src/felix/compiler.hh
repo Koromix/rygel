@@ -24,12 +24,21 @@ enum class SourceType {
     CXX_Header
 };
 
+struct ObjectInfo {
+    const char *src_filename;
+    SourceType src_type;
+
+    const char *dest_filename;
+};
+
 struct Compiler {
     const char *name;
 
-    const char *(*BuildObjectCommand)(const char *src_filename, SourceType source_type,
+    const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
                                       BuildMode build_mode, const char *dest_filename,
                                       const char *deps_filename, Allocator *alloc);
+    const char *(*BuildLinkCommand)(Span<const ObjectInfo> objects, Span<const char *const> libraries,
+                                    const char *dest_filename, Allocator *alloc);
 };
 
 extern Compiler ClangCompiler;
