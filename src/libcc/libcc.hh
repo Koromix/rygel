@@ -3135,6 +3135,7 @@ Span<const char> GetPathExtension(Span<const char> filename,
 const char *CanonicalizePath(Span<const char> root_dir, Span<const char> path, Allocator *alloc);
 
 bool PathIsAbsolute(const char *path);
+bool PathIsAbsolute(Span<const char> path);
 bool PathContainsDotDot(const char *path);
 
 enum class FileType {
