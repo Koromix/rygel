@@ -6,6 +6,17 @@
 
 #include "../libcc/libcc.hh"
 
+enum class BuildMode {
+    Debug,
+    FastDebug,
+    Release
+};
+static const char *const BuildModeNames[] = {
+    "Debug",
+    "FastDebug",
+    "Release"
+};
+
 enum class SourceType {
     C_Source,
     C_Header,
@@ -16,9 +27,9 @@ enum class SourceType {
 struct Compiler {
     const char *name;
 
-    const char *(*BuildObjectCommand)(SourceType source_type, const char *src_filename,
-                                      const char *dest_filename, const char *deps_filename,
-                                      Allocator *alloc);
+    const char *(*BuildObjectCommand)(const char *src_filename, SourceType source_type,
+                                      BuildMode build_mode, const char *dest_filename,
+                                      const char *deps_filename, Allocator *alloc);
 };
 
 extern Compiler ClangCompiler;
