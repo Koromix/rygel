@@ -13,6 +13,8 @@
     #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
+
+    extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #else
     #include <dirent.h>
     #include <fcntl.h>
@@ -1410,6 +1412,15 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
 
     out_guard.disable();
     return true;
+}
+
+bool MatchPathName(const char *name, const char *pattern)
+{
+#ifdef _WIN32
+    return PathMatchSpecA(name, pattern);
+#else
+    return !fnmatch(pattern, name, 0);
+#endif
 }
 
 const char *GetWorkingDirectory()

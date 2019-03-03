@@ -2,13 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#ifdef _WIN32
-    // Avoid windows.h
-    extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
-#else
-    #include <fnmatch.h>
-#endif
-
 #include "../libcc/libcc.hh"
 #include "generator.hh"
 #include "packer.hh"
@@ -116,11 +109,7 @@ static bool LoadMergeRules(const char *filename, HeapArray<MergeRule> *out_rules
 
 static const MergeRule *FindMergeRule(Span<const MergeRule> rules, const char *filename)
 {
-#ifdef _WIN32
-    const auto test_pattern = [&](const char *pattern) { return PathMatchSpecA(filename, pattern); };
-#else
-    const auto test_pattern = [&](const char *pattern) { return !fnmatch(pattern, filename, 0); };
-#endif
+    const auto test_pattern = [&](const char *pattern) { return MatchPathName(filename, pattern); };
 
     for (const MergeRule &rule: rules) {
         if (std::any_of(rule.include.begin(), rule.include.end(), test_pattern) &&
