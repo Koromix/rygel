@@ -23,6 +23,9 @@ target_link_libraries(libcc PUBLIC miniz)
 if(NOT EMSCRIPTEN)
     target_link_libraries(libcc PUBLIC Threads::Threads)
 endif()
+if(WIN32)
+    target_link_libraries(libcc PUBLIC shlwapi)
+endif()
 
 # ------------------------------------------------------------------------
 # felix
@@ -80,9 +83,6 @@ set(PACKER_SRC
 
 add_executable(packer ${PACKER_SRC})
 target_link_libraries(packer PRIVATE libcc)
-if(WIN32)
-    target_link_libraries(packer PRIVATE shlwapi)
-endif()
 
 set(LIBPACKER_SRC
     packer/libpacker.cc

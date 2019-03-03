@@ -3166,6 +3166,8 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_files,
                              Allocator *str_alloc, HeapArray<const char *> *out_files);
 
+bool MatchPathName(const char *name, const char *pattern);
+
 const char *GetWorkingDirectory();
 
 const char *GetApplicationExecutable(); // Can be NULL
