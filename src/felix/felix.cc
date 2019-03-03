@@ -73,7 +73,7 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
         Span<const char> path = TrimStr(SplitStr(rule, ' ', &rule));
 
         if (path.len && path != "\\") {
-            const char *dep_filename = CanonicalizePath(nullptr, path, alloc);
+            const char *dep_filename = NormalizePath(path, alloc).ptr;
             if (!dep_filename)
                 return false;
             out_filenames->Append(dep_filename);

@@ -19,8 +19,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         config.base_url = base_url;
     };
 
-    Span<const char> root_dir;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_dir);
+    Span<const char> root_directory;
+    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_directory);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
@@ -33,7 +33,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             if (prop.section == "Resources") {
                 do {
                     if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = CanonicalizePath(root_dir, prop.value.ptr, &config.str_alloc);
+                        config.profile_directory = NormalizePath(prop.value, root_directory,
+                                                                 &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
