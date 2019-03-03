@@ -40,14 +40,17 @@ static Span<const char> SplitListValue(Span<const char> str,
 
     if (out_enable) {
         if (part.len && part[0] == '+') {
-            part = part.Take(1, part.len - 1);
+            part = TrimStrLeft(part.Take(1, part.len - 1));
             *out_enable = true;
         } else if (part.len && part[0] == '-') {
-            part = part.Take(1, part.len - 1);
+            part = TrimStrLeft(part.Take(1, part.len - 1));
             *out_enable = false;
         } else {
             *out_enable = true;
         }
+    }
+    if (!part.len) {
+        LogError("Ignoring empty list value");
     }
 
     return part;
@@ -122,7 +125,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
                         if (part == "All") {
                             user.permissions = enable ? UINT_MAX : 0;
-                        } else {
+                        } else if (part.len) {
                             const char *const *name = FindIf(UserPermissionNames,
                                                              [&](const char *str) { return TestStr(str, part); });
                             if (name) {
@@ -154,7 +157,7 @@ bool UserSetBuilder::LoadIni(StreamReader &st)
 
                         if (part == "All") {
                             user.mco_dispense_modes = enable ? UINT_MAX : 0;
-                        } else {
+                        } else if (part.len) {
                             const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                                             [&](const OptionDesc &desc) { return TestStr(desc.name, part); });
                             if (desc) {
