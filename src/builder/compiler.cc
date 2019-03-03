@@ -9,8 +9,8 @@ Compiler ClangCompiler = {
     "Clang",
 
     /* BuildObjectCommand */
-    [](SourceType source_type, const char *src_filename, const char *dest_filename,
-       const char *deps_filename, Allocator *alloc) {
+    [](const char *src_filename, SourceType source_type, BuildMode build_mode,
+       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
@@ -28,6 +28,12 @@ Compiler ClangCompiler = {
                                                      "-include pch/stdafx_cxx.h %1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
                                                      "-x c++-header %1", flags); } break;
+        }
+
+        switch (build_mode) {
+            case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
+            case BuildMode::FastDebug: { Fmt(&buf, " -O2 -g"); } break;
+            case BuildMode::Release: { Fmt(&buf, " -O2 -flto"); } break;
         }
 
         Fmt(&buf, " -c %1", src_filename);
@@ -46,8 +52,8 @@ Compiler GnuCompiler = {
     "GNU",
 
     /* BuildObjectCommand */
-    [](SourceType source_type, const char *src_filename, const char *dest_filename,
-       const char *deps_filename, Allocator *alloc) {
+    [](const char *src_filename, SourceType source_type, BuildMode build_mode,
+       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
@@ -65,6 +71,19 @@ Compiler GnuCompiler = {
                                                      "-include pch/stdafx_cxx.h %1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
                                                      "-x c++-header %1", flags); } break;
+        }
+
+        switch (build_mode) {
+            case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
+            case BuildMode::FastDebug: { Fmt(&buf, " -O2 -g"); } break;
+            case BuildMode::Release: {
+#ifdef _WIN32
+                LogError("LTO does not work correctly with MinGW (ignoring)");
+                Fmt(&buf, " -O2");
+#else
+                Fmt(&buf, " -O2 -flto");
+#endif
+            } break;
         }
 
         Fmt(&buf, " -c %1", src_filename);

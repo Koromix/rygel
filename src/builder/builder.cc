@@ -97,9 +97,9 @@ static bool EnsureDirectoryExists(const char *filename)
     return MakeDirectoryRec(directory);
 }
 
-static bool AppendPCHCommands(const Compiler &compiler, SourceType source_type,
-                              const char *pch_filename, Allocator *alloc,
-                              HeapArray<BuildCommand> *out_commands)
+static bool AppendPCHCommands(const char *pch_filename, SourceType source_type,
+                              const Compiler &compiler, BuildMode build_mode,
+                              Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
     DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
 
@@ -152,7 +152,7 @@ static bool AppendPCHCommands(const Compiler &compiler, SourceType source_type,
             if (!writer.Close())
                 return false;
 
-            cmd.cmd = compiler.BuildObjectCommand(source_type, dest_filename, nullptr,
+            cmd.cmd = compiler.BuildObjectCommand(dest_filename, source_type, build_mode, nullptr,
                                                   deps_filename, alloc);
 
             out_commands->Append(cmd);
@@ -168,7 +168,8 @@ static bool AppendPCHCommands(const Compiler &compiler, SourceType source_type,
     return true;
 }
 
-static bool AppendObjectCommands(const Compiler &compiler, const char *src_directory,
+static bool AppendObjectCommands(const char *src_directory,
+                                 const Compiler &compiler, BuildMode build_mode,
                                  Allocator *alloc, HeapArray<BuildCommand> *out_commands)
 {
     DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
@@ -215,10 +216,10 @@ static bool AppendObjectCommands(const Compiler &compiler, const char *src_direc
                         return false;
 
                     if (extension == ".c") {
-                        cmd.cmd = compiler.BuildObjectCommand(SourceType::C_Source, src_filename,
+                        cmd.cmd = compiler.BuildObjectCommand(src_filename, SourceType::C_Source, build_mode,
                                                               cmd.dest_filename, deps_filename, alloc);
                     } else {
-                        cmd.cmd = compiler.BuildObjectCommand(SourceType::CXX_Source, src_filename,
+                        cmd.cmd = compiler.BuildObjectCommand(src_filename, SourceType::CXX_Source, build_mode,
                                                               cmd.dest_filename, deps_filename, alloc);
                     }
 
@@ -268,8 +269,10 @@ int main(int argc, char **argv)
 R"(Usage: builder [options] [target]
 
 Options:
-    -c, --compiler <compiler>    Set compiler
+    -c, --compiler <compiler>    Set compiler, see below
                                  (default: %1)
+    -m, --mode     <mode>        Set build mode, see below
+                                 (default: %2)
 
         --c_pch <filename>       Precompile C header <filename>
         --cxx_pch <filename>     Precompile C++ header <filename>
@@ -277,13 +280,19 @@ Options:
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores)
 
-Available compilers:)", Compilers[0]->name);
+Available compilers:)", Compilers[0]->name, BuildModeNames[0]);
         for (const Compiler *compiler: Compilers) {
             PrintLn(fp, "    %1", compiler->name);
+        }
+        PrintLn(fp, R"(
+Available build modes:)");
+        for (const char *mode_name: BuildModeNames) {
+            PrintLn(fp, "    %1", mode_name);
         }
     };
 
     const Compiler *compiler = Compilers[0];
+    BuildMode build_mode = (BuildMode)0;
     HeapArray<const char *> src_directories;
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
@@ -303,6 +312,15 @@ Available compilers:)", Compilers[0]->name);
                 }
 
                 compiler = *ptr;
+            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
+                const char *const *name = FindIf(BuildModeNames,
+                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
+                if (!name) {
+                    LogError("Unknown build mode '%1'", opt.current_value);
+                    return 1;
+                }
+
+                build_mode = (BuildMode)(name - BuildModeNames);
             } else if (opt.Test("--c_pch", OptionType::Value)) {
                 c_pch_filename = opt.current_value;
             } else if (opt.Test("--cxx_pch", OptionType::Value)) {
@@ -344,9 +362,11 @@ Available compilers:)", Compilers[0]->name);
         HeapArray<BuildCommand> commands;
         BlockAllocator commands_alloc;
 
-        if (!AppendPCHCommands(*compiler, SourceType::C_Header, c_pch_filename, &commands_alloc, &commands))
+        if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *compiler, build_mode,
+                               &commands_alloc, &commands))
             return 1;
-        if (!AppendPCHCommands(*compiler, SourceType::CXX_Header, cxx_pch_filename, &commands_alloc, &commands))
+        if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *compiler, build_mode,
+                               &commands_alloc, &commands))
             return 1;
 
         if (commands.len) {
@@ -363,7 +383,8 @@ Available compilers:)", Compilers[0]->name);
         BlockAllocator commands_alloc;
 
         for (const char *src_directory: src_directories) {
-            if (!AppendObjectCommands(*compiler, src_directory, &commands_alloc, &commands))
+            if (!AppendObjectCommands(src_directory, *compiler, build_mode,
+                                      &commands_alloc, &commands))
                 return 1;
         }
 
