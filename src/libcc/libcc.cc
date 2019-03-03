@@ -1604,6 +1604,12 @@ const char *CanonicalizePath(Span<const char> root_dir, Span<const char> path, A
         Allocator::Release(alloc, (void *)complete_path.ptr, complete_path.len + 1);
         return DuplicateString(real_path, alloc).ptr;
     } else {
+#ifdef _WIN32
+        for (Size i = 0; i < complete_path.len; i++) {
+            complete_path[i] = (complete_path[i] == '/') ? '\\' : complete_path[i];
+        }
+#endif
+
         return complete_path.ptr;
     }
 }
