@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: builder [options] [target]
+R"(Usage: felix [options] [target]
 
 Options:
     -c, --compiler <compiler>    Set compiler, see below

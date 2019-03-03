@@ -25,17 +25,19 @@ if(NOT EMSCRIPTEN)
 endif()
 
 # ------------------------------------------------------------------------
-# builder
+# felix
 # ------------------------------------------------------------------------
 
-set(BUILDER_SRC
-    builder/builder.cc
-    builder/compiler.cc
-    builder/compiler.hh
+set(FELIX_SRC
+    felix/compiler.cc
+    felix/compiler.hh
+    felix/config.cc
+    felix/config.hh
+    felix/felix.cc
 )
 
-add_executable(builder ${BUILDER_SRC})
-target_link_libraries(builder PRIVATE libcc)
+add_executable(felix ${FELIX_SRC})
+target_link_libraries(felix PRIVATE libcc)
 
 # ------------------------------------------------------------------------
 # libgui
