@@ -14,9 +14,12 @@ struct TargetData {
     const char *name;
     TargetType type;
 
-    HeapArray<ObjectInfo> objects;
+    const char *c_pch_filename;
+    const char *cxx_pch_filename;
 
     Span<const char *const> libraries;
+
+    HeapArray<ObjectInfo> objects;
 };
 
 struct BuildCommand {
@@ -40,8 +43,8 @@ static int64_t GetFileModificationTime(const char *filename)
     return file_info.modification_time;
 }
 
-static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
-                                   Allocator *alloc)
+static const char *BuildOutputPath(const char *src_filename, const char *output_directory,
+                                   const char *suffix, Allocator *alloc)
 {
     DebugAssert(!PathIsAbsolute(src_filename));
 
@@ -49,7 +52,7 @@ static const char *BuildObjectPath(const char *src_filename, const char *output_
     buf.allocator = alloc;
 
     Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
-    Fmt(&buf, "%1.o", src_filename);
+    Fmt(&buf, "%1%2", src_filename, suffix);
 
     // Replace '..' components with '__'
     {
@@ -93,8 +96,6 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
 
         if (path.len && path != "\\") {
             const char *dep_filename = NormalizePath(path, alloc).ptr;
-            if (!dep_filename)
-                return false;
             out_filenames->Append(dep_filename);
         }
     }
@@ -123,6 +124,16 @@ static bool EnsureDirectoryExists(const char *filename)
     return MakeDirectoryRec(directory);
 }
 
+static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_filename)
+{
+    if (!EnsureDirectoryExists(dest_filename))
+        return false;
+
+    StreamWriter writer(dest_filename);
+    Print(&writer, "#include \"%1%/%2\"", GetWorkingDirectory(), pch_filename);
+    return writer.Close();
+}
+
 static bool CreateTarget(const TargetConfig &target_config, const char *output_directory,
                          Allocator *alloc, HeapArray<TargetData> *out_targets)
 {
@@ -142,6 +153,8 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
     target->name = target_config.name;
     target->type = target_config.type;
     target->libraries = target_config.libraries;
+    target->c_pch_filename = target_config.c_pch_filename;
+    target->cxx_pch_filename = target_config.cxx_pch_filename;
 
     for (const char *src_filename: src_filenames) {
         const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
@@ -161,7 +174,7 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
             }
 
             obj.src_filename = DuplicateString(src_filename, alloc).ptr;
-            obj.dest_filename = BuildObjectPath(src_filename, output_directory, alloc);
+            obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", alloc);
 
             target->objects.Append(obj);
         }
@@ -170,33 +183,19 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
     return true;
 }
 
-static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
-                              const Toolchain &toolchain, BuildMode build_mode,
-                              BuildSet *out_set)
+static bool AppendPrecompileCommands(const char *pch_filename, SourceType src_type,
+                                     const char *output_directory,
+                                     const Toolchain &toolchain, BuildMode build_mode,
+                                     BuildSet *out_set)
 {
     const Size start_len = out_set->commands.len;
     DEFER_N(out_guard) { out_set->commands.RemoveFrom(start_len); };
 
     BlockAllocator temp_alloc;
 
-    const char *dest_filename = nullptr;
-    const char *deps_filename = nullptr;
-    switch (src_type) {
-        case SourceType::C_Header: {
-            dest_filename = "pch/stdafx_c.h";
-            deps_filename = "pch/stdafx_c.d";
-        } break;
-        case SourceType::CXX_Header: {
-            dest_filename = "pch/stdafx_cxx.h";
-            deps_filename = "pch/stdafx_cxx.d";
-        } break;
-
-        case SourceType::C_Source:
-        case SourceType::CXX_Source: {
-            Assert(false);
-        } break;
-    }
-    DebugAssert(dest_filename && deps_filename);
+    const char *dest_filename = BuildOutputPath(pch_filename, output_directory, "_pch.h",
+                                                &out_set->str_alloc);
+    const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
 
     bool build;
     if (TestFile(deps_filename, FileType::File)) {
@@ -211,32 +210,15 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
     build &= !out_set->commands_set.Find(dest_filename);
 
     if (build) {
-        if (!EnsureDirectoryExists(dest_filename))
+        BuildCommand cmd = {};
+
+        cmd.dest_filename = dest_filename;
+        if (!CreatePrecompileHeader(pch_filename, dest_filename))
             return false;
+        cmd.cmd = toolchain.BuildObjectCommand(pch_filename, src_type, build_mode, nullptr,
+                                               nullptr, deps_filename, &out_set->str_alloc);
 
-        if (pch_filename) {
-            BuildCommand cmd = {};
-            cmd.dest_filename = dest_filename;
-
-            StreamWriter writer(dest_filename);
-            if (PathIsAbsolute(pch_filename)) {
-                Print(&writer, "#include \"%1\"", pch_filename);
-            } else {
-                Print(&writer, "#include \"%1%/%2\"", GetWorkingDirectory(), pch_filename);
-            }
-            if (!writer.Close())
-                return false;
-
-            cmd.cmd = toolchain.BuildObjectCommand(dest_filename, src_type, build_mode, nullptr,
-                                                  deps_filename, &out_set->str_alloc);
-
-            out_set->commands.Append(cmd);
-        } else {
-            if (!WriteFile("", dest_filename))
-                return false;
-            if (!WriteFile("", deps_filename))
-                return false;
-        }
+        out_set->commands.Append(cmd);
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
@@ -287,11 +269,21 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         if (build) {
             BuildCommand cmd = {};
 
+            const char *pch_filename = nullptr;
+            switch (obj.src_type) {
+                case SourceType::C_Source: { pch_filename = target.c_pch_filename; } break;
+                case SourceType::CXX_Source: { pch_filename = target.cxx_pch_filename; } break;
+
+                case SourceType::C_Header:
+                case SourceType::CXX_Header: { DebugAssert(false); } break;
+            }
+
             cmd.dest_filename = DuplicateString(obj.dest_filename, &out_obj_set->str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
             cmd.cmd = toolchain.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
-                                                  obj.dest_filename, deps_filename, &out_obj_set->str_alloc);
+                                                   pch_filename, obj.dest_filename, deps_filename,
+                                                   &out_obj_set->str_alloc);
 
             out_obj_set->commands.Append(cmd);
         }
@@ -376,9 +368,6 @@ Options:
     -m, --mode     <mode>        Set build mode, see below
                                  (default: %2)
 
-        --c_pch <filename>       Precompile C header <filename>
-        --cxx_pch <filename>     Precompile C++ header <filename>
-
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores)
 
@@ -398,8 +387,6 @@ Available build modes:)");
     const char *output_directory = nullptr;
     const Toolchain *toolchain = Toolchains[0];
     BuildMode build_mode = (BuildMode)0;
-    const char *c_pch_filename = nullptr;
-    const char *cxx_pch_filename = nullptr;
     {
         OptionParser opt(argc, argv);
 
@@ -429,10 +416,6 @@ Available build modes:)");
                 }
 
                 build_mode = (BuildMode)(name - BuildModeNames);
-            } else if (opt.Test("--c_pch", OptionType::Value)) {
-                c_pch_filename = opt.current_value;
-            } else if (opt.Test("--cxx_pch", OptionType::Value)) {
-                cxx_pch_filename = opt.current_value;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
                 int max_threads;
                 if (!ParseDec(opt.current_value, &max_threads))
@@ -457,26 +440,26 @@ Available build modes:)");
         return 1;
 
 #ifdef _WIN32
-    if (toolchain == &GnuToolchain && (c_pch_filename || cxx_pch_filename)) {
-        LogError("PCH does not work correctly with MinGW (ignoring)");
+    if (toolchain == &GnuToolchain) {
+        for (TargetConfig &target_config: config.targets) {
+            static bool warned = false;
+            if (!warned && (target_config.c_pch_filename || target_config.cxx_pch_filename)) {
+                LogError("PCH does not work correctly with MinGW (ignoring)");
+                warned = true;
+            }
 
-        c_pch_filename = nullptr;
-        cxx_pch_filename = nullptr;
+            target_config.c_pch_filename = nullptr;
+            target_config.cxx_pch_filename = nullptr;
+        }
     }
 #endif
 
     // Directories
-    const char *start_directory = GetWorkingDirectory();
+    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
     if (output_directory) {
         output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
     } else {
         output_directory = start_directory;
-    }
-    if (c_pch_filename) {
-        c_pch_filename = NormalizePath(c_pch_filename, output_directory, &temp_alloc).ptr;
-    }
-    if (cxx_pch_filename) {
-        cxx_pch_filename = NormalizePath(cxx_pch_filename, output_directory, &temp_alloc).ptr;
     }
 
     // Change to root directory
@@ -518,14 +501,18 @@ Available build modes:)");
         }
     }
 
-    // We need to build PCH first (for dependency issues)
+    // We need to build PCH files first (for dependency issues)
     BuildSet pch_command_set;
-    if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *toolchain, build_mode,
-                           &pch_command_set))
-        return 1;
-    if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *toolchain, build_mode,
-                           &pch_command_set))
-        return 1;
+    for (const TargetData &target: targets) {
+        if (target.c_pch_filename &&
+                !AppendPrecompileCommands(target.c_pch_filename, SourceType::C_Header,
+                                          output_directory, *toolchain, build_mode, &pch_command_set))
+            return 1;
+        if (target.cxx_pch_filename &&
+                !AppendPrecompileCommands(target.cxx_pch_filename, SourceType::CXX_Header,
+                                          output_directory, *toolchain, build_mode, &pch_command_set))
+            return 1;
+    }
 
     if (pch_command_set.commands.len) {
         LogInfo("Build PCH");
