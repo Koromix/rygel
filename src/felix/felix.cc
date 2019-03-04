@@ -37,6 +37,8 @@ struct TargetSet {
 struct BuildCommand {
     const char *dest_filename;
     const char *cmd;
+
+    bool sync_after;
 };
 
 struct BuildSet {
@@ -278,16 +280,10 @@ TargetData *TargetSet::CreateTarget(const Config &config, const char *target_nam
 
 static bool AppendTargetCommands(const TargetData &target, const char *output_directory,
                                  const Toolchain &toolchain, BuildMode build_mode,
-                                 BuildSet *out_pch_set, BuildSet *out_obj_set, BuildSet *out_link_set)
+                                 BuildSet *out_set)
 {
-    const Size start_pch_len = out_pch_set->commands.len;
-    const Size start_obj_len = out_obj_set->commands.len;
-    const Size start_link_len = out_link_set->commands.len;
-    DEFER_N(out_guard) {
-        out_pch_set->commands.RemoveFrom(start_pch_len);
-        out_obj_set->commands.RemoveFrom(start_obj_len);
-        out_link_set->commands.RemoveFrom(start_link_len);
-    };
+    const Size start_len = out_set->commands.len;
+    DEFER_N(out_guard) { out_set->commands.RemoveFrom(start_len); };
 
     BlockAllocator temp_alloc;
 
@@ -311,20 +307,23 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         } else {
             build = true;
         }
-        build &= !out_pch_set->commands_set.Find(obj.dest_filename);
+        build &= !out_set->commands_set.Find(obj.dest_filename);
 
         if (build) {
             BuildCommand cmd = {};
 
-            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_pch_set->str_alloc).ptr;
+            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_set->str_alloc).ptr;
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
             cmd.cmd = toolchain.BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
                                                    target.include_directories, nullptr,
-                                                   deps_filename, &out_pch_set->str_alloc);
+                                                   deps_filename, &out_set->str_alloc);
 
-            out_pch_set->commands.Append(cmd);
+            out_set->commands.Append(cmd);
         }
+    }
+    if (out_set->commands.len > start_len) {
+        out_set->commands[out_set->commands.len - 1].sync_after = true;
     }
 
     // Object commands
@@ -345,7 +344,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         } else {
             build = true;
         }
-        build &= !out_obj_set->commands_set.Find(obj.dest_filename);
+        build &= !out_set->commands_set.Find(obj.dest_filename);
         relink |= build;
 
         if (build) {
@@ -360,49 +359,49 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
                 case SourceType::CXX_Header: { DebugAssert(false); } break;
             }
 
-            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_obj_set->str_alloc).ptr;
+            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_set->str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
             cmd.cmd = toolchain.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
                                                    pch_filename, target.include_directories,
-                                                   obj.dest_filename, deps_filename, &out_obj_set->str_alloc);
+                                                   obj.dest_filename, deps_filename, &out_set->str_alloc);
 
-            out_obj_set->commands.Append(cmd);
+            out_set->commands.Append(cmd);
         }
+    }
+    if (out_set->commands.len > start_len) {
+        out_set->commands[out_set->commands.len - 1].sync_after = true;
     }
 
     // Link commands
     if (target.type == TargetType::Executable) {
 #ifdef _WIN32
-        const char *link_filename = Fmt(&out_link_set->str_alloc, "%1%/%2.exe",
+        const char *link_filename = Fmt(&out_set->str_alloc, "%1%/%2.exe",
                                         output_directory, target.name).ptr;
 #else
         const char *link_filename = Fmt(&out_link_set->str_alloc, "%1%/%2",
                                         output_directory, target_config.name).ptr;
 #endif
 
-        relink &= !out_link_set->commands_set.Find(link_filename);
+        relink &= !out_set->commands_set.Find(link_filename);
 
         if (relink || !TestFile(link_filename, FileType::File)) {
             BuildCommand cmd = {};
 
             cmd.dest_filename = link_filename;
             cmd.cmd = toolchain.BuildLinkCommand(target.objects, target.libraries, link_filename,
-                                                &out_link_set->str_alloc);
+                                                &out_set->str_alloc);
 
-            out_link_set->commands.Append(cmd);
+            out_set->commands.Append(cmd);
         }
+    }
+    if (out_set->commands.len > start_len) {
+        out_set->commands[out_set->commands.len - 1].sync_after = true;
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
-    for (Size i = start_pch_len; i < out_pch_set->commands.len; i++) {
-        out_pch_set->commands_set.Append(out_pch_set->commands[i].dest_filename);
-    }
-    for (Size i = start_obj_len; i < out_obj_set->commands.len; i++) {
-        out_obj_set->commands_set.Append(out_obj_set->commands[i].dest_filename);
-    }
-    for (Size i = start_obj_len; i < out_link_set->commands.len; i++) {
-        out_link_set->commands_set.Append(out_link_set->commands[i].dest_filename);
+    for (Size i = start_len; i < out_set->commands.len; i++) {
+        out_set->commands_set.Append(out_set->commands[i].dest_filename);
     }
 
     out_guard.disable();
@@ -439,6 +438,9 @@ static bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 
             return true;
         });
+
+        if (cmd.sync_after && !async.Sync())
+            return false;
     }
 
     return async.Sync();
@@ -610,31 +612,15 @@ Available build modes:)");
     }
 
     // Create build commands
-    BuildSet pch_command_set;
-    BuildSet obj_command_set;
-    BuildSet link_command_set;
+    BuildSet command_set;
     for (const TargetData &target: target_set.targets) {
-        if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode,
-                                  &pch_command_set, &obj_command_set, &link_command_set))
+        if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode, &command_set))
             return 1;
     }
 
     // Run build
-    if (pch_command_set.commands.len) {
-        LogInfo("Precompile headers");
-        if (!RunBuildCommands(pch_command_set.commands, verbose))
-            return 1;
-    }
-    if (obj_command_set.commands.len) {
-        LogInfo("Compile source files");
-        if (!RunBuildCommands(obj_command_set.commands, verbose))
-            return 1;
-    }
-    if (link_command_set.commands.len) {
-        LogInfo("Link targets");
-        if (!RunBuildCommands(link_command_set.commands, verbose))
-            return 1;
-    }
+    if (!RunBuildCommands(command_set.commands, verbose))
+        return 1;
 
     LogInfo("Done!");
     return 0;
