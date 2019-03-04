@@ -7,8 +7,8 @@
 #endif
 
 #include "../libcc/libcc.hh"
-#include "compiler.hh"
 #include "config.hh"
+#include "toolchain.hh"
 
 struct TargetData {
     const char *name;
@@ -171,7 +171,7 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
 }
 
 static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
-                              const Compiler &compiler, BuildMode build_mode,
+                              const Toolchain &toolchain, BuildMode build_mode,
                               BuildSet *out_set)
 {
     const Size start_len = out_set->commands.len;
@@ -227,7 +227,7 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
             if (!writer.Close())
                 return false;
 
-            cmd.cmd = compiler.BuildObjectCommand(dest_filename, src_type, build_mode, nullptr,
+            cmd.cmd = toolchain.BuildObjectCommand(dest_filename, src_type, build_mode, nullptr,
                                                   deps_filename, &out_set->str_alloc);
 
             out_set->commands.Append(cmd);
@@ -249,7 +249,7 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
 }
 
 static bool AppendTargetCommands(const TargetData &target, const char *output_directory,
-                                 const Compiler &compiler, BuildMode build_mode,
+                                 const Toolchain &toolchain, BuildMode build_mode,
                                  BuildSet *out_obj_set, BuildSet *out_link_set)
 {
     const Size start_obj_len = out_obj_set->commands.len;
@@ -290,7 +290,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
             cmd.dest_filename = obj.dest_filename;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
-            cmd.cmd = compiler.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
+            cmd.cmd = toolchain.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
                                                   obj.dest_filename, deps_filename, &out_obj_set->str_alloc);
 
             out_obj_set->commands.Append(cmd);
@@ -312,7 +312,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
             BuildCommand cmd = {};
 
             cmd.dest_filename = link_filename;
-            cmd.cmd = compiler.BuildLinkCommand(target.objects, target.libraries, link_filename,
+            cmd.cmd = toolchain.BuildLinkCommand(target.objects, target.libraries, link_filename,
                                                 &out_link_set->str_alloc);
 
             out_link_set->commands.Append(cmd);
@@ -371,7 +371,7 @@ Options:
     -O, --output <directory>     Set output directory
                                  (default: working directory)
 
-    -c, --compiler <compiler>    Set compiler, see below
+    -t, --toolchain <toolchain>  Set toolchain, see below
                                  (default: %1)
     -m, --mode     <mode>        Set build mode, see below
                                  (default: %2)
@@ -382,9 +382,9 @@ Options:
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores)
 
-Available compilers:)", Compilers[0]->name, BuildModeNames[0]);
-        for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %1", compiler->name);
+Available toolchains:)", Toolchains[0]->name, BuildModeNames[0]);
+        for (const Toolchain *toolchain: Toolchains) {
+            PrintLn(fp, "    %1", toolchain->name);
         }
         PrintLn(fp, R"(
 Available build modes:)");
@@ -396,7 +396,7 @@ Available build modes:)");
     HeapArray<const char *> target_names;
     const char *config_filename = "felix.ini";
     const char *output_directory = nullptr;
-    const Compiler *compiler = Compilers[0];
+    const Toolchain *toolchain = Toolchains[0];
     BuildMode build_mode = (BuildMode)0;
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
@@ -411,15 +411,15 @@ Available build modes:)");
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 output_directory = opt.current_value;
-            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                const Compiler *const *ptr = FindIf(Compilers,
-                                                    [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
+            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
+                const Toolchain *const *ptr = FindIf(Toolchains,
+                                                     [&](const Toolchain *toolchain) { return TestStr(toolchain->name, opt.current_value); });
                 if (!ptr) {
                     LogError("Unknown toolchain '%1'", opt.current_value);
                     return 1;
                 }
 
-                compiler = *ptr;
+                toolchain = *ptr;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 const char *const *name = FindIf(BuildModeNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
@@ -457,7 +457,7 @@ Available build modes:)");
         return 1;
 
 #ifdef _WIN32
-    if (compiler == &GnuCompiler && (c_pch_filename || cxx_pch_filename)) {
+    if (toolchain == &GnuToolchain && (c_pch_filename || cxx_pch_filename)) {
         LogError("PCH does not work correctly with MinGW (ignoring)");
 
         c_pch_filename = nullptr;
@@ -520,10 +520,10 @@ Available build modes:)");
 
     // We need to build PCH first (for dependency issues)
     BuildSet pch_command_set;
-    if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *compiler, build_mode,
+    if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *toolchain, build_mode,
                            &pch_command_set))
         return 1;
-    if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *compiler, build_mode,
+    if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *toolchain, build_mode,
                            &pch_command_set))
         return 1;
 
@@ -537,7 +537,7 @@ Available build modes:)");
     BuildSet obj_command_set;
     BuildSet link_command_set;
     for (const TargetData &target: targets) {
-        if (!AppendTargetCommands(target, output_directory, *compiler, build_mode,
+        if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode,
                                   &obj_command_set, &link_command_set))
             return 1;
     }

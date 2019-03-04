@@ -32,11 +32,11 @@ endif()
 # ------------------------------------------------------------------------
 
 set(FELIX_SRC
-    felix/compiler.cc
-    felix/compiler.hh
     felix/config.cc
     felix/config.hh
     felix/felix.cc
+    felix/toolchain.cc
+    felix/toolchain.hh
 )
 
 add_executable(felix ${FELIX_SRC})
