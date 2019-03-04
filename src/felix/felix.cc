@@ -367,7 +367,7 @@ R"(Usage: felix [options] [target]
 
 Options:
     -C, --config <filename>      Set configuration filename
-                                 (default: felix.ini)
+                                 (default: FelixBuild.ini)
     -O, --output <directory>     Set output directory
                                  (default: working directory)
 
@@ -394,7 +394,7 @@ Available build modes:)");
     };
 
     HeapArray<const char *> target_names;
-    const char *config_filename = "felix.ini";
+    const char *config_filename = "FelixBuild.ini";
     const char *output_directory = nullptr;
     const Toolchain *toolchain = Toolchains[0];
     BuildMode build_mode = (BuildMode)0;
