@@ -466,9 +466,11 @@ Available build modes:)");
         Span<const char> root_directory;
         SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory);
 
-        const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
-        if (!SetWorkingDirectory(root_directory0))
-            return 1;
+        if (root_directory.len) {
+            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
+            if (!SetWorkingDirectory(root_directory0))
+                return 1;
+        }
     }
 
     // We need to build PCH first (for dependency issues)
