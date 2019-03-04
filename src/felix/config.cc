@@ -77,7 +77,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 } else if (prop.key == "SourceFile") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &config.str_alloc, &target_config->src_filenames);
-                } else if (prop.key == "Exclusions") {
+                } else if (prop.key == "Exclude") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
