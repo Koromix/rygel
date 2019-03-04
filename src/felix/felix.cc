@@ -213,6 +213,22 @@ TargetData *TargetSet::CreateTarget(const Config &config, const char *target_nam
         libraries.Append(import->libraries);
     }
 
+    // Deduplicate object and library arrays
+    std::sort(objects.begin(), objects.end(), [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
+        return CmpStr(obj1.dest_filename, obj2.dest_filename) < 0;
+    });
+    objects.RemoveFrom(std::unique(objects.begin(), objects.end(),
+                                   [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
+        return TestStr(obj1.dest_filename, obj2.dest_filename);
+    }) - objects.begin());
+    std::sort(libraries.begin(), libraries.end(), [](const char *lib1, const char *lib2) {
+        return CmpStr(lib1, lib2) < 0;
+    });
+    libraries.RemoveFrom(std::unique(libraries.begin(), libraries.end(),
+                                   [](const char *lib1, const char *lib2) {
+        return TestStr(lib1, lib2);
+    }) - libraries.begin());
+
     // Big type, so create it directly in HeapArray
     // Introduce out_guard if things can start to fail after here
     TargetData *target = targets.AppendDefault();
