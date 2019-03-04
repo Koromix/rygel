@@ -53,7 +53,11 @@ bool RunCreateProfile(Span<const char *> arguments)
     HeapArray<const char *> files;
     DEFER_N(out_guard) {
         for (const char *filename: files) {
+#ifdef _WIN32
+            _unlink(filename);
+#else
             unlink(filename);
+#endif
         }
         for (Size i = directories.len - 1; i >= 0; i--) {
             rmdir(directories[i]);
