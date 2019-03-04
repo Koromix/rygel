@@ -372,7 +372,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
     return true;
 }
 
-static bool RunBuildCommands(Span<const BuildCommand> commands)
+static bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 {
     Async async;
 
@@ -381,7 +381,12 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 
     for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
-            LogInfo("[%1/%2] %3", progress_counter.fetch_add(1) + 1, commands.len, cmd.cmd);
+            if (verbose) {
+                LogInfo("[%1/%2] %3", progress_counter += 1, commands.len, cmd.cmd);
+            } else {
+                const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
+                LogInfo("[%1/%2] Build %3", progress_counter += 1, commands.len, name);
+            }
 
             // Run command
             errno = 0;
@@ -424,6 +429,8 @@ Options:
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores)
 
+    -v, --verbose                Show detailed build commands
+
 Available toolchains:)", Toolchains[0]->name, BuildModeNames[0]);
         for (const Toolchain *toolchain: Toolchains) {
             PrintLn(fp, "    %1", toolchain->name);
@@ -440,6 +447,7 @@ Available build modes:)");
     const char *output_directory = nullptr;
     const Toolchain *toolchain = Toolchains[0];
     BuildMode build_mode = (BuildMode)0;
+    bool verbose = false;
     {
         OptionParser opt(argc, argv);
 
@@ -479,6 +487,8 @@ Available build modes:)");
                 }
 
                 Async::SetThreadCount(max_threads);
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -567,9 +577,8 @@ Available build modes:)");
     }
 
     if (pch_command_set.commands.len) {
-        LogInfo("Build PCH");
-
-        if (!RunBuildCommands(pch_command_set.commands))
+        LogInfo("Precompile headers");
+        if (!RunBuildCommands(pch_command_set.commands, verbose))
             return 1;
     }
 
@@ -582,13 +591,13 @@ Available build modes:)");
     }
 
     if (obj_command_set.commands.len) {
-        LogInfo("Build object files");
-        if (!RunBuildCommands(obj_command_set.commands))
+        LogInfo("Compile source files");
+        if (!RunBuildCommands(obj_command_set.commands, verbose))
             return 1;
     }
     if (link_command_set.commands.len) {
         LogInfo("Link targets");
-        if (!RunBuildCommands(link_command_set.commands))
+        if (!RunBuildCommands(link_command_set.commands, verbose))
             return 1;
     }
 
