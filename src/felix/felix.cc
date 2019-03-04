@@ -17,6 +17,7 @@ struct TargetData {
     const char *c_pch_filename;
     const char *cxx_pch_filename;
 
+    Span<const char *const> include_directories;
     Span<const char *const> libraries;
 
     HeapArray<ObjectInfo> objects;
@@ -152,6 +153,7 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
 
     target->name = target_config.name;
     target->type = target_config.type;
+    target->include_directories = target_config.include_directories;
     target->libraries = target_config.libraries;
     target->c_pch_filename = target_config.c_pch_filename;
     target->cxx_pch_filename = target_config.cxx_pch_filename;
@@ -183,8 +185,8 @@ static bool CreateTarget(const TargetConfig &target_config, const char *output_d
     return true;
 }
 
-static bool AppendPrecompileCommands(const char *pch_filename, SourceType src_type,
-                                     const char *output_directory,
+static bool AppendPrecompileCommands(const TargetData &target, const char *pch_filename,
+                                     SourceType src_type, const char *output_directory,
                                      const Toolchain &toolchain, BuildMode build_mode,
                                      BuildSet *out_set)
 {
@@ -216,7 +218,8 @@ static bool AppendPrecompileCommands(const char *pch_filename, SourceType src_ty
         if (!CreatePrecompileHeader(pch_filename, dest_filename))
             return false;
         cmd.cmd = toolchain.BuildObjectCommand(pch_filename, src_type, build_mode, nullptr,
-                                               nullptr, deps_filename, &out_set->str_alloc);
+                                               target.include_directories, nullptr,
+                                               deps_filename, &out_set->str_alloc);
 
         out_set->commands.Append(cmd);
     }
@@ -282,8 +285,8 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
             cmd.cmd = toolchain.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
-                                                   pch_filename, obj.dest_filename, deps_filename,
-                                                   &out_obj_set->str_alloc);
+                                                   pch_filename, target.include_directories,
+                                                   obj.dest_filename, deps_filename, &out_obj_set->str_alloc);
 
             out_obj_set->commands.Append(cmd);
         }
@@ -509,11 +512,11 @@ Available build modes:)");
     BuildSet pch_command_set;
     for (const TargetData &target: targets) {
         if (target.c_pch_filename &&
-                !AppendPrecompileCommands(target.c_pch_filename, SourceType::C_Header,
+                !AppendPrecompileCommands(target, target.c_pch_filename, SourceType::C_Header,
                                           output_directory, *toolchain, build_mode, &pch_command_set))
             return 1;
         if (target.cxx_pch_filename &&
-                !AppendPrecompileCommands(target.cxx_pch_filename, SourceType::CXX_Header,
+                !AppendPrecompileCommands(target, target.cxx_pch_filename, SourceType::CXX_Header,
                                           output_directory, *toolchain, build_mode, &pch_command_set))
             return 1;
     }
