@@ -462,6 +462,7 @@ Options:
                                  (default: %1)
     -m, --mode     <mode>        Set build mode, see below
                                  (default: %2)
+       --disable_pch             Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores)
@@ -484,6 +485,7 @@ Available build modes:)");
     const char *output_directory = nullptr;
     const Toolchain *toolchain = Toolchains[0];
     BuildMode build_mode = (BuildMode)0;
+    bool disable_pch = false;
     bool verbose = false;
     {
         OptionParser opt(argc, argv);
@@ -514,6 +516,8 @@ Available build modes:)");
                 }
 
                 build_mode = (BuildMode)(name - BuildModeNames);
+            } else if (opt.Test("--disable_pch")) {
+                disable_pch = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
                 int max_threads;
                 if (!ParseDec(opt.current_value, &max_threads))
@@ -549,19 +553,24 @@ Available build modes:)");
     }
 
 #ifdef _WIN32
-    if (toolchain == &GnuToolchain) {
-        for (TargetConfig &target_config: config.targets) {
-            static bool warned = false;
-            if (!warned && (target_config.c_pch_filename || target_config.cxx_pch_filename)) {
-                LogError("PCH does not work correctly with MinGW (ignoring)");
-                warned = true;
-            }
+    if (!disable_pch && toolchain == &GnuToolchain) {
+        bool has_pch = std::any_of(config.targets.begin(), config.targets.end(),
+                                   [](const TargetConfig &target_config) {
+            return target_config.c_pch_filename || target_config.cxx_pch_filename;
+        });
 
+        if (has_pch) {
+            LogError("PCH does not work correctly with MinGW (ignoring)");
+            disable_pch = true;
+        }
+    }
+#endif
+    if (disable_pch) {
+        for (TargetConfig &target_config: config.targets) {
             target_config.c_pch_filename = nullptr;
             target_config.cxx_pch_filename = nullptr;
         }
     }
-#endif
 
     // Directories
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
