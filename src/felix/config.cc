@@ -86,9 +86,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                             target_config->exclusions.Append(copy);
                         }
                     }
-                } else if (prop.key == "C_PCH") {
+                } else if (prop.key == "Precompile_C") {
                     target_config->c_pch_filename = NormalizePath(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "CXX_PCH") {
+                } else if (prop.key == "Precompile_CXX") {
                     target_config->cxx_pch_filename = NormalizePath(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "Link_Win32") {
 #ifdef _WIN32
