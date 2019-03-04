@@ -24,20 +24,23 @@ static int64_t GetFileModificationTime(const char *filename)
     return file_info.modification_time;
 }
 
-// Do not use absolute filenames!
-static const char *BuildObjectPath(const char *src_filename, Allocator *alloc)
+static const char *BuildObjectPath(const char *src_filename, const char *output_directory,
+                                   Allocator *alloc)
 {
     DebugAssert(!PathIsAbsolute(src_filename));
 
-    Span<const char> output_directory = GetWorkingDirectory();
-    char *path = Fmt(alloc, "%1%/objects%/%2.o", output_directory, src_filename).ptr;
+    HeapArray<char> buf;
+    buf.allocator = alloc;
+
+    Size offset = Fmt(&buf, "%1%/objects%/", output_directory).len;
+    Fmt(&buf, "%1.o", src_filename);
 
     // Replace '..' components with '__'
     {
-        char *ptr = path + output_directory.len + 1;
+        char *ptr = buf.ptr + offset;
 
         while ((ptr = strstr(ptr, ".."))) {
-            if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
+            if (IsPathSeparator(ptr[-1]) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
                 ptr[0] = '_';
                 ptr[1] = '_';
             }
@@ -46,7 +49,7 @@ static const char *BuildObjectPath(const char *src_filename, Allocator *alloc)
         }
     }
 
-    return path;
+    return buf.Leak().ptr;
 }
 
 // TODO: Support Make escaping
@@ -175,7 +178,8 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
     return true;
 }
 
-static bool GatherObjects(const Target &target, Allocator *alloc, HeapArray<ObjectInfo> *out_objects)
+static bool GatherObjects(const Target &target, const char *output_directory,
+                          Allocator *alloc, HeapArray<ObjectInfo> *out_objects)
 {
     BlockAllocator temp_alloc;
 
@@ -205,7 +209,7 @@ static bool GatherObjects(const Target &target, Allocator *alloc, HeapArray<Obje
             }
 
             obj.src_filename = DuplicateString(src_filename, alloc).ptr;
-            obj.dest_filename = BuildObjectPath(src_filename, alloc);
+            obj.dest_filename = BuildObjectPath(src_filename, output_directory, alloc);
 
             out_objects->Append(obj);
         }
@@ -215,7 +219,8 @@ static bool GatherObjects(const Target &target, Allocator *alloc, HeapArray<Obje
 }
 
 static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> objects,
-                                 const Compiler &compiler, BuildMode build_mode, Allocator *alloc,
+                                 const Compiler &compiler, BuildMode build_mode,
+                                 const char *output_directory, Allocator *alloc,
                                  HeapArray<BuildCommand> *out_obj_commands,
                                  HeapArray<BuildCommand> *out_link_commands)
 {
@@ -263,7 +268,6 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
     }
 
     if (target.type == TargetType::Executable) {
-        const char *output_directory = GetWorkingDirectory();
 #ifdef _WIN32
         const char *link_filename = Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
 #else
@@ -312,6 +316,7 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 
 int main(int argc, char **argv)
 {
+    BlockAllocator temp_alloc;
     BlockAllocator commands_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
@@ -321,6 +326,8 @@ R"(Usage: felix [options] [target]
 Options:
     -C, --config <filename>      Set configuration filename
                                  (default: felix.ini)
+    -O, --output <directory>     Set output directory
+                                 (default: working directory)
 
     -c, --compiler <compiler>    Set compiler, see below
                                  (default: %1)
@@ -346,6 +353,7 @@ Available build modes:)");
 
     HeapArray<const char *> target_names;
     const char *config_filename = "felix.ini";
+    const char *output_directory = nullptr;
     const Compiler *compiler = Compilers[0];
     BuildMode build_mode = (BuildMode)0;
     const char *c_pch_filename = nullptr;
@@ -359,6 +367,8 @@ Available build modes:)");
                 return 0;
             } else if (opt.Test("-C", "--config", OptionType::Value)) {
                 config_filename = opt.current_value;
+            } else if (opt.Test("-O", "--output", OptionType::Value)) {
+                output_directory = opt.current_value;
             } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
                 const Compiler *const *ptr = FindIf(Compilers,
                                                     [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
@@ -437,6 +447,30 @@ Available build modes:)");
         }
     }
 
+    // Directories
+    const char *start_directory = GetWorkingDirectory();
+    if (output_directory) {
+        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
+    } else {
+        output_directory = start_directory;
+    }
+    if (c_pch_filename) {
+        c_pch_filename = NormalizePath(c_pch_filename, output_directory, &temp_alloc).ptr;
+    }
+    if (cxx_pch_filename) {
+        cxx_pch_filename = NormalizePath(cxx_pch_filename, output_directory, &temp_alloc).ptr;
+    }
+
+    // Change to root directory
+    {
+        Span<const char> root_directory;
+        SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory);
+
+        const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
+        if (!SetWorkingDirectory(root_directory0))
+            return 1;
+    }
+
     // We need to build PCH first (for dependency issues)
     HeapArray<BuildCommand> pch_commands;
     if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *compiler, build_mode,
@@ -461,10 +495,10 @@ Available build modes:)");
 
         for (const Target *target: targets) {
             objects.RemoveFrom(0);
-            if (!GatherObjects(*target, &commands_alloc, &objects))
+            if (!GatherObjects(*target, output_directory, &commands_alloc, &objects))
                 return 1;
 
-            if (!AppendTargetCommands(*target, objects, *compiler, build_mode,
+            if (!AppendTargetCommands(*target, objects, *compiler, build_mode, output_directory,
                                       &commands_alloc, &obj_commands, &link_commands))
                 return 1;
         }
