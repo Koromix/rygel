@@ -10,7 +10,8 @@ Toolchain ClangToolchain = {
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
+       const char *pch_filename, const char *dest_filename, const char *deps_filename,
+       Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wall -Wno-unknown-warning-option";
@@ -22,10 +23,10 @@ Toolchain ClangToolchain = {
         buf.allocator = alloc;
 
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
+            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
             case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-include pch/stdafx_cxx.h %1", flags); } break;
+                                                     "%1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
                                                      "-x c++-header %1", flags); } break;
         }
@@ -37,6 +38,9 @@ Toolchain ClangToolchain = {
         }
 
         Fmt(&buf, " -c %1", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include %1", pch_filename);
+        }
         if (deps_filename) {
             Fmt(&buf, " -MMD -MF %1", deps_filename);
         }
@@ -81,7 +85,8 @@ Toolchain GnuToolchain = {
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
+       const char *pch_filename, const char *dest_filename, const char *deps_filename,
+       Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
@@ -93,12 +98,10 @@ Toolchain GnuToolchain = {
         buf.allocator = alloc;
 
         switch (src_type) {
-            case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 -include pch/stdafx_c.h %1", flags); } break;
-            case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-include pch/stdafx_cxx.h %1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-x c++-header %1", flags); } break;
+            case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu99 %1", flags); } break;
+            case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu99 -x c-header %1", flags); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 %1", flags); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -x c++-header %1", flags); } break;
         }
 
         switch (build_mode) {
@@ -115,6 +118,9 @@ Toolchain GnuToolchain = {
         }
 
         Fmt(&buf, " -c %1", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include %1", pch_filename);
+        }
         if (deps_filename) {
             Fmt(&buf, " -MMD -MF %1", deps_filename);
         }
