@@ -8,20 +8,14 @@
 static bool AppendNormalizedPath(Span<const char> path,
                                  Allocator *alloc, HeapArray<const char *> *out_paths)
 {
-    char *copy = DuplicateString(path, alloc).ptr;
-
-    if (PathIsAbsolute(copy)) {
-        LogError("Cannot use absolute path '%1'", copy);
+    if (PathIsAbsolute(path)) {
+        LogError("Cannot use absolute path '%1'", path);
         return false;
     }
 
-#ifdef _WIN32
-    for (Size i = 0; i < path.len; i++) {
-        copy[i] = (copy[i] == '/') ? '\\' : copy[i];
-    }
-#endif
+    const char *norm_path = NormalizePath(path, alloc).ptr;
+    out_paths->Append(norm_path);
 
-    out_paths->Append(copy);
     return true;
 }
 
@@ -41,9 +35,6 @@ static void AppendLibraries(Span<const char> str,
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, len = config.targets.len) { config.targets.RemoveFrom(len); };
-
-    Span<const char> root_dir;
-    SplitStrReverseAny(st.filename, PATH_SEPARATORS, &root_dir);
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
