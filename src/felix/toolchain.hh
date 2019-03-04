@@ -31,7 +31,7 @@ struct ObjectInfo {
     const char *dest_filename;
 };
 
-struct Compiler {
+struct Toolchain {
     const char *name;
 
     const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
@@ -41,10 +41,10 @@ struct Compiler {
                                     const char *dest_filename, Allocator *alloc);
 };
 
-extern Compiler ClangCompiler;
-extern Compiler GnuCompiler;
+extern Toolchain ClangToolchain;
+extern Toolchain GnuToolchain;
 
-static const Compiler *const Compilers[] = {
-    &ClangCompiler,
-    &GnuCompiler
+static const Toolchain *const Toolchains[] = {
+    &ClangToolchain,
+    &GnuToolchain
 };
