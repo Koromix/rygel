@@ -287,7 +287,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         if (build) {
             BuildCommand cmd = {};
 
-            cmd.dest_filename = obj.dest_filename;
+            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_obj_set->str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
             cmd.cmd = toolchain.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
