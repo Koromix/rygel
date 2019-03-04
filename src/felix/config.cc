@@ -49,22 +49,22 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 return false;
             }
 
-            Target *target = config.targets.AppendDefault();
+            TargetConfig *target_config = config.targets.AppendDefault();
 
-            target->name = DuplicateString(prop.section, &config.str_alloc).ptr;
-            if (!targets_set.Append(target->name).second) {
-                LogError("Duplicate target name '%1'", target->name);
+            target_config->name = DuplicateString(prop.section, &config.str_alloc).ptr;
+            if (!targets_set.Append(target_config->name).second) {
+                LogError("Duplicate target name '%1'", target_config->name);
                 valid = false;
             }
-            target->type = TargetType::Executable;
+            target_config->type = TargetType::Executable;
 
             bool type_specified = false;
             do {
                 if (prop.key == "Type") {
                     if (prop.value == "Executable") {
-                        target->type = TargetType::Executable;
+                        target_config->type = TargetType::Executable;
                     } else if (prop.value == "Library") {
-                        target->type = TargetType::Library;
+                        target_config->type = TargetType::Library;
                     } else {
                         LogError("Unknown target type '%1'", prop.value);
                         valid = false;
@@ -73,22 +73,22 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                     type_specified = true;
                 } else if (prop.key == "SourceDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
-                                                  &config.str_alloc, &target->src_directories);
+                                                  &config.str_alloc, &target_config->src_directories);
                 } else if (prop.key == "SourceFile") {
                     valid &= AppendNormalizedPath(prop.value,
-                                                  &config.str_alloc, &target->src_filenames);
+                                                  &config.str_alloc, &target_config->src_filenames);
                 } else if (prop.key == "Exclusions") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
                         if (part.len) {
                             const char *copy = DuplicateString(part, &config.str_alloc).ptr;
-                            target->exclusions.Append(copy);
+                            target_config->exclusions.Append(copy);
                         }
                     }
                 } else if (prop.key == "Link_Win32") {
 #ifdef _WIN32
-                    AppendLibraries(prop.value, &config.str_alloc, &target->libraries);
+                    AppendLibraries(prop.value, &config.str_alloc, &target_config->libraries);
 #endif
                 } else if (prop.key == "Link_POSIX") {
 #ifndef _WIN32
@@ -101,7 +101,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
             } while (ini.NextInSection(&prop));
 
             if (!type_specified) {
-                LogError("Type attribute is missing for target '%1'", target->name);
+                LogError("Type attribute is missing for target '%1'", target_config->name);
                 valid = false;
             }
         }
@@ -144,8 +144,8 @@ bool ConfigBuilder::LoadFiles(Span<const char *const> filenames)
 
 void ConfigBuilder::Finish(Config *out_config)
 {
-    for (const Target &target: config.targets) {
-        config.targets_map.Append(&target);
+    for (const TargetConfig &target_config: config.targets) {
+        config.targets_map.Append(&target_config);
     }
 
     SwapMemory(out_config, &config, SIZE(config));
