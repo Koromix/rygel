@@ -10,9 +10,25 @@
 #include "compiler.hh"
 #include "config.hh"
 
+struct TargetData {
+    const char *name;
+    TargetType type;
+
+    HeapArray<ObjectInfo> objects;
+
+    Span<const char *const> libraries;
+};
+
 struct BuildCommand {
     const char *dest_filename;
     const char *cmd;
+};
+
+struct BuildSet {
+    HeapArray<BuildCommand> commands;
+    HashSet<const char *> commands_set;
+
+    BlockAllocator str_alloc;
 };
 
 static int64_t GetFileModificationTime(const char *filename)
@@ -107,11 +123,59 @@ static bool EnsureDirectoryExists(const char *filename)
     return MakeDirectoryRec(directory);
 }
 
+static bool CreateTarget(const TargetConfig &target_config, const char *output_directory,
+                         Allocator *alloc, HeapArray<TargetData> *out_targets)
+{
+    BlockAllocator temp_alloc;
+
+    HeapArray<const char *> src_filenames;
+    for (const char *src_directory: target_config.src_directories) {
+        if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
+            return false;
+    }
+    src_filenames.Append(target_config.src_filenames);
+
+    // Big type, so create it directly in HeapArray
+    // Introduce out_guard if things can start to fail after here
+    TargetData *target = out_targets->AppendDefault();
+
+    target->name = target_config.name;
+    target->type = target_config.type;
+    target->libraries = target_config.libraries;
+
+    for (const char *src_filename: src_filenames) {
+        const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
+        bool ignore = std::any_of(target_config.exclusions.begin(), target_config.exclusions.end(),
+                                  [&](const char *excl) { return MatchPathName(name, excl); });
+
+        if (!ignore) {
+            ObjectInfo obj = {};
+
+            Span<const char> extension = GetPathExtension(src_filename);
+            if (extension == ".c") {
+                obj.src_type = SourceType::C_Source;
+            } else if (extension == ".cc" || extension == ".cpp") {
+                obj.src_type = SourceType::CXX_Source;
+            } else {
+                continue;
+            }
+
+            obj.src_filename = DuplicateString(src_filename, alloc).ptr;
+            obj.dest_filename = BuildObjectPath(src_filename, output_directory, alloc);
+
+            target->objects.Append(obj);
+        }
+    }
+
+    return true;
+}
+
 static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
                               const Compiler &compiler, BuildMode build_mode,
-                              Allocator *alloc, HeapArray<BuildCommand> *out_commands)
+                              BuildSet *out_set)
 {
-    DEFER_NC(out_guard, len = out_commands->len) { out_commands->RemoveFrom(len); };
+    const Size start_len = out_set->commands.len;
+    DEFER_N(out_guard) { out_set->commands.RemoveFrom(start_len); };
 
     BlockAllocator temp_alloc;
 
@@ -144,6 +208,7 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
     } else {
         build = true;
     }
+    build &= !out_set->commands_set.Find(dest_filename);
 
     if (build) {
         if (!EnsureDirectoryExists(dest_filename))
@@ -163,9 +228,9 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
                 return false;
 
             cmd.cmd = compiler.BuildObjectCommand(dest_filename, src_type, build_mode, nullptr,
-                                                  deps_filename, alloc);
+                                                  deps_filename, &out_set->str_alloc);
 
-            out_commands->Append(cmd);
+            out_set->commands.Append(cmd);
         } else {
             if (!WriteFile("", dest_filename))
                 return false;
@@ -174,60 +239,24 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
         }
     }
 
+    // Do this at the end because it's much harder to roll back changes in out_guard
+    for (Size i = start_len; i < out_set->commands.len; i++) {
+        out_set->commands_set.Append(out_set->commands[i].dest_filename);
+    }
+
     out_guard.disable();
     return true;
 }
 
-static bool GatherObjects(const Target &target, const char *output_directory,
-                          Allocator *alloc, HeapArray<ObjectInfo> *out_objects)
-{
-    BlockAllocator temp_alloc;
-
-    HeapArray<const char *> src_filenames;
-    for (const char *src_directory: target.src_directories) {
-        if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
-            return false;
-    }
-    src_filenames.Append(target.src_filenames);
-
-    // Introduce out_guard if things can start to fail in there
-    for (const char *src_filename: src_filenames) {
-        const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
-        bool ignore = std::any_of(target.exclusions.begin(), target.exclusions.end(),
-                                  [&](const char *excl) { return MatchPathName(name, excl); });
-
-        if (!ignore) {
-            ObjectInfo obj = {};
-
-            Span<const char> extension = GetPathExtension(src_filename);
-            if (extension == ".c") {
-                obj.src_type = SourceType::C_Source;
-            } else if (extension == ".cc" || extension == ".cpp") {
-                obj.src_type = SourceType::CXX_Source;
-            } else {
-                continue;
-            }
-
-            obj.src_filename = DuplicateString(src_filename, alloc).ptr;
-            obj.dest_filename = BuildObjectPath(src_filename, output_directory, alloc);
-
-            out_objects->Append(obj);
-        }
-    }
-
-    return true;
-}
-
-static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> objects,
+static bool AppendTargetCommands(const TargetData &target, const char *output_directory,
                                  const Compiler &compiler, BuildMode build_mode,
-                                 const char *output_directory, Allocator *alloc,
-                                 HeapArray<BuildCommand> *out_obj_commands,
-                                 HeapArray<BuildCommand> *out_link_commands)
+                                 BuildSet *out_obj_set, BuildSet *out_link_set)
 {
-    DEFER_NC(out_guard, obj_len = out_obj_commands->len,
-                        link_len = out_link_commands->len) {
-        out_obj_commands->RemoveFrom(obj_len);
-        out_link_commands->RemoveFrom(link_len);
+    const Size start_obj_len = out_obj_set->commands.len;
+    const Size start_link_len = out_link_set->commands.len;
+    DEFER_N(out_guard) {
+        out_obj_set->commands.RemoveFrom(start_obj_len);
+        out_link_set->commands.RemoveFrom(start_link_len);
     };
 
     BlockAllocator temp_alloc;
@@ -236,7 +265,7 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
     HeapArray<const char *> src_filenames;
 
     bool relink = false;
-    for (const ObjectInfo &obj: objects) {
+    for (const ObjectInfo &obj: target.objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
 
         src_filenames.RemoveFrom(0);
@@ -252,6 +281,7 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
         } else {
             build = true;
         }
+        build &= !out_obj_set->commands_set.Find(obj.dest_filename);
         relink |= build;
 
         if (build) {
@@ -261,27 +291,40 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
             cmd.cmd = compiler.BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
-                                                  obj.dest_filename, deps_filename, alloc);
+                                                  obj.dest_filename, deps_filename, &out_obj_set->str_alloc);
 
-            out_obj_commands->Append(cmd);
+            out_obj_set->commands.Append(cmd);
         }
     }
 
     if (target.type == TargetType::Executable) {
 #ifdef _WIN32
-        const char *link_filename = Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
+        const char *link_filename = Fmt(&out_link_set->str_alloc, "%1%/%2.exe",
+                                        output_directory, target.name).ptr;
 #else
-        const char *link_filename = Fmt(alloc, "%1%/%2", output_directory, target.name).ptr;
+        const char *link_filename = Fmt(&out_link_set->str_alloc, "%1%/%2",
+                                        output_directory, target_config.name).ptr;
 #endif
+
+        relink &= !out_link_set->commands_set.Find(link_filename);
 
         if (relink || !TestFile(link_filename, FileType::File)) {
             BuildCommand cmd = {};
 
             cmd.dest_filename = link_filename;
-            cmd.cmd = compiler.BuildLinkCommand(objects, target.libraries, link_filename, alloc);
+            cmd.cmd = compiler.BuildLinkCommand(target.objects, target.libraries, link_filename,
+                                                &out_link_set->str_alloc);
 
-            out_link_commands->Append(cmd);
+            out_link_set->commands.Append(cmd);
         }
+    }
+
+    // Do this at the end because it's much harder to roll back changes in out_guard
+    for (Size i = start_obj_len; i < out_obj_set->commands.len; i++) {
+        out_obj_set->commands_set.Append(out_obj_set->commands[i].dest_filename);
+    }
+    for (Size i = start_obj_len; i < out_link_set->commands.len; i++) {
+        out_link_set->commands_set.Append(out_link_set->commands[i].dest_filename);
     }
 
     out_guard.disable();
@@ -317,7 +360,6 @@ static bool RunBuildCommands(Span<const BuildCommand> commands)
 int main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
-    BlockAllocator commands_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
@@ -423,30 +465,6 @@ Available build modes:)");
     }
 #endif
 
-    HeapArray<const Target *> targets;
-    if (target_names.len) {
-        HashSet<const void *> handled_set;
-
-        for (const char *target_name: target_names) {
-            const Target *target = config.targets_map.FindValue(target_name, nullptr);
-            if (!target) {
-                LogError("Unknown target '%1'", target_name);
-                return 1;
-            }
-
-            if (!handled_set.Append(target).second) {
-                LogError("Target '%1' is specified multiple times");
-                return 1;
-            }
-
-            targets.Append(target);
-        }
-    } else {
-        for (const Target &target: config.targets) {
-            targets.Append(&target);
-        }
-    }
-
     // Directories
     const char *start_directory = GetWorkingDirectory();
     if (output_directory) {
@@ -473,47 +491,65 @@ Available build modes:)");
         }
     }
 
-    // We need to build PCH first (for dependency issues)
-    HeapArray<BuildCommand> pch_commands;
-    if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *compiler, build_mode,
-                           &commands_alloc, &pch_commands))
-        return 1;
-    if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *compiler, build_mode,
-                           &commands_alloc, &pch_commands))
-        return 1;
+    // Gather targets
+    HeapArray<TargetData> targets;
+    if (target_names.len) {
+        HashSet<const void *> handled_set;
 
-    if (pch_commands.len) {
-        LogInfo("Build PCH");
-
-        if (!RunBuildCommands(pch_commands))
-            return 1;
-    }
-
-    HeapArray<BuildCommand> obj_commands;
-    HeapArray<BuildCommand> link_commands;
-    {
-        // Reuse for performance
-        HeapArray<ObjectInfo> objects;
-
-        for (const Target *target: targets) {
-            objects.RemoveFrom(0);
-            if (!GatherObjects(*target, output_directory, &commands_alloc, &objects))
+        for (const char *target_name: target_names) {
+            const TargetConfig *target_config = config.targets_map.FindValue(target_name, nullptr);
+            if (!target_config) {
+                LogError("Unknown target '%1'", target_name);
                 return 1;
+            }
 
-            if (!AppendTargetCommands(*target, objects, *compiler, build_mode, output_directory,
-                                      &commands_alloc, &obj_commands, &link_commands))
+            if (!handled_set.Append(target_config).second) {
+                LogError("Target '%1' is specified multiple times");
+                return 1;
+            }
+
+            if (!CreateTarget(*target_config, output_directory, &temp_alloc, &targets))
+                return 1;
+        }
+    } else {
+        for (const TargetConfig &target_config: config.targets) {
+            if (!CreateTarget(target_config, output_directory, &temp_alloc, &targets))
                 return 1;
         }
     }
 
-    if (obj_commands.len) {
-        LogInfo("Build object files");
-        if (!RunBuildCommands(obj_commands))
+    // We need to build PCH first (for dependency issues)
+    BuildSet pch_command_set;
+    if (!AppendPCHCommands(c_pch_filename, SourceType::C_Header, *compiler, build_mode,
+                           &pch_command_set))
+        return 1;
+    if (!AppendPCHCommands(cxx_pch_filename, SourceType::CXX_Header, *compiler, build_mode,
+                           &pch_command_set))
+        return 1;
+
+    if (pch_command_set.commands.len) {
+        LogInfo("Build PCH");
+
+        if (!RunBuildCommands(pch_command_set.commands))
             return 1;
     }
-    if (link_commands.len) {
+
+    BuildSet obj_command_set;
+    BuildSet link_command_set;
+    for (const TargetData &target: targets) {
+        if (!AppendTargetCommands(target, output_directory, *compiler, build_mode,
+                                  &obj_command_set, &link_command_set))
+            return 1;
+    }
+
+    if (obj_command_set.commands.len) {
+        LogInfo("Build object files");
+        if (!RunBuildCommands(obj_command_set.commands))
+            return 1;
+    }
+    if (link_command_set.commands.len) {
         LogInfo("Link targets");
-        if (!RunBuildCommands(link_commands))
+        if (!RunBuildCommands(link_command_set.commands))
             return 1;
     }
 

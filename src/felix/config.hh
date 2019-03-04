@@ -11,7 +11,7 @@ enum class TargetType {
     Library
 };
 
-struct Target {
+struct TargetConfig {
     const char *name;
     TargetType type;
 
@@ -21,12 +21,12 @@ struct Target {
 
     HeapArray<const char *> libraries;
 
-    HASH_TABLE_HANDLER(Target, name);
+    HASH_TABLE_HANDLER(TargetConfig, name);
 };
 
 struct Config {
-    HeapArray<Target> targets;
-    HashTable<const char *, const Target *> targets_map;
+    HeapArray<TargetConfig> targets;
+    HashTable<const char *, const TargetConfig *> targets_map;
 
     BlockAllocator str_alloc;
 };
