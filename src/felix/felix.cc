@@ -14,11 +14,12 @@ struct TargetData {
     const char *name;
     TargetType type;
 
-    const char *c_pch_filename;
-    const char *cxx_pch_filename;
-
     Span<const char *const> include_directories;
     HeapArray<const char *> libraries;
+
+    HeapArray<ObjectInfo> pch_objects;
+    const char *c_pch_filename;
+    const char *cxx_pch_filename;
 
     HeapArray<ObjectInfo> objects;
 };
@@ -229,16 +230,44 @@ TargetData *TargetSet::CreateTarget(const Config &config, const char *target_nam
         return TestStr(lib1, lib2);
     }) - libraries.begin());
 
+    // PCH files
+    HeapArray<ObjectInfo> pch_objects;
+    const char *c_pch_filename = nullptr;
+    const char *cxx_pch_filename = nullptr;
+    if (target_config->c_pch_filename) {
+        ObjectInfo obj = {};
+
+        obj.src_type = SourceType::C_Header;
+        obj.src_filename = target_config->c_pch_filename;
+        obj.dest_filename = BuildOutputPath(target_config->c_pch_filename, output_directory,
+                                            ".pch.h", &str_alloc);
+        c_pch_filename = obj.dest_filename;
+
+        pch_objects.Append(obj);
+    }
+    if (target_config->cxx_pch_filename) {
+        ObjectInfo obj = {};
+
+        obj.src_type = SourceType::CXX_Header;
+        obj.src_filename = target_config->cxx_pch_filename;
+        obj.dest_filename = BuildOutputPath(target_config->cxx_pch_filename, output_directory,
+                                            ".pch.h", &str_alloc);
+        cxx_pch_filename = obj.dest_filename;
+
+        pch_objects.Append(obj);
+    }
+
     // Big type, so create it directly in HeapArray
     // Introduce out_guard if things can start to fail after here
     TargetData *target = targets.AppendDefault();
 
     target->name = target_config->name;
     target->type = target_config->type;
-    target->c_pch_filename = target_config->c_pch_filename;
-    target->cxx_pch_filename = target_config->cxx_pch_filename;
     target->include_directories = target_config->include_directories;
     std::swap(target->libraries, libraries);
+    std::swap(target->pch_objects, pch_objects);
+    target->c_pch_filename = c_pch_filename;
+    target->cxx_pch_filename = cxx_pch_filename;
     std::swap(target->objects, objects);
 
     bool appended = targets_map.Append(target_config->name, targets.len - 1).second;
@@ -247,61 +276,15 @@ TargetData *TargetSet::CreateTarget(const Config &config, const char *target_nam
     return target;
 }
 
-static bool AppendPrecompileCommands(const TargetData &target, const char *pch_filename,
-                                     SourceType src_type, const char *output_directory,
-                                     const Toolchain &toolchain, BuildMode build_mode,
-                                     BuildSet *out_set)
-{
-    const Size start_len = out_set->commands.len;
-    DEFER_N(out_guard) { out_set->commands.RemoveFrom(start_len); };
-
-    BlockAllocator temp_alloc;
-
-    const char *dest_filename = BuildOutputPath(pch_filename, output_directory, "_pch.h",
-                                                &out_set->str_alloc);
-    const char *deps_filename = Fmt(&temp_alloc, "%1.d", pch_filename).ptr;
-
-    bool build;
-    if (TestFile(deps_filename, FileType::File)) {
-        HeapArray<const char *> src_filenames;
-        if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-            return false;
-
-        build = !IsFileUpToDate(dest_filename, src_filenames);
-    } else {
-        build = true;
-    }
-    build &= !out_set->commands_set.Find(dest_filename);
-
-    if (build) {
-        BuildCommand cmd = {};
-
-        cmd.dest_filename = dest_filename;
-        if (!CreatePrecompileHeader(pch_filename, dest_filename))
-            return false;
-        cmd.cmd = toolchain.BuildObjectCommand(pch_filename, src_type, build_mode, nullptr,
-                                               target.include_directories, nullptr,
-                                               deps_filename, &out_set->str_alloc);
-
-        out_set->commands.Append(cmd);
-    }
-
-    // Do this at the end because it's much harder to roll back changes in out_guard
-    for (Size i = start_len; i < out_set->commands.len; i++) {
-        out_set->commands_set.Append(out_set->commands[i].dest_filename);
-    }
-
-    out_guard.disable();
-    return true;
-}
-
 static bool AppendTargetCommands(const TargetData &target, const char *output_directory,
                                  const Toolchain &toolchain, BuildMode build_mode,
-                                 BuildSet *out_obj_set, BuildSet *out_link_set)
+                                 BuildSet *out_pch_set, BuildSet *out_obj_set, BuildSet *out_link_set)
 {
+    const Size start_pch_len = out_pch_set->commands.len;
     const Size start_obj_len = out_obj_set->commands.len;
     const Size start_link_len = out_link_set->commands.len;
     DEFER_N(out_guard) {
+        out_pch_set->commands.RemoveFrom(start_pch_len);
         out_obj_set->commands.RemoveFrom(start_obj_len);
         out_link_set->commands.RemoveFrom(start_link_len);
     };
@@ -311,6 +294,40 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
     // Reuse for performance
     HeapArray<const char *> src_filenames;
 
+    // Precompiled headers
+    for (const ObjectInfo &obj: target.pch_objects) {
+        const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
+
+        src_filenames.RemoveFrom(0);
+        src_filenames.Append(obj.src_filename);
+
+        // Parse Make rule dependencies
+        bool build = false;
+        if (TestFile(deps_filename, FileType::File)) {
+            if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
+                return false;
+
+            build = !IsFileUpToDate(obj.dest_filename, src_filenames);
+        } else {
+            build = true;
+        }
+        build &= !out_pch_set->commands_set.Find(obj.dest_filename);
+
+        if (build) {
+            BuildCommand cmd = {};
+
+            cmd.dest_filename = DuplicateString(obj.dest_filename, &out_pch_set->str_alloc).ptr;
+            if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
+                return false;
+            cmd.cmd = toolchain.BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
+                                                   target.include_directories, nullptr,
+                                                   deps_filename, &out_pch_set->str_alloc);
+
+            out_pch_set->commands.Append(cmd);
+        }
+    }
+
+    // Object commands
     bool relink = false;
     for (const ObjectInfo &obj: target.objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
@@ -354,6 +371,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         }
     }
 
+    // Link commands
     if (target.type == TargetType::Executable) {
 #ifdef _WIN32
         const char *link_filename = Fmt(&out_link_set->str_alloc, "%1%/%2.exe",
@@ -377,6 +395,9 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
+    for (Size i = start_pch_len; i < out_pch_set->commands.len; i++) {
+        out_pch_set->commands_set.Append(out_pch_set->commands[i].dest_filename);
+    }
     for (Size i = start_obj_len; i < out_obj_set->commands.len; i++) {
         out_obj_set->commands_set.Append(out_obj_set->commands[i].dest_filename);
     }
@@ -579,33 +600,22 @@ Available build modes:)");
         }
     }
 
-    // We need to build PCH files first (for dependency issues)
+    // Create build commands
     BuildSet pch_command_set;
+    BuildSet obj_command_set;
+    BuildSet link_command_set;
     for (const TargetData &target: target_set.targets) {
-        if (target.c_pch_filename &&
-                !AppendPrecompileCommands(target, target.c_pch_filename, SourceType::C_Header,
-                                          output_directory, *toolchain, build_mode, &pch_command_set))
-            return 1;
-        if (target.cxx_pch_filename &&
-                !AppendPrecompileCommands(target, target.cxx_pch_filename, SourceType::CXX_Header,
-                                          output_directory, *toolchain, build_mode, &pch_command_set))
+        if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode,
+                                  &pch_command_set, &obj_command_set, &link_command_set))
             return 1;
     }
 
+    // Run build
     if (pch_command_set.commands.len) {
         LogInfo("Precompile headers");
         if (!RunBuildCommands(pch_command_set.commands, verbose))
             return 1;
     }
-
-    BuildSet obj_command_set;
-    BuildSet link_command_set;
-    for (const TargetData &target: target_set.targets) {
-        if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode,
-                                  &obj_command_set, &link_command_set))
-            return 1;
-    }
-
     if (obj_command_set.commands.len) {
         LogInfo("Compile source files");
         if (!RunBuildCommands(obj_command_set.commands, verbose))
