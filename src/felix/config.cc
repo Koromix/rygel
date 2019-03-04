@@ -86,6 +86,14 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                             target_config->exclusions.Append(copy);
                         }
                     }
+                } else if (prop.key == "ImportFrom") {
+                    if (targets_set.Find(prop.value.ptr)) {
+                        const char *import_name = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        target_config->imports.Append(import_name);
+                    } else {
+                        LogError("Cannot import from unknown target '%1'", prop.value);
+                        valid = false;
+                    }
                 } else if (prop.key == "IncludeDirectory") {
                     valid &= AppendNormalizedPath(prop.value, &config.str_alloc,
                                                   &target_config->include_directories);

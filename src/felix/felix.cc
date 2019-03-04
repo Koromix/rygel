@@ -18,9 +18,19 @@ struct TargetData {
     const char *cxx_pch_filename;
 
     Span<const char *const> include_directories;
-    Span<const char *const> libraries;
+    HeapArray<const char *> libraries;
 
     HeapArray<ObjectInfo> objects;
+};
+
+struct TargetSet {
+    HeapArray<TargetData> targets;
+    HashMap<const char *, Size> targets_map;
+
+    BlockAllocator str_alloc;
+
+    TargetData *CreateTarget(const Config &config, const char *target_name,
+                             const char *output_directory);
 };
 
 struct BuildCommand {
@@ -135,54 +145,90 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     return writer.Close();
 }
 
-static bool CreateTarget(const TargetConfig &target_config, const char *output_directory,
-                         Allocator *alloc, HeapArray<TargetData> *out_targets)
+TargetData *TargetSet::CreateTarget(const Config &config, const char *target_name,
+                                    const char *output_directory)
 {
     BlockAllocator temp_alloc;
 
-    HeapArray<const char *> src_filenames;
-    for (const char *src_directory: target_config.src_directories) {
-        if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
-            return false;
+    const TargetConfig *target_config = config.targets_map.FindValue(target_name, nullptr);
+    if (!target_config) {
+        LogError("Could not find target '%1'", target_name);
+        return nullptr;
     }
-    src_filenames.Append(target_config.src_filenames);
 
-    // Big type, so create it directly in HeapArray
-    // Introduce out_guard if things can start to fail after here
-    TargetData *target = out_targets->AppendDefault();
+    // Gather target objects
+    HeapArray<ObjectInfo> objects;
+    {
+        HeapArray<const char *> src_filenames;
+        for (const char *src_directory: target_config->src_directories) {
+            if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
+                return nullptr;
+        }
+        src_filenames.Append(target_config->src_filenames);
 
-    target->name = target_config.name;
-    target->type = target_config.type;
-    target->include_directories = target_config.include_directories;
-    target->libraries = target_config.libraries;
-    target->c_pch_filename = target_config.c_pch_filename;
-    target->cxx_pch_filename = target_config.cxx_pch_filename;
+        for (const char *src_filename: src_filenames) {
+            const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
+            bool ignore = std::any_of(target_config->exclusions.begin(), target_config->exclusions.end(),
+                                      [&](const char *excl) { return MatchPathName(name, excl); });
 
-    for (const char *src_filename: src_filenames) {
-        const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
-        bool ignore = std::any_of(target_config.exclusions.begin(), target_config.exclusions.end(),
-                                  [&](const char *excl) { return MatchPathName(name, excl); });
+            if (!ignore) {
+                ObjectInfo obj = {};
 
-        if (!ignore) {
-            ObjectInfo obj = {};
+                Span<const char> extension = GetPathExtension(src_filename);
+                if (extension == ".c") {
+                    obj.src_type = SourceType::C_Source;
+                } else if (extension == ".cc" || extension == ".cpp") {
+                    obj.src_type = SourceType::CXX_Source;
+                } else {
+                    continue;
+                }
 
-            Span<const char> extension = GetPathExtension(src_filename);
-            if (extension == ".c") {
-                obj.src_type = SourceType::C_Source;
-            } else if (extension == ".cc" || extension == ".cpp") {
-                obj.src_type = SourceType::CXX_Source;
-            } else {
-                continue;
+                obj.src_filename = DuplicateString(src_filename, &str_alloc).ptr;
+                obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", &str_alloc);
+
+                objects.Append(obj);
             }
-
-            obj.src_filename = DuplicateString(src_filename, alloc).ptr;
-            obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", alloc);
-
-            target->objects.Append(obj);
         }
     }
 
-    return true;
+    // Target libraries
+    HeapArray<const char *> libraries;
+    libraries.Append(target_config->libraries);
+
+    // Resolve imported objects and libraries
+    for (const char *import_name: target_config->imports) {
+        const TargetData *import;
+        {
+            Size import_idx = targets_map.FindValue(import_name, -1);
+            if (import_idx >= 0) {
+                import = &targets[import_idx];
+            } else {
+                import = CreateTarget(config, import_name, output_directory);
+                if (!import)
+                    return nullptr;
+            }
+        }
+
+        objects.Append(import->objects);
+        libraries.Append(import->libraries);
+    }
+
+    // Big type, so create it directly in HeapArray
+    // Introduce out_guard if things can start to fail after here
+    TargetData *target = targets.AppendDefault();
+
+    target->name = target_config->name;
+    target->type = target_config->type;
+    target->c_pch_filename = target_config->c_pch_filename;
+    target->cxx_pch_filename = target_config->cxx_pch_filename;
+    target->include_directories = target_config->include_directories;
+    std::swap(target->libraries, libraries);
+    std::swap(target->objects, objects);
+
+    bool appended = targets_map.Append(target_config->name, targets.len - 1).second;
+    DebugAssert(appended);
+
+    return target;
 }
 
 static bool AppendPrecompileCommands(const TargetData &target, const char *pch_filename,
@@ -446,6 +492,15 @@ Available build modes:)");
     if (!LoadConfig(config_filename, &config))
         return 1;
 
+    // Default targets
+    if (!target_names.len) {
+        for (const TargetConfig &target_config: config.targets) {
+            if (target_config.type == TargetType::Executable) {
+                target_names.Append(target_config.name);
+            }
+        }
+    }
+
 #ifdef _WIN32
     if (toolchain == &GnuToolchain) {
         for (TargetConfig &target_config: config.targets) {
@@ -482,35 +537,25 @@ Available build modes:)");
     }
 
     // Gather targets
-    HeapArray<TargetData> targets;
-    if (target_names.len) {
-        HashSet<const void *> handled_set;
+    TargetSet target_set;
+    {
+        HashSet<const char *> handled_set;
 
         for (const char *target_name: target_names) {
-            const TargetConfig *target_config = config.targets_map.FindValue(target_name, nullptr);
-            if (!target_config) {
-                LogError("Unknown target '%1'", target_name);
+            if (!handled_set.Append(target_name).second) {
+                LogError("Target '%1' is specified multiple times", target_name);
                 return 1;
             }
 
-            if (!handled_set.Append(target_config).second) {
-                LogError("Target '%1' is specified multiple times");
-                return 1;
-            }
-
-            if (!CreateTarget(*target_config, output_directory, &temp_alloc, &targets))
-                return 1;
-        }
-    } else {
-        for (const TargetConfig &target_config: config.targets) {
-            if (!CreateTarget(target_config, output_directory, &temp_alloc, &targets))
+            if (!target_set.targets_map.Find(target_name) &&
+                    !target_set.CreateTarget(config, target_name, output_directory))
                 return 1;
         }
     }
 
     // We need to build PCH files first (for dependency issues)
     BuildSet pch_command_set;
-    for (const TargetData &target: targets) {
+    for (const TargetData &target: target_set.targets) {
         if (target.c_pch_filename &&
                 !AppendPrecompileCommands(target, target.c_pch_filename, SourceType::C_Header,
                                           output_directory, *toolchain, build_mode, &pch_command_set))
@@ -530,7 +575,7 @@ Available build modes:)");
 
     BuildSet obj_command_set;
     BuildSet link_command_set;
-    for (const TargetData &target: targets) {
+    for (const TargetData &target: target_set.targets) {
         if (!AppendTargetCommands(target, output_directory, *toolchain, build_mode,
                                   &obj_command_set, &link_command_set))
             return 1;
