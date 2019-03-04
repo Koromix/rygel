@@ -10,8 +10,8 @@ Toolchain ClangToolchain = {
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *pch_filename, const char *dest_filename, const char *deps_filename,
-       Allocator *alloc) {
+       const char *pch_filename, Span<const char *const> include_directories,
+       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wall -Wno-unknown-warning-option";
@@ -40,6 +40,9 @@ Toolchain ClangToolchain = {
         Fmt(&buf, " -c %1", src_filename);
         if (pch_filename) {
             Fmt(&buf, " -include %1", pch_filename);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " -I%1", include_directory);
         }
         if (deps_filename) {
             Fmt(&buf, " -MMD -MF %1", deps_filename);
@@ -85,8 +88,8 @@ Toolchain GnuToolchain = {
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *pch_filename, const char *dest_filename, const char *deps_filename,
-       Allocator *alloc) {
+       const char *pch_filename, Span<const char *const> include_directories,
+       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
@@ -120,6 +123,9 @@ Toolchain GnuToolchain = {
         Fmt(&buf, " -c %1", src_filename);
         if (pch_filename) {
             Fmt(&buf, " -include %1", pch_filename);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " -I%1", include_directory);
         }
         if (deps_filename) {
             Fmt(&buf, " -MMD -MF %1", deps_filename);

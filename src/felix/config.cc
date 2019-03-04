@@ -86,6 +86,9 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                             target_config->exclusions.Append(copy);
                         }
                     }
+                } else if (prop.key == "IncludeDirectory") {
+                    valid &= AppendNormalizedPath(prop.value, &config.str_alloc,
+                                                  &target_config->include_directories);
                 } else if (prop.key == "Precompile_C") {
                     target_config->c_pch_filename = NormalizePath(prop.value, &config.str_alloc).ptr;
                 } else if (prop.key == "Precompile_CXX") {
