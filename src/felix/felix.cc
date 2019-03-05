@@ -422,11 +422,13 @@ static bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 
     for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
+            int progress = 100 * (progress_counter += 1) / commands.len;
+
             if (verbose) {
-                LogInfo("[%1/%2] %3", progress_counter += 1, commands.len, cmd.cmd);
+                LogInfo("[%1%%] %2", FmtArg(progress).Pad(-3), cmd.cmd);
             } else {
                 const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
-                LogInfo("[%1/%2] %3 %4", progress_counter += 1, commands.len, cmd.type, name);
+                LogInfo("[%1%%] %2 %3", FmtArg(progress).Pad(-3), cmd.type, name);
             }
 
             // Run command
