@@ -278,7 +278,7 @@ bool RenderSimulationWindow(HeapArray<Simulation> *simulations, Size idx)
                 ImGui::TextUnformatted(DiseaseNames[i]); ImGui::NextColumn();
                 for (Size j = 0; j < 6; j++) {
                     if (time[j]) {
-                        float proportion = (incidences[i][j] / time[j]) * 100.0f;
+                        float proportion = (incidences[i][j] / time[j]) * 100000.0f;
                         const char *str = Fmt(&frame_alloc, "%1 (%2)",
                                               incidences[i][j], FmtDouble(proportion, 1)).ptr;
                         ImGui::TextUnformatted(str); ImGui::NextColumn();
