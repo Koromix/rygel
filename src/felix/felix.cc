@@ -146,10 +146,16 @@ Available build modes:)");
     {
         HashSet<const char *> handled_set;
 
+        bool valid = true;
         for (const char *target_name: target_names) {
-            const Target *target = target_set.targets_map.FindValue(target_name, nullptr);
+            if (handled_set.Append(target_name).second) {
+                const Target *target = target_set.targets_map.FindValue(target_name, nullptr);
+                if (!target) {
+                    LogError("Target '%1' does not exist", target_name);
+                    valid = false;
+                    continue;
+                }
 
-            if (handled_set.Append(target->name).second) {
                 for (const char *import_name: target->imports) {
                     if (handled_set.Append(import_name).second) {
                         const Target *import = target_set.targets_map.FindValue(import_name, nullptr);
@@ -159,6 +165,8 @@ Available build modes:)");
                 enabled_targets.Append(target);
             }
         }
+        if (!valid)
+            return 1;
     }
 
     // We're ready to output stuff
