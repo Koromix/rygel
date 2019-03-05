@@ -35,6 +35,8 @@ struct TargetSet {
 };
 
 struct BuildCommand {
+    const char *type;
+
     const char *dest_filename;
     const char *cmd;
 
@@ -312,6 +314,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         if (build) {
             BuildCommand cmd = {};
 
+            cmd.type = "Precompile";
             cmd.dest_filename = DuplicateString(obj.dest_filename, &out_set->str_alloc).ptr;
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
@@ -359,6 +362,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
                 case SourceType::CXX_Header: { DebugAssert(false); } break;
             }
 
+            cmd.type = "Build";
             cmd.dest_filename = DuplicateString(obj.dest_filename, &out_set->str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
@@ -388,6 +392,7 @@ static bool AppendTargetCommands(const TargetData &target, const char *output_di
         if (relink || !TestFile(link_filename, FileType::File)) {
             BuildCommand cmd = {};
 
+            cmd.type = "Link";
             cmd.dest_filename = link_filename;
             cmd.cmd = toolchain.BuildLinkCommand(target.objects, target.libraries, link_filename,
                                                 &out_set->str_alloc);
@@ -421,7 +426,7 @@ static bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
                 LogInfo("[%1/%2] %3", progress_counter += 1, commands.len, cmd.cmd);
             } else {
                 const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
-                LogInfo("[%1/%2] Build %3", progress_counter += 1, commands.len, name);
+                LogInfo("[%1/%2] %3 %4", progress_counter += 1, commands.len, cmd.type, name);
             }
 
             // Run command
