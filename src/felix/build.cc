@@ -120,7 +120,7 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
         if (build) {
             BuildCommand cmd = {};
 
-            cmd.type = "Precompile";
+            cmd.text = Fmt(&str_alloc, "Precompile %1", obj.src_filename).ptr;
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
@@ -166,7 +166,7 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
                 case SourceType::CXX_Header: { DebugAssert(false); } break;
             }
 
-            cmd.type = "Build";
+            cmd.text = Fmt(&str_alloc, "Build %1", obj.src_filename).ptr;
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
@@ -185,7 +185,8 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
         if (relink || !TestFile(target.dest_filename, FileType::File)) {
             BuildCommand cmd = {};
 
-            cmd.type = "Link";
+            cmd.text = Fmt(&str_alloc, "Link %1",
+                           SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
             cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
             cmd.cmd = toolchain->BuildLinkCommand(target.objects, target.libraries,
                                                   target.dest_filename, &str_alloc);
@@ -242,12 +243,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
                 std::lock_guard lock(log_mutex);
 
                 int progress = 100 * progress_counter++ / commands.len;
-                if (verbose) {
-                    LogInfo("[%1%%]  %2", FmtArg(progress).Pad(-3), cmd.cmd);
-                } else {
-                    const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
-                    LogInfo("[%1%%]  %2 %3", FmtArg(progress).Pad(-3), cmd.type, name);
-                }
+                LogInfo("[%1%%]  %2", FmtArg(progress).Pad(-3), verbose ? cmd.cmd : cmd.text);
             }
 
             // Run command
