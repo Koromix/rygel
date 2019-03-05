@@ -92,8 +92,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         link_commands.RemoveFrom(start_link_len);
     };
 
-    BlockAllocator temp_alloc;
-
     // Reuse for performance
     HeapArray<const char *> src_filenames;
 

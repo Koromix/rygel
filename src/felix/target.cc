@@ -212,8 +212,6 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 // We steal stuff from TargetConfig so it's not reusable after that
 const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
-    BlockAllocator temp_alloc;
-
     // Gather direct target objects
     HeapArray<ObjectInfo> objects;
     {
