@@ -18,7 +18,7 @@ enum class mco_ClassifyFlag {
 static const OptionDesc mco_ClassifyFlagOptions[] = {
     {"MonoOrigStay",   "Use original stays in mono algorithm"},
     {"IgnoreConfirm",  "Ignore RSS confirmation flag"},
-    {"IgnoreCompProc", "Ignore completementary procedure check"},
+    {"IgnoreCompProc", "Ignore complementary procedure check"},
     {"IgnoreProcExt",  "Ignore ATIH procedure extension check"}
 };
 
