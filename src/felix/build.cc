@@ -50,6 +50,19 @@ static int64_t GetFileModificationTime(const char *filename)
     return file_info.modification_time;
 }
 
+static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
+{
+    int64_t dest_time = GetFileModificationTime(dest_filename);
+
+    for (const char *src_filename: src_filenames) {
+        int64_t src_time = GetFileModificationTime(src_filename);
+        if (src_time < 0 || src_time > dest_time)
+            return false;
+    }
+
+    return true;
+}
+
 static bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory;
@@ -66,19 +79,6 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     StreamWriter writer(dest_filename);
     Print(&writer, "#include \"%1%/%2\"", GetWorkingDirectory(), pch_filename);
     return writer.Close();
-}
-
-static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
-{
-    int64_t dest_time = GetFileModificationTime(dest_filename);
-
-    for (const char *src_filename: src_filenames) {
-        int64_t src_time = GetFileModificationTime(src_filename);
-        if (src_time < 0 || src_time > dest_time)
-            return false;
-    }
-
-    return true;
 }
 
 bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
