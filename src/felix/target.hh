@@ -43,6 +43,8 @@ struct TargetSet {
 class TargetSetBuilder {
     const char *output_directory;
 
+    BlockAllocator temp_alloc;
+
     TargetSet set;
 
     HashMap<const char *, Size> targets_map;

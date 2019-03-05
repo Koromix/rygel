@@ -27,6 +27,8 @@ class BuildSetBuilder {
     const Compiler *compiler;
     BuildMode build_mode;
 
+    BlockAllocator temp_alloc;
+
     HeapArray<BuildCommand> pch_commands;
     HeapArray<BuildCommand> obj_commands;
     HeapArray<BuildCommand> link_commands;
