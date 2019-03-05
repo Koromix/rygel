@@ -23,7 +23,7 @@ Options:
 
     -t, --toolchain <toolchain>  Set toolchain, see below
                                  (default: %1)
-    -m, --mode     <mode>        Set build mode, see below
+    -m, --mode <mode>            Set build mode, see below
                                  (default: %2)
        --disable_pch             Disable header precompilation (PCH)
 
