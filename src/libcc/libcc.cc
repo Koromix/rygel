@@ -1053,13 +1053,13 @@ void LogFmt(LogLevel level, const char *ctx MAYBE_UNUSED, const char *fmt, Span<
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
 
 #ifdef NDEBUG
-        Fmt(ctx_buf, " [%1]  ", FmtDouble(time, 3).Pad(-8));
+        Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
 #else
         Size ctx_len = (Size)strlen(ctx);
         if (ctx_len > 20) {
-            Fmt(ctx_buf, " ...%1 [%2]  ", ctx + ctx_len - 17, FmtDouble(time, 3).Pad(-8));
+            Fmt(ctx_buf, " ...%1 [%2] ", ctx + ctx_len - 17, FmtDouble(time, 3).Pad(-8));
         } else {
-            Fmt(ctx_buf, " ...%1 [%2]  ", FmtArg(ctx).Pad(-21), FmtDouble(time, 3).Pad(-8));
+            Fmt(ctx_buf, " ...%1 [%2] ", FmtArg(ctx).Pad(-21), FmtDouble(time, 3).Pad(-8));
         }
 #endif
     }
