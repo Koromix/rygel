@@ -9,7 +9,7 @@
 #include "target.hh"
 
 struct BuildCommand {
-    const char *type;
+    const char *text;
 
     const char *dest_filename;
     const char *cmd;
