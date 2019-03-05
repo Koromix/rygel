@@ -19,7 +19,7 @@ Options:
     -C, --config <filename>      Set configuration filename
                                  (default: FelixBuild.ini)
     -O, --output <directory>     Set output directory
-                                 (default: working directory)
+                                 (default: bin/<toolchain>_<mode>)
 
     -t, --toolchain <toolchain>  Set toolchain, see below
                                  (default: %1)
@@ -136,15 +136,8 @@ Available build modes:)");
         }
     }
 
-    // Directories
-    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
-    if (output_directory) {
-        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
-    } else {
-        output_directory = start_directory;
-    }
-
     // Change to root directory
+    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
     {
         Span<const char> root_directory;
         SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory);
@@ -154,6 +147,14 @@ Available build modes:)");
             if (!SetWorkingDirectory(root_directory0))
                 return 1;
         }
+    }
+
+    // Output directory
+    if (output_directory) {
+        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
+    } else {
+        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
+                               toolchain->name, BuildModeNames[(int)build_mode]).ptr;
     }
 
     // Gather target information
