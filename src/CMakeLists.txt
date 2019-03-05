@@ -32,9 +32,13 @@ endif()
 # ------------------------------------------------------------------------
 
 set(FELIX_SRC
+    felix/build.cc
+    felix/build.hh
     felix/config.cc
     felix/config.hh
     felix/felix.cc
+    felix/target.cc
+    felix/target.hh
     felix/toolchain.cc
     felix/toolchain.hh
 )
