@@ -48,8 +48,30 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 
             do {
                 if (prop.key == "SourceDirectory") {
+                    if (PathIsAbsolute(prop.value.ptr)) {
+                        LogError("Cannot use absolute path '%1'", prop.value);
+                        valid = false;
+                    }
+
                     const char *directory = DuplicateString(prop.value, &config.str_alloc).ptr;
                     target->src_directories.Append(directory);
+                } else if (prop.key == "SourceFile") {
+                    if (PathIsAbsolute(prop.value.ptr)) {
+                        LogError("Cannot use absolute path '%1'", prop.value);
+                        valid = false;
+                    }
+
+                    const char *filename = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    target->src_filenames.Append(filename);
+                } else if (prop.key == "Exclusions") {
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            const char *copy = DuplicateString(part, &config.str_alloc).ptr;
+                            target->exclusions.Append(copy);
+                        }
+                    }
                 } else if (prop.key == "Link_Win32") {
 #ifdef _WIN32
                     AppendLibraries(prop.value, &config.str_alloc, &target->libraries);

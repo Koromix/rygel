@@ -10,6 +10,9 @@ struct Target {
     const char *name;
 
     HeapArray<const char *> src_directories;
+    HeapArray<const char *> src_filenames;
+    HeapArray<const char *> exclusions;
+
     HeapArray<const char *> libraries;
 
     HASH_TABLE_HANDLER(Target, name);

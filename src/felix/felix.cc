@@ -164,42 +164,42 @@ static bool AppendPCHCommands(const char *pch_filename, SourceType src_type,
     return true;
 }
 
-static bool ListObjectFiles(const char *src_directory, Allocator *alloc,
-                            HeapArray<ObjectInfo> *out_objects)
+static bool GatherObjects(const Target &target, Allocator *alloc, HeapArray<ObjectInfo> *out_objects)
 {
-    DEFER_NC(out_guard, len = out_objects->len) { out_objects->RemoveFrom(len); };
+    BlockAllocator temp_alloc;
 
-    if (PathIsAbsolute(src_directory)) {
-        LogError("Cannot use absolute directory '%1'", src_directory);
-        return false;
+    HeapArray<const char *> src_filenames;
+    for (const char *src_directory: target.src_directories) {
+        if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
+            return false;
     }
+    src_filenames.Append(target.src_filenames);
 
-    EnumStatus status = EnumerateDirectory(src_directory, nullptr, 32768,
-                                           [&](const char *name, FileType file_type) {
-        if (file_type == FileType::File) {
+    // Introduce out_guard if things can start to fail in there
+    for (const char *src_filename: src_filenames) {
+        const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
+        bool ignore = std::any_of(target.exclusions.begin(), target.exclusions.end(),
+                                  [&](const char *excl) { return MatchPathName(name, excl); });
+
+        if (!ignore) {
             ObjectInfo obj = {};
 
-            Span<const char> extension = GetPathExtension(name);
+            Span<const char> extension = GetPathExtension(src_filename);
             if (extension == ".c") {
                 obj.src_type = SourceType::C_Source;
             } else if (extension == ".cc" || extension == ".cpp") {
                 obj.src_type = SourceType::CXX_Source;
             } else {
-                return true;
+                continue;
             }
 
-            obj.src_filename = Fmt(alloc, "%1%/%2", src_directory, name).ptr;
-            obj.dest_filename = BuildObjectPath("objects", obj.src_filename, alloc);
+            obj.src_filename = DuplicateString(src_filename, alloc).ptr;
+            obj.dest_filename = BuildObjectPath("objects", src_filename, alloc);
 
             out_objects->Append(obj);
         }
+    }
 
-        return true;
-    });
-    if (status != EnumStatus::Done)
-        return false;
-
-    out_guard.disable();
     return true;
 }
 
@@ -447,10 +447,8 @@ Available build modes:)");
 
         for (const Target *target: targets) {
             objects.RemoveFrom(0);
-            for (const char *src_directory: target->src_directories) {
-                if (!ListObjectFiles(src_directory, &commands_alloc, &objects))
-                    return 1;
-            }
+            if (!GatherObjects(*target, &commands_alloc, &objects))
+                return 1;
 
             if (!AppendTargetCommands(*target, objects, *compiler, build_mode,
                                       &commands_alloc, &obj_commands, &link_commands))
