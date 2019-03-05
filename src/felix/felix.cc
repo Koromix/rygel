@@ -25,14 +25,16 @@ static int64_t GetFileModificationTime(const char *filename)
 }
 
 // Do not use absolute filenames!
-static const char *BuildObjectPath(Span<const char> output_dir, Span<const char> filename,
-                                   Allocator *alloc)
+static const char *BuildObjectPath(const char *src_filename, Allocator *alloc)
 {
-    char *path = Fmt(alloc, "%1%/%2.o", output_dir, filename).ptr;
+    DebugAssert(!PathIsAbsolute(src_filename));
+
+    Span<const char> output_directory = GetWorkingDirectory();
+    char *path = Fmt(alloc, "%1%/objects%/%2.o", output_directory, src_filename).ptr;
 
     // Replace '..' components with '__'
     {
-        char *ptr = path + output_dir.len + 1;
+        char *ptr = path + output_directory.len + 1;
 
         while ((ptr = strstr(ptr, ".."))) {
             if ((ptr == path || IsPathSeparator(ptr[-1])) && (IsPathSeparator(ptr[2]) || !ptr[2])) {
@@ -51,20 +53,29 @@ static const char *BuildObjectPath(Span<const char> output_dir, Span<const char>
 static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
                                   HeapArray<const char *> *out_filenames)
 {
-    Span<const char> rule;
     HeapArray<char> rule_buf;
     if (ReadFile(filename, Megabytes(2), &rule_buf) < 0)
         return false;
-    rule = rule_buf;
+    rule_buf.Append(0);
 
-    // Skip target path
-    SplitStr(rule, ':', &rule);
+    // Skip output path
+    Span<const char> rule;
+    {
+        const char *ptr = strstr(rule_buf.ptr, ": ");
+        if (ptr) {
+            rule = Span<const char>(ptr + 2);
+        } else {
+            rule = {};
+        }
+    }
 
     while (rule.len) {
         Span<const char> path = TrimStr(SplitStr(rule, ' ', &rule));
 
         if (path.len && path != "\\") {
             const char *dep_filename = CanonicalizePath(nullptr, path, alloc);
+            if (!dep_filename)
+                return false;
             out_filenames->Append(dep_filename);
         }
     }
@@ -194,7 +205,7 @@ static bool GatherObjects(const Target &target, Allocator *alloc, HeapArray<Obje
             }
 
             obj.src_filename = DuplicateString(src_filename, alloc).ptr;
-            obj.dest_filename = BuildObjectPath("objects", src_filename, alloc);
+            obj.dest_filename = BuildObjectPath(src_filename, alloc);
 
             out_objects->Append(obj);
         }
@@ -251,10 +262,11 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
         }
     }
 
+    const char *output_directory = GetWorkingDirectory();
 #ifdef _WIN32
-    const char *link_filename = Fmt(alloc, "%1.exe", target.name).ptr;
+    const char *link_filename = Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
 #else
-    const char *link_filename = Fmt(alloc, "%1", target.name).ptr;
+    const char *link_filename = Fmt(alloc, "%1%/%2", output_directory, target.name).ptr;
 #endif
 
     if (relink || !TestFile(link_filename, FileType::File)) {

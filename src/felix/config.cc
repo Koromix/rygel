@@ -5,6 +5,26 @@
 #include "../libcc/libcc.hh"
 #include "config.hh"
 
+static bool AppendNormalizedPath(Span<const char> path,
+                                 Allocator *alloc, HeapArray<const char *> *out_paths)
+{
+    char *copy = DuplicateString(path, alloc).ptr;
+
+    if (PathIsAbsolute(copy)) {
+        LogError("Cannot use absolute path '%1'", copy);
+        return false;
+    }
+
+#ifdef _WIN32
+    for (Size i = 0; i < path.len; i++) {
+        copy[i] = (copy[i] == '/') ? '\\' : copy[i];
+    }
+#endif
+
+    out_paths->Append(copy);
+    return true;
+}
+
 static void AppendLibraries(Span<const char> str,
                             Allocator *alloc, HeapArray<const char *> *out_libraries)
 {
@@ -48,21 +68,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 
             do {
                 if (prop.key == "SourceDirectory") {
-                    if (PathIsAbsolute(prop.value.ptr)) {
-                        LogError("Cannot use absolute path '%1'", prop.value);
-                        valid = false;
-                    }
-
-                    const char *directory = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    target->src_directories.Append(directory);
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &config.str_alloc, &target->src_directories);
                 } else if (prop.key == "SourceFile") {
-                    if (PathIsAbsolute(prop.value.ptr)) {
-                        LogError("Cannot use absolute path '%1'", prop.value);
-                        valid = false;
-                    }
-
-                    const char *filename = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    target->src_filenames.Append(filename);
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &config.str_alloc, &target->src_filenames);
                 } else if (prop.key == "Exclusions") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
