@@ -38,7 +38,7 @@ public:
     BuildSetBuilder(const Compiler *compiler, BuildMode build_mode)
         : compiler(compiler), build_mode(build_mode) {}
 
-    bool AppendTargetCommands(const TargetData &target);
+    bool AppendTargetCommands(const Target &target);
 
     void Finish(BuildSet *out_set);
 };
