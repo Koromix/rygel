@@ -4,7 +4,6 @@
 
 #include "../libcc/libcc.hh"
 #include "build.hh"
-#include "config.hh"
 #include "compiler.hh"
 
 int main(int argc, char **argv)
@@ -102,25 +101,78 @@ Available build modes:)");
         opt.ConsumeNonOptions(&target_names);
     }
 
-    Config config;
-    if (!LoadConfig(config_filename, &config))
+    // Change to root directory
+    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
+    {
+        Span<const char> root_directory;
+        config_filename = SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory).ptr;
+
+        if (root_directory.len) {
+            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
+            if (!SetWorkingDirectory(root_directory0))
+                return 1;
+        }
+    }
+    if (output_directory) {
+        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
+    } else {
+        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
+                               compiler->name, BuildModeNames[(int)build_mode]).ptr;
+    }
+
+    // Load configuration file
+    TargetSet target_set;
+    {
+        TargetSetBuilder target_set_builder(output_directory);
+
+        if (!target_set_builder.LoadFiles(config_filename))
+            return 1;
+        target_set_builder.Finish(&target_set);
+    }
+    if (!target_set.targets.len) {
+        LogError("There are no targets");
         return 1;
+    }
 
     // Default targets
     if (!target_names.len) {
-        for (const TargetConfig &target_config: config.targets) {
-            if (target_config.type == TargetType::Executable) {
-                target_names.Append(target_config.name);
+        for (const Target &target: target_set.targets) {
+            if (target.type == TargetType::Executable) {
+                target_names.Append(target.name);
             }
         }
     }
 
+    // Select targets and their dependencies (imports)
+    HeapArray<const Target *> enabled_targets;
+    {
+        HashSet<const char *> handled_set;
+
+        for (const char *target_name: target_names) {
+            const Target *target = target_set.targets_map.FindValue(target_name, nullptr);
+
+            if (handled_set.Append(target->name).second) {
+                for (const char *import_name: target->imports) {
+                    if (handled_set.Append(import_name).second) {
+                        const Target *import = target_set.targets_map.FindValue(import_name, nullptr);
+                        enabled_targets.Append(import);
+                    }
+                }
+                enabled_targets.Append(target);
+            }
+        }
+    }
+
+    // We're ready to output stuff
+    if (!MakeDirectoryRec(output_directory))
+        return 1;
+
     // Disable PCH?
 #ifdef _WIN32
     if (!disable_pch && compiler == &GnuCompiler) {
-        bool has_pch = std::any_of(config.targets.begin(), config.targets.end(),
-                                   [](const TargetConfig &target_config) {
-            return target_config.c_pch_filename || target_config.cxx_pch_filename;
+        bool has_pch = std::any_of(target_set.targets.begin(), target_set.targets.end(),
+                                   [](const Target &target) {
+            return target.c_pch_filename || target.cxx_pch_filename;
         });
 
         if (has_pch) {
@@ -130,62 +182,11 @@ Available build modes:)");
     }
 #endif
     if (disable_pch) {
-        for (TargetConfig &target_config: config.targets) {
-            target_config.c_pch_filename = nullptr;
-            target_config.cxx_pch_filename = nullptr;
+        for (Target &target: target_set.targets) {
+            target.pch_objects.Clear();
+            target.c_pch_filename = nullptr;
+            target.cxx_pch_filename = nullptr;
         }
-    }
-
-    // Change to root directory
-    const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
-    {
-        Span<const char> root_directory;
-        SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory);
-
-        if (root_directory.len) {
-            const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
-            if (!SetWorkingDirectory(root_directory0))
-                return 1;
-        }
-    }
-
-    // Output directory
-    if (output_directory) {
-        output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
-    } else {
-        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
-                               compiler->name, BuildModeNames[(int)build_mode]).ptr;
-    }
-    if (!MakeDirectoryRec(output_directory))
-        return 1;
-
-    // Gather target information
-    TargetSet target_set;
-    {
-        TargetSetBuilder target_set_builder(output_directory);
-        target_set_builder.resolve_import = [&](const char *import_name) {
-            const TargetConfig *import_config = config.targets_map.FindValue(import_name, nullptr);
-            return import_config;
-        };
-
-        HashSet<const char *> handled_set;
-        for (const char *target_name: target_names) {
-            if (!handled_set.Append(target_name).second) {
-                LogError("Target '%1' is specified multiple times", target_name);
-                return 1;
-            }
-
-            const TargetConfig *target_config = config.targets_map.FindValue(target_name, nullptr);
-            if (!target_config) {
-                LogError("Target '%1' does not exist", target_name);
-                return 1;
-            }
-
-            if (!target_set_builder.CreateTarget(*target_config))
-                return 1;
-        }
-
-        target_set_builder.Finish(&target_set);
     }
 
     // Create build commands
@@ -193,8 +194,8 @@ Available build modes:)");
     {
         BuildSetBuilder build_set_builder(compiler, build_mode);
 
-        for (const Target &target: target_set.targets) {
-            if (!build_set_builder.AppendTargetCommands(target))
+        for (const Target *target: enabled_targets) {
+            if (!build_set_builder.AppendTargetCommands(*target))
                 return 1;
         }
 

@@ -7,34 +7,20 @@
 #include "../libcc/libcc.hh"
 #include "compiler.hh"
 
+struct TargetConfig;
+
 enum class TargetType {
     Executable,
     Library
-};
-
-struct TargetConfig {
-    const char *name;
-    TargetType type;
-
-    HeapArray<const char *> src_directories;
-    HeapArray<const char *> src_filenames;
-    HeapArray<const char *> exclusions;
-
-    const char *c_pch_filename;
-    const char *cxx_pch_filename;
-
-    HeapArray<const char *> imports;
-    HeapArray<const char *> include_directories;
-    HeapArray<const char *> libraries;
-
-    HASH_TABLE_HANDLER(TargetConfig, name);
 };
 
 struct Target {
     const char *name;
     TargetType type;
 
-    Span<const char *const> include_directories;
+    HeapArray<const char *> imports;
+
+    HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
     HeapArray<ObjectInfo> pch_objects;
@@ -62,12 +48,14 @@ class TargetSetBuilder {
     HashMap<const char *, Size> targets_map;
 
 public:
-    std::function<const TargetConfig *(const char *)> resolve_import;
-
     TargetSetBuilder(const char *output_directory)
         : output_directory(output_directory) {}
 
-    const Target *CreateTarget(const TargetConfig &target_config);
+    bool LoadIni(StreamReader &st);
+    bool LoadFiles(Span<const char *const> filenames);
 
     void Finish(TargetSet *out_set);
+
+private:
+    const Target *CreateTarget(TargetConfig *target_config);
 };
