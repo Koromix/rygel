@@ -30,7 +30,7 @@ struct TargetConfig {
     HASH_TABLE_HANDLER(TargetConfig, name);
 };
 
-struct TargetData {
+struct Target {
     const char *name;
     TargetType type;
 
@@ -44,12 +44,12 @@ struct TargetData {
     HeapArray<ObjectInfo> objects;
     const char *dest_filename;
 
-    HASH_TABLE_HANDLER(TargetData, name);
+    HASH_TABLE_HANDLER(Target, name);
 };
 
 struct TargetSet {
-    HeapArray<TargetData> targets;
-    HashTable<const char *, const TargetData *> targets_map;
+    HeapArray<Target> targets;
+    HashTable<const char *, const Target *> targets_map;
 
     BlockAllocator str_alloc;
 };
@@ -67,7 +67,7 @@ public:
     TargetSetBuilder(const char *output_directory)
         : output_directory(output_directory) {}
 
-    const TargetData *CreateTarget(const TargetConfig &target_config);
+    const Target *CreateTarget(const TargetConfig &target_config);
 
     void Finish(TargetSet *out_set);
 };

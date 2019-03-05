@@ -34,7 +34,7 @@ static const char *BuildOutputPath(const char *src_filename, const char *output_
     return buf.Leak().ptr;
 }
 
-const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
+const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
 {
     BlockAllocator temp_alloc;
 
@@ -87,7 +87,7 @@ const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_conf
     // Resolve imported objects and libraries
     if (resolve_import) {
         for (const char *import_name: target_config.imports) {
-            const TargetData *import;
+            const Target *import;
             {
                 Size import_idx = targets_map.FindValue(import_name, -1);
                 if (import_idx >= 0) {
@@ -162,7 +162,7 @@ const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_conf
 
     // Big type, so create it directly in HeapArray
     // Introduce out_guard if things can start to fail after here
-    TargetData *target = set.targets.AppendDefault();
+    Target *target = set.targets.AppendDefault();
 
     target->name = target_config.name;
     target->type = target_config.type;
@@ -187,7 +187,7 @@ const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_conf
 
 void TargetSetBuilder::Finish(TargetSet *out_set)
 {
-    for (const TargetData &target: set.targets) {
+    for (const Target &target: set.targets) {
         set.targets_map.Append(&target);
     }
 

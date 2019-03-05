@@ -81,7 +81,7 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     return writer.Close();
 }
 
-bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
+bool BuildSetBuilder::AppendTargetCommands(const Target &target)
 {
     const Size start_pch_len = pch_commands.len;
     const Size start_obj_len = obj_commands.len;

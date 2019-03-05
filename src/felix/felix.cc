@@ -193,7 +193,7 @@ Available build modes:)");
     {
         BuildSetBuilder build_set_builder(compiler, build_mode);
 
-        for (const TargetData &target: target_set.targets) {
+        for (const Target &target: target_set.targets) {
             if (!build_set_builder.AppendTargetCommands(target))
                 return 1;
         }
