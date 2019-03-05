@@ -3172,6 +3172,7 @@ bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_f
 
 bool MatchPathName(const char *name, const char *pattern);
 
+bool SetWorkingDirectory(const char *directory);
 const char *GetWorkingDirectory();
 
 const char *GetApplicationExecutable(); // Can be NULL
