@@ -5,29 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-
-enum class TargetType {
-    Executable,
-    Library
-};
-
-struct TargetConfig {
-    const char *name;
-    TargetType type;
-
-    HeapArray<const char *> src_directories;
-    HeapArray<const char *> src_filenames;
-    HeapArray<const char *> exclusions;
-
-    const char *c_pch_filename;
-    const char *cxx_pch_filename;
-
-    HeapArray<const char *> imports;
-    HeapArray<const char *> include_directories;
-    HeapArray<const char *> libraries;
-
-    HASH_TABLE_HANDLER(TargetConfig, name);
-};
+#include "target.hh"
 
 struct Config {
     HeapArray<TargetConfig> targets;

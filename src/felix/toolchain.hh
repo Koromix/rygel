@@ -6,17 +6,6 @@
 
 #include "../libcc/libcc.hh"
 
-enum class BuildMode {
-    Debug,
-    FastDebug,
-    Release
-};
-static const char *const BuildModeNames[] = {
-    "Debug",
-    "FastDebug",
-    "Release"
-};
-
 enum class SourceType {
     C_Source,
     C_Header,
@@ -29,6 +18,17 @@ struct ObjectInfo {
     SourceType src_type;
 
     const char *dest_filename;
+};
+
+enum class BuildMode {
+    Debug,
+    FastDebug,
+    Release
+};
+static const char *const BuildModeNames[] = {
+    "Debug",
+    "FastDebug",
+    "Release"
 };
 
 struct Toolchain {
