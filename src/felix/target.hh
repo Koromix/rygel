@@ -61,3 +61,6 @@ public:
 private:
     const Target *CreateTarget(TargetConfig *target_config);
 };
+
+bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
+                   TargetSet *out_set);
