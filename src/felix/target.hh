@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "toolchain.hh"
+#include "compiler.hh"
 
 enum class TargetType {
     Executable,

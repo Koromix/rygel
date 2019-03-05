@@ -5,7 +5,7 @@
 #include "../libcc/libcc.hh"
 #include "build.hh"
 #include "config.hh"
-#include "toolchain.hh"
+#include "compiler.hh"
 
 int main(int argc, char **argv)
 {
@@ -19,9 +19,9 @@ Options:
     -C, --config <filename>      Set configuration filename
                                  (default: FelixBuild.ini)
     -O, --output <directory>     Set output directory
-                                 (default: bin/<toolchain>_<mode>)
+                                 (default: bin/<compiler>_<mode>)
 
-    -t, --toolchain <toolchain>  Set toolchain, see below
+    -c, --compiler <compiler>    Set compiler, see below
                                  (default: %1)
     -m, --mode <mode>            Set build mode, see below
                                  (default: %2)
@@ -32,9 +32,9 @@ Options:
 
     -v, --verbose                Show detailed build commands
 
-Available toolchains:)", Toolchains[0]->name, BuildModeNames[0]);
-        for (const Toolchain *toolchain: Toolchains) {
-            PrintLn(fp, "    %1", toolchain->name);
+Available compilers:)", Compilers[0]->name, BuildModeNames[0]);
+        for (const Compiler *compiler: Compilers) {
+            PrintLn(fp, "    %1", compiler->name);
         }
         PrintLn(fp, R"(
 Available build modes:)");
@@ -46,7 +46,7 @@ Available build modes:)");
     HeapArray<const char *> target_names;
     const char *config_filename = "FelixBuild.ini";
     const char *output_directory = nullptr;
-    const Toolchain *toolchain = Toolchains[0];
+    const Compiler *compiler = Compilers[0];
     BuildMode build_mode = (BuildMode)0;
     bool disable_pch = false;
     bool verbose = false;
@@ -61,15 +61,15 @@ Available build modes:)");
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 output_directory = opt.current_value;
-            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
-                const Toolchain *const *ptr = FindIf(Toolchains,
-                                                     [&](const Toolchain *toolchain) { return TestStr(toolchain->name, opt.current_value); });
+            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
+                const Compiler *const *ptr = FindIf(Compilers,
+                                                     [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
                 if (!ptr) {
-                    LogError("Unknown toolchain '%1'", opt.current_value);
+                    LogError("Unknown compiler '%1'", opt.current_value);
                     return 1;
                 }
 
-                toolchain = *ptr;
+                compiler = *ptr;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 const char *const *name = FindIf(BuildModeNames,
                                                  [&](const char *name) { return TestStr(name, opt.current_value); });
@@ -117,7 +117,7 @@ Available build modes:)");
 
     // Disable PCH?
 #ifdef _WIN32
-    if (!disable_pch && toolchain == &GnuToolchain) {
+    if (!disable_pch && compiler == &GnuCompiler) {
         bool has_pch = std::any_of(config.targets.begin(), config.targets.end(),
                                    [](const TargetConfig &target_config) {
             return target_config.c_pch_filename || target_config.cxx_pch_filename;
@@ -154,7 +154,7 @@ Available build modes:)");
         output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
     } else {
         output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
-                               toolchain->name, BuildModeNames[(int)build_mode]).ptr;
+                               compiler->name, BuildModeNames[(int)build_mode]).ptr;
     }
     if (!MakeDirectoryRec(output_directory))
         return 1;
@@ -191,7 +191,7 @@ Available build modes:)");
     // Create build commands
     BuildSet build_set;
     {
-        BuildSetBuilder build_set_builder(toolchain, build_mode);
+        BuildSetBuilder build_set_builder(compiler, build_mode);
 
         for (const TargetData &target: target_set.targets) {
             if (!build_set_builder.AppendTargetCommands(target))

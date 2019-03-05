@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "toolchain.hh"
+#include "compiler.hh"
 
-Toolchain ClangToolchain = {
+Compiler ClangCompiler = {
     "Clang",
 
     // BuildObjectCommand
@@ -83,7 +83,7 @@ Toolchain ClangToolchain = {
     }
 };
 
-Toolchain GnuToolchain = {
+Compiler GnuCompiler = {
     "GNU",
 
     // BuildObjectCommand

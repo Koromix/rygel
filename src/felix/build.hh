@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "toolchain.hh"
+#include "compiler.hh"
 #include "target.hh"
 
 struct BuildCommand {
@@ -24,7 +24,7 @@ struct BuildSet {
 };
 
 class BuildSetBuilder {
-    const Toolchain *toolchain;
+    const Compiler *compiler;
     BuildMode build_mode;
 
     HeapArray<BuildCommand> pch_commands;
@@ -35,8 +35,8 @@ class BuildSetBuilder {
     HashSet<const char *> output_set;
 
 public:
-    BuildSetBuilder(const Toolchain *toolchain, BuildMode build_mode)
-        : toolchain(toolchain), build_mode(build_mode) {}
+    BuildSetBuilder(const Compiler *compiler, BuildMode build_mode)
+        : compiler(compiler), build_mode(build_mode) {}
 
     bool AppendTargetCommands(const TargetData &target);
 

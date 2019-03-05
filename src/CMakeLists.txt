@@ -34,13 +34,13 @@ endif()
 set(FELIX_SRC
     felix/build.cc
     felix/build.hh
+    felix/compiler.cc
+    felix/compiler.hh
     felix/config.cc
     felix/config.hh
     felix/felix.cc
     felix/target.cc
     felix/target.hh
-    felix/toolchain.cc
-    felix/toolchain.hh
 )
 
 add_executable(felix ${FELIX_SRC})
