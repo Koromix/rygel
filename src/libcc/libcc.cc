@@ -1843,7 +1843,12 @@ void Async::SetThreadCount(int max_threads)
     DebugAssert(max_threads > 0);
     DebugAssert(!g_thread_pool);
 
+#ifdef __EMSCRIPTEN__
+    LogError("Cannot use parallelism on Emscripten platform");
+    g_max_threads = 1;
+#else
     g_max_threads = max_threads;
+#endif
 }
 
 int Async::GetThreadCount()
@@ -1857,12 +1862,13 @@ int Async::GetThreadCount()
             char *end_ptr;
             long threads = strtol(env, &end_ptr, 10);
             if (end_ptr > env && !end_ptr[0] && threads > 0) {
-                return (int)threads;
+                g_max_threads = (int)threads;
             } else {
                 LogError("LIBCC_THREADS must be positive number (ignored)");
             }
+        } else {
+            g_max_threads = (int)std::thread::hardware_concurrency();
         }
-        return (int)std::thread::hardware_concurrency();
 
         Assert(g_max_threads > 0);
 #endif
