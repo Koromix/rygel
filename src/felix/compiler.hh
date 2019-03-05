@@ -31,7 +31,7 @@ static const char *const BuildModeNames[] = {
     "Release"
 };
 
-struct Toolchain {
+struct Compiler {
     const char *name;
 
     const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
@@ -43,10 +43,10 @@ struct Toolchain {
                                     const char *dest_filename, Allocator *alloc);
 };
 
-extern Toolchain ClangToolchain;
-extern Toolchain GnuToolchain;
+extern Compiler ClangCompiler;
+extern Compiler GnuCompiler;
 
-static const Toolchain *const Toolchains[] = {
-    &ClangToolchain,
-    &GnuToolchain
+static const Compiler *const Compilers[] = {
+    &ClangCompiler,
+    &GnuCompiler
 };
