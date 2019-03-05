@@ -1423,6 +1423,23 @@ bool MatchPathName(const char *name, const char *pattern)
 #endif
 }
 
+bool SetWorkingDirectory(const char *directory)
+{
+#ifdef _WIN32
+    if (!SetCurrentDirectory(directory)) {
+        LogError("Failed to set current directory to '%1': %2", directory, Win32ErrorString());
+        return false;
+    }
+#else
+    if (chdir(directory) < 0) {
+        LogError("Failed to set current directory to '%1': %2", directory, strerror(errno));
+        return false;
+    }
+#endif
+
+    return true;
+}
+
 const char *GetWorkingDirectory()
 {
     static THREAD_LOCAL char buf[4096];
