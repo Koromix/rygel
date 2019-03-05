@@ -65,9 +65,22 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                 LogError("Duplicate target name '%1'", target->name);
                 valid = false;
             }
+            target->type = TargetType::Executable;
 
+            bool type_specified = false;
             do {
-                if (prop.key == "SourceDirectory") {
+                if (prop.key == "Type") {
+                    if (prop.value == "Executable") {
+                        target->type = TargetType::Executable;
+                    } else if (prop.value == "Library") {
+                        target->type = TargetType::Library;
+                    } else {
+                        LogError("Unknown target type '%1'", prop.value);
+                        valid = false;
+                    }
+
+                    type_specified = true;
+                } else if (prop.key == "SourceDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &config.str_alloc, &target->src_directories);
                 } else if (prop.key == "SourceFile") {
@@ -95,6 +108,11 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                     valid = false;
                 }
             } while (ini.NextInSection(&prop));
+
+            if (!type_specified) {
+                LogError("Type attribute is missing for target '%1'", target->name);
+                valid = false;
+            }
         }
     }
     if (ini.error || !valid)

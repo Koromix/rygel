@@ -6,8 +6,14 @@
 
 #include "../libcc/libcc.hh"
 
+enum class TargetType {
+    Executable,
+    Library
+};
+
 struct Target {
     const char *name;
+    TargetType type;
 
     HeapArray<const char *> src_directories;
     HeapArray<const char *> src_filenames;
