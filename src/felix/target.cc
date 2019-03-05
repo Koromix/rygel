@@ -98,6 +98,10 @@ const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_conf
                         LogError("Cannot find import target '%1'", import_name);
                         return nullptr;
                     }
+                    if (import_config->type != TargetType::Library) {
+                        LogError("Cannot import non-library target '%1'", import_name);
+                        return nullptr;
+                    }
 
                     import = CreateTarget(*import_config);
                     if (!import)
