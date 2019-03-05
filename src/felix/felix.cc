@@ -27,7 +27,7 @@ Options:
        --disable_pch             Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
-                                 (default: number of cores)
+                                 (default: number of cores + 1)
 
     -v, --verbose                Show detailed build commands
 
@@ -41,6 +41,9 @@ Available build modes:)");
             PrintLn(fp, "    %1", mode_name);
         }
     };
+
+    // NOTE: This overrules LIBCC_THREADS if it exists
+    Async::SetThreadCount(Async::GetThreadCount() + 1);
 
     HeapArray<const char *> target_names;
     const char *config_filename = "FelixBuild.ini";
