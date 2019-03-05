@@ -156,6 +156,8 @@ Available build modes:)");
         output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
                                toolchain->name, BuildModeNames[(int)build_mode]).ptr;
     }
+    if (!MakeDirectoryRec(output_directory))
+        return 1;
 
     // Gather target information
     TargetSet target_set;
