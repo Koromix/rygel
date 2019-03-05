@@ -68,6 +68,19 @@ static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_fi
     return writer.Close();
 }
 
+static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
+{
+    int64_t dest_time = GetFileModificationTime(dest_filename);
+
+    for (const char *src_filename: src_filenames) {
+        int64_t src_time = GetFileModificationTime(src_filename);
+        if (src_time < 0 || src_time > dest_time)
+            return false;
+    }
+
+    return true;
+}
+
 bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
 {
     const Size start_pch_len = pch_commands.len;
@@ -93,15 +106,16 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
 
         // Parse Make rule dependencies
         bool build = false;
-        if (TestFile(deps_filename, FileType::File)) {
+        if (output_set.Find(obj.dest_filename)) {
+            build = false;
+        } else if (TestFile(deps_filename, FileType::File)) {
             if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
                 return false;
 
-            build = NeedsRebuild(obj.dest_filename, src_filenames);
+            build = !IsFileUpToDate(obj.dest_filename, src_filenames);
         } else {
             build = true;
         }
-        build &= !output_set.Find(obj.dest_filename);
 
         if (build) {
             BuildCommand cmd = {};
@@ -128,15 +142,16 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
 
         // Parse Make rule dependencies
         bool build = false;
-        if (TestFile(deps_filename, FileType::File)) {
+        if (output_set.Find(obj.dest_filename)) {
+            build = false;
+        } else if (TestFile(deps_filename, FileType::File)) {
             if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
                 return false;
 
-            build = NeedsRebuild(obj.dest_filename, src_filenames);
+            build = !IsFileUpToDate(obj.dest_filename, src_filenames);
         } else {
             build = true;
         }
-        build &= !output_set.Find(obj.dest_filename);
         relink |= build;
 
         if (build) {
@@ -210,19 +225,6 @@ void BuildSetBuilder::Finish(BuildSet *out_set)
     out_set->commands.Append(link_commands);
 
     SwapMemory(&out_set->str_alloc, &str_alloc, SIZE(str_alloc));
-}
-
-bool BuildSetBuilder::NeedsRebuild(const char *dest_filename, Span<const char *const> src_filenames)
-{
-    int64_t dest_time = GetFileModificationTime(dest_filename);
-
-    for (const char *src_filename: src_filenames) {
-        int64_t src_time = GetFileModificationTime(src_filename);
-        if (src_time < 0 || src_time > dest_time)
-            return true;
-    }
-
-    return false;
 }
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)

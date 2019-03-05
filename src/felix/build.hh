@@ -41,9 +41,6 @@ public:
     bool AppendTargetCommands(const TargetData &target);
 
     void Finish(BuildSet *out_set);
-
-private:
-    bool NeedsRebuild(const char *dest_filename, Span<const char *const> src_filenames);
 };
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose);
