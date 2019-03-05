@@ -165,21 +165,15 @@ bool BuildSetBuilder::AppendTargetCommands(const TargetData &target)
 
     // Link commands
     if (target.type == TargetType::Executable) {
-#ifdef _WIN32
-        const char *link_filename = Fmt(&str_alloc, "%1%/%2.exe", output_directory, target.name).ptr;
-#else
-        const char *link_filename = Fmt(&str_alloc, "%1%/%2", output_directory, target.name).ptr;
-#endif
+        relink &= !output_set.Find(target.dest_filename);
 
-        relink &= !output_set.Find(link_filename);
-
-        if (relink || !TestFile(link_filename, FileType::File)) {
+        if (relink || !TestFile(target.dest_filename, FileType::File)) {
             BuildCommand cmd = {};
 
             cmd.type = "Link";
-            cmd.dest_filename = link_filename;
-            cmd.cmd = toolchain->BuildLinkCommand(target.objects, target.libraries, link_filename,
-                                                  &str_alloc);
+            cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
+            cmd.cmd = toolchain->BuildLinkCommand(target.objects, target.libraries,
+                                                  target.dest_filename, &str_alloc);
 
             link_commands.Append(cmd);
         }

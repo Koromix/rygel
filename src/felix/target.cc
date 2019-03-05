@@ -167,7 +167,13 @@ const TargetData *TargetSetBuilder::CreateTarget(const TargetConfig &target_conf
     std::swap(target->pch_objects, pch_objects);
     target->c_pch_filename = c_pch_filename;
     target->cxx_pch_filename = cxx_pch_filename;
+
     std::swap(target->objects, objects);
+#ifdef _WIN32
+    target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;
+#else
+    target->dest_filename = Fmt(&set.str_alloc, "%1%/%2", output_directory, target->name).ptr;
+#endif
 
     bool appended = targets_map.Append(target_config.name, set.targets.len - 1).second;
     DebugAssert(appended);

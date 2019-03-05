@@ -42,6 +42,7 @@ struct TargetData {
     const char *cxx_pch_filename;
 
     HeapArray<ObjectInfo> objects;
+    const char *dest_filename;
 
     HASH_TABLE_HANDLER(TargetData, name);
 };

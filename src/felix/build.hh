@@ -26,7 +26,6 @@ struct BuildSet {
 class BuildSetBuilder {
     const Toolchain *toolchain;
     BuildMode build_mode;
-    const char *output_directory; // TODO: Get rid of output_directory here
 
     HeapArray<BuildCommand> pch_commands;
     HeapArray<BuildCommand> obj_commands;
@@ -36,9 +35,8 @@ class BuildSetBuilder {
     HashSet<const char *> output_set;
 
 public:
-    BuildSetBuilder(const Toolchain *toolchain, BuildMode build_mode,
-                    const char *output_directory)
-        : toolchain(toolchain), build_mode(build_mode), output_directory(output_directory) {}
+    BuildSetBuilder(const Toolchain *toolchain, BuildMode build_mode)
+        : toolchain(toolchain), build_mode(build_mode) {}
 
     bool AppendTargetCommands(const TargetData &target);
 
