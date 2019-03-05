@@ -188,7 +188,7 @@ Available build modes:)");
     // Create build commands
     BuildSet build_set;
     {
-        BuildSetBuilder build_set_builder(toolchain, build_mode, output_directory);
+        BuildSetBuilder build_set_builder(toolchain, build_mode);
 
         for (const TargetData &target: target_set.targets) {
             if (!build_set_builder.AppendTargetCommands(target))
