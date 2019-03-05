@@ -28,7 +28,10 @@ class BuildSetBuilder {
     BuildMode build_mode;
     const char *output_directory; // TODO: Get rid of output_directory here
 
-    BuildSet set;
+    HeapArray<BuildCommand> pch_commands;
+    HeapArray<BuildCommand> obj_commands;
+    HeapArray<BuildCommand> link_commands;
+    BlockAllocator str_alloc;
 
     HashSet<const char *> output_set;
 
