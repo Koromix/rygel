@@ -1426,11 +1426,14 @@ bool MatchPathName(const char *name, const char *pattern)
 const char *GetWorkingDirectory()
 {
     static THREAD_LOCAL char buf[4096];
+
 #ifdef _WIN32
-    Assert(_getcwd(buf, SIZE(buf)));
+    DWORD ret = GetCurrentDirectory(SIZE(buf), buf);
+    Assert(ret && ret <= SIZE(buf));
 #else
     Assert(getcwd(buf, SIZE(buf)));
 #endif
+
     return buf;
 }
 
