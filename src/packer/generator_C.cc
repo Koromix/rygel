@@ -14,7 +14,6 @@ R"(// This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include <initializer_list>
 #include <stdint.h>
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
@@ -29,30 +28,18 @@ R"(// This Source Code Form is subject to the terms of the Mozilla Public
     #define EXPORT __attribute__((visibility("default")))
 #endif
 
-template <typename T>
-struct Span {
-    T *ptr;
+typedef struct Span {
+    const void *ptr;
     Size len;
+} Span;
 
-    Span() = default;
-    constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-    template <Size N>
-    constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
-};
-
-enum class CompressionType {
-    None,
-    Zlib,
-    Gzip
-};
-
-struct pack_Asset {
+typedef struct pack_Asset {
     const char *name;
-    CompressionType compression_type;
-    Span<const uint8_t> data;
+    int compression_type; // CompressionType
+    Span data;
 
     const char *source_map;
-};)";
+} pack_Asset;)";
 
 struct BlobInfo {
     const char *str_name;
@@ -88,8 +75,8 @@ static void PrintAsHexArray(Span<const uint8_t> bytes, StreamWriter *out_st)
     }
 }
 
-bool GenerateCXX(Span<const AssetInfo> assets, const char *output_path,
-                 CompressionType compression_type)
+bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
+               CompressionType compression_type)
 {
     BlockAllocator temp_alloc;
 
@@ -155,11 +142,11 @@ static pack_Asset assets[%1] = {)", blobs.len);
             const BlobInfo &blob = blobs[i];
 
             if (blob.source_map) {
-                PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}, \"%5\"},",
+                PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, \"%5\"},",
                         blob.str_name, (int)compression_type, cumulative_len, blob.len,
                         blob.source_map);
             } else {
-                PrintLn(&st, "    {\"%1\", (CompressionType)%2, {raw_data + %3, %4}},",
+                PrintLn(&st, "    {\"%1\", %2, {raw_data + %3, %4}, 0},",
                         blob.str_name, (int)compression_type, cumulative_len, blob.len);
             }
             cumulative_len += blob.len;
@@ -167,8 +154,9 @@ static pack_Asset assets[%1] = {)", blobs.len);
 
         PrintLn(&st, R"(};
 
-EXPORT extern const Span<const pack_Asset> pack_assets = assets;
-)");
+EXPORT extern const Span pack_assets;
+const Span pack_assets = {assets, %1};
+)", blobs.len);
 
         for (Size i = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
@@ -179,8 +167,8 @@ const pack_Asset *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
         }
     } else {
         PrintLn(&st, R"(
-EXPORT extern const Span<const pack_Asset> pack_assets;
-const Span<const pack_Asset> pack_assets = {};)");
+EXPORT extern const Span pack_assets;
+const Span pack_assets = {};)");
     }
 
     return st.Close();

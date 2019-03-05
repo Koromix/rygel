@@ -74,7 +74,7 @@ endif()
 # ------------------------------------------------------------------------
 
 set(PACKER_SRC
-    packer/generator_cxx.cc
+    packer/generator_C.cc
     packer/generator_files.cc
     packer/generator.hh
     packer/output.cc
@@ -99,7 +99,7 @@ endif()
 function(target_assets TARGET)
     cmake_parse_arguments("OPT" "" "MODE;MERGE_RULES" "OPTIONS;SOURCES" ${ARGN})
 
-    set(output_src "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_assets.cc")
+    set(output_src "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_assets.c")
     set(output_target "${TARGET}_assets")
     set(output_dependencies packer ${OPT_SOURCES})
 
@@ -119,7 +119,7 @@ function(target_assets TARGET)
     add_custom_command(
         OUTPUT ${output_src}
         COMMAND $<TARGET_FILE:packer>
-        ARGS -gC++ ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
+        ARGS -gC ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         DEPENDS ${output_dependencies}
     )

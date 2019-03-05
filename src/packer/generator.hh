@@ -7,7 +7,16 @@
 #include "../libcc/libcc.hh"
 #include "packer.hh"
 
-bool GenerateCXX(Span<const AssetInfo> assets, const char *output_path,
-                 CompressionType compression_type);
+enum class GeneratorType {
+    C,
+    Files
+};
+static const char *const GeneratorTypeNames[] = {
+    "C",
+    "Files"
+};
+
+bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
+               CompressionType compression_type);
 bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
                    CompressionType compression_type);
