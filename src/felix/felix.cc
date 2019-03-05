@@ -200,9 +200,5 @@ Available build modes:)");
     }
 
     // Run build
-    if (!RunBuildCommands(build_set.commands, verbose))
-        return 1;
-
-    LogInfo("Done!");
-    return 0;
+    return !RunBuildCommands(build_set.commands, verbose);
 }
