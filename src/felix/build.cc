@@ -231,18 +231,23 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 {
     Async async;
 
-    static std::atomic_int progress_counter;
-    progress_counter = 0;
+    std::mutex log_mutex;
+    int progress_counter = 0;
 
     for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
-            int progress = 100 * progress_counter.fetch_add(1) / commands.len;
+            // The lock is needed to garantuee ordering of progress counter. Atomics
+            // do not help much because the LogInfo() calls need to be protected too.
+            {
+                std::lock_guard lock(log_mutex);
 
-            if (verbose) {
-                LogInfo("[%1%%]  %2", FmtArg(progress).Pad(-3), cmd.cmd);
-            } else {
-                const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
-                LogInfo("[%1%%]  %2 %3", FmtArg(progress).Pad(-3), cmd.type, name);
+                int progress = 100 * progress_counter++ / commands.len;
+                if (verbose) {
+                    LogInfo("[%1%%]  %2", FmtArg(progress).Pad(-3), cmd.cmd);
+                } else {
+                    const char *name = SplitStrReverseAny(cmd.dest_filename, PATH_SEPARATORS).ptr;
+                    LogInfo("[%1%%]  %2 %3", FmtArg(progress).Pad(-3), cmd.type, name);
+                }
             }
 
             // Run command
