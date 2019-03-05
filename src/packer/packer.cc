@@ -14,15 +14,6 @@ struct MergeRule {
     HeapArray<const char *> exclude;
 };
 
-enum class GeneratorType {
-    CXX,
-    Files
-};
-static const char *const GeneratorTypeNames[] = {
-    "C++",
-    "Files"
-};
-
 static MergeMode FindDefaultMergeMode(const char *filename)
 {
     Span<const char> extension = GetPathExtension(filename);
@@ -180,7 +171,7 @@ Available compression types:)");
         }
     };
 
-    GeneratorType generator = GeneratorType::CXX;
+    GeneratorType generator = GeneratorType::C;
     const char *output_path = nullptr;
     int strip_count = INT_MAX;
     CompressionType compression_type = CompressionType::None;
@@ -284,7 +275,7 @@ Available compression types:)");
     }
 
     switch (generator) {
-        case GeneratorType::CXX: return !GenerateCXX(assets, output_path, compression_type);
+        case GeneratorType::C: return !GenerateC(assets, output_path, compression_type);
         case GeneratorType::Files: return !GenerateFiles(assets, output_path, compression_type);
     }
     Assert(false);
