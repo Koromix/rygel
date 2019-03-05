@@ -107,6 +107,17 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
         }
     }
 
+    // Lung cancer
+    if (pcg_RandomBool(&out_human->rand_evolution, PredictLungCancer(human))) {
+        if (!human.lung_cancer_age) {
+            out_human->lung_cancer_age = human.age;
+        }
+    }
+    if (human.lung_cancer_age && human.age - human.lung_cancer_age > 3) {
+        out_human->alive = false;
+        out_human->death_type = DeathType::LungCancer;
+    }
+
     // Other causes of death
     {
         unsigned int type_flags = UINT_MAX;

@@ -7,6 +7,9 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+// Lung cancer
+double PredictLungCancer(const Human &human);
+
 // Cardiovascular
 double PredictFraminghamScore(const Human &human);
 double PredictHeartScore(const Human &human);
