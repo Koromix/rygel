@@ -418,6 +418,7 @@ if(TARGET libgui)
         wrappers/pcg.hh
         simPL/economics.cc
         simPL/economics.hh
+        simPL/predict_cancer.cc
         simPL/predict_cv.cc
         simPL/predict_cv_qrisk3.cc
         simPL/predict.hh
