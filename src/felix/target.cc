@@ -368,3 +368,14 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
 
     SwapMemory(&set, out_set, SIZE(set));
 }
+
+bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
+                   TargetSet *out_set)
+{
+    TargetSetBuilder target_set_builder(output_directory);
+    if (!target_set_builder.LoadFiles(filenames))
+        return false;
+    target_set_builder.Finish(out_set);
+
+    return true;
+}

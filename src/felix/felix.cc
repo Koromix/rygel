@@ -122,13 +122,8 @@ Available build modes:)");
 
     // Load configuration file
     TargetSet target_set;
-    {
-        TargetSetBuilder target_set_builder(output_directory);
-
-        if (!target_set_builder.LoadFiles(config_filename))
-            return 1;
-        target_set_builder.Finish(&target_set);
-    }
+    if (!LoadTargetSet(config_filename, output_directory, &target_set))
+        return 1;
     if (!target_set.targets.len) {
         LogError("There are no targets");
         return 1;
