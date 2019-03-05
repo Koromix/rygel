@@ -36,8 +36,6 @@ set(FELIX_SRC
     felix/build.hh
     felix/compiler.cc
     felix/compiler.hh
-    felix/config.cc
-    felix/config.hh
     felix/felix.cc
     felix/target.cc
     felix/target.hh

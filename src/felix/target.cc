@@ -3,8 +3,54 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../libcc/libcc.hh"
-#include "config.hh"
 #include "target.hh"
+
+// Temporary struct used until target is created
+struct TargetConfig {
+    const char *name;
+    TargetType type;
+
+    HeapArray<const char *> src_directories;
+    HeapArray<const char *> src_filenames;
+    HeapArray<const char *> exclusions;
+
+    const char *c_pch_filename;
+    const char *cxx_pch_filename;
+
+    HeapArray<const char *> imports;
+
+    HeapArray<const char *> include_directories;
+    HeapArray<const char *> libraries;
+
+    HASH_TABLE_HANDLER(TargetConfig, name);
+};
+
+static bool AppendNormalizedPath(Span<const char> path,
+                                 Allocator *alloc, HeapArray<const char *> *out_paths)
+{
+    if (PathIsAbsolute(path)) {
+        LogError("Cannot use absolute path '%1'", path);
+        return false;
+    }
+
+    const char *norm_path = NormalizePath(path, alloc).ptr;
+    out_paths->Append(norm_path);
+
+    return true;
+}
+
+static void AppendLibraries(Span<const char> str,
+                            Allocator *alloc, HeapArray<const char *> *out_libraries)
+{
+    while (str.len) {
+        Span<const char> lib = TrimStr(SplitStr(str, ' ', &str));
+
+        if (lib.len) {
+            const char *copy = DuplicateString(lib, alloc).ptr;
+            out_libraries->Append(copy);
+        }
+    }
+}
 
 static const char *BuildOutputPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
@@ -34,30 +80,153 @@ static const char *BuildOutputPath(const char *src_filename, const char *output_
     return buf.Leak().ptr;
 }
 
-const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
+bool TargetSetBuilder::LoadIni(StreamReader &st)
+{
+    DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+
+    IniParser ini(&st);
+    ini.reader.PushLogHandler();
+    DEFER { PopLogHandler(); };
+
+    bool valid = true;
+    {
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                LogError("Property is outside section");
+                return false;
+            }
+
+            TargetConfig target_config = {};
+
+            target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
+            if (targets_map.Find(target_config.name)) {
+                LogError("Duplicate target name '%1'", target_config.name);
+                valid = false;
+            }
+            target_config.type = TargetType::Executable;
+
+            bool type_specified = false;
+            do {
+                if (prop.key == "Type") {
+                    if (prop.value == "Executable") {
+                        target_config.type = TargetType::Executable;
+                    } else if (prop.value == "Library") {
+                        target_config.type = TargetType::Library;
+                    } else {
+                        LogError("Unknown target type '%1'", prop.value);
+                        valid = false;
+                    }
+
+                    type_specified = true;
+                } else if (prop.key == "SourceDirectory") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.src_directories);
+                } else if (prop.key == "SourceFile") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.src_filenames);
+                } else if (prop.key == "Exclude") {
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                            target_config.exclusions.Append(copy);
+                        }
+                    }
+                } else if (prop.key == "ImportFrom") {
+                    if (targets_map.Find(prop.value.ptr)) {
+                        const char *import_name = DuplicateString(prop.value, &set.str_alloc).ptr;
+                        target_config.imports.Append(import_name);
+                    } else {
+                        LogError("Cannot import from unknown target '%1'", prop.value);
+                        valid = false;
+                    }
+                } else if (prop.key == "IncludeDirectory") {
+                    valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
+                                                  &target_config.include_directories);
+                } else if (prop.key == "Precompile_C") {
+                    target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                } else if (prop.key == "Precompile_CXX") {
+                    target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                } else if (prop.key == "Link_Win32") {
+#ifdef _WIN32
+                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
+#endif
+                } else if (prop.key == "Link_POSIX") {
+#ifndef _WIN32
+                    AppendLibraries(prop.value, &config.str_alloc, &target.libraries);
+#endif
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } while (ini.NextInSection(&prop));
+
+            if (!type_specified) {
+                LogError("Type attribute is missing for target '%1'", target_config.name);
+                valid = false;
+            }
+
+            if (valid && !CreateTarget(&target_config)) {
+                valid = false;
+            }
+        }
+    }
+    if (ini.error || !valid)
+        return false;
+
+    out_guard.disable();
+    return true;
+}
+
+bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
+{
+    bool success = true;
+
+    for (const char *filename: filenames) {
+        CompressionType compression_type;
+        Span<const char> extension = GetPathExtension(filename, &compression_type);
+
+        bool (TargetSetBuilder::*load_func)(StreamReader &st);
+        if (extension == ".ini") {
+            load_func = &TargetSetBuilder::LoadIni;
+        } else {
+            LogError("Cannot load config from file '%1' with unknown extension '%2'",
+                     filename, extension);
+            success = false;
+            continue;
+        }
+
+        StreamReader st(filename, compression_type);
+        if (st.error) {
+            success = false;
+            continue;
+        }
+        success &= (this->*load_func)(st);
+    }
+
+    return success;
+}
+
+// We steal stuff from TargetConfig so it's not reusable after that
+const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
     BlockAllocator temp_alloc;
 
-    // Already done?
-    {
-        Size target_idx = targets_map.FindValue(target_config.name, -1);
-        if (target_idx >= 0)
-            return &set.targets[target_idx];
-    }
-
-    // Gather target objects
+    // Gather direct target objects
     HeapArray<ObjectInfo> objects;
     {
         HeapArray<const char *> src_filenames;
-        for (const char *src_directory: target_config.src_directories) {
+        for (const char *src_directory: target_config->src_directories) {
             if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
                 return nullptr;
         }
-        src_filenames.Append(target_config.src_filenames);
+        src_filenames.Append(target_config->src_filenames);
 
         for (const char *src_filename: src_filenames) {
             const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
-            bool ignore = std::any_of(target_config.exclusions.begin(), target_config.exclusions.end(),
+            bool ignore = std::any_of(target_config->exclusions.begin(), target_config->exclusions.end(),
                                       [&](const char *excl) { return MatchPathName(name, excl); });
 
             if (!ignore) {
@@ -80,51 +249,51 @@ const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
         }
     }
 
-    // Target libraries
-    HeapArray<const char *> libraries;
-    libraries.Append(target_config.libraries);
-
     // Resolve imported objects and libraries
-    if (resolve_import) {
-        for (const char *import_name: target_config.imports) {
+    HeapArray<const char *> imports;
+    HeapArray<const char *> libraries;
+    {
+        std::swap(libraries, target_config->libraries);
+
+        // We'll add transitive imports to the array as we go
+        Size imports_len = target_config->imports.len;
+
+        for (Size i = 0; i < imports_len; i++) {
             const Target *import;
             {
+                const char *import_name = target_config->imports[i];
                 Size import_idx = targets_map.FindValue(import_name, -1);
-                if (import_idx >= 0) {
-                    import = &set.targets[import_idx];
-                } else {
-                    const TargetConfig *import_config = resolve_import(import_name);
-                    if (!import_config) {
-                        LogError("Cannot find import target '%1'", import_name);
-                        return nullptr;
-                    }
-                    if (import_config->type != TargetType::Library) {
-                        LogError("Cannot import non-library target '%1'", import_name);
-                        return nullptr;
-                    }
+                DebugAssert(import_idx >= 0);
 
-                    import = CreateTarget(*import_config);
-                    if (!import)
-                        return nullptr;
+                import = &set.targets[import_idx];
+                if (import->type != TargetType::Library) {
+                    LogError("Cannot import non-library target '%1'", import->name);
+                    return nullptr;
                 }
             }
 
-            objects.Append(import->objects);
+            imports.Append(import->imports);
             libraries.Append(import->libraries);
+            objects.Append(import->objects);
         }
-    } else if (target_config.imports.len) {
-        LogError("Imports are not enabled");
-        return nullptr;
+
+        imports.Append(target_config->imports);
     }
 
-    // Deduplicate object and library arrays
-    std::sort(objects.begin(), objects.end(), [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
-        return CmpStr(obj1.dest_filename, obj2.dest_filename) < 0;
-    });
-    objects.RemoveFrom(std::unique(objects.begin(), objects.end(),
-                                   [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
-        return TestStr(obj1.dest_filename, obj2.dest_filename);
-    }) - objects.begin());
+    // Deduplicate import array, without sorting because ordering matters
+    {
+        HashSet<const char *> handled_imports;
+
+        Size j = 0;
+        for (Size i = 0; i < imports.len; i++) {
+            imports[j] = imports[i];
+            j += handled_imports.Append(imports[i]).second;
+        }
+
+        imports.RemoveFrom(j);
+    }
+
+    // Sort and deduplicate library and object arrays
     std::sort(libraries.begin(), libraries.end(), [](const char *lib1, const char *lib2) {
         return CmpStr(lib1, lib2) < 0;
     });
@@ -132,28 +301,35 @@ const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
                                    [](const char *lib1, const char *lib2) {
         return TestStr(lib1, lib2);
     }) - libraries.begin());
+    std::sort(objects.begin(), objects.end(), [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
+        return CmpStr(obj1.dest_filename, obj2.dest_filename) < 0;
+    });
+    objects.RemoveFrom(std::unique(objects.begin(), objects.end(),
+                                   [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
+        return TestStr(obj1.dest_filename, obj2.dest_filename);
+    }) - objects.begin());
 
     // PCH files
     HeapArray<ObjectInfo> pch_objects;
     const char *c_pch_filename = nullptr;
     const char *cxx_pch_filename = nullptr;
-    if (target_config.c_pch_filename) {
+    if (target_config->c_pch_filename) {
         ObjectInfo obj = {};
 
         obj.src_type = SourceType::C_Header;
-        obj.src_filename = target_config.c_pch_filename;
-        obj.dest_filename = BuildOutputPath(target_config.c_pch_filename, output_directory,
+        obj.src_filename = target_config->c_pch_filename;
+        obj.dest_filename = BuildOutputPath(target_config->c_pch_filename, output_directory,
                                             ".pch.h", &set.str_alloc);
         c_pch_filename = obj.dest_filename;
 
         pch_objects.Append(obj);
     }
-    if (target_config.cxx_pch_filename) {
+    if (target_config->cxx_pch_filename) {
         ObjectInfo obj = {};
 
         obj.src_type = SourceType::CXX_Header;
-        obj.src_filename = target_config.cxx_pch_filename;
-        obj.dest_filename = BuildOutputPath(target_config.cxx_pch_filename, output_directory,
+        obj.src_filename = target_config->cxx_pch_filename;
+        obj.dest_filename = BuildOutputPath(target_config->cxx_pch_filename, output_directory,
                                             ".pch.h", &set.str_alloc);
         cxx_pch_filename = obj.dest_filename;
 
@@ -164,9 +340,10 @@ const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
     // Introduce out_guard if things can start to fail after here
     Target *target = set.targets.AppendDefault();
 
-    target->name = target_config.name;
-    target->type = target_config.type;
-    target->include_directories = target_config.include_directories;
+    target->name = target_config->name;
+    target->type = target_config->type;
+    std::swap(target->imports, imports);
+    std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->libraries, libraries);
     std::swap(target->pch_objects, pch_objects);
     target->c_pch_filename = c_pch_filename;
@@ -179,7 +356,7 @@ const Target *TargetSetBuilder::CreateTarget(const TargetConfig &target_config)
     target->dest_filename = Fmt(&set.str_alloc, "%1%/%2", output_directory, target->name).ptr;
 #endif
 
-    bool appended = targets_map.Append(target_config.name, set.targets.len - 1).second;
+    bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
     DebugAssert(appended);
 
     return target;
