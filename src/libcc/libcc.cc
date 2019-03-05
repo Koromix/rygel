@@ -1066,6 +1066,7 @@ void LogFmt(LogLevel level, const char *ctx MAYBE_UNUSED, const char *fmt, Span<
 
     static std::mutex log_mutex;
 
+    // FIXME: Avoid need for mutex in Log API
     std::lock_guard<std::mutex> lock(log_mutex);
     if (log_handlers_len) {
         (*log_handlers[log_handlers_len - 1])(level, ctx_buf, fmt, args);
