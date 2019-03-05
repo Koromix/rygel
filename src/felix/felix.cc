@@ -262,20 +262,22 @@ static bool AppendTargetCommands(const Target &target, Span<const ObjectInfo> ob
         }
     }
 
-    const char *output_directory = GetWorkingDirectory();
+    if (target.type == TargetType::Executable) {
+        const char *output_directory = GetWorkingDirectory();
 #ifdef _WIN32
-    const char *link_filename = Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
+        const char *link_filename = Fmt(alloc, "%1%/%2.exe", output_directory, target.name).ptr;
 #else
-    const char *link_filename = Fmt(alloc, "%1%/%2", output_directory, target.name).ptr;
+        const char *link_filename = Fmt(alloc, "%1%/%2", output_directory, target.name).ptr;
 #endif
 
-    if (relink || !TestFile(link_filename, FileType::File)) {
-        BuildCommand cmd = {};
+        if (relink || !TestFile(link_filename, FileType::File)) {
+            BuildCommand cmd = {};
 
-        cmd.dest_filename = link_filename;
-        cmd.cmd = compiler.BuildLinkCommand(objects, target.libraries, link_filename, alloc);
+            cmd.dest_filename = link_filename;
+            cmd.cmd = compiler.BuildLinkCommand(objects, target.libraries, link_filename, alloc);
 
-        out_link_commands->Append(cmd);
+            out_link_commands->Append(cmd);
+        }
     }
 
     out_guard.disable();
