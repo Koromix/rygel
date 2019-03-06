@@ -31,8 +31,14 @@ static const char *const BuildModeNames[] = {
     "LTO"
 };
 
+enum class CompilerFlag {
+    PCH = 1 << 0,
+    LTO = 1 << 1
+};
+
 struct Compiler {
     const char *name;
+    unsigned int flags;
 
     const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
                                       BuildMode build_mode, const char *pch_filename,
@@ -42,6 +48,8 @@ struct Compiler {
     const char *(*BuildLinkCommand)(Span<const ObjectInfo> objects, BuildMode build_mode,
                                     Span<const char *const> libraries,
                                     const char *dest_filename, Allocator *alloc);
+
+    bool Supports(CompilerFlag flag) const { return flags & (int)flag; }
 };
 
 extern Compiler ClangCompiler;
