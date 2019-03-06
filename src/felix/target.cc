@@ -19,6 +19,7 @@ struct TargetConfig {
 
     HeapArray<const char *> imports;
 
+    HeapArray<const char *> definitions;
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
@@ -39,8 +40,8 @@ static bool AppendNormalizedPath(Span<const char> path,
     return true;
 }
 
-static void AppendLibraries(Span<const char> str,
-                            Allocator *alloc, HeapArray<const char *> *out_libraries)
+static void AppendListValues(Span<const char> str,
+                             Allocator *alloc, HeapArray<const char *> *out_libraries)
 {
     while (str.len) {
         Span<const char> lib = TrimStr(SplitStr(str, ' ', &str));
@@ -149,15 +150,25 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
                 } else if (prop.key == "Precompile_CXX") {
                     target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                } else if (prop.key == "Definitions") {
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
+                } else if (prop.key == "Definitions_Win32") {
+#ifdef _WIN32
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
+#endif
+                } else if (prop.key == "Definitions_POSIX") {
+#ifndef _WIN32
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.definitions);
+#endif
                 } else if (prop.key == "Link") {
-                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
                 } else if (prop.key == "Link_Win32") {
 #ifdef _WIN32
-                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
                 } else if (prop.key == "Link_POSIX") {
 #ifndef _WIN32
-                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
+                    AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
@@ -343,6 +354,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->name = target_config->name;
     target->type = target_config->type;
     std::swap(target->imports, imports);
+    std::swap(target->definitions, target_config->definitions);
     std::swap(target->include_directories, target_config->include_directories);
     std::swap(target->libraries, libraries);
     std::swap(target->pch_objects, pch_objects);

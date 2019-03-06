@@ -14,8 +14,8 @@ Compiler ClangCompiler = {
 #endif
 
     // BuildObjectCommand
-    [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *pch_filename, Span<const char *const> include_directories,
+    [](const char *src_filename, SourceType src_type, BuildMode build_mode, const char *pch_filename,
+       Span<const char *const> definitions, Span<const char *const> include_directories,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
@@ -45,6 +45,9 @@ Compiler ClangCompiler = {
         Fmt(&buf, " -c %1", src_filename);
         if (pch_filename) {
             Fmt(&buf, " -include %1", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " -I%1", include_directory);
@@ -102,8 +105,8 @@ Compiler GnuCompiler = {
 #endif
 
     // BuildObjectCommand
-    [](const char *src_filename, SourceType src_type, BuildMode build_mode,
-       const char *pch_filename, Span<const char *const> include_directories,
+    [](const char *src_filename, SourceType src_type, BuildMode build_mode, const char *pch_filename,
+       Span<const char *const> definitions, Span<const char *const> include_directories,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
@@ -131,6 +134,9 @@ Compiler GnuCompiler = {
         Fmt(&buf, " -c %1", src_filename);
         if (pch_filename) {
             Fmt(&buf, " -include %1", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " -D%1", definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " -I%1", include_directory);
