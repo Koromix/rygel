@@ -155,7 +155,7 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
 #endif
                 } else if (prop.key == "Link_POSIX") {
 #ifndef _WIN32
-                    AppendLibraries(prop.value, &config.str_alloc, &target.libraries);
+                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
