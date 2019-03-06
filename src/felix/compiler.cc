@@ -33,8 +33,15 @@ Compiler ClangCompiler = {
 
         switch (build_mode) {
             case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
-            case BuildMode::FastDebug: { Fmt(&buf, " -O2 -g"); } break;
-            case BuildMode::Release: { Fmt(&buf, " -O2 -flto"); } break;
+            case BuildMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
+            case BuildMode::LTO: {
+#ifdef _WIN32
+                LogError("Clang LTO does not seem to work on Windows (link fails)");
+                return (const char *)nullptr;
+#else
+                Fmt(&buf, " -O2 -flto -g -DNDEBUG");
+#endif
+            } break;
         }
 
         Fmt(&buf, " -c %1", src_filename);
@@ -55,7 +62,7 @@ Compiler ClangCompiler = {
     },
 
     // BuildLinkCommand
-    [](Span<const ObjectInfo> objects, Span<const char *const> libraries,
+    [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
@@ -73,6 +80,11 @@ Compiler ClangCompiler = {
                 case SourceType::CXX_Header: { DebugAssert(false); } break;
             }
         }
+
+        if (build_mode == BuildMode::LTO) {
+            Fmt(&buf, " -flto");
+        }
+
         for (const char *lib: libraries) {
             Fmt(&buf, " -l%1", lib);
         }
@@ -109,15 +121,8 @@ Compiler GnuCompiler = {
 
         switch (build_mode) {
             case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
-            case BuildMode::FastDebug: { Fmt(&buf, " -O2 -g"); } break;
-            case BuildMode::Release: {
-#ifdef _WIN32
-                LogError("LTO does not work correctly with MinGW (ignoring)");
-                Fmt(&buf, " -O2");
-#else
-                Fmt(&buf, " -O2 -flto");
-#endif
-            } break;
+            case BuildMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
+            case BuildMode::LTO: { Fmt(&buf, " -O2 -flto -g -DNDEBUG"); } break;
         }
 
         Fmt(&buf, " -c %1", src_filename);
@@ -138,7 +143,7 @@ Compiler GnuCompiler = {
     },
 
     // BuildLinkCommand
-    [](Span<const ObjectInfo> objects, Span<const char *const> libraries,
+    [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
@@ -156,6 +161,11 @@ Compiler GnuCompiler = {
                 case SourceType::CXX_Header: { DebugAssert(false); } break;
             }
         }
+
+        if (build_mode == BuildMode::LTO) {
+            Fmt(&buf, " -flto");
+        }
+
         for (const char *lib: libraries) {
             Fmt(&buf, " -l%1", lib);
         }
