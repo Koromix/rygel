@@ -22,13 +22,13 @@ struct ObjectInfo {
 
 enum class BuildMode {
     Debug,
-    FastDebug,
-    Release
+    Fast,
+    LTO
 };
 static const char *const BuildModeNames[] = {
     "Debug",
-    "FastDebug",
-    "Release"
+    "Fast",
+    "LTO"
 };
 
 struct Compiler {
@@ -39,7 +39,8 @@ struct Compiler {
                                       Span<const char *const> include_directories,
                                       const char *dest_filename, const char *deps_filename,
                                       Allocator *alloc);
-    const char *(*BuildLinkCommand)(Span<const ObjectInfo> objects, Span<const char *const> libraries,
+    const char *(*BuildLinkCommand)(Span<const ObjectInfo> objects, BuildMode build_mode,
+                                    Span<const char *const> libraries,
                                     const char *dest_filename, Allocator *alloc);
 };
 
