@@ -34,6 +34,7 @@ class BuildSetBuilder {
     HeapArray<BuildCommand> link_commands;
     BlockAllocator str_alloc;
 
+    HashMap<const char *, int64_t> mtime_map;
     HashSet<const char *> output_set;
 
 public:
@@ -43,6 +44,10 @@ public:
     bool AppendTargetCommands(const Target &target);
 
     void Finish(BuildSet *out_set);
+
+private:
+    bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
+    int64_t GetFileModificationTime(const char *filename);
 };
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose);
