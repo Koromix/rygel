@@ -41,28 +41,6 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
     return true;
 }
 
-static int64_t GetFileModificationTime(const char *filename)
-{
-    FileInfo file_info;
-    if (!StatFile(filename, false, &file_info))
-        return -1;
-
-    return file_info.modification_time;
-}
-
-static bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames)
-{
-    int64_t dest_time = GetFileModificationTime(dest_filename);
-
-    for (const char *src_filename: src_filenames) {
-        int64_t src_time = GetFileModificationTime(src_filename);
-        if (src_time < 0 || src_time > dest_time)
-            return false;
-    }
-
-    return true;
-}
-
 static bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory;
@@ -224,6 +202,36 @@ void BuildSetBuilder::Finish(BuildSet *out_set)
     out_set->commands.Append(link_commands);
 
     SwapMemory(&out_set->str_alloc, &str_alloc, SIZE(str_alloc));
+}
+
+bool BuildSetBuilder::IsFileUpToDate(const char *dest_filename,
+                                     Span<const char *const> src_filenames)
+{
+    int64_t dest_time = GetFileModificationTime(dest_filename);
+
+    for (const char *src_filename: src_filenames) {
+        int64_t src_time = GetFileModificationTime(src_filename);
+        if (src_time < 0 || src_time > dest_time)
+            return false;
+    }
+
+    return true;
+}
+
+int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
+{
+    int64_t mtime = mtime_map.FindValue(filename, -1);
+
+    if (mtime < 0) {
+        FileInfo file_info;
+        if (!StatFile(filename, false, &file_info))
+            return -1;
+
+        mtime_map.Append(filename, file_info.modification_time);
+        mtime = file_info.modification_time;
+    }
+
+    return mtime;
 }
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
