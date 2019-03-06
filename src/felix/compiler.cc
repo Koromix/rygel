@@ -7,6 +7,11 @@
 
 Compiler ClangCompiler = {
     "Clang",
+#ifdef _WIN32
+    (int)CompilerFlag::PCH,
+#else
+    (int)CompilerFlag::PCH | (int)CompilerFlag::LTO,
+#endif
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,
@@ -34,14 +39,7 @@ Compiler ClangCompiler = {
         switch (build_mode) {
             case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
             case BuildMode::Fast: { Fmt(&buf, " -O2 -g -DNDEBUG"); } break;
-            case BuildMode::LTO: {
-#ifdef _WIN32
-                LogError("Clang LTO does not seem to work on Windows (link fails)");
-                return (const char *)nullptr;
-#else
-                Fmt(&buf, " -O2 -flto -g -DNDEBUG");
-#endif
-            } break;
+            case BuildMode::LTO: { Fmt(&buf, " -O2 -flto -g -DNDEBUG"); } break;
         }
 
         Fmt(&buf, " -c %1", src_filename);
@@ -97,6 +95,11 @@ Compiler ClangCompiler = {
 
 Compiler GnuCompiler = {
     "GNU",
+#ifdef _WIN32
+    (int)CompilerFlag::LTO,
+#else
+    (int)CompilerFlag::PCH | (int)CompilerFlag::LTO,
+#endif
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode,

@@ -174,25 +174,29 @@ Available build modes:)");
         return 1;
 
     // Disable PCH?
-#ifdef _WIN32
-    if (!disable_pch && compiler == &GnuCompiler) {
-        bool has_pch = std::any_of(target_set.targets.begin(), target_set.targets.end(),
-                                   [](const Target &target) {
-            return target.c_pch_filename || target.cxx_pch_filename;
+    if (!disable_pch && !compiler->Supports(CompilerFlag::PCH)) {
+        bool using_pch = std::any_of(enabled_targets.begin(), enabled_targets.end(),
+                                   [](const Target *target) {
+            return target->c_pch_filename || target->cxx_pch_filename;
         });
 
-        if (has_pch) {
-            LogError("PCH does not work correctly with MinGW (ignoring)");
+        if (using_pch) {
+            LogError("PCH does not work correctly with %1 compiler (ignoring)", compiler->name);
             disable_pch = true;
         }
     }
-#endif
     if (disable_pch) {
         for (Target &target: target_set.targets) {
             target.pch_objects.Clear();
             target.c_pch_filename = nullptr;
             target.cxx_pch_filename = nullptr;
         }
+    }
+
+    // LTO?
+    if (build_mode == BuildMode::LTO && !compiler->Supports(CompilerFlag::LTO)) {
+        LogError("LTO does not work correctly with %1 compiler", compiler->name);
+        return 1;
     }
 
     // Create build commands
