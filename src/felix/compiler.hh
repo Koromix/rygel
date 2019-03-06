@@ -42,6 +42,7 @@ struct Compiler {
 
     const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
                                       BuildMode build_mode, const char *pch_filename,
+                                      Span<const char *const> definitions,
                                       Span<const char *const> include_directories,
                                       const char *dest_filename, const char *deps_filename,
                                       Allocator *alloc);

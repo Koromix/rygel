@@ -123,8 +123,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
             cmd.cmd = compiler->BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
-                                                   target.include_directories, nullptr,
-                                                   deps_filename, &str_alloc);
+                                                   target.definitions, target.include_directories,
+                                                   nullptr, deps_filename, &str_alloc);
 
             pch_commands.Append(cmd);
         }
@@ -168,8 +168,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
-            cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode,
-                                                   pch_filename, target.include_directories,
+            cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
+                                                   target.definitions, target.include_directories,
                                                    obj.dest_filename, deps_filename, &str_alloc);
 
             obj_commands.Append(cmd);
