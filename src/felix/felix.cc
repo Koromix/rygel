@@ -172,6 +172,7 @@ Available build modes:)");
     // We're ready to output stuff
     if (!MakeDirectoryRec(output_directory))
         return 1;
+    LogInfo("Output directory: '%1'", output_directory);
 
     // Disable PCH?
     if (!disable_pch && !compiler->Supports(CompilerFlag::PCH)) {
