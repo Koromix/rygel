@@ -225,8 +225,17 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 // We steal stuff from TargetConfig so it's not reusable after that
 const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
+    DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+
+    // Heavy type, so create it directly in HeapArray
+    Target *target = set.targets.AppendDefault();
+
+    target->name = target_config->name;
+    target->type = target_config->type;
+    std::swap(target->definitions, target_config->definitions);
+    std::swap(target->include_directories, target_config->include_directories);
+
     // Gather direct target objects
-    HeapArray<ObjectInfo> objects;
     {
         HeapArray<const char *> src_filenames;
         for (const char *src_directory: target_config->src_directories) {
@@ -255,24 +264,18 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 obj.src_filename = DuplicateString(src_filename, &set.str_alloc).ptr;
                 obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", &set.str_alloc);
 
-                objects.Append(obj);
+                target->objects.Append(obj);
             }
         }
     }
 
     // Resolve imported objects and libraries
-    HeapArray<const char *> imports;
-    HeapArray<const char *> libraries;
     {
-        std::swap(libraries, target_config->libraries);
+        std::swap(target->libraries, target_config->libraries);
 
-        // We'll add transitive imports to the array as we go
-        Size imports_len = target_config->imports.len;
-
-        for (Size i = 0; i < imports_len; i++) {
+        for (const char *import_name: target_config->imports) {
             const Target *import;
             {
-                const char *import_name = target_config->imports[i];
                 Size import_idx = targets_map.FindValue(import_name, -1);
                 DebugAssert(import_idx >= 0);
 
@@ -283,12 +286,12 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
                 }
             }
 
-            imports.Append(import->imports);
-            libraries.Append(import->libraries);
-            objects.Append(import->objects);
+            target->imports.Append(import->imports);
+            target->libraries.Append(import->libraries);
+            target->objects.Append(import->objects);
         }
 
-        imports.Append(target_config->imports);
+        target->imports.Append(target_config->imports);
     }
 
     // Deduplicate import array, without sorting because ordering matters
@@ -296,34 +299,33 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         HashSet<const char *> handled_imports;
 
         Size j = 0;
-        for (Size i = 0; i < imports.len; i++) {
-            imports[j] = imports[i];
-            j += handled_imports.Append(imports[i]).second;
+        for (Size i = 0; i < target->imports.len; i++) {
+            target->imports[j] = target->imports[i];
+            j += handled_imports.Append(target->imports[i]).second;
         }
 
-        imports.RemoveFrom(j);
+        target->imports.RemoveFrom(j);
     }
 
     // Sort and deduplicate library and object arrays
-    std::sort(libraries.begin(), libraries.end(), [](const char *lib1, const char *lib2) {
+    std::sort(target->libraries.begin(), target->libraries.end(),
+              [](const char *lib1, const char *lib2) {
         return CmpStr(lib1, lib2) < 0;
     });
-    libraries.RemoveFrom(std::unique(libraries.begin(), libraries.end(),
-                                   [](const char *lib1, const char *lib2) {
+    target->libraries.RemoveFrom(std::unique(target->libraries.begin(), target->libraries.end(),
+                                 [](const char *lib1, const char *lib2) {
         return TestStr(lib1, lib2);
-    }) - libraries.begin());
-    std::sort(objects.begin(), objects.end(), [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
+    }) - target->libraries.begin());
+    std::sort(target->objects.begin(), target->objects.end(),
+              [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
         return CmpStr(obj1.dest_filename, obj2.dest_filename) < 0;
     });
-    objects.RemoveFrom(std::unique(objects.begin(), objects.end(),
+    target->objects.RemoveFrom(std::unique(target->objects.begin(), target->objects.end(),
                                    [](const ObjectInfo &obj1, const ObjectInfo &obj2) {
         return TestStr(obj1.dest_filename, obj2.dest_filename);
-    }) - objects.begin());
+    }) - target->objects.begin());
 
     // PCH files
-    HeapArray<ObjectInfo> pch_objects;
-    const char *c_pch_filename = nullptr;
-    const char *cxx_pch_filename = nullptr;
     if (target_config->c_pch_filename) {
         ObjectInfo obj = {};
 
@@ -331,9 +333,9 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         obj.src_filename = target_config->c_pch_filename;
         obj.dest_filename = BuildOutputPath(target_config->c_pch_filename, output_directory,
                                             ".pch.h", &set.str_alloc);
-        c_pch_filename = obj.dest_filename;
 
-        pch_objects.Append(obj);
+        target->c_pch_filename = obj.dest_filename;
+        target->pch_objects.Append(obj);
     }
     if (target_config->cxx_pch_filename) {
         ObjectInfo obj = {};
@@ -342,26 +344,11 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         obj.src_filename = target_config->cxx_pch_filename;
         obj.dest_filename = BuildOutputPath(target_config->cxx_pch_filename, output_directory,
                                             ".pch.h", &set.str_alloc);
-        cxx_pch_filename = obj.dest_filename;
 
-        pch_objects.Append(obj);
+        target->cxx_pch_filename = obj.dest_filename;
+        target->pch_objects.Append(obj);
     }
 
-    // Big type, so create it directly in HeapArray
-    // Introduce out_guard if things can start to fail after here
-    Target *target = set.targets.AppendDefault();
-
-    target->name = target_config->name;
-    target->type = target_config->type;
-    std::swap(target->imports, imports);
-    std::swap(target->definitions, target_config->definitions);
-    std::swap(target->include_directories, target_config->include_directories);
-    std::swap(target->libraries, libraries);
-    std::swap(target->pch_objects, pch_objects);
-    target->c_pch_filename = c_pch_filename;
-    target->cxx_pch_filename = cxx_pch_filename;
-
-    std::swap(target->objects, objects);
 #ifdef _WIN32
     target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;
 #else
@@ -371,6 +358,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
     DebugAssert(appended);
 
+    out_guard.disable();
     return target;
 }
 
