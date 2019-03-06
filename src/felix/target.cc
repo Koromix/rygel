@@ -149,6 +149,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     target_config.c_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
                 } else if (prop.key == "Precompile_CXX") {
                     target_config.cxx_pch_filename = NormalizePath(prop.value, &set.str_alloc).ptr;
+                } else if (prop.key == "Link") {
+                    AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
                 } else if (prop.key == "Link_Win32") {
 #ifdef _WIN32
                     AppendLibraries(prop.value, &set.str_alloc, &target_config.libraries);
