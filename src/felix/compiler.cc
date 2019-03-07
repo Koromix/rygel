@@ -21,7 +21,7 @@ Compiler ClangCompiler = {
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wall -Wno-unknown-warning-option";
 #else
-        static const char *const flags = "-Wall";
+        static const char *const flags = "-pthread -Wall";
 #endif
 
         HeapArray<char> buf;
@@ -65,12 +65,18 @@ Compiler ClangCompiler = {
     // BuildLinkCommand
     [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
+#ifdef _WIN32
+        static const char *const flags = "";
+#else
+        static const char *const flags = "-lrt -ldl -pthread";
+#endif
+
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         bool is_cxx = std::any_of(objects.begin(), objects.end(),
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
-        buf.Append(is_cxx ? "clang++" : "clang");
+        Fmt(&buf, "%1 %2", is_cxx ? "clang++" : "clang", flags);
 
         for (const ObjectInfo &obj: objects) {
             switch (obj.src_type) {
@@ -112,7 +118,7 @@ Compiler GnuCompiler = {
         static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
                                          "-Wno-unknown-warning-option";
 #else
-        static const char *const flags = "-Wall";
+        static const char *const flags = "-pthread -Wall";
 #endif
 
         HeapArray<char> buf;
@@ -154,12 +160,18 @@ Compiler GnuCompiler = {
     // BuildLinkCommand
     [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
+#ifdef _WIN32
+        static const char *const flags = "";
+#else
+        static const char *const flags = "-lrt -ldl -pthread";
+#endif
+
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         bool is_cxx = std::any_of(objects.begin(), objects.end(),
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
-        buf.Append(is_cxx ? "g++" : "gcc");
+        Fmt(&buf, "%1 %2", is_cxx ? "g++" : "gcc", flags);
 
         for (const ObjectInfo &obj: objects) {
             switch (obj.src_type) {
