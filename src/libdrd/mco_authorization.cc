@@ -45,10 +45,8 @@ int8_t mco_AuthorizationSet::GetAuthorizationType(drd_UnitCode unit, Date date) 
         return (int8_t)(unit.number % 100);
     } else if (unit.number) {
         const mco_Authorization *auth = FindUnit(unit, date);
-        if (UNLIKELY(!auth)) {
-            LogDebug("Unit %1 is missing from authorization set", unit);
+        if (UNLIKELY(!auth))
             return 0;
-        }
         return auth->type;
     } else {
         return 0;

@@ -35,10 +35,6 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     return(result_set)
 }
 
-drd_options <- function(debug = NULL) {
-    .Call(`drdR_Options`, debug)
-}
-
 mco_indexes <- function(classifier) {
     .Call(`drdR_mco_Indexes`, classifier)
 }

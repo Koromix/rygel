@@ -19,20 +19,6 @@ struct Instance {
     std::mutex lock;
 };
 
-// [[Rcpp::export(name = 'heimdall.options')]]
-SEXP R_Options(SEXP debug = R_NilValue)
-{
-    RCC_SETUP_LOG_HANDLER();
-
-    if (!Rf_isNull(debug)) {
-        enable_debug = Rcpp::as<bool>(debug);
-    }
-
-    return Rcpp::List::create(
-        Rcpp::Named("debug") = enable_debug
-    );
-}
-
 // [[Rcpp::export(name = 'heimdall')]]
 SEXP R_Heimdall()
 {
