@@ -10,12 +10,6 @@
 # warning Alternatively, use the "stable" branch in the git repository.
 #endif
 
-#if !defined(_MSC_VER) && (!defined(CONFIGURED) || CONFIGURED != 1)
-# warning *** The library is being compiled using an undocumented method.
-# warning This is not supported. It has not been tested, it might not
-# warning work as expected, and performance is likely to be suboptimal.
-#endif
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -226,26 +220,51 @@ xor_buf(unsigned char *out, const unsigned char *in, size_t n)
 # endif
 #endif
 
-#if defined(_MSC_VER) && \
-    (defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86))
-
+/*
+ * We barely enable anything on Clang because instrinsic pragmas do not
+ * work correctly there.
+ */
+#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
 # include <intrin.h>
-
-# define HAVE_INTRIN_H    1
-# define HAVE_MMINTRIN_H  1
-# define HAVE_EMMINTRIN_H 1
-# define HAVE_PMMINTRIN_H 1
-# define HAVE_TMMINTRIN_H 1
-# define HAVE_SMMINTRIN_H 1
-# define HAVE_AVXINTRIN_H 1
-# if _MSC_VER >= 1600
+# define NATIVE_LITTLE_ENDIAN 1
+# if defined(__GNUC__)
+#  define HAVE_MEMSET_S    1
+#  define HAVE_ATOMIC_OPS  1
+#  define HAVE_INTRIN_H    1
+#  define HAVE_MMINTRIN_H  1
+#  define HAVE_EMMINTRIN_H 1
+#  define HAVE_PMMINTRIN_H 1
+#  define HAVE_TMMINTRIN_H 1
+#  define HAVE_SMMINTRIN_H 1
+#  define HAVE_AVXINTRIN_H 1
 #  define HAVE_WMMINTRIN_H 1
+#  ifdef _M_X64
+#   define HAVE_AVX2INTRIN_H 1
+#  endif
+#  if __GNUC__ >= 6 && defined(_M_X64)
+#   define HAVE_AVX512FINTRIN_H
+#  endif
+#  define HAVE_RDRAND 1
+# elif defined(__clang__)
+#  define HAVE_MEMSET_S    1
+#  define HAVE_ATOMIC_OPS  1
+#  define HAVE_INTRIN_H    1
+#  define HAVE_MMINTRIN_H  1
+# elif defined(_MSC_VER)
+#  define HAVE_INTRIN_H    1
+#  define HAVE_MMINTRIN_H  1
+#  define HAVE_EMMINTRIN_H 1
+#  define HAVE_PMMINTRIN_H 1
+#  define HAVE_TMMINTRIN_H 1
+#  define HAVE_SMMINTRIN_H 1
+#  define HAVE_AVXINTRIN_H 1
+#  if _MSC_VER >= 1600
+#   define HAVE_WMMINTRIN_H 1
+#  endif
+#  if _MSC_VER >= 1700 && defined(_M_X64)
+#   define HAVE_AVX2INTRIN_H 1
+#  endif
 # endif
-# if _MSC_VER >= 1700 && defined(_M_X64)
-#  define HAVE_AVX2INTRIN_H 1
-# endif
-#elif defined(HAVE_INTRIN_H)
-# include <intrin.h>
 #endif
 
 #ifdef HAVE_LIBCTGRIND
