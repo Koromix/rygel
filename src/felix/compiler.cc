@@ -31,10 +31,14 @@ Compiler ClangCompiler = {
             case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu99 %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu99 -x c-header %1", flags); } break;
             case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "%1", flags); } break;
+                                                     "-fno-exceptions %1", flags); } break;
             case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-x c++-header %1", flags); } break;
+                                                     "-fno-exceptions -x c++-header %1", flags); } break;
         }
+#ifndef _WIN32
+        // Breaks some <functional> stuff on Windows
+        Fmt(&buf, " -fno-rtti");
+#endif
 
         switch (build_mode) {
             case BuildMode::Debug: { Fmt(&buf, " -O0 -g"); } break;
@@ -127,8 +131,10 @@ Compiler GnuCompiler = {
         switch (src_type) {
             case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu99 %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu99 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 %1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -x c++-header %1", flags); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-rtti -fno-exceptions "
+                                                     "%1", flags); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-rtti -fno-exceptions "
+                                                     "-x c++-header %1", flags); } break;
         }
 
         switch (build_mode) {
