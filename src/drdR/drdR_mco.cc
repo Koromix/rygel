@@ -10,17 +10,6 @@ struct ClassifierInstance {
     mco_AuthorizationSet authorization_set;
 };
 
-RcppExport SEXP drdR_Options(SEXP debug = R_NilValue)
-{
-    if (!Rf_isNull(debug)) {
-        enable_debug = Rcpp::as<bool>(debug);
-    }
-
-    return Rcpp::List::create(
-        Rcpp::Named("debug") = enable_debug
-    );
-}
-
 RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
                               SEXP authorization_filename_xp)
 {
@@ -505,8 +494,6 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
             } \
         } while (false)
 
-    LogDebug("Start");
-
     StaysProxy stays;
     stays.nrow = stays_df.nrow();
     stays.id = stays_df["id"];
@@ -564,8 +551,6 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     LOAD_OPTIONAL_COLUMN(procedures, doc);
 
 #undef LOAD_OPTIONAL_COLUMN
-
-    LogDebug("Classify");
 
     Size sets_count = (stays.nrow - 1) / task_size + 1;
     HeapArray<mco_StaySet> stay_sets(sets_count);
@@ -644,8 +629,6 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
         if (!async.Sync())
             Rcpp::stop("The 'id' column must be ordered in all data.frames");
     }
-
-    LogDebug("Export");
 
     mco_Pricing summary = {};
     mco_Summarize(summaries, &summary);
@@ -1371,7 +1354,6 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        {"drdR_Options", (DL_FUNC)&drdR_Options, 1},
         {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 3},
         {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 9},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},

@@ -972,8 +972,6 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 static THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
 static THREAD_LOCAL Size log_handlers_len;
 
-bool enable_debug = GetDebugFlag("LIBCC_DEBUG");
-
 bool GetDebugFlag(const char *name)
 {
     LogDebug("Checked debug flag '%1'", name);
@@ -1045,9 +1043,6 @@ static bool ConfigLogTerminalOutput()
 
 void LogFmt(LogLevel level, const char *ctx MAYBE_UNUSED, const char *fmt, Span<const FmtArg> args)
 {
-    if (level == LogLevel::Debug && !enable_debug)
-        return;
-
     char ctx_buf[128];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;

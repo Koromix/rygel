@@ -2707,8 +2707,6 @@ static inline void PrintLn() { putchar('\n'); }
 // Debug and errors
 // ------------------------------------------------------------------------
 
-extern bool enable_debug;
-
 typedef void LogHandlerFunc(LogLevel level, const char *ctx,
                             const char *fmt, Span<const FmtArg> args);
 
@@ -2730,10 +2728,11 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 
 #ifdef NDEBUG
     #define LOG_LOCATION nullptr
+    #define LogDebug(...)
 #else
     #define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
+    #define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
 #endif
-#define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
 #define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
 #define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
 
