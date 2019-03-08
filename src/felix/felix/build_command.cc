@@ -103,6 +103,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.cmd = compiler->BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
                                                    target.definitions, target.include_directories,
                                                    nullptr, deps_filename, &str_alloc);
+            if (!cmd.cmd)
+                return false;
 
             pch_commands.Append(cmd);
         }
@@ -149,6 +151,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
                                                    target.definitions, target.include_directories,
                                                    obj.dest_filename, deps_filename, &str_alloc);
+            if (!cmd.cmd)
+                return false;
 
             obj_commands.Append(cmd);
         }
@@ -166,6 +170,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
             cmd.cmd = compiler->BuildLinkCommand(target.objects, build_mode, target.libraries,
                                                  target.dest_filename, &str_alloc);
+            if (!cmd.cmd)
+                return false;
 
             link_commands.Append(cmd);
         }
