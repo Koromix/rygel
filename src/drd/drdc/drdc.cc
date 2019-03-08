@@ -6,12 +6,12 @@
 #include "drdc.hh"
 #include "config.hh"
 
-bool RunMcoClassify(Span<const char *> arguments);
-bool RunMcoDump(Span<const char *> arguments);
-bool RunMcoList(Span<const char *> arguments);
-bool RunMcoMap(Span<const char *> arguments);
-bool RunMcoPack(Span<const char *> arguments);
-bool RunMcoShow(Span<const char *> arguments);
+int RunMcoClassify(Span<const char *> arguments);
+int RunMcoDump(Span<const char *> arguments);
+int RunMcoList(Span<const char *> arguments);
+int RunMcoMap(Span<const char *> arguments);
+int RunMcoPack(Span<const char *> arguments);
+int RunMcoShow(Span<const char *> arguments);
 
 const char *const CommonOptions =
 R"(Common options:
@@ -112,7 +112,7 @@ Commands:
                 if (config_filename && !LoadConfig(config_filename, &drdc_config)) \
                     return 1; \
                  \
-                return !Func(arguments); \
+                return Func(arguments); \
             } \
         } while (false)
 

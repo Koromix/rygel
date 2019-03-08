@@ -16,7 +16,7 @@
 
 extern const Span<const pack_Asset> pack_assets;
 
-bool RunCreateProfile(Span<const char *> arguments)
+int RunCreateProfile(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -31,9 +31,9 @@ bool RunCreateProfile(Span<const char *> arguments)
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else {
-                return false;
+                return 1;
             }
         }
 
@@ -42,11 +42,11 @@ bool RunCreateProfile(Span<const char *> arguments)
 
     if (!profile_directory) {
         LogError("Profile directory is missing");
-        return false;
+        return 1;
     }
 
     if (!MakeDirectory(profile_directory))
-        return false;
+        return 1;
 
     // Drop created files and directories if anything fails
     HeapArray<const char *> directories;
@@ -83,7 +83,7 @@ bool RunCreateProfile(Span<const char *> arguments)
                     const char *directory0 = Fmt(&temp_alloc, "%1%/%2", profile_directory,
                                                  MakeSpan(asset.name, ptr - asset.name)).ptr;
                     if (!MakeDirectory(directory0))
-                        return false;
+                        return 1;
                     directories.Append(directory0);
                 }
 
@@ -100,7 +100,7 @@ bool RunCreateProfile(Span<const char *> arguments)
         StreamReader reader(asset.data, nullptr, asset.compression_type);
         StreamWriter writer(filename);
         if (!SpliceStream(&reader, Megabytes(8), &writer))
-            return false;
+            return 1;
     }
 
     // Create database
@@ -110,11 +110,11 @@ bool RunCreateProfile(Span<const char *> arguments)
 
         SQLiteConnection db;
         if (!db.Open(filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-            return false;
+            return 1;
         if (!InitDatabase(db))
-            return false;
+            return 1;
     }
 
     out_guard.disable();
-    return true;
+    return 0;
 }

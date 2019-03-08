@@ -78,7 +78,7 @@ Commands:
                 if (config_filename && !LoadConfig(config_filename, &goupil_config)) \
                     return 1; \
                  \
-                return !Func(arguments); \
+                return Func(arguments); \
             } \
         } while (false)
 
