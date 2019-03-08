@@ -301,7 +301,7 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
     PrintLn();
 }
 
-bool RunMcoClassify(Span<const char *> arguments)
+int RunMcoClassify(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
@@ -352,7 +352,7 @@ Test options:)");
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-o", "--option", OptionType::Value)) {
                 const char *flags_str = opt.current_value;
 
@@ -362,7 +362,7 @@ Test options:)");
                                                     [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
                     if (!desc) {
                         LogError("Unknown classifier flag '%1'", flag);
-                        return false;
+                        return 1;
                     }
                     classifier_flags |= 1u << (desc - mco_ClassifyFlagOptions);
                 }
@@ -373,7 +373,7 @@ Test options:)");
                                                 [&](const OptionDesc &desc) { return TestStr(desc.name, mode_str); });
                 if (!desc) {
                     LogError("Unknown dispensation mode '%1'", mode_str);
-                    return false;
+                    return 1;
                 }
                 dispense_mode = (int)(desc - mco_DispenseModeOptions);
             } else if (opt.Test("--coeff")) {
@@ -394,7 +394,7 @@ Test options:)");
                                                         [&](const OptionDesc &desc) { return TestStr(desc.name, flag); });
                         if (!desc) {
                             LogError("Unknown test flag '%1'", flag);
-                            return false;
+                            return 1;
                         }
                         test_flags |= 1u << (desc - TestFlagOptions);
                     }
@@ -403,29 +403,29 @@ Test options:)");
                 }
             } else if (opt.Test("--torture", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &torture))
-                    return false;
+                    return 1;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
 
         opt.ConsumeNonOptions(&filenames);
         if (!filenames.len) {
             LogError("No filename provided");
-            return false;
+            return 1;
         }
     }
 
     LogInfo("Load tables");
     mco_TableSet table_set;
     if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set) || !table_set.indexes.len)
-        return false;
+        return 1;
 
     LogInfo("Load authorizations");
     mco_AuthorizationSet authorization_set;
     if (!mco_LoadAuthorizationSet(drdc_config.profile_directory, drdc_config.mco_authorization_filename,
                                   &authorization_set))
-        return false;
+        return 1;
 
     HeapArray<char> filter_buf;
     if (filter) {
@@ -433,7 +433,7 @@ Test options:)");
         filter_buf.Append(0);
     } else if (filter_path) {
         if (ReadFile(filter_path, Megabytes(1), &filter_buf) < 0)
-            return false;
+            return 1;
         filter_buf.Append(0);
     }
 
@@ -444,10 +444,10 @@ Test options:)");
         for (const char *filename: filenames) {
             LogInfo("Load '%1'", filename);
             if (!stay_set_builder.LoadFiles(filename, test_flags ? &tests : nullptr))
-                return false;
+                return 1;
         }
         if (!stay_set_builder.Finish(&stay_set))
-            return false;
+            return 1;
     }
 
     // Performance counter
@@ -493,7 +493,7 @@ Test options:)");
             HeapArray<const mco_Result *> filter_mono_results;
             if (!mco_Filter(filter_buf.ptr, results, mono_results, &filter_results,
                             dispense_mode >= 0 ? &filter_mono_results : nullptr, &filter_stay_set))
-                return false;
+                return 1;
 
             for (Size k = 0; k < filter_results.len; k++) {
                 results[k] = *filter_results[k];
@@ -562,10 +562,10 @@ Test options:)");
                 FmtDouble(100.0 * pricing_time / total_time, 2));
     }
 
-    return true;
+    return 0;
 }
 
-bool RunMcoDump(Span<const char *> arguments)
+int RunMcoDump(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
@@ -584,11 +584,11 @@ Dump options:
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-d", "--dump")) {
                 dump = true;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
 
@@ -598,16 +598,16 @@ Dump options:
     mco_TableSet table_set;
     if (!mco_LoadTableSet(drdc_config.table_directories, filenames, &table_set) ||
             !table_set.indexes.len)
-        return false;
+        return 1;
     mco_DumpTableSetHeaders(table_set, &stdout_st);
     if (dump) {
         mco_DumpTableSetContent(table_set, &stdout_st);
     }
 
-    return true;
+    return 0;
 }
 
-bool RunMcoList(Span<const char *> arguments)
+int RunMcoList(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
@@ -627,20 +627,20 @@ List options:
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
-                    return false;
+                    return 1;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
 
         opt.ConsumeNonOptions(&spec_strings);
         if (!spec_strings.len) {
             LogError("No specifier string provided");
-            return false;
+            return 1;
         }
     }
 
@@ -648,11 +648,11 @@ List options:
     const mco_TableIndex *index;
     {
         if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
-            return false;
+            return 1;
         index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
-            return false;
+            return 1;
         }
     }
 
@@ -693,10 +693,10 @@ List options:
         PrintLn();
     }
 
-    return true;
+    return 0;
 }
 
-bool RunMcoMap(Span<const char *> arguments)
+int RunMcoMap(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_map [options]
@@ -715,13 +715,13 @@ Map options:
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
-                    return false;
+                    return 1;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
     }
@@ -730,18 +730,18 @@ Map options:
     const mco_TableIndex *index;
     {
         if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
-            return false;
+            return 1;
         index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
-            return false;
+            return 1;
         }
     }
 
     LogInfo("Computing");
     HashTable<mco_GhmCode, mco_GhmConstraint> ghm_constraints;
     if (!mco_ComputeGhmConstraints(*index, &ghm_constraints))
-        return false;
+        return 1;
 
     LogInfo("Export");
     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs)  {
@@ -757,10 +757,10 @@ Map options:
         }
     }
 
-    return true;
+    return 0;
 }
 
-bool RunMcoPack(Span<const char *> arguments)
+int RunMcoPack(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
@@ -779,22 +779,22 @@ Pack options:
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
 
         opt.ConsumeNonOptions(&filenames);
         if (!dest_filename) {
             LogError("A destination file must be provided (--output)");
-            return false;
+            return 1;
         }
         if (!filenames.len) {
             LogError("No stay file provided");
-            return false;
+            return 1;
         }
     }
 
@@ -804,19 +804,19 @@ Pack options:
         mco_StaySetBuilder stay_set_builder;
 
         if (!stay_set_builder.LoadFiles(filenames))
-            return false;
+            return 1;
         if (!stay_set_builder.Finish(&stay_set))
-            return false;
+            return 1;
     }
 
     LogInfo("Pack stays");
     if (!stay_set.SavePack(dest_filename))
-        return false;
+        return 1;
 
-    return true;
+    return 0;
 }
 
-bool RunMcoShow(Span<const char *> arguments)
+int RunMcoShow(Span<const char *> arguments)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
@@ -832,20 +832,20 @@ bool RunMcoShow(Span<const char *> arguments)
         while (opt.Next()) {
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
-                return true;
+                return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = Date::FromString(opt.current_value);
                 if (!index_date.value)
-                    return false;
+                    return 1;
             } else if (!HandleCommonOption(opt)) {
-                return false;
+                return 1;
             }
         }
 
         opt.ConsumeNonOptions(&names);
         if (!names.len) {
             LogError("No element name provided");
-            return false;
+            return 1;
         }
     }
 
@@ -853,11 +853,11 @@ bool RunMcoShow(Span<const char *> arguments)
     const mco_TableIndex *index;
     {
         if (!mco_LoadTableSet(drdc_config.table_directories, {}, &table_set))
-            return false;
+            return 1;
         index = table_set.FindIndex(index_date);
         if (!index) {
             LogError("No table index available at '%1'", index_date);
-            return false;
+            return 1;
         }
     }
 
@@ -938,5 +938,5 @@ bool RunMcoShow(Span<const char *> arguments)
         LogError("Unknown element '%1'", name);
     }
 
-    return true;
+    return 0;
 }

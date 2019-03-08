@@ -6,4 +6,4 @@
 
 #include "../../libcc/libcc.hh"
 
-bool RunCreateProfile(Span<const char *> arguments);
+int RunCreateProfile(Span<const char *> arguments);
