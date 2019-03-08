@@ -6,13 +6,40 @@
 #include "build.hh"
 #include "compiler.hh"
 
+static int RunTarget(const Target &target, Span<const char *const> arguments, bool verbose)
+{
+    if (target.type != TargetType::Executable) {
+        LogError("Cannot run non-executable target '%1'", target.name);
+        return 1;
+    }
+
+    HeapArray<char> cmd_buf;
+
+    // FIXME: Just like the code in compiler.cc, command-line escaping is
+    // either wrong or not done. Make something to deal with that uniformely.
+    Fmt(&cmd_buf, "\"%1\"", target.dest_filename);
+    for (const char *arg: arguments) {
+        bool escape = strchr(arg, ' ');
+        Fmt(&cmd_buf, escape ? " \"%1\"" : " %1", arg);
+    }
+
+    if (verbose) {
+        LogInfo("Run '%1'", cmd_buf);
+    } else {
+        LogInfo("Run target '%1'", target.name);
+    }
+    PrintLn(stderr);
+
+    return system(cmd_buf.ptr);
+}
+
 int main(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: felix [options] [target]
+R"(Usage: felix [options] [target...]
 
 Options:
     -C, --config <filename>      Set configuration filename
@@ -30,6 +57,9 @@ Options:
                                  (default: number of cores + 1)
 
     -v, --verbose                Show detailed build commands
+
+        --run                    Run target after successful build
+                                 (all remaining arguments are passed as-is)
 
 Available compilers:)", Compilers[0]->name, BuildModeNames[0]);
         for (const Compiler *compiler: Compilers) {
@@ -52,10 +82,19 @@ Available build modes:)");
     BuildMode build_mode = (BuildMode)0;
     bool disable_pch = false;
     bool verbose = false;
+    bool run = false;
+    Span<const char *> run_arguments = {};
     {
         OptionParser opt(argc, argv);
 
-        while (opt.Next()) {
+        for (;;) {
+            // We need to consume values (target names) as we go because
+            // the --run option will break the loop and all remaining
+            // arguments will be passed as-is to the target.
+            opt.ConsumeNonOptions(&target_names);
+            if (!opt.Next())
+                break;
+
             if (opt.Test("--help")) {
                 PrintUsage(stdout);
                 return 0;
@@ -95,13 +134,23 @@ Available build modes:)");
                 Async::SetThreadCount(max_threads);
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
+            } else if (opt.Test("--run")) {
+                run = true;
+                break;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
             }
         }
 
-        opt.ConsumeNonOptions(&target_names);
+        if (run) {
+            if (target_names.len != 1) {
+                LogError("Exactly one target name must be specified with --run");
+                return 1;
+            }
+
+            run_arguments = opt.GetRemainingArguments();
+        }
     }
 
     // Change to root directory
@@ -127,10 +176,6 @@ Available build modes:)");
     TargetSet target_set;
     if (!LoadTargetSet(config_filename, output_directory, &target_set))
         return 1;
-    if (!target_set.targets.len) {
-        LogError("There are no targets");
-        return 1;
-    }
 
     // Default targets
     if (!target_names.len) {
@@ -140,9 +185,14 @@ Available build modes:)");
             }
         }
     }
+    if (!target_names.len) {
+        LogError("There are no targets");
+        return 1;
+    }
 
     // Select targets and their dependencies (imports)
     HeapArray<const Target *> enabled_targets;
+    const Target *first_target = nullptr;
     {
         HashSet<const char *> handled_set;
 
@@ -162,7 +212,11 @@ Available build modes:)");
                         enabled_targets.Append(import);
                     }
                 }
+
                 enabled_targets.Append(target);
+                if (!first_target) {
+                    first_target = target;
+                }
             }
         }
         if (!valid)
@@ -213,6 +267,14 @@ Available build modes:)");
         build_set_builder.Finish(&build_set);
     }
 
-    // Run build
-    return !RunBuildCommands(build_set.commands, verbose);
+    // Build
+    if (!RunBuildCommands(build_set.commands, verbose))
+        return 1;
+
+    // Run?
+    if (run) {
+        return RunTarget(*first_target, run_arguments, verbose);
+    } else {
+        return 0;
+    }
 }
