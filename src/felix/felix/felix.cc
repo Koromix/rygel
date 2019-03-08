@@ -16,27 +16,29 @@ int main(int argc, char **argv)
         PrintLn(fp, R"(Usage: felix <command> [<args>]
 
 Commands:
-    build                        Build C and C++ projects
+    build                        Build C and C++ projects (default)
     pack                         Pack assets to C source file and other formats)");
     };
 
-    if (argc < 2) {
-        PrintUsage(stderr);
-        return 1;
-    }
+    const char *cmd;
+    Span<const char *> arguments;
+    if (argc >= 2) {
+        cmd = argv[1];
+        arguments = MakeSpan((const char **)argv + 2, argc - 2);
 
-    const char *cmd = argv[1];
-    Span<const char *> arguments((const char **)argv + 2, argc - 2);
-
-    // Handle 'felix help [command]' and 'felix --help [command]' invocations
-    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
-        if (arguments.len && arguments[0][0] != '-') {
-            cmd = arguments[0];
-            arguments[0] = "--help";
-        } else {
-            PrintUsage(stdout);
-            return 0;
+        // Handle 'felix help [command]' and 'felix --help [command]' invocations
+        if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
+            if (arguments.len && arguments[0][0] != '-') {
+                cmd = arguments[0];
+                arguments[0] = "--help";
+            } else {
+                PrintUsage(stdout);
+                return 0;
+            }
         }
+    } else {
+        cmd = "build";
+        arguments = {};
     }
 
 #define HANDLE_COMMAND(Cmd, Func) \
