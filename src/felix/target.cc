@@ -349,11 +349,13 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         target->pch_objects.Append(obj);
     }
 
+    if (target->type == TargetType::Executable) {
 #ifdef _WIN32
-    target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;
+        target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;
 #else
-    target->dest_filename = Fmt(&set.str_alloc, "%1%/%2", output_directory, target->name).ptr;
+        target->dest_filename = Fmt(&set.str_alloc, "%1%/%2", output_directory, target->name).ptr;
 #endif
+    }
 
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
     DebugAssert(appended);
