@@ -1951,8 +1951,8 @@ void Async::RunTask(Task *task)
     g_task_running = true;
     DEFER { g_task_running = false; };
 
-    if (success) {
-        success &= task->func();
+    if (success && !task->func()) {
+        success = false;
     }
     remaining_tasks--;
 }
