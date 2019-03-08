@@ -151,7 +151,7 @@ int RunPack(Span<const char *> arguments)
 
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp,
-R"(Usage: packer <filename> ...
+R"(Usage: felix pack <filename> ...
 
 Options:
     -g, --generator <gen>        Set output file generator
