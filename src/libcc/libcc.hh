@@ -3351,4 +3351,6 @@ public:
     const char *ConsumeValue();
     const char *ConsumeNonOption();
     void ConsumeNonOptions(HeapArray<const char *> *non_options);
+
+    Span<const char *> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
 };
