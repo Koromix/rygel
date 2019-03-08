@@ -14,7 +14,7 @@
 #include "simPL.hh"
 #include "simulate.hh"
 #include "view.hh"
-#include "../packer/libpacker.hh"
+#include "../felix/libpacker/libpacker.hh"
 #include "../../lib/imgui/imgui.h"
 
 extern const pack_Asset *const pack_asset_Roboto_Medium_ttf;

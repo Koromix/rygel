@@ -32,13 +32,13 @@ endif()
 # ------------------------------------------------------------------------
 
 set(FELIX_SRC
-    felix/build.cc
-    felix/build.hh
-    felix/compiler.cc
-    felix/compiler.hh
-    felix/felix.cc
-    felix/target.cc
-    felix/target.hh
+    felix/felix/build.cc
+    felix/felix/build.hh
+    felix/felix/compiler.cc
+    felix/felix/compiler.hh
+    felix/felix/felix.cc
+    felix/felix/target.cc
+    felix/felix/target.hh
 )
 
 add_executable(felix ${FELIX_SRC})
@@ -74,21 +74,21 @@ endif()
 # ------------------------------------------------------------------------
 
 set(PACKER_SRC
-    packer/generator_C.cc
-    packer/generator_files.cc
-    packer/generator.hh
-    packer/output.cc
-    packer/output.hh
-    packer/packer.cc
-    packer/packer.hh
+    felix/packer/generator_C.cc
+    felix/packer/generator_files.cc
+    felix/packer/generator.hh
+    felix/packer/output.cc
+    felix/packer/output.hh
+    felix/packer/packer.cc
+    felix/packer/packer.hh
 )
 
 add_executable(packer ${PACKER_SRC})
 target_link_libraries(packer PRIVATE libcc)
 
 set(LIBPACKER_SRC
-    packer/libpacker.cc
-    packer/libpacker.hh
+    felix/libpacker/libpacker.cc
+    felix/libpacker/libpacker.hh
 )
 
 add_library(libpacker STATIC ${LIBPACKER_SRC})
@@ -140,41 +140,41 @@ endfunction()
 # ------------------------------------------------------------------------
 
 set(LIBDRD_SRC
-    libdrd/common.hh
-    libdrd/mco_authorization.cc
-    libdrd/mco_authorization.hh
-    libdrd/mco_classifier.cc
-    libdrd/mco_classifier.hh
-    libdrd/mco_common.hh
-    libdrd/mco_dump.cc
-    libdrd/mco_dump.hh
-    libdrd/mco_filter.cc
-    libdrd/mco_filter.hh
-    libdrd/mco_mapper.cc
-    libdrd/mco_mapper.hh
-    libdrd/mco_pricing.cc
-    libdrd/mco_pricing.hh
-    libdrd/mco_stay.cc
-    libdrd/mco_stay.hh
-    libdrd/mco_tables.cc
-    libdrd/mco_tables.hh
+    drd/libdrd/common.hh
+    drd/libdrd/mco_authorization.cc
+    drd/libdrd/mco_authorization.hh
+    drd/libdrd/mco_classifier.cc
+    drd/libdrd/mco_classifier.hh
+    drd/libdrd/mco_common.hh
+    drd/libdrd/mco_dump.cc
+    drd/libdrd/mco_dump.hh
+    drd/libdrd/mco_filter.cc
+    drd/libdrd/mco_filter.hh
+    drd/libdrd/mco_mapper.cc
+    drd/libdrd/mco_mapper.hh
+    drd/libdrd/mco_pricing.cc
+    drd/libdrd/mco_pricing.hh
+    drd/libdrd/mco_stay.cc
+    drd/libdrd/mco_stay.hh
+    drd/libdrd/mco_tables.cc
+    drd/libdrd/mco_tables.hh
 )
 
 add_library(libdrd ${LIBDRD_SRC})
 set_target_properties(libdrd PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(libdrd PUBLIC libcc wren)
-add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.cc" libdrd/libdrd.cc)
-add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" libdrd/libdrd.hh)
+add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.cc" drd/libdrd/libdrd.cc)
+add_amalgamated_file(libdrd "${CMAKE_BINARY_DIR}/libdrd.hh" drd/libdrd/libdrd.hh)
 
 # ------------------------------------------------------------------------
 # drdc
 # ------------------------------------------------------------------------
 
 set(DRDC_SRC
-    drdc/config.cc
-    drdc/config.hh
-    drdc/drdc.cc
-    drdc/drdc_mco.cc
+    drd/drdc/config.cc
+    drd/drdc/config.hh
+    drd/drdc/drdc.cc
+    drd/drdc/drdc_mco.cc
 )
 
 add_executable(drdc ${DRDC_SRC})
@@ -189,11 +189,12 @@ if(R_FOUND)
     set(DRDR_SRC
         wrappers/Rcc.cc
         wrappers/Rcc.hh
-        drdR/drdR_mco.cc
-        drdR/drdR_mco.R
+        drd/drdR/drdR_mco.cc
+        drd/drdR/drdR_mco.R
     )
 
-    R_add_package(drdR drdR/DESCRIPTION drdR/NAMESPACE RCPP_INCLUDE ${DRDR_SRC})
+    R_add_package(drdR drd/drdR/DESCRIPTION drd/drdR/NAMESPACE
+                  RCPP_INCLUDE ${DRDR_SRC})
     target_link_libraries(drdR PRIVATE libcc libdrd miniz)
 endif()
 
@@ -280,17 +281,17 @@ if(TARGET libgui)
         wrappers/opengl.cc
         wrappers/opengl.hh
         wrappers/opengl_func.inc
-        libheimdall/animation.hh
-        libheimdall/core.cc
-        libheimdall/core.hh
-        libheimdall/data.hh
+        heimdall/libheimdall/animation.hh
+        heimdall/libheimdall/core.cc
+        heimdall/libheimdall/core.hh
+        heimdall/libheimdall/data.hh
     )
 
     add_library(libheimdall ${LIBHEIMDALL_SRC})
     set_target_properties(libheimdall PROPERTIES POSITION_INDEPENDENT_CODE ON)
     target_link_libraries(libheimdall PUBLIC libcc libgui)
-    add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.cc" libheimdall/libheimdall.cc)
-    add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" libheimdall/libheimdall.hh)
+    add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.cc" heimdall/libheimdall/libheimdall.cc)
+    add_amalgamated_file(libheimdall "${CMAKE_BINARY_DIR}/libheimdall.hh" heimdall/libheimdall/libheimdall.hh)
 endif()
 
 # ------------------------------------------------------------------------
@@ -302,12 +303,12 @@ if(TARGET libheimdall AND R_FOUND)
     set(HEIMDALLR_SRC
         wrappers/Rcc.cc
         wrappers/Rcc.hh
-        heimdallR/heimdallR.cc
-        heimdallR/heimdallR.R
+        heimdall/heimdallR/heimdallR.cc
+        heimdall/heimdallR/heimdallR.R
     )
 
-    R_add_package(heimdallR heimdallR/DESCRIPTION heimdallR/NAMESPACE RCPP_EXPORT RCPP_INCLUDE
-                  ${HEIMDALLR_SRC})
+    R_add_package(heimdallR heimdall/heimdallR/DESCRIPTION heimdall/heimdallR/NAMESPACE
+                  RCPP_EXPORT RCPP_INCLUDE ${HEIMDALLR_SRC})
     target_link_libraries(heimdallR PRIVATE libcc libheimdall miniz)
 endif()
 
@@ -321,7 +322,7 @@ if(TARGET libheimdall)
     endif()
 
     set(HEIMDALLW_SRC
-        heimdallw/heimdallw.cc
+        heimdall/heimdallw/heimdallw.cc
     )
 
     add_executable(heimdallw ${HEIMDALLW_SRC})

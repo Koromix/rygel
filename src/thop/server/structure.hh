@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "../../libdrd/libdrd.hh"
+#include "../../drd/libdrd/libdrd.hh"
 
 struct StructureEntity {
     const char *path;
