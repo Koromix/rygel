@@ -2,6 +2,14 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <windows.h>
+#endif
+
 #include "../../libcc/libcc.hh"
 #include "build_compiler.hh"
 
@@ -35,7 +43,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     }
 }
 
-static void AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode build_mode,
+static bool AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode build_mode,
                                    Span<const char *const> libraries, const char *dest_filename,
                                    HeapArray<char> *out_buf)
 {
@@ -43,6 +51,9 @@ static void AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode bui
         Fmt(out_buf, " -flto");
     }
 
+#ifdef _WIN32
+    Size rsp_offset = out_buf->len;
+#endif
     for (const ObjectInfo &obj: objects) {
         switch (obj.src_type) {
             case SourceType::C_Source:
@@ -52,6 +63,32 @@ static void AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode bui
             case SourceType::CXX_Header: { DebugAssert(false); } break;
         }
     }
+#ifdef _WIN32
+    if (out_buf->len - rsp_offset >= 4096) {
+        char rsp_filename[4096];
+        {
+            // TODO: Maybe we should try to delete these temporary files when felix exits?
+            char temp_directory[4096];
+            if (!GetTempPath(SIZE(temp_directory), temp_directory) ||
+                    !GetTempFileName(temp_directory, "fxb", 0, rsp_filename)) {
+                LogError("Failed to create temporary path");
+                return false;
+            }
+        }
+
+        // Apparently backslash characters needs to be escaped in response files,
+        // but it's easier to use '/' instead.
+        Span<char> arguments = out_buf->Take(rsp_offset + 1, out_buf->len - rsp_offset - 1);
+        for (Size i = 0; i < arguments.len; i++) {
+            arguments[i] = (arguments[i] == '\\' ? '/' : arguments[i]);
+        }
+        if (!WriteFile(arguments, rsp_filename))
+            return false;
+
+        out_buf->RemoveFrom(rsp_offset);
+        Fmt(out_buf, " \"@%1\"", rsp_filename);
+    }
+#endif
 
 #ifndef _WIN32
     Fmt(out_buf, " -lrt -ldl -pthread");
@@ -60,6 +97,8 @@ static void AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode bui
         Fmt(out_buf, " -l%1", lib);
     }
     Fmt(out_buf, " -o %1", dest_filename);
+
+    return true;
 }
 
 Compiler ClangCompiler = {
@@ -113,7 +152,8 @@ Compiler ClangCompiler = {
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
         Fmt(&buf, "%1", is_cxx ? "clang++" : "clang");
 
-        AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf);
+        if (!AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf))
+            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
@@ -166,7 +206,8 @@ Compiler GnuCompiler = {
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
         Fmt(&buf, "%1", is_cxx ? "g++" : "gcc");
 
-        AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf);
+        if (!AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf))
+            return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
     }
