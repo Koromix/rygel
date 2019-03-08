@@ -6,7 +6,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "structure.hh"
-#include "../../libdrd/libdrd.hh"
+#include "../../drd/libdrd/libdrd.hh"
 #include "../../wrappers/http.hh"
 
 struct StructureEntity;

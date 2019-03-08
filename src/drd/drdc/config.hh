@@ -5,22 +5,13 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "../../drd/libdrd/libdrd.hh"
+#include "drdc.hh"
 
 struct Config {
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
 
     const char *mco_authorization_filename = nullptr;
-    mco_DispenseMode mco_dispense_mode = mco_DispenseMode::J;
-    HeapArray<const char *> mco_stay_directories;
-    HeapArray<const char *> mco_stay_filenames;
-
-    IPStack ip_stack = IPStack::Dual;
-    int port = 8888;
-    int threads = 4;
-    const char *base_url = "/";
-    int max_age = 3600;
 
     BlockAllocator str_alloc;
 };

@@ -5,14 +5,12 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "../../drd/libdrd/libdrd.hh"
+#include "../libdrd/libdrd.hh"
 
 struct Config;
-struct StructureSet;
-struct UserSet;
 
-extern Config thop_config;
-extern bool thop_has_casemix;
+extern const char *const CommonOptions;
 
-extern StructureSet thop_structure_set;
-extern UserSet thop_user_set;
+extern Config drdc_config;
+
+bool HandleCommonOption(OptionParser &opt);
