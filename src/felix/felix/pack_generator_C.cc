@@ -3,9 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "generator.hh"
-#include "output.hh"
-#include "packer.hh"
+#include "pack_generator.hh"
+#include "pack_output.hh"
 
 // For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.

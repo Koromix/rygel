@@ -4,7 +4,7 @@
 
 #include "../../libcc/libcc.hh"
 #include "../../wrappers/json.hh"
-#include "output.hh"
+#include "pack_output.hh"
 
 static FmtArg FormatZigzagVLQ64(int value)
 {

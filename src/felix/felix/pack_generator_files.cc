@@ -3,9 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "generator.hh"
-#include "output.hh"
-#include "packer.hh"
+#include "pack_generator.hh"
+#include "pack_output.hh"
 
 bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
                    CompressionType compression_type)

@@ -3,8 +3,14 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "generator.hh"
-#include "packer.hh"
+#include "pack_generator.hh"
+#include "pack_output.hh"
+
+enum class MergeMode {
+    Naive,
+    CSS,
+    JS
+};
 
 struct MergeRule {
     const char *name;
@@ -139,7 +145,7 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
     return name;
 }
 
-int main(int argc, char **argv)
+int RunPack(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -179,7 +185,7 @@ Available compression types:)");
     bool source_maps = false;
     HeapArray<const char *> filenames;
     {
-        OptionParser opt(argc, argv);
+        OptionParser opt(arguments);
 
         while (opt.Next()) {
             if (opt.Test("--help")) {

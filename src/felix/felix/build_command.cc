@@ -7,7 +7,7 @@
 #endif
 
 #include "../../libcc/libcc.hh"
-#include "build.hh"
+#include "build_command.hh"
 
 // TODO: Support Make escaping
 static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
