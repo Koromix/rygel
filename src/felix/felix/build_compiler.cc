@@ -52,6 +52,10 @@ static void AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode bui
             case SourceType::CXX_Header: { DebugAssert(false); } break;
         }
     }
+
+#ifndef _WIN32
+    Fmt(out_buf, " -lrt -ldl -pthread");
+#endif
     for (const char *lib: libraries) {
         Fmt(out_buf, " -l%1", lib);
     }
@@ -92,6 +96,7 @@ Compiler ClangCompiler = {
         // -fno-rtti breaks <functional> on Windows
         Fmt(&buf, " -fno-rtti");
 #endif
+
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
 
@@ -101,19 +106,13 @@ Compiler ClangCompiler = {
     // BuildLinkCommand
     [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
-#ifdef _WIN32
-        static const char *const flags = "";
-#else
-        static const char *const flags = "-lrt -ldl -pthread";
-#endif
-
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         bool is_cxx = std::any_of(objects.begin(), objects.end(),
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
+        Fmt(&buf, "%1", is_cxx ? "clang++" : "clang");
 
-        Fmt(&buf, "%1 %2", is_cxx ? "clang++" : "clang", flags);
         AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf);
 
         return (const char *)buf.Leak().ptr;
@@ -150,6 +149,7 @@ Compiler GnuCompiler = {
             case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-rtti -fno-exceptions "
                                                      "-x c++-header %1", flags); } break;
         }
+
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
 
@@ -159,19 +159,13 @@ Compiler GnuCompiler = {
     // BuildLinkCommand
     [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
        const char *dest_filename, Allocator *alloc) {
-#ifdef _WIN32
-        static const char *const flags = "";
-#else
-        static const char *const flags = "-lrt -ldl -pthread";
-#endif
-
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         bool is_cxx = std::any_of(objects.begin(), objects.end(),
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
+        Fmt(&buf, "%1", is_cxx ? "g++" : "gcc");
 
-        Fmt(&buf, "%1 %2", is_cxx ? "g++" : "gcc", flags);
         AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf);
 
         return (const char *)buf.Leak().ptr;
