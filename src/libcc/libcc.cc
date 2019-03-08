@@ -1093,10 +1093,10 @@ void StartConsoleLog(LogLevel level)
 
 void EndConsoleLog()
 {
-    fputs("\n", stderr);
     if (ConfigLogTerminalOutput()) {
         fputs("\x1B[0m", stderr);
     }
+    fputs("\n", stderr);
 }
 
 void PushLogHandler(std::function<LogHandlerFunc> handler)
