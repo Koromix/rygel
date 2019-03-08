@@ -22,7 +22,7 @@ static bool get_password_safe(char *out_buf, int out_buf_size)
 #ifdef _WIN32
     int len = 0;
     while (len < out_buf_size - 1) {
-        int c = getch();
+        int c = _getch();
         switch (c) {
             case '\r':
             case '\n':
