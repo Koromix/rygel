@@ -41,18 +41,12 @@ Commands:
         arguments = {};
     }
 
-#define HANDLE_COMMAND(Cmd, Func) \
-        do { \
-            if (TestStr(cmd, STRINGIFY(Cmd))) { \
-                return Func(arguments); \
-            } \
-        } while (false)
-
-    HANDLE_COMMAND(build, RunBuild);
-    HANDLE_COMMAND(pack, RunPack);
-
-#undef HANDLE_COMMAND
-
-    LogError("Unknown command '%1'", cmd);
-    return 1;
+    if (TestStr(cmd, "build")) {
+        return RunBuild(arguments);
+    } else if (TestStr(cmd, "pack")) {
+        return RunPack(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
 }
