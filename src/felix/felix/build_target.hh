@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "compiler.hh"
+#include "build_compiler.hh"
 
 struct TargetConfig;
 

@@ -6,15 +6,13 @@
 
 #include "../../libcc/libcc.hh"
 
-enum class MergeMode {
-    Naive,
-    CSS,
-    JS
+enum class GeneratorType {
+    C,
+    Files
 };
-
-enum class SourceMapType {
-    None,
-    JSv3
+static const char *const GeneratorTypeNames[] = {
+    "C",
+    "Files"
 };
 
 struct SourceInfo {
@@ -25,6 +23,11 @@ struct SourceInfo {
     const char *suffix;
 };
 
+enum class SourceMapType {
+    None,
+    JSv3
+};
+
 struct AssetInfo {
     const char *name;
     HeapArray<SourceInfo> sources;
@@ -32,3 +35,8 @@ struct AssetInfo {
     SourceMapType source_map_type;
     const char *source_map_name;
 };
+
+bool GenerateC(Span<const AssetInfo> assets, const char *output_path,
+               CompressionType compression_type);
+bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
+                   CompressionType compression_type);

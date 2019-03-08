@@ -32,17 +32,77 @@ endif()
 # ------------------------------------------------------------------------
 
 set(FELIX_SRC
-    felix/felix/build.cc
-    felix/felix/build.hh
-    felix/felix/compiler.cc
-    felix/felix/compiler.hh
+    felix/felix/build_command.cc
+    felix/felix/build_command.hh
+    felix/felix/build_compiler.cc
+    felix/felix/build_compiler.hh
+    felix/felix/build_target.cc
+    felix/felix/build_target.hh
     felix/felix/felix.cc
-    felix/felix/target.cc
-    felix/felix/target.hh
+    felix/felix/felix_build.cc
+    felix/felix/felix_pack.cc
+    felix/felix/pack_generator_C.cc
+    felix/felix/pack_generator_files.cc
+    felix/felix/pack_generator.hh
+    felix/felix/pack_output.cc
+    felix/felix/pack_output.hh
 )
 
 add_executable(felix ${FELIX_SRC})
 target_link_libraries(felix PRIVATE libcc)
+
+function(target_assets TARGET)
+    cmake_parse_arguments("OPT" "" "MODE;MERGE_RULES" "OPTIONS;SOURCES" ${ARGN})
+
+    set(output_src "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_assets.c")
+    set(output_target "${TARGET}_assets")
+    set(output_dependencies felix ${OPT_SOURCES})
+
+    if(OPT_MERGE_RULES)
+        list(APPEND OPT_OPTIONS "-M${OPT_MERGE_RULES}")
+        list(APPEND output_dependencies ${OPT_MERGE_RULES})
+    endif()
+
+    if(OPT_MODE STREQUAL "ModuleIfDebug")
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            set(OPT_MODE "Module")
+        else()
+            set(OPT_MODE "Static")
+        endif()
+    endif()
+
+    add_custom_command(
+        OUTPUT ${output_src}
+        COMMAND $<TARGET_FILE:felix>
+        ARGS pack -gC ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        DEPENDS ${output_dependencies}
+    )
+
+    if(NOT OPT_MODE OR OPT_MODE STREQUAL "Static")
+        target_sources(${TARGET} PRIVATE ${output_src})
+    elseif(OPT_MODE STREQUAL "Module")
+        add_library(${output_target} MODULE ${output_src})
+        set_target_properties(${output_target} PROPERTIES PREFIX "")
+        add_dependencies(${TARGET} ${output_target})
+    else()
+        message(FATAL_ERROR "Option MODE must be 'Static' (default), 'Module' or 'ModuleIfDebug'")
+    endif()
+endfunction()
+
+# ------------------------------------------------------------------------
+# libpacker
+# ------------------------------------------------------------------------
+
+set(LIBPACKER_SRC
+    felix/libpacker/libpacker.cc
+    felix/libpacker/libpacker.hh
+)
+
+add_library(libpacker STATIC ${LIBPACKER_SRC})
+if(UNIX)
+    target_link_libraries(libpacker PUBLIC dl)
+endif()
 
 # ------------------------------------------------------------------------
 # libgui
@@ -68,72 +128,6 @@ if(WIN32 OR EMSCRIPTEN)
     add_amalgamated_file(libgui "${CMAKE_BINARY_DIR}/libgui.cc" libgui/libgui.cc)
     add_amalgamated_file(libgui "${CMAKE_BINARY_DIR}/libgui.hh" libgui/libgui.hh)
 endif()
-
-# ------------------------------------------------------------------------
-# packer
-# ------------------------------------------------------------------------
-
-set(PACKER_SRC
-    felix/packer/generator_C.cc
-    felix/packer/generator_files.cc
-    felix/packer/generator.hh
-    felix/packer/output.cc
-    felix/packer/output.hh
-    felix/packer/packer.cc
-    felix/packer/packer.hh
-)
-
-add_executable(packer ${PACKER_SRC})
-target_link_libraries(packer PRIVATE libcc)
-
-set(LIBPACKER_SRC
-    felix/libpacker/libpacker.cc
-    felix/libpacker/libpacker.hh
-)
-
-add_library(libpacker STATIC ${LIBPACKER_SRC})
-if(UNIX)
-    target_link_libraries(libpacker PUBLIC dl)
-endif()
-
-function(target_assets TARGET)
-    cmake_parse_arguments("OPT" "" "MODE;MERGE_RULES" "OPTIONS;SOURCES" ${ARGN})
-
-    set(output_src "${CMAKE_CURRENT_BINARY_DIR}/${TARGET}_assets.c")
-    set(output_target "${TARGET}_assets")
-    set(output_dependencies packer ${OPT_SOURCES})
-
-    if(OPT_MERGE_RULES)
-        list(APPEND OPT_OPTIONS "-M${OPT_MERGE_RULES}")
-        list(APPEND output_dependencies ${OPT_MERGE_RULES})
-    endif()
-
-    if(OPT_MODE STREQUAL "ModuleIfDebug")
-        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-            set(OPT_MODE "Module")
-        else()
-            set(OPT_MODE "Static")
-        endif()
-    endif()
-
-    add_custom_command(
-        OUTPUT ${output_src}
-        COMMAND $<TARGET_FILE:packer>
-        ARGS -gC ${OPT_OPTIONS} "-O${output_src}" ${OPT_SOURCES}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        DEPENDS ${output_dependencies}
-    )
-
-    if(NOT OPT_MODE OR OPT_MODE STREQUAL "Static")
-        target_sources(${TARGET} PRIVATE ${output_src})
-    elseif(OPT_MODE STREQUAL "Module")
-        add_library(${output_target} MODULE ${output_src})
-        set_target_properties(${output_target} PROPERTIES PREFIX "")
-        add_dependencies(${TARGET} ${output_target})
-    else()
-        message(FATAL_ERROR "Option MODE must be 'Static' (default), 'Module' or 'ModuleIfDebug'")
-    endif()
-endfunction()
 
 # ------------------------------------------------------------------------
 # libdrd
@@ -409,10 +403,10 @@ add_custom_target(inPL ALL
 add_custom_command(
     OUTPUT "${CMAKE_BINARY_DIR}/inPL/inPL.html"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/inPL"
-    COMMAND $<TARGET_FILE:packer> -M inPL/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
-    COMMAND $<TARGET_FILE:packer> -M inPL/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS packer ${INPL_ASSETS}
+    DEPENDS felix ${INPL_ASSETS}
 )
 
 # ------------------------------------------------------------------------

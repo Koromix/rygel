@@ -5,8 +5,8 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "compiler.hh"
-#include "target.hh"
+#include "build_compiler.hh"
+#include "build_target.hh"
 
 struct BuildCommand {
     const char *text;
