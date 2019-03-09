@@ -111,7 +111,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     }
 
     // Object commands
-    bool relink = false;
+    HeapArray<const char *> obj_filenames;
     for (const ObjectInfo &obj: target.objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
 
@@ -130,7 +130,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         } else {
             build = true;
         }
-        relink |= build;
 
         if (build) {
             BuildCommand cmd = {};
@@ -155,26 +154,28 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 return false;
 
             obj_commands.Append(cmd);
+
+            // Pretend object file does not exist to force link step
+            mtime_map.Set(obj.dest_filename, -1);
         }
+
+        obj_filenames.Append(obj.dest_filename);
     }
 
     // Link commands
-    if (target.type == TargetType::Executable) {
-        relink &= !output_set.Find(target.dest_filename);
+    if (target.type == TargetType::Executable &&
+            !IsFileUpToDate(target.dest_filename, obj_filenames)) {
+        BuildCommand cmd = {};
 
-        if (relink || !TestFile(target.dest_filename, FileType::File)) {
-            BuildCommand cmd = {};
+        cmd.text = Fmt(&str_alloc, "Link %1",
+                       SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
+        cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
+        cmd.cmd = compiler->BuildLinkCommand(obj_filenames, build_mode, target.libraries,
+                                             target.dest_filename, &str_alloc);
+        if (!cmd.cmd)
+            return false;
 
-            cmd.text = Fmt(&str_alloc, "Link %1",
-                           SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
-            cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
-            cmd.cmd = compiler->BuildLinkCommand(target.objects, build_mode, target.libraries,
-                                                 target.dest_filename, &str_alloc);
-            if (!cmd.cmd)
-                return false;
-
-            link_commands.Append(cmd);
-        }
+        link_commands.Append(cmd);
     }
 
     // Do this at the end because it's much harder to roll back changes in out_guard
@@ -214,6 +215,8 @@ bool BuildSetBuilder::IsFileUpToDate(const char *dest_filename,
                                      Span<const char *const> src_filenames)
 {
     int64_t dest_time = GetFileModificationTime(dest_filename);
+    if (dest_time < 0)
+        return false;
 
     for (const char *src_filename: src_filenames) {
         int64_t src_time = GetFileModificationTime(src_filename);
@@ -226,18 +229,17 @@ bool BuildSetBuilder::IsFileUpToDate(const char *dest_filename,
 
 int64_t BuildSetBuilder::GetFileModificationTime(const char *filename)
 {
-    int64_t mtime = mtime_map.FindValue(filename, -1);
+    std::pair<int64_t *, bool> ret = mtime_map.Append(filename, -1);
 
-    if (mtime < 0) {
+    if (ret.second) {
         FileInfo file_info;
         if (!StatFile(filename, false, &file_info))
             return -1;
 
-        mtime_map.Append(filename, file_info.modification_time);
-        mtime = file_info.modification_time;
+        *ret.first = file_info.modification_time;
     }
 
-    return mtime;
+    return *ret.first;
 }
 
 bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
