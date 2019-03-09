@@ -136,12 +136,18 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                         }
                     }
                 } else if (prop.key == "ImportFrom") {
-                    if (targets_map.Find(prop.value.ptr)) {
-                        const char *import_name = DuplicateString(prop.value, &set.str_alloc).ptr;
-                        target_config.imports.Append(import_name);
-                    } else {
-                        LogError("Cannot import from unknown target '%1'", prop.value);
-                        valid = false;
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            Size import_idx = targets_map.FindValue(part, -1);
+                            if (import_idx >= 0) {
+                                target_config.imports.Append(set.targets[import_idx].name);
+                            } else {
+                                LogError("Cannot import from unknown target '%1'", part);
+                                valid = false;
+                            }
+                        }
                     }
                 } else if (prop.key == "IncludeDirectory") {
                     valid &= AppendNormalizedPath(prop.value, &set.str_alloc,
