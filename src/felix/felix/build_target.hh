@@ -48,7 +48,7 @@ class TargetSetBuilder {
 
     TargetSet set;
 
-    HashMap<const char *, Size> targets_map;
+    HashMap<Span<const char>, Size> targets_map;
 
 public:
     TargetSetBuilder(const char *output_directory)
