@@ -13,7 +13,7 @@
 #endif
 
 #include "../../libcc/libcc.hh"
-#include "libpacker.hh"
+#include "libpack.hh"
 
 pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char *var_name)
 {
