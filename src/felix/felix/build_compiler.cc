@@ -206,6 +206,12 @@ Compiler GnuCompiler = {
                                   [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
         Fmt(&buf, "%1", is_cxx ? "g++" : "gcc");
 
+#ifdef _WIN32
+        if (build_mode != BuildMode::Debug) {
+            Fmt(&buf, " -static -static-libgcc -static-libstdc++");
+        }
+#endif
+
         if (!AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf))
             return (const char *)nullptr;
 
