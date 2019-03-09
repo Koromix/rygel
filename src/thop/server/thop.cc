@@ -12,7 +12,7 @@
 #include "mco_info.hh"
 #include "user.hh"
 #include "../../wrappers/http.hh"
-#include "../../felix/libpacker/libpacker.hh"
+#include "../../felix/libpack/libpack.hh"
 
 struct CatalogSet {
     HeapArray<pack_Asset> catalogs;

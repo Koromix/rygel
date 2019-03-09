@@ -5,7 +5,7 @@
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "../../wrappers/http.hh"
-#include "../../felix/libpacker/libpacker.hh"
+#include "../../felix/libpack/libpack.hh"
 
 struct Route {
     const char *method;

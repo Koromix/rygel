@@ -12,7 +12,7 @@
 #include "../../libcc/libcc.hh"
 #include "profile.hh"
 #include "../server/data.hh"
-#include "../../felix/libpacker/libpacker.hh"
+#include "../../felix/libpack/libpack.hh"
 
 extern const Span<const pack_Asset> pack_assets;
 

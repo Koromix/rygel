@@ -91,17 +91,17 @@ function(target_assets TARGET)
 endfunction()
 
 # ------------------------------------------------------------------------
-# libpacker
+# libpack
 # ------------------------------------------------------------------------
 
-set(LIBPACKER_SRC
-    felix/libpacker/libpacker.cc
-    felix/libpacker/libpacker.hh
+set(LIBPACK_SRC
+    felix/libpack/libpack.cc
+    felix/libpack/libpack.hh
 )
 
-add_library(libpacker STATIC ${LIBPACKER_SRC})
+add_library(libpack STATIC ${LIBPACK_SRC})
 if(UNIX)
-    target_link_libraries(libpacker PUBLIC dl)
+    target_link_libraries(libpack PUBLIC dl)
 endif()
 
 # ------------------------------------------------------------------------
@@ -254,7 +254,7 @@ if(NOT EMSCRIPTEN)
 
     add_executable(thop ${THOP_SRC})
     target_include_directories(thop PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-    target_link_libraries(thop PRIVATE libcc libdrd libpacker microhttpd sodium)
+    target_link_libraries(thop PRIVATE libcc libdrd libpack microhttpd sodium)
     target_assets(thop
         MODE ModuleIfDebug
         MERGE_RULES thop/client/packer.ini
@@ -359,7 +359,7 @@ set(GOUPIL_ADMIN_ASSETS
 )
 
 add_executable(goupil ${GOUPIL_SRC})
-target_link_libraries(goupil PRIVATE libcc libpacker microhttpd sqlite)
+target_link_libraries(goupil PRIVATE libcc libpack microhttpd sqlite)
 target_assets(goupil
     MODE ModuleIfDebug
     MERGE_RULES goupil/client/packer.ini
