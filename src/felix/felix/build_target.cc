@@ -245,7 +245,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     {
         HeapArray<const char *> src_filenames;
         for (const char *src_directory: target_config->src_directories) {
-            if (!EnumerateDirectoryFiles(src_directory, nullptr, 1024, &temp_alloc, &src_filenames))
+            if (!EnumerateFiles(src_directory, nullptr, 0, 1024, &temp_alloc, &src_filenames))
                 return nullptr;
         }
         src_filenames.Append(target_config->src_filenames);

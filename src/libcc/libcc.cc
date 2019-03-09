@@ -1394,15 +1394,26 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
 #endif
 
-bool EnumerateDirectoryFiles(const char *dirname, const char *filter, Size max_files,
-                             Allocator *str_alloc, HeapArray<const char *> *out_files)
+bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
+                    Allocator *str_alloc, HeapArray<const char *> *out_files)
 {
     DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumStatus status = EnumerateDirectory(dirname, filter, max_files,
                                            [&](const char *filename, FileType file_type) {
-        if (file_type == FileType::File) {
-            out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+        switch (file_type) {
+            case FileType::Directory: {
+                if (max_depth) {
+                    const char *sub_directory = Fmt(str_alloc, "%1%/%2", dirname, filename).ptr;
+                    return EnumerateFiles(sub_directory, filter, std::max((Size)-1, max_depth - 1),
+                                          max_files, str_alloc, out_files);
+                }
+            } break;
+            case FileType::File: {
+                out_files->Append(Fmt(str_alloc, "%1%/%2", dirname, filename).ptr);
+            } break;
+
+            case FileType::Unknown: {} break;
         }
 
         return true;
