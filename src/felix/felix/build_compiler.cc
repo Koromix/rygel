@@ -43,7 +43,7 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
     }
 }
 
-static bool AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode build_mode,
+static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildMode build_mode,
                                    Span<const char *const> libraries, const char *dest_filename,
                                    HeapArray<char> *out_buf)
 {
@@ -54,14 +54,8 @@ static bool AppendGccLinkArguments(Span<const ObjectInfo> objects, BuildMode bui
 #ifdef _WIN32
     Size rsp_offset = out_buf->len;
 #endif
-    for (const ObjectInfo &obj: objects) {
-        switch (obj.src_type) {
-            case SourceType::C_Source:
-            case SourceType::CXX_Source: { Fmt(out_buf, " %1", obj.dest_filename); } break;
-
-            case SourceType::C_Header:
-            case SourceType::CXX_Header: { DebugAssert(false); } break;
-        }
+    for (const char *obj_filename: obj_filenames) {
+        Fmt(out_buf, " %1", obj_filename);
     }
 #ifdef _WIN32
     if (out_buf->len - rsp_offset >= 4096) {
@@ -143,16 +137,13 @@ Compiler ClangCompiler = {
     },
 
     // BuildLinkCommand
-    [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
-       const char *dest_filename, Allocator *alloc) {
+    [](Span<const char *const> obj_filenames, BuildMode build_mode,
+       Span<const char *const> libraries, const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        bool is_cxx = std::any_of(objects.begin(), objects.end(),
-                                  [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
-        Fmt(&buf, "%1", is_cxx ? "clang++" : "clang");
-
-        if (!AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf))
+        Fmt(&buf, "clang++");
+        if (!AppendGccLinkArguments(obj_filenames, build_mode, libraries, dest_filename, &buf))
             return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
@@ -197,22 +188,19 @@ Compiler GnuCompiler = {
     },
 
     // BuildLinkCommand
-    [](Span<const ObjectInfo> objects, BuildMode build_mode, Span<const char *const> libraries,
-       const char *dest_filename, Allocator *alloc) {
+    [](Span<const char *const> obj_filenames, BuildMode build_mode,
+       Span<const char *const> libraries, const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        bool is_cxx = std::any_of(objects.begin(), objects.end(),
-                                  [](const ObjectInfo &obj) { return obj.src_type == SourceType::CXX_Source; });
-        Fmt(&buf, "%1", is_cxx ? "g++" : "gcc");
-
+        Fmt(&buf, "g++");
 #ifdef _WIN32
         if (build_mode != BuildMode::Debug) {
             Fmt(&buf, " -static -static-libgcc -static-libstdc++");
         }
 #endif
 
-        if (!AppendGccLinkArguments(objects, build_mode, libraries, dest_filename, &buf))
+        if (!AppendGccLinkArguments(obj_filenames, build_mode, libraries, dest_filename, &buf))
             return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
