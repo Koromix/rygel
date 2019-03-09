@@ -11,6 +11,7 @@ struct TargetConfig {
     TargetType type;
 
     HeapArray<const char *> src_directories;
+    HeapArray<const char *> src_directories_rec;
     HeapArray<const char *> src_filenames;
     HeapArray<const char *> src_ignore;
 
@@ -123,6 +124,9 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                 } else if (prop.key == "SourceDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &set.str_alloc, &target_config.src_directories);
+                } else if (prop.key == "SourceDirectoryRec") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.src_directories_rec);
                 } else if (prop.key == "SourceFile") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &set.str_alloc, &target_config.src_filenames);
@@ -246,6 +250,10 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         HeapArray<const char *> src_filenames;
         for (const char *src_directory: target_config->src_directories) {
             if (!EnumerateFiles(src_directory, nullptr, 0, 1024, &temp_alloc, &src_filenames))
+                return nullptr;
+        }
+        for (const char *src_directory: target_config->src_directories_rec) {
+            if (!EnumerateFiles(src_directory, nullptr, -1, 1024, &temp_alloc, &src_filenames))
                 return nullptr;
         }
         src_filenames.Append(target_config->src_filenames);
