@@ -1242,6 +1242,10 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     Size count = 0;
     do {
+        if ((find_data.cFileName[0] == '.' && !find_data.cFileName[1]) ||
+                (find_data.cFileName[0] == '.' && find_data.cFileName[1] == '.' && !find_data.cFileName[2]))
+            continue;
+
         if (UNLIKELY(++count > max_files && max_files >= 0)) {
             LogError("Partial enumation of directory '%1'", dirname);
             return EnumStatus::Partial;
