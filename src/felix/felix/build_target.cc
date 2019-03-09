@@ -12,7 +12,7 @@ struct TargetConfig {
 
     HeapArray<const char *> src_directories;
     HeapArray<const char *> src_filenames;
-    HeapArray<const char *> exclusions;
+    HeapArray<const char *> src_ignore;
 
     const char *c_pch_filename;
     const char *cxx_pch_filename;
@@ -126,13 +126,13 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                 } else if (prop.key == "SourceFile") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &set.str_alloc, &target_config.src_filenames);
-                } else if (prop.key == "Exclude") {
+                } else if (prop.key == "SourceIgnore") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
                         if (part.len) {
                             const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                            target_config.exclusions.Append(copy);
+                            target_config.src_ignore.Append(copy);
                         }
                     }
                 } else if (prop.key == "ImportFrom") {
@@ -252,8 +252,8 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
         for (const char *src_filename: src_filenames) {
             const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
-            bool ignore = std::any_of(target_config->exclusions.begin(), target_config->exclusions.end(),
-                                      [&](const char *excl) { return MatchPathName(name, excl); });
+            bool ignore = std::any_of(target_config->src_ignore.begin(), target_config->src_ignore.end(),
+                                      [&](const char *pattern) { return MatchPathName(name, pattern); });
 
             if (!ignore) {
                 ObjectInfo obj = {};
