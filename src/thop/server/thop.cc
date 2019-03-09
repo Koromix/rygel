@@ -75,7 +75,7 @@ static bool InitCatalogSet(Span<const char *const> table_directories)
         for (const char *resource_dir: table_directories) {
             const char *desc_dir = Fmt(&temp_alloc, "%1%/catalogs", resource_dir).ptr;
             if (TestFile(desc_dir, FileType::Directory)) {
-                success &= EnumerateDirectoryFiles(desc_dir, "*.json", 1024, &temp_alloc, &filenames);
+                success &= EnumerateFiles(desc_dir, "*.json", 0, 1024, &temp_alloc, &filenames);
             }
         }
         if (!success)
