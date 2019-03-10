@@ -5,16 +5,19 @@
 #include "../../libcc/libcc.hh"
 #include "build_target.hh"
 
+struct FileSet {
+    HeapArray<const char *> directories;
+    HeapArray<const char *> directories_rec;
+    HeapArray<const char *> filenames;
+    HeapArray<const char *> ignore;
+};
+
 // Temporary struct used until target is created
 struct TargetConfig {
     const char *name;
     TargetType type;
 
-    HeapArray<const char *> src_directories;
-    HeapArray<const char *> src_directories_rec;
-    HeapArray<const char *> src_filenames;
-    HeapArray<const char *> src_ignore;
-
+    FileSet src_file_set;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
 
@@ -24,11 +27,9 @@ struct TargetConfig {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
-    PackLinkType pack_link_type;
-    HeapArray<const char *> pack_directories;
-    HeapArray<const char *> pack_directories_rec;
-    HeapArray<const char *> pack_filenames;
+    FileSet pack_file_set;
     const char *pack_options;
+    PackLinkType pack_link_type;
 
     HASH_TABLE_HANDLER(TargetConfig, name);
 };
@@ -88,6 +89,33 @@ static const char *BuildOutputPath(const char *src_filename, const char *output_
     return buf.Leak().ptr;
 }
 
+static bool ResolveFileSet(const FileSet &file_set,
+                           Allocator *alloc, HeapArray<const char *> *out_filenames)
+{
+    DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
+
+    for (const char *directory: file_set.directories) {
+        if (!EnumerateFiles(directory, nullptr, 0, 1024, alloc, out_filenames))
+            return false;
+    }
+    for (const char *directory: file_set.directories_rec) {
+        if (!EnumerateFiles(directory, nullptr, -1, 1024, alloc, out_filenames))
+            return false;
+    }
+    out_filenames->Append(file_set.filenames);
+
+    out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
+                                             [&](const char *filename) {
+        const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
+        bool ignore = std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
+                                  [&](const char *pattern) { return MatchPathName(name, pattern); });
+        return ignore;
+    }) - out_filenames->begin());
+
+    out_guard.disable();
+    return true;
+}
+
 bool TargetSetBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
@@ -130,20 +158,20 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     type_specified = true;
                 } else if (prop.key == "SourceDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_directories);
+                                                  &set.str_alloc, &target_config.src_file_set.directories);
                 } else if (prop.key == "SourceDirectoryRec") {
                     valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_directories_rec);
+                                                  &set.str_alloc, &target_config.src_file_set.directories_rec);
                 } else if (prop.key == "SourceFile") {
                     valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.src_filenames);
+                                                  &set.str_alloc, &target_config.src_file_set.filenames);
                 } else if (prop.key == "SourceIgnore") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
                         if (part.len) {
                             const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                            target_config.src_ignore.Append(copy);
+                            target_config.src_file_set.ignore.Append(copy);
                         }
                     }
                 } else if (prop.key == "ImportFrom") {
@@ -187,6 +215,27 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
 #ifndef _WIN32
                     AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
+                } else if (prop.key == "AssetDirectory") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_file_set.directories);
+                } else if (prop.key == "AssetDirectoryRec") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_file_set.directories_rec);
+                } else if (prop.key == "AssetFile") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_file_set.filenames);
+
+                } else if (prop.key == "AssetIgnore") {
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                            target_config.pack_file_set.ignore.Append(copy);
+                        }
+                    }
+                } else if (prop.key == "AssetOptions") {
+                    target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                 } else if (prop.key == "AssetLink") {
                     if (prop.value == "Static") {
                         target_config.pack_link_type = PackLinkType::Static;
@@ -198,17 +247,6 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                         LogError("Unknown asset link mode '%1'", prop.value);
                         valid = false;
                     }
-                } else if (prop.key == "AssetDirectory") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_directories);
-                } else if (prop.key == "AssetDirectoryRec") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_directories_rec);
-                } else if (prop.key == "AssetFile") {
-                    valid &= AppendNormalizedPath(prop.value,
-                                                  &set.str_alloc, &target_config.pack_filenames);
-                } else if (prop.key == "AssetOptions") {
-                    target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -280,38 +318,25 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Gather direct target objects
     {
         HeapArray<const char *> src_filenames;
-        for (const char *src_directory: target_config->src_directories) {
-            if (!EnumerateFiles(src_directory, nullptr, 0, 1024, &temp_alloc, &src_filenames))
-                return nullptr;
-        }
-        for (const char *src_directory: target_config->src_directories_rec) {
-            if (!EnumerateFiles(src_directory, nullptr, -1, 1024, &temp_alloc, &src_filenames))
-                return nullptr;
-        }
-        src_filenames.Append(target_config->src_filenames);
+        if (!ResolveFileSet(target_config->src_file_set, &temp_alloc, &src_filenames))
+            return nullptr;
 
         for (const char *src_filename: src_filenames) {
-            const char *name = SplitStrReverseAny(src_filename, PATH_SEPARATORS).ptr;
-            bool ignore = std::any_of(target_config->src_ignore.begin(), target_config->src_ignore.end(),
-                                      [&](const char *pattern) { return MatchPathName(name, pattern); });
+            ObjectInfo obj = {};
 
-            if (!ignore) {
-                ObjectInfo obj = {};
-
-                Span<const char> extension = GetPathExtension(src_filename);
-                if (extension == ".c") {
-                    obj.src_type = SourceType::C_Source;
-                } else if (extension == ".cc" || extension == ".cpp") {
-                    obj.src_type = SourceType::CXX_Source;
-                } else {
-                    continue;
-                }
-
-                obj.src_filename = DuplicateString(src_filename, &set.str_alloc).ptr;
-                obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", &set.str_alloc);
-
-                target->objects.Append(obj);
+            Span<const char> extension = GetPathExtension(src_filename);
+            if (extension == ".c") {
+                obj.src_type = SourceType::C_Source;
+            } else if (extension == ".cc" || extension == ".cpp") {
+                obj.src_type = SourceType::CXX_Source;
+            } else {
+                continue;
             }
+
+            obj.src_filename = DuplicateString(src_filename, &set.str_alloc).ptr;
+            obj.dest_filename = BuildOutputPath(src_filename, output_directory, ".o", &set.str_alloc);
+
+            target->objects.Append(obj);
         }
     }
 
@@ -396,17 +421,8 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
 
     // Gather asset filenames
-    for (const char *pack_directory: target_config->pack_directories) {
-        if (!EnumerateFiles(pack_directory, nullptr, 0, 1024,
-                            &set.str_alloc, &target->pack_filenames))
-            return nullptr;
-    }
-    for (const char *pack_directory: target_config->pack_directories_rec) {
-        if (!EnumerateFiles(pack_directory, nullptr, -1, 1024,
-                            &set.str_alloc, &target->pack_filenames))
-            return nullptr;
-    }
-    target->pack_filenames.Append(target_config->pack_filenames);
+    if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
+        return nullptr;
     if (target->pack_filenames.len) {
         target->pack_obj_filename = Fmt(&set.str_alloc, "%1%/assets%/%2_assets.o",
                                         output_directory, target->name).ptr;
