@@ -296,11 +296,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             errno = 0;
             if (system(cmd.cmd) || errno) {
                 LogError("Command '%1' failed", cmd.cmd);
-#ifdef _WIN32
-                _unlink(cmd.dest_filename);
-#else
                 unlink(cmd.dest_filename);
-#endif
                 return false;
             }
 
