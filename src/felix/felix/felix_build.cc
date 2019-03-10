@@ -274,9 +274,5 @@ Available build modes:)");
         return 1;
 
     // Run?
-    if (run) {
-        return RunTarget(*first_target, run_arguments, verbose);
-    } else {
-        return 0;
-    }
+    return run ? RunTarget(*first_target, run_arguments, verbose) : 0;
 }
