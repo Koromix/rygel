@@ -46,6 +46,8 @@ public:
     void Finish(BuildSet *out_set);
 
 private:
+    bool NeedsRebuild(const char *src_filename, const char *dest_filename,
+                      const char *deps_filename);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     int64_t GetFileModificationTime(const char *filename);
 };
