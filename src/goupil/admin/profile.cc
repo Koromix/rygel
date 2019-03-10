@@ -14,7 +14,7 @@
 #include "../server/data.hh"
 #include "../../felix/libpack/libpack.hh"
 
-extern const Span<const pack_Asset> pack_assets;
+extern "C" const Span<const pack_Asset> pack_assets;
 
 int RunCreateProfile(Span<const char *> arguments)
 {

@@ -20,7 +20,7 @@
 #include "../felix/libpack/libpack.hh"
 #include "../../lib/imgui/imgui.h"
 
-extern const pack_Asset *const pack_asset_Roboto_Medium_ttf;
+extern "C" const pack_Asset *const pack_asset_Roboto_Medium_ttf;
 
 decltype(InitializeConfig) *InitializeConfig_;
 decltype(InitializeHumans) *InitializeHumans_;
