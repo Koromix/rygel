@@ -184,7 +184,11 @@ Compiler ClangCompiler = {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
+#ifdef _WIN32
+        Fmt(&buf, "clang++ -fuse-ld=lld");
+#else
         Fmt(&buf, "clang++");
+#endif
         if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
                                     dest_filename, &buf))
             return (const char *)nullptr;
