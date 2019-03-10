@@ -19,6 +19,8 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
                                      const char *dest_filename, const char *deps_filename,
                                      HeapArray<char> *out_buf)
 {
+    Fmt(out_buf, " -fvisibility=hidden");
+
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
         case BuildMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
