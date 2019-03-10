@@ -70,30 +70,11 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         link_commands.RemoveFrom(start_link_len);
     };
 
-    // Reuse for performance
-    HeapArray<const char *> src_filenames;
-
     // Precompiled headers
     for (const ObjectInfo &obj: target.pch_objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
 
-        src_filenames.RemoveFrom(0);
-        src_filenames.Append(obj.src_filename);
-
-        // Parse Make rule dependencies
-        bool build = false;
-        if (output_set.Find(obj.dest_filename)) {
-            build = false;
-        } else if (TestFile(deps_filename, FileType::File)) {
-            if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-                return false;
-
-            build = !IsFileUpToDate(obj.dest_filename, src_filenames);
-        } else {
-            build = true;
-        }
-
-        if (build) {
+        if (NeedsRebuild(obj.src_filename, obj.dest_filename, deps_filename)) {
             BuildCommand cmd = {};
 
             cmd.text = Fmt(&str_alloc, "Precompile %1", obj.src_filename).ptr;
@@ -115,23 +96,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     for (const ObjectInfo &obj: target.objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
 
-        src_filenames.RemoveFrom(0);
-        src_filenames.Append(obj.src_filename);
-
-        // Parse Make rule dependencies
-        bool build = false;
-        if (output_set.Find(obj.dest_filename)) {
-            build = false;
-        } else if (TestFile(deps_filename, FileType::File)) {
-            if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &src_filenames))
-                return false;
-
-            build = !IsFileUpToDate(obj.dest_filename, src_filenames);
-        } else {
-            build = true;
-        }
-
-        if (build) {
+        if (NeedsRebuild(obj.src_filename, obj.dest_filename, deps_filename)) {
             BuildCommand cmd = {};
 
             const char *pch_filename = nullptr;
@@ -209,6 +174,25 @@ void BuildSetBuilder::Finish(BuildSet *out_set)
     out_set->commands.Append(link_commands);
 
     SwapMemory(&out_set->str_alloc, &str_alloc, SIZE(str_alloc));
+}
+
+bool BuildSetBuilder::NeedsRebuild(const char *src_filename, const char *dest_filename,
+                                   const char *deps_filename)
+{
+    HeapArray<const char *> dep_filenames;
+    dep_filenames.Append(src_filename);
+
+    if (output_set.Find(dest_filename)) {
+        return false;
+    } else if (TestFile(deps_filename, FileType::File)) {
+        // Parse Make rule dependencies
+        if (!ParseCompilerMakeRule(deps_filename, &temp_alloc, &dep_filenames))
+            return true;
+
+        return !IsFileUpToDate(dest_filename, dep_filenames);
+    } else {
+        return true;
+    }
 }
 
 bool BuildSetBuilder::IsFileUpToDate(const char *dest_filename,
