@@ -20,22 +20,24 @@ Commands:
     pack                         Pack assets to C source file and other formats)");
     };
 
+    // Handle 'felix --help [command]' and 'felix help [command]' invocations
+    if (argc >= 2 && (TestStr(argv[1], "--help") || TestStr(argv[1], "help"))) {
+        if (argc >= 3 && argv[2][0] != '-') {
+            std::swap(argv[1], argv[2]);
+        } else {
+            PrintUsage(stdout);
+            return 0;
+        }
+    }
+
     const char *cmd;
     Span<const char *> arguments;
-    if (argc >= 2) {
+    if (argc >= 2 && argv[1][0] != '-') {
         cmd = argv[1];
         arguments = MakeSpan((const char **)argv + 2, argc - 2);
-
-        // Handle 'felix help [command]' and 'felix --help [command]' invocations
-        if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
-            if (arguments.len && arguments[0][0] != '-') {
-                cmd = arguments[0];
-                arguments[0] = "--help";
-            } else {
-                PrintUsage(stdout);
-                return 0;
-            }
-        }
+    } else if (argc >= 2) {
+        cmd = "build";
+        arguments = MakeSpan((const char **)argv + 1, argc - 1);
     } else {
         cmd = "build";
         arguments = {};
