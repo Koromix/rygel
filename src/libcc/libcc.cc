@@ -1089,13 +1089,12 @@ void DefaultLogHandler(LogLevel level, const char *ctx,
 
 void StartConsoleLog(LogLevel level)
 {
-    if (!ConfigLogTerminalOutput())
-        return;
-
-    switch (level)  {
-        case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
-        case LogLevel::Info: { fputs("\x1B[36m", stderr); } break;
-        case LogLevel::Debug: { fputs("\x1B[33m", stderr); } break;
+    if (ConfigLogTerminalOutput()) {
+        switch (level)  {
+            case LogLevel::Error: { fputs("\x1B[31m", stderr); } break;
+            case LogLevel::Info: { fputs("\x1B[96m", stderr); } break;
+            case LogLevel::Debug: { fputs("\x1B[90m", stderr); } break;
+        }
     }
 }
 
