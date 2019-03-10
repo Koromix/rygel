@@ -83,9 +83,23 @@ static bool LoadMergeRules(const char *filename, Allocator *alloc, HeapArray<Mer
                         valid = false;
                     }
                 } else if (prop.key == "Include") {
-                    rule->include.Append(DuplicateString(prop.value, alloc).ptr);
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            const char *copy = DuplicateString(part, alloc).ptr;
+                            rule->include.Append(copy);
+                        }
+                    }
                 } else if (prop.key == "Exclude") {
-                    rule->exclude.Append(DuplicateString(prop.value, alloc).ptr);
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            const char *copy = DuplicateString(part, alloc).ptr;
+                            rule->exclude.Append(copy);
+                        }
+                    }
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
