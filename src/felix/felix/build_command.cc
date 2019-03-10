@@ -149,7 +149,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             mtime_map.Set(target.pack_obj_filename, -1);
         }
 
-        bool module;
+        bool module = false;
         switch (target.pack_link_type) {
             case PackLinkType::Static: { module = false; } break;
             case PackLinkType::Module: { module = true; } break;
