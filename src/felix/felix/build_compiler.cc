@@ -142,14 +142,19 @@ Compiler ClangCompiler = {
         switch (src_type) {
             case SourceType::C_Source: { Fmt(&buf, "clang -std=gnu11 %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "clang -std=gnu11 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-fno-exceptions %1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -Xclang -flto-visibility-public-std "
-                                                     "-fno-exceptions -x c++-header %1", flags); } break;
+            case SourceType::CXX_Source: { Fmt(&buf, "clang++ -std=gnu++17 -fno-exceptions %1", flags); } break;
+            case SourceType::CXX_Header: { Fmt(&buf, "clang++ -std=gnu++17 -fno-exceptions -x c++-header %1", flags); } break;
         }
-#ifndef _WIN32
-        // -fno-rtti breaks <functional> on Windows
-        Fmt(&buf, " -fno-rtti");
+#ifdef _WIN32
+        Fmt(&buf, " -D_MT -Xclang --dependent-lib=libcmt -Xclang --dependent-lib=oldnames");
+        if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
+            Fmt(&buf, " -Xclang -flto-visibility-public-std");
+        }
+#else
+        if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
+            // -fno-rtti breaks <functional> on Windows
+            Fmt(&buf, " -fno-rtti");
+        }
 #endif
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
