@@ -1622,7 +1622,7 @@ Span<const char> GetPathExtension(Span<const char> filename, CompressionType *ou
     return extension;
 }
 
-Span<const char> NormalizePath(Span<const char> path, Span<const char> root_directory,
+Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
                                Allocator *alloc)
 {
     if (!path.len && !root_directory.len)
