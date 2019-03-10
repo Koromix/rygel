@@ -114,7 +114,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
-
             cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
                                                    target.definitions, target.include_directories,
                                                    obj.dest_filename, deps_filename, &str_alloc);
@@ -139,7 +138,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(target.pack_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(target.pack_filename))
                 return false;
-
             cmd.cmd = compiler->BuildPackCommand(target.pack_filenames, target.pack_options,
                                                  target.pack_filename, &str_alloc);
             if (!cmd.cmd)
@@ -162,7 +160,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         cmd.text = Fmt(&str_alloc, "Link %1",
                        SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
         cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
-
         cmd.cmd = compiler->BuildLinkCommand(obj_filenames, build_mode, target.libraries,
                                              target.dest_filename, &str_alloc);
         if (!cmd.cmd)
