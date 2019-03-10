@@ -78,7 +78,7 @@ Available build modes:)");
     Async::SetThreadCount(Async::GetThreadCount() + 1);
 
     HeapArray<const char *> target_names;
-    const char *config_filename = "FelixBuild.ini";
+    const char *config_filename = nullptr;
     const char *output_directory = nullptr;
     const Compiler *compiler = Compilers[0];
     BuildMode build_mode = (BuildMode)0;
@@ -155,9 +155,9 @@ Available build modes:)");
         }
     }
 
-    // Change to root directory
+    // Root directory
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
-    {
+    if (config_filename) {
         Span<const char> root_directory;
         config_filename = SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory).ptr;
 
@@ -166,11 +166,27 @@ Available build modes:)");
             if (!SetWorkingDirectory(root_directory0))
                 return 1;
         }
+    } else {
+        config_filename = "FelixBuild.ini";
+
+        // Try to find FelixBuild.ini in current directory and all parent directories. We
+        // don't need to handle not finding it anywhere, because in this case the config load
+        // will fail with a simple "Cannot open 'FelixBuild.ini'" message.
+        for (Size i = 0; start_directory[i]; i++) {
+            if (IsPathSeparator(start_directory[i])) {
+                if (TestFile(config_filename))
+                    break;
+
+                SetWorkingDirectory("..");
+            }
+        }
     }
+
+    // Output directory
     if (output_directory) {
         output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
     } else {
-        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", start_directory,
+        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
                                compiler->name, BuildModeNames[(int)build_mode]).ptr;
     }
 
