@@ -111,7 +111,7 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
         }
     }
 
-    program_guard.disable();
+    program_guard.Disable();
     return shader_program;
 }
 

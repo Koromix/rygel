@@ -202,7 +202,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         output_set.Append(link_commands[i].dest_filename);
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

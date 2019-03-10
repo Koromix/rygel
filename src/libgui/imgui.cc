@@ -153,7 +153,7 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
     imgui_local = true;
     imgui_ready = true;
 
-    imgui_guard.disable();
+    imgui_guard.Disable();
     return true;
 }
 

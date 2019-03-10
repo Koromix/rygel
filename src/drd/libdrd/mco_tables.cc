@@ -245,7 +245,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
         out_tables->Append(table);
     }
 
-    out_tables_guard.disable();
+    out_tables_guard.Disable();
     return true;
 }
 
@@ -307,7 +307,7 @@ static bool ParseGhmDecisionTree(const uint8_t *file_data, const mco_TableInfo &
         out_nodes->Append(ghm_node);
     }
 
-    out_nodes_guard.disable();
+    out_nodes_guard.Disable();
     return true;
 }
 
@@ -420,7 +420,7 @@ static bool ParseDiagnosisTable(const uint8_t *file_data, const mco_TableInfo &t
         }
     }
 
-    out_diags_guard.disable();
+    out_diags_guard.Disable();
     return true;
 }
 
@@ -441,7 +441,7 @@ static bool ParseExclusionTable(const uint8_t *file_data, const mco_TableInfo &t
                (size_t)(SIZE(excl->raw) - table.sections[4].value_len));
     }
 
-    out_exclusions_guard.disable();
+    out_exclusions_guard.Disable();
     return true;
 }
 
@@ -536,7 +536,7 @@ static bool ParseProcedureTable(const uint8_t *file_data, const mco_TableInfo &t
         }
     }
 
-    out_proc_guard.disable();
+    out_proc_guard.Disable();
     return true;
 }
 
@@ -626,7 +626,7 @@ static bool ParseProcedureAdditionTable(const uint8_t *file_data, const mco_Tabl
         }
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -685,7 +685,7 @@ static bool ParseProcedureExtensionTable(const uint8_t *file_data, const mco_Tab
         }
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -793,7 +793,7 @@ static bool ParseGhmRootTable(const uint8_t *file_data, const mco_TableInfo &tab
         out_ghm_roots->Append(ghm_root);
     }
 
-    out_ghm_roots_guard.disable();
+    out_ghm_roots_guard.Disable();
     return true;
 }
 
@@ -836,7 +836,7 @@ static bool ParseSeverityTable(const uint8_t *file_data, const mco_TableInfo &ta
         out_cells->Append(cell);
     }
 
-    out_cells_guard.disable();
+    out_cells_guard.Disable();
     return true;
 }
 
@@ -981,7 +981,7 @@ static bool ParseGhmToGhsTable(const uint8_t *file_data, const mco_TableInfo &ta
         }
     });
 
-    out_ghs_guard.disable();
+    out_ghs_guard.Disable();
     return true;
 }
 
@@ -1025,7 +1025,7 @@ static bool ParseAuthorizationTable(const uint8_t *file_data, const mco_TableInf
         }
     }
 
-    out_auths_guard.disable();
+    out_auths_guard.Disable();
     return true;
 }
 
@@ -1078,7 +1078,7 @@ static bool ParseSrcPairTable(const uint8_t *file_data, const mco_TableInfo &tab
         return pair1.diag < pair2.diag;
     });
 
-    out_pairs_guard.disable();
+    out_pairs_guard.Disable();
     return true;
 }
 
@@ -1100,7 +1100,7 @@ static bool ParseGhsMinorationTable(const uint8_t *file_data, const mco_TableInf
         out_minored_ghs->Append(ghs);
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -1230,7 +1230,7 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
         }
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     *out_ghs_coefficient = ghs_coefficient;
     *out_supplement_prices = supplement_prices;
     return true;

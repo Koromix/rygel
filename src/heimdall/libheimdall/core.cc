@@ -97,7 +97,7 @@ static void TextMeasure(const Element &elmt, double align_offset)
     if (DetectAnomaly(elmt)) {
         ImGui::PushStyleColor(ImGuiCol_Text, GetVisColor(VisColor::Alert));
     } else {
-        style_guard.disable();
+        style_guard.Disable();
     }
 
     if (!std::isnan(elmt.u.measure.min) && !std::isnan(elmt.u.measure.max)) {
