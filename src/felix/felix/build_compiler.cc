@@ -44,8 +44,8 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
 }
 
 static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildMode build_mode,
-                                   Span<const char *const> libraries, const char *dest_filename,
-                                   HeapArray<char> *out_buf)
+                                   LinkType link_type, Span<const char *const> libraries,
+                                   const char *dest_filename, HeapArray<char> *out_buf)
 {
     if (build_mode == BuildMode::LTO) {
         Fmt(out_buf, " -flto");
@@ -83,6 +83,11 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
         Fmt(out_buf, " \"@%1\"", rsp_filename);
     }
 #endif
+
+    switch (link_type) {
+        case LinkType::Executable: { /* Skip */ } break;
+        case LinkType::SharedLibrary: { Fmt(out_buf, " -shared"); } break;
+    }
 
 #ifndef _WIN32
     Fmt(out_buf, " -lrt -ldl -pthread");
@@ -167,12 +172,14 @@ Compiler ClangCompiler = {
 
     // BuildLinkCommand
     [](Span<const char *const> obj_filenames, BuildMode build_mode,
-       Span<const char *const> libraries, const char *dest_filename, Allocator *alloc) {
+       Span<const char *const> libraries, LinkType link_type,
+       const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         Fmt(&buf, "clang++");
-        if (!AppendGccLinkArguments(obj_filenames, build_mode, libraries, dest_filename, &buf))
+        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
+                                    dest_filename, &buf))
             return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;
@@ -230,18 +237,21 @@ Compiler GnuCompiler = {
 
     // BuildLinkCommand
     [](Span<const char *const> obj_filenames, BuildMode build_mode,
-       Span<const char *const> libraries, const char *dest_filename, Allocator *alloc) {
+       Span<const char *const> libraries, LinkType link_type,
+       const char *dest_filename, Allocator *alloc) {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
         Fmt(&buf, "g++");
 #ifdef _WIN32
         if (build_mode != BuildMode::Debug) {
-            Fmt(&buf, " -static -static-libgcc -static-libstdc++");
+            // Force static linking of libgcc, libstdc++ and winpthread
+            Fmt(&buf, " -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic");
         }
 #endif
 
-        if (!AppendGccLinkArguments(obj_filenames, build_mode, libraries, dest_filename, &buf))
+        if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
+                                    dest_filename, &buf))
             return (const char *)nullptr;
 
         return (const char *)buf.Leak().ptr;

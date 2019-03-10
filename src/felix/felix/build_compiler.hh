@@ -31,6 +31,11 @@ static const char *const BuildModeNames[] = {
     "LTO"
 };
 
+enum class LinkType {
+    Executable,
+    SharedLibrary
+};
+
 enum class CompilerFlag {
     PCH = 1 << 0,
     LTO = 1 << 1
@@ -49,7 +54,7 @@ struct Compiler {
     const char *(*BuildPackCommand)(Span<const char *const> pack_filenames, const char *pack_options,
                                     const char *dest_filename, Allocator *alloc);
     const char *(*BuildLinkCommand)(Span<const char *const> obj_filenames, BuildMode build_mode,
-                                    Span<const char *const> libraries,
+                                    Span<const char *const> libraries, LinkType link_type,
                                     const char *dest_filename, Allocator *alloc);
 
     bool Supports(CompilerFlag flag) const { return flags & (int)flag; }

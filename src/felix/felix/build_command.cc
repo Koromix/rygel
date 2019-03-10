@@ -130,26 +130,49 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     }
 
     // Assets
-    if (target.pack_filename) {
-        if (!IsFileUpToDate(target.pack_filename, target.pack_filenames)) {
+    if (target.pack_obj_filename) {
+        if (!IsFileUpToDate(target.pack_obj_filename, target.pack_filenames)) {
             BuildCommand cmd = {};
 
-            cmd.text = Fmt(&str_alloc, "Pack assets for %1", target.name).ptr;
-            cmd.dest_filename = DuplicateString(target.pack_filename, &str_alloc).ptr;
-            if (!EnsureDirectoryExists(target.pack_filename))
+            cmd.text = Fmt(&str_alloc, "Pack %1 assets", target.name).ptr;
+            cmd.dest_filename = DuplicateString(target.pack_obj_filename, &str_alloc).ptr;
+            if (!EnsureDirectoryExists(target.pack_obj_filename))
                 return false;
             cmd.cmd = compiler->BuildPackCommand(target.pack_filenames, target.pack_options,
-                                                 target.pack_filename, &str_alloc);
+                                                 target.pack_obj_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
             obj_commands.Append(cmd);
 
             // Pretend object file does not exist to force link step
-            mtime_map.Set(target.pack_filename, -1);
+            mtime_map.Set(target.pack_obj_filename, -1);
         }
 
-        obj_filenames.Append(target.pack_filename);
+        bool module;
+        switch (target.pack_link_type) {
+            case PackLinkType::Static: { module = false; } break;
+            case PackLinkType::Module: { module = true; } break;
+            case PackLinkType::ModuleIfDebug: { module = (build_mode == BuildMode::Debug); } break;
+        }
+
+        if (module) {
+            if (!IsFileUpToDate(target.pack_module_filename, target.pack_obj_filename)) {
+                BuildCommand cmd = {};
+
+                // TODO: Check if this conflicts with a target destination file?
+                cmd.text = Fmt(&str_alloc, "Link %1",
+                               SplitStrReverseAny(target.pack_module_filename, PATH_SEPARATORS)).ptr;
+                cmd.dest_filename = DuplicateString(target.pack_module_filename, &str_alloc).ptr;
+                cmd.cmd = compiler->BuildLinkCommand(target.pack_obj_filename, BuildMode::Debug, {},
+                                                     LinkType::SharedLibrary, target.pack_module_filename,
+                                                     &str_alloc);
+
+                link_commands.Append(cmd);
+            }
+        } else {
+            obj_filenames.Append(target.pack_obj_filename);
+        }
     }
 
     // Link commands
@@ -161,7 +184,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                        SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
         cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
         cmd.cmd = compiler->BuildLinkCommand(obj_filenames, build_mode, target.libraries,
-                                             target.dest_filename, &str_alloc);
+                                             LinkType::Executable, target.dest_filename, &str_alloc);
         if (!cmd.cmd)
             return false;
 
