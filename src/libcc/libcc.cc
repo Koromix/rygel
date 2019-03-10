@@ -1428,7 +1428,7 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
     if (status == EnumStatus::Error)
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -2079,7 +2079,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2102,7 +2102,7 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2127,7 +2127,7 @@ bool StreamReader::Open(const char *filename, CompressionType compression_type)
     if (!InitDecompressor(compression_type))
         return false;
 
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2203,7 +2203,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
         if (error)
             return -1;
 
-        buf_guard.disable();
+        buf_guard.Disable();
         return total_len;
     }
 }
@@ -2573,7 +2573,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
         return false;
 
     open = true;
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2597,7 +2597,7 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
         return false;
 
     open = true;
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2623,7 +2623,7 @@ bool StreamWriter::Open(const char *filename, CompressionType compression_type)
         return false;
 
     open = true;
-    error_guard.disable();
+    error_guard.Disable();
     return true;
 }
 
@@ -2890,7 +2890,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 return LineType::Exit;
             }
 
-            error_guard.disable();
+            error_guard.Disable();
             current_section.RemoveFrom(0);
             current_section.Append(section);
             return LineType::Section;
@@ -2909,7 +2909,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             value = TrimStr(value);
             *value.end() = 0;
 
-            error_guard.disable();
+            error_guard.Disable();
             out_prop->section = current_section;
             out_prop->key = key;
             out_prop->value = value;
@@ -2919,7 +2919,7 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
     if (reader.error)
         return LineType::Exit;
 
-    error_guard.disable();
+    error_guard.Disable();
     eof = true;
     return LineType::Exit;
 }

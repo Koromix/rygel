@@ -59,7 +59,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
     if (ini.error || !valid)
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

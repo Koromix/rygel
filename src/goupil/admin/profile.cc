@@ -111,6 +111,6 @@ int RunCreateProfile(Span<const char *> arguments)
             return 1;
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return 0;
 }

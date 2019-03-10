@@ -193,7 +193,7 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
 
     // We assume stays are already sorted in pak files
 
-    set_guard.disable();
+    set_guard.Disable();
     return true;
 
 corrupt_error:
@@ -789,7 +789,7 @@ bool mco_StaySetBuilder::LoadAtih(StreamReader &st,
                         stay1.bill_id - stay2.bill_id) < 0;
     });
 
-    set_guard.disable();
+    set_guard.Disable();
     return true;
 }
 

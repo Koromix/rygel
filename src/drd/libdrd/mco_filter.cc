@@ -1148,7 +1148,7 @@ bool mco_FilterRunner::Process(Span<const mco_Result> results, Span<const mco_Re
         wren_count -= process_results;
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

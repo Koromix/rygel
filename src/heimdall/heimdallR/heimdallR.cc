@@ -28,7 +28,7 @@ SEXP R_Heimdall()
     Instance *inst = new Instance;
     DEFER_N(inst_guard) { delete inst; };
 
-    inst_guard.disable();
+    inst_guard.Disable();
     return Rcpp::XPtr<Instance>(inst, true);
 }
 

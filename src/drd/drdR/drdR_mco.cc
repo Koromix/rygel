@@ -53,7 +53,7 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
         ClassifierInstance *classifier = (ClassifierInstance *)R_ExternalPtrAddr(classifier_xp);
         delete classifier;
     }, TRUE);
-    classifier_guard.disable();
+    classifier_guard.Disable();
 
     return classifier_xp;
 

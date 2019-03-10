@@ -121,7 +121,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
     if (reader.error || !valid)
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -184,7 +184,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
     if (ini.error || !valid)
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

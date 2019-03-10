@@ -410,7 +410,7 @@ public:
     DeferGuard(const DeferGuard &) = delete;
     DeferGuard &operator=(DeferGuard &) = delete;
 
-    void disable() { enabled = false; }
+    void Disable() { enabled = false; }
 };
 
 // Honestly, I don't understand all the details in there, this comes from Andrei Alexandrescu.

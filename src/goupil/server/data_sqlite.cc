@@ -28,7 +28,7 @@ bool SQLiteConnection::Open(const char *filename, unsigned int flags)
         return false;
     }
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

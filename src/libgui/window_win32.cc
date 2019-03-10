@@ -227,7 +227,7 @@ static HWND CreateMainWindow(const char *application_name)
     }
     DEFER_N(gl_wnd_guard) { DestroyWindow(main_wnd); };
 
-    gl_wnd_guard.disable();
+    gl_wnd_guard.Disable();
     return main_wnd;
 }
 static void DeleteMainWindow(HWND wnd)
@@ -384,7 +384,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
     }
     DEFER_N(gl_guard) { wglDeleteContext(gl); };
 
-    gl_guard.disable();
+    gl_guard.Disable();
     return gl;
 }
 static void DeleteGLContext(HGLRC gl)
@@ -435,7 +435,7 @@ bool gui_Window::Init(const char *application_name)
     if (!ogl_InitFunctions([](const char *name) { return (void *)wglGetProcAddress(name); }))
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 

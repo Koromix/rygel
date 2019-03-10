@@ -112,7 +112,7 @@ static bool ResolveFileSet(const FileSet &file_set,
         return ignore;
     }) - out_filenames->begin());
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -266,7 +266,7 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
     if (ini.error || !valid)
         return false;
 
-    out_guard.disable();
+    out_guard.Disable();
     return true;
 }
 
@@ -445,7 +445,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
     DebugAssert(appended);
 
-    out_guard.disable();
+    out_guard.Disable();
     return target;
 }
 
