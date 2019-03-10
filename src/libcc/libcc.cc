@@ -2890,9 +2890,10 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
                 return LineType::Exit;
             }
 
-            error_guard.Disable();
             current_section.RemoveFrom(0);
             current_section.Append(section);
+
+            error_guard.Disable();
             return LineType::Section;
         } else {
             Span<char> value;
@@ -2909,18 +2910,20 @@ IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
             value = TrimStr(value);
             *value.end() = 0;
 
-            error_guard.Disable();
             out_prop->section = current_section;
             out_prop->key = key;
             out_prop->value = value;
+
+            error_guard.Disable();
             return LineType::KeyValue;
         }
     }
     if (reader.error)
         return LineType::Exit;
 
-    error_guard.Disable();
     eof = true;
+
+    error_guard.Disable();
     return LineType::Exit;
 }
 
