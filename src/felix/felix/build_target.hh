@@ -14,6 +14,12 @@ enum class TargetType {
     Library
 };
 
+enum class PackLinkType {
+    Static,
+    Module,
+    ModuleIfDebug
+};
+
 struct Target {
     const char *name;
     TargetType type;
@@ -29,9 +35,11 @@ struct Target {
     const char *cxx_pch_filename;
     HeapArray<ObjectInfo> objects;
 
-    const char *pack_filename;
     HeapArray<const char *> pack_filenames;
     const char *pack_options;
+    const char *pack_obj_filename;
+    PackLinkType pack_link_type;
+    const char *pack_module_filename; // PackLinkMode = Module or ModuleIfDebug
 
     const char *dest_filename;
 

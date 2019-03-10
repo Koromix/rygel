@@ -24,6 +24,7 @@ struct TargetConfig {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
+    PackLinkType pack_link_type;
     HeapArray<const char *> pack_directories;
     HeapArray<const char *> pack_directories_rec;
     HeapArray<const char *> pack_filenames;
@@ -112,6 +113,7 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                 valid = false;
             }
             target_config.type = TargetType::Executable;
+            target_config.pack_link_type = PackLinkType::Static;
 
             bool type_specified = false;
             do {
@@ -185,6 +187,17 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
 #ifndef _WIN32
                     AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
+                } else if (prop.key == "AssetLink") {
+                    if (prop.value == "Static") {
+                        target_config.pack_link_type = PackLinkType::Static;
+                    } else if (prop.value == "Module") {
+                        target_config.pack_link_type = PackLinkType::Module;
+                    } else if (prop.value == "ModuleIfDebug") {
+                        target_config.pack_link_type = PackLinkType::ModuleIfDebug;
+                    } else {
+                        LogError("Unknown asset link mode '%1'", prop.value);
+                        valid = false;
+                    }
                 } else if (prop.key == "AssetDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &set.str_alloc, &target_config.pack_directories);
@@ -261,6 +274,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->type = target_config->type;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->include_directories, target_config->include_directories);
+    target->pack_link_type = target_config->pack_link_type;
     target->pack_options = target_config->pack_options;
 
     // Gather direct target objects
@@ -394,8 +408,13 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
     target->pack_filenames.Append(target_config->pack_filenames);
     if (target->pack_filenames.len) {
-        target->pack_filename = Fmt(&set.str_alloc, "%1%/assets%/%2_assets.o",
-                                    output_directory, target->name).ptr;
+        target->pack_obj_filename = Fmt(&set.str_alloc, "%1%/assets%/%2_assets.o",
+                                        output_directory, target->name).ptr;
+#ifdef _WIN32
+        target->pack_module_filename = Fmt(&set.str_alloc, "%1%/%2_assets.dll", output_directory, target->name).ptr;
+#else
+        target->pack_module_filename = Fmt(&set.str_alloc, "%1%/%2_assets.so", output_directory, target->name).ptr;
+#endif
     }
 
     // Final target output
