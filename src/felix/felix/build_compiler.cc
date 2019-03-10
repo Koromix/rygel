@@ -95,6 +95,23 @@ static bool AppendGccLinkArguments(Span<const char *const> obj_filenames, BuildM
     return true;
 }
 
+static void AppendPackCommandLine(Span<const char *const> pack_filenames, const char *pack_options,
+                                  HeapArray<char> *out_buf)
+{
+#ifdef _WIN32
+    Fmt(out_buf, "cmd /c \"%1\" pack", GetApplicationExecutable());
+#else
+    Fmt(out_buf, "\"%1\" pack", GetApplicationExecutable());
+#endif
+
+    if (pack_options) {
+        Fmt(out_buf, " %1", pack_options);
+    }
+    for (const char *pack_filename: pack_filenames) {
+        Fmt(out_buf, " %1", pack_filename);
+    }
+}
+
 Compiler ClangCompiler = {
     "Clang",
 #ifdef _WIN32
@@ -132,6 +149,18 @@ Compiler ClangCompiler = {
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
+
+        return (const char *)buf.Leak().ptr;
+    },
+
+    // BuildPackCommand
+    [](Span<const char *const> pack_filenames, const char *pack_options,
+       const char *dest_filename, Allocator *alloc) {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        AppendPackCommandLine(pack_filenames, pack_options, &buf);
+        Fmt(&buf, " | clang -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
     },
@@ -183,6 +212,18 @@ Compiler GnuCompiler = {
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
                                  include_directories, dest_filename, deps_filename, &buf);
+
+        return (const char *)buf.Leak().ptr;
+    },
+
+    // BuildPackCommand
+    [](Span<const char *const> pack_filenames, const char *pack_options,
+       const char *dest_filename, Allocator *alloc) {
+        HeapArray<char> buf;
+        buf.allocator = alloc;
+
+        AppendPackCommandLine(pack_filenames, pack_options, &buf);
+        Fmt(&buf, " | gcc -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
     },

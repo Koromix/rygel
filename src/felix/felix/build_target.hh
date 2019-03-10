@@ -27,8 +27,12 @@ struct Target {
     HeapArray<ObjectInfo> pch_objects;
     const char *c_pch_filename;
     const char *cxx_pch_filename;
-
     HeapArray<ObjectInfo> objects;
+
+    const char *pack_filename;
+    HeapArray<const char *> pack_filenames;
+    const char *pack_options;
+
     const char *dest_filename;
 
     HASH_TABLE_HANDLER(Target, name);
