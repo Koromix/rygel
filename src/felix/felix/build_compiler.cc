@@ -185,9 +185,9 @@ Compiler ClangCompiler = {
         buf.allocator = alloc;
 
 #ifdef _WIN32
-        Fmt(&buf, "clang++ -fuse-ld=lld");
+        Fmt(&buf, "clang++ -g -fuse-ld=lld");
 #else
-        Fmt(&buf, "clang++");
+        Fmt(&buf, "clang++ -g");
 #endif
         if (!AppendGccLinkArguments(obj_filenames, build_mode, link_type, libraries,
                                     dest_filename, &buf))
@@ -253,7 +253,7 @@ Compiler GnuCompiler = {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
-        Fmt(&buf, "g++");
+        Fmt(&buf, "g++ -g");
 #ifdef _WIN32
         if (build_mode != BuildMode::Debug) {
             // Force static linking of libgcc, libstdc++ and winpthread
