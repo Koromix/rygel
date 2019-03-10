@@ -24,6 +24,11 @@ struct TargetConfig {
     HeapArray<const char *> include_directories;
     HeapArray<const char *> libraries;
 
+    HeapArray<const char *> pack_directories;
+    HeapArray<const char *> pack_directories_rec;
+    HeapArray<const char *> pack_filenames;
+    const char *pack_options;
+
     HASH_TABLE_HANDLER(TargetConfig, name);
 };
 
@@ -180,6 +185,17 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
 #ifndef _WIN32
                     AppendListValues(prop.value, &set.str_alloc, &target_config.libraries);
 #endif
+                } else if (prop.key == "AssetDirectory") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_directories);
+                } else if (prop.key == "AssetDirectoryRec") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_directories_rec);
+                } else if (prop.key == "AssetFile") {
+                    valid &= AppendNormalizedPath(prop.value,
+                                                  &set.str_alloc, &target_config.pack_filenames);
+                } else if (prop.key == "AssetOptions") {
+                    target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -240,10 +256,12 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Heavy type, so create it directly in HeapArray
     Target *target = set.targets.AppendDefault();
 
+    // Copy simple values
     target->name = target_config->name;
     target->type = target_config->type;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->include_directories, target_config->include_directories);
+    target->pack_options = target_config->pack_options;
 
     // Gather direct target objects
     {
@@ -363,6 +381,24 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         target->pch_objects.Append(obj);
     }
 
+    // Gather asset filenames
+    for (const char *pack_directory: target_config->pack_directories) {
+        if (!EnumerateFiles(pack_directory, nullptr, 0, 1024,
+                            &set.str_alloc, &target->pack_filenames))
+            return nullptr;
+    }
+    for (const char *pack_directory: target_config->pack_directories_rec) {
+        if (!EnumerateFiles(pack_directory, nullptr, -1, 1024,
+                            &set.str_alloc, &target->pack_filenames))
+            return nullptr;
+    }
+    target->pack_filenames.Append(target_config->pack_filenames);
+    if (target->pack_filenames.len) {
+        target->pack_filename = Fmt(&set.str_alloc, "%1%/assets%/%2_assets.o",
+                                    output_directory, target->name).ptr;
+    }
+
+    // Final target output
     if (target->type == TargetType::Executable) {
 #ifdef _WIN32
         target->dest_filename = Fmt(&set.str_alloc, "%1%/%2.exe", output_directory, target->name).ptr;

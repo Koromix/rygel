@@ -46,6 +46,8 @@ struct Compiler {
                                       Span<const char *const> include_directories,
                                       const char *dest_filename, const char *deps_filename,
                                       Allocator *alloc);
+    const char *(*BuildPackCommand)(Span<const char *const> pack_filenames, const char *pack_options,
+                                    const char *dest_filename, Allocator *alloc);
     const char *(*BuildLinkCommand)(Span<const char *const> obj_filenames, BuildMode build_mode,
                                     Span<const char *const> libraries,
                                     const char *dest_filename, Allocator *alloc);

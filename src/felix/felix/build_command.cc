@@ -70,6 +70,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         link_commands.RemoveFrom(start_link_len);
     };
 
+    HeapArray<const char *> obj_filenames;
+
     // Precompiled headers
     for (const ObjectInfo &obj: target.pch_objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
@@ -81,6 +83,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
+
             cmd.cmd = compiler->BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
                                                    target.definitions, target.include_directories,
                                                    nullptr, deps_filename, &str_alloc);
@@ -92,7 +95,6 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
     }
 
     // Object commands
-    HeapArray<const char *> obj_filenames;
     for (const ObjectInfo &obj: target.objects) {
         const char *deps_filename = Fmt(&temp_alloc, "%1.d", obj.dest_filename).ptr;
 
@@ -112,6 +114,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
+
             cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
                                                    target.definitions, target.include_directories,
                                                    obj.dest_filename, deps_filename, &str_alloc);
@@ -127,6 +130,30 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         obj_filenames.Append(obj.dest_filename);
     }
 
+    // Assets
+    if (target.pack_filename) {
+        if (!IsFileUpToDate(target.pack_filename, target.pack_filenames)) {
+            BuildCommand cmd = {};
+
+            cmd.text = Fmt(&str_alloc, "Pack assets for %1", target.name).ptr;
+            cmd.dest_filename = DuplicateString(target.pack_filename, &str_alloc).ptr;
+            if (!EnsureDirectoryExists(target.pack_filename))
+                return false;
+
+            cmd.cmd = compiler->BuildPackCommand(target.pack_filenames, target.pack_options,
+                                                 target.pack_filename, &str_alloc);
+            if (!cmd.cmd)
+                return false;
+
+            obj_commands.Append(cmd);
+
+            // Pretend object file does not exist to force link step
+            mtime_map.Set(target.pack_filename, -1);
+        }
+
+        obj_filenames.Append(target.pack_filename);
+    }
+
     // Link commands
     if (target.type == TargetType::Executable &&
             !IsFileUpToDate(target.dest_filename, obj_filenames)) {
@@ -135,6 +162,7 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         cmd.text = Fmt(&str_alloc, "Link %1",
                        SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
         cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
+
         cmd.cmd = compiler->BuildLinkCommand(obj_filenames, build_mode, target.libraries,
                                              target.dest_filename, &str_alloc);
         if (!cmd.cmd)
