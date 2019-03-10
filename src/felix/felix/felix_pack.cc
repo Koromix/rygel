@@ -227,9 +227,20 @@ Available compression types:)");
             }
         }
 
-        opt.ConsumeNonOptions(&filenames);
+        const char *filename;
+        while ((filename = opt.ConsumeNonOption())) {
+            char *filename2 = NormalizePath(filename, &temp_alloc).ptr;
+#ifdef _WIN32
+            for (Size i = 0; filename2[i]; i++) {
+                filename2[i] = (filename2[i] == '\\' ? '/' : filename2[i]);
+            }
+#endif
+
+            filenames.Append(filename2);
+        }
     }
 
+    // Load merge rules
     HeapArray<MergeRule> merge_rules;
     if (merge_file && !LoadMergeRules(merge_file, &temp_alloc, &merge_rules))
         return 1;
