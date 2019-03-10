@@ -1619,7 +1619,7 @@ Span<const char> NormalizePath(Span<const char> path, Span<const char> root_dire
                                Allocator *alloc)
 {
     if (!path.len && !root_directory.len)
-        return {};
+        return Fmt(alloc, "");
 
     HeapArray<char> buf;
     buf.allocator = alloc;
@@ -1659,9 +1659,17 @@ Span<const char> NormalizePath(Span<const char> path, Span<const char> root_dire
     }
     AppendNormalizedPath(path);
 
-    if (buf.len > 1) {
-        buf[buf.len - 1] = 0;
+    if (!buf.len) {
+        buf.Append('.');
+        buf.Append(0);
+    } else if (buf.len == 1 && IsPathSeparator(buf[0])) {
+        // Root '/', keep as-is
+        buf.Append(0);
+    } else {
+        // Strip last separator
+        buf.ptr[--buf.len] = 0;
     }
+
     return buf.Leak();
 }
 
