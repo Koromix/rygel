@@ -7,6 +7,56 @@
 #include "build_compiler.hh"
 #include "build_target.hh"
 
+struct Toolchain {
+    const Compiler *compiler;
+    BuildMode build_mode;
+
+    operator FmtArg() const
+    {
+        FmtArg arg = {};
+        arg.type = FmtArg::Type::Buffer;
+        Fmt(arg.value.buf, "%1_%2", compiler->name, BuildModeNames[(int)build_mode]);
+        return arg;
+    }
+};
+
+static bool ParseToolchainSpec(Span<const char> str, Toolchain *out_toolchain)
+{
+    Span<const char> build_mode_str;
+    Span<const char> compiler_str = SplitStr(str, '_', &build_mode_str);
+
+    Toolchain toolchain = *out_toolchain;
+
+    bool valid = true;
+    if (compiler_str.len) {
+        const Compiler *const *ptr = FindIf(Compilers,
+                                            [&](const Compiler *compiler) { return TestStr(compiler->name, compiler_str); });
+
+        if (ptr) {
+            toolchain.compiler = *ptr;
+        } else {
+            LogError("Unknown compiler '%1'", compiler_str);
+            valid = false;
+        }
+    }
+    if (build_mode_str.ptr > compiler_str.end()) {
+        const char *const *name = FindIf(BuildModeNames,
+                                         [&](const char *name) { return TestStr(name, build_mode_str); });
+
+        if (name) {
+            toolchain.build_mode = (BuildMode)(name - BuildModeNames);
+        } else {
+            LogError("Unknown build mode '%1'", build_mode_str);
+            valid = false;
+        }
+    }
+    if (!valid)
+        return false;
+
+    *out_toolchain = toolchain;
+    return true;
+}
+
 static int RunTarget(const Target &target, Span<const char *const> arguments, bool verbose)
 {
     if (target.type != TargetType::Executable) {
@@ -38,7 +88,20 @@ int RunBuild(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    // Options
+    HeapArray<const char *> target_names;
+    const char *config_filename = nullptr;
+    const char *output_directory = nullptr;
+    Toolchain toolchain = {Compilers[0], BuildMode::Debug};
+    bool disable_pch = false;
+    bool verbose = false;
+    bool run = false;
+    Span<const char *> run_arguments = {};
+
+    // NOTE: This overrules LIBCC_THREADS if it exists
+    Async::SetThreadCount(Async::GetThreadCount() + 1);
+
+    static const auto PrintUsage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix build [options] [target...]
        felix build [options] target --run [arguments...]
@@ -47,12 +110,10 @@ Options:
     -C, --config <filename>      Set configuration filename
                                  (default: FelixBuild.ini)
     -O, --output <directory>     Set output directory
-                                 (default: bin/<compiler>_<mode>)
+                                 (default: bin/<toolchain>)
 
-    -c, --compiler <compiler>    Set compiler, see below
+    -t, --toolchain <toolcahin>  Set toolchain, see below
                                  (default: %1)
-    -m, --mode <mode>            Set build mode, see below
-                                 (default: %2)
        --disable_pch             Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
@@ -63,29 +124,18 @@ Options:
         --run                    Run target after successful build
                                  (all remaining arguments are passed as-is)
 
-Available compilers:)", Compilers[0]->name, BuildModeNames[0]);
+Available toolchains:)", toolchain);
         for (const Compiler *compiler: Compilers) {
-            PrintLn(fp, "    %1", compiler->name);
+            for (const char *mode_name: BuildModeNames) {
+                PrintLn(fp, "    %1_%2", compiler->name, mode_name);
+            }
         }
         PrintLn(fp, R"(
-Available build modes:)");
-        for (const char *mode_name: BuildModeNames) {
-            PrintLn(fp, "    %1", mode_name);
-        }
+You can omit either part of the toolchain string (e.g. 'Clang' and
+'_Fast' are both valid).)");
     };
 
-    // NOTE: This overrules LIBCC_THREADS if it exists
-    Async::SetThreadCount(Async::GetThreadCount() + 1);
-
-    HeapArray<const char *> target_names;
-    const char *config_filename = nullptr;
-    const char *output_directory = nullptr;
-    const Compiler *compiler = Compilers[0];
-    BuildMode build_mode = (BuildMode)0;
-    bool disable_pch = false;
-    bool verbose = false;
-    bool run = false;
-    Span<const char *> run_arguments = {};
+    // Parse options
     {
         OptionParser opt(arguments);
 
@@ -104,24 +154,9 @@ Available build modes:)");
                 config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output", OptionType::Value)) {
                 output_directory = opt.current_value;
-            } else if (opt.Test("-c", "--compiler", OptionType::Value)) {
-                const Compiler *const *ptr = FindIf(Compilers,
-                                                     [&](const Compiler *compiler) { return TestStr(compiler->name, opt.current_value); });
-                if (!ptr) {
-                    LogError("Unknown compiler '%1'", opt.current_value);
+            } else if (opt.Test("-t", "--toolchain", OptionType::Value)) {
+                if (!ParseToolchainSpec(opt.current_value, &toolchain))
                     return 1;
-                }
-
-                compiler = *ptr;
-            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
-                const char *const *name = FindIf(BuildModeNames,
-                                                 [&](const char *name) { return TestStr(name, opt.current_value); });
-                if (!name) {
-                    LogError("Unknown build mode '%1'", opt.current_value);
-                    return 1;
-                }
-
-                build_mode = (BuildMode)(name - BuildModeNames);
             } else if (opt.Test("--disable_pch")) {
                 disable_pch = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
@@ -186,8 +221,7 @@ Available build modes:)");
     if (output_directory) {
         output_directory = NormalizePath(output_directory, start_directory, &temp_alloc).ptr;
     } else {
-        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2_%3", GetWorkingDirectory(),
-                               compiler->name, BuildModeNames[(int)build_mode]).ptr;
+        output_directory = Fmt(&temp_alloc, "%1%/bin%/%2", GetWorkingDirectory(), toolchain).ptr;
     }
 
     // Load configuration file
@@ -247,14 +281,15 @@ Available build modes:)");
     LogInfo("Output directory: '%1'", output_directory);
 
     // Disable PCH?
-    if (!disable_pch && !compiler->Supports(CompilerFlag::PCH)) {
+    if (!disable_pch && !toolchain.compiler->Supports(CompilerFlag::PCH)) {
         bool using_pch = std::any_of(enabled_targets.begin(), enabled_targets.end(),
                                    [](const Target *target) {
             return target->c_pch_filename || target->cxx_pch_filename;
         });
 
         if (using_pch) {
-            LogError("PCH does not work correctly with %1 compiler (ignoring)", compiler->name);
+            LogError("PCH does not work correctly with %1 compiler (ignoring)",
+                     toolchain.compiler->name);
             disable_pch = true;
         }
     }
@@ -267,15 +302,16 @@ Available build modes:)");
     }
 
     // LTO?
-    if (build_mode == BuildMode::LTO && !compiler->Supports(CompilerFlag::LTO)) {
-        LogError("LTO does not work correctly with %1 compiler", compiler->name);
+    if (toolchain.build_mode == BuildMode::LTO &&
+            !toolchain.compiler->Supports(CompilerFlag::LTO)) {
+        LogError("LTO does not work correctly with %1 compiler", toolchain.compiler->name);
         return 1;
     }
 
     // Create build commands
     BuildSet build_set;
     {
-        BuildSetBuilder build_set_builder(compiler, build_mode);
+        BuildSetBuilder build_set_builder(toolchain.compiler, toolchain.build_mode);
 
         for (const Target *target: enabled_targets) {
             if (!build_set_builder.AppendTargetCommands(*target))
