@@ -99,7 +99,7 @@ int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
 
     // NOTE: This overrules LIBCC_THREADS if it exists
-    Async::SetThreadCount(Async::GetThreadCount() + 1);
+    Async::SetWorkerCount(Async::GetWorkerCount() + 1);
 
     static const auto PrintUsage = [=](FILE *fp) {
         PrintLn(fp,
@@ -160,15 +160,15 @@ You can omit either part of the toolchain string (e.g. 'Clang' and
             } else if (opt.Test("--disable_pch")) {
                 disable_pch = true;
             } else if (opt.Test("-j", "--jobs", OptionType::Value)) {
-                int max_threads;
-                if (!ParseDec(opt.current_value, &max_threads))
+                int jobs;
+                if (!ParseDec(opt.current_value, &jobs))
                     return 1;
-                if (max_threads < 1) {
+                if (jobs < 1) {
                     LogError("Jobs count cannot be < 1");
                     return 1;
                 }
 
-                Async::SetThreadCount(max_threads);
+                Async::SetWorkerCount(jobs);
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
             } else if (opt.Test("--run")) {

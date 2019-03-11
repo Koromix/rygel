@@ -3210,11 +3210,9 @@ class Async {
     std::atomic_int success {1};
     std::atomic_int remaining_tasks {0};
 
-    int try_worker_idx = 0;
-
 public:
-    static void SetThreadCount(int max_threads);
-    static int GetThreadCount();
+    static void SetWorkerCount(int max_threads);
+    static int GetWorkerCount();
 
     Async();
     ~Async();
@@ -3227,11 +3225,7 @@ public:
 
     static bool IsTaskRunning();
 
-private:
-    void RunTask(struct Task *task);
-
-    static void RunWorker(struct ThreadPool *thread_pool, struct WorkerThread *worker);
-    static void StealAndRunTasks();
+    friend class AsyncPool;
 };
 
 // ------------------------------------------------------------------------
