@@ -1933,10 +1933,31 @@ Async::~Async()
 
 void Async::AddTask(const std::function<bool()> &func)
 {
-    g_worker_thread->mutex.lock();
-    g_worker_thread->tasks.Append({func, this});
-    remaining_tasks++;
-    g_worker_thread->mutex.unlock();
+    // If we are the main thread, and haven't reached Sync() yet, try to assign
+    // task to a "random" worker thread first.
+    bool assigned = false;
+    if (!g_task_running && g_thread_pool->workers.len > 1) {
+        if (++try_worker_idx >= g_thread_pool->workers.len) {
+            try_worker_idx = 1;
+        }
+
+        WorkerThread *worker = &g_thread_pool->workers[try_worker_idx];
+
+        if (worker->mutex.try_lock()) {
+            worker->tasks.Append({func, this});
+            remaining_tasks++;
+            worker->mutex.unlock();
+
+            assigned = true;
+        }
+    }
+
+    if (!assigned) {
+        g_worker_thread->mutex.lock();
+        g_worker_thread->tasks.Append({func, this});
+        remaining_tasks++;
+        g_worker_thread->mutex.unlock();
+    }
 
     if (!g_thread_pool->pending_tasks++) {
         g_thread_pool->mutex.lock();
