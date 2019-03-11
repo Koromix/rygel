@@ -135,7 +135,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and
 '_Fast' are both valid).)");
     };
 
-    // Parse options
+    // Parse arguments
     {
         OptionParser opt(arguments);
 

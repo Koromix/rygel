@@ -163,24 +163,34 @@ int RunPack(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
-    static const auto PrintUsage = [](FILE *fp) {
+    // Options
+    GeneratorType generator = GeneratorType::C;
+    const char *output_path = nullptr;
+    int strip_count = INT_MAX;
+    CompressionType compression_type = CompressionType::None;
+    const char *merge_file = nullptr;
+    bool source_maps = false;
+    HeapArray<const char *> filenames;
+
+    static const auto PrintUsage = [=](FILE *fp) {
         PrintLn(fp,
 R"(Usage: felix pack <filename> ...
 
 Options:
     -g, --generator <gen>        Set output file generator
-                                 (default: C++)
+                                 (default: %1)
     -O, --output_file <file>     Redirect output to file or directory
 
     -s, --strip <count>          Strip first count directory components, or 'All'
                                  (default: All)
     -c, --compress <type>        Compress data, see below for available types
-                                 (default: %1)
+                                 (default: %2)
 
     -M, --merge_file <file>      Load merge rules from file
         --source_map             Generate source maps when applicable
 
-Available generators:)", CompressionTypeNames[0]);
+Available generators:)", GeneratorTypeNames[(int)generator],
+                         CompressionTypeNames[(int)compression_type]);
         for (const char *gen: GeneratorTypeNames) {
             PrintLn(fp, "    %1", gen);
         }
@@ -191,13 +201,7 @@ Available compression types:)");
         }
     };
 
-    GeneratorType generator = GeneratorType::C;
-    const char *output_path = nullptr;
-    int strip_count = INT_MAX;
-    CompressionType compression_type = CompressionType::None;
-    const char *merge_file = nullptr;
-    bool source_maps = false;
-    HeapArray<const char *> filenames;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
