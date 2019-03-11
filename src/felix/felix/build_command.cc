@@ -286,7 +286,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             // The lock is needed to garantuee ordering of progress counter. Atomics
             // do not help much because the LogInfo() calls need to be protected too.
             {
-                std::lock_guard lock(log_mutex);
+                std::lock_guard<std::mutex> lock(log_mutex);
 
                 int progress = 100 * progress_counter++ / commands.len;
                 LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd.cmd : cmd.text);
