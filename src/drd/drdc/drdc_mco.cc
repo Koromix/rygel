@@ -303,6 +303,17 @@ static void ExportTests(Span<const mco_Result> results, Span<const mco_Pricing> 
 
 int RunMcoClassify(Span<const char *> arguments)
 {
+    // Options
+    unsigned int classifier_flags = 0;
+    int dispense_mode = -1;
+    bool apply_coefficient = false;
+    const char *filter = nullptr;
+    const char *filter_path = nullptr;
+    int verbosity = 0;
+    unsigned int test_flags = 0;
+    int torture = 0;
+    HeapArray<const char *> filenames;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_classify [options] stay_file ...
 )");
@@ -337,15 +348,7 @@ Test options:)");
         }
     };
 
-    unsigned int classifier_flags = 0;
-    int dispense_mode = -1;
-    bool apply_coefficient = false;
-    const char *filter = nullptr;
-    const char *filter_path = nullptr;
-    int verbosity = 0;
-    unsigned int test_flags = 0;
-    int torture = 0;
-    HeapArray<const char *> filenames;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
@@ -567,6 +570,10 @@ Test options:)");
 
 int RunMcoDump(Span<const char *> arguments)
 {
+    // Options
+    bool dump = false;
+    HeapArray<const char *> filenames;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_dump [options] [filename] ...
 )");
@@ -576,8 +583,7 @@ Dump options:
     -d, --dump                   Dump content of (readable) tables)");
     };
 
-    bool dump = false;
-    HeapArray<const char *> filenames;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
@@ -609,6 +615,10 @@ Dump options:
 
 int RunMcoList(Span<const char *> arguments)
 {
+    // Options
+    Date index_date = {};
+    HeapArray<const char *> spec_strings;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_list [options] list_name ...
 )");
@@ -619,8 +629,7 @@ List options:
                                  (default: most recent tables))");
     };
 
-    Date index_date = {};
-    HeapArray<const char *> spec_strings;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
@@ -698,6 +707,9 @@ List options:
 
 int RunMcoMap(Span<const char *> arguments)
 {
+    // Options
+    Date index_date = {};
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_map [options]
 )");
@@ -708,7 +720,7 @@ Map options:
                                  (default: most recent tables))");
     };
 
-    Date index_date = {};
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
@@ -762,6 +774,10 @@ Map options:
 
 int RunMcoPack(Span<const char *> arguments)
 {
+    // Options
+    const char *dest_filename = nullptr;
+    HeapArray<const char *> filenames;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_pack [options] stay_file ... -O output_file
 )");
@@ -771,8 +787,7 @@ Pack options:
     -O, --output_file <file>     Set output file)");
     };
 
-    const char *dest_filename = nullptr;
-    HeapArray<const char *> filenames;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
@@ -818,14 +833,17 @@ Pack options:
 
 int RunMcoShow(Span<const char *> arguments)
 {
+    // Options
+    Date index_date = {};
+    HeapArray<const char *> names;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: drdc mco_show [options] name ...
 )");
         PrintLn(fp, CommonOptions);
     };
 
-    Date index_date = {};
-    HeapArray<const char *> names;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 

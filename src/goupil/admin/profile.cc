@@ -20,11 +20,14 @@ int RunCreateProfile(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
+    // Options
+    const char *profile_directory = nullptr;
+
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: goupil_admin create_profile [options] profile_directory)");
     };
 
-    const char *profile_directory = nullptr;
+    // Parse arguments
     {
         OptionParser opt(arguments);
 
