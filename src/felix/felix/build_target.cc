@@ -143,6 +143,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
             target_config.type = TargetType::Executable;
             target_config.pack_link_type = PackLinkType::Static;
 
+            bool restricted_platforms = false;
+            bool supported_platform = false;
             bool type_specified = false;
             do {
                 if (prop.key == "Type") {
@@ -156,6 +158,27 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     }
 
                     type_specified = true;
+                } else if (prop.key == "Platforms") {
+                    while (prop.value.len) {
+                        Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
+
+                        if (part.len) {
+                            if (part == "Win32") {
+#ifdef _WIN32
+                                supported_platform = true;
+#endif
+                            } else if (part == "POSIX") {
+#ifndef _WIN32
+                                supported_platform = true;
+#endif
+                            } else {
+                                LogError("Unknown platform '%1'", part);
+                                valid = false;
+                            }
+                        }
+                    }
+
+                    restricted_platforms = true;
                 } else if (prop.key == "SourceDirectory") {
                     valid &= AppendNormalizedPath(prop.value,
                                                   &set.str_alloc, &target_config.src_file_set.directories);
@@ -258,7 +281,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                 valid = false;
             }
 
-            if (valid && !CreateTarget(&target_config)) {
+            supported_platform |= !restricted_platforms;
+            if (valid && supported_platform && !CreateTarget(&target_config)) {
                 valid = false;
             }
         }
