@@ -121,11 +121,7 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, const 
 
 Compiler ClangCompiler = {
     "Clang",
-#ifdef _WIN32
-    (int)CompilerFlag::PCH,
-#else
     (int)CompilerFlag::PCH | (int)CompilerFlag::LTO,
-#endif
 
     // BuildObjectCommand
     [](const char *src_filename, SourceType src_type, BuildMode build_mode, const char *pch_filename,
