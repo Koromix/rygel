@@ -206,8 +206,7 @@ Compiler GnuCompiler = {
        Span<const char *const> definitions, Span<const char *const> include_directories,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
-        static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
-                                         "-Wno-unknown-warning-option";
+        static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
 #else
         static const char *const flags = "-pthread -Wall";
 #endif
