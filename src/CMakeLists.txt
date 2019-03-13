@@ -41,8 +41,7 @@ set(FELIX_SRC
     felix/felix/felix.cc
     felix/felix/felix_build.cc
     felix/felix/felix_pack.cc
-    felix/felix/pack_generator_C.cc
-    felix/felix/pack_generator_files.cc
+    felix/felix/pack_generator.cc
     felix/felix/pack_generator.hh
     felix/felix/pack_output.cc
     felix/felix/pack_output.hh
