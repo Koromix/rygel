@@ -131,8 +131,7 @@ Available toolchains:)", toolchain);
             }
         }
         PrintLn(fp, R"(
-You can omit either part of the toolchain string (e.g. 'Clang' and
-'_Fast' are both valid).)");
+You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are both valid).)");
     };
 
     // Parse arguments
