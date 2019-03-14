@@ -1,5 +1,6 @@
 bin/
 *.o
+*.obj
 *.exe
 *.dll
 *.so
@@ -8,3 +9,5 @@ CMakeLists.txt.user*
 .Rproj.user
 RcppExports.*
 .Rhistory
+.Rbuildignore
+*.sublime-*
