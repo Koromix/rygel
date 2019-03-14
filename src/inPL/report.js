@@ -102,7 +102,9 @@ let report = (function() {
                         parser: function(tag) {
                             tag = tag.replace(/[’‘]/g, "'");
                             return { get: (it) => eval(tag) };
-                        }
+                        },
+                        paragraphLoop: true,
+                        linebreaks: true
                     });
                     doc.setData(row);
                     doc.render();
