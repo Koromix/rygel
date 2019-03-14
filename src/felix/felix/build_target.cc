@@ -16,6 +16,7 @@ struct FileSet {
 struct TargetConfig {
     const char *name;
     TargetType type;
+    bool enable_by_default;
 
     FileSet src_file_set;
     const char *c_pch_filename;
@@ -146,6 +147,7 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
             bool restricted_platforms = false;
             bool supported_platform = false;
             bool type_specified = false;
+            bool enable_by_default_specified = false;
             do {
                 if (prop.key == "Type") {
                     if (prop.value == "Executable") {
@@ -158,6 +160,17 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     }
 
                     type_specified = true;
+                } else if (prop.key == "EnableByDefault") {
+                    if (prop.value == "1" || prop.value == "On" || prop.value == "Y") {
+                        target_config.enable_by_default = true;
+                    } else if (prop.value == "0" || prop.value == "Off" || prop.value == "N") {
+                        target_config.enable_by_default = false;
+                    } else {
+                        LogError("Invalid EnableByDefault value '%1'", prop.value);
+                        valid = false;
+                    }
+
+                    enable_by_default_specified = true;
                 } else if (prop.key == "Platforms") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
@@ -280,6 +293,9 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                 LogError("Type attribute is missing for target '%1'", target_config.name);
                 valid = false;
             }
+            if (!enable_by_default_specified) {
+                target_config.enable_by_default = (target_config.type == TargetType::Executable);
+            }
 
             supported_platform |= !restricted_platforms;
             if (valid && supported_platform && !CreateTarget(&target_config)) {
@@ -334,6 +350,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     // Copy simple values
     target->name = target_config->name;
     target->type = target_config->type;
+    target->enable_by_default = target_config->enable_by_default;
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->include_directories, target_config->include_directories);
     target->pack_link_type = target_config->pack_link_type;

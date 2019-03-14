@@ -231,7 +231,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     // Default targets
     if (!target_names.len) {
         for (const Target &target: target_set.targets) {
-            if (target.type == TargetType::Executable) {
+            if (target.enable_by_default) {
                 target_names.Append(target.name);
             }
         }

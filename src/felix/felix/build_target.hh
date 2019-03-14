@@ -23,6 +23,7 @@ enum class PackLinkType {
 struct Target {
     const char *name;
     TargetType type;
+    bool enable_by_default;
 
     HeapArray<const char *> imports;
 
