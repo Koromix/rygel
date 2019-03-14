@@ -33,8 +33,13 @@ VARSETS <- c(
 )
 
 VARIABLES_CALCULEES <- tribble(
-    ~varset, ~field_name,
-    'consultant', 'age'
+    ~varset, ~field_name, ~field_type,
+    'consultant', 'age', 'integer',
+    'constantes', 'imc', 'decimal',
+    'audition', 'perte_tonale_gauche', 'decimal',
+    'audition', 'perte_tonale_droite', 'decimal',
+    'diet', 'variation_ponderale', 'decimal',
+    'respi', 'vems_cvf', 'decimal'
 )
 
 read_variables <- function(filename, select, encoding = 'UTF-8') {
