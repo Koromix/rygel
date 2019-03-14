@@ -66,6 +66,32 @@ let report = (function() {
                     return null;
                 }
             }
+            function test(data, test_name)
+            {
+                let result;
+                switch (test_name) {
+                    case 'diet_diversite': { result = nutrition.screenDiversity(data); } break;
+                    case 'diet_proteines': { result = nutrition.screenProteinIntake(data); } break;
+                    case 'diet_calcium': { result = nutrition.screenCalciumIntake(data); } break;
+                    case 'diet_comportement': { result = nutrition.screenBehavior(data); } break;
+
+                    case 'ems_mobilite': { result = ems.screenMobility(data); } break;
+                    case 'ems_force': { result = ems.screenStrength(data); } break;
+                    case 'ems_fractures': { result = ems.screenFractureRisk(data); } break;
+
+                    case 'neuropsy_efficience': { result = neuropsy.screenEfficiency(data); } break;
+                    case 'neuropsy_memoire': { result = neuropsy.screenMemory(data); } break;
+                    case 'neuropsy_execution': { result = neuropsy.screenExecution(data); } break;
+                    case 'neuropsy_attention': { result = neuropsy.screenAttention(data); } break;
+                    case 'neuropsy_cognition': { result = neuropsy.screenCognition(data); } break;
+                    case 'neuropsy_had': { result = neuropsy.screenDepressionAnxiety(data); } break;
+                    case 'neuropsy_sommeil': { result = neuropsy.screenSleep(data); } break;
+
+                    default: throw `Unknown test \'${test_name}\'`;
+                }
+
+                return ScreeningResult.label(result);
+            }
 
             reader.onload = function() {
                 let zip = new JSZip(reader.result);
