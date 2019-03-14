@@ -1,7 +1,7 @@
-diff --git a/lib/wren/src/include/wren.h b/lib/wren/src/include/wren.h
+diff --git a/vendor/wren/src/include/wren.h b/vendor/wren/src/include/wren.h
 index 0528f6f3..38957ccb 100644
---- a/lib/wren/src/include/wren.h
-+++ b/lib/wren/src/include/wren.h
+--- a/vendor/wren/src/include/wren.h
++++ b/vendor/wren/src/include/wren.h
 @@ -476,6 +476,10 @@ void wrenInsertInList(WrenVM* vm, int listSlot, int index, int elementSlot);
  void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
                       int slot);
@@ -13,10 +13,10 @@ index 0528f6f3..38957ccb 100644
  // Sets the current fiber to be aborted, and uses the value in [slot] as the
  // runtime error object.
  void wrenAbortFiber(WrenVM* vm, int slot);
-diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
 index 78e28ff6..03b24e55 100644
---- a/lib/wren/src/vm/wren_vm.c
-+++ b/lib/wren/src/vm/wren_vm.c
+--- a/vendor/wren/src/vm/wren_vm.c
++++ b/vendor/wren/src/vm/wren_vm.c
 @@ -1752,6 +1752,20 @@ void wrenGetVariable(WrenVM* vm, const char* module, const char* name,
    setSlot(vm, slot, moduleObj->variables.data[variableSlot]);
  }

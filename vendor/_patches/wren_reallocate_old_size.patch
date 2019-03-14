@@ -1,7 +1,7 @@
-diff --git a/lib/wren/src/include/wren.h b/lib/wren/src/include/wren.h
+diff --git a/vendor/wren/src/include/wren.h b/vendor/wren/src/include/wren.h
 index dbea3077..583bbd20 100644
---- a/lib/wren/src/include/wren.h
-+++ b/lib/wren/src/include/wren.h
+--- a/vendor/wren/src/include/wren.h
++++ b/vendor/wren/src/include/wren.h
 @@ -47,7 +47,7 @@ typedef struct WrenHandle WrenHandle;
  //
  // - To free memory, [memory] will be the memory to free and [newSize] will be
@@ -11,10 +11,10 @@ index dbea3077..583bbd20 100644
  
  // A function callable from Wren code, but implemented in C.
  typedef void (*WrenForeignMethodFn)(WrenVM* vm);
-diff --git a/lib/wren/src/vm/wren_value.c b/lib/wren/src/vm/wren_value.c
+diff --git a/vendor/wren/src/vm/wren_value.c b/vendor/wren/src/vm/wren_value.c
 index f856cd91..afa0c5b7 100644
---- a/lib/wren/src/vm/wren_value.c
-+++ b/lib/wren/src/vm/wren_value.c
+--- a/vendor/wren/src/vm/wren_value.c
++++ b/vendor/wren/src/vm/wren_value.c
 @@ -973,9 +973,11 @@ void wrenGrayObj(WrenVM* vm, Obj* obj)
    // more marks later.
    if (vm->grayCount >= vm->grayCapacity)
@@ -29,10 +29,10 @@ index f856cd91..afa0c5b7 100644
    }
  
    vm->gray[vm->grayCount++] = obj;
-diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
 index d1a7784b..0e0101e6 100644
---- a/lib/wren/src/vm/wren_vm.c
-+++ b/lib/wren/src/vm/wren_vm.c
+--- a/vendor/wren/src/vm/wren_vm.c
++++ b/vendor/wren/src/vm/wren_vm.c
 @@ -24,8 +24,10 @@
  // may return a non-NULL pointer which must not be dereferenced but nevertheless
  // should be freed. To prevent that, we avoid calling realloc() with a zero

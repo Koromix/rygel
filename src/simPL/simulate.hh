@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-#include "../../lib/pcg/pcg_basic.h"
+#include "../../vendor/pcg/pcg_basic.h"
 
 enum class Sex {
     Male,

@@ -1,7 +1,7 @@
-diff --git a/lib/libsodium/src/libsodium/include/sodium/private/common.h b/lib/libsodium/src/libsodium/include/sodium/private/common.h
+diff --git a/vendor/libsodium/src/libsodium/include/sodium/private/common.h b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 index 9a2f7fab..d2a9d934 100644
---- a/lib/libsodium/src/libsodium/include/sodium/private/common.h
-+++ b/lib/libsodium/src/libsodium/include/sodium/private/common.h
+--- a/vendor/libsodium/src/libsodium/include/sodium/private/common.h
++++ b/vendor/libsodium/src/libsodium/include/sodium/private/common.h
 @@ -10,12 +10,6 @@
  # warning Alternatively, use the "stable" branch in the git repository.
  #endif
@@ -84,10 +84,10 @@ index 9a2f7fab..d2a9d934 100644
  #endif
  
  #ifdef HAVE_LIBCTGRIND
-diff --git a/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c b/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
+diff --git a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
 index 87ad70e6..21b8afb4 100644
---- a/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
-+++ b/lib/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
+--- a/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
++++ b/vendor/libsodium/src/libsodium/randombytes/salsa20/randombytes_salsa20_random.c
 @@ -41,10 +41,6 @@
  #ifdef BLOCK_ON_DEV_RANDOM
  # include <poll.h>

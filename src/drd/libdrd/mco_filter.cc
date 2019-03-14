@@ -6,7 +6,7 @@
 #include "mco_filter.hh"
 #include "mco_pricing.hh"
 
-#include "../../../lib/wren/src/include/wren.hpp"
+#include "../../../vendor/wren/src/include/wren.hpp"
 
 static const char *const InitCode = R"(
 import "meta" for Meta

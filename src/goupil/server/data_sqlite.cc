@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-#include "../../../lib/sqlite/sqlite3.h"
+#include "../../../vendor/sqlite/sqlite3.h"
 #include "../../libcc/libcc.hh"
 #include "data.hh"
 

@@ -1,7 +1,7 @@
-diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
 index 03b24e55..c9f6fee8 100644
---- a/lib/wren/src/vm/wren_vm.c
-+++ b/lib/wren/src/vm/wren_vm.c
+--- a/vendor/wren/src/vm/wren_vm.c
++++ b/vendor/wren/src/vm/wren_vm.c
 @@ -773,6 +773,11 @@ static Value getModuleVariable(WrenVM* vm, ObjModule* module,
  // also, as you can imagine, highly performance critical.
  static WrenInterpretResult runInterpreter(WrenVM* vm, register ObjFiber* fiber)

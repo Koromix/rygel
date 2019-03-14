@@ -1,8 +1,8 @@
-diff --git a/lib/libsodium/src/libsodium/include/sodium/version.h b/lib/libsodium/src/libsodium/include/sodium/version.h
+diff --git a/vendor/libsodium/src/libsodium/include/sodium/version.h b/vendor/libsodium/src/libsodium/include/sodium/version.h
 new file mode 100644
 index 0000000..56ec2b9
 --- /dev/null
-+++ b/lib/libsodium/src/libsodium/include/sodium/version.h
++++ b/vendor/libsodium/src/libsodium/include/sodium/version.h
 @@ -0,0 +1,32 @@
 +
 +#ifndef sodium_version_H

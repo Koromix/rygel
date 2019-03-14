@@ -112,5 +112,5 @@ endif()
 # Targets
 # ------------------------------------------------------------------------
 
-add_subdirectory(lib EXCLUDE_FROM_ALL)
+add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)

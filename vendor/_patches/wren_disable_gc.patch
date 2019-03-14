@@ -1,7 +1,7 @@
-diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
 index c9f6fee8..086c4b52 100644
---- a/lib/wren/src/vm/wren_vm.c
-+++ b/lib/wren/src/vm/wren_vm.c
+--- a/vendor/wren/src/vm/wren_vm.c
++++ b/vendor/wren/src/vm/wren_vm.c
 @@ -182,8 +182,11 @@ void wrenCollectGarbage(WrenVM* vm)
  
    // Calculate the next gc point, this is the current allocation plus

@@ -18,7 +18,7 @@
 #include "simulate.hh"
 #include "view.hh"
 #include "../felix/libpack/libpack.hh"
-#include "../../lib/imgui/imgui.h"
+#include "../../vendor/imgui/imgui.h"
 
 extern "C" const pack_Asset *const pack_asset_Roboto_Medium_ttf;
 

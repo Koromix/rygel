@@ -6,8 +6,8 @@
 #include "window.hh"
 #include "../wrappers/opengl.hh"
 PUSH_NO_WARNINGS()
-#include "../../lib/imgui/imgui.h"
-#include "../../lib/imgui/imgui_internal.h"
+#include "../../vendor/imgui/imgui.h"
+#include "../../vendor/imgui/imgui_internal.h"
 POP_NO_WARNINGS()
 
 static const char *const ImGuiVertexCode =
