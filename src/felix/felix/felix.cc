@@ -30,25 +30,24 @@ Commands:
         }
     }
 
-    const char *cmd;
+    int (*cmd_func)(Span<const char *> arguments);
     Span<const char *> arguments;
-    if (argc >= 2 && argv[1][0] != '-') {
-        cmd = argv[1];
-        arguments = MakeSpan((const char **)argv + 2, argc - 2);
-    } else if (argc >= 2) {
-        cmd = "build";
-        arguments = MakeSpan((const char **)argv + 1, argc - 1);
+    if (argc >= 2) {
+        const char *cmd = argv[1];
+        if (TestStr(cmd, "build")) {
+            cmd_func = RunBuild;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else if (TestStr(cmd, "pack")) {
+            cmd_func = RunPack;
+            arguments = MakeSpan((const char **)argv + 2, argc - 2);
+        } else {
+            cmd_func = RunBuild;
+            arguments = MakeSpan((const char **)argv + 1, argc - 1);
+        }
     } else {
-        cmd = "build";
+        cmd_func = RunBuild;
         arguments = {};
     }
 
-    if (TestStr(cmd, "build")) {
-        return RunBuild(arguments);
-    } else if (TestStr(cmd, "pack")) {
-        return RunPack(arguments);
-    } else {
-        LogError("Unknown command '%1'", cmd);
-        return 1;
-    }
+    return cmd_func(arguments);
 }
