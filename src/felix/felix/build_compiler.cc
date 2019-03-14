@@ -19,13 +19,16 @@ static void AppendGccObjectArguments(const char *src_filename, BuildMode build_m
                                      const char *dest_filename, const char *deps_filename,
                                      HeapArray<char> *out_buf)
 {
-    Fmt(out_buf, " -fvisibility=hidden");
-
     switch (build_mode) {
         case BuildMode::Debug: { Fmt(out_buf, " -O0 -g"); } break;
         case BuildMode::Fast: { Fmt(out_buf, " -O2 -g -DNDEBUG"); } break;
         case BuildMode::LTO: { Fmt(out_buf, " -O2 -flto -g -DNDEBUG"); } break;
     }
+
+    Fmt(out_buf, " -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -fvisibility=hidden");
+#ifdef _WIN32
+    Fmt(out_buf, " -DWINVER=0x0601 -D_WIN32_WINNT=0x0601");
+#endif
 
     Fmt(out_buf, " -c %1", src_filename);
     if (pch_filename) {
@@ -128,8 +131,8 @@ Compiler ClangCompiler = {
        Span<const char *const> definitions, Span<const char *const> include_directories,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
-        static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE "
-                                         "-Wall -Wno-unknown-warning-option";
+        static const char *const flags = "-Wall -Wno-unknown-warning-option "
+                                         "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
 #else
         static const char *const flags = "-pthread -Wall";
 #endif
@@ -206,7 +209,7 @@ Compiler GnuCompiler = {
        Span<const char *const> definitions, Span<const char *const> include_directories,
        const char *dest_filename, const char *deps_filename, Allocator *alloc) {
 #ifdef _WIN32
-        static const char *const flags = "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
+        static const char *const flags = "-Wall -D__USE_MINGW_ANSI_STDIO=1";
 #else
         static const char *const flags = "-pthread -Wall";
 #endif
