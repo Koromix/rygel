@@ -399,6 +399,7 @@ set(INPL_ASSETS
     libweb/util.js
     inPL/common.js
     inPL/inPL.js
+    inPL/mod_demo.js
     inPL/mod_ems.js
     inPL/mod_neuropsy.js
     inPL/mod_nutrition.js
