@@ -70,6 +70,11 @@ let report = (function() {
             {
                 let result;
                 switch (test_name) {
+                    case 'demo_rachis': { result = demo.testRachis(data); } break;
+                    case 'demo_col': { result = demo.testFemoralNeck(data); } break;
+                    case 'demo_hanche': { result = demo.testHip(data); } break;
+                    case 'demo_avbras': { result = demo.testForearm(data); } break;
+
                     case 'diet_diversite': { result = nutrition.screenDiversity(data); } break;
                     case 'diet_proteines': { result = nutrition.screenProteinIntake(data); } break;
                     case 'diet_calcium': { result = nutrition.screenCalciumIntake(data); } break;
