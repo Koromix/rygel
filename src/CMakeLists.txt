@@ -27,6 +27,18 @@ if(WIN32)
     target_link_libraries(libcc PUBLIC shlwapi)
 endif()
 
+add_executable(libcc_bench EXCLUDE_FROM_ALL
+    libcc/bench/vendor/stb_sprintf.c
+    libcc/bench/vendor/fmt/posix.cc
+    libcc/bench/vendor/fmt/format.cc
+
+    libcc/bench/bench.cc
+    libcc/bench/bench.hh
+    libcc/bench/bench_fmt.cc
+)
+target_include_directories(libcc_bench PRIVATE libcc/bench/vendor)
+target_link_libraries(libcc_bench PRIVATE libcc)
+
 # ------------------------------------------------------------------------
 # felix
 # ------------------------------------------------------------------------
@@ -231,8 +243,8 @@ if(NOT EMSCRIPTEN)
         libweb/period_picker.js
         libweb/tree_selector.js
         libweb/version_line.js
-        ../lib/chartjs/chart.min.js
-        ../lib/sheetjs/xlsx.core.min.js
+        ../vendor/chartjs/chart.min.js
+        ../vendor/sheetjs/xlsx.core.min.js
         thop/client/thop.css
         thop/client/mco_casemix.css
         thop/client/mco_list.css
@@ -380,9 +392,9 @@ target_assets(goupil_admin
 set(INPL_ASSETS
     inPL/inPL.html
     inPL/inPL_logo.png
-    ../lib/papaparse/papaparse.min.js
-    ../lib/docxtemplater/jszip.min.js
-    ../lib/docxtemplater/docxtemplater.min.js
+    ../vendor/papaparse/papaparse.min.js
+    ../vendor/docxtemplater/jszip.min.js
+    ../vendor/docxtemplater/docxtemplater.min.js
     libweb/compat.js
     libweb/util.js
     inPL/common.js
@@ -419,7 +431,7 @@ if(TARGET libgui)
         simPL/view.hh
     )
     set(SIMPL_ASSETS
-        ../lib/imgui/misc/fonts/Roboto-Medium.ttf
+        ../vendor/imgui/misc/fonts/Roboto-Medium.ttf
     )
 
     set(SIMPL_MODULE_SRC

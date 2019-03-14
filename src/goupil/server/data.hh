@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../../lib/sqlite/sqlite3.h"
+#include "../../../vendor/sqlite/sqlite3.h"
 #include "../../libcc/libcc.hh"
 
 class SQLiteConnection {

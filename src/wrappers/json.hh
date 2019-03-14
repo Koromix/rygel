@@ -6,8 +6,8 @@
 
 #include "../libcc/libcc.hh"
 PUSH_NO_WARNINGS()
-#include "../../lib/rapidjson/writer.h"
-#include "../../lib/rapidjson/error/en.h"
+#include "../../vendor/rapidjson/writer.h"
+#include "../../vendor/rapidjson/error/en.h"
 POP_NO_WARNINGS()
 
 class json_StreamWriter {

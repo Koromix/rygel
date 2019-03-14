@@ -9,7 +9,7 @@
     #include <arpa/inet.h>
 #endif
 
-#include "../../../lib/libsodium/src/libsodium/include/sodium.h"
+#include "../../../vendor/libsodium/src/libsodium/include/sodium.h"
 #include "../../libcc/libcc.hh"
 #include "config.hh"
 #include "structure.hh"

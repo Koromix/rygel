@@ -1,7 +1,7 @@
-diff --git a/lib/wren/src/include/wren.h b/lib/wren/src/include/wren.h
+diff --git a/vendor/wren/src/include/wren.h b/vendor/wren/src/include/wren.h
 index 38957ccb..b4a7088c 100644
---- a/lib/wren/src/include/wren.h
-+++ b/lib/wren/src/include/wren.h
+--- a/vendor/wren/src/include/wren.h
++++ b/vendor/wren/src/include/wren.h
 @@ -241,9 +241,19 @@ typedef struct
    // If zero, defaults to 50.
    int heapGrowthPercent;
@@ -23,10 +23,10 @@ index 38957ccb..b4a7088c 100644
  } WrenConfiguration;
  
  typedef enum
-diff --git a/lib/wren/src/vm/wren_vm.c b/lib/wren/src/vm/wren_vm.c
+diff --git a/vendor/wren/src/vm/wren_vm.c b/vendor/wren/src/vm/wren_vm.c
 index 086c4b52..00eda8df 100644
---- a/lib/wren/src/vm/wren_vm.c
-+++ b/lib/wren/src/vm/wren_vm.c
+--- a/vendor/wren/src/vm/wren_vm.c
++++ b/vendor/wren/src/vm/wren_vm.c
 @@ -49,6 +49,8 @@ void wrenInitConfiguration(WrenConfiguration* config)
    config->initialHeapSize = 1024 * 1024 * 10;
    config->minHeapSize = 1024 * 1024;

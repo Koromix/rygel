@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../../lib/libmicrohttpd/src/include/microhttpd.h"
+#include "../../vendor/libmicrohttpd/src/include/microhttpd.h"
 #include "../libcc/libcc.hh"
 #include "json.hh"
 

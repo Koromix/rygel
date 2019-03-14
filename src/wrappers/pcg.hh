@@ -7,7 +7,7 @@
 #include <random>
 
 #include "../libcc/libcc.hh"
-#include "../../lib/pcg/pcg_basic.h"
+#include "../../vendor/pcg/pcg_basic.h"
 
 // Adapt PCG to bullshit std::random API
 class pcg_Generator {

@@ -44,7 +44,7 @@
     #define MINIZ_NO_ZLIB_APIS
     #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
     #define MINIZ_NO_MALLOC
-    #include "../../lib/miniz/miniz.h"
+    #include "../../vendor/miniz/miniz.h"
 #endif
 
 #include "libcc.hh"

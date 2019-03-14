@@ -8,8 +8,8 @@
 #include "core.hh"
 #include "data.hh"
 PUSH_NO_WARNINGS()
-#include "../../../lib/imgui/imgui.h"
-#include "../../../lib/imgui/imgui_internal.h"
+#include "../../../vendor/imgui/imgui.h"
+#include "../../../vendor/imgui/imgui_internal.h"
 POP_NO_WARNINGS()
 
 // Ideas:

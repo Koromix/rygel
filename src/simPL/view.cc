@@ -5,7 +5,7 @@
 #include "../libcc/libcc.hh"
 #include "simPL.hh"
 #include "view.hh"
-#include "../../lib/imgui/imgui.h"
+#include "../../vendor/imgui/imgui.h"
 
 static void InitializeSimulation(Simulation *out_simulation)
 {

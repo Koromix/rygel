@@ -1,8 +1,8 @@
-diff --git a/lib/libmicrohttpd/MHD_config.h b/lib/libmicrohttpd/MHD_config.h
+diff --git a/vendor/libmicrohttpd/MHD_config.h b/vendor/libmicrohttpd/MHD_config.h
 new file mode 100644
 index 0000000..76bcb63
 --- /dev/null
-+++ b/lib/libmicrohttpd/MHD_config.h
++++ b/vendor/libmicrohttpd/MHD_config.h
 @@ -0,0 +1,198 @@
 +#define PACKAGE "libmicrohttpd"
 +#define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"

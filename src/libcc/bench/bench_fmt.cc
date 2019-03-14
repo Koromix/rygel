@@ -1,145 +1,134 @@
-#include "stb_sprintf.h"
-#include "fmt/format.h"
-#include "../../src/libcc/util.hh"
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+#include "vendor/stb_sprintf.h"
+#include "vendor/fmt/format.h"
+#include "../libcc.hh"
+#include "bench.hh"
 
 #define ITERATIONS 4000000
 
-struct Checkpoint {
-    uint64_t time;
-    uint64_t clock;
-};
-
-static inline Checkpoint GetTime()
+void BenchFmt()
 {
-    return { GetMonotonicTime(), GetClockCounter() };
-}
+    const int iterations = 4000000;
 
-static inline Checkpoint StartBenchmark(const char *name)
-{
-    Print(" + %1", name);
-    return GetTime();
-}
-
-static inline void EndBenchmark(Checkpoint start, unsigned int iterations)
-{
-    Checkpoint now = GetTime();
-    uint64_t time = now.time - start.time;
-    uint64_t clock = now.clock - start.clock;
-    PrintLn(" %1 ms / %2 cycles (%3 cycles per iteration)", time, clock,
-            clock / iterations);
-}
-
-int main(int, char **)
-{
 #ifdef _WIN32
     FILE *fp = fopen("NUL", "w");
 #else
     FILE *fp = fopen("/dev/null", "we");
 #endif
-    if (!fp) {
-        LogError("Cannot open '/dev/null': %1", strerror(errno));
-        return 1;
-    }
+    Assert(fp);
     DEFER { fclose(fp); };
 
+    PrintLn("String formatting");
+
+    // printf
     {
         Checkpoint start = StartBenchmark("printf");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             fprintf(fp, "%d:%d:%d:%s:%p:%c:%%\n",
                     1234, 42, -313, "str", (void*)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // snprintf
     {
         Checkpoint start = StartBenchmark("snprintf");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             char buf[1024];
             snprintf(buf, SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
                     1234, 42, -313, "str", (void*)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
 #ifndef _WIN32
+    // asprintf
     {
         Checkpoint start = StartBenchmark("asprintf");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             char *ret = nullptr;
             asprintf(&ret, "%d:%d:%d:%s:%p:%c:%%\n",
                      1234, 42, -313, "str", (void*)1000, 'X');
             free(ret);
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 #endif
 
+    // stbsp_snprintf
     {
         Checkpoint start = StartBenchmark("stbsp_snprintf");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             char buf[1024];
             stbsp_snprintf(buf, SIZE(buf), "%d:%d:%d:%s:%p:%c:%%\n",
                            1234, 42, -313, "str", (void*)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // fmt::format
     {
         Checkpoint start = StartBenchmark("fmt::format");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             fmt::format("{}:{}:{}:{}:{}:{}%\n", 1234, 42, -313, "str", (void *)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // fmt::format_to
     {
         Checkpoint start = StartBenchmark("fmt::format_to");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             fmt::memory_buffer buf;
             fmt::format_to(buf, "{}:{}:{}:{}:{}:{}%\n", 1234, 42, -313, "str", (void *)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // libcc Print
     {
-        Checkpoint start = StartBenchmark("Print");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        Checkpoint start = StartBenchmark("libcc Print");
+        for (int i = 0; i < iterations; i++) {
             Print(fp, "%1:%2:%3:%4:%5:%6:%%\n",
                   1234, 42, -313, "str", (void*)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // libcc Fmt (allocator)
     {
-        Checkpoint start = StartBenchmark("Fmt (allocator)");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        Checkpoint start = StartBenchmark("libcc Fmt (allocator)");
+        for (int i = 0; i < iterations; i++) {
             LinkedAllocator temp_alloc;
             Fmt(&temp_alloc, "%1:%2:%3:%4:%5:%6:%%\n",
                 1234, 42, -313, "str", (void*)1000, 'X');
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // libcc Fmt (heap)
     {
-        Checkpoint start = StartBenchmark("Fmt (heap)");
+        Checkpoint start = StartBenchmark("libcc Fmt (heap)");
         HeapArray<char> buf;
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        for (int i = 0; i < iterations; i++) {
             Fmt(&buf, "%1:%2:%3:%4:%5:%6:%%\n",
                 1234, 42, -313, "str", (void*)1000, 'X');
             buf.RemoveFrom(0);
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
 
+    // libcc Fmt (buffer)
     {
-        Checkpoint start = StartBenchmark("Fmt (buffer)");
-        for (unsigned int i = 0; i < ITERATIONS; i++) {
+        Checkpoint start = StartBenchmark("libcc Fmt (buffer)");
+        for (int i = 0; i < iterations; i++) {
             LocalArray<char, 1024> buf;
             buf.len = Fmt(buf.data, "%1:%2:%3:%4:%5:%6:%%\n",
                           1234, 42, -313, "str", (void*)1000, 'X').len;
         }
-        EndBenchmark(start, ITERATIONS);
+        EndBenchmark(start, iterations);
     }
-
-    return 0;
 }
