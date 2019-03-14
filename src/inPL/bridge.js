@@ -34,8 +34,8 @@ let bridge = (function() {
         cigar_elec: { 1: 'Avec nicotine', 2: 'Sans nicotine', 3: 'Les deux', },
         nb_cigar: { 1: '10 ou moins', 2: '11 à 20', 3: '21 à 30', 4: '31 ou plus', },
         delai_cigar: { 4: 'Moins de 5 min', 3: '6 à 30 min', 2: '31 à 60 min', 1: 'Après plus d\'1 heure', },
-        temps_travail: { 1: 'A temps complet', 0: 'A temps partiel', },
-        heures_travail: { 1: 'Des horaires fixes', 0: 'Des horaires décalés', },
+        temps_travail: { 1: 'à temps complet', 0: 'à temps partiel', },
+        heures_travail: { 1: 'des horaires fixes', 0: 'des horaires décalés', },
         mobilite: { 1: 'Je n\'ai aucun problème pour me déplacer à pied', 2: 'J\'ai des problèmes pour me déplacer à pied', 3: 'Je suis obigé(e) de rester alité(e)', },
         autonomie: { 1: 'Je n\'ai aucun problème pour prendre soin de moi', 2: 'J\'ai des problèmes pour me laver ou m\'habiller seul(e)', 3: 'Je suis incapable de me laver ou de m\'habiller seul(e)', },
         douleurs: { 1: 'Je n\'ai ni douleur ni gêne', 2: 'J\'ai des douleurs ou une gêne modérée(s)', 3: 'J\'ai des douleurs ou une gêne extrême(s)', },
@@ -63,7 +63,7 @@ let bridge = (function() {
         soc5: { 4: 'Aucune', 3: '1 à 2', 2: '3 à 5', 1: '6 ou plus', },
         soc6: { 5: 'Non, pas d\'interet du tout', 4: 'Non, peu d\'interet', 3: 'Je ne peux pas dire avec certitude', 2: 'Oui, un certain intérêt', 1: 'Oui, beaucoup d\'intérêt', },
         soc7: { 5: 'Pas du tout ', 4: 'Un peu', 3: 'Modérément', 2: 'Beaucoup', 1: 'Entièrement', },
-        diplome: { 6: 'Sans diplôme', 5: 'Certificat de formation générale (CFG), Certificat d\'études primaires, Diplôme national du brevet (BEPC ou Brevet des Collèges)', 4: 'Baccalauréat ou diplôme équivalent (a)', 3: 'Bac +2 ou +3 ou diplôme équivalent (b)', 2: 'Bac +4 ou diplôme équivalent (c)', 1: 'Bac +5 ou plus ou diplôme équivalent (d)', },
+        diplome: { 6: 'Sans diplôme', 5: 'Certificat de formation générale (CFG), Certificat d\'études primaires, Diplôme national du brevet (BEPC ou Brevet des Collèges)', 4: 'Baccalauréat ou diplôme équivalent', 3: 'Bac +2 ou +3 ou diplôme équivalent', 2: 'Bac +4 ou diplôme équivalent', 1: 'Bac +5 ou plus ou diplôme équivalent', },
         emploi: { 1: 'Vous occupez un emploi, y compris si vous êtes temporairement en arrêt de travail (arrêt maladie, congés sans solde ou disponibilité, congé maternité/paternité/d\'adoption)', 2: 'Vous êtes en recherche d\'emploi', 3: 'Vous êtes retraité(e)', 4: 'Vous êtes en formation', 5: 'Vous ne travaillez pas pour des raisons de santé', 6: 'Vous êtes père/mère au foyer', 7: 'Vous êtes sans activité professionnelle', },
         csp: { 1: 'Agriculteur(trice), exploitant(e) ou conjoint sur l\'exploitation', 2: 'Artisan, commerçant(e), chef d\'entreprise', 3: 'Cadre et profession intellectuelle supérieure (ingénieur, médecin...)', 4: 'Profession intermédiaire (professeur des écoles, infirmier(ère), assistante sociale, technicien(ne), contremaître, agent de maîtrise...)', 5: 'Employé(e) (employé(e) de bureau ou de commerce, garde d\'enfants, agent de service...)', 6: 'Ouvrier(ère)', 7: 'N\'a jamais travaillé', },
         evtvie: { 1: 'Un gain ', 2: 'Une perte', 3: 'Un gain et une perte', 4: 'Ni l\'un ni l\'autre', 5: 'Ne sait pas ', },
@@ -72,7 +72,7 @@ let bridge = (function() {
         retraite3: { 1: 'Des motifs économiques', 2: 'Votre état de santé', 3: 'Votre age', 4: 'Un choix de votre part', 5: 'La pression de votre entourage', },
         retraite5: { 1: 'Jamais', 2: 'Rarement', 3: 'Parfois', 4: 'Souvent', },
         retraite6: { 2: 'Un soulagement', 3: 'Un regret', 4: 'Un sentiment d\'inutilité', 5: 'L\'ennui', 6: 'La peur du vide', 1: 'Une opportunité pour faire d\'autres choses', },
-        maison: { 1: 'Une maison', 2: 'Un appartement', },
+        maison: { 1: 'une maison', 2: 'un appartement', },
         aides: { 1: 'CMU (Couverture Maladie Universelle de base)', 2: 'CMUc (CMU complémentaire)', 3: 'AME (Aide Médicale d\'Etat)', 4: 'Autre', },
         chgmt: { 1: 'Alimentation', 2: 'Activité physique', 3: 'Stress / Anxiété', 4: 'Sommeil', 5: 'Mémoire / Attention', 6: 'Alcool', 7: 'Tabac', 8: 'Cannabis', 9: 'Lien social / Activités', },
         ems_auto_eval: { 1: 'Sous-évalué', 2: 'Bien évalué', 3: 'Surévalué', },
@@ -142,7 +142,7 @@ let bridge = (function() {
         ems_non_dispo: { 0: 'Trop loin', 1: 'Pas envie', 2: 'Pas le temps', 3: 'Aidant', 'autre': 'Autre(s)', },
         rdv_financeur_pl: { 1: 'ARS', 2: 'CARSAT', },
         rdv_entreprise_balc: { 1: 'Entreprise 1', 2: 'Entreprise 2', },
-        statut_aq: { 1: 'envoyé', 2: 'réceptionné par l\'ipl', 3: 'papier retard', 4: 'incomplet', 5: 'complet', },
+        statut_aq: { 1: 'envoyé', 2: 'réceptionné par l\'ipl', 3: 'papier retard', 4: 'incomplet', 5: 'complet', }
     };
 
     const VarInfo = {
