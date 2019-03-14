@@ -5,5 +5,14 @@
 const ScreeningResult = Object.freeze({
     Bad: 1,
     Fragile: 2,
-    Good: 3
+    Good: 3,
+
+    label: function(value) {
+        switch (value) {
+            case ScreeningResult.Bad: return 'Pathologique';
+            case ScreeningResult.Fragile: return 'Fragile';
+            case ScreeningResult.Good: return 'Vigoureux';
+            default: return 'Inconnu';
+        }
+    }
 });
