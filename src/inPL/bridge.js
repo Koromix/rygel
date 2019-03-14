@@ -908,8 +908,12 @@ let bridge = (function() {
         consultant_nom_pharma_consultant: { kind: 'text' },
         consultant_ville_pharma_consultant: { kind: 'text' },
         consultant_transmission_resultats: { kind: 'enum', dict_name: 'oui_non' },
-        aq1_statut_aq: { kind: 'enum', dict_name: 'statut_aq' },
         rdv_statut_aq: { kind: 'enum', dict_name: 'statut_aq' },
+        constantes_imc: { kind: 'float' },
+        audition_perte_tonale_gauche: { kind: 'float' },
+        audition_perte_tonale_droite: { kind: 'float' },
+        diet_variation_ponderale: { kind: 'float' },
+        respi_vems_cvf: { kind: 'float' }
     };
 
     function translateInt(str)
