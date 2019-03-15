@@ -215,13 +215,8 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
 
                         if (part.len) {
-                            Size import_idx = targets_map.FindValue(part, -1);
-                            if (import_idx >= 0) {
-                                target_config.imports.Append(set.targets[import_idx].name);
-                            } else {
-                                LogError("Cannot import from unknown target '%1'", part);
-                                valid = false;
-                            }
+                            const char *copy = DuplicateString(part, &set.str_alloc).ptr;
+                            target_config.imports.Append(copy);
                         }
                     }
                 } else if (prop.key == "IncludeDirectory") {
@@ -389,7 +384,10 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             const Target *import;
             {
                 Size import_idx = targets_map.FindValue(import_name, -1);
-                DebugAssert(import_idx >= 0);
+                if (import_idx < 0) {
+                    LogError("Cannot import from unknown target '%1'", import_name);
+                    return nullptr;
+                }
 
                 import = &set.targets[import_idx];
                 if (import->type != TargetType::Library) {
