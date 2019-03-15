@@ -1124,7 +1124,7 @@ void PopLogHandler()
 
 #ifdef _WIN32
 
-static char *Win32ErrorString(DWORD error_code = UINT32_MAX)
+char *Win32ErrorString(uint32_t error_code)
 {
     if (error_code == UINT32_MAX) {
         error_code = GetLastError();
