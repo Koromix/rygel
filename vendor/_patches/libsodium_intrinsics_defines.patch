@@ -27,7 +27,7 @@ index 9a2f7fab..d2a9d934 100644
 + * work correctly there.
 + */
 +#if defined(_M_X64) || defined(_M_AMD64) || defined(_M_IX86)
- # include <intrin.h>
+-# include <intrin.h>
 -
 -# define HAVE_INTRIN_H    1
 -# define HAVE_MMINTRIN_H  1
@@ -57,11 +57,13 @@ index 9a2f7fab..d2a9d934 100644
 +#  endif
 +#  define HAVE_RDRAND 1
 +# elif defined(__clang__)
++#  include <intrin.h>
 +#  define HAVE_MEMSET_S    1
 +#  define HAVE_ATOMIC_OPS  1
 +#  define HAVE_INTRIN_H    1
 +#  define HAVE_MMINTRIN_H  1
 +# elif defined(_MSC_VER)
++#  include <intrin.h>
 +#  define HAVE_INTRIN_H    1
 +#  define HAVE_MMINTRIN_H  1
 +#  define HAVE_EMMINTRIN_H 1
