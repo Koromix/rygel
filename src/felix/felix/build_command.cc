@@ -22,7 +22,7 @@
 #include "../../libcc/libcc.hh"
 #include "build_command.hh"
 
-static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, bool *out_success)
+static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
 {
 #ifdef _WIN32
     STARTUPINFO startup_info = {};
@@ -98,7 +98,7 @@ static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, bool 
         }
     }
 
-    *out_success = !exit_code;
+    *out_code = (int)exit_code;
     return true;
 #else
     int out_pfd[2];
@@ -151,7 +151,13 @@ static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, bool 
         return false;
     }
 
-    *out_success = WIFEXITED(status) && !WEXITSTATUS(status);
+    if (WIFSIGNALED(status)) {
+        *out_code = 128 + WTERMSIG(status);
+    } else if (WIFEXITED(status)) {
+        *out_code = WEXITSTATUS(status);
+    } else {
+        *out_code = -1;
+    }
     return true;
 #endif
 }
@@ -443,12 +449,12 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
 
             // Run command
             HeapArray<char> output;
-            bool success;
-            if (!ExecuteCommand(cmd.cmd, &output, &success))
+            int exit_code;
+            if (!ExecuteCommand(cmd.cmd, &output, &exit_code))
                 return false;
 
             // Print command output
-            if (!success) {
+            if (exit_code) {
                 LogError("Command '%1' failed", cmd.cmd);
             }
             if (output.len) {
@@ -456,7 +462,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
                 fwrite(output.ptr, 1, output.len, stdout);
             }
 
-            if (success) {
+            if (!exit_code) {
                 dest_guard.Disable();
                 return true;
             } else {
