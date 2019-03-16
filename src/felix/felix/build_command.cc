@@ -133,7 +133,7 @@ static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, int *
     for (;;) {
         out_buf->Grow(1024);
 
-        ssize_t read_len = read(out_pfd[0], out_buf->end(), 1024);
+        ssize_t read_len = POSIX_RESTART_EINTR(read(out_pfd[0], out_buf->end(), 1024));
         if (read_len < 0) {
             LogError("Failed to read process output: %1", strerror(errno));
             break;
@@ -146,7 +146,7 @@ static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, int *
 
     // Wait for process exit
     int status;
-    if (waitpid(pid, &status, 0) < 0) {
+    if (POSIX_RESTART_EINTR(waitpid(pid, &status, 0)) < 0) {
         LogError("Failed to wait for process exit: %1", strerror(errno));
         return false;
     }
@@ -459,7 +459,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             }
             if (output.len) {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
-                fwrite(output.ptr, 1, output.len, stdout);
+                stdout_st.Write(output);
             }
 
             if (!exit_code) {

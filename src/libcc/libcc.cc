@@ -936,6 +936,8 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
+    // TODO: Deal properly with partial writes in PrintFmt(FILE) overload
+
     LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
         if (frag.len > ARRAY_SIZE(buf.data) - buf.len) {
@@ -2531,8 +2533,12 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
     Size read_len = 0;
     switch (source.type) {
         case SourceType::File: {
+restart:
             read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.fp);
             if (ferror(source.u.fp)) {
+                if (errno == EINTR)
+                    goto restart;
+
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
                 error = true;
                 return -1;
@@ -2861,10 +2867,21 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
     switch (dest.type) {
         case DestinationType::File: {
-            if (fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.fp) != (size_t)buf.len) {
-                LogError("Failed to write to '%1': %2", filename, strerror(errno));
-                error = true;
-                return false;
+            while (buf.len) {
+                size_t write_len = fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.fp);
+
+                if (ferror(dest.u.fp)) {
+                    if (errno == EINTR) {
+                        clearerr(dest.u.fp);
+                    } else {
+                        LogError("Failed to write to '%1': %2", filename, strerror(errno));
+                        error = true;
+                        return false;
+                    }
+                }
+
+                buf.ptr += write_len;
+                buf.len -= write_len;
             }
 
             return true;
