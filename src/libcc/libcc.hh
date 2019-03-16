@@ -3206,6 +3206,15 @@ static const char *const IPStackNames[] = {
     "IPv6"
 };
 
+#ifndef _WIN32
+    #define POSIX_RESTART_EINTR(CallCode) \
+        ([&]() { \
+            decltype(CallCode) ret; \
+            while ((ret = (CallCode)) < 0 && errno == EINTR); \
+            return ret; \
+        })()
+#endif
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------
