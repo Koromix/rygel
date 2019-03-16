@@ -22,7 +22,7 @@
 #include "../../libcc/libcc.hh"
 #include "build_command.hh"
 
-static bool ExecuteCommand(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
+static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, int *out_code)
 {
 #ifdef _WIN32
     STARTUPINFO startup_info = {};
@@ -450,7 +450,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             // Run command
             HeapArray<char> output;
             int exit_code;
-            if (!ExecuteCommand(cmd.cmd, &output, &exit_code))
+            if (!ExecuteCommandLine(cmd.cmd, &output, &exit_code))
                 return false;
 
             // Print command output
