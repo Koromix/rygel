@@ -2021,7 +2021,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 
     async->remaining_tasks++;
     if (!g_async_pool->pending_tasks++) {
-        std::lock_guard lock_pool(g_async_pool->mutex);
+        std::lock_guard<std::mutex> lock_pool(g_async_pool->mutex);
         g_async_pool->cv.notify_all();
     }
 }
