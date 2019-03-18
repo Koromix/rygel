@@ -5,3 +5,4 @@
 include Makevars
 
 PKG_CPPFLAGS += -DWINVER=0x0602 -D_WIN32_WINNT=0x0602 -D__USE_MINGW_ANSI_STDIO=1
+PKG_LIBS += -lshlwapi
