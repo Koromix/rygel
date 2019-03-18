@@ -3,8 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
+#include "config.hh"
 #include "mco_casemix.hh"
 #include "mco.hh"
+#include "thop.hh"
 #include "user.hh"
 
 static int GetQueryDateRange(const http_Request &request, const char *key,
@@ -314,7 +316,7 @@ void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCod
 }
 
 static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_date, Date max_date,
-                             HeapArray<GhmGhsInfo> *out_ghm_ghs)
+                             drd_Sector sector, HeapArray<GhmGhsInfo> *out_ghm_ghs)
 {
     HashMap<GhmGhsInfo::Key, Size> ghm_ghs_map;
 
@@ -327,14 +329,14 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, Date min_dat
                 Span<const mco_GhmToGhsInfo> compatible_ghs = index.FindCompatibleGhs(ghm_root);
 
                 for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                    const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(drd_Sector::Public), drd_Sector::Public);
+                    const mco_GhsPriceInfo *ghs_price_info = index.FindGhsPrice(ghm_to_ghs_info.Ghs(sector), sector);
                     const mco_GhmConstraint *constraint = constraints.Find(ghm_to_ghs_info.ghm);
 
                     GhmGhsInfo *agg_ghm_ghs;
                     {
                         GhmGhsInfo::Key key;
                         key.ghm = ghm_to_ghs_info.ghm;
-                        key.ghs = ghm_to_ghs_info.Ghs(drd_Sector::Public);
+                        key.ghs = ghm_to_ghs_info.Ghs(sector);
 
                         std::pair<Size *, bool> ret = ghm_ghs_map.Append(key, out_ghm_ghs->len);
                         if (ret.second) {
@@ -461,7 +463,7 @@ int ProduceMcoAggregate(const http_Request &request, const User *user, http_Resp
     {
         Date min_date = diff[0].value ? std::min(diff[0], period[0]) : period[0];
         Date max_date = diff[0].value ? std::min(diff[1], period[1]) : period[1];
-        GatherGhmGhsInfo(ghm_roots, min_date, max_date, &ghm_ghs);
+        GatherGhmGhsInfo(ghm_roots, min_date, max_date, thop_config.sector, &ghm_ghs);
     }
 
     // Export data

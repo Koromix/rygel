@@ -9,6 +9,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
 {
     DEFER_NC(out_guard, table_directories_len = config.table_directories.len,
                         profile_directory = config.profile_directory,
+                        sector = config.sector,
                         mco_authorization_filename = config.mco_authorization_filename,
                         mco_dispense_mode = config.mco_dispense_mode,
                         mco_stay_directories_len = config.mco_stay_directories.len,
@@ -20,6 +21,7 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         max_age = config.max_age) {
         config.table_directories.RemoveFrom(table_directories_len);
         config.profile_directory = profile_directory;
+        config.sector = sector;
         config.mco_authorization_filename = mco_authorization_filename;
         config.mco_dispense_mode = mco_dispense_mode;
         config.mco_stay_directories.RemoveFrom(mco_stay_directories_len);
@@ -56,6 +58,22 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Institution") {
+                do {
+                    if (prop.key == "Sector") {
+                        const char *const *ptr = FindIf(drd_SectorNames,
+                                                        [&](const char *name) { return TestStr(name, prop.value.ptr); });
+                        if (ptr) {
+                            config.sector = (drd_Sector)(ptr - drd_SectorNames);
+                        } else {
+                            LogError("Unkown sector '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "MCO") {
                 do {
                     if (prop.key == "AuthorizationFile") {
@@ -64,11 +82,12 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                     } else if (prop.key == "DispenseMode") {
                         const OptionDesc *desc = FindIf(mco_DispenseModeOptions,
                                                         [&](const OptionDesc &desc) { return TestStr(desc.name, prop.value.ptr); });
-                        if (!desc) {
+                        if (desc) {
+                            config.mco_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
+                        } else {
                             LogError("Unknown dispensation mode '%1'", prop.value);
                             valid = false;
                         }
-                        config.mco_dispense_mode = (mco_DispenseMode)(desc - mco_DispenseModeOptions);
                     } else if (prop.key == "StayDirectory") {
                         const char *directory = NormalizePath(prop.value, root_directory,
                                                               &config.str_alloc).ptr;

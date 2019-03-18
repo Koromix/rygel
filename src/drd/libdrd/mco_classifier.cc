@@ -1712,8 +1712,9 @@ static bool TestGhs(const mco_PreparedStay &prep, Span<const mco_PreparedStay> m
 }
 
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
-                        const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        mco_GhmCode ghm, unsigned int /*flags*/, int16_t *out_ghs_duration)
+                        drd_Sector sector, const mco_PreparedStay &prep,
+                        Span<const mco_PreparedStay> mono_preps, mco_GhmCode ghm,
+                        unsigned int /*flags*/, int16_t *out_ghs_duration)
 {
     const mco_Stay &stay = *prep.stay;
 
@@ -1751,7 +1752,7 @@ mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet 
 
         for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
             if (TestGhs(prep, mono_preps, authorization_set, ghm_to_ghs_info)) {
-                ghs = ghm_to_ghs_info.Ghs(drd_Sector::Public);
+                ghs = ghm_to_ghs_info.Ghs(sector);
                 break;
             }
         }
@@ -2055,7 +2056,7 @@ static mco_Stay FixMonoStayForClassifier(mco_Stay mono_stay)
 }
 
 static Size RunClassifier(const mco_TableSet &table_set,
-                          const mco_AuthorizationSet &authorization_set,
+                          const mco_AuthorizationSet &authorization_set, drd_Sector sector,
                           Span<const mco_Stay> mono_stays, unsigned int flags,
                           mco_Result out_results[], Strider<mco_Result> out_mono_results)
 {
@@ -2075,6 +2076,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
         result.index = prepared_set.index;
         result.age = prepared_set.prep.age;
         result.duration = prepared_set.prep.duration;
+        result.sector = sector;
 
         // Classify GHM
         if (LIKELY(!result.ghm.IsError())) {
@@ -2086,7 +2088,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
         DebugAssert(result.ghm.IsValid());
 
         // Classify GHS
-        result.ghs = mco_PickGhs(*prepared_set.index, authorization_set,
+        result.ghs = mco_PickGhs(*prepared_set.index, authorization_set, sector,
                                  prepared_set.prep, prepared_set.mono_preps, result.ghm,
                                  flags, &result.ghs_duration);
 
@@ -2108,6 +2110,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                     mono_result->index = prepared_set.index;
                     mono_result->age = mono_prep.age;
                     mono_result->duration = mono_prep.duration;
+                    mono_result->sector = sector;
 
                     if (!result.ghm.IsError()) {
                         // Some tests in RunGhmTree() need this to avoid counting duplicates,
@@ -2127,7 +2130,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                                                                   mono_result->ghm, *ghm_root_info);
                             }
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           sector, mono_prep, mono_prep, mono_result->ghm,
                                                            mono_flags, &mono_result->ghs_duration);
                         } else {
                             DEFER_C(prev_stay = mono_prep.stay) { mono_prep.stay = prev_stay; };
@@ -2137,7 +2140,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
                             mono_result->ghm = mco_PickGhm(*prepared_set.index, mono_prep,
                                                            mono_prep, mono_flags, &mono_errors);
                             mono_result->ghs = mco_PickGhs(*prepared_set.index, authorization_set,
-                                                           mono_prep, mono_prep, mono_result->ghm,
+                                                           sector, mono_prep, mono_prep, mono_result->ghm,
                                                            mono_flags, &mono_result->ghs_duration);
                         }
                         mono_result->main_error = mono_errors.main_error;
@@ -2167,7 +2170,7 @@ static Size RunClassifier(const mco_TableSet &table_set,
 }
 
 Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                  Span<const mco_Stay> mono_stays, unsigned int flags,
+                  drd_Sector sector, Span<const mco_Stay> mono_stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     static const int task_size = 2048;
@@ -2185,10 +2188,10 @@ Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &aut
         if (out_mono_results) {
             mco_Result *task_mono_results = out_mono_results->end() +
                                             (task_stays.ptr - mono_stays.ptr);
-            return RunClassifier(table_set, authorization_set, task_stays, flags,
+            return RunClassifier(table_set, authorization_set, sector, task_stays, flags,
                                  task_results, task_mono_results);
         } else {
-            return RunClassifier(table_set, authorization_set, task_stays, flags,
+            return RunClassifier(table_set, authorization_set, sector, task_stays, flags,
                                  task_results, nullptr);
         }
     };

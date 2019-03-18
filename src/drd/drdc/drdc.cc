@@ -23,7 +23,10 @@ R"(Common options:
 
          --mco_auth_file <file>   Set MCO authorization file
                                   (default: <profile_dir>%/mco_authorizations.ini
-                                            <profile_dir>%/mco_authorizations.txt))";
+                                            <profile_dir>%/mco_authorizations.txt)
+
+     -s, --sector <sector>        Use Public or Private sector GHS and prices
+                                  (default: Public))";
 
 Config drdc_config;
 
@@ -37,6 +40,15 @@ bool HandleCommonOption(OptionParser &opt)
         drdc_config.table_directories.Append(opt.current_value);
     } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
         drdc_config.mco_authorization_filename = opt.current_value;
+    } else if (opt.Test("-s", "--sector", OptionType::Value)) {
+        const char *const *ptr = FindIf(drd_SectorNames,
+                                        [&](const char *name) { return TestStr(name, opt.current_value); });
+        if (!ptr) {
+            LogError("Unknown sector '%1'", opt.current_value);
+            return false;
+        }
+
+        drdc_config.sector = (drd_Sector)(ptr - drd_SectorNames);
     } else {
         LogError("Cannot handle option '%1'", opt.current_option);
         return false;

@@ -41,6 +41,22 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Institution") {
+                do {
+                    if (prop.key == "Sector") {
+                        const char *const *ptr = FindIf(drd_SectorNames,
+                                                        [&](const char *name) { return TestStr(name, prop.value.ptr); });
+                        if (ptr) {
+                            config.sector = (drd_Sector)(ptr - drd_SectorNames);
+                        } else {
+                            LogError("Unkown sector '%1'", prop.value);
+                            valid = false;
+                        }
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "MCO") {
                 if (prop.key == "AuthorizationFile") {
                     config.mco_authorization_filename = NormalizePath(prop.value, root_directory,

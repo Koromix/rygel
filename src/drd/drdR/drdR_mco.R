@@ -3,11 +3,11 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 mco_init <- function(table_dirs, authorization_filename,
-                     table_filenames = character(0)) {
-    .Call(`drdR_mco_Init`, table_dirs, table_filenames, authorization_filename)
+                     table_filenames = character(0), default_sector = NULL) {
+    .Call(`drdR_mco_Init`, table_dirs, table_filenames, authorization_filename, default_sector)
 }
 
-mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
+mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL, sector = NULL,
                          options = character(0), details = TRUE, dispense_mode = NULL,
                          apply_coefficient = FALSE, supplement_columns = 'both') {
     if (!is.data.frame(stays) && is.list(stays)) {
@@ -20,7 +20,7 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
         stays <- stays$stays
     }
 
-    result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
+    result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures, sector,
                         options, details, dispense_mode, apply_coefficient, supplement_columns)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
@@ -39,8 +39,8 @@ mco_indexes <- function(classifier) {
     .Call(`drdR_mco_Indexes`, classifier)
 }
 
-mco_ghm_ghs <- function(classifier, date, map = TRUE) {
-    .Call(`drdR_mco_GhmGhs`, classifier, date, map)
+mco_ghm_ghs <- function(classifier, date, sector = NULL, map = TRUE) {
+    .Call(`drdR_mco_GhmGhs`, classifier, date, sector, map)
 }
 
 mco_diagnoses <- function(classifier, date) {

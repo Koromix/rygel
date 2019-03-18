@@ -194,7 +194,7 @@ bool InitMcoStays(Span<const char *const> stay_directories, Span<const char *con
     LogInfo("Classify MCO stays");
 
     // Classify
-    mco_Classify(mco_table_set, mco_authorization_set, mco_stay_set.stays, 0,
+    mco_Classify(mco_table_set, mco_authorization_set, thop_config.sector, mco_stay_set.stays, 0,
                  &mco_results, &mco_mono_results);
     mco_results.Trim();
     mco_mono_results.Trim();
@@ -334,8 +334,8 @@ bool McoResultProvider::RunFilter(std::function<void(Span<const mco_Result>, Spa
         // Classify changed stays
         {
             Size j = results_buf.len, k = mono_results_buf.len;
-            mco_Classify(mco_table_set, mco_authorization_set, changed_stay_set.stays,
-                         0, &results_buf, &mono_results_buf);
+            mco_Classify(mco_table_set, mco_authorization_set, thop_config.sector,
+                         changed_stay_set.stays, 0, &results_buf, &mono_results_buf);
 
             if (ghm_root.IsValid()) {
                 for (Size l = j, m = k; l < results_buf.len;) {

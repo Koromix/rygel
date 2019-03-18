@@ -9,10 +9,30 @@
 struct ClassifierInstance {
     mco_TableSet table_set;
     mco_AuthorizationSet authorization_set;
+
+    drd_Sector default_sector;
 };
 
+static drd_Sector GetSectorFromString(SEXP sector_xp, drd_Sector default_sector)
+{
+    const char *sector_str = !Rf_isNull(sector_xp) ? Rcpp::as<const char *>(sector_xp) : nullptr;
+
+    if (sector_str) {
+        const char *const *ptr = FindIf(drd_SectorNames,
+                                        [&](const char *name) { return TestStr(name, sector_str); });
+        if (!ptr) {
+            LogError("Sector '%1' does not exist", sector_str);
+            rcc_StopWithLastError();
+        }
+
+        return (drd_Sector)(ptr - drd_SectorNames);
+    } else {
+        return default_sector;
+    }
+}
+
 RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
-                              SEXP authorization_filename_xp)
+                              SEXP authorization_filename_xp, SEXP default_sector_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -38,6 +58,8 @@ RcppExport SEXP drdR_mco_Init(SEXP table_dirs_xp, SEXP table_filenames_xp,
     if (authorization_filename.Len()) {
         authorization_filename2 = authorization_filename[0].ptr;
     }
+
+    classifier->default_sector = GetSectorFromString(default_sector_xp, drd_Sector::Public);
 
     LogInfo("Load tables");
     if (!mco_LoadTableSet(table_dirs2, table_filenames2, &classifier->table_set) ||
@@ -118,7 +140,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
                           const StaysProxy &stays, Size stays_offset, Size stays_end,
                           const DiagnosesProxy &diagnoses, Size diagnoses_offset, Size diagnoses_end,
                           const ProceduresProxy &procedures, Size procedures_offset, Size procedures_end,
-                          unsigned int flags, mco_StaySet *out_stay_set,
+                          drd_Sector sector, unsigned int flags, mco_StaySet *out_stay_set,
                           HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results)
 {
     out_stay_set->stays.Reserve(stays_end - stays_offset);
@@ -313,7 +335,7 @@ static bool RunClassifier(const ClassifierInstance &classifier,
     if (j < diagnoses_end || k < procedures_end)
         return false;
 
-    mco_Classify(classifier.table_set, classifier.authorization_set, out_stay_set->stays,
+    mco_Classify(classifier.table_set, classifier.authorization_set, sector, out_stay_set->stays,
                  flags, out_results, out_mono_results);
 
     other_diagnoses2.Leak();
@@ -429,9 +451,9 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 }
 
 RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
-                                  SEXP procedures_xp, SEXP options_xp, SEXP details_xp,
-                                  SEXP dispense_mode_xp, SEXP apply_coefficient_xp,
-                                  SEXP supplement_columns_xp)
+                                  SEXP procedures_xp, SEXP sector_xp, SEXP options_xp,
+                                  SEXP details_xp, SEXP dispense_mode_xp,
+                                  SEXP apply_coefficient_xp, SEXP supplement_columns_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -443,6 +465,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Rcpp::DataFrame stays_df(stays_xp);
     Rcpp::DataFrame diagnoses_df(diagnoses_xp);
     Rcpp::DataFrame procedures_df(procedures_xp);
+    drd_Sector sector = GetSectorFromString(sector_xp, classifier->default_sector);
     Rcpp::CharacterVector options_vec(options_xp);
     bool details = Rcpp::as<bool>(details_xp);
     const char *dispense_mode_str = !Rf_isNull(dispense_mode_xp) ?
@@ -605,7 +628,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                 if (!RunClassifier(*classifier, stays, stays_offset, stays_end,
                                    diagnoses, diagnoses_offset, diagnoses_end,
                                    procedures, procedures_offset, procedures_end,
-                                   flags, task_stay_set, task_results, task_mono_results))
+                                   sector, flags, task_stay_set, task_results, task_mono_results))
                     return false;
 
                 if (details || dispense_mode >= 0) {
@@ -731,7 +754,7 @@ RcppExport SEXP drdR_mco_Indexes(SEXP classifier_xp)
     END_RCPP
 }
 
-RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
+RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP sector_xp, SEXP map_xp)
 {
     BEGIN_RCPP
     RCC_SETUP_LOG_HANDLER();
@@ -742,6 +765,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
     Date date = rcc_Vector<Date>(date_xp).Value();
     if (!date.value)
         rcc_StopWithLastError();
+    drd_Sector sector = GetSectorFromString(sector_xp, classifier->default_sector);
     bool map = Rcpp::as<bool>(map_xp);
 
     const mco_TableIndex *index = classifier->table_set.FindIndex(date);
@@ -795,8 +819,8 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
         for (const mco_GhmRootInfo &ghm_root_info: index->ghm_roots) {
             Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root_info.ghm_root);
             for (const mco_GhmToGhsInfo &ghm_to_ghs_info: compatible_ghs) {
-                mco_GhsCode ghs_code = ghm_to_ghs_info.Ghs(drd_Sector::Public);
-                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_code, drd_Sector::Public);
+                mco_GhsCode ghs_code = ghm_to_ghs_info.Ghs(sector);
+                const mco_GhsPriceInfo *ghs_price_info = index->FindGhsPrice(ghs_code, sector);
 
                 char buf[256];
 
@@ -848,7 +872,7 @@ RcppExport SEXP drdR_mco_GhmGhs(SEXP classifier_xp, SEXP date_xp, SEXP map_xp)
 
                 if (ghs_price_info) {
                     ghs_cents[i] = ghs_price_info->ghs_cents;
-                    ghs_coefficient[i] = index->GhsCoefficient(drd_Sector::Public);
+                    ghs_coefficient[i] = index->GhsCoefficient(sector);
                     if (ghs_price_info->exh_treshold) {
                         exh_treshold[i] = ghs_price_info->exb_treshold;
                         exh_cents[i] = ghs_price_info->exh_cents;
@@ -1355,11 +1379,11 @@ RcppExport SEXP drdR_mco_CleanProcedures(SEXP procedures_xp)
 
 RcppExport void R_init_drdR(DllInfo *dll) {
     static const R_CallMethodDef call_entries[] = {
-        {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 3},
-        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 9},
+        {"drdR_mco_Init", (DL_FUNC)&drdR_mco_Init, 4},
+        {"drdR_mco_Classify", (DL_FUNC)&drdR_mco_Classify, 10},
         // {"drdR_mco_Dispense", (DL_FUNC)&drdR_mco_Dispense, 3},
         {"drdR_mco_Indexes", (DL_FUNC)&drdR_mco_Indexes, 1},
-        {"drdR_mco_GhmGhs", (DL_FUNC)&drdR_mco_GhmGhs, 3},
+        {"drdR_mco_GhmGhs", (DL_FUNC)&drdR_mco_GhmGhs, 4},
         {"drdR_mco_Diagnoses", (DL_FUNC)&drdR_mco_Diagnoses, 2},
         {"drdR_mco_Exclusions", (DL_FUNC)&drdR_mco_Exclusions, 2},
         {"drdR_mco_Procedures", (DL_FUNC)&drdR_mco_Procedures, 2},

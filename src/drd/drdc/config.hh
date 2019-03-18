@@ -11,6 +11,8 @@ struct Config {
     HeapArray<const char *> table_directories;
     const char *profile_directory = nullptr;
 
+    drd_Sector sector = drd_Sector::Public;
+
     const char *mco_authorization_filename = nullptr;
 
     BlockAllocator str_alloc;
