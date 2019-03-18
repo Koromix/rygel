@@ -52,14 +52,14 @@ bool mco_StaySet::SavePack(StreamWriter &st) const
             uint8_t raw[32];
             struct {
                 int64_t _pad1;
-                int64_t diagnoses_len;
+                int64_t other_diagnoses_len;
                 int64_t _pad2;
                 int64_t procedures_len;
             } st;
         } u;
-        u.st.diagnoses_len = (int64_t)stay.diagnoses.len;
+        u.st.other_diagnoses_len = (int64_t)stay.other_diagnoses.len;
         u.st.procedures_len = (int64_t)stay.procedures.len;
-        memcpy(&stay2.diagnoses, u.raw, 32);
+        memcpy(&stay2.other_diagnoses, u.raw, 32);
 
         st.Write(&stay2, SIZE(stay2));
     }
@@ -158,13 +158,13 @@ bool mco_StaySetBuilder::LoadPack(StreamReader &st, HashTable<int32_t, mco_Test>
                 uint8_t raw[32];
                 struct {
                     int64_t _pad1;
-                    int64_t diagnoses_len;
+                    int64_t other_diagnoses_len;
                     int64_t _pad2;
                     int64_t procedures_len;
                 } st;
             } u;
-            memcpy(u.raw, &stay->diagnoses, 32);
-            stay->diagnoses.len = (Size)u.st.diagnoses_len;
+            memcpy(u.raw, &stay->other_diagnoses, 32);
+            stay->other_diagnoses.len = (Size)u.st.other_diagnoses_len;
             stay->procedures.len = (Size)u.st.procedures_len;
 #endif
 
