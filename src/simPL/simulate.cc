@@ -76,7 +76,7 @@ static bool SimulateYear(const SimulationConfig &config, const Human &human, Hum
 
     // Cardiac ischemia and stroke
     if (config.predict_cvd != PredictCvdMode::Disabled) {
-        double treshold;
+        double treshold = NAN;
         switch (config.predict_cvd) {
             case PredictCvdMode::Disabled: { DebugAssert(false); } break;
             case PredictCvdMode::Framingham: { treshold = PredictFraminghamScore(human); } break;

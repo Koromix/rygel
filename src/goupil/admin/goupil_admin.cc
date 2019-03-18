@@ -13,6 +13,7 @@ R"(Common options:
      -C, --config_file <file>    Set configuration file
      -P, --profile_dir <dir>     Set profile directory)";
 
+#if 0
 static bool HandleCommonOption(OptionParser &opt)
 {
     if (opt.Test("-C", "--config_file", OptionType::Value)) {
@@ -26,6 +27,7 @@ static bool HandleCommonOption(OptionParser &opt)
 
     return true;
 }
+#endif
 
 int main(int argc, char **argv)
 {
