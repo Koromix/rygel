@@ -8,8 +8,8 @@ mco_init <- function(table_dirs, authorization_filename,
 }
 
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
-                         sorted = TRUE, options = character(0), details = TRUE,
-                         dispense = NULL, apply_coefficient = FALSE, supplement_columns = 'both') {
+                         options = character(0), details = TRUE, dispense_mode = NULL,
+                         apply_coefficient = FALSE, supplement_columns = 'both') {
     if (!is.data.frame(stays) && is.list(stays)) {
         if (is.null(diagnoses)) {
             diagnoses <- stays$diagnoses
@@ -21,7 +21,7 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     }
 
     result_set <- .Call(`drdR_mco_Classify`, classifier, stays, diagnoses, procedures,
-                        options, details, dispense, apply_coefficient, supplement_columns)
+                        options, details, dispense_mode, apply_coefficient, supplement_columns)
 
     class(result_set$summary) <- c('mco_summary', class(result_set$summary))
     if ('results' %in% names(result_set)) {
@@ -121,23 +121,23 @@ summary.mco_result_set <- function(result_set, by = NULL) {
 }
 
 mco_dispense <- function(results, group = NULL, group_var = 'group',
-                        fixed = NULL, fixed_count = FALSE) {
+                         reassign_list = NULL, reassign_counts = FALSE) {
     if ('mco_result_set' %in% class(results)) {
         results <- results$mono_results
     }
 
     agg <- setDT(summary.mco_results(results, by = 'unit'))
 
-    if (!is.null(fixed)) {
-        if (is.data.frame(fixed)) {
-            fixed_names <- fixed$supplement
-            fixed <- fixed$unit
-            names(fixed) <- fixed_names
+    if (!is.null(reassign_list)) {
+        if (is.data.frame(reassign_list)) {
+            reassign_names <- reassign_list$supplement
+            reassign_list <- reassign_list$unit
+            names(reassign_list) <- reassign_names
         }
 
-        for (supp in names(fixed)) {
-            unit <- fixed[[supp]]
-            if (fixed_count) {
+        for (supp in names(reassign_list)) {
+            unit <- reassign_list[[supp]]
+            if (reassign_counts) {
                 agg[[paste0(supp, '_count')]] <- ifelse(agg$unit == unit, sum(agg[[paste0(supp, '_count')]]), 0)
             }
             agg[[paste0(supp, '_cents')]] <- ifelse(agg$unit == unit, sum(agg[[paste0(supp, '_cents')]]), 0)
