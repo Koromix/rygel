@@ -78,6 +78,7 @@ struct mco_Result {
     mco_GhmCode ghm;
     int16_t main_error;
 
+    drd_Sector sector;
     mco_GhsCode ghs;
     int16_t ghs_duration;
 
@@ -105,8 +106,9 @@ mco_GhmCode mco_PickGhm(const mco_TableIndex &index,
                         const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                         unsigned int flags, mco_ErrorSet *out_errors);
 mco_GhsCode mco_PickGhs(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
-                        const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
-                        mco_GhmCode ghm, unsigned int flags, int16_t *out_ghs_duration = nullptr);
+                        drd_Sector sector, const mco_PreparedStay &prep,
+                        Span<const mco_PreparedStay> mono_preps, mco_GhmCode ghm,
+                        unsigned int flags, int16_t *out_ghs_duration = nullptr);
 void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSet &authorization_set,
                           const mco_PreparedStay &prep, Span<const mco_PreparedStay> mono_preps,
                           mco_GhmCode ghm, mco_GhsCode ghs, unsigned int flags,
@@ -114,5 +116,5 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
                           Strider<mco_SupplementCounters<int16_t>> out_mono_counters = {});
 
 Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
-                  Span<const mco_Stay> stays, unsigned int flags, HeapArray<mco_Result> *out_results,
-                  HeapArray<mco_Result> *out_mono_results = nullptr);
+                  drd_Sector sector, Span<const mco_Stay> stays, unsigned int flags,
+                  HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results = nullptr);

@@ -50,9 +50,9 @@ void mco_Price(const mco_Result &result, bool apply_coefficient, mco_Pricing *ou
     if (!result.index || result.ghs == mco_GhsCode(9999))
         return;
 
-    const mco_GhsPriceInfo *price_info = result.index->FindGhsPrice(result.ghs, drd_Sector::Public);
-    const mco_SupplementCounters<int32_t> &prices = result.index->SupplementPrices(drd_Sector::Public);
-    double ghs_coefficient = result.index->GhsCoefficient(drd_Sector::Public);
+    const mco_GhsPriceInfo *price_info = result.index->FindGhsPrice(result.ghs, result.sector);
+    const mco_SupplementCounters<int32_t> &prices = result.index->SupplementPrices(result.sector);
+    double ghs_coefficient = result.index->GhsCoefficient(result.sector);
 
     out_pricing->ghs_coefficient = ghs_coefficient;
     if (!apply_coefficient)

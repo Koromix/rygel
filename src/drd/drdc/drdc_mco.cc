@@ -486,8 +486,8 @@ Test options:)");
         summary = {};
 
         switch_perf_counter(&classify_time);
-        mco_Classify(table_set, authorization_set, stay_set.stays, classifier_flags,
-                     &results, dispense_mode >= 0 ? &mono_results : nullptr);
+        mco_Classify(table_set, authorization_set, drdc_config.sector, stay_set.stays,
+                     classifier_flags, &results, dispense_mode >= 0 ? &mono_results : nullptr);
 
         if (filter_buf.len) {
             switch_perf_counter(&filter_time);
@@ -507,8 +507,8 @@ Test options:)");
             results.RemoveFrom(filter_results.len);
             mono_results.RemoveFrom(filter_mono_results.len);
 
-            mco_Classify(table_set, authorization_set, filter_stay_set.stays, classifier_flags,
-                         &results, dispense_mode >= 0 ? &mono_results : nullptr);
+            mco_Classify(table_set, authorization_set, drdc_config.sector, filter_stay_set.stays,
+                         classifier_flags, &results, dispense_mode >= 0 ? &mono_results : nullptr);
         }
 
         switch_perf_counter(&pricing_time);
