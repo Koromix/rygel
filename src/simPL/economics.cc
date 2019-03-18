@@ -41,13 +41,13 @@ double ComputeUtility(const Human &human)
     return utility;
 }
 
-double ComputeDiseaseCost(const Human &human)
+double ComputeDiseaseCost(const Human &)
 {
     LogError("ComputeDiseaseCost() is a stub");
     Assert(false);
 }
 
-double ComputeProductivityCost(const Human &human)
+double ComputeProductivityCost(const Human &)
 {
     LogError("ComputeProductivityCost() is a stub");
     Assert(false);
