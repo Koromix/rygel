@@ -452,7 +452,7 @@ static SEXP ExportResultsDataFrame(Span<const HeapArray<mco_Result>> result_sets
 
 RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagnoses_xp,
                                   SEXP procedures_xp, SEXP sector_xp, SEXP options_xp,
-                                  SEXP details_xp, SEXP dispense_mode_xp,
+                                  SEXP results_xp, SEXP dispense_mode_xp,
                                   SEXP apply_coefficient_xp, SEXP supplement_columns_xp)
 {
     BEGIN_RCPP
@@ -467,7 +467,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     Rcpp::DataFrame procedures_df(procedures_xp);
     drd_Sector sector = GetSectorFromString(sector_xp, classifier->default_sector);
     Rcpp::CharacterVector options_vec(options_xp);
-    bool details = Rcpp::as<bool>(details_xp);
+    bool results = Rcpp::as<bool>(results_xp);
     const char *dispense_mode_str = !Rf_isNull(dispense_mode_xp) ?
                                     Rcpp::as<const char *>(dispense_mode_xp) : nullptr;
     bool apply_coefficient = Rcpp::as<bool>(apply_coefficient_xp);
@@ -631,7 +631,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
                                    sector, flags, task_stay_set, task_results, task_mono_results))
                     return false;
 
-                if (details || dispense_mode >= 0) {
+                if (results || dispense_mode >= 0) {
                     mco_Price(*task_results, apply_coefficient, task_pricings);
                     if (dispense_mode >= 0) {
                         mco_Dispense(*task_pricings, *task_mono_results,
@@ -684,7 +684,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
     }
 
     rcc_AutoSexp results_df;
-    if (details) {
+    if (results) {
         results_df = ExportResultsDataFrame(result_sets, pricing_sets, false,
                                             export_supplement_cents, export_supplement_counts);
     }
