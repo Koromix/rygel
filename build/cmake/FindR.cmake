@@ -24,6 +24,7 @@ if(NOT R_BINARY AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG) AND NOT
         find_program(R_BINARY R)
         find_program(R_BINARY_RSCRIPT Rscript)
         find_path(R_INCLUDE_DIRS R.h HINTS /usr/include /usr/local/include
+                                           /usr/share/R/include
                                      PATH_SUFFIXES R)
         find_library(R_LIBRARY R PATH_SUFFIXES R R/lib)
     endif()
