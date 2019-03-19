@@ -154,11 +154,6 @@ Compiler ClangCompiler = {
         if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
             Fmt(&buf, " -Xclang -flto-visibility-public-std");
         }
-#else
-        if (src_type == SourceType::CXX_Source || src_type == SourceType::CXX_Header) {
-            // -fno-rtti breaks <functional> on Windows
-            Fmt(&buf, " -fno-rtti");
-        }
 #endif
 
         AppendGccObjectArguments(src_filename, build_mode, pch_filename, definitions,
@@ -223,9 +218,9 @@ Compiler GnuCompiler = {
         switch (src_type) {
             case SourceType::C_Source: { Fmt(&buf, "gcc -std=gnu11 %1", flags); } break;
             case SourceType::C_Header: { Fmt(&buf, "gcc -std=gnu11 -x c-header %1", flags); } break;
-            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-rtti -fno-exceptions "
+            case SourceType::CXX_Source: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions "
                                                      "%1", flags); } break;
-            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-rtti -fno-exceptions "
+            case SourceType::CXX_Header: { Fmt(&buf, "g++ -std=gnu++17 -fno-exceptions "
                                                      "-x c++-header %1", flags); } break;
         }
 
