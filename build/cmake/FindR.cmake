@@ -38,6 +38,9 @@ if(NOT R_BINARY AND (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_CLANG) AND NOT
                 OUTPUT_VARIABLE R_LIB_PATHS)
             find_path(R_RCPP_INCLUDE_DIRS Rcpp.h HINTS ${R_LIB_PATHS}
                                                  PATH_SUFFIXES Rcpp/include)
+            if(NOT R_RCPP_INCLUDE_DIRS)
+                message(WARNING "Found R but Rcpp is not installed: ignoring R packages")
+            endif()
         endif()
     endif()
 endif()
