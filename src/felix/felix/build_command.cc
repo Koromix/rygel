@@ -87,15 +87,13 @@ static bool ExecuteCommandLine(const char *cmd_line, HeapArray<char> *out_buf, i
 
     // Wait for process exit
     DWORD exit_code;
-    {
-        if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
-            LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
-            return false;
-        }
-        if (!GetExitCodeProcess(process_handle, &exit_code)) {
-            LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
-            return false;
-        }
+    if (WaitForSingleObject(process_handle, INFINITE) != WAIT_OBJECT_0) {
+        LogError("WaitForSingleObject() failed: %1", Win32ErrorString());
+        return false;
+    }
+    if (!GetExitCodeProcess(process_handle, &exit_code)) {
+        LogError("GetExitCodeProcess() failed: %1", Win32ErrorString());
+        return false;
     }
 
     *out_code = (int)exit_code;
