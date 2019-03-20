@@ -144,22 +144,28 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
             target_config.type = TargetType::Executable;
             target_config.pack_link_type = PackLinkType::Static;
 
+            // Type property must be specified first
+            if (prop.key == "Type") {
+                if (prop.value == "Executable") {
+                    target_config.type = TargetType::Executable;
+                    target_config.enable_by_default = true;
+                } else if (prop.value == "Library") {
+                    target_config.type = TargetType::Library;
+                } else {
+                    LogError("Unknown target type '%1'", prop.value);
+                    valid = false;
+                }
+            } else {
+                LogError("Property 'Type' must be specified first");
+                valid = false;
+            }
+
             bool restricted_platforms = false;
             bool supported_platform = false;
-            bool type_specified = false;
-            bool enable_by_default_specified = false;
-            do {
+            while (ini.NextInSection(&prop)) {
                 if (prop.key == "Type") {
-                    if (prop.value == "Executable") {
-                        target_config.type = TargetType::Executable;
-                    } else if (prop.value == "Library") {
-                        target_config.type = TargetType::Library;
-                    } else {
-                        LogError("Unknown target type '%1'", prop.value);
-                        valid = false;
-                    }
-
-                    type_specified = true;
+                    LogError("Target type cannot be changed");
+                    valid = false;
                 } else if (prop.key == "EnableByDefault") {
                     if (prop.value == "1" || prop.value == "On" || prop.value == "Y") {
                         target_config.enable_by_default = true;
@@ -169,8 +175,6 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                         LogError("Invalid EnableByDefault value '%1'", prop.value);
                         valid = false;
                     }
-
-                    enable_by_default_specified = true;
                 } else if (prop.key == "Platforms") {
                     while (prop.value.len) {
                         Span<const char> part = TrimStr(SplitStr(prop.value, ' ', &prop.value));
@@ -282,14 +286,6 @@ bool TargetSetBuilder::LoadIni(StreamReader &st)
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
-            } while (ini.NextInSection(&prop));
-
-            if (!type_specified) {
-                LogError("Type attribute is missing for target '%1'", target_config.name);
-                valid = false;
-            }
-            if (!enable_by_default_specified) {
-                target_config.enable_by_default = (target_config.type == TargetType::Executable);
             }
 
             supported_platform |= !restricted_platforms;
