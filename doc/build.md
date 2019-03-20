@@ -19,7 +19,7 @@ from the msys2 prompt (for x64 builds):
 
 cmake, gcc/g++ and ninja binaries must be in PATH when you use the cmake command.
 
-For R packages, you need to install *R*, *RBuildTools* and the following R packages:
+For R packages, you need to install *R*, *Rtools* (>= 3.5) and the following R packages:
 *Rcpp* and *data.table*.
 
 ```bash
@@ -34,7 +34,9 @@ ninja
 ### Visual Studio
 
 Execute commands from a Visual Studio native prompt (x64 or x86).
-Visual Studio cannot build R packages.
+
+R packages can only be compiled with GCC. In particular, Visual Studio cannot
+build R packages.
 
 ```bash
 git clone https://github.com/Koromix/rygel.git
