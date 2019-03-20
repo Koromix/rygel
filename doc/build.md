@@ -19,8 +19,8 @@ from the msys2 prompt (for x64 builds):
 
 cmake, gcc/g++ and ninja binaries must be in PATH when you use the cmake command.
 
-For R packages, you need to install *R*, *Rtools* (>= 3.5) and the following R packages:
-*Rcpp* and *data.table*.
+For R packages, you need to install *R*, *Rtools* (3.5, avoid 4.0 until it is released)
+and the following R packages: *Rcpp* and *data.table*.
 
 ```bash
 git clone https://github.com/Koromix/rygel.git
