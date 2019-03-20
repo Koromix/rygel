@@ -52,7 +52,7 @@ drdc mco_classify -v -sPrivate -C resources/profile/drdc.ini fichier.grp ...
 drdc mco_classify -vv -sPrivate -C resources/profile/drdc.ini fichier.grp ...
 
 # Tu peux tester les performances avec l'argument --torture <nombre_dessais>, par exemple '--torture 20'
-# et tu auras des réusltats de benchmark.
+# et tu auras des résultats de benchmark.
 drdc mco_classify --torture 20 -sPrivate -C resources/profile/drdc.ini fichier.grp ...
 
 # Il est également possible d'avoir les infos de ventilation des recettes dans les différentes
@@ -77,7 +77,7 @@ drdc mco_classify --help
 library(drdR)
 
 # Chargement des tables et autorisations, l'objet obtenu peut être réutilisé
-# autent de fois que nécessaire.
+# autant de fois que nécessaire.
 m <- mco_init('resources/tables/', 'resources/profile/mco_authorizations.txt',
               default_sector = 'Private')
 
@@ -109,8 +109,8 @@ head(c$results)
 # ce cas c$results ne sera pas créé, mais le summary() fonctionnera.
 c <- mco_classify(m, l, results = FALSE)
 
-# Il y aussi des fonctions permettant d'extraires les données des tables
-# vers des data.frames
+# Il y aussi des fonctions permettant d'extraire les données des tables
+# vers des data.frames.
 head(mco_ghm_ghs(m, '2017-03-01'))
 head(mco_diagnoses(m, '2017-03-01'))
 head(mco_procedures(m, '2017-03-01'))
@@ -127,13 +127,15 @@ si besoin ça peut être ajouté !
 En ce qui concerne le groupage GHM, il faut noter que les contrôles bloquants sont
 bons (en tout cas sur les tests que j’ai fait sur 6 années de CHU dont des tas de données
 non consolidées) mais pas toujours faits dans le même ordre. Donc ça finit bien en
-90Z mais parfois le code retour n’est pas le même. En terme de valorisation, ça ne change rien.
+90Z mais parfois le code retour n’est pas le même. En terme de valorisation ou de GHM,
+ça ne change rien.
 
 Autre chose, les suppléments de radiothérapie ne sont pas implémentés. Il sont simples à
 ajouter, je n'ai pas pris le temps de le faire car il n'y a pas de radiothérapie au CHU,
 si besoin je peux les ajouter assez rapidement.
 
-Les numéros FINESS du FICUM et des RSS sont ignorés, et donc les autorisations globales (comme
-l'autorisation 30 pour les IOA complexes) sont appliquées à l'ensemble des RUM. Le CHU
-n'avait pas besoin de cela et je n'ai pas pris le temps de supporter comme il faut
-les FINESS, si besoin ça peut être ajouté rapidement.
+Les numéros FINESS du FICUM et des RSS sont ignorés, et donc les autorisations globales
+(comme l'autorisation 30 pour les IOA complexes) peuvent être appliquées à l'ensemble des
+RUM et pas juste à deux dont le FINESS match. Le CHU n'avait pas besoin de cela et je
+n'ai pas pris le temps de supporter comme il faut les FINESS, si besoin ça peut être
+ajouté rapidement.
