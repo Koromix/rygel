@@ -167,7 +167,7 @@ const pack_Asset *const pack_asset_%1 = &assets[%2];)", blob.var_name, i);
     } else {
         PrintLn(&st, R"(
 EXPORT extern const Span pack_assets;
-const Span pack_assets = {};)");
+const Span pack_assets = {0, 0};)");
     }
 
     return st.Close();
