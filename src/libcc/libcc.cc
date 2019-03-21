@@ -1758,8 +1758,16 @@ bool MakeDirectoryRec(Span<const char> directory)
 
 void WaitForDelay(int64_t delay)
 {
+    DebugAssert(delay >= 0);
+    DebugAssert(delay < 1000ll * INT32_MAX);
+
 #ifdef _WIN32
-    Sleep(delay);
+    while (delay) {
+        DWORD delay32 = (DWORD)std::min(delay, (int64_t)UINT32_MAX);
+        delay -= delay32;
+
+        Sleep(delay32);
+    }
 #else
     struct timespec ts;
     ts.tv_sec = (int)(delay / 1000);
