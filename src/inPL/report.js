@@ -92,6 +92,8 @@ let report = (function() {
                     case 'neuropsy_had': { result = neuropsy.screenDepressionAnxiety(data); } break;
                     case 'neuropsy_sommeil': { result = neuropsy.screenSleep(data); } break;
 
+                    case 'constantes_hta_ortho': { result = misc.screenOrthostaticHypotension(data); } break;
+
                     default: throw `Unknown test \'${test_name}\'`;
                 }
 
