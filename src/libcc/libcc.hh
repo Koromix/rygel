@@ -3166,12 +3166,13 @@ enum class EnumStatus {
 bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info);
 static inline bool StatFile(const char *filename, FileInfo *out_info)
     { return StatFile(filename, true, out_info); }
-bool TestFile(const char *path, FileType type = FileType::Unknown);
 
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, FileType)> func);
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
+
+bool TestFile(const char *filename, FileType type = FileType::Unknown);
 
 bool MatchPathName(const char *name, const char *pattern);
 
