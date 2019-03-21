@@ -97,6 +97,14 @@ let report = (function() {
 
                 return ScreeningResult.label(result);
             }
+            function calc(data, calc_name)
+            {
+                switch (calc_name) {
+                    case 'aq1_epices': return misc.computeEpices(data);
+
+                    default: throw `Unknown calculated variable \'${calc_name}\'`;
+                }
+            }
 
             reader.onload = function() {
                 let zip = new JSZip(reader.result);
