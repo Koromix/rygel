@@ -401,6 +401,7 @@ set(INPL_ASSETS
     inPL/inPL.js
     inPL/mod_demo.js
     inPL/mod_ems.js
+    inPL/mod_misc.js
     inPL/mod_neuropsy.js
     inPL/mod_nutrition.js
     inPL/bridge.js
