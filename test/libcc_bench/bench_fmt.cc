@@ -4,7 +4,7 @@
 
 #include "vendor/stb_sprintf.h"
 #include "vendor/fmt/format.h"
-#include "../libcc.hh"
+#include "../../src/libcc/libcc.hh"
 #include "bench.hh"
 
 #define ITERATIONS 4000000
