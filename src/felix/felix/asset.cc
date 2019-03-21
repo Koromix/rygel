@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "pack_generator.hh"
-#include "pack_output.hh"
+#include "asset_generator.hh"
+#include "asset_output.hh"
 
 enum class MergeMode {
     Naive,

@@ -44,6 +44,12 @@ target_link_libraries(libcc_bench PRIVATE libcc)
 # ------------------------------------------------------------------------
 
 set(FELIX_SRC
+    felix/felix/asset.cc
+    felix/felix/asset_generator.cc
+    felix/felix/asset_generator.hh
+    felix/felix/asset_output.cc
+    felix/felix/asset_output.hh
+    felix/felix/build.cc
     felix/felix/build_command.cc
     felix/felix/build_command.hh
     felix/felix/build_compiler.cc
@@ -51,12 +57,6 @@ set(FELIX_SRC
     felix/felix/build_target.cc
     felix/felix/build_target.hh
     felix/felix/felix.cc
-    felix/felix/felix_build.cc
-    felix/felix/felix_pack.cc
-    felix/felix/pack_generator.cc
-    felix/felix/pack_generator.hh
-    felix/felix/pack_output.cc
-    felix/felix/pack_output.hh
 )
 
 add_executable(felix ${FELIX_SRC})
