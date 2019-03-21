@@ -28,5 +28,25 @@ let misc = (function() {
         return score;
     };
 
+    this.screenOrthostaticHypotension = function(data) {
+        if (data.constantes_explcv2 === null || data.constantes_explcv3 === null ||
+                data.constantes_explcv8 === null || data.constantes_explcv9 === null ||
+                data.constantes_explcv11 === null || data.constantes_explcv12 === null)
+                // data.constantes_explcv14 === null || data.constantes_explcv15 === null)
+            return null;
+
+        let pas_min = Math.min(data.constantes_explcv8, data.constantes_explcv11); //, data.constantes_explcv14);
+        let pad_min = Math.min(data.constantes_explcv9, data.constantes_explcv12); //, data.constantes_explcv15);
+
+        if (data.constantes_explcv2 - pas_min >= 20 || data.constantes_explcv3 - pad_min >= 10) {
+            return ScreeningResult.Bad;
+        //} else if (data.constantes_explcv2 - data.constantes_explcv14 >= 20 ||
+        //           data.constantes_explcv3 - data.constantes_explcv15 >= 10) {
+        //    return ScreeningResult.Fragile;
+        } else {
+            return ScreeningResult.Good;
+        }
+    };
+
     return this;
 }).call({});
