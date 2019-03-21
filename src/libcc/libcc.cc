@@ -1193,34 +1193,6 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
     return true;
 }
 
-bool TestFile(const char *path, FileType type)
-{
-    DWORD attr = GetFileAttributes(path);
-    if (attr == INVALID_FILE_ATTRIBUTES)
-        return false;
-
-    switch (type) {
-        case FileType::Directory: {
-            if (!(attr & FILE_ATTRIBUTE_DIRECTORY)) {
-                LogError("Path '%1' exists but is not a directory", path);
-                return false;
-            }
-        } break;
-        case FileType::File: {
-            if (attr & FILE_ATTRIBUTE_DIRECTORY) {
-                LogError("Path '%1' exists but is not a file", path);
-                return false;
-            }
-        } break;
-
-        case FileType::Unknown: {
-            // Ignore file type
-        } break;
-    }
-
-    return true;
-}
-
 EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               std::function<bool(const char *, FileType)> func)
 {
@@ -1305,34 +1277,6 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
 #else
     out_info->modification_time = (int64_t)sb.st_mtime * 1000;
 #endif
-
-    return true;
-}
-
-bool TestFile(const char *path, FileType type)
-{
-    struct stat sb;
-    if (stat(path, &sb) < 0)
-        return false;
-
-    switch (type) {
-        case FileType::Directory: {
-            if (!S_ISDIR(sb.st_mode)) {
-                LogError("Path '%1' exists but is not a directory", path);
-                return false;
-            }
-        } break;
-        case FileType::File: {
-            if (!S_ISREG(sb.st_mode)) {
-                LogError("Path '%1' exists but is not a file", path);
-                return false;
-            }
-        } break;
-
-        case FileType::Unknown: {
-            // Ignore file type
-        } break;
-    }
 
     return true;
 }
@@ -1431,6 +1375,25 @@ bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Siz
         return false;
 
     out_guard.Disable();
+    return true;
+}
+
+bool TestFile(const char *filename, FileType type)
+{
+    FileInfo file_info;
+    if (!StatFile(filename, false, &file_info))
+        return false;
+
+    if (type != FileType::Unknown && type != file_info.type) {
+        switch (type) {
+            case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
+            case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
+            case FileType::Unknown: { DebugAssert(false); } break;
+        }
+
+        return false;
+    }
+
     return true;
 }
 
