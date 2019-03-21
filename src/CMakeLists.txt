@@ -27,18 +27,6 @@ if(WIN32)
     target_link_libraries(libcc PUBLIC shlwapi)
 endif()
 
-add_executable(libcc_bench EXCLUDE_FROM_ALL
-    libcc/bench/vendor/stb_sprintf.c
-    libcc/bench/vendor/fmt/posix.cc
-    libcc/bench/vendor/fmt/format.cc
-
-    libcc/bench/bench.cc
-    libcc/bench/bench.hh
-    libcc/bench/bench_fmt.cc
-)
-target_include_directories(libcc_bench PRIVATE libcc/bench/vendor)
-target_link_libraries(libcc_bench PRIVATE libcc)
-
 # ------------------------------------------------------------------------
 # felix
 # ------------------------------------------------------------------------

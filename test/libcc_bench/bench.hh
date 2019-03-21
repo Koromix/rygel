@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "../libcc.hh"
+#include "../../src/libcc/libcc.hh"
 
 struct Checkpoint {
     int64_t time;

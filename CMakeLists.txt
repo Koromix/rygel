@@ -114,3 +114,4 @@ endif()
 
 add_subdirectory(vendor EXCLUDE_FROM_ALL)
 add_subdirectory(src)
+add_subdirectory(test EXCLUDE_FROM_ALL)
