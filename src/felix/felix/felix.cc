@@ -3,9 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "../../libcc/libcc.hh"
-#include "build_command.hh"
-#include "build_compiler.hh"
-#include "build_target.hh"
 
 int RunBuild(Span<const char *> arguments);
 int RunPack(Span<const char *> arguments);

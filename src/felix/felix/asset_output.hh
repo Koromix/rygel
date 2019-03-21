@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../../libcc/libcc.hh"
-#include "pack_generator.hh"
+#include "asset_generator.hh"
 
 Size PackAsset(Span<const SourceInfo> sources, CompressionType compression_type,
                std::function<void(Span<const uint8_t> buf)> func);
