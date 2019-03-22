@@ -2,7 +2,6 @@ Package: drdR
 Type: Package
 Title: Alternative French PMSI Classifier
 Version: 0.9
-Date: 2017-11-16
 Author: Niels Martignene
 Maintainer: Niels Martignene <niels.martignene@protonmail.com>
 Description: Alternative French PMSI Classifier
