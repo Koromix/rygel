@@ -7,6 +7,7 @@
 library(stringr)
 library(devtools)
 library(drat)
+library(roxygen2)
 library(optparse)
 
 bundle_drdR <- function(project_dir, build_dir) {
@@ -62,7 +63,18 @@ bundle_drdR <- function(project_dir, build_dir) {
     return (build_dir)
 }
 
-register_package <- function(pkg_dir, repo_dir) {
+run_roxygen2 <- function(pkg_dir) {
+    env_legacy <- function(path) {
+        env <- new.env()
+        files <- dir(file.path(path, "R"), full.names = TRUE)
+        for (file in files) source(file, local = env)
+        env
+    }
+
+    roxygen2::roxygenize(pkg_dir, roclets = 'rd', load_code = env_legacy)
+}
+
+build_package <- function(pkg_dir, repo_dir) {
     pkg_src_filename <- devtools::build(pkg_dir)
     if (Sys.info()[['sysname']] == 'Windows') {
         pkg_win32_filename <- devtools::build(pkg_dir, binary = TRUE)
@@ -90,4 +102,5 @@ local({
 })
 
 pkg_dir <- bundle_drdR(src_dir, str_interp('${repo_dir}/tmp/drdR'))
-register_package(pkg_dir, repo_dir)
+run_roxygen2(pkg_dir)
+build_package(pkg_dir, repo_dir)
