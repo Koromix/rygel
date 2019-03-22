@@ -55,7 +55,8 @@ bundle_drdR <- function(project_dir, build_dir) {
 
     copy_files('src/drd/drdR/src/dummy.cc', 'src')
     copy_files('src/drd/drdR/drdR_mco.cc', 'src/drd/drdR')
-    copy_files('src/drd/drdR/drdR_mco.R', 'R')
+    copy_files(c('src/drd/drdR/drdR.R',
+                 'src/drd/drdR/drdR_mco.R'), 'R')
     copy_files(list_files('src/drd/libdrd'), 'src/drd/libdrd')
     copy_files(list_files('src/libcc'), 'src/libcc')
     copy_files(c('src/wrappers/Rcc.cc',

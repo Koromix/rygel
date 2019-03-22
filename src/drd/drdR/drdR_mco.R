@@ -2,11 +2,134 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+#' Create new MCO classifier object
+#'
+#' @description
+#' The resulting object contains a set of ATIH tables, pricing and institutional
+#' unit authorizations that will be used to classify stays.
+#'
+#' @details
+#' A typical call should look like this:
+#' `m <- mco_init('path/to/tables', 'path/to/FICUM.txt', default_sector = 'Public')`
+#'
+#' The `default_sector` parameter can be overriden in functions that need sector
+#' information such as [mco_classify()].
+#'
+#' @param table_dirs Paths to directories containing classification tables.
+#' @param authorization_filename Path to FICUM file, or NULL.
+#' @param table_filenames Paths to additional classification table files.
+#' @param default_sector Default sector 'Public' or 'Private'.
+#' @return A classifier object that can be used by [mco_classify()] and a
+#'         varierty of other functions.
+#'
+#' @md
 mco_init <- function(table_dirs, authorization_filename,
                      table_filenames = character(0), default_sector = NULL) {
     .Call(`drdR_mco_Init`, table_dirs, table_filenames, authorization_filename, default_sector)
 }
 
+#' Load MCO stays from RSS, GRP, RSA (and FICHCOMP) files
+#'
+#' @details
+#' You can pass multiple filenames. To load FICHCOMP files, pass them as
+#' additional filenames, they must use a .txt extension.
+#'
+#' Supported file formats: RSS (.rss), GRP (.grp) and RSA (.rsa).
+#'
+#' @param filenames Paths of filenames to load stays (and FICHCOMP data) from.
+#' @return A list containing three data.frames: l$stays, l$diagnoses and
+#'         l$procedures. A sorted id column links all three together.
+#'
+#' @examples
+#' \donttest{
+#' l <- mco_load_stays('/path/to/stays.rss')
+#'
+#' head(l$stays)
+#' head(l$diagnoses)
+#' head(l$procedures)
+#' }
+#'
+#' @md
+mco_load_stays <- function(filenames) {
+    .Call(`drdR_mco_LoadStays`, filenames)
+}
+
+#' Classify MCO stays
+#'
+#' @description
+#' This function takes a classifier object (with its table and authorization set) and
+#' loaded stays as input and classifies them according to the revelant ATIH algorithm.
+#' Final GHM, GHS, supplements, pricings are calculated (among others). Stays with the
+#' same bill_id (RSS id) are fused together and produce a single result.
+#'
+#' @details
+#' The stays must be presented in three data.frames: stays, diagnoses, procedures.
+#' These are linked by an id column which must be sorted before calling [mco_classify()]
+#' otherwise the call will fail. While each data.frame must be sorted by this
+#' column, they don't have to match perfectly. For example, you can filter out
+#' stays from the first data.frame without having to do the same in the two
+#' other data.frames.
+#'
+#' Several options can be used to control the algorithm used to classify stays:
+#'
+#' * MonoOrigStay: Use original stays in mono algorithm
+#' * IgnoreConfirm: Ignore RSS confirmation flag
+#' * IgnoreCompProc: Ignore complementary procedure check
+#' * IgnoreProcExt: Ignore ATIH procedure extension check
+#'
+#' You can use the `dispense_mode` parameter to redistribute pricings from multi-stay
+#' results to individual stays, the following algorithms can be used:
+#'
+#' * J: Proportional to each stay duration
+#' * E: Proportional to pseudo-GHS pricing of each stay
+#' * Ex: Proportional to pseudo-GHS-EXB+EXH pricing of each stay
+#' * Ex': Proportional to pseudo-GHS-EXB+EXH pricing of each stay if duration < EXB or
+#'        pseudo-GHS pricing otherwise
+#' * ExJ: Combine J and Ex algorithms
+#' * Ex'J: Combine J and Ex' algorithms
+#'
+#' After loading stays with [mco_load_stays()], you can use a shortcut call `mco_classify(m, l)`
+#' instead of the longer `mco_classify(m, l$stays, l$diagnoses, l$procedures)`.
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#' @param stays Data.frame of stays, or a list with three objects (stays, diagnoses, procedures).
+#' @param diagnoses Data.frame of diagnoses, or NULL is you pass a list of data.frames to stays.
+#' @param procedures Data.frame of procedures, or NULL is you pass a list of data.frames to stays.
+#' @param sector Sector 'Public' or 'Private', by default the `default_sector` value
+#'               specified in [mco_init()] will be used.
+#' @param options List of options to alter classifier algorithm.
+#' @param results Return results for each RSS as a data.frame.
+#' @param dispense_mode Retribute paiements to individual stays (RUM), several algorithms
+#'                      are available: "J", "Ex", "Ex'", "ExJ", "Ex'J". Individual results
+#'                      will be available in the `$mono_results` component of the returned list.
+#' @param apply_coefficient Apply GHS coefficients to results.
+#' @param supplement_columns Change returned supplement columns, the following values can
+#'                           be used: "none", "count", "cents" or "both".
+#' @return A list containing one to three data.frames: `$summary`, `$results`
+#'         (if `results = TRUE`) and `$mono_results` (if `dispense_mode != NULL`).
+#'
+#' @examples
+#' \donttest{
+#' library(drdR)
+#'
+#' # Load tables and authorizations, the resulting object can be reused as many
+#' # times as necessary.
+#' m <- mco_init('path/to/tables/', 'path/to/FICUM.txt', default_sector = 'Public')
+#'
+#' # Load stays, diagnoses and procedures from a file (RSS, GRP or RSA), the
+#' # returned object is a list containing three data.frames: l$stays, l$diagnoses
+#' # and l$procedures. A sorted id column links all three together.
+#' l <- mco_load_stays('fichier.rss')
+#'
+#' c <- mco_classify(m, l)
+#'
+#' summary(c)
+#' summary(c, by = 'ghm')
+#' summary(c$results, by = 'ghm') # This does the same
+#' head(c$results)
+#' }
+#'
+#' @md
 mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL, sector = NULL,
                          options = character(0), results = TRUE, dispense_mode = NULL,
                          apply_coefficient = FALSE, supplement_columns = 'both') {
@@ -35,30 +158,72 @@ mco_classify <- function(classifier, stays, diagnoses = NULL, procedures = NULL,
     return(result_set)
 }
 
+#' Get information about available MCO table sets
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#'
+#' @md
 mco_indexes <- function(classifier) {
     .Call(`drdR_mco_Indexes`, classifier)
 }
 
+#' Extract GHM/GHS information from MCO tables
+#'
+#' @details
+#' You can use any `date` supported by the set of tables loaded in [mco_init()].
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#' @param date Determines which tables to use.
+#' @param sector Sector 'Public' or 'Private' (defaults to `default_sector` specified in [mco_init()]).
+#' @param map Calculate information about possible GHM durations.
+#'
+#' @md
 mco_ghm_ghs <- function(classifier, date, sector = NULL, map = TRUE) {
     .Call(`drdR_mco_GhmGhs`, classifier, date, sector, map)
 }
 
+#' Extract diagnosis information from MCO tables
+#'
+#' @details
+#' You can use any `date` supported by the set of tables loaded in [mco_init()].
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#' @param date Determines which tables to use.
+#'
+#' @md
 mco_diagnoses <- function(classifier, date) {
     .Call(`drdR_mco_Diagnoses`, classifier, date)
 }
 
+#' Extract DAS exclusion information from MCO tables
+#'
+#' @details
+#' You can use any `date` supported by the set of tables loaded in [mco_init()].
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#' @param date Determines which tables to use.
+#'
+#' @md
 mco_exclusions <- function(classifier, date) {
     .Call(`drdR_mco_Exclusions`, classifier, date)
 }
 
+#' Extract CCAM procedure information from MCO tables
+#'
+#' @details
+#' You can use any `date` supported by the set of tables loaded in [mco_init()].
+#'
+#' @param classifier Classifier object created by [mco_init()].
+#' @param date Determines which tables to use.
+#'
+#' @md
 mco_procedures <- function(classifier, date) {
     .Call(`drdR_mco_Procedures`, classifier, date)
 }
 
-mco_load_stays <- function(filenames) {
-    .Call(`drdR_mco_LoadStays`, filenames)
-}
-
+#' Create delta between two summary data.frames
+#'
+#' @md
 mco_compare <- function(summary1, summary2, ...) {
     if (!('mco_summary' %in% class(summary1))) {
         summary1 <- summary(summary1, ...)
@@ -82,6 +247,38 @@ mco_compare <- function(summary1, summary2, ...) {
     )
 
     return(diff)
+}
+
+#' Summarize MCO results
+#'
+#' @description
+#' Results obtained from [mco_classify()] can be by simply calling [summary()]
+#' on the returned object, or on the `c$results` data.frame.
+#'
+#' @details
+#' You can use the `by` parameter to group summary rows on a specific key (e.g. 'ghm').
+#' By default the summary will only have a single row (total), which you can also
+#' access directly with `c$summary`.
+#'
+#' @param result_set List returned by [mco_classify()].
+#' @param by Column used to group summary (e.g. ghm), or NULL.
+#'
+#' @examples
+#' \donttest{
+#' c <- mco_classify(m, l)
+#'
+#' summary(c)
+#' summary(c, by = 'ghm')
+#' summary(c$results, by = 'ghm') # Does the same thing
+#' }
+#'
+#' @md
+summary.mco_result_set <- function(result_set, by = NULL) {
+    if (is.null(by)) {
+        return(result_set$summary)
+    } else {
+        return(summary.mco_results(result_set$results, by = by))
+    }
 }
 
 summary.mco_results <- function(results, by = NULL) {
@@ -112,14 +309,8 @@ summary.mco_results <- function(results, by = NULL) {
 
     return(f(results, by = by))
 }
-summary.mco_result_set <- function(result_set, by = NULL) {
-    if (is.null(by)) {
-        return(result_set$summary)
-    } else {
-        return(summary.mco_results(result_set$results, by = by))
-    }
-}
 
+#' Dispense MCO pricings to medical units
 mco_dispense <- function(results, group = NULL, group_var = 'group',
                          reassign_list = NULL, reassign_counts = FALSE) {
     if ('mco_result_set' %in% class(results)) {
@@ -183,10 +374,30 @@ mco_summary_columns <- function() {
       paste0(tolower(.Call(`drdR_mco_SupplementTypes`)), '_count'))
 }
 
+#' Validate CIM-10 codes and strip extensions
+#'
+#' @description
+#' Valid CIM-10 codes will be returned stripped of any extension (space extensions,
+#' CIM +, etc.), NA will be returned for invalid CIM-10 codes.
+#'
+#' @param diagnoses Character vector of CIM-10 codes.
+#' @return Cleaned up character vector of CIM-10 codes.
+#'
+#' @md
 mco_clean_diagnoses <- function(diagnoses) {
     .Call(`drdR_mco_CleanDiagnoses`, diagnoses)
 }
 
+#' Validate CCAM codes
+#'
+#' @description
+#' Valid CCAM codes will be returned as is, NA will be returned for invalid
+#' CCAM codes.
+#'
+#' @param procedures Character vector of CCAM codes.
+#' @return Cleaned up character vector of CCAM codes.
+#'
+#' @md
 mco_clean_procedures <- function(procedures) {
     .Call(`drdR_mco_CleanProcedures`, procedures)
 }
