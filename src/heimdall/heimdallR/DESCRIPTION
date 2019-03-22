@@ -2,7 +2,6 @@ Package: heimdallR
 Type: Package
 Title: Timeline visualization package
 Version: 0.9
-Date: 2017-11-16
 Author: Niels Martignene
 Maintainer: Niels Martignene <niels.martignene@protonmail.com>
 Description: Timeline visualization package
