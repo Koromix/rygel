@@ -148,7 +148,7 @@ enum class Endianness {
     #define FALLTHROUGH [[fallthrough]]
 #elif defined(__clang__)
     #define FALLTHROUGH [[clang::fallthrough]]
-#elif defined(__GNUC__)
+#elif __GNUC__ >= 7
     #define FALLTHROUGH [[gnu::fallthrough]]
 #else
     #define FALLTHROUGH
