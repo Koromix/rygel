@@ -43,9 +43,10 @@ bundle_drdR <- function(project_dir, build_dir) {
         filename <- str_interp('${build_dir}/DESCRIPTION')
         lines <- readLines(filename)
 
+        version <- gsub('-', '.', Sys.Date(), fixed = TRUE)
         lines <- ifelse(
             grepl('Version:', lines, fixed = TRUE),
-            paste0('Version: ', gsub('-', '.', Sys.Date(), fixed = TRUE)),
+            str_interp('Version: ${version}'),
             lines
         )
 
