@@ -8,6 +8,7 @@ library(stringr)
 library(devtools)
 library(drat)
 library(roxygen2)
+library(parallel)
 library(optparse)
 
 bundle_drdR <- function(project_dir, build_dir) {
@@ -88,6 +89,7 @@ build_package <- function(pkg_dir, repo_dir) {
     }
 }
 
+# Parse arguments
 local({
     opt_parser <- OptionParser(option_list = list(
         make_option(c('-R', '--repository'), type = 'character', help = 'repository directory')
@@ -101,6 +103,15 @@ local({
     repo_dir <<- args$options$repository
 })
 
+# Use all cores to build package
+local({
+    cores <- detectCores()
+    flags <- Sys.getenv('MAKEFLAGS', unset = '')
+
+    Sys.setenv(MAKEFLAGS = str_interp('-j${cores + 1} ${flags}'))
+})
+
+# Bundle, build and register the package
 pkg_dir <- bundle_drdR(src_dir, str_interp('${repo_dir}/tmp/drdR'))
 run_roxygen2(pkg_dir)
 build_package(pkg_dir, repo_dir)
