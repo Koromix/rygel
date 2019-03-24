@@ -182,10 +182,8 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
         LogError("Output directory was not specified");
         return false;
     }
-    if (!TestFile(output_path, FileType::Directory)) {
-        LogError("Directory '%1' does not exist", output_path);
+    if (!MakeDirectory(output_path, false))
         return false;
-    }
 
     const char *compression_ext = nullptr;
     switch (compression_type) {
