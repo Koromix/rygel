@@ -463,3 +463,14 @@ if(TARGET libgui)
         target_link_libraries(simPL PRIVATE pcg)
     endif()
 endif()
+
+# ------------------------------------------------------------------------
+# webler
+# ------------------------------------------------------------------------
+
+set(WEBLER_SRC
+    webler/webler.cc
+)
+
+add_executable(webler ${WEBLER_SRC})
+target_link_libraries(webler PRIVATE libcc libsoldout)
