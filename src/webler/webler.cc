@@ -214,12 +214,14 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     Print(&st, R"(<!DOCTYPE html>
 <html lang="en" class="nojs">
     <head>
+        <base href="/%2"/>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+
         <title>%1</title>
+
         <link rel="stylesheet" href="static/style.css">
         <script type="text/javascript" src="static/script.js" async></script>
-        <base href="/%2"/>
     </head>
     <body>
         <div id="top">
