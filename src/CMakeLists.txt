@@ -471,6 +471,18 @@ endif()
 set(WEBLER_SRC
     webler/webler.cc
 )
+set(WEBLER_ASSETS
+    webler/webler.css
+
+    libweb/compat.js
+    libweb/util.js
+    webler/webler.js
+)
 
 add_executable(webler ${WEBLER_SRC})
-target_link_libraries(webler PRIVATE libcc libsoldout)
+target_link_libraries(webler PRIVATE libcc libpack libsoldout)
+target_assets(webler
+    MERGE_RULES webler/packer.ini
+    OPTIONS -cGzip
+    SOURCES ${WEBLER_ASSETS}
+)
