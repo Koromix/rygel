@@ -52,75 +52,6 @@ static const char *FileNameToPageName(const char *filename, Allocator *alloc)
     return name2;
 }
 
-static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char *dest_filename)
-{
-    StreamWriter st(dest_filename);
-
-    const PageData &page = pages[page_idx];
-
-    Print(&st, R"(<!DOCTYPE html>
-<html lang="en" class="nojs">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>neodd.com — %1</title>
-        <link rel="stylesheet" href="/resources/style.css">
-        <script type="text/javascript" src="/resources/script.js" async></script>
-        <base href="/%2"/>
-    </head>
-    <body>
-        <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleActive('top_menu'); return false;"></a>
-            <nav id="top_menu">
-                <ul>)", page.title, page.url);
-
-    for (Size i = 0; i < pages.len; i++) {
-        const PageData &menu_page = pages[i];
-
-        if (i == page_idx) {
-            Print(&st, "\n                    <li><a href=\"%1\" class=\"active\">%2</a></li>",
-                  menu_page.url, menu_page.title);
-        } else {
-            Print(&st, "\n                    <li><a href=\"%1\">%2</a></li>",
-                  menu_page.url, menu_page.title);
-        }
-    }
-
-    Print(&st, R"(
-                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
-                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
-                </ul>
-            </nav>
-        </div>
-        <div id="content">)");
-
-    if (page.sections.len) {
-        Print(&st, R"(
-            <a id="side_deploy" href="#" onclick="toggleActive('side_menu'); return false;"></a>
-            <nav id="side_menu">
-                <ul>)");
-
-        for (const PageSection &sec: page.sections) {
-            Print(&st, "\n                    <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
-                  sec.id, sec.level, sec.title);
-        }
-
-        Print(&st, R"(
-                </ul>
-            </nav>)");
-    }
-
-    Print(&st, R"(
-            <main>
-%1
-            </main>
-        </div>
-    </body>
-</html>)", page.html);
-
-    return st.Close();
-}
-
 // TODO: Resolve page links in content
 static bool RenderPageContent(PageData *page, Allocator *alloc)
 {
@@ -269,6 +200,75 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
     }
 
     return true;
+}
+
+static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char *dest_filename)
+{
+    StreamWriter st(dest_filename);
+
+    const PageData &page = pages[page_idx];
+
+    Print(&st, R"(<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>neodd.com — %1</title>
+        <link rel="stylesheet" href="/resources/style.css">
+        <script type="text/javascript" src="/resources/script.js" async></script>
+        <base href="/%2"/>
+    </head>
+    <body>
+        <div id="top">
+            <a id="top_deploy" href="#" onclick="toggleActive('top_menu'); return false;"></a>
+            <nav id="top_menu">
+                <ul>)", page.title, page.url);
+
+    for (Size i = 0; i < pages.len; i++) {
+        const PageData &menu_page = pages[i];
+
+        if (i == page_idx) {
+            Print(&st, "\n                    <li><a href=\"%1\" class=\"active\">%2</a></li>",
+                  menu_page.url, menu_page.title);
+        } else {
+            Print(&st, "\n                    <li><a href=\"%1\">%2</a></li>",
+                  menu_page.url, menu_page.title);
+        }
+    }
+
+    Print(&st, R"(
+                    <li style="float: right;"><a href="mailto:niels.martignene@protonmail.com">Contact</a></li>
+                    <li style="float: right;"><a href="https://github.com/Koromix">GitHub Profile</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div id="content">)");
+
+    if (page.sections.len) {
+        Print(&st, R"(
+            <a id="side_deploy" href="#" onclick="toggleActive('side_menu'); return false;"></a>
+            <nav id="side_menu">
+                <ul>)");
+
+        for (const PageSection &sec: page.sections) {
+            Print(&st, "\n                    <li><a href=\"#%1\" class=\"lv%2\">%3</a></li>",
+                  sec.id, sec.level, sec.title);
+        }
+
+        Print(&st, R"(
+                </ul>
+            </nav>)");
+    }
+
+    Print(&st, R"(
+            <main>
+%1
+            </main>
+        </div>
+    </body>
+</html>)", page.html);
+
+    return st.Close();
 }
 
 int main(int argc, char *argv[])
