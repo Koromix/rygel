@@ -6,6 +6,9 @@
 extern "C" {
     #include "../../vendor/libsoldout/soldout.h"
 }
+#include "../felix/libpack/libpack.hh"
+
+extern "C" const Span<const pack_Asset> pack_assets;
 
 struct PageSection {
     const char *id;
@@ -213,14 +216,14 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>neodd.com — %1</title>
-        <link rel="stylesheet" href="/resources/style.css">
-        <script type="text/javascript" src="/resources/script.js" async></script>
+        <title>%1</title>
+        <link rel="stylesheet" href="static/style.css">
+        <script type="text/javascript" src="static/script.js" async></script>
         <base href="/%2"/>
     </head>
     <body>
         <div id="top">
-            <a id="top_deploy" href="#" onclick="toggleActive('top_menu'); return false;"></a>
+            <a id="top_deploy" href="#" onclick="query('#top_menu').toggleClass('active'); return false;"></a>
             <nav id="top_menu">
                 <ul>)", page.title, page.url);
 
@@ -246,7 +249,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
     if (page.sections.len) {
         Print(&st, R"(
-            <a id="side_deploy" href="#" onclick="toggleActive('side_menu'); return false;"></a>
+            <a id="side_deploy" href="#" onclick="query('#side_menu').toggleClass('active'); return false;"></a>
             <nav id="side_menu">
                 <ul>)");
 
@@ -356,8 +359,6 @@ Options:
                 page.url = Fmt(&temp_alloc, "%1.html", page.name).ptr;
             }
 
-            LogInfo("Page '%1' from '%2'", page.name, filename);
-
             bool valid = true;
             if (!page.name) {
                 LogError("%1: Page with empty name", page.src_filename);
@@ -389,26 +390,35 @@ Options:
     LogInfo("Output directory: '%1'", output_dir);
 
     // Output fully-formed pages
-    {
-        // Reuse for performance
-        HeapArray<char> dest_filename;
+    for (Size i = 0; i < pages.len; i++) {
+        const PageData &page = pages[i];
 
-        for (Size i = 0; i < pages.len; i++) {
-            const PageData &page = pages[i];
-
-            dest_filename.RemoveFrom(0);
-            if (subdirs && !TestStr(pages[i].name, "index")) {
-                Fmt(&dest_filename, "%1%/%2", output_dir, page.name);
-                if (!MakeDirectory(dest_filename.ptr, false))
-                    return 1;
-                Fmt(&dest_filename, "%/index.html");
-            } else {
-                Fmt(&dest_filename, "%1%/%2.html", output_dir, page.name);
-            }
-
-            if (!RenderFullPage(pages, i, dest_filename.ptr))
+        const char *dest_filename;
+        if (subdirs && !TestStr(pages[i].name, "index")) {
+            dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
+            if (!EnsureDirectoryExists(dest_filename))
                 return 1;
+        } else {
+            dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
         }
+
+        if (!RenderFullPage(pages, i, dest_filename))
+            return 1;
+    }
+
+    // Extract static assets
+    for (const pack_Asset &asset: pack_assets) {
+        const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, asset.name).ptr;
+
+        if (!EnsureDirectoryExists(dest_filename))
+            return 1;
+
+        StreamReader reader(asset.data, nullptr, asset.compression_type);
+        StreamWriter writer(dest_filename);
+        if (!SpliceStream(&reader, Megabytes(4), &writer))
+            return 1;
+        if (!writer.Close())
+            return 1;
     }
 
     LogInfo("Done!");

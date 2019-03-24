@@ -1,0 +1,224 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+   License, v. 2.0. If a copy of the MPL was not distributed with this
+   file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+body { font: 1em / 1.3em sans-serif; }
+
+nav#top_menu ul {
+    box-sizing: border-box;
+    height: 40px;
+    margin: 0;
+    padding: 0;
+    background: #250e2e;
+    overflow: hidden;
+}
+nav#top_menu li {
+    float: left;
+    list-style-type: none;
+}
+nav#top_menu a {
+    display: block;
+    height: 40px;
+    padding: 0 10px;
+    color: white;
+    text-decoration: none;
+}
+nav#top_menu a.active {
+    background: #f8f8f8;
+    color: #250e2e;
+}
+
+nav#side_menu ul {
+    margin: 0;
+    padding: 0;
+}
+nav#side_menu li {
+    list-style-type: none;
+}
+nav#side_menu a {
+    display: block;
+    padding: 1px;
+}
+nav#side_menu a.lv1 { padding-left: 12px; }
+nav#side_menu a.lv2 { padding-left: 27px; }
+nav#side_menu a.lv3 { padding-left: 42px; }
+nav#side_menu a.lv4 { padding-left: 57px; }
+nav#side_menu a.lv5 { padding-left: 72px; }
+nav#side_menu a.lv6 { padding-left: 87px; }
+main {
+    /* Fix main on IE */
+    display: block;
+    padding: 0 12px;
+    background: #f8f8f8;
+    /* Avoid margin collapse */
+    overflow: auto;
+}
+
+a {
+    color: #250e2e;
+    text-decoration: underline;
+}
+
+table {
+    margin: 1em auto;
+    border-collapse: collapse;
+}
+th {
+    padding: 0.4em;
+    border: 1px solid #ebebeb;
+    text-align: center;
+}
+td {
+    padding: 0.3em;
+    background: #ffffff;
+    border: 1px solid #ebebeb;
+}
+
+pre {
+    max-height: 300px;
+    margin: 1em 30px;
+    padding: 0;
+    border: 1px solid #ebebeb;
+    background: #ffffff;
+    overflow: auto;
+    counter-reset: line;
+}
+pre span:before {
+    display: inline-block;
+    width: 2em;
+    padding-left: 0.6em;
+    margin-right: 0.6em;
+    background: #f8f8f8;
+    border-right: 1px solid #ebebeb;
+    color: #333;
+    counter-increment: line;
+    content: counter(line);
+    -webkit-user-select: none;
+}
+code {
+    padding: 0.25em 0.5em;
+    background: #ebebeb;
+    color: black;
+}
+
+@media screen and (min-width: 801px) {
+    html {
+        /* Fix stupid scrollbar behavior */
+        width: calc(100vw - 17px);
+    }
+    body {
+        display: flex;
+        flex-direction: column;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 0 8px 0;
+    }
+
+    nav#top_menu { height: 40px; }
+    nav#top_menu ul {
+        position: fixed;
+        width: 80vw;
+        max-width: 800px;
+        border-top: 8px solid white;
+        border-bottom: 2px solid #f8f8f8;
+    }
+    nav#top_menu a {
+        line-height: 32px;
+    }
+
+    div#content {
+        display: flex;
+        flex-direction: row-reverse;
+    }
+    nav#side_menu {
+        flex: 0 1 auto;
+        width: 200px;
+        /* Account for 2px bottom border of top_menu ul */
+        margin-top: -2px;
+    }
+    nav#side_menu ul {
+        position: fixed;
+        width: inherit;
+    }
+    nav#side_menu a {
+        text-decoration: none;
+    }
+    nav#side_menu a.active {
+        background: #250e2e;
+        color: white;
+    }
+    main {
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        width: 80vw;
+        max-width: 800px;
+        /* Fix weird behavior when going to the first anchored heading, which
+           happens only in Chrome and IE. Not sure what I'm doing. */
+        margin-top: -40px;
+        padding-top: 40px;
+    }
+
+    /* Going to an anchored heading puts it at the top, behind the fixed header.
+       This fixes it, in addition to the hack just above for the first heading on
+       the page. */
+    h1:before, h2:before, h3:before, h4:before, h5:before, h6:before {
+        display: block;
+        height: 50px;
+        margin: -50px 0 0;
+        content: "";
+    }
+}
+
+@media screen and (max-width: 800px) {
+    body { margin: 0; }
+
+    nav#top_menu a { line-height: 40px; }
+
+    .js a#side_deploy {
+        display: block;
+        position: absolute;
+        /* Avoid calc() for old Android browser versions */
+        left: 100%;
+        width: 42px;
+        height: 40px;
+        margin-left: -42px;
+        background-image: url("data:image/gif;base64,R0lGODlhFgAWAIABACUOLv///yH5BAEKAAEALAAAAAAWABYAAAIfhI+py+0PXZi02ouz3rz7b0XiSJYRiKbqyobmC8dNAQA7");
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    nav#side_menu {
+        display: none;
+        padding-top: 20px;
+        background: #f8f8f8;
+    }
+    nav#side_menu.active {
+        display: block;
+    }
+    main {
+        /* Fill viewport, does not work on Android 2.3.7 but
+           this is a minor issue. */
+        min-height: calc(100vh - 40px);
+    }
+}
+
+@media screen and (max-width: 580px) {
+    .js a#top_deploy {
+        display: block;
+        float: left;
+        width: 42px;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        background-image: url("data:image/gif;base64,R0lGODlhFgAWAIABAP///wAAACH5BAEKAAEALAAAAAAWABYAAAIfhI+py+0PXZi02ouz3rz7b0XiSJYRiKbqyobmC8dNAQA7");
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    nav#top_menu { background: #250e2e; }
+    nav#top_menu li {
+        float: left !important;
+        clear: left;
+    }
+    .js nav#top_menu a:not(.active) { display: none; }
+    nav#top_menu ul { height: auto; }
+    nav#top_menu.active a { display: block !important; }
+}
