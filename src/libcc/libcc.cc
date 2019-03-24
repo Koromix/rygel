@@ -1756,6 +1756,14 @@ bool MakeDirectoryRec(Span<const char> directory)
     return true;
 }
 
+bool EnsureDirectoryExists(const char *filename)
+{
+    Span<const char> directory;
+    SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
+
+    return MakeDirectoryRec(directory);
+}
+
 void WaitForDelay(int64_t delay)
 {
     DebugAssert(delay >= 0);
