@@ -383,6 +383,11 @@ Options:
         }
     }
 
+    // Output directory
+    if (!MakeDirectory(output_dir, false))
+        return 1;
+    LogInfo("Output directory: '%1'", output_dir);
+
     // Output fully-formed pages
     {
         // Reuse for performance
