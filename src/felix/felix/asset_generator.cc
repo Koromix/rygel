@@ -210,11 +210,9 @@ bool GenerateFiles(Span<const AssetInfo> assets, const char *output_path,
             return false;
         }
 
-        Span<const char> directory;
         const char *filename = Fmt(&temp_alloc, "%1%/%2%3", output_path, asset.name, compression_ext).ptr;
-        SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
 
-        if (!MakeDirectoryRec(directory))
+        if (!EnsureDirectoryExists(filename))
             return false;
 
         if (!st.Open(filename))

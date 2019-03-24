@@ -3184,6 +3184,7 @@ const char *GetApplicationDirectory(); // Can be NULL
 
 bool MakeDirectory(const char *dir, bool error_if_exists = true);
 bool MakeDirectoryRec(Span<const char> dir);
+bool EnsureDirectoryExists(const char *filename);
 
 enum class OpenFileMode {
     Read = 1 << 0,

@@ -192,14 +192,6 @@ static bool ParseCompilerMakeRule(const char *filename, Allocator *alloc,
     return true;
 }
 
-static bool EnsureDirectoryExists(const char *filename)
-{
-    Span<const char> directory;
-    SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
-
-    return MakeDirectoryRec(directory);
-}
-
 static bool CreatePrecompileHeader(const char *pch_filename, const char *dest_filename)
 {
     if (!EnsureDirectoryExists(dest_filename))
