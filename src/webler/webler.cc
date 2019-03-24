@@ -312,12 +312,8 @@ Options:
         }
 
         input_dir = opt.ConsumeNonOption();
-    }
 
-    // Validate options
-    {
         bool valid = true;
-
         if (!input_dir) {
             LogError("Missing input directory");
             valid = false;
@@ -326,7 +322,6 @@ Options:
             LogError("Missing output directory");
             valid = false;
         }
-
         if (!valid)
             return 1;
     }
