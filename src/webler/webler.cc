@@ -20,8 +20,9 @@ struct PageData {
     const char *created;
     const char *modified;
     HeapArray<PageSection> sections;
+
     std::shared_ptr<const char> html_buf;
-    size_t html_size = 0;
+    Span<const char> html;
 
     const char *name;
     const char *url;
@@ -115,7 +116,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
             </main>
         </div>
     </body>
-</html>)", MakeSpan(page.html_buf.get(), page.html_size));
+</html>)", page.html);
 
     return st.Close();
 }
@@ -264,7 +265,7 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
 
         markdown(ob, ib, &renderer);
         page->html_buf.reset(ob->data, free);
-        page->html_size = ob->size;
+        page->html = MakeSpan(ob->data, ob->size);
     }
 
     return true;
