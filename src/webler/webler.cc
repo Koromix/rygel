@@ -335,7 +335,8 @@ Options:
     HeapArray<const char *> filenames;
     if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &filenames))
         return 1;
-    std::sort(filenames.begin(), filenames.end());
+    std::sort(filenames.begin(), filenames.end(),
+              [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
 
     // Render pages
     HeapArray<PageData> pages;
