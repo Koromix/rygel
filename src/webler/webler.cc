@@ -225,7 +225,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     </head>
     <body>
         <div id="top">
-            <a id="top_deploy" href="#" onclick="query('#top_menu').toggleClass('active'); return false;"></a>
+            <a id="top_deploy" href="#" onclick="parentNode.query('#top_menu').toggleClass('active'); return false;"></a>
             <nav id="top_menu">
                 <ul>)", page.title, page.url);
 
@@ -251,7 +251,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 
     if (page.sections.len) {
         Print(&st, R"(
-            <a id="side_deploy" href="#" onclick="query('#side_menu').toggleClass('active'); return false;"></a>
+            <a id="side_deploy" href="#" onclick="parentNode.query('#side_menu').toggleClass('active'); return false;"></a>
             <nav id="side_menu">
                 <ul>)");
 
