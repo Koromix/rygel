@@ -179,10 +179,10 @@ code {
         position: absolute;
         /* Avoid calc() for old Android browser versions */
         left: 100%;
-        width: 42px;
-        height: 40px;
-        margin-left: -42px;
-        background-image: url("data:image/gif;base64,R0lGODlhFgAWAIABACUOLv///yH5BAEKAAEALAAAAAAWABYAAAIfhI+py+0PXZi02ouz3rz7b0XiSJYRiKbqyobmC8dNAQA7");
+        width: 36px;
+        height: 26px;
+        margin-left: -40px;
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAAkUlEQVQoka3SPwtBYRiH4etLKIMsUhIlxUCZDCaL8sVlUQalDoUShUUG3tLJn+M4d/22p2t6oIII14w2Qc6jGlYZoFPkxWpg8wc6QyGOhlrYpUDnKL5DQx3sf0AXKH1DQz0cEqBLlJOioT6OH9AI1V/R0ACnF+ga9bRoaIjzE7pF8180NMLF/WPaWaGhMbpJj286M2/iOl/gNAAAAABJRU5ErkJggg==");
         background-repeat: no-repeat;
         background-position: center;
     }
