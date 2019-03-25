@@ -236,6 +236,10 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
         set.authorizations_map.Append(&auth);
     }
 
+    if (!set.authorizations.len) {
+        LogError("Authorization set is empty");
+    }
+
     SwapMemory(out_set, &set, SIZE(set));
 }
 
