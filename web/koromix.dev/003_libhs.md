@@ -52,8 +52,8 @@ repository](https://github.com/Koromix/tytools/tree/master/src/libhs/examples).
 The following code uses libhs to enumerate serial and HID devices:
 
     /* libhs - public domain
-       Niels Martignène <niels.martignene@gmail.com>
-       https://neodd.com/libraries
+       Niels Martignène <niels.martignene@protonmail.com>
+       https://koromix.dev/libhs
 
        This software is in the public domain. Where that dedication is not
        recognized, you are granted a perpetual, irrevocable license to copy,
