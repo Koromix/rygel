@@ -1,3 +1,24 @@
+# Installation et mise à jour
+
+## Version précompilée (Windows)
+
+Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit de
+télécharger la dernière archive de drdc disponible sur mon serveur :
+[https://koromix.dev/files/drd](https://koromix.dev/files/drd).
+
+J'ai créé un *dépôt R* contenant le paquet source (toutes plateformes) et le paquet précompilé
+(Windows), il suffit d'utiliser les commandes suivantes pour installer le paquet ou le
+mettre à jour :
+
+```r
+install.packages('drdR', repos = 'https://koromix.dev/files/R')
+update.packages(repos = 'https://koromix.dev/files/R', ask = FALSE)
+```
+
+## Compilation
+
+Voir le fichier [build.md](build.md).
+
 # Notes sur le groupage
 
 En réalité, pour reproduire le groupeur ATIH (MCO) il faut implémenter quatre choses :
