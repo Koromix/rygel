@@ -22,37 +22,11 @@ update.packages(repos = 'https://koromix.dev/files/R', ask = FALSE)
 
 Voir le fichier [build.md](build.md).
 
-# Notes sur le groupage
-
-En réalité, pour reproduire le groupeur ATIH (MCO) il faut implémenter quatre choses :
-
-1. Lecture des fichiers RSS/GRP et FICHCOMP (et RSA éventuellement)
-2. L'algorithme de sélection du RUM principal dans les multi-RUM
-3. Les contrôles d'erreurs bloquantes et non bloquantes sont implémentées dans le code
-4. Lecture et interprétation des listes/caractéristiques d'actes, de diagnostics et
-   de l'arbre stockés dans des fichiers binaires ".tab" distribués par l'ATIH
-
-Le groupeur libdrd reproduit ce fonctionnement. Les fichiers binaires _.tab_ ont été
-récupérés dans GenRSA.
-
-Comme je n'ai pas les sources du groupeur, tout le code de lecture de ces fichiers non
-documentés à été déchiffré et réimplémenté par rétro-engineering, de même qu'une grande
-partie du code de vérification des erreurs de groupage. Une partie provient évidemment
-de la lecture des guides MCO, mais il y beaucoup de subtilités qui n'y figurent pas.
-Actuellement seules les tables à partir du 01/03/2012 peuvent être utilisées.
-
-J'ai passé beaucoup de temps à comparer les résultats obtenus avec ceux de GenRSA, mais
-j'ai tout fait sur les données d'un seul établissement. En particulier, je n'ai jamais
-testé sur un établissement privé.
-
-Une partie provient évidemment de la lecture des guides MCO, mais il y beaucoup de
-subtilités qui n'y figurent pas.
-
 # Configuration
 
 Les tables ne sont pas dans ce dépôt, je n'ai pas envie de provoquer l'ATIH. Elles doivent
-être extraites de GenRSA ou, beaucoup plus simplement, il suffit de me demander une archive
-contenant les tables sur plusieurs années.
+être extraites patiemment de GenRSA ou, beaucoup plus simplement, il suffit de télécharger la
+dernière version de drdc sur [https://koromix.dev/files/drd](https://koromix.dev/files/drd).
 
 Une fois l'archive extraite, il faut configurer les autorisations d'UF. Pour cela il faut
 remplacer *path/to/profile/mco_authorizations.txt* par le fichier FICUM utilisé par
@@ -140,6 +114,32 @@ head(mco_diagnoses(m, '2017-03-01'))
 head(mco_procedures(m, '2017-03-01'))
 head(mco_exclusions(m, '2017-03-01'))
 ```
+
+# Notes sur le groupage
+
+En réalité, pour reproduire le groupeur ATIH (MCO) il faut implémenter quatre choses :
+
+1. Lecture des fichiers RSS/GRP et FICHCOMP (et RSA éventuellement)
+2. L'algorithme de sélection du RUM principal dans les multi-RUM
+3. Les contrôles d'erreurs bloquantes et non bloquantes sont implémentées dans le code
+4. Lecture et interprétation des listes/caractéristiques d'actes, de diagnostics et
+   de l'arbre stockés dans des fichiers binaires ".tab" distribués par l'ATIH
+
+Le groupeur libdrd reproduit ce fonctionnement. Les fichiers binaires _.tab_ ont été
+récupérés dans GenRSA.
+
+Comme je n'ai pas les sources du groupeur, tout le code de lecture de ces fichiers non
+documentés à été déchiffré et réimplémenté par rétro-engineering, de même qu'une grande
+partie du code de vérification des erreurs de groupage. Une partie provient évidemment
+de la lecture des guides MCO, mais il y beaucoup de subtilités qui n'y figurent pas.
+Actuellement seules les tables à partir du 01/03/2012 peuvent être utilisées.
+
+J'ai passé beaucoup de temps à comparer les résultats obtenus avec ceux de GenRSA, mais
+j'ai tout fait sur les données d'un seul établissement. En particulier, je n'ai jamais
+testé sur un établissement privé.
+
+Une partie provient évidemment de la lecture des guides MCO, mais il y beaucoup de
+subtilités qui n'y figurent pas.
 
 # Limitations
 
