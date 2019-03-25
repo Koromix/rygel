@@ -9,7 +9,7 @@ nav#top_menu ul {
     height: 40px;
     margin: 0;
     padding: 0;
-    background: #250e2e;
+    background: #292d3e;
     overflow: hidden;
 }
 nav#top_menu li {
@@ -25,7 +25,7 @@ nav#top_menu a {
 }
 nav#top_menu a.active {
     background: #f8f8f8;
-    color: #250e2e;
+    color: #292d3e;
 }
 
 nav#side_menu ul {
@@ -55,7 +55,7 @@ main {
 }
 
 a {
-    color: #250e2e;
+    color: #292d3e;
     text-decoration: underline;
 }
 
@@ -144,7 +144,7 @@ code {
         text-decoration: none;
     }
     nav#side_menu a.active {
-        background: #250e2e;
+        background: #292d3e;
         color: white;
     }
     main {
@@ -213,7 +213,7 @@ code {
         background-repeat: no-repeat;
         background-position: center;
     }
-    nav#top_menu { background: #250e2e; }
+    nav#top_menu { background: #292d3e; }
     nav#top_menu li {
         float: left !important;
         clear: left;
