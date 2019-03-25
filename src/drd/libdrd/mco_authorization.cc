@@ -83,39 +83,38 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
     {
         Span<const char> line;
         while (reader.Next(&line)) {
-            if (line.len < 28) {
+            if (line.len >= 28) {
+                mco_Authorization auth = {};
+                HeapArray<mco_Authorization> *authorizations;
+
+                if (line.Take(0, 3) == "$$$") {
+                    auth.unit.number = INT16_MAX;
+                    authorizations = &set.facility_authorizations;
+                } else {
+                    auth.unit = drd_UnitCode::FromString(line.Take(0, 4));
+                    valid &= auth.unit.IsValid();
+                    authorizations = &set.authorizations;
+                }
+                valid &= ParseDec(line.Take(13, 3), &auth.type,
+                                  DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
+                        DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
+                         DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
+                         DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                auth.dates[1] = default_end_date;
+
+                if (!auth.unit.number || !auth.dates[0].IsValid()) {
+                    LogError("Invalid authorization attributes");
+                    valid = false;
+                }
+
+                authorizations->Append(auth);
+            } else if (TrimStr(line).len) {
                 LogError("Truncated FICUM line");
                 valid = false;
-                continue;
             }
-
-            mco_Authorization auth = {};
-            HeapArray<mco_Authorization> *authorizations;
-
-            if (line.Take(0, 3) == "$$$") {
-                auth.unit.number = INT16_MAX;
-                authorizations = &set.facility_authorizations;
-            } else {
-                auth.unit = drd_UnitCode::FromString(line.Take(0, 4));
-                valid &= auth.unit.IsValid();
-                authorizations = &set.authorizations;
-            }
-            valid &= ParseDec(line.Take(13, 3), &auth.type,
-                              DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
-            ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
-                    DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-            ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
-                     DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-            ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
-                     DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
-            auth.dates[1] = default_end_date;
-
-            if (!auth.unit.number || !auth.dates[0].IsValid()) {
-                LogError("Invalid authorization attributes");
-                valid = false;
-            }
-
-            authorizations->Append(auth);
         }
     }
     if (reader.error || !valid)
