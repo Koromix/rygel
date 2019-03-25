@@ -270,6 +270,7 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
 %1
             </main>
         </div>
+        <footer>Niels Martignène&nbsp;&nbsp;&nbsp;<span style="opacity: 0.6;">Koromix<span></footer>
     </body>
 </html>)", page.html);
 

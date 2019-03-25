@@ -53,6 +53,16 @@ main {
     /* Avoid margin collapse */
     overflow: auto;
 }
+footer {
+    padding: 0 12px;
+    line-height: 32px;
+    flex: 0 0 auto;
+    background: #292d3e;
+    color: white;
+    /* Avoid margin collapse */
+    overflow: auto;
+    text-align: right;
+}
 
 a {
     color: #292d3e;
@@ -156,6 +166,12 @@ code {
            happens only in Chrome and IE. Not sure what I'm doing. */
         margin-top: -40px;
         padding-top: 40px;
+    }
+    footer {
+        flex: 0 0 auto;
+        box-sizing: border-box;
+        width: 80vw;
+        max-width: 800px;
     }
 
     /* Going to an anchored heading puts it at the top, behind the fixed header.
