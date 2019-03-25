@@ -1,21 +1,24 @@
 # Installation et mise à jour
 
-## Version précompilée (Windows)
+## Tables et versions précompilées (Windows + Linux)
 
-Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit de
-télécharger la dernière archive de drdc disponible sur mon serveur :
+Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit
+de télécharger la dernière archive de drdc disponible sur mon serveur :
 [https://koromix.dev/files/drd](https://koromix.dev/files/drd).
 
-J'ai créé un *dépôt R* contenant le paquet source (toutes plateformes) et le paquet précompilé
-(Windows), il suffit d'utiliser les commandes suivantes pour installer le paquet ou le
-mettre à jour :
+La version Linux de drdc est compilée statiquement et avec musl-libc, donc elle devrait
+fonctionner sur toutes les distributions (x86_64).
+
+J'ai créé un *dépôt R* contenant le paquet source (toutes plateformes) et le paquet
+précompilé (Windows), il suffit d'utiliser les commandes suivantes pour installer le paquet
+ou le mettre à jour :
 
 ```r
 install.packages('drdR', repos = 'https://koromix.dev/files/R')
 update.packages(repos = 'https://koromix.dev/files/R', ask = FALSE)
 ```
 
-## Compilation
+## Compilation manuelle
 
 Voir le fichier [build.md](build.md).
 
