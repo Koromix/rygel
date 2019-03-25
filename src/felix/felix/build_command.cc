@@ -422,7 +422,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
     Async async;
 
     std::mutex out_mutex;
-    int progress_counter = 0;
+    Size progress_counter = 0;
 
     for (const BuildCommand &cmd: commands) {
         async.AddTask([&, cmd]() {
@@ -433,7 +433,7 @@ bool RunBuildCommands(Span<const BuildCommand> commands, bool verbose)
             {
                 std::lock_guard<std::mutex> out_lock(out_mutex);
 
-                int progress = 100 * progress_counter++ / commands.len;
+                Size progress = 100 * progress_counter++ / commands.len;
                 LogInfo("(%1%%) %2", FmtArg(progress).Pad(-3), verbose ? cmd.cmd : cmd.text);
             }
 
