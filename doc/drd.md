@@ -31,7 +31,7 @@ Les tables ne sont pas dans ce dépôt, je n'ai pas envie de provoquer l'ATIH. E
 contenant les tables sur plusieurs années.
 
 Une fois l'archive extraite, il faut configurer les autorisations d'UF. Pour cela il faut
-remplacer *resources/profile/mco_authorizations.txt* par le fichier FICUM utilisé par
+remplacer *path/to/profile/mco_authorizations.txt* par le fichier FICUM utilisé par
 l'établissement.
 
 En fait c'est la seule chose à faire. D'ailleurs même sans ça, ça devrait fonctionner
@@ -45,15 +45,15 @@ ainsi que quelques GHS spécifiques qui exigent des autorisations d'UF.
 
 # Cette première commande va grouper les fichiers passés en ligne de commande et donner un résumé.
 # des valorisations totales. Deux secteurs sont disponibles avec l'option -s: Public, Private.
-drdc mco_classify -sPrivate -C resources/profile/drdc.ini fichier.rss ...
+drdc mco_classify -sPrivate -C path/to/profile/drdc.ini fichier.rss ...
 
 # Pour avoir les résultats détaillés il faut passer -v voire -vv.
-drdc mco_classify -v -sPrivate -C resources/profile/drdc.ini fichier.grp ...
-drdc mco_classify -vv -sPrivate -C resources/profile/drdc.ini fichier.grp ...
+drdc mco_classify -v -sPrivate -C path/to/profile/drdc.ini fichier.grp ...
+drdc mco_classify -vv -sPrivate -C path/to/profile/drdc.ini fichier.grp ...
 
 # Tu peux tester les performances avec l'argument --torture <nombre_dessais>, par exemple '--torture 20'
 # et tu auras des résultats de benchmark.
-drdc mco_classify --torture 20 -sPrivate -C resources/profile/drdc.ini fichier.grp ...
+drdc mco_classify --torture 20 -sPrivate -C path/to/profile/drdc.ini fichier.grp ...
 
 # Il est également possible d'avoir les infos de ventilation des recettes dans les différentes
 # unités selon différents algorithmes :
@@ -63,7 +63,7 @@ drdc mco_classify --torture 20 -sPrivate -C resources/profile/drdc.ini fichier.g
 # - Ex' (proportionnel au tarif GHS-EXB+EXH du groupage mono-RUM si EXB, au tarif GHS si pas d'EXB)
 # - ExJ (combine Ex et J)
 # - Ex'J (combine Ex' et J = utilisé au CHU)
-drdc mco_classify -v -dExJ -sPrivate -C resources/profile/drdc.ini fichier.rss ...
+drdc mco_classify -v -dExJ -sPrivate -C path/to/profile/drdc.ini fichier.rss ...
 
 # Il y a d'autres commandes, tu peux utiliser --help pour connaitre la syntaxe
 # générale ou bien <commande> --help pour une commande particulière.
@@ -78,7 +78,7 @@ library(drdR)
 
 # Chargement des tables et autorisations, l'objet obtenu peut être réutilisé
 # autant de fois que nécessaire.
-m <- mco_init('resources/tables/', 'resources/profile/mco_authorizations.txt',
+m <- mco_init('path/to/tables/', 'path/to/profile/mco_authorizations.txt',
               default_sector = 'Private')
 
 # Chargement des RSS, l'objet retourné est une liste avec trois data.frames:
