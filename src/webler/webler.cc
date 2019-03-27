@@ -20,6 +20,7 @@ struct PageData {
     const char *src_filename;
 
     const char *title;
+    const char *menu;
     const char *created;
     const char *modified;
     HeapArray<PageSection> sections;
@@ -146,6 +147,8 @@ static bool RenderPageContent(PageData *page, Allocator *alloc)
                 const char **attr_ptr;
                 if (name == "Title") {
                     attr_ptr = &ctx->page->title;
+                } else if (name == "Menu") {
+                    attr_ptr = &ctx->page->menu;
                 } else if (name == "Created") {
                     attr_ptr = &ctx->page->created;
                 } else if (name == "Modified") {
@@ -232,12 +235,14 @@ static bool RenderFullPage(Span<const PageData> pages, Size page_idx, const char
     for (Size i = 0; i < pages.len; i++) {
         const PageData &menu_page = pages[i];
 
-        if (i == page_idx) {
-            Print(&st, "\n                    <li><a href=\"%1\" class=\"active\">%2</a></li>",
-                  menu_page.url, menu_page.title);
-        } else {
-            Print(&st, "\n                    <li><a href=\"%1\">%2</a></li>",
-                  menu_page.url, menu_page.title);
+        if (menu_page.menu) {
+            if (i == page_idx) {
+                Print(&st, "\n                    <li><a href=\"%1\" class=\"active\">%2</a></li>",
+                      menu_page.url, menu_page.menu);
+            } else {
+                Print(&st, "\n                    <li><a href=\"%1\">%2</a></li>",
+                      menu_page.url, menu_page.menu);
+            }
         }
     }
 
