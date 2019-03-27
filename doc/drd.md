@@ -1,5 +1,10 @@
 # Installation et mise à jour
 
+Il y a deux possibilités :
+
+* Simple : Installer une version précompilée
+* Compliquée : Compiler manuellement drdc et drdR
+
 ## Tables et versions précompilées (Windows + Linux)
 
 Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit
