@@ -20,7 +20,8 @@ Commands:
     // Handle 'felix --help [command]' and 'felix help [command]' invocations
     if (argc >= 2 && (TestStr(argv[1], "--help") || TestStr(argv[1], "help"))) {
         if (argc >= 3 && argv[2][0] != '-') {
-            std::swap(argv[1], argv[2]);
+            argv[1] = argv[2];
+            argv[2] = const_cast<char *>("--help");
         } else {
             PrintUsage(stdout);
             return 0;
