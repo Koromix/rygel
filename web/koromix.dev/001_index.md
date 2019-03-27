@@ -1,4 +1,5 @@
-<!-- Title: Home
+<!-- Title: koromix.dev
+     Menu: Home
      Created: 2017-01-15 -->
 
 #tytools# TyTools
