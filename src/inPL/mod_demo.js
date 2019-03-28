@@ -57,5 +57,29 @@ let demo = (function() {
         }
     }
 
+    this.testSarcopenia = function(data) {
+        if (data.consultant_sexe === null || data.demo_dxa_indice_mm === null)
+            return null;
+
+        let treshold;
+        switch (data.consultant_sexe) {
+            case 'M': {
+                if (data.demo_dxa_indice_mm <= 7.23) {
+                    return ScreeningResult.Fragile;
+                } else {
+                    return ScreeningResult.Good;
+                }
+            } break;
+
+            case 'F': {
+                if (data.demo_dmo_avb1 <= 5.67) {
+                    return ScreeningResult.Fragile;
+                } else {
+                    return ScreeningResult.Good;
+                }
+            } break;
+        }
+    }
+
     return this;
 }).call({});

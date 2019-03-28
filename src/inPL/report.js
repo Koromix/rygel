@@ -74,6 +74,7 @@ let report = (function() {
                     case 'demo_col': { result = demo.testFemoralNeck(data); } break;
                     case 'demo_hanche': { result = demo.testHip(data); } break;
                     case 'demo_avbras': { result = demo.testForearm(data); } break;
+                    case 'demo_sarcopenie': { result = demo.testSarcopenia(data); } break;
 
                     case 'diet_diversite': { result = nutrition.screenDiversity(data); } break;
                     case 'diet_proteines': { result = nutrition.screenProteinIntake(data); } break;
