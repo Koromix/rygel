@@ -45,12 +45,12 @@ let demo = (function() {
     };
 
     this.testForearm = function(data) {
-        if (data.demo_dmo_avb2 === null)
+        if (data.demo_dmo_avb1 === null)
             return null;
 
-        if (data.demo_dmo_avb2 <= -2.5) {
+        if (data.demo_dmo_avb1 <= -2.5) {
             return ScreeningResult.Bad;
-        } else if (data.demo_dmo_avb2 <= -1.0) {
+        } else if (data.demo_dmo_avb1 <= -1.0) {
             return ScreeningResult.Fragile;
         } else {
             return ScreeningResult.Good;
