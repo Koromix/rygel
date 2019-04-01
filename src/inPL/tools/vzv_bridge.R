@@ -53,6 +53,7 @@ read_variables <- function(filename, select, encoding = 'UTF-8') {
         fill = TRUE
     )
     variables <- variables[varset %in% c('rdv', 'consultant', select),]
+    variables <- unique(variables, by = c('varset', 'field_name'))
 
     # TODO: This is not the real date, delete this variable from the rdv varset?
     variables <- variables[!(varset == 'rdv' & field_name == 'date'),]
