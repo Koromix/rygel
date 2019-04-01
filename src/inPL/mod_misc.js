@@ -69,7 +69,6 @@ let misc = (function() {
         }
     };
 
-    // FIXME: Actually detect hypertension!
     this.screenVOP = function(data) {
         if (data.rdv_age === null || data.explcv17 === null)
             return null;
@@ -89,7 +88,9 @@ let misc = (function() {
             treshold = 14.6;
         }
 
-        if (data.explcv17 >= treshold) {
+        if (getSystolicPressure(data) >= 140 || getDiastolicPressure(data) >= 90) {
+            return 'non pertinent car HTA lors de l\'examen';
+        } else if (data.explcv17 >= treshold) {
             return 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir';
         } else {
             return 'rigidité artérielle dans les normes';
