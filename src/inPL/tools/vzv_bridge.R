@@ -54,6 +54,9 @@ read_variables <- function(filename, select, encoding = 'UTF-8') {
     )
     variables <- variables[varset %in% c('rdv', 'consultant', select),]
 
+    # TODO: This is not the real date, delete this variable from the rdv varset?
+    variables <- variables[!(varset == 'rdv' & field_name == 'date'),]
+
     # FIXME: Dataquery and checkbox values don't mix well (queries get very slow)
     # variables <- variables[is.na(field_type) | field_type != 'checkbox',]
     # FIXME: Date variables break the Voozanoo CSV export (needs to be investigated)
@@ -144,6 +147,9 @@ output_dataquery <- function(variables, varsets, condition) {
     <!-- RDV et consultants -->
     <column sql="{var}" alias="rdv.id_data" default_short_label="rdv.id_data" type="integer">
         <field table_name="rdv" field_name="id_data" alias="var"/>
+    </column>
+    <column sql="{var}" alias="rdv.date" default_short_label="rdv.date" type="string">
+        <field table_name="demijournee" field_name="date" alias="var"/>
     </column>
     <column sql="{var}" alias="consultant.id_data" default_short_label="consultant.id_data" type="integer">
         <field table_name="consultant" field_name="id_data" alias="var"/>
