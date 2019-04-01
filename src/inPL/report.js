@@ -120,7 +120,12 @@ let report = (function() {
                     doc.setOptions({
                         parser: function(tag) {
                             tag = tag.replace(/[’‘]/g, "'");
-                            return { get: (it) => eval(tag) };
+                            return { get: (it) => {
+                                let ret = eval(tag);
+                                if (ret === null || ret === undefined)
+                                    ret = '????';
+                                return ret;
+                            }};
                         },
                         paragraphLoop: true,
                         linebreaks: true
