@@ -615,7 +615,7 @@ let bridge = (function() {
         aq2_fsenso4: { kind: 'enum', dict_name: 'oui_non' },
         aq2_fsenso5: { kind: 'enum', dict_name: 'oui_non' },
         demo_dmo_prec: { kind: 'enum', dict_name: 'oui_non' },
-        demo_dmo_prec_date: { kind: 'text' },
+        demo_dmo_prec_date: { kind: 'date' },
         demo_dmo_prec_results: { kind: 'text' },
         demo_realise: { kind: 'multi', dict_name: 'sitedmo' },
         demo_realise_raison: { kind: 'enum', dict_name: 'raison_non_realise' },
@@ -894,12 +894,12 @@ let bridge = (function() {
         rdv_balc_entreprise: { kind: 'enum', dict_name: 'rdv_entreprise_balc' },
         rdv_plid: { kind: 'text' },
         rdv_statut_rdv: { kind: 'enum', dict_name: 'statut_rdv' },
-        rdv_date: { kind: 'text' },
+        rdv_date: { kind: 'date' },
         consultant_sexe: { kind: 'enum', dict_name: 'sexe' },
         consultant_nom: { kind: 'text' },
         consultant_nom_jeune_fille: { kind: 'text' },
         consultant_prenom: { kind: 'text' },
-        consultant_date_naissance: { kind: 'text' },
+        consultant_date_naissance: { kind: 'date' },
         consultant_ville_naissance: { kind: 'text' },
         consultant_adresse: { kind: 'text' },
         consultant_code_postal: { kind: 'text' },
@@ -946,7 +946,18 @@ let bridge = (function() {
                 continue;
 
             switch (var_info.kind) {
-                case 'text': { row2[var_name] = row[csv_name]; } break;
+                case 'text': {
+                    let value = row[csv_name];
+                    row2[var_name] = value ? value : null;
+                } break;
+                case 'date': {
+                    let parts = row[csv_name].split('-');
+                    if (parts.length === 3) {
+                        row2[var_name] = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    } else {
+                        row2[var_name] = null;
+                    }
+                } break;
                 case 'enum': {
                     let dict = DictInfo[var_info.dict_name];
 

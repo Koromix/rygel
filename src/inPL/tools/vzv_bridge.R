@@ -96,8 +96,10 @@ output_bridge <- function(variables, dictionaries) {
         csv_name <- paste(var$varset, var$field_name, sep = '.')
         js_name <- paste(var$varset, sub('.', '_', var$field_name, fixed = TRUE), sep = '_')
 
-        if (var$field_type %in% c('text', 'text_multiline', 'date')) {
+        if (var$field_type %in% c('text', 'text_multiline')) {
             cat(str_interp('        ${js_name}: { kind: \'text\' },\n'))
+        } else if (var$field_type %in% c('date')) {
+            cat(str_interp('        ${js_name}: { kind: \'date\' },\n'))
         } else if (var$field_type %in% c('radio', 'list')) {
             cat(str_interp('        ${js_name}: { kind: \'enum\', dict_name: \'${var$dico}\' },\n'))
         } else if (var$field_type %in% 'checkbox') {
