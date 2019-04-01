@@ -955,7 +955,7 @@ let bridge = (function() {
 
     function translateInt(str)
     {
-        let value = parseInt(str);
+        let value = parseInt(str, 10);
         return !isNaN(value) ? value : null;
     }
 
