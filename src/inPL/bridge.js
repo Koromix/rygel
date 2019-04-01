@@ -965,6 +965,21 @@ let bridge = (function() {
         return !isNaN(value) ? value : null;
     }
 
+    function computeAge(birth_date, rdv_date)
+    {
+        birth_date = (birth_date || '').split('-').map(x => parseInt(x, 10));
+        rdv_date = (rdv_date || '').split('-').map(x => parseInt(x, 10));
+
+        if (birth_date.length != 3 || rdv_date.length != 3)
+            return null;
+
+        let age = rdv_date[0] - birth_date[0];
+        age -= (rdv_date[1] < birth_date[1] ||
+                (rdv_date[1] == birth_date[1] && rdv_date[2] < birth_date[2]));
+
+        return age;
+    }
+
     function translateRow(row)
     {
         let row2 = {};
@@ -1011,8 +1026,9 @@ let bridge = (function() {
             }
         }
 
-        // FIXME: Wrong shortcuts but acceptable for now
-        row2.rdv_age = translateInt(row['consultant.age']);
+        row2.rdv_age = computeAge(row['consultant.date_naissance'], row['rdv.date']);
+
+        // FIXME: Wrong shortcut but acceptable for now (no biology)
         row2.bio_albuminemie = 40;
 
         // Simplified neuropsy variables
