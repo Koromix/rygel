@@ -6,23 +6,23 @@ let tables = (function() {
     let self = this;
 
     const ScreeningHandlers = [
-        {group: 'Neuropsychologie', abbrev: 'EFF', title: 'Efficience cognitive', func: neuropsy.screenEfficiency},
-        {group: 'Neuropsychologie', abbrev: 'MEM', title: 'Mémoire', func: neuropsy.screenMemory},
-        {group: 'Neuropsychologie', abbrev: 'EXE', title: 'Exécution', func: neuropsy.screenExecution},
-        {group: 'Neuropsychologie', abbrev: 'ATT', title: 'Attention et vitesse de traitement', func: neuropsy.screenAttention},
-        {group: 'Neuropsychologie', abbrev: 'COG', title: 'Cognition', func: neuropsy.screenCognition},
-        {group: 'Neuropsychologie', abbrev: 'DA', title: 'Dépression / anxiété', func: neuropsy.screenDepressionAnxiety},
-        {group: 'Neuropsychologie', abbrev: 'SOM', title: 'Sommeil', func: neuropsy.screenSleep},
-        {group: 'Neuropsychologie', abbrev: 'NP', title: 'Neuropsychologie', func: neuropsy.screenAll},
-        {group: 'Nutrition', abbrev: 'DIV', title: 'Diversité', func: nutrition.screenDiversity},
-        {group: 'Nutrition', abbrev: 'PRO', title: 'Protéines', func: nutrition.screenProteinIntake},
-        {group: 'Nutrition', abbrev: 'CAL', title: 'Calcium', func: nutrition.screenCalciumIntake},
-        {group: 'Nutrition', abbrev: 'CMP', title: 'Comportement', func: nutrition.screenBehavior},
-        {group: 'Nutrition', abbrev: 'NUT', title: 'Nutrition', func: nutrition.screenAll},
-        {group: 'EMS', abbrev: 'MOB', title: 'Mobilité', func: ems.screenMobility},
-        {group: 'EMS', abbrev: 'FOR', title: 'Force', func: ems.screenStrength},
-        {group: 'EMS', abbrev: 'RF', title: 'Risque de fracture', func: ems.screenFractureRisk},
-        {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: ems.screenAll}
+        {group: 'Neuropsychologie', abbrev: 'EFF', title: 'Efficience cognitive', func: neuropsy.testEfficiency},
+        {group: 'Neuropsychologie', abbrev: 'MEM', title: 'Mémoire', func: neuropsy.testMemory},
+        {group: 'Neuropsychologie', abbrev: 'EXE', title: 'Exécution', func: neuropsy.testExecution},
+        {group: 'Neuropsychologie', abbrev: 'ATT', title: 'Attention et vitesse de traitement', func: neuropsy.testAttention},
+        {group: 'Neuropsychologie', abbrev: 'COG', title: 'Cognition', func: neuropsy.testCognition},
+        {group: 'Neuropsychologie', abbrev: 'DA', title: 'Dépression / anxiété', func: neuropsy.testDepressionAnxiety},
+        {group: 'Neuropsychologie', abbrev: 'SOM', title: 'Sommeil', func: neuropsy.testSleep},
+        {group: 'Neuropsychologie', abbrev: 'NP', title: 'Neuropsychologie', func: neuropsy.testAll},
+        {group: 'Nutrition', abbrev: 'DIV', title: 'Diversité', func: nutrition.testDiversity},
+        {group: 'Nutrition', abbrev: 'PRO', title: 'Protéines', func: nutrition.testProteinIntake},
+        {group: 'Nutrition', abbrev: 'CAL', title: 'Calcium', func: nutrition.testCalciumIntake},
+        {group: 'Nutrition', abbrev: 'CMP', title: 'Comportement', func: nutrition.testBehavior},
+        {group: 'Nutrition', abbrev: 'NUT', title: 'Nutrition', func: nutrition.testAll},
+        {group: 'EMS', abbrev: 'MOB', title: 'Mobilité', func: ems.testMobility},
+        {group: 'EMS', abbrev: 'FOR', title: 'Force', func: ems.testStrength},
+        {group: 'EMS', abbrev: 'RF', title: 'Risque de fracture', func: ems.testFractureRisk},
+        {group: 'EMS', abbrev: 'EMS', title: 'EMS', func: ems.testAll}
     ];
 
     function createCategoryHeaders(handlers)
@@ -166,10 +166,10 @@ let tables = (function() {
         if (rows.length) {
             function resultCell(result)
             {
-                switch (result) {
-                    case ScreeningResult.Bad: return html('td', {class: 'inpl_result_1', title: 'Pathologique'}, 'P');
-                    case ScreeningResult.Fragile: return html('td', {class: 'inpl_result_2', title: 'Fragile'}, 'F');
-                    case ScreeningResult.Good: return html('td', {class: 'inpl_result_3', title: 'Robuste'}, 'R');
+                switch (result.score) {
+                    case TestScore.Bad: return html('td', {class: 'inpl_result_1', title: result.text}, 'P');
+                    case TestScore.Fragile: return html('td', {class: 'inpl_result_2', title: result.text}, 'F');
+                    case TestScore.Good: return html('td', {class: 'inpl_result_3', title: result.text}, 'R');
                     default: return html('td', {class: 'inpl_result_0', title: 'Indéfini'}, '?');
                 }
             }

@@ -5,79 +5,39 @@
 let demo = (function() {
     let self = this;
 
-    this.testRachis = function(data) {
-        if (data.demo_dmo_rachis === null)
-            return null;
+    function makeBoneResult(t)
+    {
+        if (t === null)
+            return makeTestResult(null);
 
-        if (data.demo_dmo_rachis <= -2.5) {
-            return ScreeningResult.Bad;
-        } else if (data.demo_dmo_rachis <= -1.0) {
-            return ScreeningResult.Fragile;
+        if (t <= -2.5) {
+            return makeTestResult(TestScore.Bad, 'ostéoporose');
+        } else if (t <= -1.0) {
+            return makeTestResult(TestScore.Fragile, 'ostéopénie');
         } else {
-            return ScreeningResult.Good;
-        }
-    };
-
-    this.testFemoralNeck = function(data) {
-        if (data.demo_dmo_col === null)
-            return null;
-
-        if (data.demo_dmo_col <= -2.5) {
-            return ScreeningResult.Bad;
-        } else if (data.demo_dmo_col <= -1.0) {
-            return ScreeningResult.Fragile;
-        } else {
-            return ScreeningResult.Good;
-        }
-    };
-
-    this.testHip = function(data) {
-        if (data.demo_dmo_hanche === null)
-            return null;
-
-        if (data.demo_dmo_hanche <= -2.5) {
-            return ScreeningResult.Bad;
-        } else if (data.demo_dmo_hanche <= -1.0) {
-            return ScreeningResult.Fragile;
-        } else {
-            return ScreeningResult.Good;
-        }
-    };
-
-    this.testForearm = function(data) {
-        if (data.demo_dmo_avb1 === null)
-            return null;
-
-        if (data.demo_dmo_avb1 <= -2.5) {
-            return ScreeningResult.Bad;
-        } else if (data.demo_dmo_avb1 <= -1.0) {
-            return ScreeningResult.Fragile;
-        } else {
-            return ScreeningResult.Good;
+            return makeTestResult(TestScore.Good, 'absence d\'ostéopénie/ostéoporose');
         }
     }
 
+    this.testRachis = function(data) { return makeBoneResult(data.demo_dmo_rachis); }
+    this.testFemoralNeck = function(data) { return makeBoneResult(data.demo_dmo_col); }
+    this.testHip = function(data) { return makeBoneResult(data.demo_dmo_hanche); }
+    this.testForearm = function(data) { return makeBoneResult(data.demo_dmo_avb1); }
+
     this.testSarcopenia = function(data) {
         if (data.consultant_sexe === null || data.demo_dxa_indice_mm === null)
-            return null;
+            return makeTestResult(null);
 
         let treshold;
         switch (data.consultant_sexe) {
-            case 'M': {
-                if (data.demo_dxa_indice_mm <= 7.23) {
-                    return ScreeningResult.Fragile;
-                } else {
-                    return ScreeningResult.Good;
-                }
-            } break;
+            case 'M': { treshold = 7.23; } break;
+            case 'F': { treshold = 5.67; } break;
+        }
 
-            case 'F': {
-                if (data.demo_dmo_avb1 <= 5.67) {
-                    return ScreeningResult.Fragile;
-                } else {
-                    return ScreeningResult.Good;
-                }
-            } break;
+        if (data.demo_dmo_avb1 <= treshold) {
+            return makeTestResult(TestScore.Fragile, 'sarcopénie');
+        } else {
+            return makeTestResult(TestScore.Good, 'absence de sarcopénie');
         }
     }
 

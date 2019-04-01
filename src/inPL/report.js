@@ -68,40 +68,37 @@ let report = (function() {
             }
             function test(data, test_name)
             {
-                let result;
                 switch (test_name) {
-                    case 'demo_rachis': { result = demo.testRachis(data); } break;
-                    case 'demo_col': { result = demo.testFemoralNeck(data); } break;
-                    case 'demo_hanche': { result = demo.testHip(data); } break;
-                    case 'demo_avbras': { result = demo.testForearm(data); } break;
-                    case 'demo_sarcopenie': { result = demo.testSarcopenia(data); } break;
+                    case 'demo_rachis': return demo.testRachis(data).text;
+                    case 'demo_col': return demo.testFemoralNeck(data).text;
+                    case 'demo_hanche': return demo.testHip(data).text;
+                    case 'demo_avbras': return demo.testForearm(data).text;
+                    case 'demo_sarcopenie': return demo.testSarcopenia(data).text;
 
-                    case 'diet_diversite': { result = nutrition.screenDiversity(data); } break;
-                    case 'diet_proteines': { result = nutrition.screenProteinIntake(data); } break;
-                    case 'diet_calcium': { result = nutrition.screenCalciumIntake(data); } break;
-                    case 'diet_comportement': { result = nutrition.screenBehavior(data); } break;
+                    case 'diet_diversite': return nutrition.testDiversity(data).text;
+                    case 'diet_proteines': return nutrition.testProteinIntake(data).text;
+                    case 'diet_calcium': return nutrition.testCalciumIntake(data).text;
+                    case 'diet_comportement': return nutrition.testBehavior(data).text;
 
-                    case 'ems_mobilite': { result = ems.screenMobility(data); } break;
-                    case 'ems_force': { result = ems.screenStrength(data); } break;
-                    case 'ems_fractures': { result = ems.screenFractureRisk(data); } break;
+                    case 'ems_mobilite': return ems.testMobility(data).text;
+                    case 'ems_force': return ems.testStrength(data).text;
+                    case 'ems_fractures': return ems.testFractureRisk(data).text;
 
-                    case 'neuropsy_efficience': { result = neuropsy.screenEfficiency(data); } break;
-                    case 'neuropsy_memoire': { result = neuropsy.screenMemory(data); } break;
-                    case 'neuropsy_execution': { result = neuropsy.screenExecution(data); } break;
-                    case 'neuropsy_attention': { result = neuropsy.screenAttention(data); } break;
-                    case 'neuropsy_cognition': { result = neuropsy.screenCognition(data); } break;
-                    case 'neuropsy_had': { result = neuropsy.screenDepressionAnxiety(data); } break;
-                    case 'neuropsy_sommeil': { result = neuropsy.screenSleep(data); } break;
+                    case 'neuropsy_efficience': return neuropsy.testEfficiency(data).text;
+                    case 'neuropsy_memoire': return neuropsy.testMemory(data).text;
+                    case 'neuropsy_execution': return neuropsy.testExecution(data).text;
+                    case 'neuropsy_attention': return neuropsy.testAttention(data).text;
+                    case 'neuropsy_cognition': return neuropsy.testCognition(data).text;
+                    case 'neuropsy_had': return neuropsy.testDepressionAnxiety(data).text;
+                    case 'neuropsy_sommeil': return neuropsy.testSleep(data).text;
 
-                    case 'constantes_hta_ortho': { result = misc.screenOrthostaticHypotension(data); } break;
-                    case 'constantes_vop': return misc.screenVOP(data);
-                    case 'audition_surdite_gauche': return misc.screenSurdityL(data);
-                    case 'audition_surdite_droite': return misc.screenSurdityR(data);
+                    case 'constantes_hta_ortho': return misc.testOrthostaticHypotension(data).text;
+                    case 'constantes_vop': return misc.testVOP(data).text;
+                    case 'audition_surdite_gauche': return misc.testSurdityL(data).text;
+                    case 'audition_surdite_droite': return misc.testSurdityR(data).text;
 
                     default: throw `Unknown test \'${test_name}\'`;
                 }
-
-                return ScreeningResult.label(result);
             }
             function calc(data, calc_name)
             {
