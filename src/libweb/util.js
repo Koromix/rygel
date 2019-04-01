@@ -325,6 +325,16 @@ let data = {};
 // Misc
 // ------------------------------------------------------------------------
 
+function roundTo(n, digits)
+{
+    if (digits === undefined)
+        digits = 0;
+
+    let multiplicator = Math.pow(10, digits);
+    n = parseFloat((n * multiplicator).toFixed(11));
+    return Math.round(n) / multiplicator;
+}
+
 function compareValues(value1, value2)
 {
     if (value1 < value2) {
