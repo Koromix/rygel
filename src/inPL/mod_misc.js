@@ -48,5 +48,32 @@ let misc = (function() {
         }
     };
 
+    // FIXME: Actually detect hypertension!
+    this.screenVOP = function(data) {
+        if (data.rdv_age === null || data.explcv17 === null)
+            return null;
+
+        let treshold;
+        if (data.rdv_age < 30) {
+            treshold = 7.1;
+        } else if (data.rdv_age < 40) {
+            treshold = 8.0
+        } else if (data.rdv_age < 50) {
+            treshold = 8.6;
+        } else if (data.rdv_age < 60) {
+            treshold = 10.0;
+        } else if (data.rdv_age < 70) {
+            treshold = 13.1;
+        } else {
+            treshold = 14.6;
+        }
+
+        if (data.explcv17 >= treshold) {
+            return 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir';
+        } else {
+            return 'rigidité artérielle dans les normes';
+        }
+    }
+
     return this;
 }).call({});

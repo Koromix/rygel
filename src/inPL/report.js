@@ -94,6 +94,7 @@ let report = (function() {
                     case 'neuropsy_sommeil': { result = neuropsy.screenSleep(data); } break;
 
                     case 'constantes_hta_ortho': { result = misc.screenOrthostaticHypotension(data); } break;
+                    case 'constantes_vop': return misc.screenVOP(data);
 
                     default: throw `Unknown test \'${test_name}\'`;
                 }
