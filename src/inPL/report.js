@@ -139,8 +139,19 @@ let report = (function() {
                     });
 
                     saveBlob(out, `CR_${row.rdv_plid}.docx`);
-                } catch (err) {
-                    alert(err.message);
+                } catch (e) {
+                    let error_count = 0;
+                    if (e.properties.id === 'multi_error') {
+                        e.properties.errors.forEach(function(err) {
+                            console.log(err);
+                            error_count++;
+                        });
+                    } else {
+                        console.log(e);
+                        error_count = 1;
+                    }
+
+                    alert(`Got ${error_count} error(s), open the JS console to get more information`);
                 }
             };
 
