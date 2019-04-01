@@ -75,5 +75,39 @@ let misc = (function() {
         }
     }
 
+    this.screenSurdityL = function(data) {
+        if (data.perte_tonale_gauche === null)
+            return null;
+
+        if (data.perte_tonale_gauche >= 90) {
+            return 'perte auditive profonde';
+        } else if (data.perte_tonale_gauche >= 70) {
+            return 'perte auditive sévère';
+        } else if (data.perte_tonale_gauche >= 40) {
+            return 'perte auditive moyenne';
+        } else if (data.perte_tonale_gauche >= 20) {
+            return 'perte auditive légère';
+        } else {
+            return 'audition normale';
+        }
+    }
+
+    this.screenSurdityR = function(data) {
+        if (data.perte_tonale_gauche === null)
+            return null;
+
+        if (data.perte_tonale_gauche >= 90) {
+            return 'perte auditive profonde';
+        } else if (data.perte_tonale_gauche >= 70) {
+            return 'perte auditive sévère';
+        } else if (data.perte_tonale_gauche >= 40) {
+            return 'pperte auditive moyenne';
+        } else if (data.perte_tonale_gauche >= 20) {
+            return 'perte auditive légère';
+        } else {
+            return 'audition normale';
+        }
+    }
+
     return this;
 }).call({});
