@@ -35,7 +35,7 @@ let misc = (function() {
         } else if (data.explcv2 != null) {
             return data.explcv2;
         } else {
-            return null;
+            return makeTestResult(null);
         }
     }
     function getDiastolicPressure(data) {
@@ -44,11 +44,11 @@ let misc = (function() {
         } else if (data.explcv3 != null) {
             return data.explcv3;
         } else {
-            return null;
+            return makeTestResult(null);
         }
     }
 
-    this.screenOrthostaticHypotension = function(data) {
+    this.testOrthostaticHypotension = function(data) {
         let pas = getSystolicPressure(data);
         let pad = getDiastolicPressure(data);
 
@@ -56,21 +56,21 @@ let misc = (function() {
                 data.constantes_explcv8 === null || data.constantes_explcv9 === null ||
                 data.constantes_explcv11 === null || data.constantes_explcv12 === null)
                 // data.constantes_explcv14 === null || data.constantes_explcv15 === null)
-            return null;
+            return makeTestResult(null);
 
         let pas_min = Math.min(data.constantes_explcv8, data.constantes_explcv11); //, data.constantes_explcv14);
         let pad_min = Math.min(data.constantes_explcv9, data.constantes_explcv12); //, data.constantes_explcv15);
 
         if (pas - pas_min >= 20 || pad - pad_min >= 10) {
-            return ScreeningResult.Bad;
+            return makeTestResult(TestScore.Bad, 'hypotension orthostatique');
         //} else if (pas - data.constantes_explcv14 >= 20 || pad - data.constantes_explcv15 >= 10) {
         //    return ScreeningResult.Fragile;
         } else {
-            return ScreeningResult.Good;
+            return makeTestResult(TestScore.Good, 'absence d\'hypotension orthostatique');
         }
     };
 
-    this.screenVOP = function(data) {
+    this.testVOP = function(data) {
         if (data.rdv_age === null || data.explcv17 === null)
             return null;
 
@@ -90,47 +90,34 @@ let misc = (function() {
         }
 
         if (getSystolicPressure(data) >= 140 || getDiastolicPressure(data) >= 90) {
-            return 'non pertinent car HTA lors de l\'examen';
+            return makeTestResult(TestScore.Bad, 'non pertinent car HTA lors de l\'examen');
         } else if (data.explcv17 >= treshold) {
-            return 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir';
+            return makeTestResult(TestScore.Fragile, 'rigidité artérielle anormalement élevée avec risque de développer une HTA dans l’avenir');
         } else {
-            return 'rigidité artérielle dans les normes';
+            return makeTestResult(TestScore.Good, 'rigidité artérielle dans les normes');
         }
     }
 
-    this.screenSurdityL = function(data) {
-        if (data.perte_tonale_gauche === null)
+    function testSurdity(loss)
+    {
+        if (loss === null)
             return null;
 
-        if (data.perte_tonale_gauche >= 90) {
-            return 'perte auditive profonde';
-        } else if (data.perte_tonale_gauche >= 70) {
-            return 'perte auditive sévère';
-        } else if (data.perte_tonale_gauche >= 40) {
-            return 'perte auditive moyenne';
-        } else if (data.perte_tonale_gauche >= 20) {
-            return 'perte auditive légère';
+        if (loss >= 90) {
+            return makeTestResult(TestScore.Bad, 'perte auditive profonde');
+        } else if (loss >= 70) {
+            return makeTestResult(TestScore.Bad, 'perte auditive sévère');
+        } else if (loss >= 40) {
+            return makeTestResult(TestScore.Bad, 'perte auditive moyenne');
+        } else if (loss >= 20) {
+            return makeTestResult(TestScore.Fragile, 'perte auditive légère');
         } else {
-            return 'audition normale';
+            return makeTestResult(TestScore.Good, 'audition normale');
         }
     }
 
-    this.screenSurdityR = function(data) {
-        if (data.perte_tonale_gauche === null)
-            return null;
-
-        if (data.perte_tonale_gauche >= 90) {
-            return 'perte auditive profonde';
-        } else if (data.perte_tonale_gauche >= 70) {
-            return 'perte auditive sévère';
-        } else if (data.perte_tonale_gauche >= 40) {
-            return 'pperte auditive moyenne';
-        } else if (data.perte_tonale_gauche >= 20) {
-            return 'perte auditive légère';
-        } else {
-            return 'audition normale';
-        }
-    }
+    this.testSurdityL = function(data) { return testSurdity(data.perte_tonale_gauche); }
+    this.testSurdityR = function(data) { return testSurdity(data.perte_tonale_droite); }
 
     return this;
 }).call({});

@@ -2,20 +2,28 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-const ScreeningResult = Object.freeze({
+const TestScore = Object.freeze({
     Bad: 1,
     Fragile: 2,
-    Good: 3,
+    Good: 3
+});
 
-    label: function(value) {
-        switch (value) {
-            case ScreeningResult.Bad: return 'Pathologique';
-            case ScreeningResult.Fragile: return 'Fragile';
-            case ScreeningResult.Good: return 'Vigoureux';
-            default: return 'Inconnu';
+function makeTestResult(score, text)
+{
+    if (text === undefined) {
+        switch (score) {
+            case TestScore.Bad: { text = 'pathologique'; } break;
+            case TestScore.Fragile: { text = 'fragile'; } break;
+            case TestScore.Good: { text = 'robuste'; } break;
+            default: { text = '????'; } break;
         }
     }
-});
+
+    if (score != TestScore.Bad && score !== TestScore.Fragile && score !== TestScore.Good)
+        score = null;
+
+    return {score: score, text: text};
+}
 
 function roundTo(n, digits) {
     if (digits === undefined) {

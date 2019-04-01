@@ -216,50 +216,61 @@ let neuropsy = (function() {
         return (value !== null) ? (value > treshold) : false;
     }
 
-    this.screenEfficiency = function(data) {
+    function makeNeuroResult(score)
+    {
+        switch (score) {
+            case TestScore.Bad: return makeTestResult(TestScore.Bad, 'en dehors des normes (pathologique)');
+            case TestScore.Fragile: return makeTestResult(TestScore.Fragile, 'dans les limites des normes (fragilité)');
+            case TestScore.Good: return makeTestResult(TestScore.Good, 'dans les normes (robuste)');
+
+            default: return makeTestResult(null);
+        }
+    }
+
+    this.testEfficiency = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_moca === null)
-            return null;
+            return makeTestResult(null);
 
         let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
-            return null;
+            return makeTestResult(null);
 
         if (testInfC5(data.neuropsy_moca, tresholds.moca_c5)) {
-            return ScreeningResult.Bad;
+            return makeNeuroResult(TestScore.Bad);
         } else if (testInfC50(data.neuropsy_moca, tresholds.moca_c50)) {
-            return ScreeningResult.Fragile;
+            return makeNeuroResult(TestScore.Fragile);
         } else {
-            return ScreeningResult.Good;
+            return makeNeuroResult(TestScore.Good);
         }
     };
 
-    this.screenMemory = function(data) {
+    this.testMemory = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null || data.neuropsy_rl === null ||
                 data.neuropsy_rt === null)
-            return null;
+            return makeTestResult(null);
 
         let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
-            return null;
+            return makeTestResult(null);
 
         if (testInfC5(data.neuropsy_rl, tresholds.rl_c5) || testInfC5(data.neuropsy_rt, tresholds.rt_c5)) {
-            return ScreeningResult.Bad;
+            return makeNeuroResult(TestScore.Bad);
         } else if (testInfC50(data.neuropsy_rl, tresholds.rl_c50) || testInfC50(data.neuropsy_rt, tresholds.rt_c50)) {
-            return ScreeningResult.Fragile;
+            return makeNeuroResult(TestScore.Fragile);
         } else {
-            return ScreeningResult.Good;
+            return makeNeuroResult(TestScore.Good);
         }
     };
 
-    this.screenExecution = function(data) {
+    this.testExecution = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null ||
                 ((data.neuropsy_tmtb === null) + (data.neuropsy_interf === null) + (data.neuropsy_slc === null) +
                  (data.neuropsy_animx === null) + (data.neuropsy_p === null)) > 2)
-            return null;
+            return makeTestResult(null);
 
         let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
-            return null;
+            return makeTestResult(null);
 
         let c5_fails = testSupC5(data.neuropsy_tmtb, tresholds.tmtb_c5) +
                        testSupC5(data.neuropsy_interf, tresholds.interf_c5) +
@@ -273,23 +284,23 @@ let neuropsy = (function() {
                         testInfC50(data.neuropsy_p, tresholds.p_c50);
 
         if (c5_fails) {
-            return ScreeningResult.Bad;
+            return makeNeuroResult(TestScore.Bad);
         } else if (c50_fails >= 2) {
-            return ScreeningResult.Fragile;
+            return makeNeuroResult(TestScore.Fragile);
         } else {
-            return ScreeningResult.Good;
+            return makeNeuroResult(TestScore.Good);
         }
     };
 
-    this.screenAttention = function(data) {
+    this.testAttention = function(data) {
         if (data.rdv_age === null || data.neuropsy_nsc === null ||
                 ((data.neuropsy_code === null) + (data.neuropsy_tmta === null) + (data.neuropsy_lecture === null) +
                  (data.neuropsy_deno === null)) > 2)
-            return null;
+            return makeTestResult(null);
 
         let tresholds = getTresholds(data.rdv_age, data.neuropsy_nsc);
         if (!tresholds)
-            return null;
+            return makeTestResult(null);
 
         let c5_fails = testInfC5(data.neuropsy_code, tresholds.code_c5) +
                        testSupC5(data.neuropsy_tmta, tresholds.tmta_c5) +
@@ -301,26 +312,27 @@ let neuropsy = (function() {
                         testSupC50(data.neuropsy_deno, tresholds.deno_c50);
 
         if (c5_fails) {
-            return ScreeningResult.Bad;
+            return makeNeuroResult(TestScore.Bad);
         } else if (c50_fails >= 2) {
-            return ScreeningResult.Fragile;
+            return makeNeuroResult(TestScore.Fragile);
         } else {
-            return ScreeningResult.Good;
+            return makeNeuroResult(TestScore.Good);
         }
     };
 
-    this.screenCognition = function(data) {
-        return Math.min(self.screenEfficiency(data), self.screenMemory(data),
-                        self.screenExecution(data), self.screenAttention(data)) || null;
+    this.testCognition = function(data) {
+        let score = Math.min(self.testEfficiency(data).score, self.testMemory(data).score,
+                             self.testExecution(data).score, self.testAttention(data).score);
+        return makeTestResult(score);
     };
 
-    this.screenDepressionAnxiety = function(data) {
+    this.testDepressionAnxiety = function(data) {
         if (data.aq1_had1 === null || data.aq1_had2 === null || data.aq1_had3 === null ||
                  data.aq1_had4 === null || data.aq1_had5 === null || data.aq1_had6 === null ||
                  data.aq1_had7 === null || data.aq1_had8 === null || data.aq1_had9 === null ||
                  data.aq1_had10 === null || data.aq1_had11 === null || data.aq1_had12 === null ||
                  data.aq1_had13 === null || data.aq1_had14 === null)
-            return null;
+            return makeTestResult(null);
 
         let a = data.aq1_had1 + data.aq1_had3 + data.aq1_had5 + data.aq1_had7 +
                 data.aq1_had9 + data.aq1_had11 + data.aq1_had13;
@@ -328,17 +340,17 @@ let neuropsy = (function() {
                 data.aq1_had10 + data.aq1_had12 + data.aq1_had14;
 
         if (a >= 11 || d >= 11) {
-            return ScreeningResult.Bad;
+            return makeTestResult(TestScore.Bad, 'thymie ou anxiété pathologique');
         } else if (a >= 8 || d >= 8) {
-            return ScreeningResult.Fragile;
+            return makeTestResult(TestScore.Fragile, 'thymie fragile ou anxiété');
         } else {
-            return ScreeningResult.Good;
+            return makeTestResult(TestScore.Good, 'absence de trouble thymique ou d\'anxiété');
         }
     };
 
-    this.screenSleep = function(data) {
+    this.testSleep = function(data) {
         if (data.aq1_som1 === null || data.neuropsy_plainte_som === null)
-            return null;
+            return makeTestResult(null);
 
         // FIXME: Which variables? New ones?
         let diseased = false;
@@ -346,17 +358,18 @@ let neuropsy = (function() {
                         data.neuropsy_plainte_som == 1;
 
         if (diseased) {
-            return ScreeningResult.Bad;
+            return makeTestResult(TestScore.Bad, 'sommeil pathologique');
         } else if (complaint) {
-            return ScreeningResult.Fragile;
+            return makeTestResult(TestScore.Fragile, 'sommeil fragile');
         } else {
-            return ScreeningResult.Good;
+            return makeTestResult(TestScore.Good, 'sommeil normal');
         }
     };
 
-    this.screenAll = function(data) {
-        return Math.min(self.screenCognition(data), self.screenDepressionAnxiety(data),
-                        self.screenSleep(data)) || null;
+    this.testAll = function(data) {
+        let score = Math.min(self.testCognition(data).score, self.testDepressionAnxiety(data).score,
+                             self.testSleep(data).score);
+        return makeTestResult(score);
     }
 
     return this;
