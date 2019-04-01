@@ -95,6 +95,8 @@ let report = (function() {
 
                     case 'constantes_hta_ortho': { result = misc.screenOrthostaticHypotension(data); } break;
                     case 'constantes_vop': return misc.screenVOP(data);
+                    case 'audition_surdite_gauche': return misc.screenSurdityL(data);
+                    case 'audition_surdite_droite': return misc.screenSurdityR(data);
 
                     default: throw `Unknown test \'${test_name}\'`;
                 }
