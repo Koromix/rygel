@@ -24,6 +24,7 @@ let misc = (function() {
                     !!data.aq1_integsoc3 * -9.47 + // !!data.aq1_seco15
                     !!data.aq1_integsoc4 * -7.1 + // !!data.aq1_seco16
                     75.14;
+        score = roundTo(score, 2);
 
         return score;
     };
