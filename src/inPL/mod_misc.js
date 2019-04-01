@@ -8,8 +8,8 @@ let misc = (function() {
     this.computeEpices = function(data) {
         if (data.aq1_seco4 === null || data.aq1_seco7 === null || data.aq1_seco10 === null ||
                 data.aq1_seco2 === null || data.aq1_seco3 === null || data.aq1_lois2 === null ||
-                data.aq1_lois3 === null || data.aq1_lois4 === null || data.aq1_seco14 === null ||
-                data.aq1_seco15 === null || data.aq1_seco16 === null)
+                data.aq1_lois3 === null || data.aq1_lois4 === null || data.aq1_integsoc2 === null ||
+                data.aq1_integsoc3 === null || data.aq1_integsoc4 === null)
             return null;
 
         let score = !!data.aq1_seco4 * 10.06 +
@@ -20,9 +20,9 @@ let misc = (function() {
                     !!data.aq1_lois2 * -6.51 + // !!data.aq1_seco11
                     !!data.aq1_lois3 * -7.1 + // !!data.aq1_seco12
                     !!data.aq1_lois4 * -7.1 + // !!data.aq1_seco13
-                    !!data.aq1_seco14 * -9.47 +
-                    !!data.aq1_seco15 * -9.47 +
-                    !!data.aq1_seco16 * -7.1 +
+                    !!data.aq1_integsoc2 * -9.47 + // !!data.aq1_seco14
+                    !!data.aq1_integsoc3 * -9.47 + // !!data.aq1_seco15
+                    !!data.aq1_integsoc4 * -7.1 + // !!data.aq1_seco16
                     75.14;
 
         return score;
