@@ -41,29 +41,25 @@ enum class CompilerFlag {
     LTO = 1 << 1
 };
 
-struct Compiler {
+class Compiler {
+public:
     const char *name;
     unsigned int flags;
 
-    const char *(*BuildObjectCommand)(const char *src_filename, SourceType src_type,
-                                      BuildMode build_mode, const char *pch_filename,
-                                      Span<const char *const> definitions,
-                                      Span<const char *const> include_directories,
-                                      const char *dest_filename, const char *deps_filename,
-                                      Allocator *alloc);
-    const char *(*BuildPackCommand)(Span<const char *const> pack_filenames, const char *pack_options,
-                                    const char *dest_filename, Allocator *alloc);
-    const char *(*BuildLinkCommand)(Span<const char *const> obj_filenames, BuildMode build_mode,
-                                    Span<const char *const> libraries, LinkType link_type,
-                                    const char *dest_filename, Allocator *alloc);
+    Compiler(const char *name, unsigned int flags)
+        : name(name), flags(flags) {}
 
     bool Supports(CompilerFlag flag) const { return flags & (int)flag; }
+
+    virtual const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
+                                          const char *pch_filename, Span<const char *const> definitions,
+                                          Span<const char *const> include_directories, const char *dest_filename,
+                                          const char *deps_filename, Allocator *alloc) const = 0;
+    virtual const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
+                                        const char *dest_filename, Allocator *alloc) const = 0;
+    virtual const char *MakeLinkCommand(Span<const char *const> obj_filenames, BuildMode build_mode,
+                                        Span<const char *const> libraries, LinkType link_type,
+                                        const char *dest_filename, Allocator *alloc) const = 0;
 };
 
-extern Compiler ClangCompiler;
-extern Compiler GnuCompiler;
-
-static const Compiler *const Compilers[] = {
-    &ClangCompiler,
-    &GnuCompiler
-};
+extern const Span<const Compiler *const> Compilers;

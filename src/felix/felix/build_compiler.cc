@@ -125,14 +125,15 @@ static void AppendPackCommandLine(Span<const char *const> pack_filenames, const 
     }
 }
 
-Compiler ClangCompiler = {
-    "Clang",
-    (int)CompilerFlag::PCH | (int)CompilerFlag::LTO,
+class ClangCompiler: public Compiler {
+public:
+    ClangCompiler(): Compiler("Clang", (int)CompilerFlag::PCH | (int)CompilerFlag::LTO) {}
 
-    // BuildObjectCommand
-    [](const char *src_filename, SourceType src_type, BuildMode build_mode, const char *pch_filename,
-       Span<const char *const> definitions, Span<const char *const> include_directories,
-       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
+    const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
+                                  const char *pch_filename, Span<const char *const> definitions,
+                                  Span<const char *const> include_directories, const char *dest_filename,
+                                  const char *deps_filename, Allocator *alloc) const override
+    {
 #ifdef _WIN32
         static const char *const flags = "-Wall -Wno-unknown-warning-option "
                                          "-DNOMINMAX -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE";
@@ -160,11 +161,11 @@ Compiler ClangCompiler = {
                                  include_directories, dest_filename, deps_filename, &buf);
 
         return (const char *)buf.Leak().ptr;
-    },
+    }
 
-    // BuildPackCommand
-    [](Span<const char *const> pack_filenames, const char *pack_options,
-       const char *dest_filename, Allocator *alloc) {
+    const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
+                                const char *dest_filename, Allocator *alloc) const override
+    {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
@@ -172,12 +173,12 @@ Compiler ClangCompiler = {
         Fmt(&buf, " | clang -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
-    },
+    }
 
-    // BuildLinkCommand
-    [](Span<const char *const> obj_filenames, BuildMode build_mode,
-       Span<const char *const> libraries, LinkType link_type,
-       const char *dest_filename, Allocator *alloc) {
+    const char *MakeLinkCommand(Span<const char *const> obj_filenames, BuildMode build_mode,
+                                Span<const char *const> libraries, LinkType link_type,
+                                const char *dest_filename, Allocator *alloc) const override
+    {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
@@ -194,18 +195,21 @@ Compiler ClangCompiler = {
     }
 };
 
-Compiler GnuCompiler = {
-    "GNU",
+class GnuCompiler: public Compiler {
+public:
+    GnuCompiler()
+        : Compiler("GNU", (int)CompilerFlag::PCH | (int)CompilerFlag::LTO)
+    {
 #ifdef _WIN32
-    (int)CompilerFlag::LTO,
-#else
-    (int)CompilerFlag::PCH | (int)CompilerFlag::LTO,
+        flags &= ~(int)CompilerFlag::PCH;
 #endif
+    }
 
-    // BuildObjectCommand
-    [](const char *src_filename, SourceType src_type, BuildMode build_mode, const char *pch_filename,
-       Span<const char *const> definitions, Span<const char *const> include_directories,
-       const char *dest_filename, const char *deps_filename, Allocator *alloc) {
+    const char *MakeObjectCommand(const char *src_filename, SourceType src_type, BuildMode build_mode,
+                                  const char *pch_filename, Span<const char *const> definitions,
+                                  Span<const char *const> include_directories, const char *dest_filename,
+                                  const char *deps_filename, Allocator *alloc) const override
+    {
 #ifdef _WIN32
         static const char *const flags = "-Wall -D__USE_MINGW_ANSI_STDIO=1";
 #else
@@ -228,11 +232,11 @@ Compiler GnuCompiler = {
                                  include_directories, dest_filename, deps_filename, &buf);
 
         return (const char *)buf.Leak().ptr;
-    },
+    }
 
-    // BuildPackCommand
-    [](Span<const char *const> pack_filenames, const char *pack_options,
-       const char *dest_filename, Allocator *alloc) {
+    const char *MakePackCommand(Span<const char *const> pack_filenames, const char *pack_options,
+                                const char *dest_filename, Allocator *alloc) const override
+    {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
@@ -240,12 +244,12 @@ Compiler GnuCompiler = {
         Fmt(&buf, " | gcc -x c -c - -o %1", dest_filename);
 
         return (const char *)buf.Leak().ptr;
-    },
+    }
 
-    // BuildLinkCommand
-    [](Span<const char *const> obj_filenames, BuildMode build_mode,
-       Span<const char *const> libraries, LinkType link_type,
-       const char *dest_filename, Allocator *alloc) {
+    const char *MakeLinkCommand(Span<const char *const> obj_filenames, BuildMode build_mode,
+                                Span<const char *const> libraries, LinkType link_type,
+                                const char *dest_filename, Allocator *alloc) const override
+    {
         HeapArray<char> buf;
         buf.allocator = alloc;
 
@@ -264,3 +268,11 @@ Compiler GnuCompiler = {
         return (const char *)buf.Leak().ptr;
     }
 };
+
+static ClangCompiler ClangCompiler;
+static GnuCompiler GnuCompiler;
+static const Compiler *const CompilerTable[] = {
+    &ClangCompiler,
+    &GnuCompiler
+};
+const Span<const Compiler *const> Compilers = CompilerTable;

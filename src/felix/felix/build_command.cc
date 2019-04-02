@@ -227,9 +227,9 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             if (!CreatePrecompileHeader(obj.src_filename, obj.dest_filename))
                 return false;
 
-            cmd.cmd = compiler->BuildObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
-                                                   target.definitions, target.include_directories,
-                                                   nullptr, deps_filename, &str_alloc);
+            cmd.cmd = compiler->MakeObjectCommand(obj.dest_filename, obj.src_type, build_mode, nullptr,
+                                                  target.definitions, target.include_directories,
+                                                  nullptr, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
@@ -257,9 +257,9 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(obj.dest_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(obj.dest_filename))
                 return false;
-            cmd.cmd = compiler->BuildObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
-                                                   target.definitions, target.include_directories,
-                                                   obj.dest_filename, deps_filename, &str_alloc);
+            cmd.cmd = compiler->MakeObjectCommand(obj.src_filename, obj.src_type, build_mode, pch_filename,
+                                                  target.definitions, target.include_directories,
+                                                  obj.dest_filename, deps_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
@@ -281,8 +281,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
             cmd.dest_filename = DuplicateString(target.pack_obj_filename, &str_alloc).ptr;
             if (!EnsureDirectoryExists(target.pack_obj_filename))
                 return false;
-            cmd.cmd = compiler->BuildPackCommand(target.pack_filenames, target.pack_options,
-                                                 target.pack_obj_filename, &str_alloc);
+            cmd.cmd = compiler->MakePackCommand(target.pack_filenames, target.pack_options,
+                                                target.pack_obj_filename, &str_alloc);
             if (!cmd.cmd)
                 return false;
 
@@ -307,9 +307,9 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
                 cmd.text = Fmt(&str_alloc, "Link %1",
                                SplitStrReverseAny(target.pack_module_filename, PATH_SEPARATORS)).ptr;
                 cmd.dest_filename = DuplicateString(target.pack_module_filename, &str_alloc).ptr;
-                cmd.cmd = compiler->BuildLinkCommand(target.pack_obj_filename, BuildMode::Debug, {},
-                                                     LinkType::SharedLibrary, target.pack_module_filename,
-                                                     &str_alloc);
+                cmd.cmd = compiler->MakeLinkCommand(target.pack_obj_filename, BuildMode::Debug, {},
+                                                    LinkType::SharedLibrary, target.pack_module_filename,
+                                                    &str_alloc);
 
                 link_commands.Append(cmd);
             }
@@ -326,8 +326,8 @@ bool BuildSetBuilder::AppendTargetCommands(const Target &target)
         cmd.text = Fmt(&str_alloc, "Link %1",
                        SplitStrReverseAny(target.dest_filename, PATH_SEPARATORS)).ptr;
         cmd.dest_filename = DuplicateString(target.dest_filename, &str_alloc).ptr;
-        cmd.cmd = compiler->BuildLinkCommand(obj_filenames, build_mode, target.libraries,
-                                             LinkType::Executable, target.dest_filename, &str_alloc);
+        cmd.cmd = compiler->MakeLinkCommand(obj_filenames, build_mode, target.libraries,
+                                            LinkType::Executable, target.dest_filename, &str_alloc);
         if (!cmd.cmd)
             return false;
 
