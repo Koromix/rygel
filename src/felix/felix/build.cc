@@ -114,7 +114,7 @@ Options:
 
     -t, --toolchain <toolcahin>  Set toolchain, see below
                                  (default: %1)
-       --disable_pch             Disable header precompilation (PCH)
+        --disable_pch            Disable header precompilation (PCH)
 
     -j, --jobs <count>           Set maximum number of parallel jobs
                                  (default: number of cores + 1)
