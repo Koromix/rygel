@@ -4,6 +4,8 @@
 
 #include "../../libcc/libcc.hh"
 #include "config.hh"
+#include "data.hh"
+#include "goupil.hh"
 #include "../../wrappers/http.hh"
 #include "../../felix/libpack/libpack.hh"
 
@@ -17,7 +19,8 @@ struct Route {
     HASH_TABLE_HANDLER(Route, url);
 };
 
-static Config goupil_config;
+Config goupil_config;
+SQLiteConnection database;
 
 static Span<const pack_Asset> assets;
 #ifndef NDEBUG
@@ -29,6 +32,36 @@ extern "C" const Span<const pack_Asset> pack_assets;
 
 static HashTable<const char *, Route> routes;
 static BlockAllocator routes_alloc;
+
+static bool InitDatabase(const char *filename)
+{
+    Span<const char> extension = GetPathExtension(filename);
+
+    if (extension == ".db") {
+        return database.Open(filename, SQLITE_OPEN_READWRITE);
+    } else if (extension == ".sql") {
+        if (!database.Open(":memory:", SQLITE_OPEN_READWRITE))
+            return false;
+
+        HeapArray<char> sql;
+        if (!ReadFile(filename, Megabytes(1), &sql))
+            return false;
+        sql.Append(0);
+
+        char *error = nullptr;
+        if (sqlite3_exec(database, sql.ptr, nullptr, nullptr, &error) != SQLITE_OK) {
+            LogError("SQLite request failed: %1", error);
+            sqlite3_free(error);
+
+            return false;
+        }
+
+        return true;
+    } else {
+        LogError("Unknown database extension '%1'", extension);
+        return false;
+    }
+}
 
 static void InitRoutes()
 {
@@ -110,7 +143,6 @@ int main(int argc, char **argv)
 
 Options:
     -C, --config_file <file>     Set configuration file
-    -P, --profile_dir <dir>      Set profile directory
 
         --port <port>            Change web server port
                                  (default: %1))
@@ -135,7 +167,11 @@ Options:
     }
 
     // Load config file
-    if (config_filename && !LoadConfig(config_filename, &goupil_config))
+    if (!config_filename) {
+        LogError("Configuration file not specified");
+        return 1;
+    }
+    if (!LoadConfig(config_filename, &goupil_config))
         return 1;
 
     // Parse arguments
@@ -145,8 +181,6 @@ Options:
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("-P", "--profile_dir", OptionType::Value)) {
-                goupil_config.profile_directory = opt.current_value;
             } else if (opt.Test("--port", OptionType::Value)) {
                 if (!ParseDec(opt.current_value, &goupil_config.port))
                     return 1;
@@ -159,11 +193,13 @@ Options:
         }
     }
 
-    // Configuration errors
-    if (!goupil_config.profile_directory) {
-        LogError("Profile directory is missing");
+    // Init database
+    if (!goupil_config.database_filename) {
+        LogError("Database file not specified");
         return 1;
     }
+    if (!InitDatabase(goupil_config.database_filename))
+        return 1;
 
     // Init routes
 #ifndef NDEBUG

@@ -331,7 +331,10 @@ set(GOUPIL_SRC
     wrappers/http.hh
     goupil/server/config.cc
     goupil/server/config.hh
+    goupil/server/data_sqlite.cc
+    goupil/server/data.hh
     goupil/server/goupil.cc
+    goupil/server/goupil.hh
 )
 set(GOUPIL_ASSETS
     goupil/client/goupil.html
