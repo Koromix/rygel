@@ -6,8 +6,6 @@
 #include "../../libcc/libcc.hh"
 #include "data.hh"
 
-#define SCHEMA_VERSION 1
-
 bool SQLiteConnection::Open(const char *filename, unsigned int flags)
 {
     const char *const sql = R"(
@@ -37,43 +35,6 @@ bool SQLiteConnection::Close()
     if (sqlite3_close(db) != SQLITE_OK)
         return false;
     db = nullptr;
-
-    return true;
-}
-
-bool InitDatabase(sqlite3 *db)
-{
-    const char *const sql = R"(
-        CREATE TABLE gp_values (
-            id INTEGER PRIMARY KEY,
-            table_name TEXT NOT NULL,
-            entity_id INTEGER NOT NULL,
-            key TEXT NOT NULL,
-            value BLOB,
-            creation_date INTEGER NOT NULL,
-            change_date INTEGER NOT NULL
-        );
-
-        CREATE TABLE gp_migrations (
-            version INTEGER NOT NULL,
-            date INTEGER NOT NULL,
-            value_id INTEGER NOT NULL
-        );
-
-        INSERT INTO gp_migrations (version, date, value_id) VALUES (
-            )" STRINGIFY(SCHEMA_VERSION) R"(,
-            date('now'),
-            0
-        );
-    )";
-
-    char *error = nullptr;
-    if (sqlite3_exec(db, sql, nullptr, nullptr, &error) != SQLITE_OK) {
-        LogError("SQLite request failed: %1", error);
-        sqlite3_free(error);
-
-        return false;
-    }
 
     return true;
 }

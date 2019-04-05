@@ -342,21 +342,6 @@ set(GOUPIL_ASSETS
     goupil/client/widgets.css
 )
 
-set(GOUPIL_ADMIN_SRC
-    goupil/admin/goupil_admin.cc
-    goupil/admin/profile.cc
-    goupil/admin/profile.hh
-    goupil/server/config.cc
-    goupil/server/config.hh
-    goupil/server/data_sqlite.cc
-    goupil/server/data.hh
-)
-# These are the files used by create_profile, only put in files
-# under goupil/admin/profile and avoid '..' ("dotdot") components!
-set(GOUPIL_ADMIN_ASSETS
-    # Nothing yet
-)
-
 add_executable(goupil ${GOUPIL_SRC})
 target_link_libraries(goupil PRIVATE libcc libpack microhttpd sqlite)
 target_assets(goupil
@@ -364,13 +349,6 @@ target_assets(goupil
     MERGE_RULES goupil/client/packer.ini
     OPTIONS -cGzip $<$<CONFIG:Debug>:--source_map>
     SOURCES ${GOUPIL_ASSETS}
-)
-
-add_executable(goupil_admin ${GOUPIL_ADMIN_SRC})
-target_link_libraries(goupil_admin PRIVATE libcc sqlite)
-target_assets(goupil_admin
-    OPTIONS -cGzip -s3
-    SOURCES ${GOUPIL_ADMIN_ASSETS}
 )
 
 # ------------------------------------------------------------------------

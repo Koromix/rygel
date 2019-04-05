@@ -22,5 +22,3 @@ public:
 
     operator sqlite3 *() { return db; }
 };
-
-bool InitDatabase(sqlite3 *db);
