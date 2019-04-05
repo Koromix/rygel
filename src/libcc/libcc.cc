@@ -405,10 +405,11 @@ Date Date::FromJulianDays(int days)
 {
     DebugAssert(days >= 0);
 
+    // Algorithm from Richards, copied from Wikipedia:
+    // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
+
     Date date;
     {
-        // Algorithm from Richards, copied from Wikipedia:
-        // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
         int f = days + 1401 + (((4 * days + 274277) / 146097) * 3) / 4 - 38;
         int e = 4 * f + 3;
         int g = e % 1461 / 4;
@@ -425,18 +426,45 @@ int Date::ToJulianDays() const
 {
     DebugAssert(IsValid());
 
+    // Straight from the Web:
+    // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
+
     int julian_days;
     {
-        // Straight from the Web:
-        // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
         bool adjust = st.month < 3;
         int year = st.year + 4800 - adjust;
         int month = st.month + 12 * adjust - 3;
+
         julian_days = st.day + (153 * month + 2) / 5 + 365 * year - 32045 +
                       year / 4 - year / 100 + year / 400;
     }
 
     return julian_days;
+}
+
+int Date::GetWeekDay() const
+{
+    DebugAssert(IsValid());
+
+    // Zeller's congruence:
+    // https://en.wikipedia.org/wiki/Zeller%27s_congruence
+
+    int week_day;
+    {
+        int year = st.year;
+        int month = st.month;
+        if (month < 3) {
+            year--;
+            month += 12;
+        }
+
+        int century = year / 100;
+        year %= 100;
+
+        week_day = (st.day + (13 * (month + 1) / 5) + year + year / 4 + century / 4 + 5 * century + 5) % 7;
+    }
+
+    return week_day;
 }
 
 Date &Date::operator++()
