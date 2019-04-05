@@ -2240,6 +2240,8 @@ union Date {
     int ToJulianDays() const;
     int ToCalendarDate() const { return ToJulianDays() - 2440588; }
 
+    int GetWeekDay() const;
+
     int operator-(Date other) const
         { return ToJulianDays() - other.ToJulianDays(); }
 
