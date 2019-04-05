@@ -2251,7 +2251,8 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
             return -1;
         }
 
-        out_buf->Grow(raw_len);
+        // Add one trailing byte to avoid reallocation for users who append a NUL character
+        out_buf->Grow(raw_len + 1);
         Size read_len = Read(raw_len, out_buf->end());
         if (read_len < 0)
             return -1;
