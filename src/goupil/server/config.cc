@@ -7,12 +7,12 @@
 
 bool ConfigBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, profile_directory =  config.profile_directory,
+    DEFER_NC(out_guard, database_filename =  config.database_filename,
                         ip_stack = config.ip_stack,
                         port = config.port,
                         threads = config.threads,
                         base_url = config.base_url) {
-        config.profile_directory = profile_directory;
+        config.database_filename = database_filename;
         config.ip_stack = ip_stack;
         config.port = port;
         config.threads = threads;
@@ -32,8 +32,8 @@ bool ConfigBuilder::LoadIni(StreamReader &st)
         while (ini.Next(&prop)) {
             if (prop.section == "Resources") {
                 do {
-                    if (prop.key == "ProfileDirectory") {
-                        config.profile_directory = NormalizePath(prop.value, root_directory,
+                    if (prop.key == "DatabaseFile") {
+                        config.database_filename = NormalizePath(prop.value, root_directory,
                                                                  &config.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);

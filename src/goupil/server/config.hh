@@ -7,7 +7,7 @@
 #include "../../libcc/libcc.hh"
 
 struct Config {
-    const char *profile_directory = nullptr;
+    const char *database_filename = nullptr;
 
     IPStack ip_stack = IPStack::Dual;
     int port = 8888;
