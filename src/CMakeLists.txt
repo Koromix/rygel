@@ -374,40 +374,39 @@ target_assets(goupil_admin
 )
 
 # ------------------------------------------------------------------------
-# inPL
+# inPL_report
 # ------------------------------------------------------------------------
 
-set(INPL_ASSETS
-    inPL/inPL.html
-    inPL/inPL_logo.png
+set(INPL_REPORT_ASSETS
+    inPL/report/inPL_report.html
+    inPL/report/inPL_logo.png
     ../vendor/papaparse/papaparse.min.js
     ../vendor/docxtemplater/jszip.min.js
     ../vendor/docxtemplater/docxtemplater.min.js
     libweb/compat.js
     libweb/util.js
-    inPL/common.js
-    inPL/inPL.js
-    inPL/mod_demo.js
-    inPL/mod_ems.js
-    inPL/mod_misc.js
-    inPL/mod_neuropsy.js
-    inPL/mod_nutrition.js
-    inPL/bridge.js
-    inPL/report.js
-    inPL/tables.js
-    inPL/inPL.css
+    inPL/report/common.js
+    inPL/report/inPL_report.js
+    inPL/report/mod_demo.js
+    inPL/report/mod_ems.js
+    inPL/report/mod_misc.js
+    inPL/report/mod_neuropsy.js
+    inPL/report/mod_nutrition.js
+    inPL/report/bridge.js
+    inPL/report/report.js
+    inPL/report/tables.js
+    inPL/report/inPL_report.css
 )
 
-add_custom_target(inPL ALL
-    DEPENDS "${CMAKE_BINARY_DIR}/inPL/inPL.html"
+add_custom_target(inPL_report ALL
+    DEPENDS "${CMAKE_BINARY_DIR}/inPL_report/inPL.html"
 )
 add_custom_command(
-    OUTPUT "${CMAKE_BINARY_DIR}/inPL/inPL.html"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/inPL"
-    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
-    COMMAND $<TARGET_FILE:felix> pack -M inPL/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL" ${INPL_ASSETS}
+    OUTPUT "${CMAKE_BINARY_DIR}/inPL_report/inPL.html"
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/report/packer.ini -gFiles "-O${CMAKE_BINARY_DIR}/inPL_report" ${INPL_REPORT_ASSETS}
+    COMMAND $<TARGET_FILE:felix> pack -M inPL/report/packer.ini -gFiles -cGzip "-O${CMAKE_BINARY_DIR}/inPL_report" ${INPL_REPORT_ASSETS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    DEPENDS felix ${INPL_ASSETS}
+    DEPENDS felix ${INPL_REPORT_ASSETS}
 )
 
 # ------------------------------------------------------------------------
