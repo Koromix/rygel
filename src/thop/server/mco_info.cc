@@ -6,6 +6,8 @@
 #include "mco_info.hh"
 #include "mco.hh"
 
+namespace RG {
+
 static int GetIndexFromRequest(const http_Request &request, http_Response *out_response,
                                const mco_TableIndex **out_index, drd_Sector *out_sector = nullptr)
 {
@@ -250,7 +252,7 @@ int ProduceMcoGhmGhs(const http_Request &request, const User *, http_Response *o
             }
             if (ghm_to_ghs_info.procedure_masks.len) {
                 json.Key("procedures"); json.StartArray();
-                for (const ListMask &mask: ghm_to_ghs_info.procedure_masks) {
+                for (const drd_ListMask &mask: ghm_to_ghs_info.procedure_masks) {
                     json.String(Fmt(buf, "A$%1.%2", mask.offset, mask.value).ptr);
                 }
                 json.EndArray();
@@ -308,7 +310,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                            const mco_GhmDecisionNode &ghm_node,
                            ReadableGhmDecisionNode *out_node)
 {
-    DebugAssert(ghm_node.type == mco_GhmDecisionNode::Type::Test);
+    RG_DEBUG_ASSERT(ghm_node.type == mco_GhmDecisionNode::Type::Test);
 
     out_node->key = Fmt(ctx.str_alloc, "%1%2%3",
                         FmtHex(ghm_node.u.test.function).Pad0(-2),
@@ -333,7 +335,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                     ctx.cmd = (int8_t)i;
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1",
                                                           FmtArg(ctx.cmd).Pad0(-2)).ptr;
-                    if (UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
                         return -1;
                 }
                 ctx.cmd = prev_cmd;
@@ -348,7 +350,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                     ctx.out_nodes[child_idx].header = Fmt(ctx.str_alloc, "D-%1%2",
                                                           FmtArg(ctx.cmd).Pad0(-2),
                                                           FmtArg(i).Pad0(-2)).ptr;
-                    if (UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
                         return -1;
                 }
 
@@ -413,7 +415,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
                     Size child_idx = ghm_node.u.test.children_idx + i;
 
                     ctx.cmd = ghm_node.u.test.params[1];
-                    if (UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+                    if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
                         return -1;
                 }
                 ctx.cmd = prev_cmd;
@@ -547,7 +549,7 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
 
     for (Size i = 1; i < ghm_node.u.test.children_count; i++) {
         Size child_idx = ghm_node.u.test.children_idx + i;
-        if (UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
+        if (RG_UNLIKELY(!ProcessGhmNode(ctx, child_idx)))
             return -1;
     }
 
@@ -557,19 +559,19 @@ static Size ProcessGhmTest(BuildReadableGhmTreeContext &ctx,
 static bool ProcessGhmNode(BuildReadableGhmTreeContext &ctx, Size ghm_node_idx)
 {
     for (Size i = 0;; i++) {
-        if (UNLIKELY(i >= ctx.ghm_nodes.len)) {
+        if (RG_UNLIKELY(i >= ctx.ghm_nodes.len)) {
             LogError("Empty GHM tree or infinite loop (%2)", ctx.ghm_nodes.len);
             return false;
         }
 
-        DebugAssert(ghm_node_idx < ctx.ghm_nodes.len);
+        RG_DEBUG_ASSERT(ghm_node_idx < ctx.ghm_nodes.len);
         const mco_GhmDecisionNode &ghm_node = ctx.ghm_nodes[ghm_node_idx];
         ReadableGhmDecisionNode *out_node = &ctx.out_nodes[ghm_node_idx];
 
         switch (ghm_node.type) {
             case mco_GhmDecisionNode::Type::Test: {
                 ghm_node_idx = ProcessGhmTest(ctx, ghm_node, out_node);
-                if (UNLIKELY(ghm_node_idx < 0))
+                if (RG_UNLIKELY(ghm_node_idx < 0))
                     return false;
 
                 // GOTO is special
@@ -606,7 +608,7 @@ static bool BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes,
     ctx.ghm_nodes = ghm_nodes;
     out_nodes->Grow(ghm_nodes.len);
     ctx.out_nodes = MakeSpan(out_nodes->end(), ghm_nodes.len);
-    memset(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * SIZE(*ctx.out_nodes.ptr));
+    memset(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * RG_SIZE(*ctx.out_nodes.ptr));
     ctx.str_alloc = str_alloc;
 
     if (!ProcessGhmNode(ctx, 0))
@@ -651,4 +653,6 @@ int ProduceMcoTree(const http_Request &request, const User *, http_Response *out
     json.EndArray();
 
     return json.Finish(out_response);
+}
+
 }

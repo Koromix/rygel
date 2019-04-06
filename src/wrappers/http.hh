@@ -8,6 +8,8 @@
 #include "../libcc/libcc.hh"
 #include "json.hh"
 
+namespace RG {
+
 struct http_Response {
     enum class Flag {
         DisableCacheControl = 1 << 0,
@@ -95,3 +97,5 @@ public:
 
     int Finish(http_Response *out_response);
 };
+
+}

@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 struct Element {
     enum class Type {
         Event,
@@ -41,7 +43,7 @@ struct Concept {
     const char *title = nullptr;
     const char *path = nullptr;
 
-    HASH_TABLE_HANDLER(Concept, name);
+    RG_HASH_TABLE_HANDLER(Concept, name);
 };
 
 struct ConceptSet {
@@ -53,3 +55,5 @@ struct ConceptSet {
 
     LinkedAllocator str_alloc;
 };
+
+}

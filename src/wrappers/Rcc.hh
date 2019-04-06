@@ -8,11 +8,13 @@
 
 #include <Rcpp.h>
 
+namespace RG {
+
 extern std::mutex rcc_log_mutex;
 extern BlockQueue<const char *> rcc_log_messages;
 extern bool rcc_log_missing_messages;
 
-#define RCC_SETUP_LOG_HANDLER() \
+#define RG_RCC_SETUP_LOG_HANDLER() \
     PushLogHandler([](LogLevel level, const char *ctx, \
                       const char *fmt, Span<const FmtArg> args) { \
         switch (level) { \
@@ -34,7 +36,7 @@ extern bool rcc_log_missing_messages;
             } break; \
         } \
     }); \
-    DEFER { \
+    RG_DEFER { \
         rcc_DumpWarnings(); \
         PopLogHandler(); \
     };
@@ -47,7 +49,7 @@ void *rcc_GetPointerSafe(SEXP xp);
 template <typename T, typename U>
 U rcc_GetOptional(T &vec, Size idx, U default_value)
 {
-    if (UNLIKELY(idx >= vec.Len()))
+    if (RG_UNLIKELY(idx >= vec.Len()))
         return default_value;
     auto value = vec[idx];
     if (vec.IsNA(value))
@@ -284,7 +286,7 @@ public:
 
     void Set(Size idx, const char *str)
     {
-        DebugAssert(idx >= 0 && idx < span.len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < span.len);
         if (str) {
             SET_STRING_ELT(xp, idx, Rf_mkChar(str));
         } else {
@@ -293,8 +295,8 @@ public:
     }
     void Set(Size idx, Span<const char> str)
     {
-        DebugAssert(idx >= 0 && idx < span.len);
-        DebugAssert(str.len < INT_MAX);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < span.len);
+        RG_DEBUG_ASSERT(str.len < INT_MAX);
         SET_STRING_ELT(xp, idx, Rf_mkCharLen(str.ptr, (int)str.len));
     }
 };
@@ -380,7 +382,7 @@ public:
             case Type::Int: { return (T)u.i[idx]; } break;
             case Type::Double: { return (T)u.d[idx]; } break;
         }
-        DebugAssert(false);
+        RG_DEBUG_ASSERT(false);
     }
 };
 
@@ -479,3 +481,5 @@ public:
 
     SEXP Build() { return list_builder.BuildDataFrame(); }
 };
+
+}

@@ -7,6 +7,8 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+namespace RG {
+
 extern BlockAllocator frame_alloc;
 
 extern decltype(InitializeConfig) *InitializeConfig_;
@@ -33,3 +35,5 @@ struct Simulation {
     // Control methods
     void Reset();
 };
+
+}

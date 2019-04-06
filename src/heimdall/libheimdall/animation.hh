@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 template <typename T>
 struct Animation {
     T start_time;
@@ -94,4 +96,6 @@ T TweenInOutQuad(T relative_time)
         relative_time = (relative_time - 0.5f) * 2.0f;
         return 0.5f + (0.5f * relative_time * -(relative_time - 2.0f));
     }
+}
+
 }

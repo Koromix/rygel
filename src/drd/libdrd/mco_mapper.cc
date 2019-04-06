@@ -6,6 +6,8 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 
+namespace RG {
+
 struct MapperContext {
     const mco_TableIndex *index;
 
@@ -77,7 +79,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
     // This limit is arbitrary, quick tests show depth maxing at less than 100 so we
     // should be alright. If this becomes a problem, I'll rewrite this function to
     // avoid recursion.
-    Assert(depth < 4096);
+    RG_ASSERT(depth < 4096);
 
 #define RUN_TREE_SUB(ChildIdx, ChangeCode) \
         do { \
@@ -87,7 +89,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                                       constraint_copy, out_constraints); \
         } while (false)
 
-    Assert(ghm_node_idx < ctx.index->ghm_nodes.len);
+    RG_ASSERT(ghm_node_idx < ctx.index->ghm_nodes.len);
     const mco_GhmDecisionNode &ghm_node = ctx.index->ghm_nodes[ghm_node_idx];
 
     bool success = true;
@@ -110,7 +112,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
                                 ctx.warn_cmd28_jumps_cache.Append(ghm_node_idx, 0);
                             if (ret.second) {
                                 warn_cmd28_jumps = UINT64_MAX;
-                                Assert(ghm_node.u.test.children_count <= 64);
+                                RG_ASSERT(ghm_node.u.test.children_count <= 64);
                                 for (const mco_DiagnosisInfo &diag_info: ctx.index->diagnoses) {
                                     if (constraint.cmds & (1u << diag_info.attributes[0].cmd) &&
                                             !(diag_info.attributes[0].raw[8] & 0x2)) {
@@ -201,7 +203,7 @@ static bool RecurseGhmTree(MapperContext &ctx, Size depth, Size ghm_node_idx,
 bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
                                HashTable<mco_GhmCode, mco_GhmConstraint> *out_constraints)
 {
-    Assert(!out_constraints->count);
+    RG_ASSERT(!out_constraints->count);
 
     MapperContext ctx;
     ctx.index = &index;
@@ -211,4 +213,6 @@ bool mco_ComputeGhmConstraints(const mco_TableIndex &index,
     null_constraint.durations = UINT32_MAX;
 
     return RecurseGhmTree(ctx, 0, 0, null_constraint, out_constraints);
+}
+
 }

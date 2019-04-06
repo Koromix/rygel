@@ -5,10 +5,12 @@
 #pragma once
 
 #include "../libcc/libcc.hh"
-PUSH_NO_WARNINGS()
+RG_PUSH_NO_WARNINGS()
 #include "../../vendor/rapidjson/writer.h"
 #include "../../vendor/rapidjson/error/en.h"
-POP_NO_WARNINGS()
+RG_POP_NO_WARNINGS()
+
+namespace RG {
 
 class json_StreamWriter {
     StreamWriter *st;
@@ -23,7 +25,7 @@ public:
     {
         // TODO: Move the buffering to StreamWriter (when compression is enabled)
         buf.Append((uint8_t)c);
-        if (buf.len == SIZE(buf.data)) {
+        if (buf.len == RG_SIZE(buf.data)) {
             st->Write(buf);
             buf.Clear();
         }
@@ -43,3 +45,5 @@ public:
 
     void Flush() { writer.Flush(); }
 };
+
+}

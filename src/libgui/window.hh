@@ -8,6 +8,8 @@
 
 struct ImFontAtlas;
 
+namespace RG {
+
 enum class gui_InputKey {
     Control,
     Alt,
@@ -92,3 +94,5 @@ private:
     void StartImGuiFrame();
     void ReleaseImGui();
 };
+
+}

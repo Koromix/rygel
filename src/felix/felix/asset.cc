@@ -6,6 +6,8 @@
 #include "asset_generator.hh"
 #include "asset_output.hh"
 
+namespace RG {
+
 enum class MergeMode {
     Naive,
     CSS,
@@ -35,7 +37,7 @@ static MergeMode FindDefaultMergeMode(const char *filename)
 
 static bool LoadMergeRules(const char *filename, Allocator *alloc, HeapArray<MergeRule> *out_rules)
 {
-    DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
 
     StreamReader st(filename);
     if (st.error)
@@ -43,7 +45,7 @@ static bool LoadMergeRules(const char *filename, Allocator *alloc, HeapArray<Mer
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -153,7 +155,7 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
 {
     const char *name = filename.ptr;
     for (int i = 0; filename.len && i <= strip_count; i++) {
-        name = SplitStrAny(filename, PATH_SEPARATORS, &filename).ptr;
+        name = SplitStrAny(filename, RG_PATH_SEPARATORS, &filename).ptr;
     }
 
     return name;
@@ -273,7 +275,7 @@ Available compression types:)");
     {
         HashMap<const void *, Size> merge_map;
         for (const char *filename: filenames) {
-            const char *basename = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
+            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
             const MergeRule *rule = FindMergeRule(merge_rules, basename);
 
             SourceInfo src = {};
@@ -313,5 +315,7 @@ Available compression types:)");
         case GeneratorType::C: return !GenerateC(assets, output_path, compression_type);
         case GeneratorType::Files: return !GenerateFiles(assets, output_path, compression_type);
     }
-    Assert(false);
+    RG_ASSERT(false);
+}
+
 }

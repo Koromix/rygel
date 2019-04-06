@@ -9,6 +9,8 @@
 #include "mco_stay.hh"
 #include "mco_tables.hh"
 
+namespace RG {
+
 enum class mco_ClassifyFlag {
     MonoOriginalStay = 1 << 0,
     IgnoreConfirmation = 1 << 1,
@@ -118,3 +120,5 @@ void mco_CountSupplements(const mco_TableIndex &index, const mco_AuthorizationSe
 Size mco_Classify(const mco_TableSet &table_set, const mco_AuthorizationSet &authorization_set,
                   drd_Sector sector, Span<const mco_Stay> stays, unsigned int flags,
                   HeapArray<mco_Result> *out_results, HeapArray<mco_Result> *out_mono_results = nullptr);
+
+}

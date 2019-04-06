@@ -15,6 +15,8 @@
 #include "../../libcc/libcc.hh"
 #include "libpack.hh"
 
+namespace RG {
+
 pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char *var_name)
 {
     const Span<const pack_Asset> *lib_assets = nullptr;
@@ -36,7 +38,7 @@ pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char 
         LogError("Cannot load library '%1'", filename);
         return pack_LoadStatus::Error;
     }
-    DEFER { FreeLibrary(h); };
+    RG_DEFER { FreeLibrary(h); };
 
     lib_assets = (const Span<const pack_Asset> *)GetProcAddress(h, var_name);
 #else
@@ -45,7 +47,7 @@ pack_LoadStatus pack_AssetSet::LoadFromLibrary(const char *filename, const char 
         LogError("Cannot load library '%1': %2", filename, dlerror());
         return pack_LoadStatus::Error;
     }
-    DEFER { dlclose(h); };
+    RG_DEFER { dlclose(h); };
 
     lib_assets = (const Span<const pack_Asset> *)dlsym(h, var_name);
 #endif
@@ -88,12 +90,12 @@ Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
         if (c == '{') {
             char name[33] = {};
             Size name_len = reader.Read(1, &name[0]);
-            Assert(name_len >= 0);
+            RG_ASSERT(name_len >= 0);
 
             bool valid = false;
             if (IsAsciiAlpha(name[0]) || name[0] == '_') {
                 do {
-                    Assert(reader.Read(1, &name[name_len]) >= 0);
+                    RG_ASSERT(reader.Read(1, &name[name_len]) >= 0);
 
                     if (name[name_len] == '}') {
                         name[name_len] = 0;
@@ -105,7 +107,7 @@ Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
                         name_len++;
                         break;
                     }
-                } while (++name_len < SIZE(name));
+                } while (++name_len < RG_SIZE(name));
             }
 
             if (!valid) {
@@ -116,8 +118,10 @@ Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
             writer.Write(c);
         }
     }
-    Assert(!reader.error);
+    RG_ASSERT(!reader.error);
 
-    Assert(writer.Close());
+    RG_ASSERT(writer.Close());
     return buf.Leak();
+}
+
 }

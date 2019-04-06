@@ -38,26 +38,28 @@
     #pragma intrinsic(__rdtsc)
 #endif
 
+namespace RG {
+
 // ------------------------------------------------------------------------
 // Config
 // ------------------------------------------------------------------------
 
-#define DEFAULT_ALLOCATOR MallocAllocator
-#define BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
+#define RG_DEFAULT_ALLOCATOR MallocAllocator
+#define RG_BLOCK_ALLOCATOR_DEFAULT_SIZE Kibibytes(4)
 
-#define HEAPARRAY_BASE_CAPACITY 8
-#define HEAPARRAY_GROWTH_FACTOR 1.5
+#define RG_HEAPARRAY_BASE_CAPACITY 8
+#define RG_HEAPARRAY_GROWTH_FACTOR 1.5
 
 // Must be a power-of-two
-#define HASHTABLE_BASE_CAPACITY 32
-#define HASHTABLE_MAX_LOAD_FACTOR 0.5
+#define RG_HASHTABLE_BASE_CAPACITY 32
+#define RG_HASHTABLE_MAX_LOAD_FACTOR 0.5
 
-#define FMT_STRING_BASE_CAPACITY 256
-#define FMT_STRING_PRINT_BUFFER_SIZE 1024
+#define RG_FMT_STRING_BASE_CAPACITY 256
+#define RG_FMT_STRING_PRINT_BUFFER_SIZE 1024
 
-#define LINE_READER_STEP_SIZE 65536
+#define RG_LINE_READER_STEP_SIZE 65536
 
-#define THREAD_MAX_IDLE_TIME 10000
+#define RG_THREAD_MAX_IDLE_TIME 10000
 
 // ------------------------------------------------------------------------
 // Utilities
@@ -69,55 +71,55 @@ enum class Endianness {
 };
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-    #define ARCH_64
-    #define ARCH_LITTLE_ENDIAN
-    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
+    #define RG_ARCH_64
+    #define RG_ARCH_LITTLE_ENDIAN
+    #define RG_ARCH_ENDIANNESS (Endianness::LittleEndian)
 
     typedef int64_t Size;
-    #define LEN_MAX INT64_MAX
+    #define RG_SIZE_MAX INT64_MAX
 #elif defined(__i386__) || defined(_M_IX86) || defined(__arm__) || defined(__EMSCRIPTEN__)
-    #define ARCH_32
-    #define ARCH_LITTLE_ENDIAN
-    #define ARCH_ENDIANNESS (Endianness::LittleEndian)
+    #define RG_ARCH_32
+    #define RG_ARCH_LITTLE_ENDIAN
+    #define RG_ARCH_ENDIANNESS (Endianness::LittleEndian)
 
     typedef int32_t Size;
-    #define LEN_MAX INT32_MAX
+    #define RG_SIZE_MAX INT32_MAX
 #else
     #error Machine architecture not supported
 #endif
 
-#define STRINGIFY_(a) #a
-#define STRINGIFY(a) STRINGIFY_(a)
-#define CONCAT_(a, b) a ## b
-#define CONCAT(a, b) CONCAT_(a, b)
-#define UNIQUE_ID(prefix) CONCAT(prefix, __LINE__)
-#define FORCE_EXPAND(x) x
+#define RG_STRINGIFY_(a) #a
+#define RG_STRINGIFY(a) RG_STRINGIFY_(a)
+#define RG_CONCAT_(a, b) a ## b
+#define RG_CONCAT(a, b) RG_CONCAT_(a, b)
+#define RG_UNIQUE_ID(prefix) RG_CONCAT(prefix, __LINE__)
+#define RG_FORCE_EXPAND(x) x
 
 #if defined(__GNUC__)
-    #define PUSH_NO_WARNINGS() \
+    #define RG_PUSH_NO_WARNINGS() \
         _Pragma("GCC diagnostic push") \
         _Pragma("GCC diagnostic ignored \"-Wall\"")
         _Pragma("GCC diagnostic ignored \"-Wextra\"")
         _Pragma("GCC diagnostic ignored \"-Wconversion\"")
         _Pragma("GCC diagnostic ignored \"-Wsign-conversion\"")
-    #define POP_NO_WARNINGS() \
+    #define RG_POP_NO_WARNINGS() \
         _Pragma("GCC diagnostic pop")
 
     // thread_local has many bugs with MinGW (Windows):
     // - Destructors are run after the memory is freed
     // - It crashes when used in R packages
     #ifdef __EMSCRIPTEN__
-        #define THREAD_LOCAL
+        #define RG_THREAD_LOCAL
     #else
-        #define THREAD_LOCAL __thread
+        #define RG_THREAD_LOCAL __thread
     #endif
-    #define NORETURN __attribute__((noreturn))
-    #define MAYBE_UNUSED __attribute__((unused))
-    #define FORCE_INLINE __attribute__((always_inline)) inline
-    #define LIKELY(Cond) __builtin_expect(!!(Cond), 1)
-    #define UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
-    #define RESTRICT __restrict__
-    #define UNREACHABLE() __builtin_unreachable()
+    #define RG_NORETURN __attribute__((noreturn))
+    #define RG_MAYBE_UNUSED __attribute__((unused))
+    #define RG_FORCE_INLINE __attribute__((always_inline)) inline
+    #define RG_LIKELY(Cond) __builtin_expect(!!(Cond), 1)
+    #define RG_UNLIKELY(Cond) __builtin_expect(!!(Cond), 0)
+    #define RG_RESTRICT __restrict__
+    #define RG_UNREACHABLE() __builtin_unreachable()
 
     #ifndef SCNd8
         #define SCNd8 "hhd"
@@ -129,55 +131,55 @@ enum class Endianness {
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
-    #define PUSH_NO_WARNINGS()
-    #define POP_NO_WARNINGS()
+    #define RG_PUSH_NO_WARNINGS()
+    #define RG_POP_NO_WARNINGS()
 
-    #define THREAD_LOCAL thread_local
-    #define NORETURN __declspec(noreturn)
-    #define MAYBE_UNUSED
-    #define FORCE_INLINE __forceinline
-    #define LIKELY(Cond) (Cond)
-    #define UNLIKELY(Cond) (Cond)
-    #define RESTRICT __restrict
-    #define UNREACHABLE() __assume(0)
+    #define RG_THREAD_LOCAL thread_local
+    #define RG_NORETURN __declspec(noreturn)
+    #define RG_MAYBE_UNUSED
+    #define RG_FORCE_INLINE __forceinline
+    #define RG_LIKELY(Cond) (Cond)
+    #define RG_UNLIKELY(Cond) (Cond)
+    #define RG_RESTRICT __restrict
+    #define RG_UNREACHABLE() __assume(0)
 #else
     #error Compiler not supported
 #endif
 
 #if __cplusplus >= 201703L
-    #define FALLTHROUGH [[fallthrough]]
+    #define RG_FALLTHROUGH [[fallthrough]]
 #elif defined(__clang__)
-    #define FALLTHROUGH [[clang::fallthrough]]
+    #define RG_FALLTHROUGH [[clang::fallthrough]]
 #elif __GNUC__ >= 7
-    #define FALLTHROUGH [[gnu::fallthrough]]
+    #define RG_FALLTHROUGH [[gnu::fallthrough]]
 #else
-    #define FALLTHROUGH
+    #define RG_FALLTHROUGH
 #endif
 
-extern "C" void NORETURN AssertFail(const char *cond);
+extern "C" void RG_NORETURN AssertFail(const char *cond);
 
-#define Assert(Cond) \
+#define RG_ASSERT(Cond) \
     do { \
-        if (!LIKELY(Cond)) \
-            AssertFail(STRINGIFY(Cond)); \
+        if (!RG_LIKELY(Cond)) \
+            RG::AssertFail(RG_STRINGIFY(Cond)); \
     } while (false)
 #ifndef NDEBUG
-    #define DebugAssert(Cond) Assert(Cond)
+    #define RG_DEBUG_ASSERT(Cond) RG_ASSERT(Cond)
 #else
-    #define DebugAssert(Cond) \
+    #define RG_DEBUG_ASSERT(Cond) \
         do { \
-            if (!LIKELY(Cond)) { \
-                UNREACHABLE(); \
+            if (!RG_LIKELY(Cond)) { \
+                RG_UNREACHABLE(); \
             } \
         } while (false)
 #endif
-#define StaticAssert(Cond) \
-    static_assert((Cond), STRINGIFY(Cond))
+#define RG_STATIC_ASSERT(Cond) \
+    static_assert((Cond), RG_STRINGIFY(Cond))
 
 #ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
+    #define RG_EXPORT __declspec(dllexport)
 #else
-    #define EXPORT __attribute__((visibility("default")))
+    #define RG_EXPORT __attribute__((visibility("default")))
 #endif
 
 constexpr uint16_t MakeUInt16(uint8_t high, uint8_t low)
@@ -190,11 +192,11 @@ constexpr Size Kibibytes(Size len) { return len * 1024; }
 constexpr Size Megabytes(Size len) { return len * 1000 * 1000; }
 constexpr Size Kilobytes(Size len) { return len * 1000; }
 
-#define SIZE(Type) ((Size)sizeof(Type))
+#define RG_SIZE(Type) ((RG::Size)sizeof(Type))
 template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
-#define ARRAY_SIZE(Array) SIZE(ComputeArraySize(Array))
-#define OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
+#define RG_ARRAY_SIZE(Array) RG_SIZE(RG::ComputeArraySize(Array))
+#define RG_OFFSET_OF(Type, Member) ((Size)&(((Type *)nullptr)->Member))
 
 static inline constexpr uint16_t ReverseBytes(uint16_t u)
 {
@@ -229,7 +231,7 @@ static inline constexpr int32_t ReverseBytes(int32_t i)
 static inline constexpr int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
     template <typename T>
     constexpr T LittleEndian(T v) { return v; }
 
@@ -243,7 +245,7 @@ static inline constexpr int64_t ReverseBytes(int64_t i)
     constexpr T BigEndian(T v) { return v; }
 #endif
 
-static inline void SwapMemory(void *RESTRICT ptr1, void *RESTRICT ptr2, Size len)
+static inline void SwapMemory(void *RG_RESTRICT ptr1, void *RG_RESTRICT ptr2, Size len)
 {
     uint8_t *raw1 = (uint8_t *)ptr1, *raw2 = (uint8_t *)ptr2;
     for (Size i = 0; i < len; i++) {
@@ -425,30 +427,30 @@ DeferGuard<Fun> operator+(DeferGuardHelper, Fun &&f)
 // Write 'DEFER { code };' to do something at the end of the current scope, you
 // can use DEFER_N(Name) if you need to disable the guard for some reason, and
 // DEFER_NC(Name, Captures) if you need to capture values.
-#define DEFER \
-    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&]()
-#define DEFER_N(Name) \
-    auto Name = DeferGuardHelper() + [&]()
-#define DEFER_C(...) \
-    auto UNIQUE_ID(defer) = DeferGuardHelper() + [&, __VA_ARGS__]()
-#define DEFER_NC(Name, ...) \
-    auto Name = DeferGuardHelper() + [&, __VA_ARGS__]()
+#define RG_DEFER \
+    auto RG_UNIQUE_ID(defer) = RG::DeferGuardHelper() + [&]()
+#define RG_DEFER_N(Name) \
+    auto Name = RG::DeferGuardHelper() + [&]()
+#define RG_DEFER_C(...) \
+    auto RG_UNIQUE_ID(defer) = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
+#define RG_DEFER_NC(Name, ...) \
+    auto Name = RG::DeferGuardHelper() + [&, __VA_ARGS__]()
 
-#define INIT(Name) \
-    class UNIQUE_ID(InitHelper) { \
+#define RG_INIT(Name) \
+    class RG_UNIQUE_ID(InitHelper) { \
     public: \
-        UNIQUE_ID(InitHelper)(); \
+        RG_UNIQUE_ID(InitHelper)(); \
     }; \
-    static UNIQUE_ID(InitHelper) UNIQUE_ID(init); \
-    UNIQUE_ID(InitHelper)::UNIQUE_ID(InitHelper)()
+    static RG_UNIQUE_ID(InitHelper) RG_UNIQUE_ID(init); \
+    RG_UNIQUE_ID(InitHelper)::RG_UNIQUE_ID(InitHelper)()
 
-#define EXIT(Name) \
-    class UNIQUE_ID(ExitHelper) { \
+#define RG_EXIT(Name) \
+    class RG_UNIQUE_ID(ExitHelper) { \
     public: \
-        ~UNIQUE_ID(ExitHelper)(); \
+        ~RG_UNIQUE_ID(ExitHelper)(); \
     }; \
-    static UNIQUE_ID(ExitHelper) UNIQUE_ID(exit); \
-    UNIQUE_ID(ExitHelper)::~UNIQUE_ID(ExitHelper)()
+    static RG_UNIQUE_ID(ExitHelper) RG_UNIQUE_ID(exit); \
+    RG_UNIQUE_ID(ExitHelper)::~RG_UNIQUE_ID(ExitHelper)()
 
 template <typename T>
 T MultiCmp()
@@ -490,7 +492,7 @@ enum class ParseFlag {
     Validate = 1 << 1,
     End = 1 << 2
 };
-#define DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
+#define RG_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
 
 // ------------------------------------------------------------------------
 // Memory / Allocator
@@ -547,7 +549,7 @@ protected:
 
 private:
     static Bucket *PointerToBucket(void *ptr)
-        { return (Bucket *)((uint8_t *)ptr - OFFSET_OF(Bucket, data)); }
+        { return (Bucket *)((uint8_t *)ptr - RG_OFFSET_OF(Bucket, data)); }
 };
 
 class BlockAllocatorBase: public Allocator {
@@ -562,10 +564,10 @@ class BlockAllocatorBase: public Allocator {
     uint8_t *last_alloc = nullptr;
 
 public:
-    BlockAllocatorBase(Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+    BlockAllocatorBase(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : block_size(block_size)
     {
-        DebugAssert(block_size > 0);
+        RG_DEBUG_ASSERT(block_size > 0);
     }
 
 protected:
@@ -581,7 +583,7 @@ private:
     bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
 
     static Size AlignSizeValue(Size size)
-        { return (SIZE(Bucket) + size + 7) / 8 * 8 - SIZE(Bucket); }
+        { return (RG_SIZE(Bucket) + size + 7) / 8 * 8 - RG_SIZE(Bucket); }
 };
 
 class BlockAllocator: public BlockAllocatorBase {
@@ -591,7 +593,7 @@ protected:
     virtual LinkedAllocator *GetAllocator() { return &allocator; }
 
 public:
-    BlockAllocator(Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : BlockAllocatorBase(block_size) {}
 
     void ReleaseAll();
@@ -604,7 +606,7 @@ protected:
     virtual LinkedAllocator *GetAllocator() { return allocator; }
 
 public:
-    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = BLOCK_ALLOCATOR_DEFAULT_SIZE)
+    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : BlockAllocatorBase(block_size), allocator(alloc) {}
 
     void ReleaseAll();
@@ -643,12 +645,12 @@ struct Span {
 
     T &operator[](Size idx)
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
     const T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -670,8 +672,8 @@ struct Span {
 
     Span Take(Size offset, Size sub_len) const
     {
-        DebugAssert(sub_len >= 0 && sub_len <= len);
-        DebugAssert(offset >= 0 && offset <= len - sub_len);
+        RG_DEBUG_ASSERT(sub_len >= 0 && sub_len <= len);
+        RG_DEBUG_ASSERT(offset >= 0 && offset <= len - sub_len);
 
         Span<T> sub;
         sub.ptr = ptr + offset;
@@ -705,7 +707,7 @@ struct Span<const char> {
 
     char operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -717,8 +719,8 @@ struct Span<const char> {
 
     Span Take(Size offset, Size sub_len) const
     {
-        DebugAssert(sub_len >= 0 && sub_len <= len);
-        DebugAssert(offset >= 0 && offset <= len - sub_len);
+        RG_DEBUG_ASSERT(sub_len >= 0 && sub_len <= len);
+        RG_DEBUG_ASSERT(offset >= 0 && offset <= len - sub_len);
 
         Span<const char> sub;
         sub.ptr = ptr + offset;
@@ -750,14 +752,14 @@ public:
     Size stride;
 
     Strider() = default;
-    constexpr Strider(T *ptr_) : ptr(ptr_), stride(SIZE(T)) {}
+    constexpr Strider(T *ptr_) : ptr(ptr_), stride(RG_SIZE(T)) {}
     constexpr Strider(T *ptr_, Size stride_) : ptr(ptr_), stride(stride_) {}
 
     bool IsValid() const { return ptr; }
 
     T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0);
+        RG_DEBUG_ASSERT(idx >= 0);
         return *(T *)((uint8_t *)ptr + (idx * stride));
     }
 };
@@ -765,7 +767,7 @@ public:
 template <typename T>
 static inline constexpr Strider<T> MakeStrider(T *ptr)
 {
-    return Strider<T>(ptr, SIZE(T));
+    return Strider<T>(ptr, RG_SIZE(T));
 }
 template <typename T>
 static inline constexpr Strider<T> MakeStrider(T *ptr, Size stride)
@@ -775,7 +777,7 @@ static inline constexpr Strider<T> MakeStrider(T *ptr, Size stride)
 template <typename T, Size N>
 static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
 {
-    return Strider<T>(arr, SIZE(T));
+    return Strider<T>(arr, RG_SIZE(T));
 }
 
 template <typename T, Size N>
@@ -789,7 +791,7 @@ public:
     FixedArray() = default;
     FixedArray(std::initializer_list<T> l)
     {
-        DebugAssert(l.size() <= N);
+        RG_DEBUG_ASSERT(l.size() <= N);
         for (Size i = 0; i < l.size(); i++) {
             data[i] = l[i];
         }
@@ -805,12 +807,12 @@ public:
 
     T &operator[](Size idx)
     {
-        DebugAssert(idx >= 0 && idx < N);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
         return data[idx];
     }
     const T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < N);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
         return data[idx];
     }
 
@@ -841,7 +843,7 @@ public:
     LocalArray() = default;
     LocalArray(std::initializer_list<T> l)
     {
-        DebugAssert(l.size() <= N);
+        RG_DEBUG_ASSERT(l.size() <= N);
         for (const T &val: l) {
             Append(val);
         }
@@ -863,16 +865,16 @@ public:
     T *end() { return data + len; }
     const T *end() const { return data + len; }
 
-    Size Available() const { return SIZE(data) - len; }
+    Size Available() const { return RG_SIZE(data) - len; }
 
     T &operator[](Size idx)
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return data[idx];
     }
     const T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return data[idx];
     }
 
@@ -892,7 +894,7 @@ public:
 
     T *AppendDefault(Size count = 1)
     {
-        DebugAssert(len <= N - count);
+        RG_DEBUG_ASSERT(len <= N - count);
 
         T *it = data + len;
         *it = {};
@@ -903,7 +905,7 @@ public:
 
     T *Append(const T &value)
     {
-        DebugAssert(len < N);
+        RG_DEBUG_ASSERT(len < N);
 
         T *it = data + len;
         *it = value;
@@ -913,7 +915,7 @@ public:
     }
     T *Append(Span<const T> values)
     {
-        DebugAssert(values.len <= N - len);
+        RG_DEBUG_ASSERT(values.len <= N - len);
 
         T *it = data + len;
         for (Size i = 0; i < values.len; i++) {
@@ -926,7 +928,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        DebugAssert(first >= 0 && first <= len);
+        RG_DEBUG_ASSERT(first >= 0 && first <= len);
 
         for (Size i = first; i < len; i++) {
             data[i] = T();
@@ -935,7 +937,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        DebugAssert(count >= 0 && count <= len);
+        RG_DEBUG_ASSERT(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -975,8 +977,8 @@ public:
     HeapArray &operator=(HeapArray &&other)
     {
         Clear();
-        memmove(this, &other, SIZE(other));
-        memset(&other, 0, SIZE(other));
+        memmove(this, &other, RG_SIZE(other));
+        memset(&other, 0, RG_SIZE(other));
         return *this;
     }
     HeapArray(const HeapArray &other) { *this = other; }
@@ -993,7 +995,7 @@ public:
                 ptr[i] = other.ptr[i];
             }
         } else {
-            memcpy(ptr, other.ptr, (size_t)(other.len * SIZE(*ptr)));
+            memcpy(ptr, other.ptr, (size_t)(other.len * RG_SIZE(*ptr)));
         }
         len = other.len;
         return *this;
@@ -1017,12 +1019,12 @@ public:
 
     T &operator[](Size idx)
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
     const T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
@@ -1042,7 +1044,7 @@ public:
 
     void SetCapacity(Size new_capacity)
     {
-        DebugAssert(new_capacity >= 0);
+        RG_DEBUG_ASSERT(new_capacity >= 0);
 
         if (new_capacity == capacity)
             return;
@@ -1054,7 +1056,7 @@ public:
             len = new_capacity;
         }
         Allocator::Resize(allocator, (void **)&ptr,
-                          capacity * SIZE(T), new_capacity * SIZE(T));
+                          capacity * RG_SIZE(T), new_capacity * RG_SIZE(T));
         capacity = new_capacity;
     }
 
@@ -1068,9 +1070,9 @@ public:
 
     void Grow(Size reserve_capacity = 1)
     {
-        DebugAssert(capacity >= 0);
-        DebugAssert(reserve_capacity >= 0);
-        DebugAssert((size_t)capacity + (size_t)reserve_capacity <= LEN_MAX);
+        RG_DEBUG_ASSERT(capacity >= 0);
+        RG_DEBUG_ASSERT(reserve_capacity >= 0);
+        RG_DEBUG_ASSERT((size_t)capacity + (size_t)reserve_capacity <= RG_SIZE_MAX);
 
         if (reserve_capacity <= capacity - len)
             return;
@@ -1079,12 +1081,12 @@ public:
 
         Size new_capacity;
         if (!capacity) {
-            new_capacity = HEAPARRAY_BASE_CAPACITY;
+            new_capacity = RG_HEAPARRAY_BASE_CAPACITY;
         } else {
             new_capacity = capacity;
         }
         do {
-            new_capacity = (Size)((double)new_capacity * HEAPARRAY_GROWTH_FACTOR);
+            new_capacity = (Size)((double)new_capacity * RG_HEAPARRAY_GROWTH_FACTOR);
         } while (new_capacity < needed_capacity);
 
         SetCapacity(new_capacity);
@@ -1107,7 +1109,7 @@ public:
                 len++;
             }
         } else {
-            memset(first, 0, count * SIZE(T));
+            memset(first, 0, count * RG_SIZE(T));
             len += count;
         }
         return first;
@@ -1148,7 +1150,7 @@ public:
 
     void RemoveFrom(Size first)
     {
-        DebugAssert(first >= 0 && first <= len);
+        RG_DEBUG_ASSERT(first >= 0 && first <= len);
 
 #if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
@@ -1163,7 +1165,7 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        DebugAssert(count >= 0 && count <= len);
+        RG_DEBUG_ASSERT(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
@@ -1272,8 +1274,8 @@ public:
     BlockQueue &operator=(BlockQueue &&other)
     {
         ClearBucketsAndValues();
-        memmove(this, &other, SIZE(other));
-        memset(&other, 0, SIZE(other));
+        memmove(this, &other, RG_SIZE(other));
+        memset(&other, 0, RG_SIZE(other));
         return *this;
     }
     BlockQueue(BlockQueue &) = delete;
@@ -1296,7 +1298,7 @@ public:
 
     const T &operator[](Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < len);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < len);
 
         idx += offset;
         Size bucket_idx = idx / BucketSize;
@@ -1332,7 +1334,7 @@ public:
 
     void RemoveFrom(Size from)
     {
-        DebugAssert(from >= 0 && from <= len);
+        RG_DEBUG_ASSERT(from >= 0 && from <= len);
 
         if (from == len)
             return;
@@ -1362,13 +1364,13 @@ public:
     }
     void RemoveLast(Size count = 1)
     {
-        DebugAssert(count >= 0 && count <= len);
+        RG_DEBUG_ASSERT(count >= 0 && count <= len);
         RemoveFrom(len - count);
     }
 
     void RemoveFirst(Size count = 1)
     {
-        DebugAssert(count >= 0 && count <= len);
+        RG_DEBUG_ASSERT(count >= 0 && count <= len);
 
         if (count == len) {
             Clear();
@@ -1385,7 +1387,7 @@ public:
                 DeleteBucket(buckets[i]);
             }
             memmove(&buckets[0], &buckets[end_bucket_idx],
-                    (size_t)((buckets.len - end_bucket_idx) * SIZE(Bucket *)));
+                    (size_t)((buckets.len - end_bucket_idx) * RG_SIZE(Bucket *)));
             buckets.RemoveLast(end_bucket_idx);
         }
 
@@ -1404,7 +1406,7 @@ private:
         buckets.Clear();
     }
 
-    void DeleteValues(iterator_type begin MAYBE_UNUSED, iterator_type end MAYBE_UNUSED)
+    void DeleteValues(iterator_type begin RG_MAYBE_UNUSED, iterator_type end RG_MAYBE_UNUSED)
     {
 #if __cplusplus >= 201703L
         if constexpr(!std::is_trivial<T>::value) {
@@ -1419,16 +1421,16 @@ private:
 
     Bucket *CreateBucket()
     {
-        Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, SIZE(Bucket));
+        Bucket *new_bucket = (Bucket *)Allocator::Allocate(buckets.allocator, RG_SIZE(Bucket));
         new (&new_bucket->allocator) LinkedAllocator;
-        new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * SIZE(T));
+        new_bucket->values = (T *)Allocator::Allocate(&new_bucket->allocator, BucketSize * RG_SIZE(T));
         return new_bucket;
     }
 
     void DeleteBucket(Bucket *bucket)
     {
         bucket->allocator.~LinkedAllocator();
-        Allocator::Release(buckets.allocator, bucket, SIZE(Bucket));
+        Allocator::Release(buckets.allocator, bucket, RG_SIZE(Bucket));
     }
 };
 
@@ -1458,19 +1460,19 @@ public:
 
         Size operator*() const
         {
-            DebugAssert(offset <= ARRAY_SIZE(bitset->data));
+            RG_DEBUG_ASSERT(offset <= RG_ARRAY_SIZE(bitset->data));
 
-            if (offset == ARRAY_SIZE(bitset->data))
+            if (offset == RG_ARRAY_SIZE(bitset->data))
                 return -1;
-            return offset * SIZE(size_t) * 8 + ctz;
+            return offset * RG_SIZE(size_t) * 8 + ctz;
         }
 
         Iterator &operator++()
         {
-            DebugAssert(offset <= ARRAY_SIZE(bitset->data));
+            RG_DEBUG_ASSERT(offset <= RG_ARRAY_SIZE(bitset->data));
 
             while (!bits) {
-                if (offset == ARRAY_SIZE(bitset->data) - 1)
+                if (offset == RG_ARRAY_SIZE(bitset->data) - 1)
                     return *this;
                 bits = bitset->data[++offset];
             }
@@ -1497,17 +1499,17 @@ public:
     typedef Iterator<Bitset> iterator_type;
 
     static constexpr Size Bits = N;
-    size_t data[(N + SIZE(size_t) - 1) / SIZE(size_t)] = {};
+    size_t data[(N + RG_SIZE(size_t) - 1) / RG_SIZE(size_t)] = {};
 
     void Clear()
     {
-        memset(data, 0, SIZE(data));
+        memset(data, 0, RG_SIZE(data));
     }
 
     Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
     Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
-    Iterator<Bitset> end() { return Iterator<Bitset>(this, ARRAY_SIZE(data)); }
-    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, ARRAY_SIZE(data)); }
+    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_ARRAY_SIZE(data)); }
+    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_ARRAY_SIZE(data)); }
 
     Size PopCount() const
     {
@@ -1520,28 +1522,28 @@ public:
 
     inline bool Test(Size idx) const
     {
-        DebugAssert(idx >= 0 && idx < N);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
 
         return data[offset] & mask;
     }
     inline void Set(Size idx, bool value = true)
     {
-        DebugAssert(idx >= 0 && idx < N);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
 
         data[offset] = ApplyMask(data[offset], mask, value);
     }
     inline bool TestAndSet(Size idx, bool value = true)
     {
-        DebugAssert(idx >= 0 && idx < N);
+        RG_DEBUG_ASSERT(idx >= 0 && idx < N);
 
-        Size offset = idx / (SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (SIZE(size_t) * 8));
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
 
         bool ret = data[offset] & mask;
         data[offset] = ApplyMask(data[offset], mask, value);
@@ -1551,7 +1553,7 @@ public:
 
     Bitset &operator&=(const Bitset &other)
     {
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             data[i] &= other.data[i];
         }
         return *this;
@@ -1559,7 +1561,7 @@ public:
     Bitset operator&(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             ret.data[i] = data[i] & other.data[i];
         }
         return ret;
@@ -1567,7 +1569,7 @@ public:
 
     Bitset &operator|=(const Bitset &other)
     {
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             data[i] |= other.data[i];
         }
         return *this;
@@ -1575,7 +1577,7 @@ public:
     Bitset operator|(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             ret.data[i] = data[i] | other.data[i];
         }
         return ret;
@@ -1583,7 +1585,7 @@ public:
 
     Bitset &operator^=(const Bitset &other)
     {
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             data[i] ^= other.data[i];
         }
         return *this;
@@ -1591,7 +1593,7 @@ public:
     Bitset operator^(const Bitset &other)
     {
         Bitset ret;
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             ret.data[i] = data[i] ^ other.data[i];
         }
         return ret;
@@ -1599,7 +1601,7 @@ public:
 
     Bitset &Flip()
     {
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             data[i] = ~data[i];
         }
         return *this;
@@ -1607,7 +1609,7 @@ public:
     Bitset operator~()
     {
         Bitset ret;
-        for (Size i = 0; i < ARRAY_SIZE(data); i++) {
+        for (Size i = 0; i < RG_ARRAY_SIZE(data); i++) {
             ret.data[i] = ~data[i];
         }
         return ret;
@@ -1638,18 +1640,18 @@ public:
 
         ValueType &operator*()
         {
-            DebugAssert(!table->IsEmpty(offset));
+            RG_DEBUG_ASSERT(!table->IsEmpty(offset));
             return table->data[offset];
         }
         const ValueType &operator*() const
         {
-            DebugAssert(!table->IsEmpty(offset));
+            RG_DEBUG_ASSERT(!table->IsEmpty(offset));
             return table->data[offset];
         }
 
         Iterator &operator++()
         {
-            DebugAssert(offset < table->capacity);
+            RG_DEBUG_ASSERT(offset < table->capacity);
             while (++offset < table->capacity && table->IsEmpty(offset));
             return *this;
         }
@@ -1701,8 +1703,8 @@ public:
     HashTable &operator=(HashTable &&other)
     {
         Clear();
-        memmove(this, &other, SIZE(other));
-        memset(&other, 0, SIZE(other));
+        memmove(this, &other, RG_SIZE(other));
+        memset(&other, 0, RG_SIZE(other));
         return *this;
     }
     HashTable(const HashTable &other) { *this = other; }
@@ -1730,7 +1732,7 @@ public:
     void RemoveAll()
     {
 #if __cplusplus >= 201703L
-        StaticAssert(!std::is_pointer<ValueType>::value);
+        RG_STATIC_ASSERT(!std::is_pointer<ValueType>::value);
 #endif
 
         for (Size i = 0; i < capacity; i++) {
@@ -1741,7 +1743,7 @@ public:
 
         count = 0;
         if (used) {
-            memset(used, 0, (size_t)(capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t));
+            memset(used, 0, (size_t)(capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
         }
     }
 
@@ -1805,7 +1807,7 @@ public:
     {
         if (!it)
             return;
-        DebugAssert(!IsEmpty(it - data));
+        RG_DEBUG_ASSERT(!IsEmpty(it - data));
 
         it->~ValueType();
         count--;
@@ -1821,7 +1823,7 @@ public:
                 break;
             }
 
-            memmove(&data[idx], &data[next_idx], SIZE(*data));
+            memmove(&data[idx], &data[next_idx], RG_SIZE(*data));
             idx = next_idx;
         }
     }
@@ -1863,7 +1865,7 @@ private:
             Size idx = HashToIndex(hash);
             ValueType *it = Find(&idx, key);
             if (!it) {
-                if (count >= (Size)((double)capacity * HASHTABLE_MAX_LOAD_FACTOR)) {
+                if (count >= (Size)((double)capacity * RG_HASHTABLE_MAX_LOAD_FACTOR)) {
                     Rehash(capacity << 1);
                     idx = HashToIndex(hash);
                     while (!IsEmpty(idx)) {
@@ -1877,7 +1879,7 @@ private:
                 return {it, false};
             }
         } else {
-            Rehash(HASHTABLE_BASE_CAPACITY);
+            Rehash(RG_HASHTABLE_BASE_CAPACITY);
 
             Size idx = HashToIndex(hash);
             count++;
@@ -1890,7 +1892,7 @@ private:
     {
         if (new_capacity == capacity)
             return;
-        DebugAssert(count <= new_capacity);
+        RG_DEBUG_ASSERT(count <= new_capacity);
 
         size_t *old_used = used;
         ValueType *old_data = data;
@@ -1898,9 +1900,9 @@ private:
 
         if (new_capacity) {
             used = (size_t *)Allocator::Allocate(allocator,
-                                                 (new_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t),
+                                                 (new_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t),
                                                  (int)Allocator::Flag::Zero);
-            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * SIZE(ValueType));
+            data = (ValueType *)Allocator::Allocate(allocator, new_capacity * RG_SIZE(ValueType));
             for (Size i = 0; i < new_capacity; i++) {
                 new (&data[i]) ValueType();
             }
@@ -1913,7 +1915,7 @@ private:
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
                     MarkUsed(new_idx);
-                    memmove(&data[new_idx], &old_data[i], SIZE(*data));
+                    memmove(&data[new_idx], &old_data[i], RG_SIZE(*data));
                 }
             }
         } else {
@@ -1923,21 +1925,21 @@ private:
         }
 
         Allocator::Release(allocator, old_used,
-                           (old_capacity + (SIZE(size_t) * 8) - 1) / SIZE(size_t));
-        Allocator::Release(allocator, old_data, old_capacity * SIZE(ValueType));
+                           (old_capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t));
+        Allocator::Release(allocator, old_data, old_capacity * RG_SIZE(ValueType));
     }
 
     void MarkUsed(Size idx)
     {
-        used[idx / (SIZE(size_t) * 8)] |= (1ull << (idx % (SIZE(size_t) * 8)));
+        used[idx / (RG_SIZE(size_t) * 8)] |= (1ull << (idx % (RG_SIZE(size_t) * 8)));
     }
     void MarkEmpty(Size idx)
     {
-        used[idx / (SIZE(size_t) * 8)] &= ~(1ull << (idx % (SIZE(size_t) * 8)));
+        used[idx / (RG_SIZE(size_t) * 8)] &= ~(1ull << (idx % (RG_SIZE(size_t) * 8)));
     }
     Size IsEmpty(size_t *used, Size idx) const
     {
-        return !(used[idx / (SIZE(size_t) * 8)] & (1ull << (idx % (SIZE(size_t) * 8))));
+        return !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
     }
 
     Size HashToIndex(uint64_t hash) const
@@ -2014,7 +2016,7 @@ DEFINE_INTEGER_HASH_TRAITS_32(unsigned int);
 #endif
 DEFINE_INTEGER_HASH_TRAITS_64(long long);
 DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long);
-#ifdef ARCH_64
+#ifdef RG_ARCH_64
     DEFINE_INTEGER_HASH_TRAITS_64(void *);
     DEFINE_INTEGER_HASH_TRAITS_64(const void *);
 #else
@@ -2062,7 +2064,7 @@ public:
     static bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
 };
 
-#define HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+#define RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
         static KeyType GetKey(const ValueType &value) \
@@ -2074,16 +2076,16 @@ public:
         static bool TestKeys(KeyType key1, KeyType key2) \
             { return TestFunc((key1), (key2)); } \
     }
-#define HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
-    HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
-#define HASH_TABLE_HANDLER(ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
-#define HASH_TABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
-    HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
-#define HASH_TABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
-    HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define RG_HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
+    RG_HASH_TABLE_HANDLER_EX_N(HashHandler, ValueType, KeyType, KeyMember, HashFunc, TestFunc)
+#define RG_HASH_TABLE_HANDLER(ValueType, KeyMember) \
+    RG_HASH_TABLE_HANDLER_EX(ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define RG_HASH_TABLE_HANDLER_N(Name, ValueType, KeyMember) \
+    RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, decltype(ValueType::KeyMember), KeyMember, HashTraits<decltype(ValueType::KeyMember)>::Hash, HashTraits<decltype(ValueType::KeyMember)>::Test)
+#define RG_HASH_TABLE_HANDLER_T(ValueType, KeyType, KeyMember) \
+    RG_HASH_TABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
+#define RG_HASH_TABLE_HANDLER_NT(Name, ValueType, KeyType, KeyMember) \
+    RG_HASH_TABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashTraits<KeyType>::Hash, HashTraits<KeyType>::Test)
 
 template <typename KeyType, typename ValueType>
 class HashMap {
@@ -2092,7 +2094,7 @@ public:
         KeyType key;
         ValueType value;
 
-        HASH_TABLE_HANDLER(Bucket, key);
+        RG_HASH_TABLE_HANDLER(Bucket, key);
     };
 
     HashTable<KeyType, Bucket> table;
@@ -2125,7 +2127,7 @@ public:
     {
         if (!it)
             return;
-        table.Remove((Bucket *)((uint8_t *)it - OFFSET_OF(Bucket, value)));
+        table.Remove((Bucket *)((uint8_t *)it - RG_OFFSET_OF(Bucket, value)));
     }
     void Remove(const KeyType &key) { Remove(Find(key)); }
 
@@ -2184,7 +2186,7 @@ public:
 union Date {
     int32_t value;
     struct {
-#ifdef ARCH_LITTLE_ENDIAN
+#ifdef RG_ARCH_LITTLE_ENDIAN
         int8_t day;
         int8_t month;
         int16_t year;
@@ -2197,8 +2199,8 @@ union Date {
 
     Date() = default;
     Date(int16_t year, int8_t month, int8_t day)
-#ifdef ARCH_LITTLE_ENDIAN
-        : st({day, month, year}) { DebugAssert(IsValid()); }
+#ifdef RG_ARCH_LITTLE_ENDIAN
+        : st({day, month, year}) { RG_DEBUG_ASSERT(IsValid()); }
 #else
         : st({year, month, day}) { DebugAssert(IsValid()); }
 #endif
@@ -2213,7 +2215,7 @@ union Date {
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
-    static Date FromString(Span<const char> date_str, int flags = DEFAULT_PARSE_FLAGS,
+    static Date FromString(Span<const char> date_str, int flags = RG_DEFAULT_PARSE_FLAGS,
                            Span<const char> *out_remaining = nullptr);
     static Date FromJulianDays(int days);
     static Date FromCalendarDate(int days) { return Date::FromJulianDays(days + 2440588); }
@@ -2643,7 +2645,7 @@ FmtArg FmtSpan(Span<T> arr, const char *sep = ", ")
     FmtArg arg;
     arg.type = FmtArg::Type::Span;
     arg.value.span.type = FmtArg(T()).type;
-    arg.value.span.type_len = SIZE(T);
+    arg.value.span.type_len = RG_SIZE(T);
     arg.value.span.ptr = (const void *)arr.ptr;
     arg.value.span.len = arr.len;
     arg.value.span.separator = sep;
@@ -2714,29 +2716,31 @@ typedef void LogHandlerFunc(LogLevel level, const char *ctx,
 
 bool GetDebugFlag(const char *name);
 
-void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
+void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args);
 
-// Log text line to stderr with context, for the Log() macros below
-static inline void Log(LogLevel level, const char *ctx, const char *fmt)
+static inline void Log(LogLevel level, const char *fmt)
 {
-    LogFmt(level, ctx, fmt, {});
+    LogFmt(level, fmt, {});
 }
 template <typename... Args>
-static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args... args)
+static inline void Log(LogLevel level, const char *fmt, Args... args)
 {
     const FmtArg fmt_args[] = { FmtArg(args)... };
-    LogFmt(level, ctx, fmt, fmt_args);
+    LogFmt(level, fmt, fmt_args);
 }
 
-#ifdef NDEBUG
-    #define LOG_LOCATION nullptr
-    #define LogDebug(...)
+// Shortcut log functions
+#ifndef NDEBUG
+template <typename... Args>
+static inline void LogDebug(Args... args) { Log(LogLevel::Debug, args...); }
 #else
-    #define LOG_LOCATION (__FILE__ ":" STRINGIFY(__LINE__))
-    #define LogDebug(...) Log(LogLevel::Debug, LOG_LOCATION, __VA_ARGS__)
+template <typename... Args>
+static inline void LogDebug(Args...) {}
 #endif
-#define LogInfo(...) Log(LogLevel::Info, LOG_LOCATION, __VA_ARGS__)
-#define LogError(...) Log(LogLevel::Error, LOG_LOCATION, __VA_ARGS__)
+template <typename... Args>
+static inline void LogInfo(Args... args) { Log(LogLevel::Info, args...); }
+template <typename... Args>
+static inline void LogError(Args... args) { Log(LogLevel::Error, args...); }
 
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);
 
@@ -3056,7 +3060,7 @@ Span<T> TrimStr(Span<T> str, const char *trim_chars = " \t\r\n")
 }
 
 template <typename T>
-bool ParseDec(Span<const char> str, T *out_value, int flags = DEFAULT_PARSE_FLAGS,
+bool ParseDec(Span<const char> str, T *out_value, int flags = RG_DEFAULT_PARSE_FLAGS,
               Span<const char> *out_remaining = nullptr)
 {
     uint64_t value = 0;
@@ -3074,7 +3078,7 @@ bool ParseDec(Span<const char> str, T *out_value, int flags = DEFAULT_PARSE_FLAG
 
     for (; pos < str.len; pos++) {
         unsigned int digit = (unsigned int)(str[pos] - '0');
-        if (UNLIKELY(digit > 9)) {
+        if (RG_UNLIKELY(digit > 9)) {
             if (!pos || flags & (int)ParseFlag::End) {
                 if (flags & (int)ParseFlag::Log) {
                     LogError("Malformed integer number '%1'", str);
@@ -3086,11 +3090,11 @@ bool ParseDec(Span<const char> str, T *out_value, int flags = DEFAULT_PARSE_FLAG
         }
 
         uint64_t new_value = (value * 10) + digit;
-        if (UNLIKELY(new_value < value))
+        if (RG_UNLIKELY(new_value < value))
             goto overflow;
         value = new_value;
     }
-    if (UNLIKELY(value > (uint64_t)std::numeric_limits<T>::max()))
+    if (RG_UNLIKELY(value > (uint64_t)std::numeric_limits<T>::max()))
         goto overflow;
     value = ((value ^ neg) - neg);
 
@@ -3113,11 +3117,11 @@ overflow:
 // ------------------------------------------------------------------------
 
 #ifdef _WIN32
-    #define PATH_SEPARATORS "\\/"
-    #define SHARED_LIBRARY_EXTENSION ".dll"
+    #define RG_PATH_SEPARATORS "\\/"
+    #define RG_SHARED_LIBRARY_EXTENSION ".dll"
 #else
-    #define PATH_SEPARATORS "/"
-    #define SHARED_LIBRARY_EXTENSION ".so"
+    #define RG_PATH_SEPARATORS "/"
+    #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
 static inline bool IsPathSeparator(char c)
@@ -3211,7 +3215,7 @@ static const char *const IPStackNames[] = {
 };
 
 #ifndef _WIN32
-    #define POSIX_RESTART_EINTR(CallCode) \
+    #define RG_POSIX_RESTART_EINTR(CallCode) \
         ([&]() { \
             decltype(CallCode) ret; \
             while ((ret = (CallCode)) < 0 && errno == EINTR); \
@@ -3330,3 +3334,5 @@ public:
 
     Span<const char *> GetRemainingArguments() const { return args.Take(pos, args.len - pos); }
 };
+
+}

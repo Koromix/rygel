@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 enum class SourceType {
     C_Source,
     C_Header,
@@ -63,3 +65,5 @@ public:
 };
 
 extern const Span<const Compiler *const> Compilers;
+
+}

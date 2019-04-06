@@ -14,6 +14,8 @@
 #include "window.hh"
 #include "../wrappers/opengl.hh"
 
+namespace RG {
+
 static OGL_FUNCTION_PTR(HGLRC, wglCreateContextAttribsARB, HDC hDC, HGLRC hShareContext,
                         const int *attribList);
 static OGL_FUNCTION_PTR(BOOL, wglChoosePixelFormatARB, HDC hdc, const int *piAttribIList,
@@ -42,15 +44,15 @@ struct gui_Win32Window {
     unsigned int released_buttons;
 };
 
-static THREAD_LOCAL gui_Info *thread_info;
-static THREAD_LOCAL gui_Win32Window *thread_window;
+static RG_THREAD_LOCAL gui_Info *thread_info;
+static RG_THREAD_LOCAL gui_Win32Window *thread_window;
 
 static const char *GetWin32ErrorMessage(DWORD err)
 {
     static char msg_buf[2048];
 
     if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err,
-                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg_buf, SIZE(msg_buf), NULL)) {
+                      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg_buf, RG_SIZE(msg_buf), NULL)) {
         // FormatMessage adds newlines, remove them
         char *msg_end = msg_buf + strlen(msg_buf);
         while (msg_end > msg_buf && strchr("\r\n", msg_end[-1]))
@@ -77,7 +79,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             thread_info->display.height = (int)(lparam >> 16);
         } break;
 
-        case WM_MOUSELEAVE: { thread_info->input.mouseover = false; } FALLTHROUGH;
+        case WM_MOUSELEAVE: { thread_info->input.mouseover = false; } RG_FALLTHROUGH;
         case WM_KILLFOCUS: {
             thread_info->input.keys.Clear();
             thread_info->input.buttons = 0;
@@ -122,12 +124,12 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             uint16_t c = (uint16_t)wparam;
 
             // TODO: Deal with supplementary planes
-            if (c < 0x80 && LIKELY(thread_info->input.text.Available() >= 1)) {
+            if (c < 0x80 && RG_LIKELY(thread_info->input.text.Available() >= 1)) {
                 thread_info->input.text.Append((char)c);
-            } else if (c < 0x800 && LIKELY(thread_info->input.text.Available() >= 2)) {
+            } else if (c < 0x800 && RG_LIKELY(thread_info->input.text.Available() >= 2)) {
                 thread_info->input.text.Append((char)(0xC0 | (c >> 6)));
                 thread_info->input.text.Append((char)(0x80 | (c & 0x3F)));
-            } else if (LIKELY(thread_info->input.text.Available() >= 3)) {
+            } else if (RG_LIKELY(thread_info->input.text.Available() >= 3)) {
                 thread_info->input.text.Append((char)(0xE0 | (c >> 12)));
                 thread_info->input.text.Append((char)(0x80 | ((c >> 6) & 0x3F)));
                 thread_info->input.text.Append((char)(0x80 | (c & 0x3F)));
@@ -141,7 +143,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
             thread_info->input.y = (int16_t)(lparam >> 16);
 
             if (!thread_info->input.mouseover) {
-                TRACKMOUSEEVENT tme = { SIZE(tme) };
+                TRACKMOUSEEVENT tme = { RG_SIZE(tme) };
                 tme.hwndTrack = thread_window->hwnd;
                 tme.dwFlags = TME_LEAVE;
                 TrackMouseEvent(&tme);
@@ -187,7 +189,7 @@ static HWND CreateMainWindow(const char *application_name)
     if (!main_cls_atom) {
         Fmt(main_cls_name, "%1_main", application_name);
 
-        WNDCLASSEX gl_cls = { SIZE(gl_cls) };
+        WNDCLASSEX gl_cls = { RG_SIZE(gl_cls) };
         gl_cls.hInstance = GetModuleHandle(nullptr);
         gl_cls.lpszClassName = main_cls_name;
         gl_cls.lpfnWndProc = MainWindowProc;
@@ -225,7 +227,7 @@ static HWND CreateMainWindow(const char *application_name)
 
         ShowWindow(main_wnd, SW_SHOW);
     }
-    DEFER_N(gl_wnd_guard) { DestroyWindow(main_wnd); };
+    RG_DEFER_N(gl_wnd_guard) { DestroyWindow(main_wnd); };
 
     gl_wnd_guard.Disable();
     return main_wnd;
@@ -247,7 +249,7 @@ static bool InitWGL(const char *application_name)
     Fmt(dummy_cls_name, "%1_init_gl", application_name);
 
     {
-        WNDCLASSEX dummy_cls = { SIZE(dummy_cls) };
+        WNDCLASSEX dummy_cls = { RG_SIZE(dummy_cls) };
         dummy_cls.hInstance = GetModuleHandle(nullptr);
         dummy_cls.lpszClassName = dummy_cls_name;
         dummy_cls.lpfnWndProc = DefWindowProc;
@@ -257,7 +259,7 @@ static bool InitWGL(const char *application_name)
             return false;
         }
     }
-    DEFER { UnregisterClass(dummy_cls_name, GetModuleHandle(nullptr)); };
+    RG_DEFER { UnregisterClass(dummy_cls_name, GetModuleHandle(nullptr)); };
 
     HWND dummy_wnd;
     HDC dummy_dc;
@@ -271,10 +273,10 @@ static bool InitWGL(const char *application_name)
             return false;
         }
     }
-    DEFER { DestroyWindow(dummy_wnd); };
+    RG_DEFER { DestroyWindow(dummy_wnd); };
 
     {
-        PIXELFORMATDESCRIPTOR pfd = { SIZE(PIXELFORMATDESCRIPTOR) };
+        PIXELFORMATDESCRIPTOR pfd = { RG_SIZE(PIXELFORMATDESCRIPTOR) };
         pfd.nVersion = 1;
         pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
         pfd.iPixelType = PFD_TYPE_RGBA;
@@ -291,13 +293,13 @@ static bool InitWGL(const char *application_name)
         LogError("Failed to create OpenGL context for dummy window: %1", GetWin32ErrorMessage());
         return false;
     }
-    DEFER { wglDeleteContext(dummy_ctx); };
+    RG_DEFER { wglDeleteContext(dummy_ctx); };
 
     if (!wglMakeCurrent(dummy_dc, dummy_ctx)) {
         LogError("Failed to change OpenGL context of dummy window: %1", GetWin32ErrorMessage());
         return false;
     }
-    DEFER { wglMakeCurrent(dummy_dc, nullptr); };
+    RG_DEFER { wglMakeCurrent(dummy_dc, nullptr); };
 
 #define IMPORT_WGL_FUNCTION(Name) \
         do { \
@@ -346,7 +348,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
     // Set GL-compatible pixel format
     {
         PIXELFORMATDESCRIPTOR pixel_fmt_desc;
-        DescribePixelFormat(dc, pixel_fmt_index, SIZE(pixel_fmt_desc), &pixel_fmt_desc);
+        DescribePixelFormat(dc, pixel_fmt_index, RG_SIZE(pixel_fmt_desc), &pixel_fmt_desc);
         if (!SetPixelFormat(dc, pixel_fmt_index, &pixel_fmt_desc)) {
             LogError("Cannot set pixel format on GL window: %1", GetWin32ErrorMessage());
             return nullptr;
@@ -382,7 +384,7 @@ static HGLRC CreateGLContext(const char *application_name, HDC dc)
             return nullptr;
         }
     }
-    DEFER_N(gl_guard) { wglDeleteContext(gl); };
+    RG_DEFER_N(gl_guard) { wglDeleteContext(gl); };
 
     gl_guard.Disable();
     return gl;
@@ -412,10 +414,10 @@ static bool SetGLContext(HDC dc, HGLRC gl)
 
 bool gui_Window::Init(const char *application_name)
 {
-    DebugAssert(!window);
+    RG_DEBUG_ASSERT(!window);
 
     window = new gui_Win32Window();
-    DEFER_N(out_guard) { Release(); };
+    RG_DEFER_N(out_guard) { Release(); };
 
     thread_window = window;
     thread_info = &priv;
@@ -505,12 +507,14 @@ bool gui_Window::Prepare()
     }
 
     // FIXME: Should we report an error instead?
-    Assert(SetGLContext(window->hdc, window->hgl));
+    RG_ASSERT(SetGLContext(window->hdc, window->hgl));
     if (imgui_local) {
         StartImGuiFrame();
     }
 
     return true;
+}
+
 }
 
 #endif

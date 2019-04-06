@@ -5,6 +5,8 @@
 #include "../libcc/libcc.hh"
 #include "http.hh"
 
+namespace RG {
+
 static void ReleaseDataCallback(void *ptr)
 {
     Allocator::Release(nullptr, ptr, -1);
@@ -125,10 +127,10 @@ void http_Daemon::RequestCompleted(void *cls, MHD_Connection *, void **con_cls,
 
 bool http_Daemon::Start(IPStack stack, int port, int threads, const char *base_url)
 {
-    Assert(!daemon);
+    RG_ASSERT(!daemon);
 
-    DebugAssert(handle_func);
-    DebugAssert(base_url);
+    RG_DEBUG_ASSERT(handle_func);
+    RG_DEBUG_ASSERT(base_url);
 
     // Validate configuration
     {
@@ -215,7 +217,7 @@ void http_Response::AddCookieHeader(const char *path, const char *name, const ch
 
 void http_Response::AddCachingHeaders(int max_age, const char *etag)
 {
-    DebugAssert(max_age >= 0);
+    RG_DEBUG_ASSERT(max_age >= 0);
 
     if (flags & (int)http_Response::Flag::DisableCacheControl) {
         max_age = 0;
@@ -352,7 +354,7 @@ int http_JsonPageBuilder::Finish(http_Response *out_response)
     CompressionType compression_type = st.compression.type;
 
     Flush();
-    Assert(st.Close());
+    RG_ASSERT(st.Close());
 
     MHD_Response *response =
         MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
@@ -364,4 +366,6 @@ int http_JsonPageBuilder::Finish(http_Response *out_response)
     MHD_add_response_header(*out_response, "Content-Type", "application/json");
 
     return 200;
+}
+
 }

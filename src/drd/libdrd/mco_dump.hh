@@ -8,6 +8,8 @@
 #include "common.hh"
 #include "mco_tables.hh"
 
+namespace RG {
+
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
                              Size node_idx, int depth, StreamWriter *out_st);
 static inline void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes,
@@ -27,3 +29,5 @@ void mco_DumpSupplementPairTable(Span<const mco_SrcPair> pairs, StreamWriter *ou
 
 void mco_DumpTableSetHeaders(const mco_TableSet &table_set, StreamWriter *out_st);
 void mco_DumpTableSetContent(const mco_TableSet &table_set, StreamWriter *out_st);
+
+}

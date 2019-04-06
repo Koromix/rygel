@@ -7,6 +7,10 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+namespace RG {
+
 double ComputeUtility(const Human &human);
 double ComputeDiseaseCost(const Human &human);
 double ComputeProductivityCost(const Human &human);
+
+}

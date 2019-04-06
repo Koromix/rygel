@@ -2392,14 +2392,18 @@
 // Custom helpers
 // ------------------------------------------------------------------------
 
+namespace RG {
+
 // Generic
 bool ogl_InitFunctions(void *(*get_proc_address)(const char *name));
 GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fragment_src);
+
+}
 
 // ------------------------------------------------------------------------
 // Function pointers
 // ------------------------------------------------------------------------
 
 #define OGL_FUNCTION(Cond, ...) \
-    extern FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
+    extern RG_FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
 #include "opengl_func.inc"

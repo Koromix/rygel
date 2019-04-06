@@ -7,6 +7,8 @@
 #include "build_compiler.hh"
 #include "build_target.hh"
 
+namespace RG {
+
 struct Toolchain {
     const Compiler *compiler;
     BuildMode build_mode;
@@ -193,7 +195,7 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
     const char *start_directory = DuplicateString(GetWorkingDirectory(), &temp_alloc).ptr;
     if (config_filename) {
         Span<const char> root_directory;
-        config_filename = SplitStrReverseAny(config_filename, PATH_SEPARATORS, &root_directory).ptr;
+        config_filename = SplitStrReverseAny(config_filename, RG_PATH_SEPARATORS, &root_directory).ptr;
 
         if (root_directory.len) {
             const char *root_directory0 = DuplicateString(root_directory, &temp_alloc).ptr;
@@ -326,4 +328,6 @@ You can omit either part of the toolchain string (e.g. 'Clang' and '_Fast' are b
 
     // Run?
     return run ? RunTarget(*first_target, run_arguments, verbose) : 0;
+}
+
 }

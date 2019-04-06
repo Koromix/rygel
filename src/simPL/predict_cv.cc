@@ -6,6 +6,8 @@
 #include "simulate.hh"
 #include "predict.hh"
 
+namespace RG {
+
 // Implementation is in predict_cv_qrisk3.cc for license reasons (LGPL3)
 double ComputeQRisk3Male10(int age, bool AF, bool atypicalantipsy, bool corticosteroids,
                            bool impotence2, bool migraine, bool ra, bool renal, bool semi,
@@ -189,7 +191,7 @@ static double ComputeFramingham10(const Human &human)
         } break;
     }
 
-    Assert(false);
+    RG_ASSERT(false);
 }
 
 static double ComputeScore10(const Human &human)
@@ -694,7 +696,9 @@ double PredictQRisk3(const Human &human)
                                             9.002537727355957, smoke_cat, 0, 0.392308831214905);
         } break;
     }
-    DebugAssert(!std::isnan(score10));
+    RG_DEBUG_ASSERT(!std::isnan(score10));
 
     return AnnualizePrediction(score10, 10);
+}
+
 }

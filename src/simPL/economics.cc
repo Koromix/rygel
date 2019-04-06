@@ -6,6 +6,8 @@
 #include "economics.hh"
 #include "simulate.hh"
 
+namespace RG {
+
 // NOTE: Should we take age into account? How?
 double ComputeUtility(const Human &human)
 {
@@ -31,9 +33,9 @@ double ComputeUtility(const Human &human)
     }
 
     switch (diseases) {
-        default: utility -= 0.0528; FALLTHROUGH;
-        case 3: utility -= 0.0415; FALLTHROUGH;
-        case 2: utility -= 0.0203; FALLTHROUGH;
+        default: utility -= 0.0528; RG_FALLTHROUGH;
+        case 3: utility -= 0.0415; RG_FALLTHROUGH;
+        case 2: utility -= 0.0203; RG_FALLTHROUGH;
         case 1:
         case 0: break;
     }
@@ -44,11 +46,13 @@ double ComputeUtility(const Human &human)
 double ComputeDiseaseCost(const Human &)
 {
     LogError("ComputeDiseaseCost() is a stub");
-    Assert(false);
+    RG_ASSERT(false);
 }
 
 double ComputeProductivityCost(const Human &)
 {
     LogError("ComputeProductivityCost() is a stub");
-    Assert(false);
+    RG_ASSERT(false);
+}
+
 }

@@ -5,6 +5,8 @@
 #include "../../libcc/libcc.hh"
 #include "build_target.hh"
 
+namespace RG {
+
 struct FileSet {
     HeapArray<const char *> directories;
     HeapArray<const char *> directories_rec;
@@ -32,7 +34,7 @@ struct TargetConfig {
     const char *pack_options;
     PackLinkType pack_link_type;
 
-    HASH_TABLE_HANDLER(TargetConfig, name);
+    RG_HASH_TABLE_HANDLER(TargetConfig, name);
 };
 
 static bool AppendNormalizedPath(Span<const char> path,
@@ -65,7 +67,7 @@ static void AppendListValues(Span<const char> str,
 static const char *BuildOutputPath(const char *src_filename, const char *output_directory,
                                    const char *suffix, Allocator *alloc)
 {
-    DebugAssert(!PathIsAbsolute(src_filename));
+    RG_DEBUG_ASSERT(!PathIsAbsolute(src_filename));
 
     HeapArray<char> buf;
     buf.allocator = alloc;
@@ -93,7 +95,7 @@ static const char *BuildOutputPath(const char *src_filename, const char *output_
 static bool ResolveFileSet(const FileSet &file_set,
                            Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_filenames->len) { out_filenames->RemoveFrom(len); };
 
     for (const char *directory: file_set.directories) {
         if (!EnumerateFiles(directory, nullptr, 0, 1024, alloc, out_filenames))
@@ -107,7 +109,7 @@ static bool ResolveFileSet(const FileSet &file_set,
 
     out_filenames->RemoveFrom(std::remove_if(out_filenames->begin(), out_filenames->end(),
                                              [&](const char *filename) {
-        const char *name = SplitStrReverseAny(filename, PATH_SEPARATORS).ptr;
+        const char *name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
         bool ignore = std::any_of(file_set.ignore.begin(), file_set.ignore.end(),
                                   [&](const char *pattern) { return MatchPathName(name, pattern); });
         return ignore;
@@ -119,11 +121,11 @@ static bool ResolveFileSet(const FileSet &file_set,
 
 bool TargetSetBuilder::LoadIni(StreamReader &st)
 {
-    DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
     IniParser ini(&st);
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -333,7 +335,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 // We steal stuff from TargetConfig so it's not reusable after that
 const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
-    DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
 
     // Heavy type, so create it directly in HeapArray
     Target *target = set.targets.AppendDefault();
@@ -478,7 +480,7 @@ const Target *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
 
     bool appended = targets_map.Append(target_config->name, set.targets.len - 1).second;
-    DebugAssert(appended);
+    RG_DEBUG_ASSERT(appended);
 
     out_guard.Disable();
     return target;
@@ -490,7 +492,7 @@ void TargetSetBuilder::Finish(TargetSet *out_set)
         set.targets_map.Append(&target);
     }
 
-    SwapMemory(&set, out_set, SIZE(set));
+    SwapMemory(&set, out_set, RG_SIZE(set));
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, const char *output_directory,
@@ -502,4 +504,6 @@ bool LoadTargetSet(Span<const char *const> filenames, const char *output_directo
     target_set_builder.Finish(out_set);
 
     return true;
+}
+
 }

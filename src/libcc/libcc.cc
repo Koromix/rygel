@@ -49,11 +49,13 @@
 
 #include "libcc.hh"
 
+namespace RG {
+
 // ------------------------------------------------------------------------
 // Assert
 // ------------------------------------------------------------------------
 
-extern "C" void NORETURN AssertFail(const char *cond)
+extern "C" void RG_NORETURN AssertFail(const char *cond)
 {
     fprintf(stderr, "Assertion '%s' failed\n", cond);
     abort();
@@ -72,7 +74,7 @@ protected:
     void *Allocate(Size size, unsigned int flags = 0) override
     {
         void *ptr = malloc((size_t)size);
-        if (UNLIKELY(!ptr)) {
+        if (RG_UNLIKELY(!ptr)) {
             LogError("Failed to allocate %1 of memory", FmtMemSize(size));
             abort();
         }
@@ -89,7 +91,7 @@ protected:
             *ptr = nullptr;
         } else {
             void *new_ptr = realloc(*ptr, (size_t)new_size);
-            if (UNLIKELY(new_size && !new_ptr)) {
+            if (RG_UNLIKELY(new_size && !new_ptr)) {
                 LogError("Failed to resize %1 memory block to %2",
                          FmtMemSize(old_size), FmtMemSize(new_size));
                 abort();
@@ -109,13 +111,13 @@ protected:
 
 static Allocator *GetDefaultAllocator()
 {
-    static Allocator *default_allocator = new DEFAULT_ALLOCATOR;
+    static Allocator *default_allocator = new RG_DEFAULT_ALLOCATOR;
     return default_allocator;
 }
 
 void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 {
-    DebugAssert(size >= 0);
+    RG_DEBUG_ASSERT(size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -126,7 +128,7 @@ void *Allocator::Allocate(Allocator *alloc, Size size, unsigned int flags)
 void Allocator::Resize(Allocator *alloc, void **ptr, Size old_size, Size new_size,
                        unsigned int flags)
 {
-    DebugAssert(new_size >= 0);
+    RG_DEBUG_ASSERT(new_size >= 0);
 
     if (!alloc) {
         alloc = GetDefaultAllocator();
@@ -155,7 +157,7 @@ void LinkedAllocator::ReleaseAll()
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
-    Bucket *bucket = (Bucket *)Allocator::Allocate(allocator, SIZE(*bucket) + size, flags);
+    Bucket *bucket = (Bucket *)Allocator::Allocate(allocator, RG_SIZE(*bucket) + size, flags);
 
     if (list.prev) {
         list.prev->next = &bucket->head;
@@ -181,8 +183,8 @@ void LinkedAllocator::Resize(void **ptr, Size old_size, Size new_size, unsigned 
         *ptr = nullptr;
     } else {
         Bucket *bucket = PointerToBucket(*ptr);
-        Allocator::Resize(allocator, (void **)&bucket, SIZE(*bucket) + old_size,
-                          SIZE(*bucket) + new_size, flags);
+        Allocator::Resize(allocator, (void **)&bucket, RG_SIZE(*bucket) + old_size,
+                          RG_SIZE(*bucket) + new_size, flags);
 
         if (bucket->head.next) {
             bucket->head.next->prev = &bucket->head;
@@ -227,7 +229,7 @@ void BlockAllocatorBase::ForgetCurrentBlock()
 
 void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
 {
-    DebugAssert(size >= 0);
+    RG_DEBUG_ASSERT(size >= 0);
 
     LinkedAllocator *alloc = GetAllocator();
 
@@ -239,7 +241,7 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)Allocator::Allocate(alloc, SIZE(Bucket) + block_size,
+            current_bucket = (Bucket *)Allocator::Allocate(alloc, RG_SIZE(Bucket) + block_size,
                                                            flags & ~(int)Allocator::Flag::Zero);
             current_bucket->used = 0;
         }
@@ -258,8 +260,8 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
 
 void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsigned int flags)
 {
-    DebugAssert(old_size >= 0);
-    DebugAssert(new_size >= 0);
+    RG_DEBUG_ASSERT(old_size >= 0);
+    RG_DEBUG_ASSERT(new_size >= 0);
 
     if (!new_size) {
         Release(*ptr, old_size);
@@ -302,7 +304,7 @@ void BlockAllocatorBase::Resize(void **ptr, Size old_size, Size new_size, unsign
 
 void BlockAllocatorBase::Release(void *ptr, Size size)
 {
-    DebugAssert(size >= 0);
+    RG_DEBUG_ASSERT(size >= 0);
 
     if (ptr) {
         LinkedAllocator *alloc = GetAllocator();
@@ -312,7 +314,7 @@ void BlockAllocatorBase::Release(void *ptr, Size size)
         if (ptr == last_alloc) {
             current_bucket->used -= aligned_size;
             if (!current_bucket->used) {
-                Allocator::Release(alloc, current_bucket, SIZE(Bucket) + block_size);
+                Allocator::Release(alloc, current_bucket, RG_SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
             last_alloc = nullptr;
@@ -347,13 +349,13 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
             int digit = c - '0';
             if ((unsigned int)digit < 10) {
                 parts[i] = (parts[i] * 10) + digit;
-                if (UNLIKELY(++lengths[i] > 5))
+                if (RG_UNLIKELY(++lengths[i] > 5))
                     goto malformed;
             } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
                 mult = -1;
-            } else if (UNLIKELY(i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-')) {
+            } else if (RG_UNLIKELY(i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-')) {
                 break;
-            } else if (UNLIKELY(!lengths[i] || (c != '/' && c != '-'))) {
+            } else if (RG_UNLIKELY(!lengths[i] || (c != '/' && c != '-'))) {
                 goto malformed;
             } else {
                 offset++;
@@ -366,9 +368,9 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
     if ((flags & (int)ParseFlag::End) && offset < date_str.len)
         goto malformed;
 
-    if (UNLIKELY((unsigned int)lengths[1] > 2))
+    if (RG_UNLIKELY((unsigned int)lengths[1] > 2))
         goto malformed;
-    if (UNLIKELY((lengths[0] > 2) == (lengths[2] > 2))) {
+    if (RG_UNLIKELY((lengths[0] > 2) == (lengths[2] > 2))) {
         if (flags & (int)ParseFlag::Log) {
             LogError("Ambiguous date string '%1'", date_str);
         }
@@ -376,7 +378,7 @@ Date Date::FromString(Span<const char> date_str, int flags, Span<const char> *ou
     } else if (lengths[2] > 2) {
         std::swap(parts[0], parts[2]);
     }
-    if (UNLIKELY(parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99))
+    if (RG_UNLIKELY(parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99))
         goto malformed;
 
     date.st.year = (int16_t)parts[0];
@@ -403,7 +405,7 @@ malformed:
 
 Date Date::FromJulianDays(int days)
 {
-    DebugAssert(days >= 0);
+    RG_DEBUG_ASSERT(days >= 0);
 
     // Algorithm from Richards, copied from Wikipedia:
     // https://en.wikipedia.org/w/index.php?title=Julian_day&oldid=792497863
@@ -424,7 +426,7 @@ Date Date::FromJulianDays(int days)
 
 int Date::ToJulianDays() const
 {
-    DebugAssert(IsValid());
+    RG_DEBUG_ASSERT(IsValid());
 
     // Straight from the Web:
     // http://www.cs.utsa.edu/~cs1063/projects/Spring2011/Project1/jdn-explanation.html
@@ -444,7 +446,7 @@ int Date::ToJulianDays() const
 
 int Date::GetWeekDay() const
 {
-    DebugAssert(IsValid());
+    RG_DEBUG_ASSERT(IsValid());
 
     // Zeller's congruence:
     // https://en.wikipedia.org/wiki/Zeller%27s_congruence
@@ -469,7 +471,7 @@ int Date::GetWeekDay() const
 
 Date &Date::operator++()
 {
-    DebugAssert(IsValid());
+    RG_DEBUG_ASSERT(IsValid());
 
     if (st.day < DaysInMonth(st.year, st.month)) {
         st.day++;
@@ -487,7 +489,7 @@ Date &Date::operator++()
 
 Date &Date::operator--()
 {
-    DebugAssert(IsValid());
+    RG_DEBUG_ASSERT(IsValid());
 
     if (st.day > 1) {
         st.day--;
@@ -602,7 +604,7 @@ static Span<const char> FormatDouble(double value, int precision, char out_buf[2
     } else {
         buf_len = snprintf(out_buf, 256, "%g", value);
     }
-    DebugAssert(buf_len >= 0 && buf_len < 256);
+    RG_DEBUG_ASSERT(buf_len >= 0 && buf_len < 256);
 
     return MakeSpan(out_buf, (Size)buf_len);
 }
@@ -721,7 +723,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             } break;
 
             case FmtArg::Type::Date: {
-                DebugAssert(!arg.value.date.value || arg.value.date.IsValid());
+                RG_DEBUG_ASSERT(!arg.value.date.value || arg.value.date.IsValid());
 
                 int year = arg.value.date.st.year;
                 if (year < 0) {
@@ -761,7 +763,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                     switch (arg.value.span.type) {
                         case FmtArg::Type::Str1: { arg2.value.str1 = *(const char **)ptr; } break;
                         case FmtArg::Type::Str2: { arg2.value.str2 = *(const Span<const char> *)ptr; } break;
-                        case FmtArg::Type::Buffer: { Assert(false); } break;
+                        case FmtArg::Type::Buffer: { RG_ASSERT(false); } break;
                         case FmtArg::Type::Char: { arg2.value.ch = *(const char *)ptr; } break;
                         case FmtArg::Type::Bool: { arg2.value.b = *(const bool *)ptr; } break;
                         case FmtArg::Type::Integer:
@@ -773,21 +775,21 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                                 case 4: { arg2.value.u = *(const uint32_t *)ptr; } break;
                                 case 2: { arg2.value.u = *(const uint16_t *)ptr; } break;
                                 case 1: { arg2.value.u = *(const uint8_t *)ptr; } break;
-                                default: { Assert(false); } break;
+                                default: { RG_ASSERT(false); } break;
                             }
                         } break;
                         case FmtArg::Type::Double: {
                             switch (arg.value.span.type_len) {
-                                case SIZE(double): { arg2.value.d.value = *(const double *)ptr; } break;
-                                case SIZE(float): { arg2.value.d.value = *(const float *)ptr; } break;
-                                default: { Assert(false); } break;
+                                case RG_SIZE(double): { arg2.value.d.value = *(const double *)ptr; } break;
+                                case RG_SIZE(float): { arg2.value.d.value = *(const float *)ptr; } break;
+                                default: { RG_ASSERT(false); } break;
                             }
                             arg2.value.d.precision = -1;
                         } break;
                         case FmtArg::Type::MemorySize: { arg2.value.size = *(const Size *)ptr; } break;
                         case FmtArg::Type::DiskSize: { arg2.value.size = *(const Size *)ptr; } break;
                         case FmtArg::Type::Date: { arg2.value.date = *(const Date *)ptr; } break;
-                        case FmtArg::Type::Span: { Assert(false); } break;
+                        case FmtArg::Type::Span: { RG_ASSERT(false); } break;
                     }
                     ptr += arg.value.span.type_len;
 
@@ -867,7 +869,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
             append('%');
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1] == '/') {
-            append(*PATH_SEPARATORS);
+            append(*RG_PATH_SEPARATORS);
             fmt_ptr = marker_ptr + 2;
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
@@ -896,7 +898,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, AppendFunc
 
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 {
-    DebugAssert(out_buf.len >= 0);
+    RG_DEBUG_ASSERT(out_buf.len >= 0);
 
     if (!out_buf.len)
         return {};
@@ -905,7 +907,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
     Size real_len = 0;
 
     DoFormat(fmt, args, [&](Span<const char> fragment) {
-        if (LIKELY(real_len < out_buf.len)) {
+        if (RG_LIKELY(real_len < out_buf.len)) {
             Size copy_len = fragment.len;
             if (copy_len > out_buf.len - real_len) {
                 copy_len = out_buf.len - real_len;
@@ -926,7 +928,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
 {
     Size start_len = out_buf->len;
 
-    out_buf->Grow(FMT_STRING_BASE_CAPACITY);
+    out_buf->Grow(RG_FMT_STRING_BASE_CAPACITY);
     DoFormat(fmt, args, [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
         memcpy(out_buf->end(), frag.ptr, (size_t)frag.len);
@@ -946,13 +948,13 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
 
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
-    LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
+    LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
-        if (frag.len > ARRAY_SIZE(buf.data) - buf.len) {
+        if (frag.len > RG_ARRAY_SIZE(buf.data) - buf.len) {
             st->Write(buf);
             buf.len = 0;
         }
-        if (frag.len >= ARRAY_SIZE(buf.data)) {
+        if (frag.len >= RG_ARRAY_SIZE(buf.data)) {
             st->Write(frag);
         } else {
             memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
@@ -966,13 +968,13 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 {
     // TODO: Deal properly with partial writes in PrintFmt(FILE) overload
 
-    LocalArray<char, FMT_STRING_PRINT_BUFFER_SIZE> buf;
+    LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
     DoFormat(fmt, args, [&](Span<const char> frag) {
-        if (frag.len > ARRAY_SIZE(buf.data) - buf.len) {
+        if (frag.len > RG_ARRAY_SIZE(buf.data) - buf.len) {
             fwrite(buf.data, 1, (size_t)buf.len, fp);
             buf.len = 0;
         }
-        if (frag.len >= ARRAY_SIZE(buf.data)) {
+        if (frag.len >= RG_ARRAY_SIZE(buf.data)) {
             fwrite(frag.ptr, 1, (size_t)frag.len, fp);
         } else {
             memcpy(buf.data + buf.len, frag.ptr, (size_t)frag.len);
@@ -999,8 +1001,8 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
 
 // NOTE: LocalArray does not work with __thread, and thread_local is broken on MinGW
 // when destructors are involved. So heap allocation it is, at least for now.
-static THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
-static THREAD_LOCAL Size log_handlers_len;
+static RG_THREAD_LOCAL std::function<LogHandlerFunc> *log_handlers[16];
+static RG_THREAD_LOCAL Size log_handlers_len;
 
 bool GetDebugFlag(const char *name)
 {
@@ -1060,7 +1062,7 @@ static bool ConfigLogTerminalOutput()
 
         if (output_is_terminal) {
             atexit([]() {
-                WriteFile(stderr_handle, "\x1B[0m", (DWORD)strlen("\x1B[0m"), nullptr, nullptr);
+                ::WriteFile(stderr_handle, "\x1B[0m", (DWORD)strlen("\x1B[0m"), nullptr, nullptr);
             });
         }
 #else
@@ -1079,22 +1081,12 @@ static bool ConfigLogTerminalOutput()
     return output_is_terminal;
 }
 
-void LogFmt(LogLevel level, const char *ctx MAYBE_UNUSED, const char *fmt, Span<const FmtArg> args)
+void LogFmt(LogLevel level, const char *fmt, Span<const FmtArg> args)
 {
     char ctx_buf[128];
     {
         double time = (double)(GetMonotonicTime() - g_start_time) / 1000;
-
-#ifdef NDEBUG
         Fmt(ctx_buf, " [%1] ", FmtDouble(time, 3).Pad(-8));
-#else
-        Size ctx_len = (Size)strlen(ctx);
-        if (ctx_len > 20) {
-            Fmt(ctx_buf, " ...%1 [%2] ", ctx + ctx_len - 17, FmtDouble(time, 3).Pad(-8));
-        } else {
-            Fmt(ctx_buf, " ...%1 [%2] ", FmtArg(ctx).Pad(-21), FmtDouble(time, 3).Pad(-8));
-        }
-#endif
     }
 
     static std::mutex log_mutex;
@@ -1138,13 +1130,13 @@ void EndConsoleLog()
 
 void PushLogHandler(std::function<LogHandlerFunc> handler)
 {
-    DebugAssert(log_handlers_len < ARRAY_SIZE(log_handlers));
+    RG_DEBUG_ASSERT(log_handlers_len < RG_ARRAY_SIZE(log_handlers));
     log_handlers[log_handlers_len++] = new std::function<LogHandlerFunc>(handler);
 }
 
 void PopLogHandler()
 {
-    DebugAssert(log_handlers_len > 0);
+    RG_DEBUG_ASSERT(log_handlers_len > 0);
     delete log_handlers[--log_handlers_len];
 }
 
@@ -1160,10 +1152,10 @@ char *Win32ErrorString(uint32_t error_code)
         error_code = GetLastError();
     }
 
-    static THREAD_LOCAL char str_buf[256];
+    static RG_THREAD_LOCAL char str_buf[256];
     DWORD fmt_ret = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                                   nullptr, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                                  str_buf, SIZE(str_buf), nullptr);
+                                  str_buf, RG_SIZE(str_buf), nullptr);
     if (fmt_ret) {
         char *str_end = str_buf + strlen(str_buf);
         // FormatMessage adds newlines, remove them
@@ -1206,7 +1198,7 @@ bool StatFile(const char *filename, bool error_if_missing, FileInfo *out_info)
         }
         return false;
     }
-    DEFER { CloseHandle(h); };
+    RG_DEFER { CloseHandle(h); };
 
     BY_HANDLE_FILE_INFORMATION attr;
     if (!GetFileInformationByHandle(h, &attr)) {
@@ -1228,7 +1220,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
     if (!filter) {
         filter = "*";
     }
-    if (snprintf(find_filter, SIZE(find_filter), "%s\\%s", dirname, filter) >= SIZE(find_filter)) {
+    if (snprintf(find_filter, RG_SIZE(find_filter), "%s\\%s", dirname, filter) >= RG_SIZE(find_filter)) {
         LogError("Cannot enumerate directory '%1': Path too long", dirname);
         return EnumStatus::Error;
     }
@@ -1247,7 +1239,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                  Win32ErrorString());
         return EnumStatus::Error;
     }
-    DEFER { FindClose(handle); };
+    RG_DEFER { FindClose(handle); };
 
     Size count = 0;
     do {
@@ -1255,7 +1247,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
                 (find_data.cFileName[0] == '.' && find_data.cFileName[1] == '.' && !find_data.cFileName[2]))
             continue;
 
-        if (UNLIKELY(++count > max_files && max_files >= 0)) {
+        if (RG_UNLIKELY(++count > max_files && max_files >= 0)) {
             LogError("Partial enumation of directory '%1'", dirname);
             return EnumStatus::Partial;
         }
@@ -1317,7 +1309,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
         return EnumStatus::Error;
     }
-    DEFER { closedir(dirp); };
+    RG_DEFER { closedir(dirp); };
 
     Size count = 0;
     dirent *dent;
@@ -1327,7 +1319,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
             continue;
 
         if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
-            if (UNLIKELY(++count > max_files && max_files >= 0)) {
+            if (RG_UNLIKELY(++count > max_files && max_files >= 0)) {
                 LogError("Partial enumation of directory '%1'", dirname);
                 return EnumStatus::Partial;
             }
@@ -1378,7 +1370,7 @@ EnumStatus EnumerateDirectory(const char *dirname, const char *filter, Size max_
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files)
 {
-    DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_files->len) { out_files->RemoveFrom(len); };
 
     EnumStatus status = EnumerateDirectory(dirname, filter, max_files,
                                            [&](const char *filename, FileType file_type) {
@@ -1416,7 +1408,7 @@ bool TestFile(const char *filename, FileType type)
         switch (type) {
             case FileType::Directory: { LogError("Path '%1' is not a directory", filename); } break;
             case FileType::File: { LogError("Path '%1' is not a file", filename); } break;
-            case FileType::Unknown: { DebugAssert(false); } break;
+            case FileType::Unknown: { RG_DEBUG_ASSERT(false); } break;
         }
 
         return false;
@@ -1453,13 +1445,13 @@ bool SetWorkingDirectory(const char *directory)
 
 const char *GetWorkingDirectory()
 {
-    static THREAD_LOCAL char buf[4096];
+    static RG_THREAD_LOCAL char buf[4096];
 
 #ifdef _WIN32
-    DWORD ret = GetCurrentDirectory(SIZE(buf), buf);
-    Assert(ret && ret <= SIZE(buf));
+    DWORD ret = GetCurrentDirectory(RG_SIZE(buf), buf);
+    RG_ASSERT(ret && ret <= RG_SIZE(buf));
 #else
-    Assert(getcwd(buf, SIZE(buf)));
+    RG_ASSERT(getcwd(buf, RG_SIZE(buf)));
 #endif
 
     return buf;
@@ -1519,9 +1511,9 @@ const char *GetApplicationExecutable()
     static char executable_path[4096];
 
     if (!executable_path[0]) {
-        Size path_len = (Size)GetModuleFileName(nullptr, executable_path, SIZE(executable_path));
-        Assert(path_len);
-        Assert(path_len < SIZE(executable_path));
+        Size path_len = (Size)GetModuleFileName(nullptr, executable_path, RG_SIZE(executable_path));
+        RG_ASSERT(path_len);
+        RG_ASSERT(path_len < RG_SIZE(executable_path));
     }
 
     return executable_path;
@@ -1530,10 +1522,10 @@ const char *GetApplicationExecutable()
 
     if (!executable_path[0]) {
         uint32_t buffer_size = SIZE(executable_path);
-        Assert(!_NSGetExecutablePath(executable_path, &buffer_size));
+        RG_ASSERT(!_NSGetExecutablePath(executable_path, &buffer_size));
         char *path_buf = realpath(executable_path, nullptr);
-        Assert(path_buf);
-        Assert(strlen(path_buf) < SIZE(executable_path));
+        RG_ASSERT(path_buf);
+        RG_ASSERT(strlen(path_buf) < SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -1544,8 +1536,8 @@ const char *GetApplicationExecutable()
 
     if (!executable_path[0]) {
         char *path_buf = realpath("/proc/self/exe", nullptr);
-        Assert(path_buf);
-        Assert(strlen(path_buf) < SIZE(executable_path));
+        RG_ASSERT(path_buf);
+        RG_ASSERT(strlen(path_buf) < RG_SIZE(executable_path));
         strcpy(executable_path, path_buf);
         free(path_buf);
     }
@@ -1589,7 +1581,7 @@ CompressionType GetPathCompression(Span<const char> filename)
 // Names starting with a dot are not considered to be an extension (POSIX hidden files)
 Span<const char> GetPathExtension(Span<const char> filename, CompressionType *out_compression_type)
 {
-    filename = SplitStrReverseAny(filename, PATH_SEPARATORS);
+    filename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
 
     Span<const char> extension = {};
     const auto GetNextExtension = [&]() {
@@ -1628,13 +1620,13 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
         Size parts_count = 0;
 
         if (!buf.len && PathIsAbsolute(path)) {
-            Span<const char> prefix = SplitStrAny(path, PATH_SEPARATORS, &path);
+            Span<const char> prefix = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
             buf.Append(prefix);
-            buf.Append(*PATH_SEPARATORS);
+            buf.Append(*RG_PATH_SEPARATORS);
         }
 
         while (path.len) {
-            Span<const char> part = SplitStrAny(path, PATH_SEPARATORS, &path);
+            Span<const char> part = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
 
             if (part == "..") {
                 if (parts_count) {
@@ -1642,13 +1634,13 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
                     parts_count--;
                 } else {
                     buf.Append("..");
-                    buf.Append(*PATH_SEPARATORS);
+                    buf.Append(*RG_PATH_SEPARATORS);
                 }
             } else if (part == ".") {
                 // Skip
             } else if (part.len) {
                 buf.Append(part);
-                buf.Append(*PATH_SEPARATORS);
+                buf.Append(*RG_PATH_SEPARATORS);
                 parts_count++;
             }
         }
@@ -1745,7 +1737,7 @@ bool MakeDirectory(const char *directory, bool error_if_exists)
 bool MakeDirectoryRec(Span<const char> directory)
 {
     char buf[4096];
-    if (UNLIKELY(directory.len >= SIZE(buf))) {
+    if (RG_UNLIKELY(directory.len >= RG_SIZE(buf))) {
         LogError("Path '%1' is too large", directory);
         return false;
     }
@@ -1772,7 +1764,7 @@ bool MakeDirectoryRec(Span<const char> directory)
 
     for (; offset < directory.len; offset++) {
         if (!buf[offset]) {
-            buf[offset] = *PATH_SEPARATORS;
+            buf[offset] = *RG_PATH_SEPARATORS;
 
             if (!MakeDirectory(buf, false)) {
                 LogError("Cannot create directory '%1': %2", buf, strerror(errno));
@@ -1787,15 +1779,15 @@ bool MakeDirectoryRec(Span<const char> directory)
 bool EnsureDirectoryExists(const char *filename)
 {
     Span<const char> directory;
-    SplitStrReverseAny(filename, PATH_SEPARATORS, &directory);
+    SplitStrReverseAny(filename, RG_PATH_SEPARATORS, &directory);
 
     return MakeDirectoryRec(directory);
 }
 
 void WaitForDelay(int64_t delay)
 {
-    DebugAssert(delay >= 0);
-    DebugAssert(delay < 1000ll * INT32_MAX);
+    RG_DEBUG_ASSERT(delay >= 0);
+    RG_DEBUG_ASSERT(delay < 1000ll * INT32_MAX);
 
 #ifdef _WIN32
     while (delay) {
@@ -1811,7 +1803,7 @@ void WaitForDelay(int64_t delay)
 
     struct timespec rem;
     while (nanosleep(&ts, &rem) < 0) {
-        Assert(errno == EINTR);
+        RG_ASSERT(errno == EINTR);
         ts = rem;
     }
 #endif
@@ -1894,15 +1886,15 @@ public:
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
-static THREAD_LOCAL Size g_async_worker_idx;
-static THREAD_LOCAL bool g_task_running = false;
+static RG_THREAD_LOCAL AsyncPool *g_async_pool = nullptr;
+static RG_THREAD_LOCAL Size g_async_worker_idx;
+static RG_THREAD_LOCAL bool g_task_running = false;
 static int g_max_workers;
 
 void Async::SetWorkerCount(int max_threads)
 {
-    DebugAssert(max_threads > 0);
-    DebugAssert(!g_async_pool);
+    RG_DEBUG_ASSERT(max_threads > 0);
+    RG_DEBUG_ASSERT(!g_async_pool);
 
 #ifdef __EMSCRIPTEN__
     LogError("Cannot use parallelism on Emscripten platform");
@@ -1931,7 +1923,7 @@ int Async::GetWorkerCount()
             g_max_workers = (int)std::thread::hardware_concurrency();
         }
 
-        Assert(g_max_workers > 0);
+        RG_ASSERT(g_max_workers > 0);
 #endif
     }
 
@@ -1953,7 +1945,7 @@ Async::Async()
 
 Async::~Async()
 {
-    Assert(!remaining_tasks);
+    RG_ASSERT(!remaining_tasks);
 
     g_async_pool->UnregisterAsync();
 }
@@ -2052,9 +2044,9 @@ void AsyncPool::RunWorker(Size worker_idx)
 
         std::unique_lock<std::mutex> lock_pool(mutex);
         while (!pending_tasks) {
-#if THREAD_MAX_IDLE_TIME >= 0
+#if RG_THREAD_MAX_IDLE_TIME >= 0
             cv.wait_for(lock_pool,
-                        std::chrono::duration<int, std::milli>(THREAD_MAX_IDLE_TIME));
+                        std::chrono::duration<int, std::milli>(RG_THREAD_MAX_IDLE_TIME));
             if (!async_count) {
                 worker->running = false;
                 return;
@@ -2094,7 +2086,7 @@ void AsyncPool::RunTask(Task *task)
     Async *async = task->async;
 
     g_task_running = true;
-    DEFER { g_task_running = false; };
+    RG_DEFER { g_task_running = false; };
 
     pending_tasks--;
     if (async->success && !task->func()) {
@@ -2129,15 +2121,15 @@ struct MinizInflateContext {
     uint32_t crc32;
     Size uncompressed_size;
 };
-StaticAssert(SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
+RG_STATIC_ASSERT(RG_SIZE(MinizInflateContext::out) >= TINFL_LZ_DICT_SIZE);
 #endif
 
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
@@ -2157,15 +2149,15 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
 
 bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
-    DebugAssert(fp);
-    DebugAssert(filename);
+    RG_DEBUG_ASSERT(fp);
+    RG_DEBUG_ASSERT(filename);
     this->filename = filename;
 
     source.type = SourceType::File;
@@ -2180,14 +2172,14 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamReader::Open(const char *filename, CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
-    DebugAssert(filename);
+    RG_DEBUG_ASSERT(filename);
     this->filename = filename;
 
     source.type = SourceType::File;
@@ -2218,7 +2210,7 @@ void StreamReader::Close()
 
 Size StreamReader::Read(Size max_len, void *out_buf)
 {
-    if (UNLIKELY(error))
+    if (RG_UNLIKELY(error))
         return -1;
 
     Size read_len = 0;
@@ -2234,7 +2226,7 @@ Size StreamReader::Read(Size max_len, void *out_buf)
         } break;
     }
 
-    if (LIKELY(read_len >= 0)) {
+    if (RG_LIKELY(read_len >= 0)) {
         read += read_len;
     }
     return read_len;
@@ -2260,7 +2252,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
 
         return read_len;
     } else {
-        DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
+        RG_DEFER_NC(buf_guard, buf_len = out_buf->len) { out_buf->RemoveFrom(buf_len); };
 
         Size read_len, total_len = 0;
         out_buf->Grow(Megabytes(1));
@@ -2290,24 +2282,24 @@ Size StreamReader::ComputeStreamLen()
         case SourceType::File: {
 #ifdef _WIN32
             int64_t pos = _ftelli64(source.u.fp);
-            DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
+            RG_DEFER { _fseeki64(source.u.fp, pos, SEEK_SET); };
             if (_fseeki64(source.u.fp, 0, SEEK_END) < 0)
                 return -1;
             int64_t len = _ftelli64(source.u.fp);
 #else
             off64_t pos = ftello64(source.u.fp);
-            DEFER { fseeko64(source.u.fp, pos, SEEK_SET); };
+            RG_DEFER { fseeko64(source.u.fp, pos, SEEK_SET); };
             if (fseeko64(source.u.fp, 0, SEEK_END) < 0)
                 return -1;
             off64_t len = ftello64(source.u.fp);
 #endif
-            if (len > LEN_MAX) {
+            if (len > RG_SIZE_MAX) {
                 static bool warned = false;
                 if (!warned) {
-                    LogError("Files bigger than %1 are not well supported", FmtMemSize(LEN_MAX));
+                    LogError("Files bigger than %1 are not well supported", FmtMemSize(RG_SIZE_MAX));
                     warned = true;
                 }
-                len = LEN_MAX;
+                len = RG_SIZE_MAX;
             }
             raw_len = (Size)len;
         } break;
@@ -2329,7 +2321,7 @@ bool StreamReader::InitDecompressor(CompressionType type)
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             compression.u.miniz =
-                (MinizInflateContext *)Allocator::Allocate(nullptr, SIZE(MinizInflateContext),
+                (MinizInflateContext *)Allocator::Allocate(nullptr, RG_SIZE(MinizInflateContext),
                                                            (int)Allocator::Flag::Zero);
             tinfl_init(&compression.u.miniz->inflator);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
@@ -2353,7 +2345,7 @@ void StreamReader::ReleaseResources()
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            Allocator::Release(nullptr, compression.u.miniz, SIZE(*compression.u.miniz));
+            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
 #endif
         } break;
     }
@@ -2385,7 +2377,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
         uint8_t header[4096];
         Size header_len;
 
-        header_len = ReadRaw(SIZE(header), header);
+        header_len = ReadRaw(RG_SIZE(header), header);
         if (header_len < 0) {
             return -1;
         } else if (header_len < 10 || header[0] != 0x1F || header[1] != 0x8B) {
@@ -2463,16 +2455,16 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                 }
             }
 
-            while (ctx->out_len < SIZE(ctx->out)) {
+            while (ctx->out_len < RG_SIZE(ctx->out)) {
                 if (!ctx->in_len) {
                     ctx->in_ptr = ctx->in;
-                    ctx->in_len = ReadRaw(SIZE(ctx->in), ctx->in);
+                    ctx->in_len = ReadRaw(RG_SIZE(ctx->in), ctx->in);
                     if (ctx->in_len < 0)
                         return read_len ? read_len : ctx->in_len;
                 }
 
                 size_t in_arg = (size_t)ctx->in_len;
-                size_t out_arg = (size_t)(SIZE(ctx->out) - ctx->out_len);
+                size_t out_arg = (size_t)(RG_SIZE(ctx->out) - ctx->out_len);
                 uint32_t flags = (uint32_t)
                     ((compression.type == CompressionType::Zlib ? TINFL_FLAG_PARSE_ZLIB_HEADER : 0) |
                      (source.eof ? 0 : TINFL_FLAG_HAS_MORE_INPUT));
@@ -2494,12 +2486,12 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                     // Gzip footer (CRC and size check)
                     if (compression.type == CompressionType::Gzip) {
                         uint32_t footer[2];
-                        StaticAssert(SIZE(footer) == 8);
+                        RG_STATIC_ASSERT(RG_SIZE(footer) == 8);
 
-                        if (ctx->in_len < SIZE(footer)) {
+                        if (ctx->in_len < RG_SIZE(footer)) {
                             memcpy(footer, ctx->in_ptr, (size_t)ctx->in_len);
 
-                            Size missing_len = SIZE(footer) - ctx->in_len;
+                            Size missing_len = RG_SIZE(footer) - ctx->in_len;
                             if (ReadRaw(missing_len, footer + ctx->in_len) < missing_len) {
                                 if (error) {
                                     return -1;
@@ -2508,7 +2500,7 @@ Size StreamReader::Deflate(Size max_len, void *out_buf)
                                 }
                             }
                         } else {
-                            memcpy(footer, ctx->in_ptr, SIZE(footer));
+                            memcpy(footer, ctx->in_ptr, RG_SIZE(footer));
                         }
                         footer[0] = LittleEndian(footer[0]);
                         footer[1] = LittleEndian(footer[1]);
@@ -2537,7 +2529,7 @@ truncated_error:
     error = true;
     return -1;
 #else
-    DebugAssert(false);
+    RG_DEBUG_ASSERT(false);
 #endif
 }
 
@@ -2579,14 +2571,14 @@ restart:
 // TODO: Maximum line length
 bool LineReader::Next(Span<char> *out_line)
 {
-    if (UNLIKELY(error || eof))
+    if (RG_UNLIKELY(error || eof))
         return false;
 
     for (;;) {
         if (!view.len) {
-            buf.Grow(LINE_READER_STEP_SIZE + 1);
+            buf.Grow(RG_LINE_READER_STEP_SIZE + 1);
 
-            Size read_len = st->Read(LINE_READER_STEP_SIZE, buf.end());
+            Size read_len = st->Read(RG_LINE_READER_STEP_SIZE, buf.end());
             if (read_len < 0) {
                 error = true;
                 return false;
@@ -2612,8 +2604,8 @@ bool LineReader::Next(Span<char> *out_line)
 
 void LineReader::PushLogHandler()
 {
-    ::PushLogHandler([=](LogLevel level, const char *ctx,
-                         const char *fmt, Span<const FmtArg> args) {
+    RG::PushLogHandler([=](LogLevel level, const char *ctx,
+                           const char *fmt, Span<const FmtArg> args) {
         StartConsoleLog(level);
         Print(stderr, "%1%2(%3): ", ctx, st->filename, line_number);
         PrintFmt(fmt, args, stderr);
@@ -2634,9 +2626,9 @@ struct MinizDeflateContext {
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
@@ -2656,15 +2648,15 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
 
 bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
-    DebugAssert(fp);
-    DebugAssert(filename);
+    RG_DEBUG_ASSERT(fp);
+    RG_DEBUG_ASSERT(filename);
     this->filename = filename;
 
     dest.type = DestinationType::File;
@@ -2680,14 +2672,14 @@ bool StreamWriter::Open(FILE *fp, const char *filename, CompressionType compress
 
 bool StreamWriter::Open(const char *filename, CompressionType compression_type)
 {
-    Assert(!this->filename);
+    RG_ASSERT(!this->filename);
 
-    DEFER_N(error_guard) {
+    RG_DEFER_N(error_guard) {
         ReleaseResources();
         error = true;
     };
 
-    DebugAssert(filename);
+    RG_DEBUG_ASSERT(filename);
     this->filename = filename;
 
     dest.type = DestinationType::File;
@@ -2732,7 +2724,7 @@ bool StreamWriter::Close()
                         LittleEndian((uint32_t)ctx->uncompressed_size)
                     };
 
-                    success &= WriteRaw(MakeSpan((uint8_t *)gzip_footer, SIZE(gzip_footer)));
+                    success &= WriteRaw(MakeSpan((uint8_t *)gzip_footer, RG_SIZE(gzip_footer)));
                 }
 #endif
             } break;
@@ -2765,7 +2757,7 @@ bool StreamWriter::Close()
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
-    if (UNLIKELY(error))
+    if (RG_UNLIKELY(error))
         return false;
 
     switch (compression.type) {
@@ -2796,7 +2788,7 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 #endif
         } break;
     }
-    DebugAssert(false);
+    RG_DEBUG_ASSERT(false);
 }
 
 bool StreamWriter::InitCompressor(CompressionType type)
@@ -2808,7 +2800,7 @@ bool StreamWriter::InitCompressor(CompressionType type)
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
             compression.u.miniz =
-                (MinizDeflateContext *)Allocator::Allocate(nullptr, SIZE(MinizDeflateContext),
+                (MinizDeflateContext *)Allocator::Allocate(nullptr, RG_SIZE(MinizDeflateContext),
                                                            (int)Allocator::Flag::Zero);
             compression.u.miniz->crc32 = MZ_CRC32_INIT;
 
@@ -2858,7 +2850,7 @@ void StreamWriter::ReleaseResources()
         case CompressionType::Gzip:
         case CompressionType::Zlib: {
 #ifdef MZ_VERSION
-            Allocator::Release(nullptr, compression.u.miniz, SIZE(*compression.u.miniz));
+            Allocator::Release(nullptr, compression.u.miniz, RG_SIZE(*compression.u.miniz));
 #endif
         } break;
     }
@@ -2911,7 +2903,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             return true;
         } break;
     }
-    DebugAssert(false);
+    RG_DEBUG_ASSERT(false);
 }
 
 bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
@@ -2922,7 +2914,7 @@ bool SpliceStream(StreamReader *reader, Size max_len, StreamWriter *writer)
     Size len = 0;
     while (!reader->eof) {
         char buf[128 * 1024];
-        Size read_len = reader->Read(SIZE(buf), buf);
+        Size read_len = reader->Read(RG_SIZE(buf), buf);
         if (read_len < 0)
             return false;
 
@@ -2950,10 +2942,10 @@ static inline bool IsAsciiIdChar(char c)
 
 IniParser::LineType IniParser::FindNextLine(IniProperty *out_prop)
 {
-    if (UNLIKELY(error))
+    if (RG_UNLIKELY(error))
         return LineType::Exit;
 
-    DEFER_N(error_guard) { error = true; };
+    RG_DEFER_N(error_guard) { error = true; };
 
     Span<char> line;
     while (reader.Next(&line)) {
@@ -3110,8 +3102,8 @@ const char *OptionParser::Next()
             // option up to '=' in our buffer. And store the part after '=' as the
             // current value.
             Size len = needle - opt;
-            if (len > SIZE(buf) - 1) {
-                len = SIZE(buf) - 1;
+            if (len > RG_SIZE(buf) - 1) {
+                len = RG_SIZE(buf) - 1;
             }
             memcpy(buf, opt, (size_t)len);
             buf[len] = 0;
@@ -3153,8 +3145,8 @@ const char *OptionParser::Next()
 
 bool OptionParser::Test(const char *test1, const char *test2, OptionType type)
 {
-    DebugAssert(test1 && IsOption(test1));
-    DebugAssert(!test2 || IsOption(test2));
+    RG_DEBUG_ASSERT(test1 && IsOption(test1));
+    RG_DEBUG_ASSERT(!test2 || IsOption(test2));
 
     if (TestStr(test1, current_option) || (test2 && TestStr(test2, current_option))) {
         switch (type) {
@@ -3219,4 +3211,6 @@ void OptionParser::ConsumeNonOptions(HeapArray<const char *> *non_options)
     while ((non_option = ConsumeNonOption())) {
         non_options->Append(non_option);
     }
+}
+
 }

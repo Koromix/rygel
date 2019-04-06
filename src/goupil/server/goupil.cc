@@ -9,6 +9,8 @@
 #include "../../wrappers/http.hh"
 #include "../../felix/libpack/libpack.hh"
 
+namespace RG {
+
 struct Route {
     const char *method;
     const char *url;
@@ -16,7 +18,7 @@ struct Route {
     pack_Asset asset;
     const char *mime_type;
 
-    HASH_TABLE_HANDLER(Route, url);
+    RG_HASH_TABLE_HANDLER(Route, url);
 };
 
 Config goupil_config;
@@ -92,7 +94,7 @@ static void InitRoutes()
             add_asset_route("GET", url, asset);
         }
     }
-    DebugAssert(html.name);
+    RG_DEBUG_ASSERT(html.name);
 
     // Patch HTML
     html.data = pack_PatchVariables(html, &routes_alloc,
@@ -134,7 +136,7 @@ static int HandleRequest(const http_Request &request, http_Response *out_respons
     return code;
 }
 
-int main(int argc, char **argv)
+int RunGoupil(int argc, char **argv)
 {
     BlockAllocator temp_alloc;
 
@@ -204,7 +206,7 @@ Options:
     // Init routes
 #ifndef NDEBUG
     assets_filename = Fmt(&temp_alloc, "%1%/goupil_assets%2",
-                          GetApplicationDirectory(), SHARED_LIBRARY_EXTENSION).ptr;
+                          GetApplicationDirectory(), RG_SHARED_LIBRARY_EXTENSION).ptr;
     if (asset_set.LoadFromLibrary(assets_filename) == pack_LoadStatus::Error)
         return 1;
     assets = asset_set.assets;
@@ -227,3 +229,8 @@ Options:
     LogInfo("Exit");
     return 0;
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunGoupil(argc, argv); }

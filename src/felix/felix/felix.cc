@@ -4,10 +4,12 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 int RunBuild(Span<const char *> arguments);
 int RunPack(Span<const char *> arguments);
 
-int main(int argc, char **argv)
+int RunFelix(int argc, char **argv)
 {
     static const auto PrintUsage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: felix <command> [<args>]
@@ -49,3 +51,8 @@ Commands:
 
     return cmd_func(arguments);
 }
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunFelix(argc, argv); }

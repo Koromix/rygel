@@ -40,6 +40,8 @@
 #include "../libcc/libcc.hh"
 #include "simulate.hh"
 
+namespace RG {
+
 double ComputeQRisk3Male10(int age, bool AF, bool atypicalantipsy, bool corticosteroids,
                            bool impotence2, bool migraine, bool ra, bool renal, bool semi,
                            bool sle, bool treatedhyp, bool type1, bool type2, double bmi,
@@ -291,4 +293,6 @@ double ComputeQRisk3Female10(int age, bool AF, bool atypicalantipsy, bool cortic
     double score = (1 - pow(survivor[surv], exp(a)));
 
     return score;
+}
+
 }

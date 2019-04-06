@@ -9,6 +9,8 @@
 #include "thop.hh"
 #include "user.hh"
 
+namespace RG {
+
 static int GetQueryDateRange(const http_Request &request, const char *key,
                              http_Response *out_response, Date *out_start_date, Date *out_end_date)
 {
@@ -144,7 +146,7 @@ struct Aggregate {
     int64_t price_cents;
     Span<Part> parts;
 
-    HASH_TABLE_HANDLER(Aggregate, key);
+    RG_HASH_TABLE_HANDLER(Aggregate, key);
 };
 
 enum class AggregationFlag {
@@ -231,7 +233,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             const mco_Result &mono_result = sub_mono_results[k];
             const mco_Pricing &mono_pricing = sub_mono_pricings[k];
             drd_UnitCode unit = mono_result.stays[0].unit;
-            DebugAssert(mono_result.stays[0].bill_id == result.stays[0].bill_id);
+            RG_DEBUG_ASSERT(mono_result.stays[0].bill_id == result.stays[0].bill_id);
 
             if (user->mco_allowed_units.Find(unit)) {
                 std::pair<Aggregate::Part *, bool> ret =
@@ -285,7 +287,7 @@ void AggregateSetBuilder::Process(Span<const mco_Result> results, Span<const mco
             agg->mono_count += multiplier * (int32_t)result.stays.len;
             agg->price_cents += multiplier * pricing.price_cents;
             if (agg->parts.ptr) {
-                DebugAssert(agg->parts.len == agg_parts.len);
+                RG_DEBUG_ASSERT(agg->parts.len == agg_parts.len);
                 for (Size k = 0; k < agg->parts.len; k++) {
                     agg->parts[k].mono_count += agg_parts[k].mono_count;
                     agg->parts[k].price_cents += agg_parts[k].price_cents;
@@ -309,7 +311,7 @@ void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCod
                         agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
 
-    SwapMemory(out_set, &set, SIZE(set));
+    SwapMemory(out_set, &set, RG_SIZE(set));
     if (out_ghm_roots) {
         std::swap(ghm_roots, *out_ghm_roots);
     }
@@ -596,7 +598,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
             const mco_GhmRootInfo *ghm_root_info = nullptr;
             const mco_DiagnosisInfo *main_diag_info = nullptr;
             const mco_DiagnosisInfo *linked_diag_info = nullptr;
-            if (LIKELY(result.index)) {
+            if (RG_LIKELY(result.index)) {
                 ghm_root_info = result.index->FindGhmRoot(result.ghm.Root());
                 main_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].main_diagnosis);
                 linked_diag_info = result.index->FindDiagnosis(result.stays[result.main_stay_idx].linked_diagnosis);
@@ -606,7 +608,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
 
             json.Key("admin_id"); json.Int(result.stays[0].admin_id);
             json.Key("bill_id"); json.Int(result.stays[0].bill_id);
-            if (LIKELY(result.index)) {
+            if (RG_LIKELY(result.index)) {
                 json.Key("index_date"); json.String(Fmt(buf, "%1", result.index->limit_dates[0]).ptr);
             }
             if (result.duration >= 0) {
@@ -679,7 +681,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                         json.Key("ucd"); json.Bool(stay.flags & (int)mco_Stay::Flag::Ucd);
                     }
 
-                    if (LIKELY(stay.main_diagnosis.IsValid())) {
+                    if (RG_LIKELY(stay.main_diagnosis.IsValid())) {
                         json.Key("main_diagnosis"); json.String(stay.main_diagnosis.str);
                     }
                     if (stay.linked_diagnosis.IsValid()) {
@@ -689,7 +691,7 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
                     json.Key("other_diagnoses"); json.StartArray();
                     for (drd_DiagnosisCode diag: stay.other_diagnoses) {
                         const mco_DiagnosisInfo *diag_info =
-                            LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
+                            RG_LIKELY(result.index) ? result.index->FindDiagnosis(diag) : nullptr;
 
                         json.StartObject();
                         json.Key("diag"); json.String(diag.str);
@@ -742,4 +744,6 @@ int ProduceMcoResults(const http_Request &request, const User *user, http_Respon
     json.EndArray();
 
     return json.Finish(out_response);
+}
+
 }

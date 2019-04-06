@@ -6,6 +6,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 struct Config {
     const char *database_filename = nullptr;
 
@@ -28,3 +30,5 @@ public:
 };
 
 bool LoadConfig(Span<const char *const> filenames, Config *out_config);
+
+}

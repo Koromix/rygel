@@ -6,6 +6,8 @@
 #include "mco_authorization.hh"
 #include "mco_tables.hh"
 
+namespace RG {
+
 Span<const mco_Authorization> mco_AuthorizationSet::FindUnit(drd_UnitCode unit) const
 {
     Span<const mco_Authorization> auths;
@@ -45,7 +47,7 @@ int8_t mco_AuthorizationSet::GetAuthorizationType(drd_UnitCode unit, Date date) 
         return (int8_t)(unit.number % 100);
     } else if (unit.number) {
         const mco_Authorization *auth = FindUnit(unit, date);
-        if (UNLIKELY(!auth))
+        if (RG_UNLIKELY(!auth))
             return 0;
         return auth->type;
     } else {
@@ -70,14 +72,14 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
     static const Date default_end_date = mco_ConvertDate1980(UINT16_MAX);
 
     Size authorizations_len = set.authorizations.len;
-    DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+    RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
         set.authorizations.RemoveFrom(authorizations_len);
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
 
     LineReader reader(&st);
     reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -96,13 +98,13 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
                     authorizations = &set.authorizations;
                 }
                 valid &= ParseDec(line.Take(13, 3), &auth.type,
-                                  DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                                  RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 ParseDec(line.Take(16, 2), &auth.dates[0].st.day,
-                        DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                        RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseDec(line.Take(18, 2), &auth.dates[0].st.month,
-                         DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 ParseDec(line.Take(20, 4), &auth.dates[0].st.year,
-                         DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
+                         RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
                 auth.dates[1] = default_end_date;
 
                 if (!auth.unit.number || !auth.dates[0].IsValid()) {
@@ -127,7 +129,7 @@ bool mco_AuthorizationSetBuilder::LoadFicum(StreamReader &st)
 bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
 {
     Size authorizations_len = set.authorizations.len;
-    DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
+    RG_DEFER_NC(out_guard, facility_authorizations_len = set.facility_authorizations.len) {
         set.authorizations.RemoveFrom(authorizations_len);
         set.facility_authorizations.RemoveFrom(facility_authorizations_len);
     };
@@ -135,7 +137,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
     IniParser ini(&st);
 
     ini.reader.PushLogHandler();
-    DEFER { PopLogHandler(); };
+    RG_DEFER { PopLogHandler(); };
 
     bool valid = true;
     {
@@ -155,7 +157,7 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader &st)
 
             do {
                 if (prop.key == "Authorization") {
-                    valid &= ParseDec(prop.value, &auth.type, DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
+                    valid &= ParseDec(prop.value, &auth.type, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::End);
                 } else if (prop.key == "Date") {
                     auth.dates[0] = Date::FromString(prop.value);
                     valid &= !!auth.dates[0].value;
@@ -240,7 +242,7 @@ void mco_AuthorizationSetBuilder::Finish(mco_AuthorizationSet *out_set)
         LogError("Authorization set is empty");
     }
 
-    SwapMemory(out_set, &set, SIZE(set));
+    SwapMemory(out_set, &set, RG_SIZE(set));
 }
 
 bool mco_LoadAuthorizationSet(const char *profile_directory,
@@ -280,4 +282,6 @@ bool mco_LoadAuthorizationSet(const char *profile_directory,
     }
 
     return true;
+}
+
 }

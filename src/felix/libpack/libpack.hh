@@ -10,6 +10,8 @@
 
 #include "../../libcc/libcc.hh"
 
+namespace RG {
+
 // Keep in sync with version in packer.cc
 struct pack_Asset {
     const char *name;
@@ -36,3 +38,5 @@ struct pack_AssetSet {
 
 Span<const uint8_t> pack_PatchVariables(pack_Asset &asset, Allocator *alloc,
                                         std::function<bool(const char *, StreamWriter *)> func);
+
+}
